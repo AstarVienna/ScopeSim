@@ -1,2 +1,4 @@
-nose
-sphinx
+numpy
+scipy
+astropy
+pysynphot
