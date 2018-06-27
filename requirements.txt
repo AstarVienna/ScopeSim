@@ -2,3 +2,5 @@ numpy
 scipy
 astropy
 pysynphot
+wget
+requests
