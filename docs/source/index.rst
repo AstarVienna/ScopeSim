@@ -7,11 +7,11 @@ Welcome to TelescoPy's documentation!
 =====================================
 
 .. toctree::
-   :maxdepth: 3
-   :caption: Contents:
+    :maxdepth: 3
+    :caption: Contents:
 
-    source/TopLevel
-    source/examples/FirstExample
+    TopLevel
+    examples/FirstExample
 
 Indices and tables
 ==================
