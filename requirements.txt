@@ -4,3 +4,4 @@ astropy
 pysynphot
 wget
 requests
+numpydoc
