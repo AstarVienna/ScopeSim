@@ -9,6 +9,15 @@ This module contains the Class descriptions of the sources
 """
 
 def source_source():
+    """
+    Random docstring test
+    
+    .. code::
+    
+        >>> print("Hello World")
+        Hello World
+    
+    """
     pass
     
 
@@ -56,9 +65,8 @@ class BasicSource(object):
         
             >>> import matplotlib.pyplot as plt
             >>> x,y = [0,1], [1,0]
-            >>> plt.plot(x,y)
+            >>> plt.plot(x,y)           # doctest: +SKIP
             
-        
         
         """
         
