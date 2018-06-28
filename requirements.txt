@@ -5,3 +5,4 @@ pysynphot
 wget
 requests
 numpydoc
+sphinxcontrib-apidoc
