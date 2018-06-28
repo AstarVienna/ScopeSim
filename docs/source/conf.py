@@ -49,6 +49,8 @@ extensions = [
     'sphinx.ext.githubpages',
     'numpydoc',
     'sphinxcontrib.apidoc',
+    'matplotlib.sphinxext.only_directives',
+    'matplotlib.sphinxext.plot_directive',
 ]
 
 print(os.getcwd())

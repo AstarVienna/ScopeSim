@@ -46,7 +46,20 @@ class BasicSource(object):
         -------
         a : int
             You get what you give
+        
+        Examples
+        --------
+        
+        Lets plot a line
+        
+        .. plot::
+        
+            >>> import matplotlib.pyplot as plt
+            >>> x,y = [0,1], [1,0]
+            >>> plt.plot(x,y)
             
+        
+        
         """
         
         return a
