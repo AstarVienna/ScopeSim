@@ -12,7 +12,9 @@ Welcome to TelescoPy's documentation!
 
     TopLevel
     examples/FirstExample
-
+    reference/modules
+    
+    
 Indices and tables
 ==================
 
