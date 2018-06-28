@@ -19,12 +19,12 @@
 
 # -- Project information -----------------------------------------------------
 
-project = 'TelescoPy'
+project = 'Telescopy'
 copyright = '2018, Kieran Leschinski'
 author = 'Kieran Leschinski'
 
 # The short X.Y version
-version = ''
+version = '0.1'
 # The full version, including alpha/beta/rc tags
 release = '0.1.0'
 
@@ -48,7 +48,13 @@ extensions = [
     'sphinx.ext.viewcode',
     'sphinx.ext.githubpages',
     'numpydoc',
+    'sphinxcontrib.apidoc',
 ]
+
+apidoc_module_dir = '../../telescopy'
+apidoc_output_dir = 'reference'
+apidoc_excluded_paths = ['tests']
+apidoc_separate_modules = True
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -137,7 +143,7 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-    (master_doc, 'TelescoPy.tex', 'TelescoPy Documentation',
+    (master_doc, 'Telescopy.tex', 'Telescopy Documentation',
      'Kieran Leschinski', 'manual'),
 ]
 
@@ -147,7 +153,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    (master_doc, 'telescopy', 'TelescoPy Documentation',
+    (master_doc, 'telescopy', 'Telescopy Documentation',
      [author], 1)
 ]
 
@@ -158,8 +164,8 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-    (master_doc, 'TelescoPy', 'TelescoPy Documentation',
-     author, 'TelescoPy', 'One line description of project.',
+    (master_doc, 'Telescopy', 'Telescopy Documentation',
+     author, 'Telescopy', 'One line description of project.',
      'Miscellaneous'),
 ]
 
