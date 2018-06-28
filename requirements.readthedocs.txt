@@ -1,0 +1,9 @@
+numpy
+scipy
+astropy
+pysynphot
+wget
+requests
+matplotlib
+numpydoc
+sphinxcontrib-apidoc
