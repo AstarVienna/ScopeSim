@@ -14,7 +14,7 @@
 #
 import os
 import sys
-sys.path.insert(0, os.path.abspath('../../telescopy'))
+sys.path.insert(0, os.path.abspath('../../'))
 
 
 # -- Project information -----------------------------------------------------
@@ -51,9 +51,11 @@ extensions = [
     'sphinxcontrib.apidoc',
 ]
 
-apidoc_module_dir = '../../telescopy'
+print(os.getcwd())
+
+apidoc_module_dir = '../../'
 apidoc_output_dir = 'reference'
-apidoc_excluded_paths = ['tests']
+apidoc_excluded_paths = ['tests', 'setup', 'version']
 apidoc_separate_modules = True
 
 # Add any paths that contain templates here, relative to this directory.
