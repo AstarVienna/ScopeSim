@@ -55,7 +55,7 @@ print(os.getcwd())
 
 apidoc_module_dir = '../../'
 apidoc_output_dir = 'reference'
-apidoc_excluded_paths = ['tests', 'setup', 'version']
+apidoc_excluded_paths = ['tests', '../setup.py', '**/version.py']
 apidoc_separate_modules = True
 
 # Add any paths that contain templates here, relative to this directory.
@@ -80,7 +80,7 @@ language = None
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path .
-exclude_patterns = []
+exclude_patterns = ['../setup.py', '**/version.py']
 
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = 'sphinx'
