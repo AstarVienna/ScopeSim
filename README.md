@@ -24,3 +24,6 @@ astropy
 pysynphot
 wget
 ```
+
+## Documentation
+https://telescopy.readthedocs.io/en/latest/
