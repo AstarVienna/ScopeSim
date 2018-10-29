@@ -185,8 +185,6 @@ RONFRAME 0        1        2        FITS     Read noise frames (Req: CHIPTYPE)
 
 
 
-
-
 3D+ Effects
 ~~~~~~~~~~~
 
