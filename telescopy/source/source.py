@@ -12,10 +12,28 @@ def source_source():
     """
     Random docstring test
     
+    Examples
+    --------
+    
+    Inline code - but should fail ``pytest --doctest-modules``::
+    
+        >>> print("It's over 9000")
+        It's over 9000
+        
+    
+    Blocked code    
+    
     .. code::
     
         >>> print("Hello World")
         Hello World
+    
+    
+    More inline code::
+    
+        >>> print("It's under 10000")
+        9001
+        
     
     """
     pass
