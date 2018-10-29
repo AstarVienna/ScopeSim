@@ -32,7 +32,7 @@ def source_source():
     More inline code::
     
         >>> print("It's under 10000")
-        9001
+        It's under 10000
         
     
     """

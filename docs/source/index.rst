@@ -7,12 +7,14 @@ Welcome to TelescoPy's documentation!
 =====================================
 
 .. toctree::
-    :maxdepth: 3
-    :caption: Contents:
+   :maxdepth: 3
+   :caption: Contents:
 
-    TopLevel
-    examples/FirstExample
-    reference/modules
+   TopLevel
+   design/Effect_Descriptions
+   examples/FirstExample
+
+   reference/modules
     
     
 Indices and tables

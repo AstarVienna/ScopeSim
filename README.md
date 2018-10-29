@@ -1,6 +1,8 @@
 # TelescoPy
 
-[![Build Status](https://travis-ci.org/astronomyk/TelescoPy.svg?branch=master)](https://travis-ci.org/astronomyk/TelescoPy)
+
+
+[![Build Status](https://travis-ci.org/astronomyk/TelescoPy.svg?branch=master)](https://travis-ci.org/astronomyk/TelescoPy.svg?branch=master)
 [![Documentation Status](https://readthedocs.org/projects/telescopy/badge/?version=latest)](https://telescopy.readthedocs.io/en/latest/?badge=latest)
 
 A telescope observations simulator for Python
