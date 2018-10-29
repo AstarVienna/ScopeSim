@@ -33,7 +33,7 @@ List of effect types
 --------------------
 
 .. figure:: Effects_Listed.PNG
-    :width: 300
+    :width: 600
 
     The list of possible optical effects which occur along an optical train
 
@@ -136,7 +136,7 @@ Others
 
 
 .. figure:: Effects_Generalisation.PNG
-    :width: 300
+    :width: 600
 
     A visualisation of the different optical effects according to their type and
     active dimensions
