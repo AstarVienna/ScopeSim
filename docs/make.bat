@@ -34,5 +34,3 @@ goto end
 
 :end
 popd
-
-pause
