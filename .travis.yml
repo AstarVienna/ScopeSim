@@ -11,4 +11,4 @@ install:
     
 script: 
     - pytest
-    - cd telescopy && pytest --doctest-modules
+    - pytest --doctest-modules
