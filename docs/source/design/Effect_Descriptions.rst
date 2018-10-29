@@ -32,7 +32,7 @@ Effects come in either 0, 1, 2, or 3 (2+1) dimensions
 List of effect types
 --------------------
 
-.. figure:: Effects_Listed.png
+.. figure:: Effects_Listed.PNG
     :width: 300
 
     The list of possible optical effects which occur along an optical train
