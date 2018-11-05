@@ -4,7 +4,7 @@ SimCADO 1.0 design overview
 .. figure::Design_Interface_Overview.PNG
     :width: 600
 
-    The software design interface diagram for SiMCADO 1.0
+    The software design interface diagram for SimCADO 1.0
 
 In the above interface diagram the main interfaces are shown in red. These can
 be divided into input and output interfaces, and external and internal
@@ -20,8 +20,12 @@ outside of the SimCADO team are involved. For example:
     i.e. Pipeline and Archive
 #.  Output which should be returned to an external source
 
+**Internal:**
+
+#. Local working directory
+
 
 .. figure::Design_Interface_Diagram.PNG
     :width: 600
 
-    The software design interface diagram for SiMCADO 1.0
+    The software design interface diagram for SimCADO 1.0
