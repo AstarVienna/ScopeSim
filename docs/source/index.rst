@@ -11,6 +11,7 @@ Welcome to TelescoPy's documentation!
    :caption: Contents:
 
    TopLevel
+   design/Design_Overview
    design/Effect_Descriptions
    examples/FirstExample
 
