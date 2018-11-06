@@ -115,7 +115,7 @@ Near-IR
 
 * 3 modes: LR = 3500, MR = 7500, HR = 18000
 * 152 x 206 spaxels (31300 spaxels)
-    * Probably 152 slices, slice length of ~206 pixels
+    + Probably 152 slices, slice length of ~206 pixels
 * 4 spatial scales (4 mask sizes)
 * 0.8-2.45 µm - wavelength split into 10 filters
 * Observations confined to 1 filter with 1 spatial scale
@@ -145,8 +145,8 @@ Visual
 * 2 modes R = 5000, R = 15000
 * 0.45-0.8µm
 * 200 fibre bundles
-    * each with 19 fibres, ie 3800 spectra
-    * (probably 3800 traces)
+    + each with 19 fibres, ie 3800 spectra
+    + (probably 3800 traces)
 * 1..N Detectors - layout unknown
 * 1..N traces per masks
 * 75 mas Fibre (ergo trace) width
@@ -155,10 +155,10 @@ Visual
 
 * 0.31-0.97 µm
 * 3 modes: MR, HR, IFU
-    * R < 100,000
+    + R < 100,000
 * ? masks and ? traces, over ? detectors
 * Full wavelength ranges simultaneously VIS + NIR
-    * 4 Camera modules with ? Detectors
+    + 4 Camera modules with ? Detectors
 
 
 Near-IR
@@ -168,8 +168,8 @@ Near-IR
 * 2 modes R = 5000, R = 15000
 * 0.8-1.8µm
 * 100x2 fibres bundles
-    * each with 2x19 bundles
-    * probably ~3800 traces
+    + each with 2x19 bundles
+    + probably ~3800 traces
 * 10 deployable IFUs
 * 1..N Detectors - layout unknown
 * 1..N traces per masks
@@ -179,10 +179,10 @@ Near-IR
 
 * 0.97-2.5 µm
 * 3 modes: MR, HR, IFU
-    * R < 100,000
+    + R < 100,000
 * ? masks and ? traces, over ? detectors
 * Full wavelength ranges simultaneously VIS + NIR
-    * 4 Camera modules with ? Detectors
+    + 4 Camera modules with ? Detectors
 
 
 Mid-IR
@@ -216,7 +216,7 @@ Several other (possibly relevant) NIR Imagers
 
 * Imaging with stable no-atmo PSF
 * Simultaneous imaging of 2 fields of view in 2 wavelength regions
-    * SW=(0.6-2.3 µm) and LW=(2.4-5 µm)
+    + SW=(0.6-2.3 µm) and LW=(2.4-5 µm)
 * 10 Detectors - 2x4 SW and 2x1 LW
 * 2s readout time
 * Fixed noise properties
