@@ -1,12 +1,12 @@
-SimCADO 1.0 design overview
-===========================
+SimCADO 1.0 Interface Overview
+==============================
 
-.. figure::Design_Interface_Overview.PNG
+.. figure:: Design_Interface_Overview.PNG
     :width: 600
 
-    The software design interface diagram for SimCADO 1.0
+    A slimmed down software design interface diagram for SimCADO 1.0
 
-In the above interface diagram the main interfaces are shown in red. These can
+In the above diagram the main interfaces are shown in red. These can
 be divided into input and output interfaces, and external and internal
 interfaces. The distinction between external and internal is where parties
 outside of the SimCADO team are involved. For example:
@@ -25,7 +25,7 @@ outside of the SimCADO team are involved. For example:
 #. Local working directory
 
 
-.. figure::Design_Interface_Diagram.PNG
+.. figure:: Design_Interface_Diagram.PNG
     :width: 600
 
     The software design interface diagram for SimCADO 1.0
