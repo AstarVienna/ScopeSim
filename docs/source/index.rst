@@ -14,6 +14,7 @@ Welcome to the design documentation for SimCADO 1.0!
    design/Scope_Overview
    design/Design_Overview
    design/Effect_Descriptions
+   design/Design_Code_Workflow
    design/Inst_Pkg_DB
    examples/FirstExample
 
