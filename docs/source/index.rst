@@ -3,8 +3,8 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to TelescoPy's documentation!
-=====================================
+Welcome to the design documentation for SimCADO 1.0!
+====================================================
 
 .. toctree::
    :maxdepth: 3
@@ -14,6 +14,7 @@ Welcome to TelescoPy's documentation!
    design/Scope_Overview
    design/Design_Overview
    design/Effect_Descriptions
+   design/Inst_Pkg_DB
    examples/FirstExample
 
    reference/modules

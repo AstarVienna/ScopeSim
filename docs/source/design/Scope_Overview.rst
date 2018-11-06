@@ -21,7 +21,11 @@ three ranges:
 .. figure:: Scope_ELT_Instrument_Overview.PNG
     :width: 600
 
-    The parameter space covered by the ELT instruments
+    The parameter space covered by the ELT instruments. The instruments in green
+    are those that drive the design of SimCADO. However given that these green
+    cases cover 2 of the 3 wavelength regions and 3 or 4 types of instument, it
+    should be reasonably easy to extent to the software to covering all 12
+    categories.
 
 Characteristics of Instruments at the ELT
 -----------------------------------------
