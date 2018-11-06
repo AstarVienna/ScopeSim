@@ -55,25 +55,3 @@ Software Module Interfaces
 
 
 
-
-
-Why is this needed ? Is it required for operations (e.g for Observations
-preparation, or taking decisions regarding observations, or data reductions) ?
-Please detail the use cases involving the usage of the tool by either ESO
-operational staff or science users.
-
-"At the time of the PDR, SIMCADO is not a deliverable to ESO. It is therefore
-not part of the PDR process. If ESO takes over SIMCADO, it will need a
-dedicated review."
-
-"An evaluation phase is needed before accepting or not the proposal to take
-ownership.
-This phase should evaluate:
-    - the needs for the tool as discussed in RIQ YJU5
-    - the maintenance costs for ESO:
-        The SIMCADO interfaces with other components: pipeline,
-        DFS infrastructure, PSF data file, etc..
-        The maintenance effort will also depend on the software quality / size /
-        design, which will need to be evaluated
-If accepted, the tool would need a proper dedicated design/acceptance review
-before the MICADO FDR."
