@@ -1,13 +1,26 @@
 Instrument Package Database
 ===========================
 
+The SimCADO software should be instrument agnostic, i.e. the code is completely
+separate from the data files used to model the optical train. The primary driver
+for this is the fact that the files used by simcado
+
+
+This also means
+that the software should theoretically be able to simulate the optical train of
+any telescope-instrument configuration given the write data files.
+
+
 .. figure:: Inst_Pkg_Mode_Pathways.PNG
     :width: 600
 
-
+    The major components of the optical trains for the ELT first light
+    instruments, as well as the VLT LGF driven instruments HAWK-I and MUSE.
 
 .. figure:: Inst_Pkg_Server_Interfaces.PNG
-    :width:
+    :width: 600
+
+
 
 
 Conclusions
