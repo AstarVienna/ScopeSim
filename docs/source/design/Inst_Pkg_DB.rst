@@ -17,10 +17,12 @@ any telescope-instrument configuration given the write data files.
     The major components of the optical trains for the ELT first light
     instruments, as well as the VLT LGF driven instruments HAWK-I and MUSE.
 
+I guess we need text between the figures
+
 .. figure:: Inst_Pkg_Server_Interfaces.PNG
     :width: 600
 
-    THis is a comments
+    And also a comment here?
 
 
 
