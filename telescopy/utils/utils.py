@@ -63,13 +63,6 @@ def export_filter_files(fname, waveset=None, **kwargs):
     ------
     Anything accepted by ``numpy.savetxt``
 
-
-    Example
-    -------
-    ::
-
-        >>> export_filter_files("filts_bg2.txt", waveset=(0.8,2.5))
-
     """
 
     fi = ascii.read(fname)
