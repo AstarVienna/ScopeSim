@@ -1,7 +1,7 @@
 import os
 import pytest
 from astropy.table import Table
-import telescopy.data.database as tdb
+import telescopy.data.utils as tdb
 import telescopy.default_keywords as dkeys
 
 
@@ -16,5 +16,5 @@ def test_get_local_pkgs_returns_Table_if_local_DB_file_exists():
 
 def test_get_local_pkgs_throws_error_if_local_DB_file_path_is_bogus():
     local_db_path = "bogus.txt"
-    with pytest.raises(FileNotFoundError):
+    with pytest.raises(ValueError):
         tdb.get_local_packages(local_db_path)

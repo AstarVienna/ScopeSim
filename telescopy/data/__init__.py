@@ -1,2 +1,2 @@
-from . import database
+from . import data
 from . import utils

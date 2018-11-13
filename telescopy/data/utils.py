@@ -18,3 +18,20 @@ def get_cwd():
     
 def pwd():
     return get_cwd()
+
+def get_local_packages(path=None):
+
+    if path is None:
+        path = os.path.join(dkeys.PKG_DIR,
+                            dkeys.INST_PKG_LOCAL_PATH,
+                            dkeys.INST_PKG_LOCAL_DB_NAME)
+
+    if not os.path.exists(path):
+        raise ValueError(path + " doesn't exist")
+
+    list_of_packages = ioascii.read(path)
+
+    return list_of_packages
+
+
+
