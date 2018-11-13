@@ -1,0 +1,188 @@
+# ATMOSPHERE
+object : atmosphere
+name : armazones
+z_order : 0
+inst_pkg_name : elt
+
+properties :
+    temperature : 0         # [-270..270] deg C
+    pressure : 0.6          # [0..1] bar
+    relitive_humidity : 0.3 # [0..1]
+    airmass : 1.2           # [1..99]
+    pwv : 2.5               # [0..] mm
+
+effects :
+-   name : atmospheric_dispersion
+    effect_type : 3D_shift
+    function_name : make_3D_shift
+    kwargs :
+        lam : [1,2,3]
+        dx : [0. ,0. ,0. ]
+        dy : [0.1,0.2,0.3]
+
+-   name : atmospheric_spectral_response
+    effect_type : 1D_multiplication
+    function_name : import_ter_curve
+    kwargs :
+        file_name : ter_atmo.fits
+
+-   name : atmospheric_emission_map
+    effect_type : 2D_multiplication
+    function_name : import_multiplication_map
+    kwargs :
+        file_name : atmo_background_emission_map.fits
+        extension : 2
+
+---
+
+# TELESCOPE
+object : telescope
+name : elt
+z_order : 1
+inst_pkg_name : elt
+
+properties :
+    temperature : 0             # [-270..270] deg C
+    longitude : -70.192222      # [-89.99, 89.99] deg N
+    latitude : -24.589167       # [-180, 180] deg E
+    altitude : 3060             # [-9999, 9999] meters a.s.l
+
+effects :
+-   name : telescope_psf
+    effect_type : 3D_convolution
+    function_name : import_psf_cube
+    kwargs :
+        file_name : PSF_MICADO_SCAO-FV_NIR.fits
+        field_varying : False
+
+-   name : telescope_surface_list
+    effect_type : 1D_list
+    function_name : import_ter_curve_list
+    kwargs :
+        file_name : elt_mirror_list.tbl
+
+-   name : telescope_vibration
+    effect_type : 2D_convolution
+    function_name : make_gaussian_psf
+    kwargs :
+        fwhm : 0.001            # [arcsec]
+
+-   name : telescope_rotation
+    effect_type : 2D_rotation
+    function_name : rotate_fov
+    kwargs :
+        centre : [0,0]          # [arcsec]
+        rotation : 15           # [degrees]
+        integrate : True
+
+-   name : telescope_distortion
+    effect_type : 2D_distortion
+    function_name : import_distortion_map
+    kwargs :
+        file_name : elt_distortion_map.fits
+
+---
+
+# FORE OPTICS
+object : fore_optics
+name : relay_optics
+z_order : 2
+inst_pkg_name : micado
+
+properties :
+    temperature : 0
+
+effects :
+-   name : relay_surface_list
+    effect_type : 1D_list
+    function_name : import_ter_curve_list
+    kwargs :
+        file_name : relay_mirror_list.tbl
+
+-   name : relay_distortion
+    effect_type : 2D_distortion
+    function_name : import_distortion_map
+    kwargs :
+        file_name : relay_distortion_map.fits
+
+
+---
+
+# INSTRUMENT OPTICS
+object : instrument
+name : micado_wide_field
+z_order : 3
+inst_pkg_name : micado
+
+properties :
+    temperature : -190
+    plate_scale : 0.004
+
+
+effects :
+-   name : micado_surface_list
+    effect_type : 1D_list
+    function_name : import_ter_curve_list
+    kwargs :
+        file_name : micado_mirror_list.tbl
+
+-   name : micado_distortion
+    effect_type : 2D_distortion
+    function_name : import_distortion_map
+    kwargs :
+        file_name : micado_distortion_map.fits
+
+-   name : filter
+    effect_type : 1D_multiplication
+    function_name : import_ter_curve
+    kwargs :
+        file_name : micado_Ks_filter.dat
+
+-   name : micado_ncpas
+    effect_type : 3D_convolution
+    function_name : import_ter_curve
+    kwargs :
+        file_name : micado_Ks_filter.dat
+
+-   name : micado_adc
+    effect_type : 3D_shift
+    function_name : make_ADC_shifts
+    kwargs :
+        zenith_distance : 30
+
+---
+
+# Detector array
+object : detector
+name : micado_detector_array
+z_order : 4
+inst_pkg_name : micado
+
+properties :
+    temperature : -190
+    dark_current : 0.1
+
+effects :
+-   name : qe_curve
+    effect_type : 1D_multiplication
+    function_name : import_ter_curve
+    kwargs :
+        file_name : h4rg_QE.dat
+
+-   name : noise_frames
+    effect_type : 0D_addition
+    function_name : import_ter_curve
+    kwargs :
+        file_name : h4rg_QE.dat
+
+-   name : micado_wide_chip_geometry.tbl
+    effect_type : 2D_mask_list
+
+
+
+
+
+
+
+
+
