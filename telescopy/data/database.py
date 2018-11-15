@@ -18,8 +18,3 @@ from astropy.io import ascii as ioascii
 def data_database():
     return "Sorry Dave"
 
-
-
-
-
-
