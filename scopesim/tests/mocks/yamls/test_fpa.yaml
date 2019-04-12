@@ -1,0 +1,20 @@
+# Detector array
+object : detector
+name : micado_detector_array
+z_order : 4
+inst_pkg_name : micado
+
+properties :
+    temperature : -190
+    dark_current : 0.1
+
+effects :
+-   name : detector_qe_curve
+    class : TERCurve
+    kwargs :
+        file_name : h4rg_QE.dat
+
+-   name : micado_detector_geometry
+    class : DetectorList
+    kwargs:
+        file_name: micado_detector_geometry.tbl

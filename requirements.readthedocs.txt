@@ -1,9 +1,12 @@
 numpy
 scipy
-astropy
-pysynphot
-wget
-requests
 matplotlib
-numpydoc
+astropy
+pyyaml
+wget
 sphinxcontrib-apidoc
+synphot
+reproject
+numpydoc ==0.6.0
+sphinx ==1.6.7
+

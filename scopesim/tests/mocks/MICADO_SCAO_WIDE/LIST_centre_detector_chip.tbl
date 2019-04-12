@@ -1,0 +1,22 @@
+# name : MICADO H4RG-15 FPA
+# author : Oliver Czoske
+# sources: E-MCD-FPA-572089EB.uda, ELT-TRE-MCD-56300-0011
+# date_created  : 2017-06-28
+# date_modified : 2018-07-26
+# type : detector:chip_list
+# x_cen_unit : mm
+# y_cen_unit : mm
+# xhw_unit : mm
+# yhw_unit : mm
+# pixsize_unit : mm
+# angle_unit : deg
+# gain_unit : electron/adu
+#
+# changes:
+# - 2017-08-12 (OC) id changed to conform with spectroscopy report
+# - 2018-07-26 (OC) large gap (chips 5 and 6) reduced to 8 mm
+# - 2018-11-19 (KL) updated meta data to new format
+# - 2019-01-28 (KL) moved units into header
+#
+ id   x_cen  y_cen    xhw    yhw  pixsize  angle    gain
+  5    0.00   0.00  30.72  30.72    0.015    0.0     1.0

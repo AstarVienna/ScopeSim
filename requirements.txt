@@ -1,8 +1,0 @@
-numpy
-scipy
-astropy
-pysynphot
-wget
-requests
-numpydoc
-sphinxcontrib-apidoc

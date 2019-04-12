@@ -1,4 +1,4 @@
-.. TelescoPy documentation master file, created by
+.. ScopeSim documentation master file, created by
    sphinx-quickstart on Thu Jun 28 09:21:41 2018.
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.

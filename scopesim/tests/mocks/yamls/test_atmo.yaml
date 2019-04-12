@@ -1,0 +1,16 @@
+# ATMOSPHERE
+object : atmosphere
+name : armazones
+z_order : 0
+inst_pkg_name : elt
+
+properties :
+    temperature : 0         # [-270..270] deg C
+    pressure : 0.6          # [0..1] bar
+    relitive_humidity : 0.3 # [0..1]
+    airmass : 1.2           # [1..99]
+    pwv : 2.5               # [0..] mm
+
+effects :
+-   name : atmospheric_dispersion
+    class : AtmosphericDispersion

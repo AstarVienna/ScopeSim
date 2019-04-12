@@ -19,7 +19,7 @@ sys.path.insert(0, os.path.abspath('../../'))
 
 # -- Project information -----------------------------------------------------
 
-project = 'Telescopy'
+project = 'ScopeSim'
 copyright = '2018, Kieran Leschinski'
 author = 'Kieran Leschinski'
 
@@ -120,7 +120,7 @@ html_static_path = ['_static']
 # -- Options for HTMLHelp output ---------------------------------------------
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'TelescoPydoc'
+htmlhelp_basename = 'ScopeSimdoc'
 
 
 # -- Options for LaTeX output ------------------------------------------------
@@ -147,7 +147,7 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-    (master_doc, 'Telescopy.tex', 'Telescopy Documentation',
+    (master_doc, 'ScopeSim.tex', 'ScopeSim Documentation',
      'Kieran Leschinski', 'manual'),
 ]
 
@@ -157,7 +157,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    (master_doc, 'telescopy', 'Telescopy Documentation',
+    (master_doc, 'scopesim', 'ScopeSim Documentation',
      [author], 1)
 ]
 
@@ -168,8 +168,8 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-    (master_doc, 'Telescopy', 'Telescopy Documentation',
-     author, 'Telescopy', 'One line description of project.',
+    (master_doc, 'ScopeSim', 'ScopeSim Documentation',
+     author, 'ScopeSim', 'One line description of project.',
      'Miscellaneous'),
 ]
 

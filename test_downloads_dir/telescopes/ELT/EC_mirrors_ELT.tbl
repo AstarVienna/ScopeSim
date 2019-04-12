@@ -1,0 +1,17 @@
+# author : Oliver Czoske
+# source : 
+# date_created : 
+# date_modified : 2018-11-19
+# status : Design - pre PDR list of ELT mirrors
+# type : mirror:list
+# changes :
+# - 2018-11-19 (KL) Added meta data, added Action column
+#
+Mirror      Outer   Inner   Angle  Temp    Action       Coating
+#           [m]     [m]     [deg]   [C]
+M1          37.3    11.1    0.     0.      Reflect      TER_mirror_mgf2agal.dat
+M2          4.2     0.545   0.     0.      Reflect      TER_mirror_mgf2agal.dat
+M3          3.8     0.14    0.     0.      Reflect      TER_mirror_mgf2agal.dat
+M4          2.4     0.      7.75   0.      Reflect      TER_mirror_aluminium.dat
+M5          2.4     0.      52.75  0.      Reflect      TER_mirror_mgf2agal.dat
+

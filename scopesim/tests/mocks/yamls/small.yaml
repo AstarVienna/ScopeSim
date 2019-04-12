@@ -1,0 +1,15 @@
+# ATMOSPHERE
+object : atmosphere
+name : armazones
+inst_pkg_name : elt
+
+properties :
+    temperature : 0         # [-270..270] deg C
+    pressure : 0.6          # [0..1] bar
+
+effects :
+-   name : super_psf
+    class : GaussianDiffractionPSF
+    z_order : 0
+    kwargs :
+        diameter : 39

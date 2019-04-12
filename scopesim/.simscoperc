@@ -1,0 +1,53 @@
+# This file contains the default parameters regarding the software,
+# It does NOT contain information regarding the instrument or telescope
+# configuration
+
+
+################################################################################
+#                           SIMULATION PARAMETERS                              #
+################################################################################
+
+SIM_CHUNK_SIZE            512               # [pixel] side length of image plane chunks
+SIM_OVERSAMPLING          1                 # The factor of oversampling inside the simulation
+SIM_PIXEL_THRESHOLD       1                 # photons per pixel summed over the wavelength range. Values less than this are assumed to be zero
+SIM_SPLINE_ORDER          1                 # Order of spline interpolation passed to scipy.ndimage functions
+SIM_MAX_SEGMENT_SIZE      1.1E6             # Default 1024*1024 pixels (8MB). Maximum size for image operations
+
+SIM_SPEC_RESOLUTION       1E-4              # [um] spectral resolution when resampling spectral curves
+SIM_MIN_THROUGHPUT        1E-7              # Level below which transmission is ignored
+SIM_FILTER_THRESHOLD      1E-6              # transmission below this threshold is assumed to be 0
+SIM_FLUX_ACCURACY         1E-3              # Deviation from sum(PSF)=1 for a PSF kernel before the kernel is re-normalised
+SIM_SUB_PIXEL_ACCURACY    False             # Whether to use sub pixel accuracy when dealing with point sources
+SIM_SUB_PIXEL_FRACTION    1                 # full pixel shift
+
+SIM_VERBOSE               no                # [yes/no] print information on the simulation run
+SIM_SIM_MESSAGE_LEVEL     3                 # the amount of information printed [5-everything, 0-nothing]
+SIM_LOGGING               False
+SIM_LOGGING_LEVEL         INFO              # Use the python.logging levels
+SIM_LOGGING_FILE          ./simcado.log
+
+
+################################################################################
+#                             SERVER DOWNLOADS                                 #
+################################################################################
+
+# If not explicitly set, downloaded packages will be saved in your working dir
+FILE_LOCAL_DOWNLOADS_PATH         D:/simcado_downloads/
+FILE_LOCAL_TEMP_FILES_PATH        ./simcado_temp_files/
+
+# Data server paths
+FILE_SERVER_BASE_URL              https://www.univie.ac.at/simcado/InstPkgSvr/
+
+FILE_SCOPE_PKG_LOCAL_PATH         telescopes/
+
+FILE_INST_PKG_LOCAL_PATH          instruments/
+FILE_INST_PKG_LOCAL_DB_NAME       LocalInstPkgDB.dat
+FILE_INST_PKG_SERVER_DB_NAME      InstPkgDB.dat
+
+FILE_PSF_LOCAL_PATH               psfs/
+FILE_PSF_LOCAL_DB_NAME            LocalPsfDB.dat
+FILE_PSF_SERVER_DB_NAME           PsfDB.dat
+
+FILE_SRC_PKG_LOCAL_PATH           sources/
+FILE_SRC_PKG_LOCAL_DB_NAME        LocalSourceDB.dat
+FILE_SRC_PKG_SERVER_DB_NAME       SourceDB.dat

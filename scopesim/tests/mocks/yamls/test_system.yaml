@@ -1,0 +1,5 @@
+atmosphere  : test_atmo.yaml
+telescope   : test_scope.yaml
+fore_optics : test_cfo.yaml
+instrument  : test_inst.yaml
+detector    : test_fpa.yaml

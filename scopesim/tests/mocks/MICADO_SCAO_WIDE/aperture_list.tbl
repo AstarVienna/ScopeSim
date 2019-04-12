@@ -1,0 +1,7 @@
+# x_unit : arcsec
+# y_unit : arcsec
+# hw1_unit : arcsec
+# hw2_unit : arcsec
+#
+x   y   dx  dy  aperture_type
+0   0   30  30  pupil

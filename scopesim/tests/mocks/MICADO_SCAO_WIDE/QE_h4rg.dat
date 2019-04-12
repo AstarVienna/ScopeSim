@@ -1,0 +1,10 @@
+# name : fake qe for micado
+# author : kieran
+# date_created : 2019-03-13
+# wavelength_unit : um
+#
+wavelength  transmission
+0.79        0
+0.8         1
+2.4         1
+2.41        0

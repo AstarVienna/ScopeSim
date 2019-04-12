@@ -1,0 +1,11 @@
+We currently don't know much about licences, nor have we thought about them.
+No doubt, this will change in the future. For the moment though:
+
+We invoke the licence of honour. Ask yourself, what would Thor do?
+
+If ambiguity ensues, ScopeSim will use the GNU GPLv3 software licence.
+https://choosealicense.com/licenses/gpl-3.0/
+
+TLDR; Give credit where credit is due, and reuse this licence.
+
+

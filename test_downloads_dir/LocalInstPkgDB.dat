@@ -1,0 +1,7 @@
+# Date-created : 2019-04-12
+# Date-modified : 2019-04-12
+# Description : Packages containing instrument/telescope specific data files
+# 
+   name             author  date_added  date_modified                    path 
+ MICADO  Kieran_Leschinski  2018-12-04     2018-12-04  instruments/MICADO.zip 
+    ELT  Kieran_Leschinski  2018-12-04     2018-12-04      telescopes/ELT.zip 

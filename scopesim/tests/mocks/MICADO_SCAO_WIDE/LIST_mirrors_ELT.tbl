@@ -1,0 +1,24 @@
+# author : Oliver Czoske
+# source : 
+# date_created : 
+# date_modified : 2018-11-19
+# status : Design - pre PDR list of ELT mirrors
+# type : mirror:list
+# ETYPE : SURFLIST
+# EDIM : 1 
+# outer_unit : m
+# inner_unit : m
+# angle_unit : deg
+# temp_unit : deg_C
+#
+# changes :
+# - 2018-11-19 (KL) Added meta data, added Action column
+# - 2019-01-22 Added unit information
+#
+Name        Outer   Inner   Angle  Temp    Action       Filename
+M1          37.3    11.1    0.     0.      reflection   TER_mirror_gold.dat
+M2          4.2     0.545   0.     0.      reflection   TER_mirror_gold.dat
+M3          3.8     0.14    0.     0.      reflection   TER_mirror_gold.dat
+M4          2.4     0.      7.75   0.      reflection   TER_mirror_gold.dat
+M5          2.4     0.      52.75  0.      reflection   TER_mirror_gold.dat
+

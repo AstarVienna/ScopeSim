@@ -1,0 +1,85 @@
+### ATMOSPHERE
+object: atmosphere
+name: test_atmosphere
+
+effects :
+- name: atmospheric transmission
+  class: AtmosphericTERCurve
+  kwargs:
+    array_dict: {wavelength: [0.5, 1.0, 2.0, 2.5],
+                 transmission: [0, 1, 1, 0],
+                 emission: [0, 0, 0, 0]}
+    action: transmission
+    wavelength_unit: um
+    emission_unit: ph/s/m2/um
+
+---
+
+### TELESCOPE
+object: telescope
+name: test_telescope
+
+effects:
+- name: Delta PSF
+  class: PSF
+
+- name: Scope Surface List
+  class: SurfaceList
+  kwargs:
+    array_dict: {"Name": ["M1", "M2"], "Outer": [2., 1.], "Inner": [0., 0.],
+                 "Angle": [0., 0.], "Temp": [0., 0.],
+                 "Action": ["transmission", "transmission"],
+                 "Filename": ["TER_blank.dat", "TER_blank.dat"]}
+    outer_unit: m
+    inner_unit: m
+    angle_unit: deg
+    temp_unit: deg_C
+
+---
+
+### INSTRUMENT
+object: instrument
+name: test_instrument
+
+effects:
+- name: filter TC
+  class: TERCurve
+  kwargs:
+    array_dict: {wavelength: [0.5, 0.6, 0.7, 2.3, 2.4, 2.5],
+                 transmission: [0, 0, 1, 1, 0, 0]}
+    action: transmission
+    wavelength_unit: um
+    outer: 0.2
+    outer_unit: m
+
+- name: NCPA PSF
+  class: PSF
+
+---
+
+### DETECTOR
+object: detector
+name: test_detector
+
+effects:
+- name: detector array list
+  class: DetectorList
+  kwargs:
+    array_dict: {"id": [1], "x_cen": [0], "y_cen":[0], "xhw": [1024],
+                 "yhw": [1024], "x_len": [900], "y_len": [900],
+                 "pixsize": [1.], "angle": [0.], "gain": [1.0]}
+    x_cen_unit : mm
+    y_cen_unit : mm
+    xhw_unit : mm
+    yhw_unit : mm
+    pixsize_unit : mm
+    angle_unit : deg
+    gain_unit : electron/adu
+
+- name: detector QE curve
+  class: TERCurve
+  kwargs:
+    array_dict: {wavelength: [0.5, 1.0, 2.5, 3.0],
+                 transmission: [0, 1, 1, 0]}
+    wavelength_unit: um
+    action: transmission

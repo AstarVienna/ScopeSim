@@ -1,0 +1,21 @@
+# INSTRUMENT OPTICS
+object : instrument
+name : micado_wide_field
+z_order : 3
+inst_pkg_name : micado
+
+properties :
+    temperature : -190
+    plate_scale : 0.004
+
+effects :
+-   name : micado_surface_list
+    class : SurfaceList
+    kwargs :
+        file_name : micado_mirror_list.tbl
+
+-   name : micado_adc
+    class : AtmosphericDispersion
+    kwargs :
+        zenith_distance : 30
+        reverse_shifts : True

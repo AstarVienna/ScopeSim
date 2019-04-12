@@ -1,0 +1,18 @@
+# author : Kieran Leschinski
+# source : Ciliegi+ 2018 SPIE, "MAORY for ELT - preliminary design overview"
+# date_created : 2018-11-19
+# date_modified : 2018-11-19
+# status : Design - pre PDR list of MAORY mirrors
+# type : mirror:list
+# changes :
+# - 2018-11-19 (KL) Added meta data, changed Dichr. filename
+#
+Mirror      Outer   Inner   Angle   Temp    Action      Coating
+#           [m]     [m]     [deg]   [C]
+M6          1.1     0.      45.     0.      Reflect     TER_mirror_mgf2agal.dat
+M7          0.7     0.      0.      0.      Reflect     TER_mirror_gold_MAORY.dat
+M8          0.85    0.      0.      0.      Reflect     TER_mirror_gold_MAORY.dat
+M9          0.75    0.      0.      0.      Reflect     TER_mirror_gold_MAORY.dat
+Dichr.      0.6     0.      0.      0.      Reflect     TER_MAORY_dichroic.dat
+M10         0.6     0.      0.      0.      Reflect     TER_mirror_gold_MAORY.dat
+M11         0.8     0.      0.      0.      Reflect     TER_mirror_gold_MAORY.dat

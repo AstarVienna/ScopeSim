@@ -1,0 +1,30 @@
+# author : Kieran Leschinski
+# source : Ric's SPIE 2018 PPT presentation
+# date_created  : 2018-11-19
+# date_modified : 2018-11-19
+# status : Design - pre PDR list of MICADO mirrors for wide-field mode
+# type : mirror:list
+# ETYPE : SURFLIST
+# EDIM : 1 
+# outer_unit : m
+# inner_unit : m
+# angle_unit : deg
+# temp_unit : deg_C
+#
+# changes :
+# - 2019-01-22 Added unit information
+#
+Name        Outer   Inner   Angle   Temp    Action          Filename
+I00_EntrWin 0.5     0.0     0       0       transmission    TC_blank.dat
+I01_Fold1   0.5     0.0     45      -190    reflection      TER_mirror_gold.dat
+I02_Coli1   0.4     0.0     10      -190    reflection      TER_mirror_gold.dat
+I03_Coli2   0.2     0.0     10      -190    reflection      TER_mirror_gold.dat
+I04_Coli3   0.2     0.0     10      -190    reflection      TER_mirror_gold.dat
+I05_Fold2   0.2     0.0     45      -190    reflection      TER_mirror_gold.dat
+I07_ADC     0.2     0.0     00      -190    transmission    TC_blank.dat
+I08_SM5     0.2     0.0     00      -190    reflection      TER_mirror_gold.dat
+I09_SM6     0.2     0.0     00      -190    reflection      TER_mirror_gold.dat
+I10_Fold3   0.2     0.0     45      -190    reflection      TER_mirror_gold.dat
+I11_ReIm1   0.2     0.0     10      -190    reflection      TER_mirror_gold.dat
+I12_ReIm2   0.2     0.0     10      -190    reflection      TER_mirror_gold.dat
+I13_ReIm3   0.2     0.0     10      -190    reflection      TER_mirror_gold.dat

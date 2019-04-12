@@ -1,0 +1,98 @@
+# ATMOSPHERE
+object : atmosphere
+name : armazones
+inst_pkg_name : elt
+
+properties :
+    temperature : 0         # [-270..270] deg C
+
+effects :
+-   name : atmospheric_spectral_response
+    class : TERCurve
+    kwargs :
+        filename : TER_atmo_average.dat
+        action : transmission
+
+---
+
+# TELESCOPE
+object : telescope
+name : elt
+inst_pkg_name : elt
+
+properties :
+    temperature : 0             # [-270..270] deg C
+
+effects :
+-   name : telescope_psf
+    class : FieldVaryingPSF
+    kwargs :
+        filename : MAORY_SCAO_FVPSF_4mas_20181203.fits
+
+-   name : telescope_surface_list
+    class : SurfaceList
+    kwargs :
+        filename : LIST_mirrors_ELT.tbl
+
+---
+
+# FORE OPTICS
+object : fore_optics
+name : elt_relay_optics
+inst_pkg_name : micado
+
+properties :
+    temperature : 0
+
+effects :
+-   name : relay_surface_list
+    class : SurfaceList
+    kwargs :
+        filename : LIST_mirrors_SCAO_relay.tbl
+
+---
+
+# INSTRUMENT OPTICS
+object : instrument
+name : micado_wide_field
+inst_pkg_name : micado
+
+properties :
+    temperature : -190
+    plate_scale : 0.004
+
+effects :
+-   name : micado_surface_list
+    class : SurfaceList
+    kwargs :
+        filename : LIST_mirrors_MICADO_Wide.tbl
+
+-   name : filter
+    class : TERCurve
+    kwargs :
+        filename : TC_filter_Ks.dat
+        action : transmission
+
+---
+
+# Detector array
+object : detector
+name : micado_detector_array
+inst_pkg_name : micado
+
+properties :
+    temperature : -190
+    dark_current : 0.1
+    ron : 4
+
+effects :
+-   name : qe_curve
+    class : TERCurve
+    kwargs :
+        filename : QE_h4rg.dat
+        action : transmission
+
+-   name : MICADO_centre_chip_layout
+    class : DetectorList
+    kwargs :
+        filename : LIST_centre_detector_chip.tbl

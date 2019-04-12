@@ -1,0 +1,14 @@
+# FORE OPTICS
+object : fore_optics
+name : relay_optics
+z_order : 2
+inst_pkg_name : micado
+
+properties :
+    temperature : 0
+
+effects :
+-   name : relay_surface_list
+    class : SurfaceList
+    kwargs :
+        file_name : relay_mirror_list.tbl

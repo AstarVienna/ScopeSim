@@ -1,0 +1,24 @@
+
+# TELESCOPE
+object : telescope
+name : elt
+z_order : 1
+inst_pkg_name : elt
+
+properties :
+    temperature : 0             # [-270..270] deg C
+    longitude : -70.192222      # [-89.99, 89.99] deg N
+    latitude : -24.589167       # [-180, 180] deg E
+    altitude : 3060             # [-9999, 9999] meters a.s.l
+
+effects :
+-   name : telescope_psf
+    class : FieldVaryingPsfFromFile
+    kwargs :
+        file_name : PSF_MICADO_SCAO-FV_NIR.fits
+        field_varying : False
+
+-   name : telescope_surface_list
+    class : SurfaceList
+    kwargs :
+        file_name : elt_mirror_list.tbl

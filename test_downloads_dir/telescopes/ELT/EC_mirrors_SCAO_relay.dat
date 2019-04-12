@@ -1,0 +1,12 @@
+# author : Oliver Czoske
+# source : 
+# date_created : 
+# date_modified : 2018-11-19
+# status : Design - pre PDR list of SCAO relay mirrors
+# type : mirror:list
+# changes :
+# - 2018-11-19 (KL) Added meta data
+#
+Mirror      Outer   Inner   Angle   Temp    Action      Coating
+#           [m]     [m]     [deg]   [C]
+M6          1.1     0.      45.     0.      Reflect     TER_mirror_mgf2agal.dat

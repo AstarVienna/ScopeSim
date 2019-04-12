@@ -1,0 +1,14 @@
+# author : Kieran Leschinski
+# source : Kieran Leschinski
+# date_created : 2019-01-21
+# date_modified : 2019-01-21
+# status : Idea - Test emission curve
+# type : mirror:emission
+# wavelength_unit : um
+# emission_unit : ph s-1 m-2 um-1 arcsec-2
+wavelength emission
+0.5        1
+1.0        1
+1.5        1
+2.0        1
+2.5        1
