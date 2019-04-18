@@ -3,8 +3,7 @@ import numpy as np
 from astropy.io import fits
 from astropy.table import Table
 
-from .image_plane_utils import calc_footprint, add_table_to_imagehdu, \
-    add_imagehdu_to_imagehdu
+from .image_plane_utils import add_table_to_imagehdu, add_imagehdu_to_imagehdu
 
 from .. import rc
 from .. import utils

@@ -57,15 +57,6 @@ from . import simulation
 from .utils import bug_report
 from .utils import get_extras
 
-from .source.source import Source
-
-# from .optics.spectrograph import OpticalTrain
-
-from .commands.user_commands import UserCommands
-from .detector import Detector, Chip
-from .detector import install_noise_cube
-from .simulation import run
-
 
 ################################################################################
 #                          VERSION INFORMATION                                 #

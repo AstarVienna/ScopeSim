@@ -149,6 +149,14 @@ class OpticsManager:
         return header
 
     @property
+    def detector_effects(self):
+        dtcr_effects = [self.surfaces_table]
+        for opt_el in self.optical_elements:
+            dtcr_effects += opt_el.get_z_order_effects([500, 599])
+
+        return dtcr_effects
+
+    @property
     def image_plane_effects(self):
         imp_effects = [self.surfaces_table]
         for opt_el in self.optical_elements:

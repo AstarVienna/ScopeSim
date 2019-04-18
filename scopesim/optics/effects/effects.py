@@ -1,5 +1,7 @@
 from ...source.source2 import Source
+from ...detector import Detector
 from ..fov import FieldOfView
+from ..image_plane import ImagePlane
 from ..data_container import DataContainer
 
 
@@ -10,12 +12,10 @@ class Effect(DataContainer):
         self.meta["z_order"] = []
 
     def apply_to(self, obj):
-        if obj is None:
-            raise ValueError("fov was None. Oops.")
-
-        if not isinstance(obj, (Source, FieldOfView)):
-            raise ValueError("fov must be a FieldOfView (or Source) object: {}"
-                             "".format(type(obj)))
+        if not isinstance(obj, (Source, FieldOfView, ImagePlane, Detector)):
+            raise ValueError("object must one of the following: "
+                             "Source, FieldOfView, ImagePlane, Detector: "
+                             "{}".format(type(obj)))
 
         return obj
 

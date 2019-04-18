@@ -143,8 +143,8 @@ class HXRGNoise:
         self.m_short = np.reshape(self.m_short, np.size(self.m_short))
 
         # Define frequency arrays
-        self.f1 = np.fft.rfftfreq(self.nstep) # Frequencies for nstep elements
-        self.f2 = np.fft.rfftfreq(2*self.nstep) # ... for 2*nstep elements
+        self.f1 = np.fft.rfftfreq(self.nstep)   # Frequencies for nstep elements
+        self.f2 = np.fft.rfftfreq(2*self.nstep)  # ... for 2*nstep elements
 
         # Define pinkening filters. F1 and p_filter1 are used to
         # generate ACN. F2 and p_filter2 are used to generate 1/f noise.
@@ -153,7 +153,6 @@ class HXRGNoise:
         self.p_filter2 = np.sqrt(self.f2**self.alpha)
         self.p_filter1[0] = 0.
         self.p_filter2[0] = 0.
-
 
         # Initialize pca0. This includes scaling to the correct size,
         # zero offsetting, and renormalization. We use robust statistics
@@ -168,7 +167,6 @@ class HXRGNoise:
             self.pca0 = hdu[0].data
         self.pca0 -= np.median(self.pca0) # Zero offset
         self.pca0 /= (1.4826*mad(self.pca0)) # Renormalize
-
 
     def message(self, message_text):
         """
@@ -232,8 +230,6 @@ class HXRGNoise:
 
         # Done
         return(result)
-
-
 
     def mknoise(self, o_file, rd_noise=None, pedestal=None, c_pink=None,
                 u_pink=None, acn=None, pca0_amp=None,
@@ -353,7 +349,6 @@ class HXRGNoise:
             for z in np.arange(self.naxis3):
                 result[z,:,:] += bias_pattern
 
-
         # Make white read noise. This is the same for all pixels.
         self.message('Generating rd_noise')
         w = self.reference_pixel_border_width # Easier to work with
@@ -362,25 +357,24 @@ class HXRGNoise:
             here = np.zeros((self.naxis2, self.naxis1))
             if w > 0: # Ref. pixel border exists
                 # Add both reference and regular pixels
-                here[:w,:] = r * self.rd_noise * \
-                             np.random.standard_normal((w,self.naxis1))
-                here[-w:,:] = r * self.rd_noise * \
-                              np.random.standard_normal((w,self.naxis1))
-                here[:,:w] = r * self.rd_noise * \
-                             np.random.standard_normal((self.naxis1,w))
-                here[:,-w:] = r * self.rd_noise * \
-                              np.random.standard_normal((self.naxis1,w))
+                here[:w, :] = r * self.rd_noise * \
+                              np.random.standard_normal((w, self.naxis1))
+                here[-w:, :] = r * self.rd_noise * \
+                               np.random.standard_normal((w, self.naxis1))
+                here[:, :w] = r * self.rd_noise * \
+                              np.random.standard_normal((self.naxis1, w))
+                here[:, -w:] = r * self.rd_noise * \
+                               np.random.standard_normal((self.naxis1, w))
                 # Make noisy regular pixels
-                here[w:-w,w:-w] = self.rd_noise * \
-                                  np.random.standard_normal( \
-                                  (self.naxis2-2*w,self.naxis1-2*w))
+                here[w:-w, w:-w] = self.rd_noise * \
+                                  np.random.standard_normal((self.naxis2-2*w,
+                                                             self.naxis1-2*w))
             else: # Ref. pixel border does not exist
                 # Add only regular pixels
-                here = self.rd_noise * np.random.standard_normal((self.naxis2,\
+                here = self.rd_noise * np.random.standard_normal((self.naxis2,
                                                                   self.naxis1))
             # Add the noise in to the result
-            result[z,:,:] += here
-
+            result[z, :, :] += here
 
         # Add correlated pink noise.
         self.message('Adding c_pink noise')
@@ -392,18 +386,16 @@ class HXRGNoise:
             x1 = x0 + self.xsize
             if self.reverse_scan_direction is False:
                 # Teledyne's default fast-scan directions
-                if np.mod(op,2)==0:
-                    result[:,:,x0:x1] += tt
+                if np.mod(op, 2) == 0:
+                    result[:, :, x0:x1] += tt
                 else:
-                    result[:,:,x0:x1] += tt[:,:,::-1]
+                    result[:, :, x0:x1] += tt[:, :, ::-1]
             else:
                 # Reverse the fast-scan directions.
                 if np.mod(op,2)==1:
                     result[:,:,x0:x1] += tt
                 else:
                     result[:,:,x0:x1] += tt[:,:,::-1]
-
-
 
         # Add uncorrelated pink noise. Because this pink noise is stationary and
         # different for each output, we don't need to flip it.
@@ -413,8 +405,8 @@ class HXRGNoise:
             x1 = x0 + self.xsize
             tt = self.u_pink * self.pink_noise('pink')
             tt = np.reshape(tt, (self.naxis3, self.naxis2+self.nfoh, \
-                             self.xsize+self.nroh))[:,:self.naxis2,:self.xsize]
-            result[:,:,x0:x1] += tt
+                            self.xsize+self.nroh))[:,:self.naxis2,:self.xsize]
+            result[:, :, x0:x1] += tt
 
         # Add ACN
         self.message('Adding acn noise')
@@ -443,24 +435,22 @@ class HXRGNoise:
             x1 = x0 + self.xsize
             result[:,:,x0:x1] += acn_cube
 
-
         # Add PCA-zero. The PCA-zero template is modulated by 1/f.
         if self.pca0_amp > 0:
             self.message('Adding PCA-zero "picture frame" noise')
             gamma = self.pink_noise(mode='pink')
             zoom_factor = self.naxis2 * self.naxis3 / np.size(gamma)
             gamma = zoom(gamma, zoom_factor, order=1, mode='mirror')
-            gamma = np.reshape(gamma, (self.naxis3,self.naxis2))
+            gamma = np.reshape(gamma, (self.naxis3, self.naxis2))
             for z in np.arange(self.naxis3):
                 for y in np.arange(self.naxis2):
-                    result[z,y,:] += self.pca0_amp*self.pca0[y,:]*gamma[z,y]
-
+                    result[z, y, :] += self.pca0_amp*self.pca0[y, :]*gamma[z, y]
 
         # If the data cube has only 1 frame, reformat into a 2-dimensional
         # image.
         if self.naxis3 == 1:
             self.message('Reformatting cube into image')
-            result = result[0,:,:]
+            result = result[0, :, :]
 
         # If the data cube has more than one frame, convert to unsigned
         # integer

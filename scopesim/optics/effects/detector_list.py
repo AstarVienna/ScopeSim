@@ -42,8 +42,32 @@ class DetectorList(Effect):
         return hdr
 
     def detector_headers(self, ids=None):
-        """Return the header to describe each individual detector"""
-        raise NotImplementedError
+
+        if ids is None:
+            ids = range(len(self.table))
+
+        hdrs = []
+        for ii in ids:
+            row = self.table[ii]
+            xcen, ycen = row["x_cen"], row["y_cen"]
+            dx, dy = row["xhw"], row["yhw"]
+            cdelt = row["pixsize"]
+
+            hdr = header_from_list_of_xy([xcen-dx, xcen+dx], [ycen-dy, ycen+dy],
+                                         pixel_scale=cdelt, wcs_suffix="D")
+            if abs(row["angle"]) > 1E-4:
+                sang = np.sin(row["angle"] / 57.29578)
+                cang = np.cos(row["angle"] / 57.29578)
+                hdr["PC1_1"] = cang
+                hdr["PC1_2"] = sang
+                hdr["PC2_1"] = -sang
+                hdr["PC2_2"] = cang
+
+            hdr["GAIN"] = row["gain"]
+
+            hdrs += [hdr]
+
+        return hdrs
 
 
 def sky_hdr_from_detector_hdr(header, pixel_scale):

@@ -409,8 +409,8 @@ def rescale_imagehdu(imagehdu, pixel_scale, wcs_suffix="", conserve_flux=True,
     imagehdu : fits.ImageHDU
 
     """
-    s = wcs_suffix
-    s0 = s[0] if len(s) > 0 else ""
+    wcs_suffix = wcs_suffix
+    s0 = wcs_suffix[0] if len(wcs_suffix) > 0 else ""
     cdelt1 = imagehdu.header["CDELT1"+s0]
     cdelt2 = imagehdu.header["CDELT2"+s0]
 
@@ -429,8 +429,8 @@ def rescale_imagehdu(imagehdu, pixel_scale, wcs_suffix="", conserve_flux=True,
 
         imagehdu.data = new_im
 
-        for ii in range(max(1, len(s))):
-            si = s[ii] if len(s) > 0 else ""
+        for ii in range(max(1, len(wcs_suffix))):
+            si = wcs_suffix[ii] if len(wcs_suffix) > 0 else ""
             imagehdu.header["CRPIX1"+si] *= zoom1
             imagehdu.header["CRPIX2"+si] *= zoom2
             imagehdu.header["CDELT1"+si] = pixel_scale
@@ -505,7 +505,7 @@ def add_imagehdu_to_imagehdu(image_hdu, canvas_hdu, order=1, wcs_suffix="",
         The ``ImageHDU`` which will be reprojected onto `canvas_hdu`
 
     canvas_hdu : fits.ImageHDU
-        The ``ImageHDU`` onto which the table files should be projected.
+        The ``ImageHDU`` onto which the image_hdu should be projected.
         This must include a valid WCS
 
     order : int, optional
