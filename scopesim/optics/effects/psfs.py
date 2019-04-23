@@ -130,6 +130,7 @@ class FieldConstantPSF(DiscretePSF):
         return {"wavelengths": self.waveset}
 
     def get_kernel(self, fov):
+        # .. todo: Add in wavelength dependency
         # fov_wave = 0.5 * (fov.meta["wave_min"] + fov.meta["wave_max"])
         # ii = nearest_index(fov_wave, self.waveset)
         # ext = self.kernel_indexes[ii]
@@ -268,8 +269,6 @@ def make_strehl_map_from_table(tbl, pixel_scale=1*u.arcsec):
     map_hdu = fits.ImageHDU(header=hdr, data=map)
 
     return map_hdu
-
-
 
 
 def resize_array(image, scale_factor, order=1):

@@ -151,3 +151,37 @@ class TestObserve:
 
         assert final_sum == approx(5*orig_sum, rel=1e-3)
 
+
+@pytest.mark.usefixtures("cmds", "im_src", "tbl_src")
+class TestReadout:
+    def test_readout_zeros_when_no_source_observed(self, cmds, im_src):
+        opt = OpticalTrain(cmds)
+        opt.observe(im_src)
+        hdu = opt.readout()
+
+        assert np.sum(hdu[1].data) == np.sum(im_src.fields[0].data)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

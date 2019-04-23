@@ -11,7 +11,7 @@ class Effect(DataContainer):
         super(Effect, self).__init__(**kwargs)
         self.meta["z_order"] = []
 
-    def apply_to(self, obj):
+    def apply_to(self, obj, **kwargs):
         if not isinstance(obj, (Source, FieldOfView, ImagePlane, Detector)):
             raise ValueError("object must one of the following: "
                              "Source, FieldOfView, ImagePlane, Detector: "

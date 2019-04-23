@@ -2,8 +2,8 @@ import numpy as np
 from astropy import units as u
 
 from ... import utils
-from .effects import Effect
 from ..image_plane_utils import header_from_list_of_xy, calc_footprint
+from .effects import Effect
 
 
 class DetectorList(Effect):

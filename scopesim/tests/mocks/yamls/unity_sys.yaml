@@ -36,7 +36,6 @@ effects :
 
 - name: detector array list
   class: DetectorList
-  z_order: [10, 100, 500]
   kwargs:
     array_dict: {"id": [1], "x_cen": [0], "y_cen":[0], "xhw": [16],
                  "yhw": [16], "pixsize": [1.], "angle": [0.], "gain": [1.0]}

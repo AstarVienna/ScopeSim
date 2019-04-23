@@ -43,7 +43,7 @@ from . import utils
 
 from . import spectral
 from . import spatial
-from . import psf
+from scopesim.optics import OLD_psf
 
 from . import detector
 from . import optics

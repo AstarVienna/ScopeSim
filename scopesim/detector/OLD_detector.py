@@ -101,11 +101,11 @@ from astropy.wcs import WCS
 
 #from astropy.stats.funcs import median_absolute_deviation as mad
 
-from .utils import find_file, airmass2zendist
+from scopesim.utils import find_file, airmass2zendist
 
-from . import spectral as sc
+from scopesim import spectral as sc
 from scopesim.commands import user_commands
-from .nghxrg import HXRGNoise
+from scopesim.detector.nghxrg import HXRGNoise
 
 __all__ = ["Detector", "Chip", "open", "plot_detector", "plot_detector_layout",
            "make_noise_cube", "install_noise_cube"]
@@ -168,7 +168,7 @@ class Detector(object):
 
     .. todo::
 
-        Open should be moved into a general function for detector.py which
+        Open should be moved into a general function for OLD_detector.py which
         returns a :class:`.Detector` object after reading in a saved detector
         file
 
@@ -1094,7 +1094,6 @@ class Chip(object):
 
         """
 
-        from astropy.table import Table
         from astropy.table import Table
 
         if isinstance(curve, str):

@@ -115,7 +115,7 @@ from astropy.convolution import Kernel2D
 from astropy.modeling.core import Fittable2DModel
 from astropy.modeling.parameters import Parameter
 
-from . import utils
+from scopesim import utils
 
 
 ## TODO

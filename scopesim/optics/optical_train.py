@@ -65,8 +65,7 @@ class OpticalTrain:
                                       **self.optics_manager.meta)
         self.image_plane = ImagePlane(self.optics_manager.image_plane_header,
                                       **self.optics_manager.meta)
-        self.detector_array = DetectorArray(self.optics_manager.detector_effects,
-                                            **self.optics_manager.meta)
+        self.detector_array = DetectorArray(**self.optics_manager.meta)
 
     def observe(self, orig_source, **kwargs):
         """
@@ -108,10 +107,32 @@ class OpticalTrain:
         for effect in self.optics_manager.image_plane_effects:
             self.image_plane = effect.apply_to(self.image_plane)
 
-    def readout(self, **kwargs):
+    def readout(self, filename=None, **kwargs):
+        """
+
+        Parameters
+        ----------
+        filename : str
+        kwargs
+
+        Returns
+        -------
+        hdu : fits.HDUList
+
+        Notes
+        -----
+        - Apply detector plane (0D, 2D) effects - z_order = 500..599
+
+        """
+
         hdu = None
         if self.detector_array is not None:
-            hdu = self.detector_array.readout(self.image_plane, **kwargs)
+            dtcr_effects = self.optics_manager.detector_effects
+            hdu = self.detector_array.readout(self.image_plane, dtcr_effects,
+                                              **kwargs)
+
+        if filename is not None and isinstance(filename, str):
+            hdu.writeto(filename, overwrite=True)
 
         return hdu
 

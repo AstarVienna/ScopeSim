@@ -35,7 +35,7 @@ class OpticalElement:
         elif isinstance(z_level, (tuple, list)):
             zmin, zmax = z_level[:2]
         else:
-            zmin, zmax = 0, 500
+            zmin, zmax = 0, 600
 
         effects = []
         for eff in self.effects:

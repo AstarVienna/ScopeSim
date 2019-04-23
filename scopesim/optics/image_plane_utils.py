@@ -516,29 +516,32 @@ def add_imagehdu_to_imagehdu(image_hdu, canvas_hdu, order=1, wcs_suffix="",
         To determine which WCS to use. "" for sky HDUs and "D" for
         ImagePlane HDUs
 
+    conserve_flux : bool
+        Default is True. Used when zooming and rotating to keep flux constant.
+
     Returns
     -------
     canvas_hdu : fits.ImageHDU
 
     """
 
-    s = wcs_suffix
+    # .. todo: Add a catch for projecting a large image onto a small canvas
+
     if isinstance(image_hdu.data, u.Quantity):
-        unit = image_hdu.data.unit
         image_hdu.data = image_hdu.data.value
-    pixel_scale = canvas_hdu.header["CDELT1"+s]
+    pixel_scale = canvas_hdu.header["CDELT1"+wcs_suffix]
 
     new_hdu = rescale_imagehdu(image_hdu, pixel_scale=pixel_scale,
-                               wcs_suffix=s, order=order,
+                               wcs_suffix=wcs_suffix, order=order,
                                conserve_flux=conserve_flux)
-    new_hdu = reorient_imagehdu(new_hdu, wcs_suffix=s, order=order,
+    new_hdu = reorient_imagehdu(new_hdu, wcs_suffix=wcs_suffix, order=order,
                                 conserve_flux=conserve_flux)
 
     xcen_im = new_hdu.header["NAXIS1"] // 2
     ycen_im = new_hdu.header["NAXIS2"] // 2
 
-    xsky0, ysky0 = pix2val(new_hdu.header, xcen_im, ycen_im, s)
-    xpix0, ypix0 = val2pix(canvas_hdu.header, xsky0, ysky0, s)
+    xsky0, ysky0 = pix2val(new_hdu.header, xcen_im, ycen_im, wcs_suffix)
+    xpix0, ypix0 = val2pix(canvas_hdu.header, xsky0, ysky0, wcs_suffix)
     canvas_hdu.data = overlay_image(new_hdu.data, canvas_hdu.data,
                                     coords=(xpix0, ypix0))
 

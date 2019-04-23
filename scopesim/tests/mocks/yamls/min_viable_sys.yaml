@@ -23,7 +23,7 @@ effects:
 - name: Delta PSF
   class: PSF
 
-- name: Scope Surface List
+- name: Telescope Surface List
   class: SurfaceList
   kwargs:
     array_dict: {"Name": ["M1", "M2"], "Outer": [2., 1.], "Inner": [0., 0.],

@@ -7,6 +7,7 @@ from scopesim.optics.image_plane import ImagePlane
 from scopesim.detector import DetectorArray
 from scopesim.tests.mocks.py_objects import effects_objects as efs_objs
 
+
 @pytest.fixture(scope="function")
 def detector_list_effect():
     return efs_objs._detector_list()
@@ -46,4 +47,5 @@ class TestReadout:
         dtcr_arr = DetectorArray()
         hdu = dtcr_arr.readout(image_plane, effects)
 
-        assert hdu[0].data[0, 0] == 0
+        assert np.all(hdu[1].data == 0)
+        assert hdu[1].shape[0] == effects[0].table["x_len"]

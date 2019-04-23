@@ -108,7 +108,7 @@ import astropy.units as u
 from .source_utils import scale_spectrum, spectrum_sum_over_range
 from ..spectral import TransmissionCurve, EmissionCurve,\
     UnityCurve, BlackbodyCurve
-from .. import psf as sim_psf
+from scopesim.optics import OLD_psf as sim_psf
 from .. import utils
 
 
