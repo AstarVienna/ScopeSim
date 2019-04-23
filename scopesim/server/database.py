@@ -479,7 +479,6 @@ def list_all():
     """
     Prints all the packages on the server and on the local disk to screen
 
-
     See Also
     --------
     :func:`.list_instruments`

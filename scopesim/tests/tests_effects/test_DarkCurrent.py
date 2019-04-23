@@ -27,5 +27,3 @@ class TestApplyTo:
         assert np.sum(dtcr.data) == level * dit * (hw * 2)**2
 
 
-
-

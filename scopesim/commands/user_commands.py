@@ -174,7 +174,7 @@ class UserCommands(object):
         >>> empty_cmds = scopesim.UserCommands()
         >>> micado_cmds = scopesim.UserCommands(instrument="MICADO")
         >>> mcao_wide_cmds = scopesim.UserCommands(instrument="MICADO",
-        ...                                       mode="MODE_MCAO_WISE")
+        ...                                        mode="MODE_MCAO_WIDE")
 
     To list the keywords that are available and their values::
 
@@ -234,7 +234,7 @@ class UserCommands(object):
         if sim_data_dir is not None:
             self.cmds['SIM_DATA_DIR'] = sim_data_dir
 
-        if self.cmds["SIM_PSF_OVERSAMPLE"] == "yes":
+        if self.cmds["SIM_OVERSAMPLING"] == "yes":
             self.cmds["PSF_MODE"] = "oversample"
         else:
             self.cmds["PSF_MODE"] = "linear_interp"

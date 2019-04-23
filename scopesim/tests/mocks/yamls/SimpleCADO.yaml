@@ -1,0 +1,22 @@
+### DETECTOR
+object: detector
+name: test_detector
+
+effects:
+- name: SimpleCADO detector array list
+  class: DetectorList
+  kwargs:
+    array_dict: {"id": [1], "pixsize": [0.015], "angle": [0.], "gain": [1.0],
+                 "x_cen": [0], "y_cen":[0], "xhw": [2048], "yhw": [2048]}
+    x_cen_unit : mm
+    y_cen_unit : mm
+    xhw_unit : mm
+    yhw_unit : mm
+    pixsize_unit : mm
+    angle_unit : deg
+    gain_unit : electron/adu
+
+- name: SimpleCADO dark current
+  class: DarkCurrent
+  kwargs:
+    value: 0.1    # [e-/s] level of dark current
