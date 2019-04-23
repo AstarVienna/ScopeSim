@@ -2,8 +2,8 @@ import warnings
 
 from astropy.io import fits
 
-from ..optics.effects.effects_utils import get_all_effects
-from ..optics import effects as efs
+from ..effects.effects_utils import get_all_effects
+from .. import effects as efs
 
 from . import Detector
 
@@ -65,6 +65,7 @@ class DetectorArray:
                     detector = effect.apply_to(detector, **self.meta)
 
             # 4. add necessary header keywords
+            # .. todo: add keywords
 
         # 5. Generate a HDUList with the ImageHDUs and any extras:
         pri_hdu = make_primary_hdu(self.meta)

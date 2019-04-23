@@ -1,11 +1,7 @@
 import os
-import pytest
-from pytest import approx
-
-from astropy import units as u
 
 import scopesim as sim
-from scopesim.optics.effects import DetectorList
+from scopesim.effects import DetectorList
 
 MOCK_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),
                                          "../mocks/MICADO_SCAO_WIDE/"))

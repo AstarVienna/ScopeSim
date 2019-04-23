@@ -1,7 +1,7 @@
 import pytest
 
 from scopesim.optics import optical_element as opt_elem
-from scopesim.optics.effects import GaussianDiffractionPSF
+from scopesim.effects import GaussianDiffractionPSF
 from scopesim.tests.mocks.py_objects.yaml_objects import _atmo_yaml_dict, \
     _detector_yaml_dict
 

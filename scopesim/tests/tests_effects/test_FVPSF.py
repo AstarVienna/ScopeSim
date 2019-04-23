@@ -19,7 +19,6 @@
 #   - psf : returns self, as array returns a layer based on defaults
 
 import os
-from copy import deepcopy
 import pytest
 from pytest import approx
 
@@ -30,18 +29,12 @@ from astropy.io import fits
 import scopesim as sim
 from scopesim.optics.fov import FieldOfView
 from scopesim.optics import image_plane_utils as imp_utils
-from scopesim.optics.optical_train import OpticalTrain
-from scopesim.utils import find_file
-from scopesim.commands.user_commands2 import UserCommands
-from scopesim.optics.effects.psfs import FieldVaryingPSF
-from scopesim.optics.effects import psfs
+from scopesim.effects import FieldVaryingPSF, psfs
 
-from scopesim.tests.mocks.py_objects.source_objects import _image_source, \
-    _single_table_source
 from scopesim.tests.mocks.py_objects.psf_objects import _basic_circular_fvpsf
 
 import matplotlib.pyplot as plt
-from matplotlib.colors import LogNorm
+
 PLOTS = False
 
 FILES_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),

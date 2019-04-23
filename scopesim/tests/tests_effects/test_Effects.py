@@ -5,9 +5,9 @@ import pytest
 from astropy.table import Table
 
 import scopesim as sim
-from scopesim.optics.effects import Effect
-from scopesim.optics.effects.spectroscopy_effects import ApertureList
-from scopesim.optics.effects.surface_list import SurfaceList
+from scopesim.effects import Effect
+from scopesim.effects import ApertureList
+from scopesim.effects import SurfaceList
 
 MOCK_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),
                                          "../mocks/MICADO_SCAO_WIDE/"))

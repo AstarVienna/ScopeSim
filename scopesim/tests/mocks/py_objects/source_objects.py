@@ -95,3 +95,35 @@ def _single_table_source():
     tbl_source = Source(table=tbl, spectra=specs)
 
     return tbl_source
+
+
+def _unity_source(dx=0, dy=0, angle=0, weight=1):
+    n = 100
+    unit = u.Unit("ph s-1 m-2 um-1")
+    wave = np.linspace(0.5, 2.5, n) * u.um
+    specs = [SourceSpectrum(Empirical1D, points=wave,
+                            lookup_table=np.ones(n) * unit)]
+
+    im_wcs = wcs.WCS(naxis=2)
+    im_wcs.wcs.cunit = [u.arcsec, u.arcsec]
+    im_wcs.wcs.cdelt = [1, 1]
+    im_wcs.wcs.crval = [0, 0]
+    im_wcs.wcs.crpix = [n/2, n/2]
+    im_wcs.wcs.ctype = ["RA---TAN", "DEC--TAN"]
+
+    im = np.ones((n, n))
+
+    im_hdu = fits.ImageHDU(data=im, header=im_wcs.to_header())
+    im_hdu.header["SPEC_REF"] = 0
+    im_source = Source(image_hdu=im_hdu, spectra=specs)
+
+    angle = angle * np.pi / 180
+    im_source.fields[0].header["CRVAL1"] += dx * u.arcsec.to(u.deg)
+    im_source.fields[0].header["CRVAL2"] += dy * u.arcsec.to(u.deg)
+    im_source.fields[0].header["PC1_1"] = np.cos(angle)
+    im_source.fields[0].header["PC1_2"] = np.sin(angle)
+    im_source.fields[0].header["PC2_1"] = -np.sin(angle)
+    im_source.fields[0].header["PC2_2"] = np.cos(angle)
+    im_source.fields[0].data *= weight
+
+    return im_source

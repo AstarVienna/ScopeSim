@@ -1,12 +1,10 @@
 import numpy as np
-from astropy import units as u
 
-from .effects.shifts import Shift3D
-from .. import utils
-from . import effects as efs
+from scopesim.effects.shifts import Shift3D
+from scopesim import effects as efs
 from .fov import FieldOfView
 from .image_plane_utils import header_from_list_of_xy
-from .effects.effects_utils import get_all_effects, is_spectroscope
+from ..effects.effects_utils import get_all_effects, is_spectroscope
 
 
 # 1. Find the Wavelength range

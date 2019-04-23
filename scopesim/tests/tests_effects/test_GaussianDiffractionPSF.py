@@ -4,7 +4,7 @@ from pytest import approx
 import numpy as np
 from astropy import units as u
 
-from scopesim.optics.effects import gaussian_diffraction_psf as gdf
+from scopesim.effects import gaussian_diffraction_psf as gdf
 from scopesim.optics.fov import FieldOfView
 from scopesim.optics.image_plane_utils import pix2val
 

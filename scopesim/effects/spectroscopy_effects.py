@@ -1,6 +1,6 @@
 from astropy.io import fits
 
-from ..image_plane_utils import calc_footprint
+from scopesim.optics.image_plane_utils import calc_footprint
 from .effects import Effect
 
 

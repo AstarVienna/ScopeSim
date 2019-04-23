@@ -1,8 +1,8 @@
-from ...source.source2 import Source
-from ...detector import Detector
-from ..fov import FieldOfView
-from ..image_plane import ImagePlane
-from ..data_container import DataContainer
+from scopesim.source.source2 import Source
+from scopesim.detector import Detector
+from scopesim.optics.fov import FieldOfView
+from scopesim.optics.image_plane import ImagePlane
+from scopesim.optics.data_container import DataContainer
 
 
 class Effect(DataContainer):

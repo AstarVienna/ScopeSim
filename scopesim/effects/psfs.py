@@ -8,10 +8,10 @@ from scipy.interpolate import griddata
 from astropy.io import fits
 from astropy import units as u
 
-from ... import utils
-from ... import rc
-from ..fov import FieldOfView
-from .. import image_plane_utils as imp_utils
+from scopesim import utils
+from scopesim import rc
+from scopesim.optics.fov import FieldOfView
+from scopesim.optics import image_plane_utils as imp_utils
 from .effects import Effect
 
 

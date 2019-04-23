@@ -2,7 +2,7 @@ import numpy as np
 from astropy import units as u
 from astropy.convolution import Gaussian2DKernel
 
-from ... import utils
+from scopesim import utils
 from .psfs import AnalyticalPSF
 
 

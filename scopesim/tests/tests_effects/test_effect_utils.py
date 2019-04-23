@@ -2,12 +2,11 @@ import os
 import pytest
 
 import scopesim as sim
-from scopesim.optics.effects import effects_utils as e_utils, \
-    GaussianDiffractionPSF, SurfaceList
+from scopesim.effects import effects_utils as e_utils
+from scopesim.effects import GaussianDiffractionPSF, SurfaceList
 from scopesim.tests.mocks.py_objects.effects_objects import _surf_list, \
     _surf_list_empty, _filter_surface
-from scopesim.tests.mocks.py_objects.yaml_objects import _atmo_yaml_dict, \
-    _detector_yaml_dict
+from scopesim.tests.mocks.py_objects.yaml_objects import _atmo_yaml_dict
 
 MOCK_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),
                                          "../mocks/MICADO_SCAO_WIDE/"))

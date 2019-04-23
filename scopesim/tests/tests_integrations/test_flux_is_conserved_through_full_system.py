@@ -1,13 +1,10 @@
 import os
-from copy import deepcopy
 import pytest
 from pytest import approx
 
 import numpy as np
-from astropy import units as u
 
 import scopesim as sim
-from scopesim.optics import image_plane_utils as imp_utils
 from scopesim.optics.optical_train import OpticalTrain
 from scopesim.utils import find_file
 from scopesim.commands.user_commands2 import UserCommands
@@ -54,12 +51,14 @@ class TestObserve:
         im = opt.image_plane.image
         bg_flux = np.pi / 4 * np.prod(im.shape)
         src_flux = tbl_src.photons_in_range(1, 2, 1)[0].value
-        assert src_flux == approx(1)          # u.Unit("ph s-1")
-        assert np.sum(im) == approx(src_flux + bg_flux, rel=2e-3)
-        # given a 1 um bandpass
 
         if PLOTS is False:
             plt.imshow(opt.image_plane.image.T, origin="lower", norm=LogNorm())
             plt.colorbar()
             plt.show()
 
+        assert src_flux == approx(1)          # u.Unit("ph s-1")
+        assert np.sum(im) == approx(src_flux + bg_flux, rel=2e-3)
+        print(src_flux, bg_flux)
+
+        # given a 1 um bandpass

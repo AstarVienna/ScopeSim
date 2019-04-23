@@ -6,7 +6,7 @@ from matplotlib import pyplot as plt
 from synphot import SpectralElement, SourceSpectrum
 
 import scopesim as sim
-from scopesim.optics.effects.ter_curves import TERCurve
+from scopesim.effects import TERCurve
 from scopesim.optics.surface import SpectralSurface
 
 PLOTS = False

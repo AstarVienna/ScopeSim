@@ -2,7 +2,7 @@ import pytest
 from astropy.io import fits
 
 from scopesim.optics import optics_manager as opt_mgr
-from scopesim.optics.effects import Effect
+from scopesim.effects import Effect
 
 from scopesim.tests.mocks.py_objects.yaml_objects import\
     _inst_yaml_dict, _detector_yaml_dict

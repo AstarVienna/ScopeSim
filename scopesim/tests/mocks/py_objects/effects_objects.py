@@ -3,8 +3,8 @@ import os
 from astropy import units as u
 from astropy.table import Table
 
-from scopesim.optics import effects as efs
-from scopesim.optics.effects.effects_utils import make_effect
+from scopesim import effects as efs
+from scopesim.effects.effects_utils import make_effect
 from scopesim.tests.mocks.py_objects.yaml_objects import _yaml_min_viable_scope
 
 import scopesim as sim

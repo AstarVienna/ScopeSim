@@ -1,5 +1,5 @@
-from . import effects as efs
-from .effects.effects_utils import make_effect, get_all_effects
+from .. import effects as efs
+from ..effects.effects_utils import make_effect, get_all_effects
 
 
 class OpticalElement:

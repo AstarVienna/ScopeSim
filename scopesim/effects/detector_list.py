@@ -1,8 +1,8 @@
 import numpy as np
 from astropy import units as u
 
-from ... import utils
-from ..image_plane_utils import header_from_list_of_xy, calc_footprint
+from scopesim import utils
+from scopesim.optics.image_plane_utils import header_from_list_of_xy, calc_footprint
 from .effects import Effect
 
 

@@ -2,8 +2,8 @@ import warnings
 
 from astropy import units as u
 
-from . import effects as efs
-from .effects.effects_utils import combine_surface_effects
+from .. import effects as efs
+from ..effects.effects_utils import combine_surface_effects
 from .optical_element import OpticalElement
 
 

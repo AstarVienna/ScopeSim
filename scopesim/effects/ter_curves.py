@@ -1,4 +1,4 @@
-from ..surface import SpectralSurface
+from scopesim.optics.surface import SpectralSurface
 from .effects import Effect
 
 

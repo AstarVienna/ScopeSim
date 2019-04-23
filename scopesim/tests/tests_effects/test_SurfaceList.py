@@ -8,7 +8,7 @@ from astropy import units as u
 from synphot import SourceSpectrum
 
 import scopesim as sim
-from scopesim.optics.effects.surface_list import SurfaceList
+from scopesim.effects import SurfaceList
 from scopesim.optics.radiometry import RadiometryTable
 
 from scopesim.tests.mocks.py_objects.source_objects import _image_source

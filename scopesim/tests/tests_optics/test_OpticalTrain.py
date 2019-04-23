@@ -8,19 +8,14 @@ from astropy import units as u
 
 import scopesim as sim
 from scopesim.optics.fov_manager import FOVManager
-from scopesim.optics import fov_manager as fov_mgr
 from scopesim.optics.image_plane import ImagePlane
 from scopesim.optics.optical_train import OpticalTrain
 from scopesim.optics.optics_manager import OpticsManager
-from scopesim.utils import find_file
 from scopesim.commands.user_commands2 import UserCommands
-from scopesim.optics.effects.ter_curves import TERCurve
+from scopesim.utils import find_file
 
-from scopesim.tests.mocks.py_objects.effects_objects import _mvs_effects_list
-from scopesim.tests.mocks.py_objects.yaml_objects import \
-    _usr_cmds_min_viable_scope
-from scopesim.tests.mocks.py_objects.source_objects import _image_source, \
-    _table_source
+from scopesim.tests.mocks.py_objects import source_objects as src_objs
+
 
 import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm
@@ -39,19 +34,33 @@ def _basic_cmds():
     return UserCommands(filename=find_file("CMD_mvs_cmds.config"))
 
 
+def _unity_cmds():
+    return UserCommands(filename=find_file("CMD_unity_cmds.config"))
+
+
 @pytest.fixture(scope="function")
 def cmds():
-    return _basic_cmds()
+    return _basic_cmds()\
+
+
+@pytest.fixture(scope="function")
+def unity_cmds():
+    return _unity_cmds()
 
 
 @pytest.fixture(scope="function")
 def tbl_src():
-    return _table_source()
+    return src_objs._table_source()
 
 
 @pytest.fixture(scope="function")
 def im_src():
-    return _image_source()
+    return src_objs._image_source()
+
+
+@pytest.fixture(scope="function")
+def unity_src():
+    return src_objs._unity_source()
 
 
 @pytest.mark.usefixtures("cmds")
@@ -152,36 +161,27 @@ class TestObserve:
         assert final_sum == approx(5*orig_sum, rel=1e-3)
 
 
-@pytest.mark.usefixtures("cmds", "im_src", "tbl_src")
+@pytest.mark.usefixtures("unity_cmds", "unity_src")
 class TestReadout:
-    def test_readout_zeros_when_no_source_observed(self, cmds, im_src):
-        opt = OpticalTrain(cmds)
-        opt.observe(im_src)
+    def test_readout_works_when_source_observed(self, unity_cmds, unity_src):
+
+        opt = OpticalTrain(unity_cmds)
+        opt.observe(unity_src)
         hdu = opt.readout()
 
-        assert np.sum(hdu[1].data) == np.sum(im_src.fields[0].data)
+        if PLOTS:
+            plt.subplot(221)
+            plt.imshow(unity_src.fields[0].data)
+            plt.colorbar()
 
+            plt.subplot(222)
+            plt.imshow(opt.image_plane.image)
+            plt.colorbar()
 
+            plt.subplot(223)
+            plt.imshow(hdu[1].data)
+            plt.colorbar()
+            plt.show()
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+        src_average = np.average(unity_src.fields[0].data)
+        assert np.average(hdu[1].data) == approx(src_average, rel=1e-3)

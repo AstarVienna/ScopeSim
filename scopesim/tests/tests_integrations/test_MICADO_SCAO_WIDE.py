@@ -17,8 +17,6 @@
 # * a yaml file which contains the description of MICADO
 
 import os
-import pytest
-from pytest import approx
 
 import numpy as np
 from matplotlib import pyplot as plt
@@ -33,7 +31,7 @@ from scopesim.optics.optical_train import OpticalTrain
 from scopesim.optics.optics_manager import OpticsManager
 from scopesim.optics.fov_manager import FOVManager
 from scopesim.optics.image_plane import ImagePlane
-from scopesim.optics import effects as efs
+from scopesim import effects as efs
 
 TEST_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),
                             "../mocks/MICADO_SCAO_WIDE/"))
