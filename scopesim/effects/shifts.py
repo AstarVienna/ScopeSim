@@ -15,7 +15,27 @@ class AtmosphericDispersion(Shift3D):
     def __init__(self, **kwargs):
         super(AtmosphericDispersion, self).__init__(**kwargs)
 
+        """
+        Needed parameters from atmospheric optical element
+        altitude
+        latitude
+        airmass
+        temperature
+        humidity
+        pressure
+        waveset
+        """
 
-class AtmosphericDispersionCorrector(Shift3D):
+
+class AtmosphericDispersionCorrection(Shift3D):
     def __init__(self, **kwargs):
-        super(AtmosphericDispersionCorrector, self).__init__(**kwargs)
+        super(AtmosphericDispersionCorrection, self).__init__(**kwargs)
+
+    def apply_to(self, obj, **kwargs):
+        self.meta.update(kwargs)
+        airmass = self.meta["airmass"]
+        efficiency = self.meta["efficiency"] if "efficiency" in self.meta else 1
+
+        if airmass == "OBS_AIRMASS":
+            # use the same as the atmosphere uses
+            pass

@@ -16,3 +16,8 @@ class TERCurve(Effect):
 class AtmosphericTERCurve(TERCurve):
     def __init__(self, **kwargs):
         super(AtmosphericTERCurve, self).__init__(**kwargs)
+
+
+class SkycalcTERCurve(TERCurve):
+    def __init__(self, **kwargs):
+        super(SkycalcTERCurve, self).__init__(**kwargs)
