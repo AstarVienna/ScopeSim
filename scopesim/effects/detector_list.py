@@ -1,9 +1,11 @@
 import numpy as np
 from astropy import units as u
 
-from scopesim import utils
-from scopesim.optics.image_plane_utils import header_from_list_of_xy, calc_footprint
 from .effects import Effect
+from .. import utils
+from ..optics.image_plane_utils import header_from_list_of_xy, calc_footprint
+
+__all__ = ["DetectorList"]
 
 
 class DetectorList(Effect):

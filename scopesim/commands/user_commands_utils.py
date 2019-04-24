@@ -1,10 +1,6 @@
 import os
 from collections import OrderedDict
 
-# import shutil
-# import logging
-# from ..utils import find_file
-
 
 def read_config(config_str):
     """
@@ -216,8 +212,6 @@ def str_to_python_type(input_str):
     return output_str
 
 
-
-
 def convert_dict_strings_to_python_types(dic):
     """
     Converts all str python types to corresponding python type in a dictionary
@@ -248,6 +242,8 @@ def extract_filter_name(path_name):
     """Returns the name of a filter from the name of the file"""
     filt_name = os.path.basename(path_name).split(".")[0]
     return filt_name.replace("TC_filter_", "")
+
+
 
 
 ################################################################################
@@ -300,7 +296,6 @@ def extract_filter_name(path_name):
 #     else:
 #         path = os.path.dirname(path)
 #         shutil.copy(fname, path)
-#         logging.debug("Printed chip layout to file: "+path+"/"+fname)
 #
 #
 # def dump_defaults(filename=None, selection="freq"):

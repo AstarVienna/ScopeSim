@@ -19,10 +19,10 @@ from synphot.models import Empirical1D
 from synphot.units import PHOTLAM
 
 import scopesim as sim
-from scopesim.source import source2_utils
-from scopesim.source.source2 import Source
+from scopesim.source import source_utils
+from scopesim.source.source import Source
 
-from scopesim.source import source2 as src2
+from scopesim.source import source as src2
 from scopesim.optics.image_plane import ImagePlane
 from scopesim.utils import convert_table_comments_to_dict
 
@@ -304,14 +304,14 @@ class TestPhotonsInRange:
     def test_returns_correct_number_of_photons_for_one_spectrum(self, ii, n_ph,
                                                                 input_spectra):
         spec = input_spectra[ii]
-        counts = source2_utils.photons_in_range([spec], 1, 2)
+        counts = source_utils.photons_in_range([spec], 1, 2)
         assert np.isclose(counts.value, n_ph, rtol=2e-3)
 
     def test_returns_ones_for_unity_spectrum(self):
         flux = np.ones(11) * u.Unit("ph s-1 m-2 um-1")
         wave = np.linspace(1, 2, 11) * u.um
         spec = SourceSpectrum(Empirical1D, points=wave, lookup_table=flux)
-        counts = source2_utils.photons_in_range([spec], 1 * u.um, 2 * u.um)
+        counts = source_utils.photons_in_range([spec], 1 * u.um, 2 * u.um)
         assert counts.value == approx(1)
 
     @pytest.mark.parametrize("area, expected_units",
@@ -322,8 +322,8 @@ class TestPhotonsInRange:
         flux = np.ones(11) * u.Unit("ph s-1 m-2 um-1")
         wave = np.linspace(1, 2, 11) * u.um
         spec = SourceSpectrum(Empirical1D, points=wave, lookup_table=flux)
-        counts = source2_utils.photons_in_range([spec], 1 * u.um, 2 * u.um,
-                                                area=area)
+        counts = source_utils.photons_in_range([spec], 1 * u.um, 2 * u.um,
+                                               area=area)
         assert counts.unit == expected_units
 
     def test_returns_correct_half_flux_with_bandpass(self):
@@ -333,8 +333,8 @@ class TestPhotonsInRange:
         bandpass = SpectralElement(Empirical1D,
                                    points=np.linspace(1, 2, 13)*u.um,
                                    lookup_table=0.5 * np.ones(13))
-        counts = source2_utils.photons_in_range([spec], 1*u.um, 2*u.um,
-                                                bandpass=bandpass)
+        counts = source_utils.photons_in_range([spec], 1 * u.um, 2 * u.um,
+                                               bandpass=bandpass)
         assert counts.value == approx(0.5)
 
     @pytest.mark.parametrize("flux, area, expected",
@@ -350,19 +350,19 @@ class TestPhotonsInRange:
         bandpass = SpectralElement(Empirical1D,
                                    points=np.linspace(1, 2, 13)*u.um,
                                    lookup_table=0.5 * np.ones(13))
-        counts = source2_utils.photons_in_range([spec], 1*u.um, 2*u.um,
-                                                bandpass=bandpass,
-                                                area=area)
+        counts = source_utils.photons_in_range([spec], 1 * u.um, 2 * u.um,
+                                               bandpass=bandpass,
+                                               area=area)
         assert counts.value == approx(expected)
 
 
 class TestMakeImageFromTable:
     def test_returned_object_is_image_hdu(self):
-        hdu = source2_utils.make_imagehdu_from_table(x=[0], y=[0], flux=[1])
+        hdu = source_utils.make_imagehdu_from_table(x=[0], y=[0], flux=[1])
         assert isinstance(hdu, fits.ImageHDU)
 
     def test_imagehdu_has_wcs(self):
-        hdu = source2_utils.make_imagehdu_from_table(x=[0], y=[0], flux=[1])
+        hdu = source_utils.make_imagehdu_from_table(x=[0], y=[0], flux=[1])
         wcs_keys = ["CRPIX1", "CRVAL1", "CDELT1", "CUNIT1"]
         assert np.all([key in hdu.header.keys() for key in wcs_keys])
 
@@ -371,8 +371,8 @@ class TestMakeImageFromTable:
         x = np.linspace(-1.0001, 1.0001, 9)*u.arcsec
         y = np.linspace(-1.0001, 1.0001, 9)*u.arcsec
         flux = np.ones(len(x))
-        hdu = source2_utils.make_imagehdu_from_table(x=x, y=y, flux=flux,
-                                                     pix_scale=0.25*u.arcsec)
+        hdu = source_utils.make_imagehdu_from_table(x=x, y=y, flux=flux,
+                                                    pix_scale=0.25*u.arcsec)
         the_wcs = wcs.WCS(hdu)
         yy, xx = the_wcs.wcs_world2pix(y.to(u.deg), x.to(u.deg), 1)
         xx = np.floor(xx).astype(int)
@@ -384,8 +384,8 @@ class TestMakeImageFromTable:
         x = np.random.random(11)*u.arcsec
         y = np.random.random(11)*u.arcsec
         flux = np.ones(len(x))
-        hdu = source2_utils.make_imagehdu_from_table(x=x, y=y, flux=flux,
-                                                     pix_scale=0.1*u.arcsec)
+        hdu = source_utils.make_imagehdu_from_table(x=x, y=y, flux=flux,
+                                                    pix_scale=0.1*u.arcsec)
         the_wcs = wcs.WCS(hdu)
         yy, xx = the_wcs.wcs_world2pix(y.to(u.deg), x.to(u.deg), 1)
         xx = xx.astype(int)

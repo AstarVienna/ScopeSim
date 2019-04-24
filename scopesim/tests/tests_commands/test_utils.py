@@ -63,9 +63,9 @@ class TestReadConfig:
             cmd_utils.read_config(dodgy_multiline_string)
 
     def test_passes_when_given_filename_that_exist(self):
-        rc_file = os.path.join(rc.__pkg_dir__, ".simscoperc")
+        rc_file = os.path.join(rc.__pkg_dir__, ".scopesimrc")
         rc_dict = cmd_utils.read_config(rc_file)
-        assert rc_dict["SIM_LOGGING"] is False
+        assert rc_dict["SIM_SUB_PIXEL_ACCURACY"] is False
 
     def test_raises_exception_if_filename_doesnt_exist(self):
         with pytest.raises(ValueError):

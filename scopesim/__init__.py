@@ -19,44 +19,25 @@ warnings.simplefilter('ignore', category=AstropyWarning)
 
 from . import rc
 
-################################################################################
-#                         ENABLE/DISABLE LOGGING                               #
-################################################################################
-
-import logging
-
-if rc.__rc__["SIM_LOGGING"]:
-    logging.basicConfig(filename=rc.__rc__["SIM_LOGGING_FILE"],
-                        filemode='w',
-                        level=logging.getLevelName(
-                            rc.__rc__["SIM_LOGGING_LEVEL"]),
-                        format='%(asctime)s %(message)s',
-                        datefmt='%m/%d/%Y %I:%M:%S %p')
-    logging.info("ScopeSim imported, logging initiated")
-
 
 ################################################################################
 #                         IMPORT PACKAGE MODULES                               #
 ################################################################################
 
 # Import all the modules to go under ScopeSim
+from . import commands
+from . import source
+from . import optics
+from . import detector
+from . import effects
+from . import server
 from . import utils
 
-from . import spectral
-from . import spatial
-from scopesim.optics import OLD_psf
+# import specific classes from the modules to included in the global namespace
 
-from . import detector
-from . import optics
-from . import commands
-from .source import source
-
-from . import simulation
-
-# import specific Classes from the modules to be accessible in the global
-# namespace
 from .utils import bug_report
-from .utils import get_extras
+from .commands import UserCommands
+from .optics.optical_train import OpticalTrain
 
 
 ################################################################################

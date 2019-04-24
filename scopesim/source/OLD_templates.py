@@ -7,10 +7,10 @@ from astropy.io import ascii as ioascii, fits
 from scipy.ndimage import interpolation as spi
 
 from .. import rc, utils
-from ..spectral import EmissionCurve
+from ..OLD_spectral import EmissionCurve
 from ..utils import find_file
-from .source import Source
-from .source_utils import scale_spectrum, _scale_pickles_to_photons, \
+from .OLD_source import Source
+from .OLD_source_utils import scale_spectrum, _scale_pickles_to_photons, \
     _get_stellar_mass, _get_stellar_Mv, scale_spectrum_sb, _rebin
 
 

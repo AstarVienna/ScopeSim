@@ -1,6 +1,6 @@
 from copy import deepcopy
 
-from ..commands.user_commands2 import UserCommands
+from ..commands.user_commands import UserCommands
 from .optics_manager import OpticsManager
 from .fov_manager import FOVManager
 from .image_plane import ImagePlane

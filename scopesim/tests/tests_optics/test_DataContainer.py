@@ -12,7 +12,7 @@ import numpy as np
 from astropy.table import Table
 from astropy import units as u
 
-from scopesim.optics.data_container import DataContainer
+from scopesim.effects.data_container import DataContainer
 
 
 def mock_dir():

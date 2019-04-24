@@ -1,12 +1,3 @@
-import numpy as np
-
-from scopesim.effects.shifts import Shift3D
-from scopesim import effects as efs
-from .fov import FieldOfView
-from .image_plane_utils import header_from_list_of_xy
-from ..effects.effects_utils import get_all_effects, is_spectroscope
-
-
 # 1. Find the Wavelength range
 # Build from edges of throughput curve
 
@@ -35,6 +26,14 @@ from ..effects.effects_utils import get_all_effects, is_spectroscope
 # If Imaging
 # DetectorList, or ApertureMask, plus any shift from
 #   AtmosphericDispersion
+
+import numpy as np
+
+from ..effects.shifts import Shift3D
+from .. import effects as efs
+from .fov import FieldOfView
+from .image_plane_utils import header_from_list_of_xy
+from ..effects.effects_utils import get_all_effects, is_spectroscope
 
 
 class FOVManager:
@@ -85,6 +84,9 @@ class FOVManager:
         self._fovs_list = self.generate_fovs_list()
         return self._fovs_list
 
+    @property
+    def fov_footprints(self):
+        return None
 
 def get_3d_shifts(effects, **kwargs):
     """

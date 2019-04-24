@@ -3,7 +3,7 @@ import glob
 
 import numpy as np
 
-from scopesim import spectral as sc
+from scopesim import OLD_spectral as sc
 from scopesim.utils import find_file
 from scopesim import rc
 

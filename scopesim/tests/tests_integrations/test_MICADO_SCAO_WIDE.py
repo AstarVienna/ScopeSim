@@ -26,18 +26,19 @@ import synphot as sp
 from astropy import units as u
 
 import scopesim as sim
-from scopesim.commands.user_commands2 import UserCommands
+from scopesim.commands.user_commands import UserCommands
 from scopesim.optics.optical_train import OpticalTrain
 from scopesim.optics.optics_manager import OpticsManager
 from scopesim.optics.fov_manager import FOVManager
 from scopesim.optics.image_plane import ImagePlane
 from scopesim import effects as efs
+from scopesim.source.source import Source
 
 TEST_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),
                             "../mocks/MICADO_SCAO_WIDE/"))
-sim.rc.__search_path__ = [TEST_PATH]
+sim.rc.__search_path__ += [TEST_PATH]
 
-PLOTS = True
+PLOTS = False
 
 
 class Test_MICADO_MVP_YAML:
@@ -57,13 +58,11 @@ class Test_MICADO_MVP_YAML:
         assert isinstance(opt.fov_manager, FOVManager)
         assert len(opt.fov_manager.fovs) == 64
 
-        if not PLOTS:
+        if PLOTS:
             for fov in opt.fov_manager.fovs:
                 sky_cnrs, det_cnrs = fov.corners
                 plt.plot(sky_cnrs[0], sky_cnrs[1])
             plt.show()
-
-        from scopesim.source.source2 import Source
 
         r = np.arange(-25, 25)
         x, y = np.meshgrid(r, r)
@@ -76,6 +75,7 @@ class Test_MICADO_MVP_YAML:
         src = Source(x=x, y=y, ref=ref, weight=weight, spectra=[spec])
         opt.observe(src)
 
-        plt.imshow(opt.image_plane.image.T, origin="lower", norm=LogNorm())
-        plt.colorbar()
-        plt.show()
+        if PLOTS:
+            plt.imshow(opt.image_plane.image.T, origin="lower", norm=LogNorm())
+            plt.colorbar()
+            plt.show()

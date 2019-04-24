@@ -22,7 +22,7 @@ class TestBasicLoading:
             assert cpath == rc.__pkg_dir__
 
     def test_rc_file_is_read_in(self):
-        assert "SIM_LOGGING" in rc.__rc__
+        assert "SIM_VERBOSE" in rc.__rc__
 
     def test_has_version_info(self):
         assert __version__
@@ -30,10 +30,10 @@ class TestBasicLoading:
 
 class TestRcFile:
     def test_rcfile_exists(self):
-        assert os.path.exists(os.path.join(rc.__pkg_dir__, ".simscoperc"))
+        assert os.path.exists(os.path.join(rc.__pkg_dir__, ".scopesimrc"))
 
     def test_rc_file_readable_by_scopesim_parser(self):
-        rc_file =  os.path.join(rc.__pkg_dir__, ".simscoperc")
+        rc_file =  os.path.join(rc.__pkg_dir__, ".scopesimrc")
         rc_dict = read_config(rc_file)
         assert isinstance(rc_dict, dict)
         assert len(rc_dict) > 0

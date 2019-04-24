@@ -1,7 +1,7 @@
 from copy import deepcopy
 
-from scopesim.optics.radiometry_utils import empty_surface_list
-from scopesim import effects as efs
+from .. import effects as efs
+from ..optics.radiometry_utils import empty_surface_list
 
 
 def combine_surface_effects(surface_effects):

@@ -4,7 +4,7 @@ from astropy.io import fits
 from astropy.table import Table
 from synphot import SourceSpectrum, Empirical1D
 
-from scopesim.source.source2 import Source
+from scopesim.source.source import Source
 
 
 def _table_source():

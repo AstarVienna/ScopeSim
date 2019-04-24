@@ -7,7 +7,7 @@ from astropy.io import fits
 from astropy.table import Table, Column
 
 from . import image_plane_utils as imp_utils
-from ..source.source2 import Source
+from ..source.source import Source
 
 from .. import utils
 from .. import rc

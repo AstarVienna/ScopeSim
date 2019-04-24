@@ -5,7 +5,9 @@ ScopeSim: A python package to simulate telescope observations
 
 from datetime import datetime
 from distutils.core import setup
-import pytest  # not needed, but stops setup being included by sphinx.apidoc
+from setuptools import find_packages
+# not needed, but stops setup being included by sphinx.apidoc
+import pytest
 
 # Version number
 MAJOR = 0
@@ -34,14 +36,25 @@ def setup_package():
     setup(name = 'ScopeSim',
           version = VERSION,
           description = "Telescope observation simulator",
-          author = "Kieran Leschinski, Oliver Czoske, Miguel Verdugo",
-          author_email = """kieran.leschinski@unive.ac.at,
-                            oliver.czoske@univie.ac.at,
-                            miguel.verdugo@univie.ac.at""",
-          url = "http://homepage.univie.ac.at/kieran.leschinski/",
-          package_dir={'scopesim': '.'},
-          packages=['scopesim'],
+          author = "Kieran Leschinski",
+          author_email = "kieran.leschinski@unive.ac.at",
+          url = "https://github.com/astronomyk/ScopeSim",
+          package_dir={'scopesim': 'scopesim'},
+          packages=find_packages(),
           package_data = {'scopesim': []},
+          install_requires=["numpy>=1.13",
+                            "scipy>0.17",
+                            "astropy>1.1.2",
+                            "wget>3.0",
+                            "requests>2.0",
+                            "synphot>0.1",
+                            "matplotlib>1.5.0",
+                            "pyyaml>3", ],
+          classifiers=["Programming Language :: Python :: 3",
+                       "License :: OSI Approved :: MIT License",
+                       "Operating System :: OS Independent",
+                       "Intended Audience :: Science/Research",
+                       "Topic :: Scientific/Engineering :: Astronomy", ]
           )
 
 

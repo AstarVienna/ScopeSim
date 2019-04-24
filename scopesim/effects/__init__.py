@@ -1,12 +1,13 @@
 from .effects import *
 
 from .psfs import *
-from .gaussian_diffraction_psf import *
 from .shifts import *
 
 from .spectroscopy_effects import *
-from .surface_list import SurfaceList
+from .surface_list import *
 from .ter_curves import *
 
-from .detector_list import DetectorList
+from .detector_list import *
 from .electronic import *
+
+from . import effects_utils

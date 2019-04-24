@@ -4,7 +4,6 @@ import os
 import scopesim as sim
 import scopesim.server.database as sim_db
 
-
 _parent_path = "./test_downloads_dir/"
 
 
@@ -16,7 +15,7 @@ def temp_directory_structure():
 
     sim_db.download_package("MICADO")
     sim_db.download_package("ELT")
-    sim_db.download_package("MAORY_MCAO_4mas")
+    sim_db.download_package("test_fvpsf")
 
     # run tests
     yield
@@ -31,16 +30,19 @@ def cmd_micado():
     return cmd
 
 
-@pytest.mark.usefixtures("temp_directory_structure", "cmd_micado")
-class TestWorkFlowForBuildingUserCommands:
+# OLD TESTS FROM THE HYBRID SIMCADO v0.6-->v1.0 days
+# .. todo: need to be renewed
 
-    def test_make_user_commands_from_scratch(self, cmd_micado):
-        assert isinstance(cmd_micado, sim.UserCommands)
-
-    def test_psf_file_path_exists(self, cmd_micado):
-        assert os.path.exists(cmd_micado["SCOPE_PSF_FILE"])
-
-    def test_filter_file_path_exists(self, cmd_micado):
-        cmd_micado.select_filter("J")
-        assert os.path.exists(cmd_micado["INST_FILTER_TC"])
-
+# @pytest.mark.usefixtures("temp_directory_structure", "cmd_micado")
+# class TestWorkFlowForBuildingUserCommands:
+#
+#     def test_make_user_commands_from_scratch(self, cmd_micado):
+#         assert isinstance(cmd_micado, sim.UserCommands)
+#
+#     def test_psf_file_path_exists(self, cmd_micado):
+#         assert os.path.exists(cmd_micado["SCOPE_PSF_FILE"])
+#
+#     def test_filter_file_path_exists(self, cmd_micado):
+#         cmd_micado.select_filter("J")
+#         assert os.path.exists(cmd_micado["INST_FILTER_TC"])
+#

@@ -56,7 +56,6 @@ import os
 
 from copy import deepcopy
 import warnings
-#import logging    # not used
 
 import numpy as np
 from astropy import units as u

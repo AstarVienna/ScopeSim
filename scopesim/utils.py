@@ -570,10 +570,12 @@ def transverse_distance(angle, distance):
 
 def angle_in_arcseconds(distance, width):
     """
-    Returns the angular distance of an object in arcseconds. Units must be consistent
+    Returns the angular distance of an object in arcseconds.
+
+    Units must be consistent!
     """
 
-    return np.arctan2(width, distance)*u.rad.to(u.arcsec)
+    return np.arctan2(width, distance) * u.rad.to(u.arcsec)
 
 
 def bug_report():
@@ -584,7 +586,7 @@ def bug_report():
     except ImportError:
         import_module = __import__
 
-    packages = ["scopesim", "astropy", "numpy", "scipy", "poppy", "wget"]
+    packages = ["scopesim", "astropy", "numpy", "scipy", "wget", "synphot"]
 
     # Check Python version
     print("Python:\n", sys.version)

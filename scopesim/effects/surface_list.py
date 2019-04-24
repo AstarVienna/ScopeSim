@@ -5,11 +5,11 @@ from astropy import units as u
 from synphot import SourceSpectrum, SpectralElement
 from synphot.models import Empirical1D
 
-from scopesim import rc
-from scopesim import utils
-from scopesim.source.source2 import Source
-from scopesim.optics.radiometry import RadiometryTable
-from scopesim.optics.image_plane import ImagePlane
+from .. import rc
+from .. import utils
+from ..source.source import Source
+from ..optics.radiometry import RadiometryTable
+from ..optics.image_plane import ImagePlane
 from .effects import Effect
 from .ter_curves import TERCurve
 

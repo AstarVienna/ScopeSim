@@ -1,6 +1,6 @@
 import pytest
 
-from scopesim.commands import user_commands as usr_cmds
+from scopesim.commands import OLD_user_commands as usr_cmds
 
 # .. todo:: finish the tests for checking instrument and filter
 
@@ -20,13 +20,14 @@ class TestUserCommandsInit:
         assert empty_cmds.cmds["SIM_ATMOSPHERE_YAML"] is None
 
     def test_str_booleans_are_converted_to_booleans(self, empty_cmds):
-        assert empty_cmds.cmds["SIM_LOGGING"] is False
+        assert empty_cmds.cmds["SIM_SUB_PIXEL_ACCURACY"] is False
 
     def test_str_floats_are_converted_to_floats(self, empty_cmds):
         assert empty_cmds.cmds["SIM_SIM_MESSAGE_LEVEL"] == 3.
 
     def test_multiline_str_accepted_as_argument_for_filename(self):
-        file_str = "SIM_LOGGING True \n SIM_SIM_MESSAGE_LEVEL None # comment"
+        file_str = "SIM_SUB_PIXEL_ACCURACY True \n " \
+                   "SIM_SIM_MESSAGE_LEVEL None # comment"
         cmds = usr_cmds.UserCommands(file_str)
         assert isinstance(cmds, usr_cmds.UserCommands)
 

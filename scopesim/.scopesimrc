@@ -22,9 +22,6 @@ SIM_SUB_PIXEL_FRACTION    1                 # full pixel shift
 
 SIM_VERBOSE               no                # [yes/no] print information on the simulation run
 SIM_SIM_MESSAGE_LEVEL     3                 # the amount of information printed [5-everything, 0-nothing]
-SIM_LOGGING               False
-SIM_LOGGING_LEVEL         INFO              # Use the python.logging levels
-SIM_LOGGING_FILE          ./simcado.log
 
 SIM_RANDOM_SEED           42                # Seed value for numpy random function. Enables reproducibility of randomness
 
