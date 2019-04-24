@@ -26,6 +26,7 @@ SIM_LOGGING               False
 SIM_LOGGING_LEVEL         INFO              # Use the python.logging levels
 SIM_LOGGING_FILE          ./simcado.log
 
+SIM_RANDOM_SEED           42                # Seed value for numpy random function. Enables reproducibility of randomness
 
 ################################################################################
 #                             SERVER DOWNLOADS                                 #

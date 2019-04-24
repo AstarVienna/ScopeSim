@@ -10,7 +10,8 @@ class Detector:
     def __init__(self, header, **kwargs):
         image = np.zeros((header["NAXIS1"], header["NAXIS2"]))
         self.image_hdu = fits.ImageHDU(header=header, data=image)
-        self.meta = kwargs
+        self.meta = {}
+        self.meta.update(kwargs)
 
     def extract(self, image_plane, order=1):
         if not isinstance(image_plane, ImagePlane):

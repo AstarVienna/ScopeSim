@@ -41,7 +41,7 @@ def setup_package():
           url = "http://homepage.univie.ac.at/kieran.leschinski/",
           package_dir={'scopesim': '.'},
           packages=['scopesim'],
-          package_data = {'scopesim': ['data/*']},
+          package_data = {'scopesim': []},
           )
 
 

@@ -7,7 +7,7 @@ effects:
   class: DetectorList
   kwargs:
     array_dict: {"id": [1], "pixsize": [0.015], "angle": [0.], "gain": [1.0],
-                 "x_cen": [0], "y_cen":[0], "xhw": [2048], "yhw": [2048]}
+                 "x_cen": [0], "y_cen":[0], "xhw": [30.72], "yhw": [30.72]}
     x_cen_unit : mm
     y_cen_unit : mm
     xhw_unit : mm
@@ -19,4 +19,4 @@ effects:
 - name: SimpleCADO dark current
   class: DarkCurrent
   kwargs:
-    value: 0.1    # [e-/s] level of dark current
+    value: 0.1    # [e-/s] level of dark currentSimpleCADO.yaml
