@@ -33,6 +33,8 @@ from scopesim.optics.fov_manager import FOVManager
 from scopesim.optics.image_plane import ImagePlane
 from scopesim import effects as efs
 from scopesim.source.source import Source
+from scopesim.utils import find_file
+
 
 TEST_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),
                             "../mocks/MICADO_SCAO_WIDE/"))
@@ -44,9 +46,15 @@ PLOTS = False
 class Test_MICADO_MVP_YAML:
     def test_yaml_file_can_be_loaded_into_optical_train(self):
         filename = os.path.join(TEST_PATH, "MICADO_SCAO_WIDE_2.config")
+
         cmds = UserCommands(filename=filename)
         assert isinstance(cmds, UserCommands)
         assert isinstance(cmds.yaml_dicts, list)
+
+        psf_file = cmds.yaml_dicts[1]["effects"][0]["kwargs"]["filename"]
+        if find_file(psf_file) is None:
+            new_file = "test_FVPSF.fits"
+            cmds.yaml_dicts[1]["effects"][0]["kwargs"]["filename"] = new_file
 
         opt = OpticalTrain(cmds=cmds)
         assert isinstance(opt, OpticalTrain)
