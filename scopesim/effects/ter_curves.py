@@ -21,3 +21,8 @@ class AtmosphericTERCurve(TERCurve):
 class SkycalcTERCurve(TERCurve):
     def __init__(self, **kwargs):
         super(SkycalcTERCurve, self).__init__(**kwargs)
+
+
+class QuantumEfficiencyCurve(TERCurve):
+    def __init__(self, **kwargs):
+        super(QuantumEfficiencyCurve, self).__init__(**kwargs)

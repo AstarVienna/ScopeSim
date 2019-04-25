@@ -1,5 +1,4 @@
 import os
-import glob
 import warnings
 import copy
 
@@ -35,7 +34,7 @@ class UserCommands:
 
         # option sim_data_dir overrides values in config files
         if sim_data_dir is not None:
-            self.cmds['SIM_DATA_DIR'] = sim_data_dir
+            rc.__search_path__.insert(sim_data_dir, 0)
 
         if instrument is not None:
             self.set_instrument(instrument)
@@ -66,13 +65,16 @@ class UserCommands:
 
     @property
     def yaml_dicts(self):
+        general_yaml = find_file(self.cmds["SIM_GENERAL_YAML"])
         atmo_yaml = find_file(self.cmds["SIM_ATMOSPHERE_YAML"])
         scope_yaml = find_file(self.cmds["SIM_TELESCOPE_YAML"])
+        relay_yaml = find_file(self.cmds["SIM_RELAY_OPTICS_YAML"])
         inst_yaml = find_file(self.cmds["SIM_INSTRUMENT_YAML"])
         detector_yaml = find_file(self.cmds["SIM_DETECTOR_YAML"])
 
         yaml_dicts = []
-        for yaml_file in [atmo_yaml, scope_yaml, inst_yaml, detector_yaml]:
+        for yaml_file in [general_yaml, atmo_yaml, scope_yaml,
+                          relay_yaml, inst_yaml, detector_yaml]:
             if yaml_file is not None:
                 with open(find_file(yaml_file)) as f:
                     yaml_dicts += [dic for dic in yaml.load_all(f)]

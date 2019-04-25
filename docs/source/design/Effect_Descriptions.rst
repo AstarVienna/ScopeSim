@@ -768,7 +768,7 @@ Detector list
 
 **Description**: Describes the physical characteristics of the chips used in
 the detector array. The conversion between on-sky coordinates and detector
-plane coordinates is handled by the SimCADO parameter ``plate_scale``
+plane coordinates is handled by the SimCADO parameter ``pixel_scale``
 
 **File type**: ASCII
 

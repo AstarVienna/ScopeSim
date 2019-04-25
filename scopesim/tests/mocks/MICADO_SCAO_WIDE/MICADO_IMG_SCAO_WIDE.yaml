@@ -116,7 +116,7 @@ inst_pkg_name : micado
        
 properties :
     temperature : -190
-    plate_scale : 0.004
+    pixel_scale : 0.004
     
     
 effects :       

@@ -1,10 +1,12 @@
 import os
 import yaml
+from scopesim import rc
 
 YAMLS_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),
                                           "../yamls/"))
 FILES_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),
                                           "../files/"))
+rc.__search_path__ += [YAMLS_PATH, FILES_PATH]
 
 
 def _atmo_yaml_dict():
@@ -36,7 +38,7 @@ inst_pkg_name : micado
 
 properties :
     temperature : -190
-    plate_scale : 0.004
+    pixel_scale : 0.004
 
 effects :
 -   name : micado_surface_list
@@ -78,13 +80,13 @@ effects :
     class : TERCurve
     z_order : [0, 200]
     kwargs :
-        filename : TC_blank.dat
+        filename : TER_blank.dat
 
 -   name : micado_detector_geometry
     class : DetectorList
     z_order : [0, 100]
     kwargs:
-        filename: FPA_array_layout.dat
+        filename: LIST_detector_layout.dat
     """
     return yaml.load(text)
 

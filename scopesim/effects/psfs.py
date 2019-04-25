@@ -87,6 +87,50 @@ class Seeing(AnalyticalPSF):
         self.meta["z_order"] = [0, 300]
 
 
+class VibrationPSF(AnalyticalPSF):
+    def __init__(self, **kwargs):
+        super(VibrationPSF, self).__init__(**kwargs)
+        self.meta["z_order"] = [0, 300]
+
+
+class GaussianDiffractionPSF(AnalyticalPSF):
+    def __init__(self, diameter, **kwargs):
+        super(GaussianDiffractionPSF, self).__init__(**kwargs)
+        self.meta["diameter"] = diameter
+        self.meta["z_order"] = [3, 303]
+
+    def fov_grid(self, header=None, waverange=None, **kwargs):
+        waverange = utils.quantify(waverange, u.um)
+        diameter = utils.quantify(self.meta["diameter"], u.m).to(u.um)
+        fwhm = 1.22 * (waverange / diameter).value  # in rad
+
+        pixel_scale = utils.quantify(header["CDELT1"], u.deg).to(u.rad).value
+        fwhm_range = np.arange(fwhm[0], fwhm[1], pixel_scale)
+        wavelengths = fwhm_range / 1.22 * diameter.to(u.m)
+
+        return {"coords": None, "wavelengths": wavelengths}
+
+    def update(self, **kwargs):
+        if "diameter" in kwargs:
+            self.meta["diameter"] = kwargs["diameter"]
+
+    def get_kernel(self, fov):
+
+        pixel_scale = fov.header["CDELT1"] * u.deg.to(u.arcsec)
+        pixel_scale = utils.quantify(pixel_scale, u.arcsec)
+
+        wave = 0.5 * (fov.meta["wave_max"] + fov.meta["wave_min"])
+
+        wave = utils.quantify(wave, u.um)
+        diameter = utils.quantify(self.meta["diameter"], u.m).to(u.um)
+        fwhm = 1.22 * (wave / diameter) * u.rad.to(u.arcsec) / pixel_scale
+
+        sigma = fwhm.value / 2.35
+        kernel = Gaussian2DKernel(sigma, mode="center").array
+
+        return kernel
+
+
 ################################################################################
 # Semi-analytical PSFs - Poppy PSFs
 
@@ -120,7 +164,7 @@ class DiscretePSF(PSF):
 class FieldConstantPSF(DiscretePSF):
     def __init__(self, **kwargs):
         super(FieldConstantPSF, self).__init__(**kwargs)
-        self.meta["z_order"] = [0, 300]
+        self.meta["z_order"] = [2, 302]
         self.waveset, self.kernel_indexes = get_psf_wave_exts(self)
         self.current_layer_id = None
 
@@ -141,13 +185,16 @@ class FieldConstantPSF(DiscretePSF):
 class FieldVaryingPSF(DiscretePSF):
     def __init__(self, **kwargs):
         super(FieldVaryingPSF, self).__init__(**kwargs)
-        self.meta["z_order"] = [0, 300]
+        self.meta["z_order"] = [1, 301]
         self.waveset, self.kernel_indexes = get_psf_wave_exts(self._file)
         self.current_ext = None
         self.current_data = None
         self._strehl_imagehdu = None
 
     def apply_to(self, fov):
+        # .. todo: add in field rotation
+        # accept "full", "dit", "none
+
         if len(fov.fields) > 0:
             if fov.hdu.data is None:
                 fov.view(self.meta["SIM_SUB_PIXEL_ACCURACY"])
@@ -167,7 +214,7 @@ class FieldVaryingPSF(DiscretePSF):
                     canvas = np.zeros(new_image.shape)
 
                 if mask is not None:
-                    new_mask =  convolve(mask, kernel, mode="same")
+                    new_mask = convolve(mask, kernel, mode="same")
                     canvas += new_image * new_mask
                 else:
                     canvas = new_image
@@ -209,7 +256,7 @@ class FieldVaryingPSF(DiscretePSF):
         layer_ids = np.round(np.unique(strl_cutout.data)).astype(int)
         if len(layer_ids) > 1:
             kernels = [self.current_data[ii] for ii in layer_ids]
-            masks = [strl_cutout.data.T == ii for ii in layer_ids]          # there's a .T in here that I don't like
+            masks = [strl_cutout.data.T == ii for ii in layer_ids]    # there's a .T in here that I don't like
             self.kernel = [[krnl, msk] for krnl, msk in zip(kernels, masks)]
         else:
             self.kernel = [[self.current_data[layer_ids[0]], None]]
@@ -236,6 +283,8 @@ class FieldVaryingPSF(DiscretePSF):
                 self._strehl_imagehdu = make_strehl_map_from_table(cat)
 
         return self._strehl_imagehdu
+
+
 
 
 ################################################################################
@@ -322,40 +371,3 @@ def get_psf_wave_exts(hdu_list):
 
     return wave_set, wave_ext
 
-
-class GaussianDiffractionPSF(AnalyticalPSF):
-    def __init__(self, diameter, **kwargs):
-        super(GaussianDiffractionPSF, self).__init__(**kwargs)
-        self.meta["diameter"] = diameter
-        self.meta["z_order"] = [0, 300]
-
-    def fov_grid(self, header=None, waverange=None, **kwargs):
-        waverange = utils.quantify(waverange, u.um)
-        diameter = utils.quantify(self.meta["diameter"], u.m).to(u.um)
-        fwhm = 1.22 * (waverange / diameter).value  # in rad
-
-        pixel_scale = utils.quantify(header["CDELT1"], u.deg).to(u.rad).value
-        fwhm_range = np.arange(fwhm[0], fwhm[1], pixel_scale)
-        wavelengths = fwhm_range / 1.22 * diameter.to(u.m)
-
-        return {"coords": None, "wavelengths": wavelengths}
-
-    def update(self, **kwargs):
-        if "diameter" in kwargs:
-            self.meta["diameter"] = kwargs["diameter"]
-
-    def get_kernel(self, fov):
-
-        pixel_scale = fov.header["CDELT1"] * u.deg.to(u.arcsec)
-        pixel_scale = utils.quantify(pixel_scale, u.arcsec)
-
-        wave = 0.5 * (fov.meta["wave_max"] + fov.meta["wave_min"])
-
-        wave = utils.quantify(wave, u.um)
-        diameter = utils.quantify(self.meta["diameter"], u.m).to(u.um)
-        fwhm = 1.22 * (wave / diameter) * u.rad.to(u.arcsec) / pixel_scale
-
-        sigma = fwhm.value / 2.35
-        kernel = Gaussian2DKernel(sigma, mode="center").array
-
-        return kernel

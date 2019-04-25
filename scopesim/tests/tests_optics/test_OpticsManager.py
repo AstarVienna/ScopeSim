@@ -31,8 +31,9 @@ class TestOpticsManager:
     def test_initialises_two_yaml_dicts(self, detector_yaml_dict,
                                         inst_yaml_dict):
         opt_man = opt_mgr.OpticsManager([detector_yaml_dict, inst_yaml_dict])
-        print(opt_man)
+        print(opt_man, opt_man.meta)
         assert isinstance(opt_man, opt_mgr.OpticsManager)
+        assert opt_man.meta["SIM_PIXEL_SCALE"] == 0.004
 
     def test_has_effects_loaded(self, detector_yaml_dict):
         opt_man = opt_mgr.OpticsManager([detector_yaml_dict])

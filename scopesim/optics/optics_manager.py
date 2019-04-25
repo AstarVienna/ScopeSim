@@ -30,6 +30,26 @@ class OpticsManager:
         if yaml_dicts is not None:
             self.load_effects(yaml_dicts)
 
+        self.set_pixel_scale(yaml_dicts)
+
+    def set_pixel_scale(self, yaml_dicts):
+        # .. todo: hack. Think up a more elegant way to store SIM_PIXEL_SCALE
+
+        if isinstance(yaml_dicts, dict):
+            yaml_dicts = [yaml_dicts]
+
+        if "SIM_PIXEL_SCALE" not in self.meta:
+            self.meta["SIM_PIXEL_SCALE"] = None
+
+        if self.meta["SIM_PIXEL_SCALE"] is None:
+            pixel_scale = None
+            for yaml_dict in yaml_dicts:
+                if "properties" in yaml_dict:
+                    if "pixel_scale" in yaml_dict["properties"]:
+                        pixel_scale = yaml_dict["properties"]["pixel_scale"]
+
+            self.meta["SIM_PIXEL_SCALE"] = pixel_scale
+
     def load_effects(self, yaml_dicts):
         """
         Generate an OpticalElement for each section of the Optical System
@@ -39,6 +59,7 @@ class OpticsManager:
 
         - Atmosphere
         - Telescope
+        - Relay optics
         - Instrument
         - Detector
 

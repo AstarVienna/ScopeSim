@@ -35,10 +35,15 @@ class ShotNoise(Effect):
     def apply_to(self, obj, **kwargs):
         if isinstance(obj, Detector):
 
-            if kwargs["use_inbuild_seed"] is True:
-                np.random.seed(rc.__rc__["SIM_RANDOM_SEED"])
             if "random_seed" in kwargs:
-                np.random.seed(kwargs["random_seed"])
+                if kwargs["random_seed"] == "SIM_RANDOM_SEED":
+                    seed = rc.__rc__["SIM_RANDOM_SEED"]
+                elif isinstance(kwargs["random_seed"], float):
+                    seed = kwargs["random_seed"]
+                else:
+                    raise ValueError("random_seed must be a float or the RC "
+                                     "keyword 'SIM_RANDOM_SEED'")
+                np.random.seed(seed)
 
             if not isinstance(obj.image_hdu.data, np.float64):
                 obj.image_hdu.data = np.random.poisson(obj.image_hdu.data)
@@ -49,3 +54,13 @@ class ShotNoise(Effect):
                 obj.image_hdu.data = obj.image_hdu.data.astype(orig_type)
 
         return obj
+
+
+class LinearityCurve(Effect):
+    def __init__(self, **kwargs):
+        super(LinearityCurve, self).__init__(**kwargs)
+
+
+class ReadoutNoise(Effect):
+    def __init__(self, **kwargs):
+        super(ReadoutNoise, self).__init__(**kwargs)
