@@ -25,17 +25,17 @@ from . import rc
 ################################################################################
 
 # Import all the modules to go under ScopeSim
-from . import commands
-from . import source
-from . import optics
-from . import detector
-from . import effects
-from . import server
-from . import utils
+# from . import commands
+# from . import source
+# from . import optics
+# from . import detector
+# from . import effects
+# from . import server
+# from . import utils
 
 # import specific classes from the modules to included in the global namespace
 
-from .utils import bug_report
+# from .utils import bug_report
 
 
 ################################################################################
