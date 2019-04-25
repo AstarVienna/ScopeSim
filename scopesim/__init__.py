@@ -35,7 +35,7 @@ from . import utils
 
 # import specific classes from the modules to included in the global namespace
 
-# from .utils import bug_report
+from .utils import bug_report
 
 
 ################################################################################
