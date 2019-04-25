@@ -36,13 +36,13 @@ def make_effect(effect_dict, **super_kwargs):
     effect_cls = getattr(efs, effect_class_name)
 
     effect_kwargs = {}
+    effect_kwargs.update(effect_meta_dict)         # effect name and description
+    effect_kwargs.update(super_kwargs)              # optical_element properties
     if "kwargs" in effect_dict:
-        effect_kwargs = effect_dict["kwargs"]
-    effect_kwargs.update(effect_meta_dict)
-    effect_kwargs.update(super_kwargs)
+        effect_kwargs.update(effect_dict["kwargs"])  # individual effect kwargs
 
     effect = effect_cls(**effect_kwargs)
-    effect.meta.update(effect_meta_dict)
+    # effect.meta.update(effect_meta_dict)  # is this needed? Seems redundant
 
     return effect
 

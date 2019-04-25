@@ -44,7 +44,7 @@ from astropy import units as u
 
 from synphot import SpectralElement
 
-from ..optics import image_plane as opt_imp
+from ..optics.image_plane import ImagePlane
 from ..optics import image_plane_utils as imp_utils
 from .source_utils import validate_source_input, convert_to_list_of_spectra, \
     photons_in_range, scale_imagehdu
@@ -193,7 +193,7 @@ class Source:
         fields = [self.fields[ii] for ii in layers]
 
         hdr = imp_utils.get_canvas_header(fields, pixel_scale=pixel_scale)
-        im_plane = opt_imp.ImagePlane(hdr)
+        im_plane = ImagePlane(hdr)
 
         for field in fields:
             if isinstance(field, Table):

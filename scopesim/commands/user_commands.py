@@ -34,7 +34,7 @@ class UserCommands:
 
         # option sim_data_dir overrides values in config files
         if sim_data_dir is not None:
-            rc.__search_path__.insert(sim_data_dir, 0)
+            rc.__search_path__.insert(0, sim_data_dir)
 
         if instrument is not None:
             self.set_instrument(instrument)
