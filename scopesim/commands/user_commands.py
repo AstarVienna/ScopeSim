@@ -18,6 +18,8 @@ class UserCommands:
         self.pkg_dir = rc.__pkg_dir__
         self.data_dir = rc.__data_dir__
 
+        self._yaml_dicts = []
+
         # read in the default keywords
         # Don't use self.update because we need to add all the valid keywords
         self.cmds = copy.deepcopy(rc.__config__)
@@ -65,21 +67,19 @@ class UserCommands:
 
     @property
     def yaml_dicts(self):
-        general_yaml = find_file(self.cmds["SIM_GENERAL_YAML"])
-        atmo_yaml = find_file(self.cmds["SIM_ATMOSPHERE_YAML"])
-        scope_yaml = find_file(self.cmds["SIM_TELESCOPE_YAML"])
-        relay_yaml = find_file(self.cmds["SIM_RELAY_OPTICS_YAML"])
-        inst_yaml = find_file(self.cmds["SIM_INSTRUMENT_YAML"])
-        detector_yaml = find_file(self.cmds["SIM_DETECTOR_YAML"])
+        _yaml_dicts = []
+        for yaml_name in ["SIM_GENERAL_YAML", "SIM_ATMOSPHERE_YAML",
+                          "SIM_TELESCOPE_YAML", "SIM_RELAY_OPTICS_YAML",
+                          "SIM_INSTRUMENT_YAML", "SIM_DETECTOR_YAML"]:
+            yaml_obj = self.cmds[yaml_name]
+            if isinstance(yaml_obj, dict):
+                _yaml_dicts += [yaml_obj]
+            elif isinstance(yaml_obj, str):
+                with open(find_file(yaml_obj)) as f:
+                    _yaml_dicts += [dic for dic in yaml.load_all(f)]
 
-        yaml_dicts = []
-        for yaml_file in [general_yaml, atmo_yaml, scope_yaml,
-                          relay_yaml, inst_yaml, detector_yaml]:
-            if yaml_file is not None:
-                with open(find_file(yaml_file)) as f:
-                    yaml_dicts += [dic for dic in yaml.load_all(f)]
-
-        return yaml_dicts
+        self._yaml_dicts = _yaml_dicts
+        return self._yaml_dicts
 
     def __getitem__(self, key):
         if cutils.is_item_subcategory(key, self.cmds):

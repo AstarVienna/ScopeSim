@@ -2,10 +2,11 @@ import warnings
 
 from astropy.io import fits
 
+from .detector import Detector
+
 from ..effects.effects_utils import get_all_effects
 from .. import effects as efs
-
-from . import Detector
+from .. import utils
 
 
 class DetectorArray:
@@ -80,8 +81,9 @@ class DetectorArray:
 
 
 def make_primary_hdu(meta):
+    new_meta = utils.stringify_dict(meta)
     prihdu = fits.PrimaryHDU()
-    prihdu.header.update(meta)
+    prihdu.header.update(new_meta)
 
     return prihdu
 

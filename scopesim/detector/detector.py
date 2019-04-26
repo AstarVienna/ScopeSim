@@ -1,7 +1,9 @@
+from copy import deepcopy
 import numpy as np
 
 from ..base_classes import ImagePlaneBase, DetectorBase
 from ..optics import image_plane_utils as imp_utils
+from .. import utils
 
 from astropy.io import fits
 
@@ -24,7 +26,8 @@ class Detector(DetectorBase):
 
     @property
     def hdu(self):
-        self.image_hdu.header.update(self.meta)
+        new_meta = utils.stringify_dict(self.meta)
+        self.image_hdu.header.update(new_meta)
         return self.image_hdu
 
     @property

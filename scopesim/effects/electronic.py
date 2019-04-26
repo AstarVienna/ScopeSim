@@ -21,7 +21,7 @@ class DarkCurrent(Effect):
                 raise ValueError("<DarkCurrent>.meta['value'] must be either"
                                  "dict or float: {}".format(self.meta["value"]))
 
-            dit = self.meta["OBS_DIT"]
+            dit = obj.meta["OBS_DIT"]
             obj.image_hdu.data += dark * dit
 
         return obj

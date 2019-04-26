@@ -936,3 +936,13 @@ def has_needed_keywords(header, suffix=""):
     keys = ["CDELT1", "CRVAL1", "CRPIX1"]
     return sum([key + suffix in header.keys() for key in keys]) == 3 and \
            "NAXIS1" in header.keys()
+
+
+def stringify_dict(dic):
+    from copy import deepcopy
+    dic_new = deepcopy(dic)
+    for key in dic_new:
+        if not isinstance(dic_new[key], str):
+            dic_new[key] = str(dic_new[key])
+
+    return dic_new

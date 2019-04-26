@@ -19,7 +19,8 @@ class TestApplyTo:
         level, dit, hw = 0.5, 10, 16
         hdr = header_from_list_of_xy([-hw, hw], [-hw, hw], 1, "D")
         dtcr = Detector(hdr)
-        dark_eff = DarkCurrent(value=level, OBS_DIT=dit)
+        dtcr.meta["OBS_DIT"] = dit
+        dark_eff = DarkCurrent(value=level)
 
         dtcr = dark_eff.apply_to(dtcr)
 
