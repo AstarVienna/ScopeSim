@@ -5,7 +5,7 @@ from .effects import Effect
 class TERCurve(Effect):
     def __init__(self, **kwargs):
         super(TERCurve, self).__init__(**kwargs)
-
+        self.meta["z_order"] = [0, 200]
         self.surface = SpectralSurface()
         self.surface.meta.update(self.meta)
         data = self.get_data()

@@ -78,13 +78,11 @@ properties :
 effects :
 -   name : detector_qe_curve
     class : TERCurve
-    z_order : [0, 200]
     kwargs :
         filename : TER_blank.dat
 
 -   name : micado_detector_geometry
     class : DetectorList
-    z_order : [0, 100]
     kwargs:
         filename: LIST_detector_layout.dat
     """
