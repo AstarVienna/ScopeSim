@@ -25,6 +25,8 @@ from . import rc
 ################################################################################
 
 # Import all the modules to go under ScopeSim
+# import scopesim.source.source
+
 from . import commands
 from . import source
 from . import optics
