@@ -7,13 +7,13 @@ from astropy.io import fits
 from astropy.table import Table, Column
 
 from . import image_plane_utils as imp_utils
-from ..source.source import Source
 
+from ..base_classes import SourceBase, FieldOfViewBase
 from .. import utils
 from .. import rc
 
 
-class FieldOfView:
+class FieldOfView(FieldOfViewBase):
     """
     A FOV is a monochromatic image. Flux units after extracting the fields from
     the Source are in ph/s/pixel
@@ -58,7 +58,7 @@ class FieldOfView:
     def extract_from(self, src):
         """ ..assumption: Bandpass has been applied"""
         
-        if not isinstance(src, Source):
+        if not isinstance(src, SourceBase):
             raise ValueError("source must be a Source object: {}"
                              "".format(type(src)))
 

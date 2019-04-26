@@ -5,11 +5,12 @@ from astropy.table import Table
 
 from .image_plane_utils import add_table_to_imagehdu, add_imagehdu_to_imagehdu
 
+from ..base_classes import ImagePlaneBase
 from .. import rc
 from .. import utils
 
 
-class ImagePlane:
+class ImagePlane(ImagePlaneBase):
     """
     A class to act as a canvas onto which to project `Source` images or tables
 

@@ -7,9 +7,8 @@ from synphot.models import Empirical1D
 
 from .. import rc
 from .. import utils
-from ..source.source import Source
+from ..base_classes import SourceBase, ImagePlaneBase
 from ..optics.radiometry import RadiometryTable
-from ..optics.image_plane import ImagePlane
 from .effects import Effect
 from .ter_curves import TERCurve
 
@@ -31,7 +30,7 @@ class SurfaceList(Effect):
             self.radiometry_table.add_surface_list(data)
 
     def apply_to(self, obj):
-        if isinstance(obj, Source):
+        if isinstance(obj, SourceBase):
             for ii in range(len(obj.spectra)):
                 compound_spec = obj.spectra[ii] * self.throughput
                 wave = compound_spec.waveset
@@ -40,7 +39,7 @@ class SurfaceList(Effect):
                                             lookup_table=spec)
                 obj.spectra[ii] = new_source
 
-        elif isinstance(obj, ImagePlane):
+        elif isinstance(obj, ImagePlaneBase):
             # by calling use_area, the surface area is taken into account, but
             # the units are stuck in PHOTLAM for synphot
             emission = self.get_emission(use_area=True)  # --> PHOTLAM * area

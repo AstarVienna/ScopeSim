@@ -2,7 +2,7 @@ import numpy as np
 
 from .. import rc
 from . import Effect
-from ..detector import Detector
+from ..base_classes import DetectorBase
 
 
 class DarkCurrent(Effect):
@@ -11,9 +11,9 @@ class DarkCurrent(Effect):
         self.meta["z_order"] = [501]
 
     def apply_to(self, obj, **kwargs):
-        if isinstance(obj, Detector):
+        if isinstance(obj, DetectorBase):
             if isinstance(self.meta["value"], dict):
-                dtcr_id = Detector.meta["id"]
+                dtcr_id = obj.meta["id"]
                 dark = self.meta["value"][dtcr_id]
             elif isinstance(self.meta["value"], float):
                 dark = self.meta["value"]
@@ -33,7 +33,7 @@ class ShotNoise(Effect):
         self.meta["z_order"] = [502]
 
     def apply_to(self, obj, **kwargs):
-        if isinstance(obj, Detector):
+        if isinstance(obj, DetectorBase):
 
             if "random_seed" in kwargs:
                 if kwargs["random_seed"] == "SIM_RANDOM_SEED":

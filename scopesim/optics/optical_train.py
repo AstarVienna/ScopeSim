@@ -93,7 +93,7 @@ class OpticalTrain:
 
         source = deepcopy(orig_source)
         for effect in self.optics_manager.source_effects:
-            source = effect.apply_to(source)
+                source = effect.apply_to(source)
 
         for fov in self.fov_manager.fovs:
             fov.extract_from(source)

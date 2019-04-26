@@ -1,12 +1,12 @@
 import numpy as np
 
-from ..optics.image_plane import ImagePlane
+from ..base_classes import ImagePlaneBase, DetectorBase
 from ..optics import image_plane_utils as imp_utils
 
 from astropy.io import fits
 
 
-class Detector:
+class Detector(DetectorBase):
     def __init__(self, header, **kwargs):
         image = np.zeros((header["NAXIS1"], header["NAXIS2"]))
         self.image_hdu = fits.ImageHDU(header=header, data=image)
@@ -14,7 +14,7 @@ class Detector:
         self.meta.update(kwargs)
 
     def extract(self, image_plane, order=1):
-        if not isinstance(image_plane, ImagePlane):
+        if not isinstance(image_plane, ImagePlaneBase):
             raise ValueError("image_plane must be an ImagePlane object: {}"
                              "".format(type(image_plane)))
 

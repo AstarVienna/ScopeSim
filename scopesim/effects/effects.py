@@ -1,8 +1,6 @@
 from ..effects.data_container import DataContainer
-from ..source.source import Source
-from ..optics.fov import FieldOfView
-from ..optics.image_plane import ImagePlane
-from ..detector import Detector
+from ..base_classes import SourceBase, FieldOfViewBase, ImagePlaneBase, \
+    DetectorBase
 
 
 class Effect(DataContainer):
@@ -12,7 +10,8 @@ class Effect(DataContainer):
         self.meta["z_order"] = []
 
     def apply_to(self, obj, **kwargs):
-        if not isinstance(obj, (Source, FieldOfView, ImagePlane, Detector)):
+        if not isinstance(obj, (SourceBase, FieldOfViewBase,
+                                ImagePlaneBase, DetectorBase)):
             raise ValueError("object must one of the following: "
                              "Source, FieldOfView, ImagePlane, Detector: "
                              "{}".format(type(obj)))

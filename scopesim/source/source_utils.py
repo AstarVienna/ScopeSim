@@ -44,12 +44,14 @@ def convert_to_list_of_spectra(spectra, lam):
     if isinstance(spectra, SourceSpectrum):
         spectra_list += [spectra]
 
-    elif isinstance(spectra, (tuple, list)) and \
+    elif lam is None and\
+            isinstance(spectra, (tuple, list)) and \
             isinstance(spectra[0], SourceSpectrum):
         spectra_list += spectra
 
-    elif isinstance(spectra, np.ndarray) and isinstance(lam, np.ndarray) and \
-            len(spectra.shape) == 1 :
+    elif lam is not None and len(spectra.shape) == 1 and \
+            isinstance(spectra, np.ndarray) and \
+            isinstance(lam, np.ndarray):
         spec = SourceSpectrum(Empirical1D, points=lam, lookup_table=spectra)
         spectra_list += [spec]
 

@@ -47,12 +47,13 @@ from synphot import SpectralElement
 from ..optics.image_plane import ImagePlane
 from ..optics import image_plane_utils as imp_utils
 from .source_utils import validate_source_input, convert_to_list_of_spectra, \
-    photons_in_range, scale_imagehdu
+    photons_in_range
 
+from ..base_classes import SourceBase
 from .. import utils
 
 
-class Source:
+class Source(SourceBase):
     """
     Create a source object from a file or from arrays
     

@@ -179,7 +179,9 @@ class OpticsManager:
 
     @property
     def image_plane_effects(self):
-        imp_effects = [self.surfaces_table]
+        surfaces_table = self.surfaces_table
+        imp_effects = [surfaces_table] if surfaces_table is not None else []
+
         for opt_el in self.optical_elements:
             imp_effects += opt_el.get_z_order_effects([400, 499])
 
@@ -195,7 +197,9 @@ class OpticsManager:
 
     @property
     def source_effects(self):
-        src_effects = [self.surfaces_table]
+        surfaces_table = self.surfaces_table
+        src_effects = [surfaces_table] if surfaces_table is not None else []
+
         for opt_el in self.optical_elements:
             src_effects += opt_el.get_z_order_effects([200, 299])
 
