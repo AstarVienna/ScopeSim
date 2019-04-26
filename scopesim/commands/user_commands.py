@@ -12,8 +12,7 @@ __all__ = ["UserCommands"]
 
 
 class UserCommands:
-    def __init__(self, filename=None, sim_data_dir=None,
-                 instrument=None, mode=None, filter_name=None):
+    def __init__(self, filename=None, sim_data_dir=None, **kwargs):
 
         self.pkg_dir = rc.__pkg_dir__
         self.data_dir = rc.__data_dir__
@@ -34,18 +33,12 @@ class UserCommands:
         if filename is not None:
             self.update(filename)
 
+        # add any loose keywords
+        self.update(kwargs)
+
         # option sim_data_dir overrides values in config files
         if sim_data_dir is not None:
             rc.__search_path__.insert(0, sim_data_dir)
-
-        if instrument is not None:
-            self.set_instrument(instrument)
-
-        if mode is not None:
-            self.set_mode(mode)
-
-        if filter_name is not None:
-            self.select_filter(filter_name)
 
     def update(self, new_input):
         if isinstance(new_input, UserCommands):

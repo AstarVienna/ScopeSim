@@ -48,8 +48,7 @@ def test_simplecado():
 
     src = sim.source.templates.empty_sky()
 
-    cmd = sim.UserCommands()
-    cmd.cmds.update(OBSERVATIONS_DICT)
+    cmd = sim.UserCommands(OBSERVATIONS_DICT)
 
     opt = sim.OpticalTrain(cmd)
     opt.observe(src)
