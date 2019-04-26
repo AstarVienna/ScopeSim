@@ -1,0 +1,191 @@
+### LOCATION ARMAZONES
+object : atmosphere
+name : armazones
+description : Atmosphere and location details for Cerro Armazones
+
+properties :
+    altitude : 3060
+    longitude : -70.1918
+    latitude : -24.5899
+    airmass : OBS_AIRMASS
+    temperature : OBS_TEMPERATURE
+    humidity : OBS_HUMIDITY
+    pressure : OBS_PRESSURE
+    pwv : OBS_PWV
+    pupil_angle : OBS_PUPIL_ANGLE
+
+
+effects :
+-   name : atmo_ter_curve
+    description : atmospheric emission and transmission
+    class : SkycalcTERCurve
+    kwargs :
+        skycalc_params : {}
+
+-   name : atmo_dispersion
+    description : atmospheric dispersion
+    class : AtmosphericDispersion
+    kwargs :
+        central_wavelength : SIM_LAM_MID
+
+
+### ELT TELESCOPE
+object : telescope
+name : ELT
+
+properties :
+    temperature : OBS_TEMPERATURE
+
+effects :
+-   name: scope_surface_list
+    description : list of ELT surfaces
+    class : SurfaceList
+    kwargs:
+        filename: LIST_mirrors_ELT.tbl
+
+-   name : scope_vibration
+    description : residual vibration of telescope
+    class : VibrationPSF
+    kwargs :
+        fwhm : 0.001
+
+
+### MAORY RELAY OPTICS
+object : relay_optics
+name : MAORY
+description : MAORY AO relay module
+
+effects :
+-   name : relay_psf
+    description : MCAO PSF
+    class : FieldVaryingPSF
+    kwargs:
+        filename : None
+        field_rotation : OBS_FIELD_ROTATION
+
+effects :
+-   name: relay_surface_list
+    description : list of surfaces in MAORY
+    class: SurfaceList
+    kwargs:
+        filename: LIST_mirrors_MCAO_MAORY.tbl
+
+
+
+### STANDALONE RELAY OPTICS
+object : relay_optics
+name : default_ro
+description : Simple stand-alone relay optics module
+
+properties :
+    temperature : OBS_TEMPERATURE
+
+effects :
+-   name : relay_psf
+    description : SCAO PSF
+    class : AnisocadoPSF
+    kwargs:
+        anisocado_params : {}
+        field_rotation : OBS_FIELD_ROTATION
+
+effects :
+-   name: relay_surface_list
+    description : list of surfaces in the relay optics
+    class: SurfaceList
+    kwargs:
+        filename: LIST_mirrors_SCAO_relay.tbl
+
+
+### MICADO INSTRUMENT WIDE FIELD MODE
+object : instrument
+name : MICADO
+description : wide field mode of MICADO
+
+properties :
+    temperature : -190
+    pixel_scale : 0.004
+
+effects :
+-   name: wide_mode_surface_list
+    description : surfaces list for wide field optics
+    class: SurfaceList
+    kwargs:
+        filename: LIST_mirrors_MICADO_Wide.tbl
+
+-   name: filter
+    description : transmission curce for filter
+    class: TERCurve
+    kwargs:
+        filename: None
+
+-   name: adc_3D_shift
+    description : atmospheric disperson corrector
+    class: AtmosphericDispersionCorrection
+    kwargs:
+        altitude : 3060
+        longitude : -70.1918
+        latitude : -24.5899
+        airmass : OBS_AIRMASS
+        temperature : OBS_TEMPERATURE
+        humidity : OBS_HUMIDITY
+        pressure : OBS_PRESSURE
+        pupil_angle : OBS_PUPIL_ANGLE
+        efficiency: 1
+
+
+-   name : ncpas_psf
+    description : Effective NCPA induced PSF kernel
+    class : NonCommonPathAberration
+    kwargs :
+        filename : INST_wfe.tbl
+
+
+### H4RG DETECTOR
+object : detector
+name : micado_detector_array
+description : A set of 9 H4RG detectors
+
+properties :
+    temperature : -230
+
+effects :
+-   name: detector_array_list
+    description : MICADO detector array list
+    class: DetectorList
+    kwargs:
+        filename : FPA_array_layout.dat
+
+-   name : qe_curve
+    description : Quantum efficiency curves for each detector
+    class : QuantumEfficiencyCurve
+    kwargs :
+        file_name : QE_detector_H2RG.dat
+
+-   name: dark_current
+    description : MICADO dark current
+    class: DarkCurrent
+    # [e-/s] level of dark current for each detector
+    kwargs:
+        value: 0.1
+
+-   name: detector_linearity
+    description : Linearity characteristics of H4RG chips
+    class: LinearityCurve
+    kwargs:
+        filename : FPA_linearity.dat
+
+-   name: shot_noise
+    description : apply poisson shot noise to images
+    class: ShotNoise
+
+
+-   name : readout_noise
+    description : Readout noise frames
+    class : ReadoutNoise
+    kwargs :
+        file_name : FPA_noise.fits
+
+
+
+
+

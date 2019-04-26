@@ -5,6 +5,12 @@ import scopesim as sim
 
 def test_simplecado():
 
+
+
+
+
+
+
     YAMLS = os.path.abspath(os.path.join(__file__, "../../mocks/yamls/"))
 
     src = sim.source.templates.empty_sky()
@@ -17,6 +23,7 @@ def test_simplecado():
 
     opt = sim.optics.optical_train.OpticalTrain(cmd)
     opt.observe(src)
+    hdu = opt.readout()
 
     print(opt.image_plane.image)
     # assert np.all(opt.image_plane.image) == 1
