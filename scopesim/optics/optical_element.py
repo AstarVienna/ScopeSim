@@ -1,24 +1,30 @@
 from .. import effects as efs
 from ..effects.effects_utils import make_effect, get_all_effects
+from ..utils import clean_dict
 
 
 class OpticalElement:
-    def __init__(self, yaml_dict=None):
+    def __init__(self, yaml_dict=None, **kwargs):
         self.meta = {"name": "<empty>"}
+        self.meta.update(kwargs)
         self.properties = {}
         self.effects = []
 
         if isinstance(yaml_dict, dict):
-            self.meta = {key : yaml_dict[key] for key in yaml_dict
+            self.meta = {key: yaml_dict[key] for key in yaml_dict
                          if key not in ["properties", "effects"]}
             if "properties" in yaml_dict:
                 self.properties = yaml_dict["properties"]
+                self.properties = clean_dict(self.properties["kwargs"],
+                                             self.meta)
             if "effects" in yaml_dict:
                 self.effects_dicts = yaml_dict["effects"]
                 self.make_effects(yaml_dict["effects"])
 
     def make_effects(self, effects_dicts):
         for effdic in effects_dicts:
+            if "kwargs" in effdic:
+                effdic["kwargs"] = clean_dict(effdic["kwargs"], self.meta)
             self.effects += [make_effect(effdic, **self.properties)]
 
     def add_effect(self, effect):

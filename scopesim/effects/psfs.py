@@ -99,16 +99,22 @@ class GaussianDiffractionPSF(AnalyticalPSF):
         self.meta["diameter"] = diameter
         self.meta["z_order"] = [3, 303]
 
-    def fov_grid(self, header=None, waverange=None, **kwargs):
-        waverange = utils.quantify(waverange, u.um)
-        diameter = utils.quantify(self.meta["diameter"], u.m).to(u.um)
-        fwhm = 1.22 * (waverange / diameter).value  # in rad
+    def fov_grid(self, which="waveset", **kwargs):
+        wavelengths = []
+        if which == "waveset" and \
+                "waverange" in kwargs and \
+                "pixel_scale" in kwargs:
+            waverange = utils.quantify(kwargs["waverange"], u.um)
+            diameter = utils.quantify(self.meta["diameter"], u.m).to(u.um)
+            fwhm = 1.22 * (waverange / diameter).value  # in rad
 
-        pixel_scale = utils.quantify(header["CDELT1"], u.deg).to(u.rad).value
-        fwhm_range = np.arange(fwhm[0], fwhm[1], pixel_scale)
-        wavelengths = fwhm_range / 1.22 * diameter.to(u.m)
+            pixel_scale = utils.quantify(kwargs["pixel_scale"], u.deg)
+            pixel_scale = pixel_scale.to(u.rad).value
+            fwhm_range = np.arange(fwhm[0], fwhm[1], pixel_scale)
+            wavelengths = list(fwhm_range / 1.22 * diameter.to(u.m))
 
-        return {"coords": None, "wavelengths": wavelengths}
+        # .. todo: check that this is actually correct
+        return wavelengths
 
     def update(self, **kwargs):
         if "diameter" in kwargs:
@@ -165,16 +171,20 @@ class FieldConstantPSF(DiscretePSF):
     def __init__(self, **kwargs):
         super(FieldConstantPSF, self).__init__(**kwargs)
         self.meta["z_order"] = [2, 302]
-        self.waveset, self.kernel_indexes = get_psf_wave_exts(self)
+        self._waveset, self.kernel_indexes = get_psf_wave_exts(self)
         self.current_layer_id = None
 
-    def fov_grid(self, header=None, waverange=None, **kwargs):
-        return {"wavelengths": self.waveset}
+    def fov_grid(self, which="waveset", **kwargs):
+        waves = []
+        if which == "waveset":
+            waves = self._waveset
+
+        return waves
 
     def get_kernel(self, fov):
         # .. todo: Add in wavelength dependency
         # fov_wave = 0.5 * (fov.meta["wave_min"] + fov.meta["wave_max"])
-        # ii = nearest_index(fov_wave, self.waveset)
+        # ii = nearest_index(fov_wave, self._waveset)
         # ext = self.kernel_indexes[ii]
         # if ext != self.current_layer_id:
         #     self.kernel = self._file[ext]

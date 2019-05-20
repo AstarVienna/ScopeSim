@@ -13,15 +13,32 @@ class DetectorList(Effect):
         super(Effect, self).__init__(**kwargs)
         self.meta["z_order"] = [0, 100, 500]
 
-    def fov_grid(self, header=None, waverange=None, **kwargs):
-        hdr = self.image_plane_header
-        pixel_scale = kwargs["pixel_scale"]  # ["] --> [deg]
-        pixel_size = hdr["CDELT1D"]
-        x_mm, y_mm = calc_footprint(hdr, "D")
-        x_sky = x_mm * pixel_scale / pixel_size  # x[deg] = x[mm] * [deg] / [mm]
-        y_sky = y_mm * pixel_scale / pixel_size  # y[deg] = y[mm] * [deg] / [mm]
+    def fov_grid(self, which="edges", **kwargs):
+        """
 
-        return {"edges": [x_sky, y_sky], "wavelengths": None}
+        Parameters
+        ----------
+        which : str, optional
+            "edges"
+        kwargs
+
+        Returns
+        -------
+
+        """
+        if which == "edges":
+            hdr = self.image_plane_header
+            pixel_scale = kwargs["pixel_scale"]  # ["] --> [deg]
+            pixel_size = hdr["CDELT1D"]
+            x_mm, y_mm = calc_footprint(hdr, "D")
+            x_sky = x_mm * pixel_scale / pixel_size  # x[deg] = x[mm] * [deg] / [mm]
+            y_sky = y_mm * pixel_scale / pixel_size  # y[deg] = y[mm] * [deg] / [mm]
+
+            edges = [[x_sky, y_sky]]
+        else:
+            edges = []
+
+        return edges
 
     @property
     def image_plane_header(self):

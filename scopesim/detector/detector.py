@@ -15,7 +15,7 @@ class Detector(DetectorBase):
         self.meta = {}
         self.meta.update(kwargs)
 
-    def extract(self, image_plane, order=1):
+    def extract_from(self, image_plane, order=1):
         if not isinstance(image_plane, ImagePlaneBase):
             raise ValueError("image_plane must be an ImagePlane object: {}"
                              "".format(type(image_plane)))

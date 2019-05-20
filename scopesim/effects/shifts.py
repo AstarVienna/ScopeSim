@@ -6,9 +6,9 @@ class Shift3D(Effect):
         super(Shift3D, self).__init__(**kwargs)
         self.meta["z_order"] = [0]
 
-    def fov_grid(self, header=None, waverange=None, **kwargs):
-        dic = {"wavelengths": waverange, "x_shifts": [0, 0], "y_shifts": [0, 0]}
-        return dic
+    def fov_grid(self, which="shifts", **kwargs):
+        waves, dx, dy = [], [], []
+        return [waves, dx, dy]
 
 
 class AtmosphericDispersion(Shift3D):
@@ -23,7 +23,7 @@ class AtmosphericDispersion(Shift3D):
         temperature
         humidity
         pressure
-        waveset
+        fov_grid
         """
 
 

@@ -14,6 +14,28 @@ from .ter_curves import TERCurve
 
 
 class SurfaceList(Effect):
+    """
+    A Effect object containing a list of all surfaces in an optical element
+
+    This calls is essentially a wrapper for the RadiometryTable class, which
+    contains all the functionality for creating and combining multiple optical
+    surfaces
+
+
+    Parameters
+    ----------
+    filename : str
+        Path to file containing
+    table : astropy.Table
+
+    array_dict : dict
+
+
+    Input format
+    ------------
+
+    """
+
     def __init__(self, **kwargs):
         super(SurfaceList, self).__init__(**kwargs)
         self.meta["z_order"] = []
@@ -29,7 +51,7 @@ class SurfaceList(Effect):
         if data is not None:
             self.radiometry_table.add_surface_list(data)
 
-    def apply_to(self, obj):
+    def apply_to(self, obj, **kwargs):
         if isinstance(obj, SourceBase):
             for ii in range(len(obj.spectra)):
                 compound_spec = obj.spectra[ii] * self.throughput
@@ -51,19 +73,26 @@ class SurfaceList(Effect):
 
         return obj
 
-    def fov_grid(self, header=None, waverange=None, **kwargs):
-        wave = np.linspace(min(waverange), max(waverange), 100)
-        throughput = self.throughput(wave)
-        valid_waves = np.where(throughput > self.meta["SIM_MIN_THROUGHPUT"])[0]
-        if len(valid_waves) > 0:
-            wave_edges = [min(wave[valid_waves]), max(wave[valid_waves])]
-        else:
-            raise ValueError("No transmission found above the threshold {} in "
-                             "this wavelength range {}. Did you open the "
-                             "shutter?".format(self.meta["SIM_MIN_THROUGHPUT"],
-                                               waverange))
+    def fov_grid(self, which="waveset", **kwargs):
+        if which == "waveset" and "waverange" in kwargs:
+            min_throughput = self.meta["SIM_MIN_THROUGHPUT"]
 
-        return {"coords": None, "wavelengths": wave_edges}
+            wave = np.linspace(min(kwargs["waverange"]),
+                               max(kwargs["waverange"]), 100)
+            throughput = self.throughput(wave)
+            valid_waves = np.where(throughput > min_throughput)[0]
+            if len(valid_waves) > 0:
+                wave_edges = [min(wave[valid_waves]), max(wave[valid_waves])]
+            else:
+                raise ValueError("No transmission found above the threshold {} "
+                                 "in this wavelength range {}. Did you open "
+                                 "the shutter?"
+                                 "".format(self.meta["SIM_MIN_THROUGHPUT"],
+                                           kwargs["waverange"]))
+        else:
+            wave_edges = []
+
+        return wave_edges
 
     def add_surface(self, surface, name, position=-1, add_to_table=True):
         if isinstance(surface, TERCurve):
@@ -112,9 +141,13 @@ class SurfaceList(Effect):
     @property
     def area(self):
         tbl = self.radiometry_table.table
-        outer_col = utils.real_colname("outer", tbl.colnames)
-        inner_col = utils.real_colname("inner", tbl.colnames)
-        outer = utils.quantity_from_table(outer_col, tbl, u.m)
-        inner = utils.quantity_from_table(inner_col, tbl, u.m)
+        if len(tbl) > 0:
+            outer_col = utils.real_colname("outer", tbl.colnames)
+            inner_col = utils.real_colname("inner", tbl.colnames)
+            outer = utils.quantity_from_table(outer_col, tbl, u.m)
+            inner = utils.quantity_from_table(inner_col, tbl, u.m)
+            scope_area = np.max(np.pi / 4 * (outer ** 2 - inner ** 2))
+        else:
+            scope_area = 0
 
-        return np.max(np.pi / 4 * (outer**2 - inner**2))
+        return scope_area

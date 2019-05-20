@@ -6,6 +6,57 @@ from .. import utils
 
 
 class DataContainer:
+    """
+    A class to hold data files needed by all Effects objects
+
+    Parameters
+    ----------
+    filename : str
+        Path to file containing data.
+        Accepted formats: ASCII table, FITS table, FITS image
+
+    table : astropy.Table
+        An astropy Table containing data
+
+    array_dict : dict
+        A dictionary out of which an astropy.Table object can be constructed.
+
+    kwargs :
+        addition meta data
+
+
+    Notes
+    -----
+    If a table is to be generated from an ``array_dict`` parameter, column units
+    can be passed as keyword arguments (kwargs) using the following format:
+
+        ``Datacontainer(... , <column name>_unit = "<unit string>")
+
+    where unit string is a string recognised by ``astropy.units``.
+    Any additional table meta-data can also be passed using this format.
+
+
+    Attributes
+    ----------
+    data : astropy.Table, fits.HDUList
+        A generic property method which returns the data from the file. Any
+        function calling this should be prepared to handle both data formats
+
+    meta : dict
+        Contains all meta data read in from the file's header, and/or passed via
+        kwargs
+
+    table : astropy.Table
+        If the file has a table format (ASCII of FITS) it is read in
+        immediately and stored in ``.table``
+
+    ._file : HDUList pointer
+        If the file is a FITS image or cube, the data is only read in when
+        needed in order to save on memory usage. ``._file`` contains a pointer
+        to the data open FITS file.
+
+    """
+
     def __init__(self, filename=None, table=None, array_dict=None, **kwargs):
 
         if filename is None and "file_name" in kwargs:

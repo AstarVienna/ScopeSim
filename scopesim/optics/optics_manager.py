@@ -19,8 +19,8 @@ class OpticsManager:
     kwargs : **dict
         Any keyword-value pairs from a config file
 
-
     """
+
     def __init__(self, yaml_dicts=[], **kwargs):
         self.optical_elements = [OpticalElement({"name": "misc"})]
         self.meta = {}
@@ -28,9 +28,13 @@ class OpticsManager:
         self._surfaces_table = None
 
         if yaml_dicts is not None:
-            self.load_effects(yaml_dicts)
+            self.load_effects(yaml_dicts, **self.meta)
 
         self.set_pixel_scale(yaml_dicts)
+        self.set_area()
+
+    def set_area(self):
+        self.meta["SIM_AREA"] = self.surfaces_table.area
 
     def set_pixel_scale(self, yaml_dicts):
         # .. todo: hack. Think up a more elegant way to store SIM_PIXEL_SCALE
@@ -50,7 +54,7 @@ class OpticsManager:
 
             self.meta["SIM_PIXEL_SCALE"] = pixel_scale
 
-    def load_effects(self, yaml_dicts):
+    def load_effects(self, yaml_dicts, **kwargs):
         """
         Generate an OpticalElement for each section of the Optical System
 
@@ -76,7 +80,8 @@ class OpticsManager:
 
         if isinstance(yaml_dicts, dict):
             yaml_dicts = [yaml_dicts]
-        self.optical_elements += [OpticalElement(dic) for dic in yaml_dicts]
+        self.optical_elements += [OpticalElement(dic, **kwargs)
+                                  for dic in yaml_dicts]
 
     def add_effect(self, effect, ext=0):
         """

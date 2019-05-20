@@ -39,7 +39,7 @@ class TestEffectInit:
     def test_has_method_apply_to(self):
         assert hasattr(Effect(), "apply_to")
 
-    def test_has_method_fov_grid(self):
+    def test_has_method_waveset(self):
         assert hasattr(Effect(), "fov_grid")
 
 

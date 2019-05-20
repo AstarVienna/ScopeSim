@@ -14,10 +14,6 @@ class ApertureMask(Effect):
         super(ApertureMask, self).__init__(**kwargs)
         self.meta["z_order"] = [0]
 
-    def fov_grid(self, header=None, waverange=None, **kwargs):
-        x_sky, y_sky = calc_footprint(self.header)
-        return {"wavelengths": None, "edges": [x_sky, y_sky]}
-
     @property
     def header(self):
         return fits.Header()

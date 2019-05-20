@@ -946,3 +946,11 @@ def stringify_dict(dic):
             dic_new[key] = str(dic_new[key])
 
     return dic_new
+
+
+def clean_dict(orig_dict, new_entries):
+    for key in orig_dict:
+        if orig_dict[key] in new_entries:
+            orig_dict[key] = new_entries[orig_dict[key]]
+
+    return orig_dict

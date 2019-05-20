@@ -58,7 +58,7 @@ class DetectorArray:
 
         # 2. iterate through all Detectors, extract image from image_plane
         for detector in self.detectors:
-            detector.extract(image_plane)
+            detector.extract_from(image_plane)
 
             # 3. apply all effects (to all Detectors)
             for effect in self.effects:

@@ -103,11 +103,11 @@ class TestFovGrid:
     def test_finds_borders_of_filter(self, filter_surface, surf_list):
         surf_list.add_surface(filter_surface, "filter")
         surf_list.meta["SIM_MIN_THROUGHPUT"] = 2e-4
-        fov_grid = surf_list.fov_grid(None, (0.5, 2.5)*u.um)
+        waverange = surf_list.fov_grid("waveset", waverange=(0.5, 2.5) * u.um)
 
         # assuming surf is the K-filter
-        assert fov_grid["wavelengths"][0] > 1.9*u.um
-        assert fov_grid["wavelengths"][1] < 2.4*u.um
+        assert waverange[0] > 1.9*u.um
+        assert waverange[1] < 2.4*u.um
 
 
 @pytest.mark.usefixtures("surf_list_empty", "filter_surface", "image_source")

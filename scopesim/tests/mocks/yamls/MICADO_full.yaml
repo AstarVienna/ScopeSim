@@ -113,10 +113,10 @@ effects :
         filename: LIST_mirrors_MICADO_Wide.tbl
 
 -   name: filter
-    description : transmission curce for filter
+    description : transmission curve for filter
     class: TERCurve
     kwargs:
-        filename: None
+        filename: TC_filter_Ks.dat
 
 -   name: adc_3D_shift
     description : atmospheric disperson corrector
