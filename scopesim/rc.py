@@ -10,4 +10,4 @@ __rc__ = read_config(os.path.join(__pkg_dir__, ".scopesimrc"))
 __config__ = read_config(os.path.join(__pkg_dir__, ".default.config"))
 
 __search_path__ = ['./', __rc__["FILE_LOCAL_DOWNLOADS_PATH"],
-                  __pkg_dir__, __data_dir__]   # For utils.find_file()
+                   __pkg_dir__, __data_dir__]   # For utils.find_file()

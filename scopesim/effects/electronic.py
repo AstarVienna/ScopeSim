@@ -1,5 +1,7 @@
 import numpy as np
 
+from astropy.io import fits
+
 from .. import rc
 from . import Effect
 from ..base_classes import DetectorBase
@@ -50,8 +52,12 @@ class ShotNoise(Effect):
             if not isinstance(obj.image_hdu.data[0, 0], np.float64):
                 obj.image_hdu.data = obj.image_hdu.data.astype(np.float64)
 
-            # obj.image_hdu.data = np.random.poisson(obj.image_hdu.data)
-            obj.image_hdu.data.astype(orig_type)
+            data = obj.image_hdu.data
+            # ..todo FIX THIS!!!!!!
+            # data = np.random.poisson(data).astype(orig_type)
+
+            new_imagehdu = fits.ImageHDU(data=data, header=obj.image_hdu.header)
+            obj.image_hdu = new_imagehdu
 
         return obj
 

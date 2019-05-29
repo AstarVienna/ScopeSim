@@ -94,10 +94,10 @@ def test_read_in_simplecado_package():
 
 def test_download_simplecado_package():
     sim.rc.__rc__["FILE_LOCAL_DOWNLOADS_PATH"] = "C:/Work/simcado_downloads"
-    print(sim.rc.__rc__["FILE_LOCAL_DOWNLOADS_PATH"])
-    dname = sim.rc.__rc__["FILE_LOCAL_DOWNLOADS_PATH"]
 
+    dname = sim.rc.__rc__["FILE_LOCAL_DOWNLOADS_PATH"]
     sim.server.set_up_local_package_directory(dname, overwrite=True)
+
     sim.server.download_package("SimpleCADO")
 
 
