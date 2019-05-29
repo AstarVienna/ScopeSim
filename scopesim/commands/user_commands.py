@@ -46,6 +46,9 @@ class UserCommands:
         elif isinstance(new_input, dict):
             tmp_cmds = new_input
         elif isinstance(new_input, str):
+            fname = find_file(new_input)
+            if fname is not None:
+                new_input = fname
             tmp_cmds = cutils.read_config(new_input)
         else:
             raise ValueError("Cannot update with type: " + type(new_input))

@@ -8,10 +8,10 @@
 ################################################################################
 
 SIM_CHUNK_SIZE            512               # [pixel] side length of image plane chunks
+SIM_MAX_SEGMENT_SIZE      1.1E6             # Default 1024*1024 pixels (8MB). Maximum size for image operations
 SIM_OVERSAMPLING          1                 # The factor of oversampling inside the simulation
 SIM_PIXEL_THRESHOLD       1                 # photons per pixel summed over the wavelength range. Values less than this are assumed to be zero
 SIM_SPLINE_ORDER          1                 # Order of spline interpolation passed to scipy.ndimage functions
-SIM_MAX_SEGMENT_SIZE      1.1E6             # Default 1024*1024 pixels (8MB). Maximum size for image operations
 
 SIM_SPEC_RESOLUTION       1E-4              # [um] spectral resolution when resampling spectral curves
 SIM_MIN_THROUGHPUT        1E-7              # Level below which transmission is ignored

@@ -950,7 +950,7 @@ def stringify_dict(dic):
 
 def clean_dict(orig_dict, new_entries):
     for key in orig_dict:
-        if orig_dict[key] in new_entries:
+        if type(orig_dict[key]) is str and orig_dict[key] in new_entries:
             orig_dict[key] = new_entries[orig_dict[key]]
 
     return orig_dict

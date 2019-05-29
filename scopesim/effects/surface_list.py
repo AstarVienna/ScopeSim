@@ -52,7 +52,7 @@ class SurfaceList(Effect):
             self.radiometry_table.add_surface_list(data)
 
     def apply_to(self, obj, **kwargs):
-        if isinstance(obj, SourceBase):
+        if not self.is_empty and isinstance(obj, SourceBase):
             for ii in range(len(obj.spectra)):
                 compound_spec = obj.spectra[ii] * self.throughput
                 wave = compound_spec.waveset
@@ -61,7 +61,7 @@ class SurfaceList(Effect):
                                             lookup_table=spec)
                 obj.spectra[ii] = new_source
 
-        elif isinstance(obj, ImagePlaneBase):
+        elif not self.is_empty and isinstance(obj, ImagePlaneBase):
             # by calling use_area, the surface area is taken into account, but
             # the units are stuck in PHOTLAM for synphot
             emission = self.get_emission(use_area=True)  # --> PHOTLAM * area
@@ -140,8 +140,8 @@ class SurfaceList(Effect):
 
     @property
     def area(self):
-        tbl = self.radiometry_table.table
-        if len(tbl) > 0:
+        if not self.is_empty:
+            tbl = self.radiometry_table.table
             outer_col = utils.real_colname("outer", tbl.colnames)
             inner_col = utils.real_colname("inner", tbl.colnames)
             outer = utils.quantity_from_table(outer_col, tbl, u.m)
@@ -151,3 +151,8 @@ class SurfaceList(Effect):
             scope_area = 0
 
         return scope_area
+
+    @property
+    def is_empty(self):
+        return len(self.radiometry_table.table) == 0
+

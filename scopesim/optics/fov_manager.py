@@ -207,16 +207,21 @@ def get_imaging_headers(effects, **kwargs):
     aperture_masks = get_all_effects(effects, efs.ApertureMask)
     detector_arrays = get_all_effects(effects, efs.DetectorList)
 
+    if len(detector_arrays) == 0:
+        raise ValueError("At least 1 DetectorList must be specified: {}"
+                         "".format(detector_arrays))
+
     pixel_scale = kwargs["SIM_PIXEL_SCALE"] / 3600.         # " -> deg
     pixel_size = detector_arrays[0].image_plane_header["CDELT1D"]  # mm
     deg2mm = pixel_size / pixel_scale
 
+    sky_edges = []
     if len(aperture_masks) > 0:
-        sky_edges = [apm.fov_grid(which="edges") for apm in aperture_masks]
+        sky_edges += [apm.fov_grid(which="edges") for apm in aperture_masks]
     elif len(detector_arrays) > 0:
         edges = detector_arrays[0].fov_grid(which="edges",
                                             pixel_scale=pixel_scale)
-        sky_edges = [edges]
+        sky_edges += [edges]
     else:
         raise ValueError("No ApertureMask or DetectorList was provided. At "
                          "least a DetectorList object must be passed: {}"

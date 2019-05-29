@@ -22,7 +22,6 @@ properties :
 effects :
 -   name : super_psf
     class : GaussianDiffractionPSF
-    z_order : 300
     kwargs :
         diameter : 39
 """
@@ -43,20 +42,17 @@ properties :
 effects :
 -   name : micado_surface_list
     class : SurfaceList
-    z_order : 200
     kwargs :
         file_name : micado_mirror_list.tbl
 
 -   name : micado_adc
     class : AtmosphericDispersion
-    z_order : 0
     kwargs :
         zenith_distance : 30
         reverse_shifts : True
 
 -   name : pupil_mask
     class : ApertureList
-    z_order : 0
     kwargs :
         file_name : aperture_list.tbl        
         

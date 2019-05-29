@@ -398,6 +398,8 @@ def rescale_imagehdu(imagehdu, pixel_scale, wcs_suffix="", conserve_flux=True,
         [deg] NOT to be passed as a Quantity
     wcs_suffix : str
 
+    conserve_flux : bool
+
     kwargs
     ------
     order : int
@@ -529,7 +531,7 @@ def add_imagehdu_to_imagehdu(image_hdu, canvas_hdu, order=1, wcs_suffix="",
 
     if isinstance(image_hdu.data, u.Quantity):
         image_hdu.data = image_hdu.data.value
-    pixel_scale = canvas_hdu.header["CDELT1"+wcs_suffix]
+    pixel_scale = float(canvas_hdu.header["CDELT1"+wcs_suffix])
 
     new_hdu = rescale_imagehdu(image_hdu, pixel_scale=pixel_scale,
                                wcs_suffix=wcs_suffix, order=order,
@@ -617,15 +619,15 @@ def val2pix(header, a, b, wcs_suffix=""):
     else:
         pc11, pc12, pc21, pc22 = 1, 0, 0, 1
 
-    da = header["CDELT1"+s]
-    db = header["CDELT2"+s]
-    x0 = header["CRPIX1"+s]
-    y0 = header["CRPIX2"+s]
-    a0 = header["CRVAL1"+s]
-    b0 = header["CRVAL2"+s]
+    da = float(header["CDELT1"+s])
+    db = float(header["CDELT2"+s])
+    x0 = float(header["CRPIX1"+s])
+    y0 = float(header["CRPIX2"+s])
+    a0 = float(header["CRVAL1"+s])
+    b0 = float(header["CRVAL2"+s])
 
-    x = x0 + 1 / da * ((a - a0) * pc11 - (b - b0) * pc21)
-    y = y0 + 1 / db * ((a - a0) * pc12 + (b - b0) * pc22)
+    x = x0 + 1. / da * ((a - a0) * pc11 - (b - b0) * pc21)
+    y = y0 + 1. / db * ((a - a0) * pc12 + (b - b0) * pc22)
 
     return x, y
 

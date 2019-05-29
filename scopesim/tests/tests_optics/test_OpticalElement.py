@@ -27,6 +27,20 @@ class TestOpticalElementInit:
         assert isinstance(opt_el, opt_elem.OpticalElement)
         assert isinstance(opt_el.effects[0], GaussianDiffractionPSF)
 
+    def test_cleans_obs_keywords_from_yaml_properties(self, atmo_yaml_dict):
+        atmo_yaml_dict["properties"]["tempertaure"] = "OBS_TEMPERATURE"
+        obs_dict = {"OBS_TEMPERATURE": 0}
+        opt_el = opt_elem.OpticalElement(atmo_yaml_dict, **obs_dict)
+
+        assert opt_el.properties["temperature"] == 0
+
+    def test_cleans_obs_keywords_from_yaml_dict_effects(self, atmo_yaml_dict):
+        atmo_yaml_dict["effects"][0]["kwargs"]["airmass"] = "OBS_AIRMASS"
+        obs_dict = {"OBS_AIRMASS": 1}
+        opt_el = opt_elem.OpticalElement(atmo_yaml_dict, **obs_dict)
+
+        assert opt_el.effects[0].meta["airmass"] == 1
+
 
 @pytest.mark.usefixtures("detector_yaml_dict")
 class TestOpticalElementGetZOrderEffects:
@@ -41,3 +55,4 @@ class TestOpticalElementGetZOrderEffects:
 class TestOpticalElementSurfaceListProperty:
     def test_returns_empty_list_if_no_surface_list_given(self):
         pass
+

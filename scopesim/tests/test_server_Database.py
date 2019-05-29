@@ -22,6 +22,7 @@ def temp_directory_structure():
     # teardown
     shutil.rmtree(_parent_path)
 
+
 @pytest.fixture(scope="class")
 def download_test_package():
     return sim_db.download_package("test_package")

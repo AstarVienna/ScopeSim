@@ -34,7 +34,7 @@ class DetectorList(Effect):
             x_sky = x_mm * pixel_scale / pixel_size  # x[deg] = x[mm] * [deg] / [mm]
             y_sky = y_mm * pixel_scale / pixel_size  # y[deg] = y[mm] * [deg] / [mm]
 
-            edges = [[x_sky, y_sky]]
+            edges = [x_sky, y_sky]
         else:
             edges = []
 
@@ -82,11 +82,25 @@ class DetectorList(Effect):
                 hdr["PC2_1"] = -sang
                 hdr["PC2_2"] = cang
 
-            hdr["GAIN"] = row["gain"]
-
+            # hdr["GAIN"] = row["gain"]
+            # if "id" in row:
+            #     hdr["ID"] = row["id"]
+            row_dict = {col: row[col] for col in row.colnames}
+            hdr.update(row_dict)
             hdrs += [hdr]
 
         return hdrs
+
+    def detector_row_dicts(self, ids=None):
+        if ids is None:
+            ids = range(len(self.table))
+
+        row_dicts = []
+        for ii in ids:
+            row = self.table[ii]
+            row_dicts += [{col: row[col] for col in row.colnames}]
+
+        return row_dicts
 
 
 def sky_hdr_from_detector_hdr(header, pixel_scale):

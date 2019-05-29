@@ -1,5 +1,11 @@
 import numpy as np
+from astropy.io import fits
 import scopesim as sim
+
+import matplotlib.pyplot as plt
+from matplotlib.colors import LogNorm
+
+PLOTS = False
 
 
 # DETECTOR nested dictionary
@@ -63,3 +69,36 @@ def test_simplecado():
     # dark = 0.2 ct/s, DIT = 10s, NDIT = 1
     print(hdu[1].data)
     assert np.all(hdu[1].data == 2.0)
+
+
+def test_read_in_simplecado_package():
+    sim.rc.__search_path__ = ["C:/Work/irdb/SimpleCADO/"]
+    assert sim.utils.find_file("SimpleCADO.config")
+
+    cmd = sim.UserCommands(filename="SimpleCADO.config")
+    assert len(cmd.yaml_dicts) > 0
+
+    opt = sim.OpticalTrain(cmds=cmd)
+    assert opt.optics_manager.optical_elements[1].meta["object"] == "detector"
+
+    src = sim.source.templates.empty_sky()
+    opt.observe(src)
+    hdu = opt.readout()
+
+    assert type(hdu) == fits.HDUList
+
+    if PLOTS:
+        plt.imshow(hdu[5].data, norm=LogNorm())
+        plt.show()
+
+
+def test_download_simplecado_package():
+    sim.rc.__rc__["FILE_LOCAL_DOWNLOADS_PATH"] = "C:/Work/simcado_downloads"
+    print(sim.rc.__rc__["FILE_LOCAL_DOWNLOADS_PATH"])
+    dname = sim.rc.__rc__["FILE_LOCAL_DOWNLOADS_PATH"]
+
+    sim.server.set_up_local_package_directory(dname, overwrite=True)
+    sim.server.download_package("SimpleCADO")
+
+
+

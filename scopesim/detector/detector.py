@@ -13,6 +13,7 @@ class Detector(DetectorBase):
         image = np.zeros((header["NAXIS1"], header["NAXIS2"]))
         self.image_hdu = fits.ImageHDU(header=header, data=image)
         self.meta = {}
+        self.meta.update(header)
         self.meta.update(kwargs)
 
     def extract_from(self, image_plane, order=1):

@@ -14,7 +14,6 @@ properties :
     pwv : OBS_PWV
     pupil_angle : OBS_PUPIL_ANGLE
 
-
 effects :
 -   name : atmo_ter_curve
     description : atmospheric emission and transmission

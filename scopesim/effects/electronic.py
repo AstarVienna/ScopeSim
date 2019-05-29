@@ -3,6 +3,7 @@ import numpy as np
 from .. import rc
 from . import Effect
 from ..base_classes import DetectorBase
+from ..utils import real_colname
 
 
 class DarkCurrent(Effect):
@@ -13,7 +14,7 @@ class DarkCurrent(Effect):
     def apply_to(self, obj, **kwargs):
         if isinstance(obj, DetectorBase):
             if isinstance(self.meta["value"], dict):
-                dtcr_id = obj.meta["id"]
+                dtcr_id = obj.meta[real_colname("id", obj.meta)]
                 dark = self.meta["value"][dtcr_id]
             elif isinstance(self.meta["value"], float):
                 dark = self.meta["value"]
@@ -45,13 +46,12 @@ class ShotNoise(Effect):
                                      "keyword 'SIM_RANDOM_SEED'")
                 np.random.seed(seed)
 
-            if not isinstance(obj.image_hdu.data, np.float64):
-                obj.image_hdu.data = np.random.poisson(obj.image_hdu.data)
-            else:
-                orig_type = type(obj.image_hdu.data)
+            orig_type = type(obj.image_hdu.data[0, 0])
+            if not isinstance(obj.image_hdu.data[0, 0], np.float64):
                 obj.image_hdu.data = obj.image_hdu.data.astype(np.float64)
-                obj.image_hdu.data = np.random.poisson(obj.image_hdu.data)
-                obj.image_hdu.data = obj.image_hdu.data.astype(orig_type)
+
+            # obj.image_hdu.data = np.random.poisson(obj.image_hdu.data)
+            obj.image_hdu.data.astype(orig_type)
 
         return obj
 
