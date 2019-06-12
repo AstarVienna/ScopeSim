@@ -114,7 +114,7 @@ def string_to_table(tbl):
     return tbl
 
 
-def add_surface_to_table(tbl, surf, name, position):
+def add_surface_to_table(tbl, surf, name, position, silent=True):
     tbl.insert_row(position)
     for colname in tbl.colnames:
         surf_col = real_colname(colname, surf.meta)
@@ -124,8 +124,9 @@ def add_surface_to_table(tbl, surf, name, position):
                 surf_val = surf_val.value
             tbl = change_table_entry(tbl, colname, surf_val, position=position)
         else:
-            warnings.warn("{} was not found in the meta dictionary of {}. "
-                          "This could cause problems.".format(colname, name))
+            if not silent:
+                warnings.warn("{} was not found in the meta dictionary of {}. "
+                              "This could cause problems".format(colname, name))
 
     colname = real_colname("name", tbl.colnames)
     tbl = change_table_entry(tbl, colname, name, position=position)

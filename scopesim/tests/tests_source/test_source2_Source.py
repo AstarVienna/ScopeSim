@@ -30,13 +30,8 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm
 
 
-def mock_dir():
-    cur_dirname = os.path.dirname(inspect.getfile(inspect.currentframe()))
-    rel_dirname = "mocks/files/"
-    return os.path.abspath(os.path.join(cur_dirname, rel_dirname))
-
-
-MOCK_DIR = mock_dir()
+MOCK_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__),
+                                          "../mocks/files/"))
 sim.rc.__search_path__.insert(0, MOCK_DIR)
 
 PLOTS = False
@@ -54,6 +49,7 @@ def input_files():
 def input_hdulist():
     filenames = ["test_image.fits"]
     filenames = [os.path.join(MOCK_DIR, fname) for fname in filenames]
+    print(filenames)
     hdu_handle = fits.open(filenames[0])
 
     return hdu_handle

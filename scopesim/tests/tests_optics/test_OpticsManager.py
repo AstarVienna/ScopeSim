@@ -1,3 +1,6 @@
+import os
+import scopesim as sim
+
 import pytest
 from astropy.io import fits
 
@@ -6,6 +9,13 @@ from scopesim.effects import Effect
 
 from scopesim.tests.mocks.py_objects.yaml_objects import\
     _inst_yaml_dict, _detector_yaml_dict
+
+
+FILES_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),
+                                          "../mocks/files/"))
+YAMLS_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),
+                                          "../mocks/MICADO_SCAO_WIDE/"))
+sim.rc.__search_path__ += [FILES_PATH, YAMLS_PATH]
 
 
 @pytest.fixture(scope="function")
@@ -30,6 +40,7 @@ class TestOpticsManager:
 
     def test_initialises_two_yaml_dicts(self, detector_yaml_dict,
                                         inst_yaml_dict):
+        print(detector_yaml_dict, inst_yaml_dict)
         opt_man = opt_mgr.OpticsManager([detector_yaml_dict, inst_yaml_dict])
         print(opt_man, opt_man.meta)
         assert isinstance(opt_man, opt_mgr.OpticsManager)

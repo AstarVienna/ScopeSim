@@ -20,13 +20,8 @@ from scopesim.optics import surface as opt_surf
 import scopesim as sim
 
 
-def mock_dir():
-    cur_dirname = os.path.dirname(inspect.getfile(inspect.currentframe()))
-    rel_dirname = "../mocks/MICADO_SCAO_WIDE/"
-    return os.path.abspath(os.path.join(cur_dirname, rel_dirname))
-
-
-MOCK_DIR = mock_dir()
+MOCK_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__),
+                                          "../mocks/MICADO_SCAO_WIDE/"))
 sim.rc.__search_path__.insert(0, MOCK_DIR)
 
 

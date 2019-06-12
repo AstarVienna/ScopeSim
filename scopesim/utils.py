@@ -729,12 +729,13 @@ def change_table_entry(tbl, col_name, new_val, old_val=None, position=None):
     return tbl
 
 
-def real_colname(name, colnames):
+def real_colname(name, colnames, silent=True):
     names = [name.lower(), name.upper(), name[0].upper() + name[1:].lower()]
     real_name = [name for name in names if name in colnames]
     if len(real_name) == 0:
         real_name = None
-        warnings.warn("None of {} were found in {}".format(names, colnames))
+        if not silent:
+            warnings.warn("None of {} were found in {}".format(names, colnames))
     else:
         real_name = real_name[0]
 

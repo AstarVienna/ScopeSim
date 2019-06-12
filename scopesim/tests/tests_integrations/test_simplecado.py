@@ -70,7 +70,9 @@ def test_simplecado():
     assert np.all(hdu[1].data == 2.0)
 
 
-def test_read_in_simplecado_package():
+def read_in_simplecado_package():
+    # ..todo: FIX THIS!!!!
+    # only works on the local laptop
     sim.rc.__search_path__ = ["C:/Work/irdb/SimpleCADO/"]
     assert sim.utils.find_file("SimpleCADO.config")
 

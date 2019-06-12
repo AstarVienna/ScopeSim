@@ -232,7 +232,10 @@ class OpticsManager:
         for opt_el in self.optical_elements:
             surface_like_effects += opt_el.ter_list
 
-        pixel_scale = self.meta["SIM_PIXEL_SCALE"] * u.arcsec
+        if self.meta["SIM_PIXEL_SCALE"] is not None:
+            pixel_scale = self.meta["SIM_PIXEL_SCALE"] * u.arcsec
+        else:
+            pixel_scale = 0 * u.arcsec**2
         surf_table = combine_surface_effects(surface_like_effects)
         surf_table.meta["etendue"] = surf_table.area * pixel_scale**2
 
