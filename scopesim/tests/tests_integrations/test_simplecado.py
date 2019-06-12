@@ -60,7 +60,6 @@ def test_simplecado():
     opt.observe(src)
     hdu = opt.readout()
 
-
     # Finished - now just testing the output
     # No rogue photon torpedoes
     print(opt.image_plane.image)

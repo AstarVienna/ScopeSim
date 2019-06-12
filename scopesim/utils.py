@@ -938,11 +938,11 @@ def has_needed_keywords(header, suffix=""):
            "NAXIS1" in header.keys()
 
 
-def stringify_dict(dic):
+def stringify_dict(dic, ignore_types=(str, int, float)):
     from copy import deepcopy
     dic_new = deepcopy(dic)
     for key in dic_new:
-        if not isinstance(dic_new[key], str):
+        if not isinstance(dic_new[key], ignore_types):
             dic_new[key] = str(dic_new[key])
 
     return dic_new

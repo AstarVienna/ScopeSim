@@ -163,20 +163,24 @@ def get_imaging_waveset(effects, **kwargs):
 
     wave_min = kwargs["SIM_LAM_MIN"]
     wave_max = kwargs["SIM_LAM_MAX"]
+    wave_bin_edges = [wave_min, wave_max]
     spf = kwargs["SIM_SUB_PIXEL_FRACTION"]
 
     psfs = get_all_effects(effects, efs.PSF)
     if len(psfs) > 0:
-        wave_bin_edges = [psf.fov_grid(which="waveset",
+        new_bin_edges = []
+        for psf in psfs:
+            psf_waveset = psf.fov_grid(which="waveset",
                                        waverange=[wave_min, wave_max],
                                        sub_pixel_frac=spf)
-                          for psf in psfs]
+            if psf_waveset is not None and len(psf_waveset) > 1:
+                new_bin_edges += [psf_waveset]
+
         # assume the longest array requires the highest spectral resolution
-        len_steps = np.array([len(lbe) for lbe in wave_bin_edges])
-        ii = np.where(len_steps == max(len_steps))[0][0]
-        wave_bin_edges = wave_bin_edges[ii]
-    else:
-        wave_bin_edges = [wave_min, wave_max]
+        if len(new_bin_edges) > 0:
+            len_steps = np.array([len(wbe) for wbe in new_bin_edges])
+            ii = np.where(len_steps == max(len_steps))[0][0]
+            wave_bin_edges = new_bin_edges[ii]
 
     return wave_bin_edges
 

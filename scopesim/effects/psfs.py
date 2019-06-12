@@ -17,6 +17,7 @@ class PSF(Effect):
     def __init__(self, **kwargs):
         self.kernel = None
         self.valid_waverange = None
+        self._waveset = None
         super(PSF, self).__init__(**kwargs)
         self.meta["SIM_FLUX_ACCURACY"] = rc.__rc__["SIM_FLUX_ACCURACY"]
         self.meta["SIM_SUB_PIXEL_ACCURACY"] = rc.__rc__["SIM_SUB_PIXEL_ACCURACY"]
@@ -51,8 +52,12 @@ class PSF(Effect):
 
         return obj
 
-    def fov_grid(self, header=None, waverange=None, **kwargs):
-        return {"wavelengths": waverange}
+    def fov_grid(self, which="waveset", **kwargs):
+        waves = []
+        if which == "waveset":
+            waves = self._waveset
+
+        return waves
 
     def get_kernel(self, fov):
         self.valid_waverange = None
@@ -196,7 +201,7 @@ class FieldVaryingPSF(DiscretePSF):
     def __init__(self, **kwargs):
         super(FieldVaryingPSF, self).__init__(**kwargs)
         self.meta["z_order"] = [1, 301]
-        self.waveset, self.kernel_indexes = get_psf_wave_exts(self._file)
+        self._waveset, self.kernel_indexes = get_psf_wave_exts(self._file)
         self.current_ext = None
         self.current_data = None
         self._strehl_imagehdu = None
@@ -252,7 +257,7 @@ class FieldVaryingPSF(DiscretePSF):
         # 5. make list of tuples with kernel and mask
 
         fov_wave = 0.5 * (fov.meta["wave_min"] + fov.meta["wave_max"])
-        jj = nearest_index(fov_wave, self.waveset)
+        jj = nearest_index(fov_wave, self._waveset)
         ii = self.kernel_indexes[jj]
         if ii != self.current_ext:
             self.current_ext = ii

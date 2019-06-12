@@ -53,8 +53,9 @@ class ShotNoise(Effect):
                 obj.image_hdu.data = obj.image_hdu.data.astype(np.float64)
 
             data = obj.image_hdu.data
-            # ..todo FIX THIS!!!!!!
-            # data = np.random.poisson(data).astype(orig_type)
+            # ..todo FIX THIS!!!
+            # (KL) it seems to have fixed itself... lets wait and see
+            data = np.random.poisson(data).astype(orig_type)
 
             new_imagehdu = fits.ImageHDU(data=data, header=obj.image_hdu.header)
             obj.image_hdu = new_imagehdu
