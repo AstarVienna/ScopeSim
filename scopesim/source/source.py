@@ -66,7 +66,7 @@ class Source(SourceBase):
     
     The spatial description can be built from any combination of:
     
-    * a list of arrays (like in SimCADO v0.5)
+    * a list of arrays (like in SimCADO >v0.5)
     * astropy Table objects
     * astropy ImageHDU objects
     * on disk FITS files
@@ -74,7 +74,8 @@ class Source(SourceBase):
     
     while the spectral descriptions can be passed as either ``synphot.SourceSpectrum``
     objects, or a set of two equal length arrays for wavelength and flux.
-   
+
+
     Parameters
     ----------
     spectra : array, or 
@@ -91,10 +92,21 @@ class Source(SourceBase):
         centre of the field of view
     ref : np.array
         the index for .spectra which connects a position (x, y) to a spectrum
-        f(x[i], y[i]) = spectra[ref[i]] * weight[i]
+        ``f(x[i], y[i]) = spectra[ref[i]] * weight[i]``
     weight : np.array
         A weighting to scale the relevant spectrum for each position
-    
+
+
+    Attributes
+    ----------
+    fields : list
+        The spatial distribution of the on-sky source, either as
+        ``fits.ImageHDU`` or ``astropy.Table`` objects
+    spectra : list of ``synphot.SourceSpectrum`` objects
+        List of spectra associated with the fields
+    meta : dict
+        Dictionary of extra information about the source
+
     See Also
     --------
     ``synphot`` - https://synphot.readthedocs.io/en/latest/

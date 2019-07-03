@@ -5,6 +5,8 @@ import scopesim as sim
 import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm
 
+import scopesim.source.source_utils
+
 PLOTS = False
 
 
@@ -52,7 +54,7 @@ OBSERVATIONS_DICT = {"SIM_PIXEL_SCALE" : 0.004,     # because optical train stil
 
 def test_simplecado():
 
-    src = sim.source.templates.empty_sky()
+    src = scopesim.source.source_utils.empty_sky()
 
     cmd = sim.UserCommands(OBSERVATIONS_DICT)
 
@@ -82,7 +84,7 @@ def read_in_simplecado_package():
     opt = sim.OpticalTrain(cmds=cmd)
     assert opt.optics_manager.optical_elements[1].meta["object"] == "detector"
 
-    src = sim.source.templates.empty_sky()
+    src = scopesim.source.source_utils.empty_sky()
     opt.observe(src)
     hdu = opt.readout()
 

@@ -1,9 +1,8 @@
-# actually for Source2
+# actually for Source
 import pytest
 from pytest import approx
 
 import os
-import inspect
 from copy import deepcopy
 
 import numpy as np
@@ -22,7 +21,6 @@ import scopesim as sim
 from scopesim.source import source_utils
 from scopesim.source.source import Source
 
-from scopesim.source import source as src2
 from scopesim.optics.image_plane import ImagePlane
 from scopesim.utils import convert_table_comments_to_dict
 
@@ -31,7 +29,7 @@ from matplotlib.colors import LogNorm
 
 
 MOCK_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__),
-                                          "../mocks/files/"))
+                                        "../mocks/files/"))
 sim.rc.__search_path__.insert(0, MOCK_DIR)
 
 PLOTS = False

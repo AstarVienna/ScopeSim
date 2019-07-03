@@ -86,6 +86,7 @@ class OpticalTrain:
         - Apply Source altering effects - z_order = 200..299
         - Apply FOV specific (3D) effects - z_order = 300..399
         - Apply FOV-independent (2D) effects - z_order = 400..499
+        - [Apply detector plane (0D, 2D) effects - z_order = 500..599]
 
         """
 

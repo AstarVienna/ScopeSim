@@ -1,18 +1,59 @@
+### OBSERVATION
+object : simulation
+name : default_simulation_config
+alias : SIM
+description : simulation confiugration parameters
+
+properties :
+    lam_min : 1.8
+    lam_mid : 2.2
+    lam_max : 2.5
+    chunk_size : 512
+    max_segment_size : 1.1E6
+    oversampling : 1
+    pixel_threshold : 1
+    minimum_throughput : 1E-6
+    spline_order : 1
+    spectral_resolution : 1E-4
+    flux_accuracy : 1E-3
+    sub_pixel_flag : False
+    sub_pixel_fraction : 1
+    verbose : False
+    message_level : 3
+    random_seed : 42
+
+
+### OBSERVATION
+object : observation
+name : default_observation
+alias : OBS
+description : observation parameters
+
+properties :
+    airmass : 1
+    pupil_angle : 0
+    field_rotation : 0
+    dit : 60
+    ndit : 1
+    filter_name : TC_filter_Ks.dat
+
+
 ### LOCATION ARMAZONES
 object : atmosphere
 name : armazones
+alias : ATMO
 description : Atmosphere and location details for Cerro Armazones
 
 properties :
     altitude : 3060
     longitude : -70.1918
     latitude : -24.5899
-    airmass : OBS_AIRMASS
-    temperature : OBS_TEMPERATURE
-    humidity : OBS_HUMIDITY
-    pressure : OBS_PRESSURE
-    pwv : OBS_PWV
-    pupil_angle : OBS_PUPIL_ANGLE
+    airmass : !OBS.airmass
+    temperature : 0
+    humidity : 0.6
+    pressure : 0.6
+    pwv : 2.5
+    pupil_angle : !OBS.pupil_angle
 
 effects :
 -   name : atmo_ter_curve
@@ -25,15 +66,16 @@ effects :
     description : atmospheric dispersion
     class : AtmosphericDispersion
     kwargs :
-        central_wavelength : SIM_LAM_MID
+        central_wavelength : !SIM.lam_mid
 
 
 ### ELT TELESCOPE
 object : telescope
 name : ELT
+alias : TEL
 
 properties :
-    temperature : OBS_TEMPERATURE
+    temperature : !ATMO.temperature
 
 effects :
 -   name: scope_surface_list
@@ -52,7 +94,11 @@ effects :
 ### MAORY RELAY OPTICS
 object : relay_optics
 name : MAORY
+alias : RO
 description : MAORY AO relay module
+
+properties :
+    temperature : !ATMO.temperature
 
 effects :
 -   name : relay_psf
@@ -60,7 +106,7 @@ effects :
     class : FieldVaryingPSF
     kwargs:
         filename : None
-        field_rotation : OBS_FIELD_ROTATION
+        field_rotation : !OBS.field_rotation
 
 effects :
 -   name: relay_surface_list
@@ -74,10 +120,11 @@ effects :
 ### STANDALONE RELAY OPTICS
 object : relay_optics
 name : default_ro
+alias : RO
 description : Simple stand-alone relay optics module
 
 properties :
-    temperature : OBS_TEMPERATURE
+    temperature : !ATMO.temperature
 
 effects :
 -   name : relay_psf
@@ -85,7 +132,7 @@ effects :
     class : AnisocadoPSF
     kwargs:
         anisocado_params : {}
-        field_rotation : OBS_FIELD_ROTATION
+        field_rotation : !OBS.field_rotation
 
 effects :
 -   name: relay_surface_list
@@ -98,6 +145,7 @@ effects :
 ### MICADO INSTRUMENT WIDE FIELD MODE
 object : instrument
 name : MICADO
+alias : INST
 description : wide field mode of MICADO
 
 properties :
@@ -115,22 +163,21 @@ effects :
     description : transmission curve for filter
     class: TERCurve
     kwargs:
-        filename: TC_filter_Ks.dat
+        filename: !OBS.filter_name
 
 -   name: adc_3D_shift
     description : atmospheric disperson corrector
     class: AtmosphericDispersionCorrection
     kwargs:
-        altitude : 3060
-        longitude : -70.1918
-        latitude : -24.5899
-        airmass : OBS_AIRMASS
-        temperature : OBS_TEMPERATURE
-        humidity : OBS_HUMIDITY
-        pressure : OBS_PRESSURE
-        pupil_angle : OBS_PUPIL_ANGLE
+        altitude : !ATMO.altitude
+        longitude : !ATMO.longitude
+        latitude : !ATMO.latitude
+        airmass : !OBS.airmass
+        temperature : !ATMO.temperature
+        humidity : !ATMO.humidity
+        pressure : !ATMO.pressure
+        pupil_angle : !OBS.pupil_angle
         efficiency: 1
-
 
 -   name : ncpas_psf
     description : Effective NCPA induced PSF kernel
@@ -142,6 +189,7 @@ effects :
 ### H4RG DETECTOR
 object : detector
 name : micado_detector_array
+alias : DET
 description : A set of 9 H4RG detectors
 
 properties :
