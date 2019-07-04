@@ -20,13 +20,13 @@ class TestUserCommandsInit:
         assert empty_cmds.cmds["SIM_ATMOSPHERE_YAML"] is None
 
     def test_str_booleans_are_converted_to_booleans(self, empty_cmds):
-        assert empty_cmds.cmds["SIM_SUB_PIXEL_ACCURACY"] is False
+        assert empty_cmds.cmds["SIM_SUB_PIXEL_FLAG"] is False
 
     def test_str_floats_are_converted_to_floats(self, empty_cmds):
         assert empty_cmds.cmds["SIM_SIM_MESSAGE_LEVEL"] == 3.
 
     def test_multiline_str_accepted_as_argument_for_filename(self):
-        file_str = "SIM_SUB_PIXEL_ACCURACY True \n " \
+        file_str = "SIM_SUB_PIXEL_FLAG True \n " \
                    "SIM_SIM_MESSAGE_LEVEL None # comment"
         cmds = usr_cmds.UserCommands(file_str)
         assert isinstance(cmds, usr_cmds.UserCommands)
@@ -48,10 +48,10 @@ class TestUserCommandsGettersAndSetters:
 
     def test_individual_values_are_converted_to_none_bool_float(self, empty_cmds):
         empty_cmds["SIM_ATMOSPHERE_YAML"] = "none"
-        empty_cmds["SIM_SUB_PIXEL_ACCURACY"] = "False"
+        empty_cmds["SIM_SUB_PIXEL_FLAG"] = "False"
         empty_cmds["SIM_CHUNK_SIZE"] = "2.0"
         assert empty_cmds["SIM_ATMOSPHERE_YAML"] is None
-        assert empty_cmds["SIM_SUB_PIXEL_ACCURACY"] is False
+        assert empty_cmds["SIM_SUB_PIXEL_FLAG"] is False
         assert empty_cmds["SIM_CHUNK_SIZE"] == 2.
 
     def test_subcategory_dicts_are_updated_when_called(self, empty_cmds):

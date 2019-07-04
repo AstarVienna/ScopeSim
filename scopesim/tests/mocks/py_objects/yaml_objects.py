@@ -18,12 +18,25 @@ name : armazones
 properties :
     temperature : 0         # [-270..270] deg C
     pressure : 0.6          # [0..1] bar
-
+    altitude : 3060
+    longitude : -70.1918
+    latitude : -24.5899
+    airmass : 1.2
+    humidity : 0.6
+    pwv : 2.5
+    pupil_angle : 30
+    
 effects :
 -   name : super_psf
     class : GaussianDiffractionPSF
     kwargs :
         diameter : 39
+
+-   name : atmo_dispersion
+    description : atmospheric dispersion
+    class : AtmosphericDispersion
+    kwargs :
+        central_wavelength : 2.2
 """
     return yaml.load(text)
 

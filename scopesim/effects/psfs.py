@@ -20,7 +20,7 @@ class PSF(Effect):
         self._waveset = None
         super(PSF, self).__init__(**kwargs)
         self.meta["SIM_FLUX_ACCURACY"] = rc.__rc__["SIM_FLUX_ACCURACY"]
-        self.meta["SIM_SUB_PIXEL_ACCURACY"] = rc.__rc__["SIM_SUB_PIXEL_ACCURACY"]
+        self.meta["SIM_SUB_PIXEL_FLAG"] = rc.__rc__["SIM_SUB_PIXEL_FLAG"]
 
         self.meta.update(kwargs)
 
@@ -29,8 +29,8 @@ class PSF(Effect):
             kernel = self.get_kernel(obj)
 
             sub_pixel = False
-            if "SIM_SUB_PIXEL_ACCURACY" in self.meta:
-                sub_pixel = self.meta["SIM_SUB_PIXEL_ACCURACY"]
+            if "SIM_SUB_PIXEL_FLAG" in self.meta:
+                sub_pixel = self.meta["SIM_SUB_PIXEL_FLAG"]
 
             if obj.hdu.data is None:
                 obj.view(sub_pixel)
@@ -212,7 +212,7 @@ class FieldVaryingPSF(DiscretePSF):
 
         if len(fov.fields) > 0:
             if fov.hdu.data is None:
-                fov.view(self.meta["SIM_SUB_PIXEL_ACCURACY"])
+                fov.view(self.meta["SIM_SUB_PIXEL_FLAG"])
 
             old_shape = fov.hdu.data.shape
 

@@ -1,8 +1,18 @@
-### OBSERVATION
+### SIMULATION PARAMETERS
 object : simulation
 name : default_simulation_config
 alias : SIM
 description : simulation confiugration parameters
+
+yaml :
+    general     : None
+    simulation  : default_simulation_config
+    observation : default_observation
+    atmosphere  : armazones
+    telescope   : ELT
+    relay_optics: default_ro
+    instrument  : MICADO_LRI
+    detector    : micado_detector_array
 
 properties :
     lam_min : 1.8
@@ -22,8 +32,9 @@ properties :
     message_level : 3
     random_seed : 42
 
+---
 
-### OBSERVATION
+### OBSERVATION PARAMETERS
 object : observation
 name : default_observation
 alias : OBS
@@ -37,6 +48,7 @@ properties :
     ndit : 1
     filter_name : TC_filter_Ks.dat
 
+---
 
 ### LOCATION ARMAZONES
 object : atmosphere
@@ -67,7 +79,9 @@ effects :
     class : AtmosphericDispersion
     kwargs :
         central_wavelength : !SIM.lam_mid
+        pixel_scale : !INST.pixel_scale
 
+---
 
 ### ELT TELESCOPE
 object : telescope
@@ -90,6 +104,7 @@ effects :
     kwargs :
         fwhm : 0.001
 
+---
 
 ### MAORY RELAY OPTICS
 object : relay_optics
@@ -115,7 +130,7 @@ effects :
     kwargs:
         filename: LIST_mirrors_MCAO_MAORY.tbl
 
-
+---
 
 ### STANDALONE RELAY OPTICS
 object : relay_optics
@@ -141,10 +156,11 @@ effects :
     kwargs:
         filename: LIST_mirrors_SCAO_relay.tbl
 
+---
 
 ### MICADO INSTRUMENT WIDE FIELD MODE
 object : instrument
-name : MICADO
+name : MICADO_LRI
 alias : INST
 description : wide field mode of MICADO
 
@@ -185,6 +201,7 @@ effects :
     kwargs :
         filename : INST_wfe.tbl
 
+---
 
 ### H4RG DETECTOR
 object : detector
@@ -225,14 +242,8 @@ effects :
     description : apply poisson shot noise to images
     class: ShotNoise
 
-
 -   name : readout_noise
     description : Readout noise frames
     class : ReadoutNoise
     kwargs :
         file_name : FPA_noise.fits
-
-
-
-
-

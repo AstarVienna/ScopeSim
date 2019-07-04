@@ -38,7 +38,7 @@ class FieldOfView(FieldOfViewBase):
                      "wave_min" : utils.quantify(waverange[0], u.um),
                      "wave_max" : utils.quantify(waverange[1], u.um),
                      "area" : 1 * u.m**2,
-                     "sub_pixel" : rc.__rc__["SIM_SUB_PIXEL_ACCURACY"]}
+                     "sub_pixel" : rc.__rc__["SIM_SUB_PIXEL_FLAG"]}
         self.meta.update(kwargs)
 
         if not any([utils.has_needed_keywords(header, s) for s in ["", "S"]]):

@@ -61,8 +61,9 @@ import astropy.io.ascii as ioascii
 from .. import rc
 
 from .. import OLD_spectral as sc
-from ..utils import atmospheric_refraction, find_file, zendist2airmass, \
+from ..utils import find_file, zendist2airmass, \
                     airmass2zendist
+from scopesim.effects.effects_utils import atmospheric_refraction
 from .. import server as svr
 
 from . import user_commands_utils as cutils
