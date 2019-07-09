@@ -12,13 +12,12 @@ __config__ = read_config(os.path.join(__pkg_dir__, ".default.config"))
 __search_path__ = ['./', __rc__["FILE_LOCAL_DOWNLOADS_PATH"],
                    __pkg_dir__, __data_dir__]   # For utils.find_file()
 
-__system__ = SystemDict()
-
 
 class SystemDict(object):
-    def __init__(self, new_dict):
+    def __init__(self, new_dict=None):
         self.dic = {}
-        self.update(new_dict)
+        if new_dict is not None:
+            self.update(new_dict)
 
     def __getitem__(self, item):
         if isinstance(item, str) and item[0] == "!":
