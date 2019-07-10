@@ -4,6 +4,7 @@ astropy
 matplotlib
 wget
 requests
+beautifulsoup4
 
 pyyaml
 synphot

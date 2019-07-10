@@ -2,7 +2,7 @@ import pytest
 import shutil
 import os
 import scopesim as sim
-import scopesim.server.database as sim_db
+import scopesim.server.OLD_database as sim_db
 
 _parent_path = "./test_downloads_dir/"
 
