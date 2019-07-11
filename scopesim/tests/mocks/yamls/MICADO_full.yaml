@@ -28,8 +28,6 @@ properties :
     flux_accuracy : 1E-3
     sub_pixel_flag : False
     sub_pixel_fraction : 1
-    verbose : False
-    message_level : 3
     random_seed : 42
 
 ---

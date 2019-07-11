@@ -36,6 +36,7 @@ def make_effect(effect_dict, **super_kwargs):
                         if key not in ["class", "kwargs"]}
     effect_class_name = effect_dict["class"]
     effect_cls = getattr(efs, effect_class_name)
+    # ..todo: add looking for custom effect class names from 3rd party packages
 
     effect_kwargs = {}
     effect_kwargs.update(effect_meta_dict)         # effect name and description
