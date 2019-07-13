@@ -5,16 +5,6 @@ alias : SIM
 description : simulation confiugration parameters
 
 properties :
-  yaml:
-    general: None
-    simulation: None
-    observation: None
-    atmosphere: None
-    telescope: None
-    relay_optics: None
-    instrument: None
-    detector: None
-
   spectral:
     lam_min : 0.3
     lam_mid : 2.2
@@ -38,6 +28,6 @@ properties :
     flux_accuracy : 1E-3
 
   file :
-    local_downloads_path : "./"
+    local_packages_path : "./"
     server_base_url : "https://www.univie.ac.at/simcado/InstPkgSvr/"
     search_path : ["./"]

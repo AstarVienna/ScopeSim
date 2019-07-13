@@ -1,0 +1,34 @@
+MICADO Effect objects
+---------------------
+    ATMO SkycalcCatalogueTERCurve
+    ATMO SkycalcDownloadTERCurve
+    ATMO AtmosphericDispersion
+D   TEL SurfaceList
+    TEL VibrationPSF
+    RO FieldConstantPSF
+D   RO FieldVaryingPSF
+    RO AnisocadoPSF
+D   RO SurfaceList
+D   INST SurfaceList
+D   INST TERCurve
+    INST NonCommonPathAberration
+D   INST_MODE SurfaceList
+    INST_MODE AtmosphericDispersionCorrection
+    INST_MODE TraceList
+    INST_MODE CoronagraphPSF
+    DET DetectorList
+    DET QuantumEfficiencyCurve
+D   DET DarkCurrent
+D   DET LinearityCurve
+D   DET ShotNoise
+    DET ReadoutNoise
+
+
+MICADO default.yaml keywords
+----------------------------
+OBS.airmass
+OBS.pupil_angle
+SIM.lam_mid
+OBS.dit
+OBS.ndit
+OBS.filter_name
