@@ -2,40 +2,68 @@ import os
 import warnings
 import copy
 
+import numpy as np
 import yaml
 
+from .system_dict import SystemDict
 from .. import rc
 from ..utils import find_file
-from . import user_commands_utils as cutils
 
 __all__ = ["UserCommands"]
 
 
 class UserCommands:
-    def __init__(self, filename=None, sim_data_dir=None, **kwargs):
+    """
+
+    kwargs
+    ------
+    name:
+
+
+
+    """
+
+    def __init__(self, filename=None, **kwargs):
+
+        self.cmds = copy.deepcopy(rc.SystemDict)
+        self.yaml_dicts = []
 
         self.filename = filename
-        self.meta = {}
-        self.meta.update(kwargs)
-        self._yaml_dicts = []
-        rc.SystemDict["SIM.file.search_path"] += ["sim_data_dir"]
+        if filename is not None:
+            self.yaml_dicts += load_yaml_dicts(find_file(filename))
+        else:
+            kwargs["alias"] = "OBS"
+            self.yaml_dicts += [kwargs]
 
-        # read in the default keywords
-        # Don't use self.update because we need to add all the valid keywords
+        self.update()
 
-    @property
-    def yaml_dicts(self):
-        _yaml_dicts = []
-        for yaml_name in ["SIM_GENERAL_YAML", "SIM_ATMOSPHERE_YAML",
-                          "SIM_TELESCOPE_YAML", "SIM_RELAY_OPTICS_YAML",
-                          "SIM_INSTRUMENT_YAML", "SIM_DETECTOR_YAML"]:
-            yaml_obj = self.cmds[yaml_name]
-            if isinstance(yaml_obj, dict):
-                _yaml_dicts += [yaml_obj]
-            elif isinstance(yaml_obj, str):
-                with open(find_file(yaml_obj)) as f:
-                    _yaml_dicts += [dic for dic in yaml.load_all(f)]
+    def update(self, **kwargs):
+        # combine dicts with same alias
+        # update self.cmds
+        self.yaml_dicts = combine_similar_yamls(self.yaml_dicts)
 
-        self._yaml_dicts = _yaml_dicts
-        return self._yaml_dicts
+
+
+        for yaml_dic in self.yaml_dicts:
+            self.cmds.update(yaml_dic)
+
+
+
+def combine_similar_yamls(yaml_list):
+    aliases = np.unique([yaml["alias"] for yaml in yaml_list])
+    for alias in alias
+
+
+
+
+    return yaml_list
+
+
+
+def load_yaml_dicts(filename):
+    yaml_dicts = []
+    with open(filename) as f:
+        yaml_dicts += [dic for dic in yaml.load_all(f)]
+
+    return yaml_dicts
 
