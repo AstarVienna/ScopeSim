@@ -4,7 +4,9 @@ import numpy as np
 from astropy import wcs, units as u
 from astropy.io import fits
 from astropy.table import Table
-from synphot import SourceSpectrum, Empirical1D, SpectralElement
+import synphot
+from synphot import units, SourceSpectrum, SpectralElement, Observation, Empirical1D
+from synphot.models import Box1D
 from synphot.units import convert_flux
 
 from .. import utils
@@ -68,6 +70,31 @@ def convert_to_list_of_spectra(spectra, lam):
     return spectra_list
 
 
+def get_vega_spectrum():
+    """
+    Copied from SimCADO
+    Retrieve the Vega spectrum from stsci and return it in synphot format
+
+
+    Notes
+    -----
+    To access wavelength and fluxes use::
+
+        wave, flux = vega_sp._get_arrays(wavelengths=None)
+
+    """
+    location = "http://ssb.stsci.edu/cdbs/calspec/alpha_lyr_stis_008.fits"
+    remote = synphot.specio.read_remote_spec(location, cache=True)
+    header = remote[0]
+    wave = remote[1]
+    flux = remote[2]
+    url = 'Vega from ftp://ftp.stsci.edu/cdbs/calspec/alpha_lyr_stis_008.fits'
+    meta = {'header': header, 'expr': url}
+    vega_sp = synphot.SourceSpectrum(Empirical1D, points=wave,
+                                     lookup_table=flux, meta=meta)
+    return vega_sp
+
+
 def photons_in_range(spectra, wave_min, wave_max, area=None, bandpass=None):
     """
 
@@ -123,6 +150,80 @@ def photons_in_range(spectra, wave_min, wave_max, area=None, bandpass=None):
         counts *= utils.quantify(area, u.m ** 2)
 
     return counts
+
+
+def new_photons_in_range(spectra, wave_min, wave_max, area, bandpass=None):
+    """
+    This function intends to supersede the function above. Once tests pass
+    It relies in synphot.Observations to return the counts
+
+    TODO: Write wrapper functions make_synphot_bandpass and make_synphot_spectra
+        to allow a variety of bandpasses and spectra.
+    TODO: Delete above function once tests pass
+
+
+    Parameters
+    ----------
+    spectra: a synphot spectrum
+    wave_min
+        [um]
+    wave_max
+        [um]
+    area : Quantity
+        [m2]
+    bandpass : SpectralElement
+
+
+    Returns
+    -------
+    counts : u.Quantity array
+
+    """
+    if isinstance(area, u.Quantity):
+        area = area.to(u.m**2).value  # if not unit is given, area is assumed in m2
+
+    if isinstance(wave_min, u.Quantity):
+        wave_min = wave_min.to(u.Angstrom).value
+    else:
+        wave_min *= 1E4
+
+    if isinstance(wave_max, u.Quantity):
+        wave_max = wave_max.to(u.Angstrom).value
+    else:
+        wave_max *= 1E4  # if not unit is given, wavelength is assumed in Angstrom
+
+    if isinstance(spectra, list) is False:
+        spectra = [spectra]
+
+    if bandpass is None:
+        # this makes a bandpass out of wmin and wmax
+        mid_point = 0.5*(wave_min + wave_max)
+        width = abs(wave_max - wave_min)
+        bandpass = SpectralElement(Box1D, amplitude=1, x_0=mid_point, width=width)
+
+    if (bandpass is not None) and (isinstance(bandpass, synphot.spectrum.SpectralElement) is False) :
+        # bandpass = make_synphot_bandpass(bandpass) # try to make a synphot bandpass from e.g. filter file
+        pass
+
+    counts = []
+    for spec in spectra:
+        if isinstance(spec, synphot.spectrum.SourceSpectrum) is False:
+            #spec = make_synphot_spectrum(spec) # Try to make a synphot spectrum from e.g. file/np.array
+            pass
+
+        obs = Observation(spec, bandpass)
+        counts.append(obs.countrate(area=area*u.m**2).value)
+
+    counts = np.array(counts) * u.ph * u.s**-1
+
+    return counts
+
+
+
+
+
+
+
 
 
 def make_imagehdu_from_table(x, y, flux, pix_scale=1*u.arcsec):
