@@ -51,9 +51,9 @@ class TestFovGrid:
         kwargs_dict = atmo_yaml_dict["properties"]
 
         from scopesim import rc
-        rc.__config__["SIM_LAM_MIN"] = 0.5
-        rc.__config__["SIM_LAM_MID"] = 1.5
-        rc.__config__["SIM_LAM_MAX"] = 2.5
+        rc.__old_config__["SIM_LAM_MIN"] = 0.5
+        rc.__old_config__["SIM_LAM_MID"] = 1.5
+        rc.__old_config__["SIM_LAM_MAX"] = 2.5
         kwargs_dict["airmass"] = 1.14
         kwargs_dict["temperature"] = 7
         kwargs_dict["pressure"] = 0.755

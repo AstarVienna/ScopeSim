@@ -216,7 +216,7 @@ class UserCommands(object):
 
         # read in the default keywords
         # Don't use self.update because we need to add all the valid keywords
-        self.cmds = copy.deepcopy(rc.__config__)
+        self.cmds = copy.deepcopy(rc.__old_config__)
         self.cmds.update(rc.__rc__)
         self._convert_python_types()
 
