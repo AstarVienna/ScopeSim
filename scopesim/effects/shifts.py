@@ -65,9 +65,9 @@ class AtmosphericDispersion(Shift3D):
 
         """
 
-        lam_min = rc.__config__["SIM_LAM_MIN"]
-        lam_mid = rc.__config__["SIM_LAM_MID"]
-        lam_max = rc.__config__["SIM_LAM_MAX"]
+        lam_min = rc.__old_config__["SIM_LAM_MIN"]
+        lam_mid = rc.__old_config__["SIM_LAM_MID"]
+        lam_max = rc.__old_config__["SIM_LAM_MAX"]
 
         atmo_params = {"z0"     : airmass2zendist(self.meta["airmass"]),
                        "temp"   : self.meta["temperature"],         # in degC

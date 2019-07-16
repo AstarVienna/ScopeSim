@@ -6,9 +6,14 @@ class SystemDict(object):
         self.dic = {}
         if isinstance(new_dict, dict):
             self.update(new_dict)
+        elif isinstance(new_dict, list):
+            for entry in new_dict:
+                self.update(entry)
 
     def update(self, new_dict):
-        if isinstance(new_dict, dict) and "alias" in new_dict:
+        if isinstance(new_dict, dict) \
+                and "alias" in new_dict \
+                and "properties" in new_dict:
             alias = new_dict["alias"]
             if alias in self.dic:
                 self.dic[alias] = recursive_update(self.dic[alias],
@@ -53,7 +58,16 @@ class SystemDict(object):
             return item in self.dic
 
     def __repr__(self):
-        return self.dic.__repr__()
+        msg = "<SystemDict> contents:"
+        for key in self.dic.keys():
+            val = self.dic[key]
+            msg += "\n{}: ".format(key)
+            if isinstance(val, dict):
+                for subkey in val.keys():
+                    msg += "\n  {}: {}".format(subkey, val[subkey])
+            else:
+                msg += "{}\n".format(val)
+        return msg
 
 
 def recursive_update(old_dict, new_dict):

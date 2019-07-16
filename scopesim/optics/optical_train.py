@@ -1,5 +1,6 @@
 from copy import deepcopy
 
+from .. import rc
 from ..commands.user_commands import UserCommands
 from .optics_manager import OpticsManager
 from .fov_manager import FOVManager
@@ -38,6 +39,8 @@ class OpticalTrain:
         user_commands : UserCommands
 
         """
+
+        rc.__currsys__ = user_commands
 
         if not isinstance(user_commands, UserCommands):
             raise ValueError("user_commands must be a UserCommands object: "

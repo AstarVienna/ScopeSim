@@ -38,11 +38,11 @@ properties :
 object : observation
 name : default_observation_config
 alias : OBS
-description : simulation confiugration parameters
+description : observation confiugration parameters
 
 packages : []
 yamls : []
-properties : []
+properties : {}
 
 use_instrument : ""
 ignore_effects : []
