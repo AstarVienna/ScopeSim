@@ -1,0 +1,24 @@
+alias : SIM
+properties :
+  spectral:
+    lam_min : 0.5     # um
+    lam_mid : 1.5     # um
+    lam_max : 2.5     # um
+
+  sub_pixel :
+    flag : True       # Turn on subpixel shifts for point sources
+    fraction : 1      # full pixel shift
+
+  computing :
+    chunk_size : 256  # pixel side length of per FOV
+
+---
+
+alias : OBS
+yamls : ["min_viable_sys.yaml"]
+
+---
+
+alias : INST
+properties :
+  pixel_scale : 0.2   # arcsec / pixel

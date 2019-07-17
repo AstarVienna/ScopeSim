@@ -44,7 +44,8 @@ class ImagePlane(ImagePlaneBase):
 
     def __init__(self, header, **kwargs):
 
-        self.meta = {"SIM_MAX_SEGMENT_SIZE" : rc.__rc__["SIM_MAX_SEGMENT_SIZE"]}
+        max_seg_size = rc.__config__["!SIM.computing.max_segment_size"]
+        self.meta = {"SIM_MAX_SEGMENT_SIZE" : max_seg_size}
         self.meta.update(kwargs)
 
         if not any([utils.has_needed_keywords(header, s)

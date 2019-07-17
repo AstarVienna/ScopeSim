@@ -58,15 +58,14 @@ import yaml
 import numpy as np
 import astropy.io.ascii as ioascii
 
-from .. import rc
+from scopesim import rc
 
-from .. import OLD_spectral as sc
-from ..utils import find_file, zendist2airmass, \
+from scopesim.utils import find_file, zendist2airmass, \
                     airmass2zendist
 from scopesim.effects.effects_utils import atmospheric_refraction
-from .. import server as svr
+from scopesim import server as svr
 
-from . import user_commands_utils as cutils
+from OLD_code import OLD_user_commands_utils as cutils, OLD_spectral as sc
 
 __all__ = ["UserCommands"]
 
@@ -222,7 +221,7 @@ class UserCommands(object):
 
         self.cmds["CONFIG_USER"] = filename
         self.cmds["CONFIG_DEFAULT"] = os.path.join(rc.__pkg_dir__,
-                                                   ".default.config")
+                                                   "OLD.default.config")
         # read in the users wishes
         # Use self.update so that we reject all the invalid keywords
         if filename is not None:

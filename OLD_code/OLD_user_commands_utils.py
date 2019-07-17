@@ -25,7 +25,7 @@ def read_config(config_str):
     From file::
 
         >>> import scopesim.tests_commands.commands_utils as cutils
-        >>> my_dict = cutils.read_config("../.default.config")
+        >>> my_dict = cutils.read_config("../OLD.default.config")
 
     From a string::
 
@@ -131,7 +131,7 @@ def update_config(new_config, old_config):
 
         >>> import scopesim.tests_commands.commands_utils as cutils
         >>> my_dict = {}
-        >>> new_file = "../.default.config"
+        >>> new_file = "../OLD.default.config"
         >>> cutils.update_config(new_file, my_dict)
 
     From a (multi-line) string::

@@ -7,7 +7,7 @@ import numpy as np
 import scopesim as sim
 from scopesim.optics.optical_train import OpticalTrain
 from scopesim.utils import find_file
-from scopesim.commands.user_commands import UserCommands
+from OLD_code.OLD_user_commands import UserCommands
 
 from scopesim.tests.mocks.py_objects.source_objects import _image_source, \
     _single_table_source

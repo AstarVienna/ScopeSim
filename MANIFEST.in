@@ -1,6 +1,5 @@
 include *.txt
 include README.md
-include scopesim/.default.config
-include scopesim/.scopesimrc
+include scopesim/.default.yaml
 prune scopesim/tests*
 prune *OLD_*

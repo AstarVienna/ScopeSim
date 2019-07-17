@@ -51,7 +51,7 @@ from astropy.convolution import convolve_fft, Gaussian2DKernel
 from astropy.io import fits
 
 import scopesim.effects.effects_utils
-from . import utils
+from scopesim import utils
 
 __all__ = ["tracking", "derotator", "wind_jitter", "adc_shift",
            "make_distortion_maps", "get_distorion_offsets"]

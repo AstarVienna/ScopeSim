@@ -6,7 +6,7 @@ import warnings
 import os
 
 from scopesim import rc
-from scopesim.commands import user_commands_utils as cmd_utils
+from OLD_code import OLD_user_commands_utils as cmd_utils
 
 
 class TestParseConfig:
@@ -63,7 +63,7 @@ class TestReadConfig:
             cmd_utils.read_config(dodgy_multiline_string)
 
     def test_passes_when_given_filename_that_exist(self):
-        rc_file = os.path.join(rc.__pkg_dir__, ".scopesimrc")
+        rc_file = os.path.join(rc.__pkg_dir__, "OLD.scopesimrc")
         rc_dict = cmd_utils.read_config(rc_file)
         assert rc_dict["SIM_SUB_PIXEL_FLAG"] is False
 

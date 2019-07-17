@@ -22,8 +22,8 @@ from numpy import where as npwhere
 from astropy.table import Table, Row, vstack
 from astropy.io import ascii as ioascii
 
-from ..utils import download_file
-from .. import rc
+from scopesim.utils import download_file
+from scopesim import rc
 
 __all__ = ["list_all", "list_instruments", "list_psfs", "list_source_packages",
            "get_local_packages", "get_server_packages",

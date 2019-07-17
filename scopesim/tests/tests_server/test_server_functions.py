@@ -12,14 +12,14 @@ class TestGetServerElements:
             db.get_server_elements(url="www.bogus.server")
 
     def test_returns_folders_if_server_exists(self):
-        url = rc.__rc__["FILE_SERVER_BASE_URL"]
+        url = rc.__config__["!SIM.file.server_base_url"]
         pkgs = db.get_server_elements(url)
-        assert "telescopes/" in pkgs
-        assert "instruments/" in pkgs
+        assert all([loc in pkgs for loc in
+                    ["locations/", "telescopes/", "instruments/"]])
 
     def test_returns_files_if_zips_exist(self):
-        url = rc.__rc__["FILE_SERVER_BASE_URL"]
-        dir = rc.__rc__["FILE_INST_PKG_LOCAL_PATH"]
+        url = rc.__config__["!SIM.file.server_base_url"]
+        dir = "instruments/"
         pkgs = db.get_server_elements(url + dir, ".zip")
         assert "test_package.zip" in pkgs
 
@@ -30,14 +30,14 @@ class TestListPackages:
         assert len(pkgs) > 0
 
     def test_returns_empty_list_when_url_wrong(self):
-        url = rc.__rc__["FILE_SERVER_BASE_URL"][:-2]
+        url = rc.__config__["!SIM.file.server_base_url"][:-2]
         pkgs = db.list_packages(url)
         assert len(pkgs) == 0
 
 
 class TestDownloadPackage:
     def test_downloads_package_successfully(self):
-        rc.__rc__["FILE_LOCAL_DOWNLOADS_PATH"] = "./"
+        rc.__config__["!SIM.file.local_packages_path"] = "./"
         pkg_path = "instruments/test_package.zip"
 
         save_path = db.download_package(pkg_path)
@@ -47,8 +47,5 @@ class TestDownloadPackage:
         assert not os.path.exists(save_path)
 
     def test_raise_error_when_package_not_found(self):
-        rc.__rc__["FILE_LOCAL_DOWNLOADS_PATH"] = "./"
-        pkg_path = "instruments/test_package.zip"
-
         with pytest.raises(HTTPError):
-            db.download_package(pkg_path + "abc")
+            db.download_package("instruments/bogus.zip")

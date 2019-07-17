@@ -102,8 +102,7 @@ from astropy.wcs import WCS
 
 from scopesim.utils import find_file, airmass2zendist
 
-from scopesim import OLD_spectral as sc
-from scopesim.commands import OLD_user_commands
+from OLD_code import OLD_simcado_user_commands, OLD_spectral as sc
 from scopesim.detector.nghxrg import HXRGNoise
 
 __all__ = ["Detector", "Chip", "open", "plot_detector", "plot_detector_layout",
@@ -1363,7 +1362,7 @@ def make_noise_cube(num_layers=25, filename="FPA_noise.fits", multicore=True):
         return None
 
 
-    cmds = OLD_user_commands.UserCommands()
+    cmds = OLD_simcado_user_commands.UserCommands()
     cmds["FPA_NOISE_PATH"] = "generate"
     cmds["FPA_CHIP_LAYOUT"] = "default"
 

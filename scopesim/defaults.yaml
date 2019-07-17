@@ -5,33 +5,36 @@ alias : SIM
 description : simulation confiugration parameters
 
 properties :
-    spectral :
-        lam_min : 0.3
-        lam_mid : 2.2
-        lam_max : 20
-        spectral_resolution : 1E-4
-        minimum_throughput : 1E-6
-        minimum_pixel_flux : 1
+  spectral :
+    lam_min : 0.3
+    lam_mid : 2.2
+    lam_max : 20
+    spectral_resolution : 1E-4
+    minimum_throughput : 1E-6
+    minimum_pixel_flux : 1
 
-    sub_pixel :
-        flag : False
-        fraction : 1
+  sub_pixel :
+    flag : False
+    fraction : 1
 
-    random :
-        seed : 42
+  random :
+    seed : 42
 
-    computing :
-        chunk_size : 512
-        max_segment_size : 1.1E6
-        oversampling : 1
-        spline_order : 1
-        flux_accuracy : 1E-3
+  computing :
+    chunk_size : 512
+    max_segment_size : 1.1E6
+    oversampling : 1
+    spline_order : 1
+    flux_accuracy : 1E-3
 
-    file :
-        local_packages_path : "./"
-        server_base_url : "https://www.univie.ac.at/simcado/InstPkgSvr/"
-        search_path : ["./"]
+  file :
+    local_packages_path : "./"
+    server_base_url : "https://www.univie.ac.at/simcado/InstPkgSvr/"
+    use_cached_downloads : False
+    search_path : ["./"]
 
+  reports :
+    verbose : False
 
 ---
 ### OBSERVATION PARAMETERS
