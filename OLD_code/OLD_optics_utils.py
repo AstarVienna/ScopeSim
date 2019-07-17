@@ -3,7 +3,7 @@ import glob
 
 import numpy as np
 
-from scopesim import OLD_spectral as sc
+from OLD_code import OLD_spectral as sc
 from scopesim.utils import find_file
 from scopesim import rc
 
@@ -164,7 +164,7 @@ def get_filter_table(path=None, filters="all"):
 
     Obtaining table for a set of filters::
 
-        >>> from scopesim.optics import OLD_optics_utils
+        >>> from OLD_code import OLD_optics_utils
         >>> filter_names = ["J", "Ks", "PaBeta", "U", "Br-gamma"]
         >>> table = OLD_optics_utils.get_filter_table(filters=filter_names)
         >>> filter_centers = table["center"].data

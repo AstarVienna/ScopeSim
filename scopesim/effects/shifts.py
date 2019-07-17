@@ -64,10 +64,9 @@ class AtmosphericDispersion(Shift3D):
         http://gtc-phase2.gtc.iac.es/science/astroweb/atmosRefraction.php
 
         """
-
-        lam_min = rc.__old_config__["SIM_LAM_MIN"]
-        lam_mid = rc.__old_config__["SIM_LAM_MID"]
-        lam_max = rc.__old_config__["SIM_LAM_MAX"]
+        lam_min = rc.__config__["!SIM.spectral.lam_min"]
+        lam_mid = rc.__config__["!SIM.spectral.lam_mid"]
+        lam_max = rc.__config__["!SIM.spectral.lam_max"]
 
         atmo_params = {"z0"     : airmass2zendist(self.meta["airmass"]),
                        "temp"   : self.meta["temperature"],         # in degC
@@ -79,8 +78,6 @@ class AtmosphericDispersion(Shift3D):
         offset_mid = atmo_refr(lam_mid, **atmo_params)
         offset_min, offset_max = atmo_refr(np.array([lam_min, lam_max]),
                                            **atmo_params) - offset_mid
-
-
 
         waves, dx, dy = [], [], []
         return [waves, dx, dy]

@@ -40,7 +40,7 @@ class SurfaceList(Effect):
         super(SurfaceList, self).__init__(**kwargs)
         self.meta["z_order"] = []
 
-        self.meta["SIM_MIN_THROUGHPUT"] = rc.__rc__["SIM_MIN_THROUGHPUT"]
+        self.meta["SIM_MIN_THROUGHPUT"] = rc.__config__["!SIM.spectral.minimum_throughput"]
 
         self.radiometry_table = RadiometryTable()
         self.radiometry_table.meta.update(self.meta)

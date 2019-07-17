@@ -19,9 +19,9 @@ class PSF(Effect):
         self.valid_waverange = None
         self._waveset = None
         super(PSF, self).__init__(**kwargs)
-        self.meta["SIM_FLUX_ACCURACY"] = rc.__rc__["SIM_FLUX_ACCURACY"]
-        self.meta["SIM_SUB_PIXEL_FLAG"] = rc.__rc__["SIM_SUB_PIXEL_FLAG"]
-
+        flux_accuracy = rc.__config__["!SIM.computing.flux_accuracy"]
+        self.meta["SIM_FLUX_ACCURACY"] = float(flux_accuracy)
+        self.meta["SIM_SUB_PIXEL_FLAG"] = rc.__config__["!SIM.sub_pixel.flag"]
         self.meta.update(kwargs)
 
     def apply_to(self, obj):

@@ -51,9 +51,9 @@ class TestFovGrid:
         kwargs_dict = atmo_yaml_dict["properties"]
 
         from scopesim import rc
-        rc.__old_config__["SIM_LAM_MIN"] = 0.5
-        rc.__old_config__["SIM_LAM_MID"] = 1.5
-        rc.__old_config__["SIM_LAM_MAX"] = 2.5
+        rc.__config__["!SIM.spectral.lam_min"] = 0.5
+        rc.__config__["!SIM.spectral.lam_mid"] = 1.5
+        rc.__config__["!SIM.spectral.lam_max"] = 2.5
         kwargs_dict["airmass"] = 1.14
         kwargs_dict["temperature"] = 7
         kwargs_dict["pressure"] = 0.755
@@ -63,4 +63,6 @@ class TestFovGrid:
         atmo_disp = AtmosphericDispersion(**kwargs_dict)
 
         print(atmo_disp.fov_grid())
-        assert atmo_disp[1]
+        assert atmo_disp.fov_grid()[1] == 0
+        assert atmo_disp.fov_grid()[1] == -0.49
+        assert atmo_disp.fov_grid()[1] == -0.53
