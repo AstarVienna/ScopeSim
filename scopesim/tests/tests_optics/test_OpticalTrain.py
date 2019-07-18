@@ -70,12 +70,11 @@ class TestInit:
 
     def test_initialises_with_basic_commands(self, cmds):
         opt = OpticalTrain(cmds=cmds)
-        print(cmds, opt)
         assert isinstance(opt, OpticalTrain)
 
-    def test_has_observation_dict_object_after_initialising(self, cmds):
+    def test_has_user_commands_object_after_initialising(self, cmds):
         opt = OpticalTrain(cmds=cmds)
-        assert len(opt.observation_dict) != 0
+        assert isinstance(opt.cmds, UserCommands)
 
     def test_has_optics_manager_object_after_initialising(self, cmds):
         opt = OpticalTrain(cmds=cmds)
@@ -92,7 +91,7 @@ class TestInit:
 
     def test_has_yaml_dict_object_after_initialising(self, cmds):
         opt = OpticalTrain(cmds=cmds)
-        assert len(opt.yaml_dicts) == 4
+        assert isinstance(opt.yaml_dicts, list) and len(opt.yaml_dicts) > 0
 
 
 @pytest.mark.usefixtures("cmds", "im_src", "tbl_src")

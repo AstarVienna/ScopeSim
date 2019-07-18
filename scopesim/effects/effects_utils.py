@@ -31,7 +31,7 @@ def get_all_effects(effects, effect_class):
     return [eff for eff in effects if isinstance(eff, effect_class)]
 
 
-def make_effect(effect_dict, **super_kwargs):
+def make_effect(effect_dict, **properties):
     effect_meta_dict = {key : effect_dict[key] for key in effect_dict
                         if key not in ["class", "kwargs"]}
     effect_class_name = effect_dict["class"]
@@ -40,7 +40,7 @@ def make_effect(effect_dict, **super_kwargs):
 
     effect_kwargs = {}
     effect_kwargs.update(effect_meta_dict)         # effect name and description
-    effect_kwargs.update(super_kwargs)              # optical_element properties
+    effect_kwargs.update(properties)              # optical_element properties
     if "kwargs" in effect_dict:
         effect_kwargs.update(effect_dict["kwargs"])  # individual effect kwargs
 

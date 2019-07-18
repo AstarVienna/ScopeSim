@@ -1,6 +1,7 @@
 from ..effects.data_container import DataContainer
 from ..base_classes import SourceBase, FieldOfViewBase, ImagePlaneBase, \
     DetectorBase
+from .. import rc
 
 
 class Effect(DataContainer):
@@ -34,6 +35,8 @@ class Effect(DataContainer):
 
     def __init__(self, **kwargs):
         super(Effect, self).__init__(**kwargs)
+        # .. todo:: should this be here, or only in apply_to() and fov_grid()?
+        self.update_bang_keywords()
         self.meta["z_order"] = []
 
     def apply_to(self, obj, **kwargs):
@@ -42,6 +45,7 @@ class Effect(DataContainer):
             raise ValueError("object must one of the following: "
                              "Source, FieldOfView, ImagePlane, Detector: "
                              "{}".format(type(obj)))
+        self.update(**kwargs)
 
         return obj
 
@@ -80,10 +84,18 @@ class Effect(DataContainer):
             [um, arcsec, arcsec]
 
         """
+        self.update(**kwargs)
         return []
 
     def update(self, **kwargs):
-        pass
+        self.meta.update(kwargs)
+        self.update_bang_keywords()
+
+    def update_bang_keywords(self):
+        for key in self.meta:
+            if isinstance(self.meta[key], str) and self.meta[key][0] == "!":
+                bang_key = self.meta[key]
+                self.meta[key] = rc.__currsys__[bang_key]
 
     def __repr__(self):
         if "name" not in self.meta:

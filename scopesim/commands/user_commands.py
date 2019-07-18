@@ -141,8 +141,11 @@ class UserCommands:
 
         if "yamls" in obs_dic:
             yaml_dicts = []
-            for filename in obs_dic["yamls"]:
-                yaml_dicts += load_yaml_dicts(find_file(filename))
+            for yaml_obj in obs_dic["yamls"]:
+                if isinstance(yaml_obj, dict):
+                    yaml_dicts += [yaml_obj]
+                elif isinstance(yaml_obj, str):
+                    yaml_dicts += load_yaml_dicts(find_file(yaml_obj))
             for yaml_dict in yaml_dicts:
                 self.update(yaml_dict)
 

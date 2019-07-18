@@ -838,6 +838,9 @@ def quantity_from_table(colname, table, default_unit=""):
 
 
 def unit_from_table(colname, table, default_unit=""):
+    """
+    Looks for the unit for a column based on the meta dict keyword "<col>_unit"
+    """
     col = table[colname]
     if col.unit is not None:
         unit = col.unit
@@ -860,12 +863,18 @@ def rad2deg(theta):
 
 
 def has_needed_keywords(header, suffix=""):
+    """
+    Check to see if the WCS keywords are in the header
+    """
     keys = ["CDELT1", "CRVAL1", "CRPIX1"]
     return sum([key + suffix in header.keys() for key in keys]) == 3 and \
            "NAXIS1" in header.keys()
 
 
 def stringify_dict(dic, ignore_types=(str, int, float)):
+    """
+    Turns a dict entries into strings for addition to FITS headers
+    """
     from copy import deepcopy
     dic_new = deepcopy(dic)
     for key in dic_new:
@@ -876,6 +885,22 @@ def stringify_dict(dic, ignore_types=(str, int, float)):
 
 
 def clean_dict(orig_dict, new_entries):
+    """
+    Used for replacing OBS_DICT keywords with actual values
+
+    Parameters
+    ----------
+    orig_dict : dict
+
+    new_entries : dict
+        OBS dict
+
+    Returns
+    -------
+    orig_dict : dict
+        Updated dict
+
+    """
     for key in orig_dict:
         if type(orig_dict[key]) is str and orig_dict[key] in new_entries:
             orig_dict[key] = new_entries[orig_dict[key]]
