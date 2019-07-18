@@ -31,11 +31,11 @@ sim.rc.__search_path__ += [FILES_PATH, YAMLS_PATH]
 
 
 def _basic_cmds():
-    return UserCommands(filename=find_file("CMD_mvs_cmds.config"))
+    return UserCommands(filename=find_file("CMD_mvs_cmds.yaml"))
 
 
 def _unity_cmds():
-    return UserCommands(filename=find_file("CMD_unity_cmds.config"))
+    return UserCommands(filename=find_file("CMD_unity_cmds.yaml"))
 
 
 @pytest.fixture(scope="function")
@@ -70,6 +70,7 @@ class TestInit:
 
     def test_initialises_with_basic_commands(self, cmds):
         opt = OpticalTrain(cmds=cmds)
+        print(cmds, opt)
         assert isinstance(opt, OpticalTrain)
 
     def test_has_observation_dict_object_after_initialising(self, cmds):

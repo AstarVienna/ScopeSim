@@ -7,7 +7,7 @@ from astropy.stats import sigma_clipped_stats
 
 import scopesim.source.OLD_templates
 from scopesim.source import OLD_source
-from scopesim.commands.OLD_user_commands import UserCommands
+from OLD_code.OLD_simcado_user_commands import UserCommands
 
 __all__ = ["run", "snr", "check_chip_positions", "limiting_mags"]
 

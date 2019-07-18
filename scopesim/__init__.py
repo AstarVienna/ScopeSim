@@ -37,7 +37,6 @@ from . import utils
 # import specific classes from the modules to included in the global namespace
 
 from .utils import bug_report
-from .commands.user_commands import UserCommands
 from .optics.optical_train import OpticalTrain
 
 ################################################################################

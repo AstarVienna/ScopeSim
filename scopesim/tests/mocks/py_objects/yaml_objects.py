@@ -105,7 +105,7 @@ def _yaml_min_viable_scope():
 
 
 def _usr_cmds_min_viable_scope():
-    from scopesim.commands.user_commands_utils import read_config
+    from OLD_code.OLD_user_commands_utils import read_config
     config_dict = read_config(os.path.join(FILES_PATH, "CMD_mvs_cmds.config"))
     return config_dict
 

@@ -2,7 +2,7 @@ import os
 import shutil
 import pytest
 from astropy.table import Table
-import scopesim.server.OLD_database as sim_db
+import OLD_code.OLD_database as sim_db
 import scopesim.utils
 
 _parent_path = "./test_downloads_dir/"

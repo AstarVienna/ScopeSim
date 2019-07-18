@@ -1,5 +1,6 @@
 import shutil
 import os
+import zipfile
 from urllib3.exceptions import HTTPError
 
 import requests
@@ -48,7 +49,7 @@ def list_packages(url=None):
     ----------
     url : str
         The URL of the IRDB HTTP server. If left as None, defaults to the
-        rc keyword FILE_SERVER_BASE_URL
+        value in scopesim.rc.__config__["!SIM.file.server_base_url"]
 
     Returns
     -------
@@ -57,7 +58,7 @@ def list_packages(url=None):
 
     """
     if url is None:
-        url = rc.__rc__["FILE_SERVER_BASE_URL"]
+        url = rc.__config__["!SIM.file.server_base_url"]
 
     all_pkgs = []
     folders = get_server_elements(url, "/")
@@ -79,11 +80,12 @@ def download_package(pkg_path, save_dir=None, url=None):
 
     save_dir : str
         The place on the local disk where the ``.zip`` package is to be saved.
-        If left as None, defaults to the rc keyword FILE_LOCAL_DOWNLOADS_PATH
+        If left as None, defaults to the value in
+        scopesim.rc.__config__["!SIM.file.local_packages_path"]
 
     url : str
         The URL of the IRDB HTTP server. If left as None, defaults to the
-        rc keyword FILE_SERVER_BASE_URL
+        value in scopesim.rc.__config__["!SIM.file.server_base_url"]
 
     Returns
     -------
@@ -92,15 +94,19 @@ def download_package(pkg_path, save_dir=None, url=None):
 
     """
     if url is None:
-        url = rc.__rc__["FILE_SERVER_BASE_URL"]
-
+        url = rc.__config__["!SIM.file.server_base_url"]
     if save_dir is None:
-        save_dir = rc.__rc__["FILE_LOCAL_DOWNLOADS_PATH"]
+        save_dir = rc.__config__["!SIM.file.local_packages_path"]
 
     try:
-        file_path = download_file(url + pkg_path, cache=True)
-        save_path = save_dir + os.path.basename(pkg_path)
-        shutil.copy2(file_path, save_path)
+        use_cached_file = rc.__config__["!SIM.file.use_cached_downloads"]
+        cache_path = download_file(url + pkg_path, cache=use_cached_file)
+        save_path = os.path.join(save_dir, os.path.basename(pkg_path))
+        file_path = shutil.copy2(cache_path, save_path)
+
+        with zipfile.ZipFile(file_path, 'r') as zip_ref:
+            zip_ref.extractall(save_dir)
+
     except HTTPError:
         ValueError("Unable to find file: {}".format(url + pkg_path))
 

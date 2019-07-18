@@ -40,7 +40,7 @@ class ShotNoise(Effect):
 
             if "random_seed" in kwargs:
                 if kwargs["random_seed"] == "SIM_RANDOM_SEED":
-                    seed = rc.__rc__["SIM_RANDOM_SEED"]
+                    seed = rc.__config__["!SIM.random.seed"]
                 elif isinstance(kwargs["random_seed"], float):
                     seed = kwargs["random_seed"]
                 else:

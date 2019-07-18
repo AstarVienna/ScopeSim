@@ -33,12 +33,13 @@ class FieldOfView(FieldOfViewBase):
     """
 
     def __init__(self, header, waverange, **kwargs):
+        spec_res = rc.__config__["!SIM.spectral.spectral_resolution"]
         self.meta = {"id" : None,
-                     "wave_binwidth" : rc.__rc__["SIM_SPEC_RESOLUTION"],
+                     "wave_binwidth" : spec_res,
                      "wave_min" : utils.quantify(waverange[0], u.um),
                      "wave_max" : utils.quantify(waverange[1], u.um),
                      "area" : 1 * u.m**2,
-                     "sub_pixel" : rc.__rc__["SIM_SUB_PIXEL_FLAG"]}
+                     "sub_pixel" : rc.__config__["!SIM.sub_pixel.flag"]}
         self.meta.update(kwargs)
 
         if not any([utils.has_needed_keywords(header, s) for s in ["", "S"]]):
@@ -261,7 +262,7 @@ def combine_imagehdu_fields(fov_header, src, fields_indexes, wave_min, wave_max,
 
     image = np.zeros((fov_header["NAXIS1"], fov_header["NAXIS2"]))
     canvas_hdu = fits.ImageHDU(header=fov_header, data=image)
-    order = int(rc.__rc__["SIM_SPLINE_ORDER"])
+    order = int(rc.__config__["!SIM.computing.spline_order"])
 
     for ii in fields_indexes:
         if isinstance(src.fields[ii], fits.ImageHDU):

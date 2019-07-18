@@ -26,7 +26,7 @@ import synphot as sp
 from astropy import units as u
 
 import scopesim as sim
-from scopesim.commands.user_commands import UserCommands
+from OLD_code.OLD_user_commands import UserCommands
 from scopesim.optics.optical_train import OpticalTrain
 from scopesim.optics.optics_manager import OpticsManager
 from scopesim.optics.fov_manager import FOVManager

@@ -65,7 +65,7 @@ from astropy.io import ascii as ioascii  # 'ascii' redefines built-in
 import astropy.table 
 import yaml
 
-from .utils import find_file
+from scopesim.utils import find_file
 
 __all__ = ["TransmissionCurve", "EmissionCurve", "BlackbodyCurve", "UnityCurve",
            "get_sky_spectrum"]

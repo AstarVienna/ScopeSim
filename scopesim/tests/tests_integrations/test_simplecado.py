@@ -93,15 +93,3 @@ def read_in_simplecado_package():
     if PLOTS:
         plt.imshow(hdu[5].data, norm=LogNorm())
         plt.show()
-
-
-def test_download_simplecado_package():
-    sim.rc.__rc__["FILE_LOCAL_DOWNLOADS_PATH"] = "C:/Work/simcado_downloads"
-
-    dname = sim.rc.__rc__["FILE_LOCAL_DOWNLOADS_PATH"]
-    sim.server.set_up_local_package_directory(dname, overwrite=True)
-
-    sim.server.download_package("SimpleCADO")
-
-
-

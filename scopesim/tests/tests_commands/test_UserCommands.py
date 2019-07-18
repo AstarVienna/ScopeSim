@@ -1,101 +1,71 @@
+import os
+import shutil
 import pytest
 
-from scopesim.commands import OLD_user_commands as usr_cmds
+from scopesim import rc
+from scopesim.commands.user_commands import UserCommands
+from scopesim.server.database import download_package
 
-# .. todo:: finish the tests for checking instrument and filter
-
-
-@pytest.fixture(scope="class")
-def empty_cmds():
-    cmd = usr_cmds.UserCommands()
-    return cmd
+LOCAL_PKGS_PATH = "./scopesim_pkg_dir_tmp/"
+rc.__config__["!SIM.file.local_packages_path"] = os.path.abspath(LOCAL_PKGS_PATH)
+# rc.__config__["!SIM.file.local_packages_path"] = "D:/Work/irdb/"
 
 
-@pytest.mark.usefixtures("empty_cmds")
-class TestUserCommandsInit:
-    def test_empty_arguments_produces_object(self, empty_cmds):
-        assert isinstance(empty_cmds, usr_cmds.UserCommands)
-
-    def test_str_nones_are_converted_to_nones(self, empty_cmds):
-        assert empty_cmds.cmds["SIM_ATMOSPHERE_YAML"] is None
-
-    def test_str_booleans_are_converted_to_booleans(self, empty_cmds):
-        assert empty_cmds.cmds["SIM_SUB_PIXEL_FLAG"] is False
-
-    def test_str_floats_are_converted_to_floats(self, empty_cmds):
-        assert empty_cmds.cmds["SIM_SIM_MESSAGE_LEVEL"] == 3.
-
-    def test_multiline_str_accepted_as_argument_for_filename(self):
-        file_str = "SIM_SUB_PIXEL_FLAG True \n " \
-                   "SIM_SIM_MESSAGE_LEVEL None # comment"
-        cmds = usr_cmds.UserCommands(file_str)
-        assert isinstance(cmds, usr_cmds.UserCommands)
-
-    def test_multiline_str_foreign_keyword_ignored_but_throw_warning(self):
-        file_str = "BOGUS my_bogus.txt"
-        cmds = usr_cmds.UserCommands(file_str)
-        assert isinstance(cmds, usr_cmds.UserCommands)
-        # Can only be fixed when filename is read in by self.update,
-        # NOT self.cmds.update
-        # assert 0
+def setup_module():
+    if not os.path.exists(LOCAL_PKGS_PATH):
+        os.mkdir(LOCAL_PKGS_PATH)
+    download_package("instruments/test_package.zip")
 
 
-@pytest.mark.usefixtures("empty_cmds")
-class TestUserCommandsGettersAndSetters:
-    def test_individual_keywords_can_be_updated_via_call(self, empty_cmds):
-        empty_cmds["SIM_ATMOSPHERE_YAML"] = None
-        assert empty_cmds["SIM_ATMOSPHERE_YAML"] is None
-
-    def test_individual_values_are_converted_to_none_bool_float(self, empty_cmds):
-        empty_cmds["SIM_ATMOSPHERE_YAML"] = "none"
-        empty_cmds["SIM_SUB_PIXEL_FLAG"] = "False"
-        empty_cmds["SIM_CHUNK_SIZE"] = "2.0"
-        assert empty_cmds["SIM_ATMOSPHERE_YAML"] is None
-        assert empty_cmds["SIM_SUB_PIXEL_FLAG"] is False
-        assert empty_cmds["SIM_CHUNK_SIZE"] == 2.
-
-    def test_subcategory_dicts_are_updated_when_called(self, empty_cmds):
-        empty_cmds["SIM_CHUNK_SIZE"] = "512"
-        assert empty_cmds["SIM_CHUNK_SIZE"] == 512
-
-    def test_foreign_keywords_returns_warning_and_are_ignored(self, empty_cmds):
-        empty_cmds["BOGUS"] = "bogus.txt"
-        assert "BOGUS" not in empty_cmds.keys
+def teardown_module():
+    shutil.rmtree(LOCAL_PKGS_PATH)
 
 
-class TestUserCommandsUpdate:
-    def test_dict_updated_with_filename(self):
-        pass
+class TestInit:
+    def test_initialise_with_nothing(self):
+        assert isinstance(UserCommands(), UserCommands)
 
-    def test_dict_updated_with_string(self):
-        pass
+    def test_initialise_with_correct_keywords(self):
+        cmd = UserCommands(yamls=["test_instrument.yaml"],
+                           packages=["test_package"],
+                           properties={"life": 42})
+        assert isinstance(cmd, UserCommands)
+        assert cmd["!OBS.life"] == 42
+        assert cmd["!INST.pixel_scale"] == 0.5
+        print(cmd)
 
-    def test_dict_updated_with_new_dict(self):
-        pass
-
-    def test_foreign_keywords_returns_warning_but_not_exception(self):
-        pass
-
-
-@pytest.mark.usefixtures("empty_cmds")
-class TestDeepcopyObject:
-    def test_object_returned_is_not_old_object(self, empty_cmds):
-        from copy import deepcopy
-        new_cmd = deepcopy(empty_cmds)
-        assert new_cmd is not empty_cmds
+    def test_initialise_with_keyword_use_instrument(self):
+        cmd = UserCommands(use_instrument="test_package")
+        assert isinstance(cmd, UserCommands)
+        assert cmd["!INST.pixel_scale"] == 0.5
+        print(cmd)
 
 
-class TestSetInstrument:
-    pass
+class TestUpdate:
+    def test_updates_with_yaml_dict(self):
+        yaml_input = {"alias": "TEL",
+                      "properties": {"temperature": 8999}}
+        cmd = UserCommands(use_instrument="test_package")
+        cmd.update(yaml_input)
+        assert cmd["!TEL.temperature"] < 9000
+
+    def test_update_works_via_setitem(self):
+        cmd = UserCommands(use_instrument="test_package")
+        cmd["!TEL.gigawatts"] = 1.21
+        assert cmd["!TEL.gigawatts"] == 1.21
 
 
-class TestSetMode:
-    pass
+class TestYamlDicts:
+    def test_everything_original_is_in_the_yaml_dicts_list(self):
+        cmd = UserCommands(use_instrument="test_package")
+        assert cmd["!TEL.temperature"] > 9000
+        assert len(cmd.yaml_dicts) > 0
+        # for yaml_dic in cmd.yaml_dicts:
+        #     print(yaml_dic)
 
 
-class TestSetFilterName:
-    pass
-
-
-
-
+class TestListLocalPackages:
+    def test_all_packages_listed(self):
+        from scopesim.commands import user_commands as uc2
+        real_pkgs, ext_pkgs = uc2.list_local_packages(action="return")
+        assert len(real_pkgs) > 0
