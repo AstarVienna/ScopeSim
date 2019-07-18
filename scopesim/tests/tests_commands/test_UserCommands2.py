@@ -1,10 +1,24 @@
 import os
+import shutil
 import pytest
 
 from scopesim import rc
-from scopesim.commands.user_commands2 import UserCommands
+from scopesim.commands.user_commands import UserCommands
+from scopesim.server.database import download_package
 
-rc.__config__["!SIM.file.local_packages_path"] = "C:/Work/irdb/"
+LOCAL_PKGS_PATH = "./scopesim_pkg_dir_tmp/"
+rc.__config__["!SIM.file.local_packages_path"] = os.path.abspath(LOCAL_PKGS_PATH)
+# rc.__config__["!SIM.file.local_packages_path"] = "D:/Work/irdb/"
+
+
+def setup_module():
+    if not os.path.exists(LOCAL_PKGS_PATH):
+        os.mkdir(LOCAL_PKGS_PATH)
+    download_package("instruments/test_package.zip")
+
+
+def teardown_module():
+    shutil.rmtree(LOCAL_PKGS_PATH)
 
 
 class TestInit:
@@ -43,9 +57,15 @@ class TestUpdate:
 
 class TestYamlDicts:
     def test_everything_original_is_in_the_yaml_dicts_list(self):
-        cmd = UserCommands(use_instrument="MICADO")
-        for yaml_dic in cmd.yaml_dicts:
-            print(yaml_dic)
-        print(cmd)
+        cmd = UserCommands(use_instrument="test_package")
+        assert cmd["!TEL.temperature"] > 9000
+        assert len(cmd.yaml_dicts) > 0
+        # for yaml_dic in cmd.yaml_dicts:
+        #     print(yaml_dic)
 
 
+class TestListLocalPackages:
+    def test_all_packages_listed(self):
+        from scopesim.commands import user_commands as uc2
+        real_pkgs, ext_pkgs = uc2.list_local_packages(action="return")
+        assert len(real_pkgs) > 0
