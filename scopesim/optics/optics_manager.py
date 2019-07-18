@@ -2,9 +2,10 @@ import warnings
 
 from astropy import units as u
 
+from .optical_element import OpticalElement
 from .. import effects as efs
 from ..effects.effects_utils import combine_surface_effects
-from .optical_element import OpticalElement
+from .. import rc
 
 
 class OpticsManager:
@@ -14,10 +15,11 @@ class OpticsManager:
     Parameters
     ----------
     yaml_dicts : list of dict
-        The nested dicts describing the Effects from the relevant YAML files
+        The nested dicts describing the Effects from the relevant YAML files,
+        which include ``effects`` and ``properties`` sub-dictionaries
 
     kwargs : **dict
-        Any keyword-value pairs from a config file
+        Any extra information not directly related to the optical elements
 
     """
 
@@ -30,29 +32,22 @@ class OpticsManager:
         if yaml_dicts is not None:
             self.load_effects(yaml_dicts, **self.meta)
 
-        self.set_pixel_scale(yaml_dicts)
-        self.set_area()
+        self.set_derived_parameters()
 
-    def set_area(self):
-        self.meta["SIM_AREA"] = self.surfaces_table.area
+    def set_derived_parameters(self):
 
-    def set_pixel_scale(self, yaml_dicts):
-        # .. todo: hack. Think up a more elegant way to store SIM_PIXEL_SCALE
+        if "!INST.pixel_scale" not in rc.__currsys__:
+            raise ValueError("!INST.pixel_scale is missing from the current"
+                             "system. Please add this to the instrument (INST)"
+                             "properties dict for the system.")
+        area = self.surfaces_table.area
+        pixel_scale = rc.__currsys__["!INST.pixel_scale"] * u.arcsec
+        etendue = area * pixel_scale**2
+        rc.__currsys__["!TEL.etendue"] = etendue
+        rc.__currsys__["!TEL.area"] = area
 
-        if isinstance(yaml_dicts, dict):
-            yaml_dicts = [yaml_dicts]
-
-        if "SIM_PIXEL_SCALE" not in self.meta:
-            self.meta["SIM_PIXEL_SCALE"] = None
-
-        if self.meta["SIM_PIXEL_SCALE"] is None:
-            pixel_scale = None
-            for yaml_dict in yaml_dicts:
-                if "properties" in yaml_dict:
-                    if "pixel_scale" in yaml_dict["properties"]:
-                        pixel_scale = yaml_dict["properties"]["pixel_scale"]
-
-            self.meta["SIM_PIXEL_SCALE"] = pixel_scale
+        params = {"area": area, "pixel_scale": pixel_scale, "etendue": etendue}
+        self.meta.update(params)
 
     def load_effects(self, yaml_dicts, **kwargs):
         """
@@ -232,13 +227,7 @@ class OpticsManager:
         for opt_el in self.optical_elements:
             surface_like_effects += opt_el.ter_list
 
-        if self.meta["SIM_PIXEL_SCALE"] is not None:
-            pixel_scale = self.meta["SIM_PIXEL_SCALE"] * u.arcsec
-        else:
-            pixel_scale = 0 * u.arcsec**2
         surf_table = combine_surface_effects(surface_like_effects)
-        surf_table.meta["etendue"] = surf_table.area * pixel_scale**2
-
         self._surfaces_table = surf_table
 
         return surf_table

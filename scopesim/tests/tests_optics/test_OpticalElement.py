@@ -1,5 +1,6 @@
 import pytest
 
+from scopesim import rc
 from scopesim.optics import optical_element as opt_elem
 from scopesim.effects import GaussianDiffractionPSF
 from scopesim.tests.mocks.py_objects.yaml_objects import _atmo_yaml_dict, \
@@ -35,11 +36,11 @@ class TestOpticalElementInit:
         assert opt_el.properties["temperature"] == 0
 
     def test_cleans_obs_keywords_from_yaml_dict_effects(self, atmo_yaml_dict):
-        atmo_yaml_dict["effects"][0]["kwargs"]["airmass"] = "OBS_AIRMASS"
-        obs_dict = {"OBS_AIRMASS": 1}
-        opt_el = opt_elem.OpticalElement(atmo_yaml_dict, **obs_dict)
+        rc.__currsys__["!OBS.airmass"] = 1.5
+        atmo_yaml_dict["effects"][1]["kwargs"]["airmass"] = "!OBS.airmass"
+        opt_el = opt_elem.OpticalElement(atmo_yaml_dict)
 
-        assert opt_el.effects[0].meta["airmass"] == 1
+        assert opt_el.effects[1].meta["airmass"] == 1.5
 
 
 @pytest.mark.usefixtures("detector_yaml_dict")

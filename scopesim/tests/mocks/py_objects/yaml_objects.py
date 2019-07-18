@@ -51,6 +51,7 @@ inst_pkg_name : micado
 properties :
     temperature : -190
     pixel_scale : 0.004
+    
 
 effects :
 -   name : micado_surface_list
@@ -63,6 +64,13 @@ effects :
     kwargs :
         zenith_distance : 30
         reverse_shifts : True
+        airmass : 1
+        temperature : 0
+        humidity : 0
+        pressure : 0
+        latitude : 0
+        altitude : 0
+        pupil_angle : 0
 
 -   name : pupil_mask
     class : ApertureList
@@ -105,9 +113,9 @@ def _yaml_min_viable_scope():
 
 
 def _usr_cmds_min_viable_scope():
-    from OLD_code.OLD_user_commands_utils import read_config
-    config_dict = read_config(os.path.join(FILES_PATH, "CMD_mvs_cmds.config"))
-    return config_dict
+    with open(os.path.join(FILES_PATH, "CMD_mvs_cmds.yaml")) as f:
+        yaml_dicts = [dic for dic in yaml.load_all(f)]
+    return yaml_dicts
 
 
 def _yaml_unity_system():

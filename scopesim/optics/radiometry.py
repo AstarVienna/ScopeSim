@@ -10,10 +10,6 @@ from .radiometry_utils import combine_emissions, combine_throughputs, \
 
 
 class RadiometryTable:
-    """
-
-    """
-
     def __init__(self, tables=(), **kwargs):
         self.meta = {"area": None}
         self.meta.update(kwargs)
@@ -48,18 +44,7 @@ class RadiometryTable:
                                               name, position)
 
     def get_throughput(self, start=0, end=None, rows=None):
-        """
 
-        Parameters
-        ----------
-        start
-        end
-        rows
-
-        Returns
-        -------
-
-        """
         if self.table is None:
             return None
 
@@ -91,7 +76,7 @@ class RadiometryTable:
     def emission(self):
         if "etendue" not in self.meta:
             raise ValueError("self.meta['etendue'] must be set")
-        etendue = quantify(self.meta["etendue"], u.Unit("m2 arcsec2"))
+        etendue = quantify(self.meta["etendue"], "m2 arcsec2")
 
         return self.get_emission(etendue)
 

@@ -52,4 +52,9 @@ ignore_effects : []
 add_effects : []
 override_effect_values : []
 
+---
+# INSTRUMENT PARAMETERS
+alias : INST
 
+properties :
+  pixel_scale : 0

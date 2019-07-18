@@ -20,7 +20,7 @@ class OpticalTrain:
 
     def __init__(self, cmds=None):
 
-        self.observation_dict = None
+        self.cmds = cmds
         self.optics_manager = None
         self.fov_manager = None
         self.image_plane = None
@@ -40,16 +40,13 @@ class OpticalTrain:
 
         """
 
-        rc.__currsys__ = user_commands
-
         if not isinstance(user_commands, UserCommands):
             raise ValueError("user_commands must be a UserCommands object: "
                              "{}".format(type(user_commands)))
 
-        self.observation_dict = user_commands.cmds
-        self.yaml_dicts = user_commands.yaml_dicts
-        self.optics_manager = OpticsManager(user_commands.yaml_dicts,
-                                            **self.observation_dict)
+        rc.__currsys__ = user_commands
+        self.yaml_dicts = rc.__currsys__.yaml_dicts
+        self.optics_manager = OpticsManager(rc.__currsys__.yaml_dicts)
         self.update()
 
     def update(self, **kwargs):
@@ -62,13 +59,12 @@ class OpticalTrain:
             Any keyword-value pairs from a config file
 
         """
-        self.optics_manager.update(**self.observation_dict)
         self.optics_manager.update(**kwargs)
         self.fov_manager = FOVManager(self.optics_manager.fov_setup_effects,
-                                      **self.optics_manager.meta)
+                                      **kwargs)
         self.image_plane = ImagePlane(self.optics_manager.image_plane_header,
-                                      **self.optics_manager.meta)
-        self.detector_array = DetectorArray(**self.optics_manager.meta)
+                                      **kwargs)
+        self.detector_array = DetectorArray(**kwargs)
 
     def observe(self, orig_source, **kwargs):
         """
@@ -139,4 +135,3 @@ class OpticalTrain:
             hdu.writeto(filename, overwrite=True)
 
         return hdu
-

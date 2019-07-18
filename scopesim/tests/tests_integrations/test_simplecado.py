@@ -9,12 +9,12 @@ import scopesim.source.source_utils
 
 PLOTS = False
 
-
 # DETECTOR nested dictionary
 # Ideally I would like to have "kwargs" : {"filename" : "MICADO_detectors.tbl"}
 # so that MICADO_detectors.tbl is the one place where the detector description
 # is stored. This however is more suited to storing the info in a database
 DETECTOR_YAML = {"object": "detector",
+                 "alias": "DET",
                  "name": "test_detector",
                  "effects": [{"name": "detector_array_list",
                               "description": "SimpleCADO detector array list",
@@ -44,19 +44,16 @@ DETECTOR_YAML = {"object": "detector",
                               }]
                  }
 
-
-OBSERVATIONS_DICT = {"SIM_PIXEL_SCALE" : 0.004,     # because optical train still need this (stupidly)
-                     "OBS_DIT" : 10,                # [sec]
-                     "OBS_NDIT" : 1,                # Not yet implemented
-                     "SIM_DETECTOR_YAML" : DETECTOR_YAML
-                     }
+OBSERVATIONS_DICT = {"!OBS.ndit": 1,            # Not yet implemented
+                     "!OBS.dit" : 10,           # [sec]
+                     "!INST.pixel_scale": 0.004 # because optical train still need this (stupidly)
+                    }
 
 
 def test_simplecado():
 
     src = scopesim.source.source_utils.empty_sky()
-
-    cmd = sim.UserCommands(OBSERVATIONS_DICT)
+    cmd = sim.commands.UserCommands(yamls=[OBSERVATIONS_DICT, DETECTOR_YAML])
 
     opt = sim.OpticalTrain(cmd)
     opt.observe(src)
