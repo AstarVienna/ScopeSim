@@ -916,6 +916,6 @@ def from_currsys(item):
         if item in rc.__currsys__:
             item = rc.__currsys__[item]
         else:
-            raise ValueError(f"{item} was not found in rc.__currsys__")
+            raise ValueError("{} was not found in rc.__currsys__".format(item))
 
     return item

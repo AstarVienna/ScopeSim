@@ -130,7 +130,7 @@ class UserCommands:
                     if yaml_file is not None:
                         self.update(yamls=load_yaml_dicts(yaml_file))
                     else:
-                        warnings.warn(f"{yaml_input} could not be found")
+                        warnings.warn("{} could not be found".format(yaml_input))
 
                 elif isinstance(yaml_input, dict):
                     for key in ["packages", "yamls"]:
@@ -141,8 +141,8 @@ class UserCommands:
                     self.yaml_dicts += [yaml_input]
 
                 else:
-                    raise ValueError(f"yaml_dicts must be a filename or a "
-                                     f"dictionary: {yaml_input}")
+                    raise ValueError("yaml_dicts must be a filename or a "
+                                     "dictionary: {}".format(yaml_input))
 
         if "properties" in kwargs:
             props_dict = kwargs["properties"]
