@@ -906,3 +906,16 @@ def clean_dict(orig_dict, new_entries):
             orig_dict[key] = new_entries[orig_dict[key]]
 
     return orig_dict
+
+
+def from_currsys(item):
+    """
+    Returns the current value of a bang-string from rc.__currsys__
+    """
+    if isinstance(item, str) and item[0] == "!":
+        if item in rc.__currsys__:
+            item = rc.__currsys__[item]
+        else:
+            raise ValueError(f"{item} was not found in rc.__currsys__")
+
+    return item
