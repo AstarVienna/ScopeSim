@@ -4,6 +4,7 @@ import pytest
 import numpy as np
 
 import scopesim as sim
+from scopesim import rc
 from scopesim.optics.fov_manager import FOVManager
 from scopesim.optics import fov_manager as fov_mgr
 from scopesim.optics.image_plane import ImagePlane
@@ -20,7 +21,7 @@ FILES_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),
                                           "../mocks/files/"))
 YAMLS_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),
                                           "../mocks/yamls/"))
-sim.rc.__search_path__ += [FILES_PATH, YAMLS_PATH]
+rc.__search_path__ += [FILES_PATH, YAMLS_PATH]
 
 
 @pytest.fixture(scope="function")
@@ -47,7 +48,7 @@ class TestGenerateFovs:
     def test_returns_the_desired_number_of_fovs(self, mvs_effects_list,
                                                 mvs_usr_cmds):
         for yaml_dic in mvs_usr_cmds:
-            sim.rc.__currsys__.update(yaml_dic)
+            rc.__currsys__.cmds.update(yaml_dic)
         fov_man = FOVManager(mvs_effects_list)
         fovs = fov_man.generate_fovs_list()
 
@@ -75,7 +76,7 @@ class TestGenerateFovs:
     def test_fovs_dont_overlap_on_canvas(self, mvs_effects_list, mvs_usr_cmds):
 
         for yaml_dic in mvs_usr_cmds:
-            sim.rc.__currsys__.update(yaml_dic)
+            rc.__currsys__.cmds.update(yaml_dic)
 
         implane = ImagePlane(mvs_effects_list[-2].image_plane_header)
         fov_man = FOVManager(mvs_effects_list)
