@@ -2,7 +2,7 @@ import pytest
 import copy
 import yaml
 
-from scopesim.commands.system_dict import SystemDict, recursive_update
+from scopesim.system_dict import SystemDict, recursive_update
 
 _basic_yaml = """
 alias : OBS
