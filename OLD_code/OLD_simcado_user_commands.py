@@ -62,7 +62,7 @@ from scopesim import rc
 
 from scopesim.utils import find_file, zendist2airmass, \
                     airmass2zendist
-from scopesim.effects.effects_utils import atmospheric_refraction
+from scopesim.effects import atmospheric_refraction
 from scopesim import server as svr
 
 from OLD_code import OLD_user_commands_utils as cutils, OLD_spectral as sc
