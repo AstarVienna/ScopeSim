@@ -51,6 +51,7 @@ from astropy.convolution import convolve_fft, Gaussian2DKernel
 from astropy.io import fits
 
 import scopesim.effects.effects_utils
+import scopesim.effects.shifts
 from scopesim import utils
 
 __all__ = ["tracking", "derotator", "wind_jitter", "adc_shift",
@@ -218,13 +219,13 @@ def adc_shift(cmds):
 
     ## get the angle shift for each slice
     zenith_distance = utils.airmass2zendist(cmds["ATMO_AIRMASS"])
-    angle_shift = [scopesim.effects.effects_utils.atmospheric_refraction(lam,
-                                                                         zenith_distance,
-                                                                         cmds["ATMO_TEMPERATURE"],
-                                                                         cmds["ATMO_REL_HUMIDITY"],
-                                                                         cmds["ATMO_PRESSURE"],
-                                                                         cmds["SCOPE_LATITUDE"],
-                                                                         cmds["SCOPE_ALTITUDE"])
+    angle_shift = [scopesim.effects.shifts.atmospheric_refraction(lam,
+                                                                  zenith_distance,
+                                                                  cmds["ATMO_TEMPERATURE"],
+                                                                  cmds["ATMO_REL_HUMIDITY"],
+                                                                  cmds["ATMO_PRESSURE"],
+                                                                  cmds["SCOPE_LATITUDE"],
+                                                                  cmds["SCOPE_ALTITUDE"])
                    for lam in cmds.lam_bin_centers]
 
     ## convert angle shift into number of pixels

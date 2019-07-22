@@ -116,6 +116,7 @@ from astropy.modeling.core import Fittable2DModel
 from astropy.modeling.parameters import Parameter
 
 import scopesim.effects.effects_utils
+import scopesim.effects.shifts
 from scopesim import utils
 
 
@@ -1277,13 +1278,13 @@ class ADC_PSFCube(DeltaPSFCube):
         ## get the angle shift for each slice
         zenith_distance = utils.airmass2zendist(params["ATMO_AIRMASS"])
         angle_shift = [
-            scopesim.effects.effects_utils.atmospheric_refraction(lam,
-                                                                  zenith_distance,
-                                                                  params["ATMO_TEMPERATURE"],
-                                                                  params["ATMO_REL_HUMIDITY"],
-                                                                  params["ATMO_PRESSURE"],
-                                                                  params["SCOPE_LATITUDE"],
-                                                                  params["SCOPE_ALTITUDE"])
+            scopesim.effects.shifts.atmospheric_refraction(lam,
+                                                           zenith_distance,
+                                                           params["ATMO_TEMPERATURE"],
+                                                           params["ATMO_REL_HUMIDITY"],
+                                                           params["ATMO_PRESSURE"],
+                                                           params["SCOPE_LATITUDE"],
+                                                           params["SCOPE_ALTITUDE"])
             for lam in lam_bin_centers]
 
         ## convert angle shift into number of pixels
