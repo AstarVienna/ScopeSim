@@ -8,7 +8,6 @@ from astropy.io import ascii as ioascii
 from astropy.table import Table, vstack
 
 from .surface import SpectralSurface
-from .. import effects as efs
 from ..utils import real_colname, insert_into_ordereddict, quantify, \
     change_table_entry, convert_table_comments_to_dict
 
@@ -157,10 +156,3 @@ def make_surface_from_row(row, **kwargs):
 
     return surface
 
-
-def empty_surface_list():
-    tbl = Table(names=["Name", "Outer", "Inner", "Angle",
-                       "Temp", "Action", "Filename"],
-                meta={"outer_unit": "m", "inner_unit": "m",
-                      "angle_unit": "deg", "temp_unit": "deg_C"})
-    return efs.SurfaceList(table=tbl)

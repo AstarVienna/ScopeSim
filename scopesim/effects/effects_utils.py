@@ -1,7 +1,8 @@
 from copy import deepcopy
 
+from astropy.table import Table
+
 from .. import effects as efs
-from ..optics.radiometry_utils import empty_surface_list
 
 
 def combine_surface_effects(surface_effects):
@@ -55,3 +56,11 @@ def is_spectroscope(effects):
                          for eff in effects])
 
     return bool(has_apertures and has_trace_lists)
+
+
+def empty_surface_list():
+    tbl = Table(names=["Name", "Outer", "Inner", "Angle",
+                       "Temp", "Action", "Filename"],
+                meta={"outer_unit": "m", "inner_unit": "m",
+                      "angle_unit": "deg", "temp_unit": "deg_C"})
+    return efs.SurfaceList(table=tbl)

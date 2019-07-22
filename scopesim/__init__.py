@@ -19,7 +19,6 @@ warnings.simplefilter('ignore', category=AstropyWarning)
 
 from . import rc
 
-
 ################################################################################
 #                         IMPORT PACKAGE MODULES                               #
 ################################################################################
