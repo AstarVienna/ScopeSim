@@ -18,7 +18,9 @@ PLOTS = False
 
 FILES_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),
                                           "../mocks/files/"))
-sim.rc.__search_path__ += [FILES_PATH]
+YAMLS_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),
+                                          "../mocks/yamls/"))
+sim.rc.__search_path__ += [FILES_PATH, YAMLS_PATH]
 
 
 @pytest.fixture(scope="function")
@@ -31,7 +33,7 @@ def mvs_usr_cmds():
     return _usr_cmds_min_viable_scope()
 
 
-@pytest.mark.usefixtures("mvs_effects_list", "mvs_usr_cmds")
+@pytest.mark.usefixtures("mvs_effects_list")
 class TestInit:
     def test_initialises_with_nothing(self):
         assert isinstance(FOVManager(), FOVManager)
