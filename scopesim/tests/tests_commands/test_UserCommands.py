@@ -25,43 +25,61 @@ class TestInit:
     def test_initialise_with_nothing(self):
         assert isinstance(UserCommands(), UserCommands)
 
+    def test_initialised_when_passed_a_dict_of_properties(self):
+        cmd = UserCommands(properties={"!OBS.dit": 60, "!ATMO.pwv": 9001})
+        assert cmd["!ATMO.pwv"] > 9000
+
+    def test_initialised_when_passed_a_instrument_yaml_dict(self):
+        cmd = UserCommands(yamls=[{"alias": "ATMO",
+                                   "properties": {"pwv": 9001}}])
+        assert cmd["!ATMO.pwv"] > 9000
+
+    def test_initialised_when_passed_a_list_of_yaml_names(self):
+        cmd = UserCommands(packages=["test_package"],
+                           yamls=["test_telescope.yaml"])
+        assert cmd["!TEL.temperature"] > 9000
+
+    def test_initialised_when_combining_yaml_dict_filename_properties(self):
+        cmd = UserCommands(packages=["test_package"],
+                           yamls=["test_telescope.yaml",
+                                  {"alias": "ATMO",
+                                   "properties": {"pwv": 9001}}],
+                           properties={"!ATMO.pwv": 8999})
+        assert cmd["!TEL.temperature"] > 9000
+        assert cmd["!ATMO.pwv"] < 9000
+
     def test_initialise_with_correct_keywords(self):
-        cmd = UserCommands(yamls=["test_instrument.yaml"],
-                           packages=["test_package"],
-                           properties={"life": 42})
+        cmd = UserCommands(packages=["test_package"],
+                           yamls=["test_instrument.yaml"],
+                           properties={"!ATMO.life": 42})
         assert isinstance(cmd, UserCommands)
-        assert cmd["!OBS.life"] == 42
+        assert cmd["!ATMO.life"] == 42
         assert cmd["!INST.pixel_scale"] == 0.5
-        print(cmd)
 
-    def test_initialise_with_keyword_use_instrument(self):
+    def test_initialised_with_filename_for_default_file(self):
+        cmd = UserCommands(packages=["test_package"],
+                           yamls=["default.yaml"])
+        assert cmd["!TEL.temperature"] > 9000
+        assert len(cmd.yaml_dicts) == 4     # 3 yamls filenames + default
+
+    def test_initialised_with_use_instrument(self):
         cmd = UserCommands(use_instrument="test_package")
-        assert isinstance(cmd, UserCommands)
-        assert cmd["!INST.pixel_scale"] == 0.5
-        print(cmd)
+        assert cmd["!TEL.temperature"] > 9000
+        assert len(cmd.yaml_dicts) == 4     # 3 yamls filenames + default
 
 
-class TestUpdate:
+class TestMiscFeatures:
     def test_updates_with_yaml_dict(self):
         yaml_input = {"alias": "TEL",
                       "properties": {"temperature": 8999}}
         cmd = UserCommands(use_instrument="test_package")
-        cmd.update(yaml_input)
+        cmd.update(yamls=[yaml_input])
         assert cmd["!TEL.temperature"] < 9000
 
     def test_update_works_via_setitem(self):
         cmd = UserCommands(use_instrument="test_package")
         cmd["!TEL.gigawatts"] = 1.21
         assert cmd["!TEL.gigawatts"] == 1.21
-
-
-class TestYamlDicts:
-    def test_everything_original_is_in_the_yaml_dicts_list(self):
-        cmd = UserCommands(use_instrument="test_package")
-        assert cmd["!TEL.temperature"] > 9000
-        assert len(cmd.yaml_dicts) > 0
-        # for yaml_dic in cmd.yaml_dicts:
-        #     print(yaml_dic)
 
 
 class TestListLocalPackages:

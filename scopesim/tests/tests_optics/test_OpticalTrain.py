@@ -16,7 +16,6 @@ from scopesim.utils import find_file
 
 from scopesim.tests.mocks.py_objects import source_objects as src_objs
 
-
 import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm
 
@@ -31,11 +30,11 @@ sim.rc.__search_path__ += [FILES_PATH, YAMLS_PATH]
 
 
 def _basic_cmds():
-    return UserCommands(filename=find_file("CMD_mvs_cmds.yaml"))
+    return UserCommands(yamls=[find_file("CMD_mvs_cmds.yaml")])
 
 
 def _unity_cmds():
-    return UserCommands(filename=find_file("CMD_unity_cmds.yaml"))
+    return UserCommands(yamls=[find_file("CMD_unity_cmds.yaml")])
 
 
 @pytest.fixture(scope="function")

@@ -1,5 +1,6 @@
 ### ATMOSPHERE
 object: atmosphere
+alias: ATMO
 name: test_atmosphere
 
 effects :
@@ -17,6 +18,7 @@ effects :
 
 ### TELESCOPE
 object: telescope
+alias: TEL
 name: test_telescope
 
 effects:
@@ -39,6 +41,7 @@ effects:
 
 ### INSTRUMENT
 object: instrument
+alias: INST
 name: test_instrument
 
 effects:
@@ -59,6 +62,7 @@ effects:
 
 ### DETECTOR
 object: detector
+alias: DET
 name: test_detector
 
 effects:

@@ -42,13 +42,8 @@ class UserCommands:
         cmds["SIM"]["file"]["local_packages_path"]
 
 
-    Parameters
-    ----------
-    filename : str, optional
-        The path to a YAML file containing a list of settings
-
-    kwargs
-    ------
+    Parameters / kwargs
+    -------------------
     use_instrument : str, optional
         The name of the main instrument to use
 
@@ -72,6 +67,7 @@ class UserCommands:
     override_effect_values : dict
         Not yet implemented
 
+
     Attributes
     ----------
     cmds : SystemDict
@@ -84,89 +80,83 @@ class UserCommands:
         Where all the effects dictionaries are stored
 
 
+    Examples
+    --------
+    Here we use a combination of the main parameters: ``packages``, ``yamls``,
+    and ``properties``. When not using the ``use_instrument`` key, ``packages``
+    and ``yamls`` must be specified, otherwise scopesim will not know which
+    where to look for yaml files (only relevant if reading in yaml files)::
+
+        >>> from scopesim.server.database import download_package
+        >>> from scopesim.commands import UserCommands
+        >>>
+        >>> download_package("test_package")
+        >>> cmd = UserCommands(packages=["test_package"],
+        ...                    yamls=["test_telescope.yaml",
+        ...                           {"alias": "ATMO",
+        ...                            "properties": {"pwv": 9001}}],
+        ...                    properties={"!ATMO.pwv": 8999})
+
     """
 
-    def __init__(self, filename=None, **kwargs):
+    def __init__(self, **kwargs):
 
         self.cmds = copy.deepcopy(rc.__config__)
         self.yaml_dicts = []
-        self.filename = filename
+        self.kwargs = kwargs
+        self.ignore_effects = []
 
-        self.ignore_effects = {}
+        self.update(**kwargs)
 
-        _yaml_dicts = []
-        if filename is not None:
-            _yaml_dicts += load_yaml_dicts(find_file(filename))
-        else:
-            kwargs["alias"] = "OBS"
-            _yaml_dicts += [kwargs]
-
-        for _yaml_dict in _yaml_dicts:
-            self.update(_yaml_dict)
-
-    def update(self, yaml_input):
+    def update(self, **kwargs):
         """
         Updates the current parameters with a yaml dictionary
 
-        Parameters
-        ----------
-        yaml_input : str, dict
-            - str: path to a file containing a YAML dictionary
-            - dict: a yaml style dict following the ``OpticalElement`` format
-
+        See the ``UserCommands`` main docstring for acceptable kwargs
         """
 
-        if isinstance(yaml_input, str):
-            yaml_dicts = load_yaml_dicts(find_file(yaml_input))
-        elif isinstance(yaml_input, dict):
-            yaml_dicts = [yaml_input]
-        else:
-            raise ValueError("yaml_dicts must be a filename or a dictionary: {}"
-                             "".format(yaml_input))
+        if "use_instrument" in kwargs:
+            self.update(packages=[kwargs["use_instrument"]],
+                        yamls=["default.yaml"])
 
-        self.yaml_dicts += yaml_dicts
-        for yaml_dic in yaml_dicts:
-            self.cmds.update(yaml_dic)
-            if "alias" in yaml_dic and yaml_dic["alias"] == "OBS":
-                self._import_obs_dict(yaml_dic)
+        if "packages" in kwargs:
+            add_packages_to_rc_search(self["!SIM.file.local_packages_path"],
+                                      kwargs["packages"])
 
-    def _import_obs_dict(self, obs_dic):
-        """
-        Deals with all the extra keys that are allowed for an ``OBS`` yaml dict
-        """
+        if "yamls" in kwargs:
+            for yaml_input in kwargs["yamls"]:
+                if isinstance(yaml_input, str):
+                    yaml_file = find_file(yaml_input)
+                    if yaml_file is not None:
+                        self.update(yamls=load_yaml_dicts(yaml_file))
+                    else:
+                        warnings.warn(f"{yaml_input} could not be found")
 
-        local_path = self.cmds["!SIM.file.local_packages_path"]
-        if "packages" in obs_dic:
-            add_packages_to_rc_search(local_path, obs_dic["packages"])
+                elif isinstance(yaml_input, dict):
+                    for key in ["packages", "yamls"]:
+                        if key in yaml_input:
+                            self.update(**{key: yaml_input[key]})
 
-        if "yamls" in obs_dic:
-            yaml_dicts = []
-            for yaml_obj in obs_dic["yamls"]:
-                if isinstance(yaml_obj, dict):
-                    yaml_dicts += [yaml_obj]
-                elif isinstance(yaml_obj, str):
-                    yaml_dicts += load_yaml_dicts(find_file(yaml_obj))
-            for yaml_dict in yaml_dicts:
-                self.update(yaml_dict)
+                    self.cmds.update(yaml_input)
+                    self.yaml_dicts += [yaml_input]
 
-        if "use_instrument" in obs_dic:
-            filename = os.path.join(os.path.abspath(local_path),
-                                    obs_dic["use_instrument"],
-                                    "default.yaml")
-            if not os.path.exists(filename):
-                raise ValueError("{} does not contain a default.yaml file. "
-                                 "Please specify a package with a default.yaml"
-                                 "".format(obs_dic["use_instrument"]))
-            for yaml_dict in load_yaml_dicts(filename):
-                self.update(yaml_dict)
+                else:
+                    raise ValueError(f"yaml_dicts must be a filename or a "
+                                     f"dictionary: {yaml_input}")
 
-        if "ignore_effects" in obs_dic:
-            self.ignore_effects = obs_dic["ignore_effects"]
+        if "properties" in kwargs:
+            props_dict = kwargs["properties"]
+            for key in props_dict:
+                self.cmds[key] = props_dict[key]
 
-        if "add_effects" in obs_dic:
+        if "ignore_effects" in kwargs:
+            self.ignore_effects = kwargs["ignore_effects"]
+
+        if "add_effects" in kwargs:
             # ..todo: implement this
             pass
-        if "override_effect_values" in obs_dic:
+
+        if "override_effect_values" in kwargs:
             # ..todo: implement this
             pass
 
@@ -209,7 +199,7 @@ def add_packages_to_rc_search(local_path, package_list):
 
 def load_yaml_dicts(filename):
     """
-    Loads a the one or more dicts stored in a YAML file under ``filename``
+    Loads one or more dicts stored in a YAML file under ``filename``
 
     Parameters
     ----------

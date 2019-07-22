@@ -16,6 +16,7 @@ PLOTS = False
 DETECTOR_YAML = {"object": "detector",
                  "alias": "DET",
                  "name": "test_detector",
+                 "properties": {"dit": "!OBS.dit"},
                  "effects": [{"name": "detector_array_list",
                               "description": "SimpleCADO detector array list",
                               "class": "DetectorList",
@@ -53,7 +54,8 @@ OBSERVATIONS_DICT = {"!OBS.ndit": 1,            # Not yet implemented
 def test_simplecado():
 
     src = scopesim.source.source_utils.empty_sky()
-    cmd = sim.commands.UserCommands(yamls=[OBSERVATIONS_DICT, DETECTOR_YAML])
+    cmd = sim.commands.UserCommands(yamls=[DETECTOR_YAML],
+                                    properties=OBSERVATIONS_DICT)
 
     opt = sim.OpticalTrain(cmd)
     opt.observe(src)
