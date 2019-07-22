@@ -7,7 +7,7 @@ import numpy as np
 import scopesim as sim
 from scopesim.optics.optical_train import OpticalTrain
 from scopesim.utils import find_file
-from OLD_code.OLD_user_commands import UserCommands
+from scopesim.commands import UserCommands
 
 from scopesim.tests.mocks.py_objects.source_objects import _image_source, \
     _single_table_source
@@ -26,7 +26,7 @@ sim.rc.__search_path__ += [FILES_PATH, YAMLS_PATH]
 
 
 def _basic_cmds():
-    return UserCommands(filename=find_file("CMD_unity_cmds.config"))
+    return UserCommands(yamls=["CMD_unity_cmds.yaml"])
 
 
 @pytest.fixture(scope="function")
@@ -46,7 +46,7 @@ def im_src():
 
 @pytest.mark.usefixtures("cmds", "im_src", "tbl_src")
 class TestObserve:
-    # The CMD_unity_cmds.config sets the backgrund emission to 0
+    # The CMD_unity_cmds.config sets the background emission to 0
     def test_flux_is_conserved_for_no_bg_emission(self, cmds, tbl_src):
         opt = OpticalTrain(cmds)
         opt.observe(tbl_src)
