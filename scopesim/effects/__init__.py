@@ -10,4 +10,4 @@ from .ter_curves import *
 from .detector_list import *
 from .electronic import *
 
-from . import effects_utils
+# from . import effects_utils
