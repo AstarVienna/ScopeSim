@@ -1,7 +1,7 @@
 dist: xenial
 language: python
 python:
-    - 2.7
+    # - 2.7   # Come back to this later, if the need exists =) [or not]
     - 3.5
     - 3.6
     - 3.7
