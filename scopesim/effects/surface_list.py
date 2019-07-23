@@ -38,7 +38,7 @@ class SurfaceList(Effect):
 
     def __init__(self, **kwargs):
         super(SurfaceList, self).__init__(**kwargs)
-        self.meta["z_order"] = []
+        self.meta["z_order"] = [20, 220]
         min_thru = rc.__config__["!SIM.spectral.minimum_throughput"]
         self.meta["SIM_MIN_THROUGHPUT"] = min_thru
 
