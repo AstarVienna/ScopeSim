@@ -3,7 +3,6 @@ scipy
 matplotlib
 astropy
 pyyaml
-wget
 sphinxcontrib-apidoc
 synphot
 reproject

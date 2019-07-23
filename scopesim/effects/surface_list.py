@@ -39,8 +39,8 @@ class SurfaceList(Effect):
     def __init__(self, **kwargs):
         super(SurfaceList, self).__init__(**kwargs)
         self.meta["z_order"] = []
-
-        self.meta["SIM_MIN_THROUGHPUT"] = rc.__config__["!SIM.spectral.minimum_throughput"]
+        min_thru = rc.__config__["!SIM.spectral.minimum_throughput"]
+        self.meta["SIM_MIN_THROUGHPUT"] = min_thru
 
         self.radiometry_table = RadiometryTable()
         self.radiometry_table.meta.update(self.meta)
@@ -108,15 +108,7 @@ class SurfaceList(Effect):
         self.radiometry_table.add_surface_list(surface_list, prepend)
 
     def get_emission(self, **kwargs):
-        if "etendue" in kwargs:
-            etendue = kwargs["etendue"]
-        elif "etendue" in self.meta:
-            etendue = self.meta["etendue"]
-        elif "etendue" in self.radiometry_table.meta:
-            etendue = self.radiometry_table.meta["etendue"]
-        else:
-            raise ValueError("etendue must be given in kwargs or .meta")
-
+        etendue = rc.__currsys__["!TEL.etendue"]
         return self.radiometry_table.get_emission(etendue=etendue, **kwargs)
 
     def get_throughput(self, **kwargs):

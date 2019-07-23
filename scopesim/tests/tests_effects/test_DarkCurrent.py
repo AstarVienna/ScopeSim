@@ -10,7 +10,7 @@ class TestInit:
         assert isinstance(DarkCurrent(), DarkCurrent)
 
     def test_initialises_with_dark_current_value_and_obs_dit_keys(self):
-        dark_eff = DarkCurrent(value=0.1, OBS_DIT=10)
+        dark_eff = DarkCurrent(value=0.1, dit=10)
         assert isinstance(dark_eff, DarkCurrent)
 
 
@@ -19,8 +19,8 @@ class TestApplyTo:
         level, dit, hw = 0.5, 10, 16
         hdr = header_from_list_of_xy([-hw, hw], [-hw, hw], 1, "D")
         dtcr = Detector(hdr)
-        dtcr.meta["OBS_DIT"] = dit
-        dark_eff = DarkCurrent(value=level)
+        dtcr.meta["dit"] = dit
+        dark_eff = DarkCurrent(value=level, **dtcr.meta)
 
         dtcr = dark_eff.apply_to(dtcr)
 

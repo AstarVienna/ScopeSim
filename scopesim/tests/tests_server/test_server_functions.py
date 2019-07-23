@@ -1,6 +1,9 @@
+import sys
 import os
 import pytest
-from urllib.error import HTTPError
+import shutil
+if sys.version_info.major > 2:
+    from urllib.error import HTTPError
 
 from scopesim import rc
 from scopesim.server import database as db
@@ -44,8 +47,10 @@ class TestDownloadPackage:
         assert os.path.exists(save_path)
 
         os.remove(save_path)
+        shutil.rmtree(save_path.replace(".zip", ""))
         assert not os.path.exists(save_path)
 
     def test_raise_error_when_package_not_found(self):
-        with pytest.raises(HTTPError):
-            db.download_package("instruments/bogus.zip")
+        if sys.version_info.major > 2:
+            with pytest.raises(HTTPError):
+                db.download_package("instruments/bogus.zip")

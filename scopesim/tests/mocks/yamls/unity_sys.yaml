@@ -1,5 +1,6 @@
 ### ATMOSPHERE
 object: atmosphere
+alias: ATMO
 name: test_atmosphere
 
 effects :

@@ -1,7 +1,7 @@
 import os
 import yaml
 
-from .commands.system_dict import SystemDict
+from .system_dict import SystemDict
 
 __pkg_dir__ = os.path.dirname(__file__)
 __data_dir__ = os.path.join(__pkg_dir__, "data")

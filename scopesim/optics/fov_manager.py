@@ -29,11 +29,12 @@
 
 import numpy as np
 
-from ..effects.shifts import Shift3D
-from .. import effects as efs
-from .fov import FieldOfView
 from .image_plane_utils import header_from_list_of_xy
+from .fov import FieldOfView
+from .. import effects as efs
+from ..effects.shifts import Shift3D
 from ..effects.effects_utils import get_all_effects, is_spectroscope
+from .. import rc
 
 
 class FOVManager:
@@ -65,6 +66,14 @@ class FOVManager:
         fovs : list of FieldOfView objects
 
         """
+        pixel_size = rc.__currsys__["!SIM.sub_pixel.fraction"]
+        chunk_size = rc.__currsys__["!SIM.computing.chunk_size"]
+        self.meta["SIM_SUB_PIXEL_FRACTION"] = pixel_size
+        self.meta["SIM_CHUNK_SIZE"] = chunk_size
+        self.meta["SIM_PIXEL_SCALE"] = rc.__currsys__["!INST.pixel_scale"]
+        self.meta["SIM_LAM_MIN"] = rc.__currsys__["!SIM.spectral.lam_min"]
+        self.meta["SIM_LAM_MID"] = rc.__currsys__["!SIM.spectral.lam_mid"]
+        self.meta["SIM_LAM_MAX"] = rc.__currsys__["!SIM.spectral.lam_max"]
 
         if is_spectroscope(self.effects):
             shifts  = get_3d_shifts(self.effects, **self.meta)
@@ -202,9 +211,9 @@ def get_imaging_headers(effects, **kwargs):
     Notes
     -----
     FOV headers use the return values from the ``<Effect>.fov_grid()``
-    method. The ``fov_grid`` dict mult contain the ``edges``
+    method. The ``fov_grid`` dict must contain the entry ``edges``
 
-    This may change in future versions of SimCADO
+    This may change in future versions of ScopeSim
 
     """
 

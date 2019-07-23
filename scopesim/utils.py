@@ -16,12 +16,6 @@ from astropy.table import Column
 
 from . import rc
 
-try:
-    import wget
-except ImportError:
-    print("Package wget is not available. scopesim.get_extras() will not work."
-          "try pip install wget")
-
 
 def msg(cmds, message, level=3):
     """
@@ -226,78 +220,6 @@ def add_keyword(filename, keyword, value, comment="", ext=0):
     f[ext].header[keyword] = (value, comment)
     f.flush()
     f.close()
-
-
-# ############ Check the server for data extras
-def download_file(url, save_dir=None):
-    """
-    Download the extra data that aren't in the ScopeSim package
-    """
-
-    if save_dir is None:
-        save_dir = rc.__data_dir__
-
-    local_filename = os.path.join(save_dir, url.split('/')[-1])
-    try:
-        temp_file = wget.download(url,
-                                  out=wget.tempfile.mktemp(dir=save_dir,
-                                                           suffix='.tmp'),
-                                  bar=wget.bar_adaptive)
-        print("\n")
-        if os.path.exists(local_filename):
-            os.remove(local_filename)
-        os.rename(temp_file, local_filename)
-    except wget.ulib.HTTPError:
-        print(url + " not found")
-
-    return local_filename
-
-
-def get_extras():
-    """
-    Downloads large files that ScopeSim needs to simulate MICADO
-    """
-
-    save_dir = rc.__data_dir__
-    fname = os.path.join(save_dir, "extras.dat")
-
-    # check_replace = 0  ## unused (OC)
-    if os.path.exists(fname):
-        old_extras = ioascii.read(fname)
-        # check_replace = 1   ## unused (OC)
-    else:
-        old_extras = ioascii.read("""
-        filename                version         size    group
-        PSF_POPPY.fits          20151103a       48MB    typical
-        """)
-
-    url = "http://www.univie.ac.at/scopesim/data_ext/"
-    new_extras = ioascii.read(download_file(url + "extras.dat"))
-
-    for name, vers, size, group in new_extras:
-        check_download = 1
-
-        # does the file exist on the users disk?
-        fname = os.path.join(rc.__data_dir__, name)
-        if os.path.exists(fname):
-
-            # is the new name in the old list of filenames
-            if name in old_extras["filename"]:
-                iname = np.where(old_extras["filename"] == name)[0][0]
-                # print(iname, old_extras["version"][iname] == vers)
-
-                # Are the versions the same?
-                if vers == old_extras["version"][iname]:
-                    check_download = 0
-
-        if check_download:
-            print("Downloading: " + name + "  Version: " + vers +
-                  "  Size: " + size)
-            download_file(url + name)
-        else:
-            print(name + " is already the latest version: " + vers)
-
-    print("Finished downloading data for ScopeSim")
 
 
 def add_SED_to_scopesim(file_in, file_out=None, lam_units="um"):
@@ -512,7 +434,8 @@ def bug_report():
     except ImportError:
         import_module = __import__
 
-    packages = ["scopesim", "astropy", "numpy", "scipy", "wget", "synphot"]
+    packages = ["scopesim", "astropy", "numpy", "scipy", "synphot",
+                "requests", "pyyaml", "beautifulsoup"]
 
     # Check Python version
     print("Python:\n", sys.version)
@@ -838,6 +761,9 @@ def quantity_from_table(colname, table, default_unit=""):
 
 
 def unit_from_table(colname, table, default_unit=""):
+    """
+    Looks for the unit for a column based on the meta dict keyword "<col>_unit"
+    """
     col = table[colname]
     if col.unit is not None:
         unit = col.unit
@@ -860,12 +786,18 @@ def rad2deg(theta):
 
 
 def has_needed_keywords(header, suffix=""):
+    """
+    Check to see if the WCS keywords are in the header
+    """
     keys = ["CDELT1", "CRVAL1", "CRPIX1"]
     return sum([key + suffix in header.keys() for key in keys]) == 3 and \
            "NAXIS1" in header.keys()
 
 
 def stringify_dict(dic, ignore_types=(str, int, float)):
+    """
+    Turns a dict entries into strings for addition to FITS headers
+    """
     from copy import deepcopy
     dic_new = deepcopy(dic)
     for key in dic_new:
@@ -876,8 +808,37 @@ def stringify_dict(dic, ignore_types=(str, int, float)):
 
 
 def clean_dict(orig_dict, new_entries):
+    """
+    Used for replacing OBS_DICT keywords with actual values
+
+    Parameters
+    ----------
+    orig_dict : dict
+
+    new_entries : dict
+        OBS dict
+
+    Returns
+    -------
+    orig_dict : dict
+        Updated dict
+
+    """
     for key in orig_dict:
         if type(orig_dict[key]) is str and orig_dict[key] in new_entries:
             orig_dict[key] = new_entries[orig_dict[key]]
 
     return orig_dict
+
+
+def from_currsys(item):
+    """
+    Returns the current value of a bang-string from rc.__currsys__
+    """
+    if isinstance(item, str) and item[0] == "!":
+        if item in rc.__currsys__:
+            item = rc.__currsys__[item]
+        else:
+            raise ValueError("{} was not found in rc.__currsys__".format(item))
+
+    return item

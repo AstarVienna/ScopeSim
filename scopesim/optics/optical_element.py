@@ -1,6 +1,7 @@
+import warnings
+
 from .. import effects as efs
 from ..effects.effects_utils import make_effect, get_all_effects
-from ..utils import clean_dict
 
 
 class OpticalElement:
@@ -22,10 +23,10 @@ class OpticalElement:
         Description of optical section properties, effects, and meta-data
 
     kwargs : dict
-        Observation parameters that are shared between optical elements.
-        Come from a .config file and use large-letter format. E.g. OBS_AIRMASS
-        These key-values are stored in ``meta`` and are used to clean the
-        ``properities`` and ``effects``-kwarg dictionaries
+        Optical Element specific information which has no connection to the
+        effects that are passed. Any global values, e.g. airmass
+        (i.e. bang strings) are passed on to the individual effect, where the
+        relevant values are then pulled from rc.__currsys__
 
 
     Attributes
@@ -60,22 +61,16 @@ class OpticalElement:
                               if key not in ["properties", "effects"]})
             if "properties" in yaml_dict:
                 self.properties = yaml_dict["properties"]
-                self.properties = clean_dict(self.properties, self.meta)
             if "effects" in yaml_dict and len(yaml_dict["effects"]) > 0:
-                # self.effects_dicts = yaml_dict["effects"]
-                self.make_effects(yaml_dict["effects"])
-
-    def make_effects(self, effects_dicts):
-        for effdic in effects_dicts:
-            if "kwargs" in effdic:
-                # substitute any OBS_DICT keywords where they are given
-                effdic["kwargs"] = clean_dict(effdic["kwargs"], self.meta)
-
-            self.effects += [make_effect(effdic, **self.properties)]
+                for eff_dic in yaml_dict["effects"]:
+                    self.effects += [make_effect(eff_dic, **self.properties)]
 
     def add_effect(self, effect):
         if isinstance(effect, efs.Effect):
             self.effects += [effect]
+        else:
+            warnings.warn("{} is not an Effect object and was not added"
+                          "".format(effect))
 
     def get_all(self, effect_class):
         return get_all_effects(self.effects, effect_class)

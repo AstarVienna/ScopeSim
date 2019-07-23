@@ -1,8 +1,14 @@
 # ScopeSim 
 #### A telescope observation simulator for Python
 
-[![Build Status](https://travis-ci.org/astronomyk/TelescoPy.svg?branch=master)](https://travis-ci.org/astronomyk/TelescoPy.svg?branch=master)
-[![Documentation Status](https://readthedocs.org/projects/telescopy/badge/?version=latest)](https://telescopy.readthedocs.io/en/latest/?badge=latest)
+[![Build Status](https://travis-ci.org/astronomyk/ScopeSim.svg?branch=master)](https://travis-ci.org/astronomyk/ScopeSim)
+[![Documentation Status](https://readthedocs.org/projects/scopesim/badge/?version=latest)](https://scopesim.readthedocs.io/en/latest/?badge=latest)
+
+[![Python 2.7](https://img.shields.io/badge/Python-2.7-red.svg)]()
+[![Python 3.5](https://img.shields.io/badge/Python-3.5-brightgreen.svg)]()
+[![Python 3.6](https://img.shields.io/badge/Python-3.6-brightgreen.svg)]()
+[![Python 3.7](https://img.shields.io/badge/Python-3.7-brightgreen.svg)]()
+
 
 ## Summary
 
@@ -17,12 +23,14 @@ This code was originally based on the [SimCADO](www.univie.ac.at/simcado) packag
 ## Dependencies
 
 ```
-numpy
+numpy >= 1.13
 scipy
 astropy
 synphot
+pyyaml
 requests
+beautifulsoup
 ```
 
 ## Documentation
-https://telescopy.readthedocs.io/en/latest/
+https://scopesim.readthedocs.io/en/latest/

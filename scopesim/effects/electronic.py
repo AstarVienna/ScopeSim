@@ -5,7 +5,7 @@ from astropy.io import fits
 from .. import rc
 from . import Effect
 from ..base_classes import DetectorBase
-from ..utils import real_colname
+from ..utils import real_colname, from_currsys
 
 
 class DarkCurrent(Effect):
@@ -24,7 +24,7 @@ class DarkCurrent(Effect):
                 raise ValueError("<DarkCurrent>.meta['value'] must be either"
                                  "dict or float: {}".format(self.meta["value"]))
 
-            dit = obj.meta["OBS_DIT"]
+            dit = from_currsys(self.meta["dit"])
             obj.image_hdu.data += dark * dit
 
         return obj
