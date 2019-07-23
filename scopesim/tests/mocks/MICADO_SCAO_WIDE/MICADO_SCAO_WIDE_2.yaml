@@ -1,5 +1,6 @@
 # ATMOSPHERE
 object : atmosphere
+alias : ATMO
 name : armazones
 inst_pkg_name : elt
 
@@ -17,6 +18,7 @@ effects :
 
 # TELESCOPE
 object : telescope
+alias : TEL
 name : elt
 inst_pkg_name : elt
 
@@ -38,6 +40,7 @@ effects :
 
 # FORE OPTICS
 object : fore_optics
+alias : RO
 name : elt_relay_optics
 inst_pkg_name : micado
 
@@ -54,6 +57,7 @@ effects :
 
 # INSTRUMENT OPTICS
 object : instrument
+alias : INST
 name : micado_wide_field
 inst_pkg_name : micado
 
@@ -77,6 +81,7 @@ effects :
 
 # Detector array
 object : detector
+alias : DET
 name : micado_detector_array
 inst_pkg_name : micado
 

@@ -26,7 +26,7 @@ import synphot as sp
 from astropy import units as u
 
 import scopesim as sim
-from OLD_code.OLD_user_commands import UserCommands
+from scopesim.commands.user_commands import UserCommands
 from scopesim.optics.optical_train import OpticalTrain
 from scopesim.optics.optics_manager import OpticsManager
 from scopesim.optics.fov_manager import FOVManager
@@ -48,7 +48,7 @@ class Test_MICADO_MVP_YAML:
         # .. todo: get this working on Travis
         filename = os.path.join(TEST_PATH, "MICADO_SCAO_WIDE_2.config")
 
-        cmds = UserCommands(filename=filename)
+        cmds = UserCommands(yamls=[filename])
         assert isinstance(cmds, UserCommands)
         assert isinstance(cmds.yaml_dicts, list)
 
