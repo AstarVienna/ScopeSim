@@ -9,6 +9,8 @@ properties :
     lam_min : 0.3
     lam_mid : 2.2
     lam_max : 20
+    lam_unit : um
+
     spectral_resolution : 1E-4
     minimum_throughput : 1E-6
     minimum_pixel_flux : 1
