@@ -92,12 +92,6 @@ class Seeing(AnalyticalPSF):
         self.meta["z_order"] = [0, 300]
 
 
-class VibrationPSF(AnalyticalPSF):
-    def __init__(self, **kwargs):
-        super(VibrationPSF, self).__init__(**kwargs)
-        self.meta["z_order"] = [0, 300]
-
-
 class GaussianDiffractionPSF(AnalyticalPSF):
     def __init__(self, diameter, **kwargs):
         super(GaussianDiffractionPSF, self).__init__(**kwargs)
