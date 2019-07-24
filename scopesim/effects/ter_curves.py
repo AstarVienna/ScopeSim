@@ -48,6 +48,7 @@ class SkycalcTERCurve(TERCurve):
 
         super(SkycalcTERCurve, self).__init__(**kwargs)
         self.meta["z_order"] = [12, 212]
+        self.meta["action"] = "transmission"
 
         self.skycalc_conn = skycalc_ipy.SkyCalc()
         self.query_server(**kwargs)

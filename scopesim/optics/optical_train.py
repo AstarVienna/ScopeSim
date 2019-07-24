@@ -46,7 +46,7 @@ class OpticalTrain:
 
         rc.__currsys__ = user_commands
         self.yaml_dicts = rc.__currsys__.yaml_dicts
-        self.optics_manager = OpticsManager(rc.__currsys__.yaml_dicts)
+        self.optics_manager = OpticsManager(self.yaml_dicts)
         self.update()
 
     def update(self, **kwargs):
