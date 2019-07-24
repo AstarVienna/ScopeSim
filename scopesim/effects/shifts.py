@@ -9,7 +9,7 @@ from .. import rc
 class Shift3D(Effect):
     def __init__(self, **kwargs):
         super(Shift3D, self).__init__(**kwargs)
-        self.meta["z_order"] = [0, 300]
+        self.meta["z_order"] = [30, 330]
 
     def apply_to(self, obj, **kwargs):
         return obj
@@ -20,24 +20,47 @@ class Shift3D(Effect):
 
 
 class AtmosphericDispersion(Shift3D):
+    """
+    Used to generate the wavelength bins based on shifts due to the atmosphere
+
+    Doesn't contain an ``apply_to`` function, but provides information through
+    the ``fov_grid`` function.
+
+    Required Parameters
+    -------------------
+    airmass : float
+        Recommended to use "!OBS.airmass" in the OBS properties
+    temperature : float
+        [degC] Recommended to use "!ATMO.temperature" in the ATMO properties
+    humidity : float
+        [0..1] Recommended to use "!ATMO.humidity" in the ATMO properties
+    pressure : float
+        [bar] Recommended to use "!ATMO.pressure" in the ATMO properties
+    latitude : float
+        [deg] Recommended to use "!ATMO.latitude" in the ATMO properties
+    altitude
+        [m] Recommended to use "!ATMO.altitude" in the ATMO properties
+    pixel_scale
+        [arcsec] Recommended to use "!INST.pixel_scale" in the INST properties
+
+    Optional Parameters
+    -------------------
+    wave_min : float
+        [um] Defaults to "!SIM.spectral.lam_min"
+    wave_mid : float
+        [um] Defaults to "!SIM.spectral.lam_mid"
+    wave_max : float
+        [um] Defaults to "!SIM.spectral.lam_max"
+    sub_pixel_fraction : float
+        [0..1] Defaults to "!SIM.sub_pixel.fraction"
+    num_steps : int
+        Default: 1000. Number of wavelength steps to use when interpolating the
+        atmospheric dispersion curve
+
+    """
     def __init__(self, **kwargs):
         super(AtmosphericDispersion, self).__init__(**kwargs)
-
-        """
-        Needed parameters from atmospheric optical element
-        altitude
-        latitude
-        airmass
-        temperature
-        humidity
-        pressure
-        fov_grid
-        
-        Alters the position on the sky for a FOV object (WCS_prefix="")
-        Only acts on FOVs when FOVs are initialised in FOV_Manager
-        
-        """
-        self.meta["z_order"] = [1, 301]
+        self.meta["z_order"] = [31, 331]
         self.meta["wave_min"] = "!SIM.spectral.lam_min"
         self.meta["wave_mid"] = "!SIM.spectral.lam_mid"
         self.meta["wave_max"] = "!SIM.spectral.lam_max"

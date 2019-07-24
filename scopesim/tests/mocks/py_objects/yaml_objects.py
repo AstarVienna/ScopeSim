@@ -36,7 +36,10 @@ effects :
     description : atmospheric dispersion
     class : AtmosphericDispersion
     kwargs :
-        central_wavelength : 2.2
+        wave_min : 1.9
+        wave_min : 2.16
+        wave_min : 2.4
+        pixel_scale: 0.004
 """
     return yaml.load(text)
 
