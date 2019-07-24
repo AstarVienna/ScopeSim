@@ -842,3 +842,19 @@ def from_currsys(item):
             raise ValueError("{} was not found in rc.__currsys__".format(item))
 
     return item
+
+
+def check_keys(input_dict, required_keys, action="error"):
+    all_keys = True
+    if not all([key in input_dict for key in required_keys]):
+        all_keys = False
+        if action == "error":
+            raise ValueError("One or more of the following keys missing "
+                             "from input_dict: \n{} \n{}"
+                             "".format(required_keys, input_dict.keys()))
+        elif action == "warn":
+            warnings.warn("One or more of the following keys missing "
+                          "from input_dict: \n{} \n{}"
+                          "".format(required_keys, input_dict.keys()))
+
+    return all_keys

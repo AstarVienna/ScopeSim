@@ -9,6 +9,7 @@ from astropy.convolution import Gaussian2DKernel
 
 from .effects import Effect
 from ..optics import image_plane_utils as imp_utils
+from ..base_classes import ImagePlaneBase
 from .. import utils
 from .. import rc
 
@@ -75,9 +76,33 @@ class AnalyticalPSF(PSF):
 
 
 class Vibration(AnalyticalPSF):
+    """
+    Creates a wavelength independent kernel image
+    """
     def __init__(self, **kwargs):
         super(Vibration, self).__init__(**kwargs)
-        self.meta["z_order"] = [400]
+        self.meta["z_order"] = [44, 444]
+        self.meta["width_n_fwhms"] = 4
+
+        required_keys = ["fwhm", "width_n_fwhms", "pixel_scale"]
+        utils.check_keys(self.meta, required_keys, action="error")
+
+        self.kernel = self.get_kernel(**self.meta)
+
+    def apply_to(self, obj):
+        if isinstance(obj, ImagePlaneBase):
+            obj.hdu.data = convolve(obj.hdu.data, self.kernel, mode="same")
+
+        return obj
+
+    def get_kernel(self, **kwargs):
+        fwhm_pix = kwargs["fwhm"] / kwargs["pixel_scale"]
+        sigma = fwhm_pix / 2.35
+        width = int(fwhm_pix * kwargs["width_n_fwhms"])
+        kernel = Gaussian2DKernel(sigma, x_size=width, y_size=width,
+                                  mode="center").array
+
+        return kernel
 
 
 class NonCommonPathAberration(AnalyticalPSF):
