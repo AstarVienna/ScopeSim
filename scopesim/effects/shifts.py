@@ -1,9 +1,7 @@
 import numpy as np
 
 from .effects import Effect
-from ..utils import zendist2airmass, airmass2zendist, from_currsys
-
-from .. import rc
+from ..utils import airmass2zendist, from_currsys, check_keys
 
 
 class Shift3D(Effect):
@@ -69,10 +67,7 @@ class AtmosphericDispersion(Shift3D):
 
         required_keys = ["airmass", "temperature", "humidity", "pressure",
                          "latitude", "altitude", "pupil_angle", "pixel_scale"]
-        if not all([key in self.meta for key in required_keys]):
-            raise ValueError("One or more of the following keys missing from "
-                             "self.meta: \n{} \n{}"
-                             "".format(required_keys, self.meta.keys()))
+        check_keys(self.meta, required_keys, action="error")
 
     def fov_grid(self, which="shifts", **kwargs):
         """
