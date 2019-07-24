@@ -1,7 +1,7 @@
 import numpy as np
 
 from .effects import Effect
-from ..utils import zendist2airmass, airmass2zendist
+from ..utils import zendist2airmass, airmass2zendist, from_currsys
 
 from .. import rc
 
@@ -38,9 +38,14 @@ class AtmosphericDispersion(Shift3D):
         
         """
         self.meta["z_order"] = [1, 301]
+        self.meta["wave_min"] = "!SIM.spectral.lam_min"
+        self.meta["wave_mid"] = "!SIM.spectral.lam_mid"
+        self.meta["wave_max"] = "!SIM.spectral.lam_max"
+        self.meta["sub_pixel_fraction"] = "!SIM.sub_pixel.fraction"
+        self.meta["num_steps"] = 1000
 
         required_keys = ["airmass", "temperature", "humidity", "pressure",
-                         "latitude", "altitude", "pupil_angle"]
+                         "latitude", "altitude", "pupil_angle", "pixel_scale"]
         if not all([key in self.meta for key in required_keys]):
             raise ValueError("One or more of the following keys missing from "
                              "self.meta: \n{} \n{}"
@@ -48,38 +53,32 @@ class AtmosphericDispersion(Shift3D):
 
     def fov_grid(self, which="shifts", **kwargs):
         """
-
-        Parameters
-        ----------
-        which
-        kwargs
-
-        Returns
-        -------
-
         Notes
         -----
         Success! Returns the same values as:
         http://gtc-phase2.gtc.iac.es/science/astroweb/atmosRefraction.php
 
         """
-        lam_min = rc.__config__["!SIM.spectral.lam_min"]
-        lam_mid = rc.__config__["!SIM.spectral.lam_mid"]
-        lam_max = rc.__config__["!SIM.spectral.lam_max"]
+
+        for key in self.meta:
+            self.meta[key] = from_currsys(self.meta[key])
 
         atmo_params = {"z0"     : airmass2zendist(self.meta["airmass"]),
                        "temp"   : self.meta["temperature"],         # in degC
                        "rel_hum": self.meta["humidity"] * 100,      # in %
                        "pres"   : self.meta["pressure"] * 1000,     # in mbar
-                       "lat"    : self.meta["latitude"],
-                       "h"      : self.meta["altitude"]}
+                       "lat"    : self.meta["latitude"],            # in deg
+                       "h"      : self.meta["altitude"]}            # in m
+        self.meta.update(atmo_params)
 
-        offset_mid = atmospheric_refraction(lam_mid, **atmo_params)
-        offset_min = atmospheric_refraction(lam_min, **atmo_params) - offset_mid
-        offset_max = atmospheric_refraction(lam_max, **atmo_params) - offset_mid
+        waves, shifts = get_pixel_border_waves_from_atmo_disp(**self.meta)
+        dx = shifts * np.cos(np.deg2rad(self.meta["pupil_angle"]))
+        dy = shifts * np.sin(np.deg2rad(self.meta["pupil_angle"]))
 
-        waves, dx, dy = [], [], []
-        return [waves, dx, dy]
+        if which == "shifts":
+            return [waves, dx, dy]
+        else:
+            return None
 
 
 class AtmosphericDispersionCorrection(Shift3D):
@@ -179,3 +178,29 @@ def atmospheric_refraction(lam, z0=60, temp=0, rel_hum=60, pres=750,
 
     # return value is in arcsec
     return ang
+
+
+def get_pixel_border_waves_from_atmo_disp(**kwargs):
+    atmo_disp_dict = {key: kwargs[key] for key in ["z0", "temp", "rel_hum",
+                                                   "pres", "lat", "h"]}
+    wave_range = np.linspace(kwargs["wave_min"], kwargs["wave_max"],
+                             kwargs["num_steps"])
+    wave_mid = kwargs["wave_mid"]
+    offset_mid = atmospheric_refraction(lam=wave_mid, **atmo_disp_dict)
+    offset_ang = atmospheric_refraction(lam=wave_range, **atmo_disp_dict)
+    offset_ang -= offset_mid
+
+    offset_step = kwargs["pixel_scale"] * kwargs["sub_pixel_fraction"]
+    offset_pix = offset_ang / offset_step
+
+    # interpolate to get the edge wavelengths of the pixels
+    y = wave_range[::-1]
+    x = offset_pix[::-1]
+    xnew = np.unique(x.astype(int))
+    xnew = np.array([xnew[0] - 1] + list(xnew) + [xnew[-1] + 1])
+    ynew = np.interp(xnew, x, y)
+
+    shifts_angle_edges = xnew[::-1] * offset_step
+    wave_pixel_edges = ynew[::-1]
+
+    return wave_pixel_edges, shifts_angle_edges
