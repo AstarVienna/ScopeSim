@@ -2,7 +2,7 @@ import sys
 import os
 import pytest
 import shutil
-if sys.version_info.major > 2:
+if sys.version_info.major >= 3:
     from urllib.error import HTTPError
 
 from scopesim import rc
@@ -51,6 +51,6 @@ class TestDownloadPackage:
         assert not os.path.exists(save_path)
 
     def test_raise_error_when_package_not_found(self):
-        if sys.version_info.major > 2:
+        if sys.version_info.major >= 3:
             with pytest.raises(HTTPError):
                 db.download_package("instruments/bogus.zip")
