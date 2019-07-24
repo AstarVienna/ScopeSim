@@ -1,26 +1,13 @@
-.. ScopeSim documentation master file, created by
-   sphinx-quickstart on Thu Jun 28 09:21:41 2018.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
+Welcome to ScopeSim's documentation!
+====================================
 
-Welcome to the design documentation for ScopeSim!
-=================================================
+Hello world! This is a test to see if the docs are working on RTFD
 
 .. toctree::
    :maxdepth: 2
    :caption: Contents:
 
-   TopLevel
-   design/Scope_Overview
-   design/Design_Interface_Overview
-   design/Effect_Descriptions
-   design/Design_Code_Workflow
-   design/Inst_Pkg_DB
-   examples/FirstExample
 
-   reference/modules
-    
-    
 Indices and tables
 ==================
 
