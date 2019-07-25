@@ -4,7 +4,6 @@ z-orders
 0..99 - Make a FOV list
 -----------------------
 TERCurves
-
 * 10 TERCurve
 * 11 AtmosphericTERCurve
 * 12 SkycalcTERCurve
@@ -54,6 +53,9 @@ Misc
 200..299 - Source altering effects
 ----------------------------------
 * 210 TERCurve
+* 211 AtmosphericTERCurve
+* 212 SkycalcTERCurve
+* 213 QuantumEfficiencyCurve
 * 220 SurfaceList
 
 

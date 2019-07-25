@@ -98,6 +98,7 @@ class DataContainer:
         self.table = Table(names=colnames, data=data)
         self.headers += [None]
         self.meta["history"] += ["Table generated from arrays"]
+        self.table.meta.update(self.meta)
 
     def _load_ascii(self):
         self.table = ioascii.read(self.meta["filename"])
@@ -107,8 +108,10 @@ class DataContainer:
         else:
             self.headers += [None]
 
-        self.table.meta.update(hdr_dict)
+        self.meta.update(self.table.meta)
         self.meta.update(hdr_dict)
+        # self.table.meta.update(hdr_dict)
+        self.table.meta.update(self.meta)
         self.meta["history"] += ["ASCII table read from {}"
                                  "".format(self.meta["filename"])]
 
