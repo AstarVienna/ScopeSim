@@ -9,7 +9,7 @@ from astropy.convolution import Gaussian2DKernel
 
 from .effects import Effect
 from ..optics import image_plane_utils as imp_utils
-from ..base_classes import ImagePlaneBase
+from ..base_classes import ImagePlaneBase, FieldOfViewBase
 from .. import utils
 from .. import rc
 
@@ -73,6 +73,7 @@ class PSF(Effect):
 class AnalyticalPSF(PSF):
     def __init__(self, **kwargs):
         super(AnalyticalPSF, self).__init__(**kwargs)
+        self.meta["z_order"] = [40, 340]
 
 
 class Vibration(AnalyticalPSF):
@@ -84,44 +85,100 @@ class Vibration(AnalyticalPSF):
         self.meta["z_order"] = [44, 444]
         self.meta["width_n_fwhms"] = 4
 
-        required_keys = ["fwhm", "width_n_fwhms", "pixel_scale"]
+        required_keys = ["fwhm", "pixel_scale"]
         utils.check_keys(self.meta, required_keys, action="error")
-
-        self.kernel = self.get_kernel(**self.meta)
+        self.kernel = None
 
     def apply_to(self, obj):
         if isinstance(obj, ImagePlaneBase):
+            self.kernel = self.get_kernel(**self.meta)
             obj.hdu.data = convolve(obj.hdu.data, self.kernel, mode="same")
 
         return obj
 
     def get_kernel(self, **kwargs):
-        fwhm_pix = kwargs["fwhm"] / kwargs["pixel_scale"]
-        sigma = fwhm_pix / 2.35
-        width = int(fwhm_pix * kwargs["width_n_fwhms"])
-        kernel = Gaussian2DKernel(sigma, x_size=width, y_size=width,
-                                  mode="center").array
+        if self.kernel is None:
+            utils.from_currsys(kwargs)
+            fwhm_pix = kwargs["fwhm"] / kwargs["pixel_scale"]
+            sigma = fwhm_pix / 2.35
+            width = int(fwhm_pix * kwargs["width_n_fwhms"])
+            self.kernel = Gaussian2DKernel(sigma, x_size=width, y_size=width,
+                                           mode="center").array
 
-        return kernel
+        return self.kernel
 
 
 class NonCommonPathAberration(AnalyticalPSF):
+    """
+    Needed: pixel_scale
+    Accepted: width_n_fwhms
+    """
     def __init__(self, **kwargs):
         super(NonCommonPathAberration, self).__init__(**kwargs)
-        self.meta["z_order"] = [0, 300]
+        self.meta["z_order"] = [41, 341]
+        self.meta["width_n_fwhms"] = 4
+        self.total_wfe = None
+
+        required_keys = ["pixel_scale"]
+        utils.check_keys(self.meta, required_keys, action="error")
+
+    def apply_to(self, obj):
+        if isinstance(obj, FieldOfViewBase):
+            if self.table is not None:
+                wave_min, wave_max = obj.meta["wave_min"], obj.meta["wave_max"]
+                kernel = self.get_kernel([wave_min, wave_max])
+                obj.hdu.data = convolve(obj.hdu.data, kernel, mode="same")
+
+        return obj
+
+    def get_kernel(self, waves):
+
+        if self.total_wfe is None:
+            self.total_wfe = get_total_wfe_from_table(self.table)
+        wave_mid = 0.5 * (waves[0] + waves[1])
+        sigma = 6.283192 * self.total_wfe / utils.quantify(wave_mid, "um")
+        sigma = sigma.si.value
+
+        width = int(2.35 * sigma * self.meta["width_n_fwhms"])
+        # self.kernel = Gaussian2DKernel(sigma, x_size=width, y_size=width,
+        #                                mode="center").array
+        self.valid_waverange = waves
+
+        return self.kernel
+
+
+def get_total_wfe_from_table(tbl):
+    wfes = utils.quantity_from_table("wfe_rms", tbl, "um")
+    n_surfs = tbl["n_surfaces"]
+    total_wfe = np.sum(n_surfs * wfes**2)**0.5
+
+    return total_wfe
+
+def strehl2gauss(strehl):
+    sigma = strehl
+
+    kernel = Gaussian2DKernel(sigma, x_size=15, y_size=15, mode="center").array
+    kernel /= np.sum(kernel)
+    return kernel
+
+
+
+
+
+
 
 
 class Seeing(AnalyticalPSF):
     def __init__(self, **kwargs):
         super(Seeing, self).__init__(**kwargs)
-        self.meta["z_order"] = [0, 300]
+        self.meta["z_order"] = [43, 343]
 
 
 class GaussianDiffractionPSF(AnalyticalPSF):
     def __init__(self, diameter, **kwargs):
         super(GaussianDiffractionPSF, self).__init__(**kwargs)
         self.meta["diameter"] = diameter
-        self.meta["z_order"] = [3, 303]
+        self.meta["z_order"] = [42, 342]
 
     def fov_grid(self, which="waveset", **kwargs):
         wavelengths = []
@@ -168,18 +225,19 @@ class GaussianDiffractionPSF(AnalyticalPSF):
 class SemiAnalyticalPSF(PSF):
     def __init__(self, **kwargs):
         super(SemiAnalyticalPSF, self).__init__(**kwargs)
+        self.meta["z_order"] = [50, 350]
 
 
 class PoppyFieldVaryingPSF(SemiAnalyticalPSF):
     def __init__(self, **kwargs):
         super(PoppyFieldVaryingPSF, self).__init__(**kwargs)
-        self.meta["z_order"] = [0, 300]
+        self.meta["z_order"] = [51, 351]
 
 
 class PoppyFieldConstantPSF(SemiAnalyticalPSF):
     def __init__(self, **kwargs):
         super(PoppyFieldConstantPSF, self).__init__(**kwargs)
-        self.meta["z_order"] = [0, 300]
+        self.meta["z_order"] = [52, 352]
 
 
 ################################################################################
@@ -189,12 +247,13 @@ class PoppyFieldConstantPSF(SemiAnalyticalPSF):
 class DiscretePSF(PSF):
     def __init__(self, **kwargs):
         super(DiscretePSF, self).__init__(**kwargs)
+        self.meta["z_order"] = [60, 360]
 
 
 class FieldConstantPSF(DiscretePSF):
     def __init__(self, **kwargs):
         super(FieldConstantPSF, self).__init__(**kwargs)
-        self.meta["z_order"] = [2, 302]
+        self.meta["z_order"] = [62, 362]
         self._waveset, self.kernel_indexes = get_psf_wave_exts(self)
         self.current_layer_id = None
 
@@ -219,7 +278,7 @@ class FieldConstantPSF(DiscretePSF):
 class FieldVaryingPSF(DiscretePSF):
     def __init__(self, **kwargs):
         super(FieldVaryingPSF, self).__init__(**kwargs)
-        self.meta["z_order"] = [1, 301]
+        self.meta["z_order"] = [61, 361]
         self._waveset, self.kernel_indexes = get_psf_wave_exts(self._file)
         self.current_ext = None
         self.current_data = None

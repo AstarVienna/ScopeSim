@@ -40,6 +40,9 @@ effects :
         wave_min : 2.16
         wave_min : 2.4
         pixel_scale: 0.004
+        
+-   name : ignorable_effect
+    include : False
 """
     return yaml.load(text)
 

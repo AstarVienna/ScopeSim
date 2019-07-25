@@ -183,24 +183,24 @@ class SpectralSurface:
 
         Returns
         -------
-        col_c : ``synphot.SpectralElement``
+        actual : ``synphot.SpectralElement``
             Complimentary spectrum to those given
 
         """
 
-        col_a = self._get_array(colname_a)
-        col_b = self._get_array(colname_b)
+        compliment_a = self._get_array(colname_a)
+        compliment_b = self._get_array(colname_b)
 
-        if col_a is not None and col_b is not None:
-            col_c = 1*col_a.unit - (col_a + col_b)
-        elif col_a is not None and col_b is None:
-            col_c = 1*col_a.unit - col_a
-        elif col_b is not None and col_a is None:
-            col_c = 1*col_b.unit - col_b
-        elif col_b is None and col_a is None:
-            col_c = None
+        if compliment_a is not None and compliment_b is not None:
+            actual = 1*compliment_a.unit - (compliment_a + compliment_b)
+        elif compliment_a is not None and compliment_b is None:
+            actual = 1*compliment_a.unit - compliment_a
+        elif compliment_b is not None and compliment_a is None:
+            actual = 1*compliment_b.unit - compliment_b
+        elif compliment_b is None and compliment_a is None:
+            actual = None
 
-        return col_c
+        return actual
 
     def _get_array(self, colname):
         """

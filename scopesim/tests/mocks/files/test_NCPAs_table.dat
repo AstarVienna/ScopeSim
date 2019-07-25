@@ -1,0 +1,5 @@
+# wfe_rms_unit : nm
+#
+element   n_surfaces    wfe_rms
+surf_1    10            20
+surf_2    5             10
