@@ -135,7 +135,7 @@ class FieldOfView(FieldOfViewBase):
         msg += "Image centre: ({},{})\n" \
                "".format(self.header["CRVAL1D"], self.header["CRVAL2D"])
         msg += "Wavelength range: ({},{})um\n" \
-               "".format(self.meta["wave_min"], self.meta["wave_min"])
+               "".format(self.meta["wave_min"], self.meta["wave_max"])
 
         return msg
 

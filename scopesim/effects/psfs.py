@@ -122,8 +122,7 @@ class NonCommonPathAberration(AnalyticalPSF):
 
         self._total_wfe = None
 
-        self.valid_waverange = [rc.__currsys__["!SIM.spectral.lam_min"] * u.um,
-                                rc.__currsys__["!SIM.spectral.lam_max"] * u.um]
+        self.valid_waverange = [0.1 * u.um, 0.2 * u.um]
 
         required_keys = ["pixel_scale"]
         utils.check_keys(self.meta, required_keys, action="error")
@@ -139,6 +138,8 @@ class NonCommonPathAberration(AnalyticalPSF):
         wave_mid_new = 0.5 * (waves[0] + waves[1])
         strehl_old = wfe2strehl(wfe=self.total_wfe, wave=wave_mid_old)
         strehl_new = wfe2strehl(wfe=self.total_wfe, wave=wave_mid_new)
+
+        print("WORLD!", strehl_old, strehl_new, wave_mid_new, wave_mid_old, old_waves)
 
         if np.abs(1 - strehl_old / strehl_new) > self.meta["strehl_drift"]:
             self.valid_waverange = waves

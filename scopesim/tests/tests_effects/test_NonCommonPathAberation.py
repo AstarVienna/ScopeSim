@@ -80,6 +80,9 @@ class TestGetKernel:
         kernel = ncpa.get_kernel(fov_Ks)
 
         print("HALLO!", kernel, type(kernel), np.sum(kernel))
+        print("HALLO!", fov_Ks, type(fov_Ks))
+        print("HALLO!", fov_Ks.data, type(fov_Ks.data), np.sum(fov_Ks.data))
+        print("HALLO!", fov_Ks.meta, type(fov_Ks.meta))
         assert np.abs(np.max(kernel) / strehl - 1) < 0.01
         assert kernel.shape == (3, 3)
         assert np.sum(kernel) == approx(1)
