@@ -79,10 +79,6 @@ class TestGetKernel:
         fov_Ks.meta["wave_max"] = waves[1]
         kernel = ncpa.get_kernel(fov_Ks)
 
-        print("HALLO!", kernel, type(kernel), np.sum(kernel))
-        print("HALLO!", fov_Ks, type(fov_Ks))
-        print("HALLO!", fov_Ks.data, type(fov_Ks.data), np.sum(fov_Ks.data))
-        print("HALLO!", fov_Ks.meta, type(fov_Ks.meta))
         assert np.abs(np.max(kernel) / strehl - 1) < 0.01
         assert kernel.shape == (3, 3)
         assert np.sum(kernel) == approx(1)
@@ -120,7 +116,21 @@ class TestApplyTo:
             plt.show()
 
 
-class TestStrehl2Gauss:
+@pytest.mark.usefixtures("ncpa_kwargs", "fov_Ks")
+class TestFovGrid:
+    def test_returns_currsys_edge_waves_for_no_input(self, ncpa_kwargs, fov_Ks):
+        ncpa = NonCommonPathAberration(**ncpa_kwargs)
+        waves = ncpa.fov_grid()
+        lam_min = rc.__currsys__["!SIM.spectral.lam_min"]
+        lam_max = rc.__currsys__["!SIM.spectral.lam_max"]
+        assert waves[0].to(u.um).value == approx(lam_min)
+        assert waves[-1].to(u.um).value == approx(lam_max)
+
+
+################################################################################
+
+
+class TestFunctionStrehl2Gauss:
     def test_relationship_between_sigma_strehl_amplitude(self):
         # test that the central pixel is equal to the strehl ratio needed
 
