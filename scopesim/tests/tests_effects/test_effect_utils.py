@@ -1,7 +1,7 @@
 import os
 import pytest
 
-import scopesim as sim
+from scopesim import rc
 from scopesim.effects import effects_utils as e_utils, GaussianDiffractionPSF
 from scopesim.effects import SurfaceList
 from scopesim.tests.mocks.py_objects.effects_objects import _surf_list, \
@@ -10,7 +10,8 @@ from scopesim.tests.mocks.py_objects.yaml_objects import _atmo_yaml_dict
 
 MOCK_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),
                                          "../mocks/MICADO_SCAO_WIDE/"))
-sim.rc.__search_path__ += [MOCK_PATH]
+if MOCK_PATH not in rc.__search_path__:
+    rc.__search_path__ += [MOCK_PATH]
 
 
 @pytest.fixture(scope="function")

@@ -317,7 +317,7 @@ class TestAddSurfaceToTable:
 class TestRadiometryTableFromELT:
     def local_basic_test_comparing_single_and_5_component_elt_reflections(self):
         import scopesim
-        scopesim.rc.__search_path__ = ["C:\Work\irdb\ELT"]
+        scopesim.rc.__search_path__.insert(0, ["C:\Work\irdb\ELT"])
 
         fname = "LIST_mirrors_ELT.tbl"
         comb = scopesim.effects.SurfaceList(filename=fname)

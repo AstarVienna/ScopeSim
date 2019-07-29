@@ -7,6 +7,7 @@ import numpy as np
 from astropy import units as u
 
 import scopesim as sim
+from scopesim import rc
 from scopesim.optics.fov_manager import FOVManager
 from scopesim.optics.image_plane import ImagePlane
 from scopesim.optics.optical_train import OpticalTrain
@@ -26,7 +27,9 @@ FILES_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),
 YAMLS_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),
                                           "../mocks/yamls/"))
 
-sim.rc.__search_path__ += [FILES_PATH, YAMLS_PATH]
+for NEW_PATH in [YAMLS_PATH, FILES_PATH]:
+    if NEW_PATH not in rc.__search_path__:
+        rc.__search_path__ += [NEW_PATH]
 
 
 def _basic_cmds():

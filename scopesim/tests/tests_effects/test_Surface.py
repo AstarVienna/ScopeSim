@@ -5,7 +5,7 @@ from astropy import units as u
 from matplotlib import pyplot as plt
 from synphot import SpectralElement, SourceSpectrum
 
-import scopesim as sim
+from scopesim import rc
 from scopesim.effects import TERCurve
 from scopesim.optics.surface import SpectralSurface
 
@@ -13,7 +13,8 @@ PLOTS = False
 
 MOCK_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),
                                          "../mocks/MICADO_SCAO_WIDE/"))
-sim.rc.__search_path__ += [MOCK_PATH]
+if MOCK_PATH not in rc.__search_path__:
+    rc.__search_path__ += [MOCK_PATH]
 
 
 class TestTERCurveInit:

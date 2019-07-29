@@ -74,7 +74,7 @@ def test_simplecado():
 def read_in_simplecado_package():
     # ..todo: FIX THIS!!!!
     # only works on the local laptop
-    sim.rc.__search_path__ = ["C:/Work/irdb/SimpleCADO/"]
+    scopesim.rc.__search_path__.insert(0, ["C:/Work/irdb/SimpleCADO/"])
     assert sim.utils.find_file("SimpleCADO.config")
 
     cmd = sim.UserCommands(filename="SimpleCADO.config")
