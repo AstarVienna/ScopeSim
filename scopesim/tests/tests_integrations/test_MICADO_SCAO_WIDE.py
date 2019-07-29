@@ -26,6 +26,7 @@ import synphot as sp
 from astropy import units as u
 
 import scopesim as sim
+from scopesim import rc
 from scopesim.commands.user_commands import UserCommands
 from scopesim.optics.optical_train import OpticalTrain
 from scopesim.optics.optics_manager import OpticsManager
@@ -38,7 +39,8 @@ from scopesim.utils import find_file
 
 TEST_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),
                             "../mocks/MICADO_SCAO_WIDE/"))
-sim.rc.__search_path__ += [TEST_PATH]
+if TEST_PATH not in rc.__search_path__:
+    rc.__search_path__ += [TEST_PATH]
 
 PLOTS = False
 

@@ -541,7 +541,8 @@ def convert_table_comments_to_dict(tbl):
     comments_dict = None
     if "comments" in tbl.meta:
         try:
-            comments_dict = yaml.load("\n".join(tbl.meta["comments"]))
+            comments_str = "\n".join(tbl.meta["comments"])
+            comments_dict = yaml.load(comments_str)
         except:
             warnings.warn("Couldn't convert <table>.meta['comments'] to dict")
             comments_dict = tbl.meta["comments"]
@@ -835,6 +836,10 @@ def from_currsys(item):
     """
     Returns the current value of a bang-string from rc.__currsys__
     """
+    if isinstance(item, dict):
+        for key in item:
+            item[key] = from_currsys(item[key])
+
     if isinstance(item, str) and item[0] == "!":
         if item in rc.__currsys__:
             item = rc.__currsys__[item]

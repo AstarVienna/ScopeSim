@@ -7,11 +7,12 @@ from scopesim import effects as efs
 from scopesim.effects.effects_utils import make_effect
 from scopesim.tests.mocks.py_objects.yaml_objects import _yaml_min_viable_scope
 
-import scopesim as sim
+from scopesim import rc
+
 YAMLS_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),
                                           "../files/"))
-sim.rc.__search_path__ += [YAMLS_PATH]
-
+if YAMLS_PATH not in rc.__search_path__:
+    rc.__search_path__ += [YAMLS_PATH]
 
 
 def _surf_list():

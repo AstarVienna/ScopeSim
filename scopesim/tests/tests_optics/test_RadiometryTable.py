@@ -4,7 +4,6 @@
 #
 import pytest
 import os
-import inspect
 
 import numpy as np
 from astropy.table import Table
@@ -315,7 +314,28 @@ class TestAddSurfaceToTable:
         assert tbl[position]["Name"] == "new_row"
 
 
+class TestRadiometryTableFromELT:
+    def local_basic_test_comparing_single_and_5_component_elt_reflections(self):
+        import scopesim
+        scopesim.rc.__search_path__.insert(0, ["C:\Work\irdb\ELT"])
 
+        fname = "LIST_mirrors_ELT.tbl"
+        comb = scopesim.effects.SurfaceList(filename=fname)
 
+        fname = "TER_ELT_System_20190611.dat"
+        eso = scopesim.effects.TERCurve(filename=fname)
+        eso.surface.meta["temp"] = 0
 
+        from matplotlib import pyplot as plt
+        wave = np.arange(0.3, 3, 0.001) * 1e4
+        plt.plot(wave * 1E-4, eso.surface.reflection(wave), label="ESO 2019")
+        plt.plot(wave * 1E-4, comb.throughput(wave), label="5 component")
 
+        plt.xlabel("Wavelength [um]")
+        plt.ylabel("Throughput ")
+        plt.legend(loc=5)
+        plt.xlim(0.3, 3)
+
+        plt.show()
+
+        print(comb.throughput(3E4), eso.surface.reflection(3E4))

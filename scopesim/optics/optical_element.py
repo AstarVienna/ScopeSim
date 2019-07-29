@@ -2,7 +2,7 @@ import warnings
 
 from .. import effects as efs
 from ..effects.effects_utils import make_effect, get_all_effects
-
+from .. import rc
 
 class OpticalElement:
     """
@@ -63,6 +63,13 @@ class OpticalElement:
                 self.properties = yaml_dict["properties"]
             if "effects" in yaml_dict and len(yaml_dict["effects"]) > 0:
                 for eff_dic in yaml_dict["effects"]:
+                    if "include" in eff_dic and eff_dic["include"] is False:
+                        continue
+                    if "name" in eff_dic and \
+                            hasattr(rc.__currsys__, "ignore_effects") and \
+                            eff_dic["name"] in rc.__currsys__.ignore_effects:
+                        continue
+
                     self.effects += [make_effect(eff_dic, **self.properties)]
 
     def add_effect(self, effect):

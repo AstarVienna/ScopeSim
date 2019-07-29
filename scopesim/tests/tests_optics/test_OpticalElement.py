@@ -3,6 +3,8 @@ import pytest
 from scopesim import rc
 from scopesim.optics import optical_element as opt_elem
 from scopesim.effects import GaussianDiffractionPSF
+from scopesim.commands import UserCommands
+
 from scopesim.tests.mocks.py_objects.yaml_objects import _atmo_yaml_dict, \
     _detector_yaml_dict
 
@@ -41,6 +43,16 @@ class TestOpticalElementInit:
         opt_el = opt_elem.OpticalElement(atmo_yaml_dict)
 
         assert opt_el.effects[1].meta["airmass"] == 1.5
+
+    def test_ignores_effects_with_keyword_include_false(self, atmo_yaml_dict):
+        opt_el = opt_elem.OpticalElement(atmo_yaml_dict)
+        assert len(opt_el.effects) == 2
+
+    def test_ignores_effects_in_currsys_ignore_effects(self, atmo_yaml_dict):
+        rc.__currsys__ = UserCommands()
+        rc.__currsys__.ignore_effects = ["super_psf", "atmo_dispersion"]
+        opt_el = opt_elem.OpticalElement(atmo_yaml_dict)
+        assert len(opt_el.effects) == 0
 
 
 @pytest.mark.usefixtures("detector_yaml_dict")

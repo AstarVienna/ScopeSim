@@ -26,7 +26,7 @@ import numpy as np
 from astropy import units as u
 from astropy.io import fits
 
-import scopesim as sim
+from scopesim import rc
 from scopesim.optics.fov import FieldOfView
 from scopesim.optics import image_plane_utils as imp_utils
 from scopesim.effects import FieldVaryingPSF, psfs
@@ -41,7 +41,9 @@ FILES_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),
                                           "../mocks/files/"))
 YAMLS_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),
                                           "../mocks/yamls/"))
-sim.rc.__search_path__ += [FILES_PATH, YAMLS_PATH]
+for NEW_PATH in [YAMLS_PATH, FILES_PATH]:
+    if NEW_PATH not in rc.__search_path__:
+        rc.__search_path__ += [NEW_PATH]
 
 
 def _centre_fov(n=55):

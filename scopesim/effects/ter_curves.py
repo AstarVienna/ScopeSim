@@ -10,7 +10,8 @@ class TERCurve(Effect):
     Transmission, Emissivity, Reflection Curve
 
     Must contain a wavelength column, and one or more of the following:
-    transmission, emissivity, reflection. Additionally in the header there
+    ``transmission``, ``emissivity``, ``reflection``.
+    Additionally in the header there
     should be the following keywords: wavelength_unit
 
     """
@@ -57,8 +58,7 @@ class SkycalcTERCurve(TERCurve):
             self.meta["name"] = self.skycalc_conn["observatory"]
 
     def query_server(self, **kwargs):
-        for key in kwargs:
-            kwargs[key] = from_currsys(kwargs[key])
+        kwargs = from_currsys(kwargs)
         self.skycalc_conn.values.update(kwargs)
 
         tbl = self.skycalc_conn.get_sky_spectrum(return_type="table")
@@ -73,3 +73,5 @@ class SkycalcTERCurve(TERCurve):
 class QuantumEfficiencyCurve(TERCurve):
     def __init__(self, **kwargs):
         super(QuantumEfficiencyCurve, self).__init__(**kwargs)
+        self.meta["action"] = "transmission"
+        self.meta["z_order"] = [13, 213]

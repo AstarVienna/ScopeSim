@@ -78,9 +78,7 @@ class AtmosphericDispersion(Shift3D):
 
         """
 
-        for key in self.meta:
-            self.meta[key] = from_currsys(self.meta[key])
-
+        self.meta = from_currsys(self.meta)
         atmo_params = {"z0"     : airmass2zendist(self.meta["airmass"]),
                        "temp"   : self.meta["temperature"],         # in degC
                        "rel_hum": self.meta["humidity"] * 100,      # in %

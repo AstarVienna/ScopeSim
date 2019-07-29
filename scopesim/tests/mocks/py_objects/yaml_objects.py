@@ -6,7 +6,9 @@ YAMLS_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),
                                           "../yamls/"))
 FILES_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),
                                           "../files/"))
-rc.__search_path__ += [YAMLS_PATH, FILES_PATH]
+for NEW_PATH in [YAMLS_PATH, FILES_PATH]:
+    if NEW_PATH not in rc.__search_path__:
+        rc.__search_path__ += [NEW_PATH]
 
 
 def _atmo_yaml_dict():
@@ -40,6 +42,9 @@ effects :
         wave_min : 2.16
         wave_min : 2.4
         pixel_scale: 0.004
+        
+-   name : ignorable_effect
+    include : False
 """
     return yaml.load(text)
 

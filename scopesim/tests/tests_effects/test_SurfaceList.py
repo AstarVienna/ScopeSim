@@ -7,7 +7,7 @@ from astropy import units as u
 
 from synphot import SourceSpectrum
 
-import scopesim as sim
+from scopesim import rc
 from scopesim.effects import SurfaceList
 from scopesim.optics.radiometry import RadiometryTable
 
@@ -21,7 +21,9 @@ PLOTS = False
 
 MOCK_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),
                                          "../mocks/MICADO_SCAO_WIDE/"))
-sim.rc.__search_path__ += [MOCK_PATH]
+if MOCK_PATH not in rc.__search_path__:
+    rc.__search_path__ += [MOCK_PATH]
+
 
 
 @pytest.fixture(scope="function")

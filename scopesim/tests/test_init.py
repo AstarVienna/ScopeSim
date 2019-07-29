@@ -10,17 +10,6 @@ class TestBasicLoading:
     def test_pkg_dir_in_search_path(self):
         assert rc.__pkg_dir__ in rc.__search_path__
 
-    def test_data_dir_in_search_path(self):
-        assert rc.__data_dir__ in rc.__search_path__
-
-    def test_data_dir_in_pkg_dir(self):
-        if sys.version_info >= (3, 5):
-            cpath = os.path.commonpath([rc.__pkg_dir__, rc.__data_dir__])
-            assert cpath == rc.__pkg_dir__
-        else:
-            cpath = os.path.commonprefix([rc.__pkg_dir__, rc.__data_dir__])
-            assert cpath == rc.__pkg_dir__
-
     def test_defaults_config_file_is_read_in(self):
         assert rc.__config__["!SIM.reports.verbose"] is False
 
