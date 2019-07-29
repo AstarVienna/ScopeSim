@@ -1,5 +1,5 @@
 import os
-import scopesim as sim
+from scopesim import rc
 
 import pytest
 from astropy.io import fits
@@ -15,7 +15,9 @@ FILES_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),
                                           "../mocks/files/"))
 YAMLS_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),
                                           "../mocks/MICADO_SCAO_WIDE/"))
-sim.rc.__search_path__ += [FILES_PATH, YAMLS_PATH]
+for NEW_PATH in [YAMLS_PATH, FILES_PATH]:
+    if NEW_PATH not in rc.__search_path__:
+        rc.__search_path__ += [NEW_PATH]
 
 
 @pytest.fixture(scope="function")

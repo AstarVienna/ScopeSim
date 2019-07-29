@@ -538,7 +538,7 @@ def airmass2zendist(airmass):
 
 def convert_table_comments_to_dict(tbl):
 
-    comments_dict = {}
+    comments_dict = None
     if "comments" in tbl.meta:
         try:
             comments_str = "\n".join(tbl.meta["comments"])

@@ -21,17 +21,21 @@ class PSF(Effect):
         self._waveset = None
         super(PSF, self).__init__(**kwargs)
         flux_accuracy = rc.__config__["!SIM.computing.flux_accuracy"]
-        self.meta["SIM_FLUX_ACCURACY"] = float(flux_accuracy)
-        self.meta["SIM_SUB_PIXEL_FLAG"] = rc.__config__["!SIM.sub_pixel.flag"]
+        self.meta["flux_accuracy"] = float(flux_accuracy)
+        self.meta["sub_pixel_flag"] = rc.__config__["!SIM.sub_pixel.flag"]
         self.meta.update(kwargs)
+        self.apply_to_classes = (FieldOfViewBase, ImagePlaneBase)
 
     def apply_to(self, obj):
-        if len(obj.fields) > 0:
+        if isinstance(obj, self.apply_to_classes):
+            if hasattr(obj, "fields") and len(obj.fields) == 0:
+                return obj
+                
             kernel = self.get_kernel(obj)
 
             sub_pixel = False
-            if "SIM_SUB_PIXEL_FLAG" in self.meta:
-                sub_pixel = self.meta["SIM_SUB_PIXEL_FLAG"]
+            if "sub_pixel_flag" in self.meta:
+                sub_pixel = self.meta["sub_pixel_flag"]
 
             if obj.hdu.data is None:
                 obj.view(sub_pixel)
@@ -60,7 +64,7 @@ class PSF(Effect):
 
         return waves
 
-    def get_kernel(self, fov):
+    def get_kernel(self, obj):
         self.valid_waverange = None
         self.kernel = np.ones((1, 1))
         return self.kernel
@@ -84,24 +88,18 @@ class Vibration(AnalyticalPSF):
         super(Vibration, self).__init__(**kwargs)
         self.meta["z_order"] = [44, 444]
         self.meta["width_n_fwhms"] = 4
+        self.apply_to_classes = (ImagePlaneBase)
 
         required_keys = ["fwhm", "pixel_scale"]
         utils.check_keys(self.meta, required_keys, action="error")
         self.kernel = None
 
-    def apply_to(self, obj):
-        if isinstance(obj, ImagePlaneBase):
-            self.kernel = self.get_kernel(**self.meta)
-            obj.hdu.data = convolve(obj.hdu.data, self.kernel, mode="same")
-
-        return obj
-
-    def get_kernel(self, **kwargs):
+    def get_kernel(self, implane):
         if self.kernel is None:
-            utils.from_currsys(kwargs)
-            fwhm_pix = kwargs["fwhm"] / kwargs["pixel_scale"]
+            utils.from_currsys(self.meta)
+            fwhm_pix = self.meta["fwhm"] / self.meta["pixel_scale"]
             sigma = fwhm_pix / 2.35
-            width = int(fwhm_pix * kwargs["width_n_fwhms"])
+            width = int(fwhm_pix * self.meta["width_n_fwhms"])
             self.kernel = Gaussian2DKernel(sigma, x_size=width, y_size=width,
                                            mode="center").array
 
@@ -111,37 +109,34 @@ class Vibration(AnalyticalPSF):
 class NonCommonPathAberration(AnalyticalPSF):
     """
     Needed: pixel_scale
-    Accepted: kernel_width
+    Accepted: kernel_width, strehl_drift
+
+    Initialises with waverange defined by "!SIM.spectral.lam_min" (lam_max)
     """
     def __init__(self, **kwargs):
         super(NonCommonPathAberration, self).__init__(**kwargs)
         self.meta["z_order"] = [41, 341]
         self.meta["kernel_width"] = None
         self.meta["strehl_drift"] = 0.02
+        self.apply_to_classes = (FieldOfViewBase)
 
-        self.total_wfe = None
-        self.valid_waverange = [rc.__currsys__["!SIM.spectral.lam_min"],
-                                rc.__currsys__["!SIM.spectral.lam_max"]] * u.um
+        self._total_wfe = None
+
+        self.valid_waverange = [rc.__currsys__["!SIM.spectral.lam_min"] * u.um,
+                                rc.__currsys__["!SIM.spectral.lam_max"] * u.um]
 
         required_keys = ["pixel_scale"]
         utils.check_keys(self.meta, required_keys, action="error")
 
-    def apply_to(self, obj):
-        if isinstance(obj, FieldOfViewBase):
-            if self.table is not None:
-                wave_min, wave_max = obj.meta["wave_min"], obj.meta["wave_max"]
-                kernel = self.get_kernel([wave_min, wave_max])
-                obj.hdu.data = convolve(obj.hdu.data, kernel, mode="same")
+    def fov_grid(self, which="waveset", **kwargs):
+        pass
 
-        return obj
+    def get_kernel(self, obj):
+        waves = obj.meta["wave_min"], obj.meta["wave_max"]
 
-    def get_kernel(self, waves):
-
-        if self.total_wfe is None:
-            self.total_wfe = get_total_wfe_from_table(self.table)
-
-        wave_mid_old = np.average(self.valid_waverange)
-        wave_mid_new = np.average(waves)
+        old_waves = self.valid_waverange
+        wave_mid_old = 0.5 * (old_waves[0] + old_waves[1])
+        wave_mid_new = 0.5 * (waves[0] + waves[1])
         strehl_old = wfe2strehl(wfe=self.total_wfe, wave=wave_mid_old)
         strehl_new = wfe2strehl(wfe=self.total_wfe, wave=wave_mid_new)
 
@@ -151,49 +146,14 @@ class NonCommonPathAberration(AnalyticalPSF):
                                     width=self.meta["kernel_width"])
         return self.kernel
 
-
-def get_total_wfe_from_table(tbl):
-    wfes = utils.quantity_from_table("wfe_rms", tbl, "um")
-    n_surfs = tbl["n_surfaces"]
-    total_wfe = np.sum(n_surfs * wfes**2)**0.5
-
-    return total_wfe
-
-
-def wfe2gauss(wfe, wave, width=None):
-    strehl = wfe2strehl(wfe, wave)
-    sigma = strehl2sigma(strehl)
-    if width is None:
-        width = min(1, 8 * sigma)
-    gauss = sigma2gauss(sigma, x_size=width, y_size=width)
-
-    return gauss
-
-
-def wfe2strehl(wfe, wave):
-    wave = utils.quantify(wave, u.um)
-    wfe = utils.quantify(wfe, u.um)
-    x = 2 * 3.1415926526 * wfe / wave
-    strehl = np.exp(-x**2)
-    return strehl
-
-
-def strehl2sigma(strehl):
-    amplitudes = [0.00465, 0.00480, 0.00506, 0.00553, 0.00637, 0.00793, 0.01092,
-                  0.01669, 0.02736, 0.04584, 0.07656, 0.12639, 0.20474, 0.32156,
-                  0.48097, 0.66895, 0.84376, 0.95514, 0.99437, 0.99982, 0.99999]
-    sigmas = [19.9526, 15.3108, 11.7489, 9.01571, 6.91830, 5.30884, 4.07380,
-              3.12607, 2.39883, 1.84077, 1.41253, 1.08392, 0.83176, 0.63826,
-              0.48977, 0.37583, 0.28840, 0.22130, 0.16982, 0.13031, 0.1]
-    sigma = np.interp(strehl, amplitudes, sigmas)
-    return sigma
-
-
-def sigma2gauss(sigma, x_size=15, y_size=15):
-    kernel = Gaussian2DKernel(sigma, x_size=x_size, y_size=y_size,
-                              mode="oversample").array
-    kernel /= np.sum(kernel)
-    return kernel
+    @property
+    def total_wfe(self):
+        if self._total_wfe is None:
+            if self.table is not None:
+                self._total_wfe = get_total_wfe_from_table(self.table)
+            else:
+                self._total_wfe = 0
+        return self._total_wfe
 
 
 class Seeing(AnalyticalPSF):
@@ -318,7 +278,7 @@ class FieldVaryingPSF(DiscretePSF):
 
         if len(fov.fields) > 0:
             if fov.hdu.data is None:
-                fov.view(self.meta["SIM_SUB_PIXEL_FLAG"])
+                fov.view(self.meta["sub_pixel_flag"])
 
             old_shape = fov.hdu.data.shape
 
@@ -327,7 +287,7 @@ class FieldVaryingPSF(DiscretePSF):
             for kernel, mask in kernels_masks:
 
                 sum_kernel = np.sum(kernel)
-                if abs(sum_kernel - 1) > self.meta["SIM_FLUX_ACCURACY"]:
+                if abs(sum_kernel - 1) > self.meta["flux_accuracy"]:
                     kernel /= sum_kernel
 
                 new_image = convolve(fov.hdu.data, kernel, mode="same")
@@ -385,7 +345,7 @@ class FieldVaryingPSF(DiscretePSF):
         # .. todo: re-scale kernel and masks to pixel_scale of FOV
         # .. todo: can this be put somewhere else to save on iterations?
         pix_ratio = fov_pixel_scale / kernel_pixel_scale
-        if abs(pix_ratio - 1) > self.meta["SIM_FLUX_ACCURACY"]:
+        if abs(pix_ratio - 1) > self.meta["flux_accuracy"]:
             for ii in range(len(self.kernel)):
                 self.kernel[ii][0] = resize_array(self.kernel[ii][0], pix_ratio)
 
@@ -492,3 +452,47 @@ def get_psf_wave_exts(hdu_list):
 
     return wave_set, wave_ext
 
+
+def get_total_wfe_from_table(tbl):
+    wfes = utils.quantity_from_table("wfe_rms", tbl, "um")
+    n_surfs = tbl["n_surfaces"]
+    total_wfe = np.sum(n_surfs * wfes**2)**0.5
+
+    return total_wfe
+
+
+def wfe2gauss(wfe, wave, width=None):
+    strehl = wfe2strehl(wfe, wave)
+    sigma = strehl2sigma(strehl)
+    if width is None:
+        width = int(np.ceil(8 * sigma))
+        width += (width + 1) % 2
+    gauss = sigma2gauss(sigma, x_size=width, y_size=width)
+
+    return gauss
+
+
+def wfe2strehl(wfe, wave):
+    wave = utils.quantify(wave, u.um)
+    wfe = utils.quantify(wfe, u.um)
+    x = 2 * 3.1415926526 * wfe / wave
+    strehl = np.exp(-x**2)
+    return strehl
+
+
+def strehl2sigma(strehl):
+    amplitudes = [0.00465, 0.00480, 0.00506, 0.00553, 0.00637, 0.00793, 0.01092,
+                  0.01669, 0.02736, 0.04584, 0.07656, 0.12639, 0.20474, 0.32156,
+                  0.48097, 0.66895, 0.84376, 0.95514, 0.99437, 0.99982, 0.99999]
+    sigmas = [19.9526, 15.3108, 11.7489, 9.01571, 6.91830, 5.30884, 4.07380,
+              3.12607, 2.39883, 1.84077, 1.41253, 1.08392, 0.83176, 0.63826,
+              0.48977, 0.37583, 0.28840, 0.22130, 0.16982, 0.13031, 0.1]
+    sigma = np.interp(strehl, amplitudes, sigmas)
+    return sigma
+
+
+def sigma2gauss(sigma, x_size=15, y_size=15):
+    kernel = Gaussian2DKernel(sigma, x_size=x_size, y_size=y_size,
+                              mode="oversample").array
+    kernel /= np.sum(kernel)
+    return kernel

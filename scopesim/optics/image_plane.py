@@ -121,3 +121,7 @@ class ImagePlane(ImagePlaneBase):
     @property
     def image(self):
         return self.data
+
+    def view(self, sub_pixel):
+        # for consistency with FieldOfView
+        return self.data

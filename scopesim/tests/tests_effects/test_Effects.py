@@ -4,14 +4,16 @@ import numpy as np
 import pytest
 from astropy.table import Table
 
-import scopesim as sim
+from scopesim import rc
 from scopesim.effects import Effect
 from scopesim.effects import ApertureList
 from scopesim.effects import SurfaceList
 
 MOCK_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),
                                          "../mocks/MICADO_SCAO_WIDE/"))
-sim.rc.__search_path__ += [MOCK_PATH]
+if MOCK_PATH not in rc.__search_path__:
+    rc.__search_path__ += [MOCK_PATH]
+
 
 
 @pytest.fixture()

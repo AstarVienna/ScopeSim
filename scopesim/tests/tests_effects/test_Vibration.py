@@ -36,6 +36,7 @@ class TestInit:
 
     def test_kernel_sums_to_one(self):
         vibration = Vibration(**{"fwhm": 0.01, "pixel_scale": 0.004})
+        vibration.get_kernel(None)
         assert np.sum(vibration.kernel) == approx(1, rel=1e-3)
 
 
