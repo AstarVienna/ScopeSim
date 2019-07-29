@@ -15,6 +15,8 @@ FILES_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__),
                                                          "../mocks/files"))
 rc.__search_path__ = [FILES_DIR]
 
+PLOTS = False
+
 
 @pytest.fixture(scope="function")
 def ncpa_kwargs():
@@ -55,36 +57,29 @@ class TestGetKernel:
         ncpa.total_wfe = 5 * u.um
         kernel = ncpa.get_kernel([1.5, 2.5]*u.um)
 
-        import numpy as np
         print(np.max(kernel))
 
-        from matplotlib import pyplot as plt
-        from matplotlib.colors import LogNorm
-
-        plt.imshow(kernel, norm=LogNorm())
-        plt.colorbar()
-        plt.show()
+        if PLOTS:
+            plt.imshow(kernel, norm=LogNorm())
+            plt.colorbar()
+            plt.show()
 
 
 class TestStrehl2Gauss:
-
-    def test_ralationship_between_sigma_strehl_amplitude(self):
+    def test_relationship_between_sigma_strehl_amplitude(self):
+        # test that the central pixel is equal to the strehl ratio needed
         from scopesim.effects.psfs import wfe2strehl, strehl2sigma, sigma2gauss
-
-        sigs = np.logspace(-1, 1.3, 21)
-        kernels = np.array([sigma2gauss(sig) for sig in sigs])
-        amplis = np.array([np.max(kernel) for kernel in kernels])
-
         wave = np.arange(0.3, 4, 0.1)
-        srs = wfe2strehl(0.05, wave)
+        srs = wfe2strehl(0.076, wave)
         sigs = strehl2sigma(srs)
         kernels = np.array([sigma2gauss(sig) for sig in sigs])
         amplis = np.array([np.max(kernel) for kernel in kernels])
-        plt.plot(amplis, srs, c="b")
-        plt.show()
+        ampli_srs = amplis / srs
+        assert np.all(0.96 < ampli_srs) and np.all(ampli_srs < 1.04)
 
-        # print(", ".join([str(a)[:7] for a in sigs[::-1]]))
-
+        if PLOTS:
+            plt.plot(amplis, srs, c="b")
+            plt.show()
 
 
 
