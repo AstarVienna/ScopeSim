@@ -111,13 +111,17 @@ class Vibration(AnalyticalPSF):
 class NonCommonPathAberration(AnalyticalPSF):
     """
     Needed: pixel_scale
-    Accepted: width_n_fwhms
+    Accepted: kernel_width
     """
     def __init__(self, **kwargs):
         super(NonCommonPathAberration, self).__init__(**kwargs)
         self.meta["z_order"] = [41, 341]
-        self.meta["width_n_fwhms"] = 4
+        self.meta["kernel_width"] = None
+        self.meta["strehl_drift"] = 0.02
+
         self.total_wfe = None
+        self.valid_waverange = [rc.__currsys__["!SIM.spectral.lam_min"],
+                                rc.__currsys__["!SIM.spectral.lam_max"]] * u.um
 
         required_keys = ["pixel_scale"]
         utils.check_keys(self.meta, required_keys, action="error")
@@ -135,15 +139,16 @@ class NonCommonPathAberration(AnalyticalPSF):
 
         if self.total_wfe is None:
             self.total_wfe = get_total_wfe_from_table(self.table)
-        wave_mid = 0.5 * (waves[0] + waves[1])
-        sigma = 6.283192 * self.total_wfe / utils.quantify(wave_mid, "um")
-        sigma = sigma.si.value
 
-        width = int(2.35 * sigma * self.meta["width_n_fwhms"])
-        # self.kernel = Gaussian2DKernel(sigma, x_size=width, y_size=width,
-        #                                mode="center").array
-        self.valid_waverange = waves
+        wave_mid_old = np.average(self.valid_waverange)
+        wave_mid_new = np.average(waves)
+        strehl_old = wfe2strehl(wfe=self.total_wfe, wave=wave_mid_old)
+        strehl_new = wfe2strehl(wfe=self.total_wfe, wave=wave_mid_new)
 
+        if np.abs(1 - strehl_old / strehl_new) > self.meta["strehl_drift"]:
+            self.valid_waverange = waves
+            self.kernel = wfe2gauss(wfe=self.total_wfe, wave=wave_mid_new,
+                                    width=self.meta["kernel_width"])
         return self.kernel
 
 
@@ -154,18 +159,41 @@ def get_total_wfe_from_table(tbl):
 
     return total_wfe
 
-def strehl2gauss(strehl):
-    sigma = strehl
 
-    kernel = Gaussian2DKernel(sigma, x_size=15, y_size=15, mode="center").array
+def wfe2gauss(wfe, wave, width=None):
+    strehl = wfe2strehl(wfe, wave)
+    sigma = strehl2sigma(strehl)
+    if width is None:
+        width = min(1, 8 * sigma)
+    gauss = sigma2gauss(sigma, x_size=width, y_size=width)
+
+    return gauss
+
+
+def wfe2strehl(wfe, wave):
+    wave = utils.quantify(wave, u.um)
+    wfe = utils.quantify(wfe, u.um)
+    x = 2 * 3.1415926526 * wfe / wave
+    strehl = np.exp(-x**2)
+    return strehl
+
+
+def strehl2sigma(strehl):
+    amplitudes = [0.00465, 0.00480, 0.00506, 0.00553, 0.00637, 0.00793, 0.01092,
+                  0.01669, 0.02736, 0.04584, 0.07656, 0.12639, 0.20474, 0.32156,
+                  0.48097, 0.66895, 0.84376, 0.95514, 0.99437, 0.99982, 0.99999]
+    sigmas = [19.9526, 15.3108, 11.7489, 9.01571, 6.91830, 5.30884, 4.07380,
+              3.12607, 2.39883, 1.84077, 1.41253, 1.08392, 0.83176, 0.63826,
+              0.48977, 0.37583, 0.28840, 0.22130, 0.16982, 0.13031, 0.1]
+    sigma = np.interp(strehl, amplitudes, sigmas)
+    return sigma
+
+
+def sigma2gauss(sigma, x_size=15, y_size=15):
+    kernel = Gaussian2DKernel(sigma, x_size=x_size, y_size=y_size,
+                              mode="oversample").array
     kernel /= np.sum(kernel)
     return kernel
-
-
-
-
-
-
 
 
 class Seeing(AnalyticalPSF):

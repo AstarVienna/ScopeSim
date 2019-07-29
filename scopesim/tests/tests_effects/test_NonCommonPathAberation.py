@@ -3,10 +3,12 @@ import os
 import pytest
 from pytest import approx
 
+import numpy as np
+from matplotlib import pyplot as plt
+from matplotlib.colors import LogNorm
 from astropy import units as u
 
 from scopesim.effects.psfs import NonCommonPathAberration
-from scopesim.effects.psfs import strehl2gauss
 from scopesim import rc
 
 FILES_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__),
@@ -50,7 +52,7 @@ class TestGetKernel:
 
     def test_returns_kernel_with_proper_fwhm(self, ncpa_kwargs):
         ncpa = NonCommonPathAberration(**ncpa_kwargs)
-        ncpa.total_wfe = 1
+        ncpa.total_wfe = 5 * u.um
         kernel = ncpa.get_kernel([1.5, 2.5]*u.um)
 
         import numpy as np
@@ -61,25 +63,27 @@ class TestGetKernel:
 
         plt.imshow(kernel, norm=LogNorm())
         plt.colorbar()
-        # plt.show()
+        plt.show()
 
 
 class TestStrehl2Gauss:
-    def test_returns_delta_function_for_high_strehl(self):
-        import numpy as np
 
-        kernel = strehl2gauss(0.2222)
-        print("")
-        print(np.sum(kernel))
-        print(np.max(kernel))
+    def test_ralationship_between_sigma_strehl_amplitude(self):
+        from scopesim.effects.psfs import wfe2strehl, strehl2sigma, sigma2gauss
 
-        from matplotlib import pyplot as plt
-        from matplotlib.colors import LogNorm
+        sigs = np.logspace(-1, 1.3, 21)
+        kernels = np.array([sigma2gauss(sig) for sig in sigs])
+        amplis = np.array([np.max(kernel) for kernel in kernels])
 
-        plt.imshow(kernel)
-        plt.colorbar()
-        # plt.show()
+        wave = np.arange(0.3, 4, 0.1)
+        srs = wfe2strehl(0.05, wave)
+        sigs = strehl2sigma(srs)
+        kernels = np.array([sigma2gauss(sig) for sig in sigs])
+        amplis = np.array([np.max(kernel) for kernel in kernels])
+        plt.plot(amplis, srs, c="b")
+        plt.show()
 
+        # print(", ".join([str(a)[:7] for a in sigs[::-1]]))
 
 
 
