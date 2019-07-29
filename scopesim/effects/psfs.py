@@ -128,7 +128,24 @@ class NonCommonPathAberration(AnalyticalPSF):
         utils.check_keys(self.meta, required_keys, action="error")
 
     def fov_grid(self, which="waveset", **kwargs):
-        pass
+
+        if which == "waveset":
+            if "waverange" not in kwargs:
+                kwargs["waverange"] = (rc.__currsys__["!SIM.spectral.lam_min"],
+                                       rc.__currsys__["!SIM.spectral.lam_max"])
+
+            min_sr = wfe2strehl(self.total_wfe, np.min(kwargs["waverange"]))
+            max_sr = wfe2strehl(self.total_wfe, np.max(kwargs["waverange"]))
+
+            srs = np.arange(min_sr, max_sr, self.meta["strehl_drift"])
+            waves = 6.2831853 * self.total_wfe * (-np.log(srs))**-0.5
+            waves = utils.quantify(waves, "um")
+            waves = list(waves) + [utils.quantify(kwargs["waverange"][-1],
+                                                  waves.unit)]
+        else:
+            waves = []
+
+        return waves
 
     def get_kernel(self, obj):
         waves = obj.meta["wave_min"], obj.meta["wave_max"]
@@ -138,8 +155,6 @@ class NonCommonPathAberration(AnalyticalPSF):
         wave_mid_new = 0.5 * (waves[0] + waves[1])
         strehl_old = wfe2strehl(wfe=self.total_wfe, wave=wave_mid_old)
         strehl_new = wfe2strehl(wfe=self.total_wfe, wave=wave_mid_new)
-
-        print("WORLD!", strehl_old, strehl_new, wave_mid_new, wave_mid_old, old_waves)
 
         if np.abs(1 - strehl_old / strehl_new) > self.meta["strehl_drift"]:
             self.valid_waverange = waves
