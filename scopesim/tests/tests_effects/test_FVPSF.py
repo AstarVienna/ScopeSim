@@ -23,14 +23,11 @@ import pytest
 from pytest import approx
 
 import numpy as np
-from astropy import units as u
 from astropy.io import fits
 
 from scopesim import rc
-from scopesim.optics.fov import FieldOfView
-from scopesim.optics import image_plane_utils as imp_utils
 from scopesim.effects import FieldVaryingPSF, psfs
-
+from scopesim.tests.mocks.py_objects.fov_objects import _centre_fov
 from scopesim.tests.mocks.py_objects.psf_objects import _basic_circular_fvpsf
 
 import matplotlib.pyplot as plt
@@ -44,15 +41,6 @@ YAMLS_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),
 for NEW_PATH in [YAMLS_PATH, FILES_PATH]:
     if NEW_PATH not in rc.__search_path__:
         rc.__search_path__ += [NEW_PATH]
-
-
-def _centre_fov(n=55):
-    xsky = np.array([-n, n]) * u.arcsec.to(u.deg)
-    ysky = np.array([-n, n]) * u.arcsec.to(u.deg)
-    sky_hdr = imp_utils.header_from_list_of_xy(xsky, ysky, 1/3600.)
-    imp_hdr = imp_utils.header_from_list_of_xy([-n, n], [-n, n], 1, "D")
-    imp_hdr.update(sky_hdr)
-    return FieldOfView(imp_hdr, waverange=[1.0, 2.0]*u.um)
 
 
 @pytest.fixture(scope="function")
@@ -125,7 +113,7 @@ class TestGetKernel:
 
 @pytest.mark.usefixtures("centre_fov", "basic_circular_fvpsf")
 class TestApplyTo:
-    def test_convolution_with_delta_for_central_region(self, centre_fov):
+    def test_convolution_with_central_psf_for_central_region(self, centre_fov):
         nax1, nax2 = centre_fov.header["NAXIS1"], centre_fov.header["NAXIS2"]
         centre_fov.hdu.data = np.zeros((nax1, nax2))
         centre_fov.hdu.data[::3, ::3] = 1

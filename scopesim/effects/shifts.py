@@ -1,7 +1,10 @@
 import numpy as np
+from astropy import units as u
 
 from .effects import Effect
-from ..utils import airmass2zendist, from_currsys, check_keys
+from ..optics.fov import sky2fp
+from ..utils import airmass2zendist, from_currsys, check_keys, quantify
+from ..base_classes import FieldOfViewBase, ImagePlaneBase, SourceBase
 
 
 class Shift3D(Effect):
@@ -13,8 +16,11 @@ class Shift3D(Effect):
         return obj
 
     def fov_grid(self, which="shifts", **kwargs):
-        waves, dx, dy = [], [], []
-        return [waves, dx, dy]
+        if which == "shifts":
+            waves, dx, dy = [], [], []
+            return waves, dx, dy
+        else:
+            return None
 
 
 class AtmosphericDispersion(Shift3D):
@@ -64,6 +70,7 @@ class AtmosphericDispersion(Shift3D):
         self.meta["wave_max"] = "!SIM.spectral.lam_max"
         self.meta["sub_pixel_fraction"] = "!SIM.sub_pixel.fraction"
         self.meta["num_steps"] = 1000
+        self.meta.update(kwargs)
 
         required_keys = ["airmass", "temperature", "humidity", "pressure",
                          "latitude", "altitude", "pupil_angle", "pixel_scale"]
@@ -88,11 +95,11 @@ class AtmosphericDispersion(Shift3D):
         self.meta.update(atmo_params)
 
         waves, shifts = get_pixel_border_waves_from_atmo_disp(**self.meta)
-        dx = shifts * np.cos(np.deg2rad(self.meta["pupil_angle"]))
-        dy = shifts * np.sin(np.deg2rad(self.meta["pupil_angle"]))
+        dx = shifts * np.sin(np.deg2rad(self.meta["pupil_angle"]))
+        dy = shifts * np.cos(np.deg2rad(self.meta["pupil_angle"]))
 
         if which == "shifts":
-            return [waves, dx, dy]
+            return waves, dx, dy
         else:
             return None
 
@@ -108,18 +115,52 @@ class AtmosphericDispersionCorrection(Shift3D):
         kwargs
         """
         super(AtmosphericDispersionCorrection, self).__init__(**kwargs)
-        self.meta["z_order"] = [2, 302]
+        self.meta["z_order"] = [32, 332]
+        self.apply_to_classes = FieldOfViewBase
 
-    def apply_to(self, obj, **kwargs):
-        self.meta.update(kwargs)
-        airmass = self.meta["airmass"]
-        efficiency = self.meta["efficiency"] if "efficiency" in self.meta else 1
+        required_keys = ["airmass", "temperature", "humidity", "pressure",
+                         "latitude", "altitude", "pupil_angle", "pixel_scale",
+                         "wave_mid"]
+        check_keys(self.meta, required_keys, action="error")
 
-        if airmass == "OBS_AIRMASS":
-            # use the same as the atmosphere uses
-            pass
+    def apply_to(self, fov):
+        # get mid wavelength of fov
+        # work out on-sky shift
+        # work out pupil-plane shift
+        # convert to pixel shifts
+        # correct fovs CRPIXnD keys
 
-        return obj
+        if isinstance(fov, self.apply_to_classes):
+            self.meta = from_currsys(self.meta)
+            atmo_params = {"z0":        airmass2zendist(self.meta["airmass"]),
+                           "temp":      self.meta["temperature"],  # in degC
+                           "rel_hum":   self.meta["humidity"] * 100,  # in %
+                           "pres":      self.meta["pressure"] * 1000, # in mbar
+                           "lat":       self.meta["latitude"],  # in deg
+                           "h":         self.meta["altitude"]}  # in m
+            fov_wave_mid = 0.5 * (fov.meta["wave_max"] + fov.meta["wave_min"])
+            fov_wave_mid = quantify(fov_wave_mid, u.um).to(u.um).value
+            obs_wave_mid = self.meta["wave_mid"]
+            shift_obs = atmospheric_refraction(lam=obs_wave_mid, **atmo_params)
+            shift_fov = atmospheric_refraction(lam=fov_wave_mid, **atmo_params)
+            shift_rel_arcsec = shift_fov - shift_obs
+            shift_rel_pixel = shift_rel_arcsec / self.meta["pixel_scale"]
+
+            # this assumes a one-to-one mapping of sky coords to detector coords
+            # this won't work if there is appreciable distortion in the optics
+            # .. todo:: think about this
+            pup_ang = self.meta["pupil_angle"]
+            dy_pix = shift_rel_pixel * np.cos(np.deg2rad(pup_ang))
+            dx_pix = shift_rel_pixel * np.sin(np.deg2rad(pup_ang))
+
+            fov.hdu.header["CRPIX1D"] += dx_pix
+            fov.hdu.header["CRPIX2D"] += dy_pix
+
+        return fov
+
+    # def fov_grid()
+    #   Not needed because the correction only happens on FOVs.
+    #   The ADC only reacts to, and doesn't drive, the simulation
 
 
 def atmospheric_refraction(lam, z0=60, temp=0, rel_hum=60, pres=750,

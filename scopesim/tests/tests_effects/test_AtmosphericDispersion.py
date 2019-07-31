@@ -62,16 +62,16 @@ class TestFovGrid:
     def test_returns_similar_values_to_lasilla_website(self, atmo_yaml_dict):
         atmo_disp = AtmosphericDispersion(**atmo_yaml_dict["properties"])
         waves, dx, dy = atmo_disp.fov_grid()
-        assert dx[0] - dx[-1] == approx(0.53, rel=1e-2)
-        assert all(dy == 0)
+        assert dy[0] - dy[-1] == approx(0.53, rel=1e-2)
+        assert all(dx == 0)
         assert waves[0] == 0.5 and waves[-1] == 2.5
 
     def test_returns_same_results_when_turned_90_degrees(self, atmo_yaml_dict):
         atmo_yaml_dict["properties"]["pupil_angle"] = 90
         atmo_disp = AtmosphericDispersion(**atmo_yaml_dict["properties"])
         waves, dx, dy = atmo_disp.fov_grid()
-        assert dy[0] - dy[-1]== approx(0.53, rel=1e-2)
-        assert all([x == approx(0) for x in dx])
+        assert dx[0] - dx[-1]== approx(0.53, rel=1e-2)
+        assert all([y == approx(0) for y in dy])
 
     def test_returns_same_results_when_turned_30_degrees(self, atmo_yaml_dict):
         atmo_yaml_dict["properties"]["pupil_angle"] = 30

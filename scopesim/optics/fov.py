@@ -130,11 +130,11 @@ class FieldOfView(FieldOfViewBase):
         msg = "FOV id: {}, with dimensions ({}, {})\n" \
               "".format(self.meta["id"], self.header["NAXIS1"],
                         self.header["NAXIS2"])
-        msg += "Sky centre: ({},{})\n" \
+        msg += "Sky centre: ({}, {})\n" \
                "".format(self.header["CRVAL1"], self.header["CRVAL2"])
-        msg += "Image centre: ({},{})\n" \
+        msg += "Image centre: ({}, {})\n" \
                "".format(self.header["CRVAL1D"], self.header["CRVAL2D"])
-        msg += "Wavelength range: ({},{})um\n" \
+        msg += "Wavelength range: ({}, {})um\n" \
                "".format(self.meta["wave_min"], self.meta["wave_max"])
 
         return msg

@@ -19,8 +19,9 @@ class PSF(Effect):
         self.kernel = None
         self.valid_waverange = None
         self._waveset = None
-        super(PSF, self).__init__(**kwargs)
         flux_accuracy = rc.__config__["!SIM.computing.flux_accuracy"]
+        super(PSF, self).__init__(**kwargs)
+
         self.meta["flux_accuracy"] = float(flux_accuracy)
         self.meta["sub_pixel_flag"] = rc.__config__["!SIM.sub_pixel.flag"]
         self.meta.update(kwargs)
@@ -28,32 +29,27 @@ class PSF(Effect):
 
     def apply_to(self, obj):
         if isinstance(obj, self.apply_to_classes):
-            if hasattr(obj, "fields") and len(obj.fields) == 0:
-                return obj
-                
-            kernel = self.get_kernel(obj)
+            if (hasattr(obj, "fields") and len(obj.fields) > 0) or \
+                    obj.hdu.data is not None:
 
-            sub_pixel = False
-            if "sub_pixel_flag" in self.meta:
-                sub_pixel = self.meta["sub_pixel_flag"]
+                if obj.hdu.data is None:
+                    obj.view(self.meta["sub_pixel_flag"])
+                old_shape = obj.hdu.data.shape
 
-            if obj.hdu.data is None:
-                obj.view(sub_pixel)
+                kernel = self.get_kernel(obj)
+                new_image = convolve(obj.hdu.data, kernel, mode="full")
+                new_shape = new_image.shape
 
-            old_shape = obj.hdu.data.shape
-            new_image = convolve(obj.hdu.data, kernel, mode="full")
-            new_shape = new_image.shape
+                obj.hdu.data = new_image
 
-            obj.hdu.data = new_image
+                # ..todo: careful with which dimensions mean what
+                if "CRPIX1" in obj.hdu.header:
+                    obj.hdu.header["CRPIX1"] += (new_shape[0] - old_shape[0]) / 2
+                    obj.hdu.header["CRPIX2"] += (new_shape[1] - old_shape[1]) / 2
 
-            # ..todo: careful with which dimensions mean what
-            if "CRPIX1" in obj.hdu.header:
-                obj.hdu.header["CRPIX1"] += (new_shape[0] - old_shape[0]) / 2
-                obj.hdu.header["CRPIX2"] += (new_shape[1] - old_shape[1]) / 2
-
-            if "CRPIX1D" in obj.hdu.header:
-                obj.hdu.header["CRPIX1D"] += (new_shape[0] - old_shape[0]) / 2
-                obj.hdu.header["CRPIX2D"] += (new_shape[1] - old_shape[1]) / 2
+                if "CRPIX1D" in obj.hdu.header:
+                    obj.hdu.header["CRPIX1D"] += (new_shape[0] - old_shape[0]) / 2
+                    obj.hdu.header["CRPIX2D"] += (new_shape[1] - old_shape[1]) / 2
 
         return obj
 
@@ -256,32 +252,55 @@ class DiscretePSF(PSF):
 
 class FieldConstantPSF(DiscretePSF):
     def __init__(self, **kwargs):
+        # sub_pixel_flag and flux_accuracy are taken care of in PSF base class
         super(FieldConstantPSF, self).__init__(**kwargs)
+
         self.meta["z_order"] = [62, 362]
-        self._waveset, self.kernel_indexes = get_psf_wave_exts(self)
+        self._waveset, self.kernel_indexes = get_psf_wave_exts(self._file)
         self.current_layer_id = None
+        self.current_ext = None
+        self.current_data = None
+        self.kernel = None
 
-    def fov_grid(self, which="waveset", **kwargs):
-        waves = []
-        if which == "waveset":
-            waves = self._waveset
+    # def apply_to(self, fov):
+    #   Taken care of by PSF base class
 
-        return waves
+    # def fov_grid(self, which="waveset", **kwargs):
+    #   Taken care of by PSF base class
 
     def get_kernel(self, fov):
-        # .. todo: Add in wavelength dependency
-        # fov_wave = 0.5 * (fov.meta["wave_min"] + fov.meta["wave_max"])
-        # ii = nearest_index(fov_wave, self._waveset)
-        # ext = self.kernel_indexes[ii]
-        # if ext != self.current_layer_id:
-        #     self.kernel = self._file[ext]
-        #     self.current_layer_id = ext
-        self.kernel = self._file[2].data[0]
+        # find nearest wavelength and pull kernel from file
+        fov_wave = 0.5 * (fov.meta["wave_min"] + fov.meta["wave_max"])
+        ii = nearest_index(fov_wave, self._waveset)
+        ext = self.kernel_indexes[ii]
+        if ext != self.current_layer_id:
+            self.kernel = self._file[ext].data
+            self.current_layer_id = ext
+
+            # compare kernel and fov pixel scales, rescale if needed
+            kernel_pixel_scale = self._file[ext].header["CDELT1"]
+            fov_pixel_scale = fov.hdu.header["CDELT1"]
+
+            # rescaling kept inside loop to avoid rescaling for every fov
+            pix_ratio = kernel_pixel_scale / fov_pixel_scale
+            if abs(pix_ratio - 1) > self.meta["flux_accuracy"]:
+                self.kernel = resize_array(self.kernel, pix_ratio)
+
+        return self.kernel
 
 
 class FieldVaryingPSF(DiscretePSF):
+    """
+    kwargs
+    ------
+    sub_pixel_flag
+    flux_accuracy : float
+        Default 1e-3. Level of flux conservation during rescaling of kernel
+    """
     def __init__(self, **kwargs):
+        # sub_pixel_flag and flux_accuracy are taken care of in PSF base class
         super(FieldVaryingPSF, self).__init__(**kwargs)
+
         self.meta["z_order"] = [61, 361]
         self._waveset, self.kernel_indexes = get_psf_wave_exts(self._file)
         self.current_ext = None
@@ -292,30 +311,37 @@ class FieldVaryingPSF(DiscretePSF):
         # .. todo: add in field rotation
         # accept "full", "dit", "none
 
+        # check if there are any fov.fields to apply a psf to
         if len(fov.fields) > 0:
             if fov.hdu.data is None:
                 fov.view(self.meta["sub_pixel_flag"])
 
             old_shape = fov.hdu.data.shape
 
+            # get the kernels that cover this fov, and their respective masks
+            # kernels and masks are returned by .get_kernel as a list of tuples
             canvas = None
             kernels_masks = self.get_kernel(fov)
             for kernel, mask in kernels_masks:
 
+                # renormalise the kernel if needs be
                 sum_kernel = np.sum(kernel)
                 if abs(sum_kernel - 1) > self.meta["flux_accuracy"]:
                     kernel /= sum_kernel
 
+                # image convolution
                 new_image = convolve(fov.hdu.data, kernel, mode="same")
                 if canvas is None:
                     canvas = np.zeros(new_image.shape)
 
+                # mask convolution + combine with convolved image
                 if mask is not None:
                     new_mask = convolve(mask, kernel, mode="same")
                     canvas += new_image * new_mask
                 else:
                     canvas = new_image
 
+            # reset WCS header info
             new_shape = canvas.shape
             fov.hdu.data = canvas
 
@@ -330,6 +356,9 @@ class FieldVaryingPSF(DiscretePSF):
 
         return fov
 
+    # def fov_grid(self, which="waveset"):
+    #   This is taken care of by the PSF base class
+
     def get_kernel(self, fov):
         # 0. get file extension
         # 1. pull out strehl map for fov header
@@ -338,18 +367,23 @@ class FieldVaryingPSF(DiscretePSF):
         # 4. if more than one, make masks for the fov on the fov pixel scale
         # 5. make list of tuples with kernel and mask
 
+        # find which file extension to use - keep a pointer in self.current_data
         fov_wave = 0.5 * (fov.meta["wave_min"] + fov.meta["wave_max"])
         jj = nearest_index(fov_wave, self._waveset)
-        ii = self.kernel_indexes[jj]
-        if ii != self.current_ext:
-            self.current_ext = ii
-            self.current_data = self._file[ii].data
-        kernel_pixel_scale = self._file[ii].header["CDELT1"]
+        ext = self.kernel_indexes[jj]
+        if ext != self.current_ext:
+            self.current_ext = ext
+            self.current_data = self._file[ext].data
+
+        # compare the fov and psf pixel scales
+        kernel_pixel_scale = self._file[ext].header["CDELT1"]
         fov_pixel_scale = fov.hdu.header["CDELT1"]
 
+        # get the spatial map of the kernel cube layers
         strl_hdu = self.strehl_imagehdu
         strl_cutout = get_strehl_cutout(fov.hdu.header, strl_hdu)
 
+        # get the kernels and mask that fit inside the fov boundaries
         layer_ids = np.round(np.unique(strl_cutout.data)).astype(int)
         if len(layer_ids) > 1:
             kernels = [self.current_data[ii] for ii in layer_ids]
@@ -360,6 +394,8 @@ class FieldVaryingPSF(DiscretePSF):
 
         # .. todo: re-scale kernel and masks to pixel_scale of FOV
         # .. todo: can this be put somewhere else to save on iterations?
+        # .. todo: should the mask also be rescaled?
+        # rescale the pixel scale of the kernel to match the fov images
         pix_ratio = fov_pixel_scale / kernel_pixel_scale
         if abs(pix_ratio - 1) > self.meta["flux_accuracy"]:
             for ii in range(len(self.kernel)):
@@ -369,6 +405,7 @@ class FieldVaryingPSF(DiscretePSF):
 
     @property
     def strehl_imagehdu(self):
+        """ The HDU containing the positional info for kernel layers """
         if self._strehl_imagehdu is None:
             ecat = self._file[0].header["ECAT"]
             if isinstance(self._file[ecat], fits.ImageHDU):
@@ -415,7 +452,9 @@ def make_strehl_map_from_table(tbl, pixel_scale=1*u.arcsec):
     return map_hdu
 
 
-def resize_array(image, scale_factor, order=1):
+def resize_array(image, scale_factor, order=None):
+    if order is None:
+        order = rc.__currsys__["!SIM.computing.spline_order"]
     sum_image = np.sum(image)
     image = zoom(image, scale_factor, order=order)
     image = np.nan_to_num(image, copy=False)        # numpy version >=1.13
