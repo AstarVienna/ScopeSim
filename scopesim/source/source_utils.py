@@ -88,7 +88,7 @@ def get_vega_spectrum():
     header = remote[0]
     wave = remote[1]
     flux = remote[2]
-    url = 'Vega from ftp://ftp.stsci.edu/cdbs/calspec/alpha_lyr_stis_008.fits'
+    url = 'Vega from ' + location
     meta = {'header': header, 'expr': url}
     vega_sp = synphot.SourceSpectrum(Empirical1D, points=wave,
                                      lookup_table=flux, meta=meta)
@@ -220,10 +220,49 @@ def new_photons_in_range(spectra, wave_min, wave_max, area, bandpass=None):
 
 
 
+def rebin_spectra(spectra, new_waves):
+    """
+    Rebin a synphot spectra to a new wavelength grid conserving flux.
+    Grid does not need to be linear and can be at higher or lower resolution
+
+    TODO: To resample the spectra at lower resolution a convolution is first needed. Implement!
+    TODO: Return the new spectra in the input wavelengths
+
+    Parameters
+    ----------
+    spectra: a synphot spectra
+    new_waves: an array of the output wavelenghts in Angstroms but other units can be
+        specified
 
 
+    Returns
+    -------
 
+    A synphot spectra in the new wavelengths
 
+    """
+    if isinstance(spectra, synphot.spectrum.SourceSpectrum) is False:
+        # spec = make_synphot_spectrum(spec) # Try to make a synphot spectrum from e.g. file/np.array
+        raise ValueError(spec, "is not a synphot spectra!")
+
+    if spectra.waveset is None:
+        raise ValueError("spectra doesn't have a defined waveset")
+
+    if isinstance(new_waves, u.Quantity):
+        new_waves = new_waves.to(u.Angstrom).value
+
+    waves = spectra.waveset.value
+    f = np.ones(len(waves))
+
+    filt = SpectralElement(Empirical1D, points=waves, lookup_table=f)
+    obs = Observation(spectra, filt, binset=new_waves, force='taper')
+
+    newflux = obs.binflux
+
+    rebin_spec = SourceSpectrum(Empirical1D, points=new_waves,
+                                lookup_table=newflux, meta=spectra.meta)
+
+    return rebin_spec
 
 
 def make_imagehdu_from_table(x, y, flux, pix_scale=1*u.arcsec):
