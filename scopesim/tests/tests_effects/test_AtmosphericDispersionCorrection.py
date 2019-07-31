@@ -93,7 +93,7 @@ class TestCombinedWithAtmoDisp:
         fov_wave_mid = np.average(waves)
         atmo_params["pixel_scale"] = pixel_scale
         atmo_params["pupil_angle"] = angle
-        atmo_params["sub_pixel_fraction"] = 0.004 / pixel_scale
+        atmo_params["sub_pixel_fraction"] = 0.001
 
         fov = _centre_fov(n=10, waverange=waves)
         fov.hdu.header["CDELT1"] = 1 / 3600 * pixel_scale
@@ -114,7 +114,7 @@ class TestCombinedWithAtmoDisp:
 
         print(adc_x_shift, ad_x_shift, adc_y_shift, ad_y_shift)
 
-        assert adc_x_shift == approx(ad_x_shift, rel=5e-4)
-        assert adc_y_shift == approx(ad_y_shift, rel=5e-4)
+        assert adc_x_shift == approx(ad_x_shift, rel=1e-3)
+        assert adc_y_shift == approx(ad_y_shift, rel=1e-3)
 
 

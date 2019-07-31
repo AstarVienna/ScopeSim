@@ -37,12 +37,14 @@ class TestOpticalElementInit:
 
         assert opt_el.properties["temperature"] == 0
 
-    def test_cleans_obs_keywords_from_yaml_dict_effects(self, atmo_yaml_dict):
-        rc.__currsys__["!OBS.airmass"] = 1.5
-        atmo_yaml_dict["effects"][1]["kwargs"]["airmass"] = "!OBS.airmass"
-        opt_el = opt_elem.OpticalElement(atmo_yaml_dict)
-
-        assert opt_el.effects[1].meta["airmass"] == 1.5
+    # Test is obsolete because Effects object should clean keywords, if needed,
+    #   not here in OpticalElement
+    # def test_cleans_obs_keywords_from_yaml_dict_effects(self, atmo_yaml_dict):
+    #     rc.__currsys__["!OBS.airmass"] = 1.5
+    #     atmo_yaml_dict["effects"][1]["kwargs"]["airmass"] = "!OBS.airmass"
+    #     opt_el = opt_elem.OpticalElement(atmo_yaml_dict)
+    #
+    #     assert opt_el.effects[1].meta["airmass"] == 1.5
 
     def test_ignores_effects_with_keyword_include_false(self, atmo_yaml_dict):
         opt_el = opt_elem.OpticalElement(atmo_yaml_dict)

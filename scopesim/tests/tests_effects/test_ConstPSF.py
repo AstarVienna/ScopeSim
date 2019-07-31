@@ -101,7 +101,7 @@ class TestApplyTo:
         constpsf = FieldConstantPSF(filename="test_ConstPSF.fits")
         fov_returned = constpsf.apply_to(centre_fov)
 
-        if not PLOTS:
+        if PLOTS:
             plt.imshow(fov_returned.hdu.data.T, origin="lower")
             plt.show()
 
