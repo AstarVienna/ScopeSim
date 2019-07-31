@@ -155,7 +155,7 @@ def photons_in_range(spectra, wave_min, wave_max, area=None, bandpass=None):
 def new_photons_in_range(spectra, wave_min, wave_max, area, bandpass=None):
     """
     This function intends to supersede the function above. Once tests pass
-    It relies in synphot.Observations to return the counts
+    It relies in synphot.Observations to return the photon counts
 
     TODO: Write wrapper functions make_synphot_bandpass and make_synphot_spectra
         to allow a variety of bandpasses and spectra.
