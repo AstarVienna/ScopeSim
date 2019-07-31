@@ -38,7 +38,7 @@ def test_photons_in_range(area, wmin, wmax):
           " counts2:", counts2)
     print("-"*50)
 
-    assert np.isclose(counts1.value, counts2.value, atol=5e-3)
+    assert np.isclose(counts1.value, counts2.value, atol=10e-3)
 
 
 
