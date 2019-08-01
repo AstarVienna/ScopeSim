@@ -45,8 +45,8 @@ Misc
 * 90 DetectorList
 
 
-100..199 - Make a image plane
------------------------------
+100..199 - Make an image plane
+------------------------------
 * 100 DetectorList
 
 

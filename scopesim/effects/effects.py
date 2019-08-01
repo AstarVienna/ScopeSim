@@ -39,13 +39,12 @@ class Effect(DataContainer):
         self.update_bang_keywords()
         self.meta["z_order"] = []
 
-    def apply_to(self, obj, **kwargs):
+    def apply_to(self, obj):
         if not isinstance(obj, (SourceBase, FieldOfViewBase,
                                 ImagePlaneBase, DetectorBase)):
             raise ValueError("object must one of the following: "
                              "Source, FieldOfView, ImagePlane, Detector: "
                              "{}".format(type(obj)))
-        self.update(**kwargs)
 
         return obj
 

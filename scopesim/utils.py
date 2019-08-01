@@ -846,6 +846,9 @@ def from_currsys(item):
         else:
             raise ValueError("{} was not found in rc.__currsys__".format(item))
 
+    if isinstance(item, str) and item.lower() == "none":
+        item = None
+
     return item
 
 
