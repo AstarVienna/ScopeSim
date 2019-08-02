@@ -16,37 +16,48 @@ class BasicReadoutNoise(Effect):
         self.meta["read_fraction"] = 0.4
         self.meta["line_fraction"] = 0.25
         self.meta["channel_fraction"] = 0.05
+        self.meta["random_seed"] = rc.__currsys__["!SIM.random.seed"]
         self.meta.update(kwargs)
 
-        self.required_keys = ["noise_std", "n_channels"]
+        self.required_keys = ["noise_std", "n_channels", "ndit"]
         check_keys(self.meta, self.required_keys, action="error")
 
     def apply_to(self, det):
         if isinstance(det, DetectorBase):
+            self.meta["random_seed"] = from_currsys(self.meta["random_seed"])
+            if self.meta["random_seed"] is not None:
+                np.random.seed(self.meta["random_seed"])
+
             from_currsys(self.meta)
-            ron_keys = ["ndit", "noise_std", "n_channels", "channel_fraction",
+            ron_keys = ["noise_std", "n_channels", "channel_fraction",
                         "line_fraction", "pedestal_fraction", "read_fraction"]
             ron_kwargs = {self.meta[key] for key in ron_keys}
             ron_kwargs["image_shape"] = det.image_hdu.data.shape
 
-            det.image_hdu.data += make_ron_frame(**self.meta)
+            for dit in self.meta["ndit"]:
+                det.image_hdu.data += make_ron_frame(**self.meta)
 
         return det
 
 
-def make_ron_frame(image_shape, ndit, noise_std, n_channels, channel_fraction,
+def make_ron_frame(image_shape, noise_std, n_channels, channel_fraction,
                    line_fraction, pedestal_fraction, read_fraction):
-    shape = list(image_shape) + [ndit]
+    shape = image_shape
     w_chan = shape[0] // n_channels
-    pixel = np.random.random(shape) * (pedestal_fraction + read_fraction)
-    line = np.random.random(shape[1:]) * line_fraction
-    channel = np.repeat(np.random.random([n_channels, ndit]),
+
+    if shape < (1024, 1024):
+        pixel = np.random.random(shape) * (pedestal_fraction + read_fraction)
+        line = np.random.random(shape[1]) * line_fraction
+    else:
+        pixel = pseudo_random_field(shape) * (pedestal_fraction + read_fraction)
+        line = pixel[0]
+
+    channel = np.repeat(np.random.random([n_channels]),
                         w_chan, axis=0) * channel_fraction
 
-    total = (np.rot90(pixel + line, axes=(0, 1)) + channel) * noise_std
-    total_flat = np.sum(total, axis=2)
+    ron_frame = ((pixel + line).T + channel) * noise_std
 
-    return total_flat
+    return ron_frame
 
 
 def pseudo_random_field(shape=(1024, 1024)):
@@ -70,13 +81,9 @@ class ShotNoise(Effect):
 
     def apply_to(self, det, **kwargs):
         if isinstance(det, DetectorBase):
-            seed = self.meta["random_seed"]
-            if isinstance(seed, str) and seed[0] == "!":
-                seed = from_currsys(seed)
-                self.meta["random_seed"] = seed
-
-            if seed is not None:
-                np.random.seed(seed)
+            self.meta["random_seed"] = from_currsys(self.meta["random_seed"])
+            if self.meta["random_seed"] is not None:
+                np.random.seed(self.meta["random_seed"])
 
             orig_type = type(det.image_hdu.data[0, 0])
             if not isinstance(det.image_hdu.data[0, 0], np.float64):
@@ -117,7 +124,9 @@ class DarkCurrent(Effect):
                                  "dict or float: {}".format(self.meta["value"]))
 
             dit = from_currsys(self.meta["dit"])
-            obj.image_hdu.data += dark * dit
+            ndit = from_currsys(self.meta["ndit"])
+
+            obj.image_hdu.data += dark * dit * ndit
 
         return obj
 
@@ -126,3 +135,26 @@ class LinearityCurve(Effect):
     def __init__(self, **kwargs):
         super(LinearityCurve, self).__init__(**kwargs)
         self.meta["z_order"] = [540]
+
+        self.required_keys = ["ndit"]
+        check_keys(self.meta, self.required_keys, action="error")
+
+    def apply_to(self, det):
+        if isinstance(det, DetectorBase):
+            ndit = from_currsys(self.meta["ndit"])
+            incident = self.table["incident"] * ndit
+            measured = self.table["measured"] * ndit
+
+            image = det.image_hdu.data
+            shape = image.shape
+            flat_image = image.flatten()
+            new_flat_image = np.interp(flat_image, incident, measured)
+            new_image = new_flat_image.reshape(shape)
+
+            det.image_hdu.data = new_image
+
+        return det
+
+
+
+
