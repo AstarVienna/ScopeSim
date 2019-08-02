@@ -31,11 +31,11 @@ class BasicReadoutNoise(Effect):
             from_currsys(self.meta)
             ron_keys = ["noise_std", "n_channels", "channel_fraction",
                         "line_fraction", "pedestal_fraction", "read_fraction"]
-            ron_kwargs = {self.meta[key] for key in ron_keys}
+            ron_kwargs = {key: self.meta[key] for key in ron_keys}
             ron_kwargs["image_shape"] = det.image_hdu.data.shape
 
-            for dit in self.meta["ndit"]:
-                det.image_hdu.data += make_ron_frame(**self.meta)
+            for n in range(self.meta["ndit"]):
+                det.image_hdu.data += make_ron_frame(**ron_kwargs)
 
         return det
 
@@ -45,27 +45,31 @@ def make_ron_frame(image_shape, noise_std, n_channels, channel_fraction,
     shape = image_shape
     w_chan = shape[0] // n_channels
 
+    pixel_std = noise_std * (pedestal_fraction + read_fraction)**0.5
+    line_std = noise_std * line_fraction**0.5
     if shape < (1024, 1024):
-        pixel = np.random.random(shape) * (pedestal_fraction + read_fraction)
-        line = np.random.random(shape[1]) * line_fraction
+        pixel = np.random.normal(loc=0, scale=pixel_std, size=shape)
+        line = np.random.normal(loc=0, scale=line_std, size=shape[1])
     else:
-        pixel = pseudo_random_field(shape) * (pedestal_fraction + read_fraction)
+        pixel = pseudo_random_field(scale=pixel_std, size=shape)
         line = pixel[0]
 
-    channel = np.repeat(np.random.random([n_channels]),
-                        w_chan, axis=0) * channel_fraction
+    channel_std = noise_std * channel_fraction**0.5
+    channel = np.repeat(np.random.normal(loc=0, scale=channel_std,
+                                         size=n_channels),
+                        w_chan, axis=0)
 
-    ron_frame = ((pixel + line).T + channel) * noise_std
+    ron_frame = (pixel + line).T + channel
 
     return ron_frame
 
 
-def pseudo_random_field(shape=(1024, 1024)):
+def pseudo_random_field(scale=1, size=(1024, 1024)):
     n = 256
-    image = np.zeros(shape)
-    batch = np.random.random((2*n, 2*n))
-    for y in range(0, shape[1], n):
-        for x in range(0, shape[0], n):
+    image = np.zeros(size)
+    batch = np.random.normal(loc=0, scale=scale, size=(2*n, 2*n))
+    for y in range(0, size[1], n):
+        for x in range(0, size[0], n):
             i, j = np.random.randint(n, size=2)
             image[x:x+n, y:y+n] = batch[i:i+n, j:j+n]
 
