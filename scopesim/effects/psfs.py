@@ -84,10 +84,10 @@ class Vibration(AnalyticalPSF):
         super(Vibration, self).__init__(**kwargs)
         self.meta["z_order"] = [44, 444]
         self.meta["width_n_fwhms"] = 4
-        self.apply_to_classes = (ImagePlaneBase)
+        self.apply_to_classes = ImagePlaneBase
 
-        self.self.required_keys = ["fwhm", "pixel_scale"]
-        utils.check_keys(self.meta, self.self.required_keys, action="error")
+        self.required_keys = ["fwhm", "pixel_scale"]
+        utils.check_keys(self.meta, self.required_keys, action="error")
         self.kernel = None
 
     def get_kernel(self, implane):

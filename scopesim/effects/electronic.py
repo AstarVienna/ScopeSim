@@ -34,7 +34,7 @@ class BasicReadoutNoise(Effect):
             ron_kwargs = {key: self.meta[key] for key in ron_keys}
             ron_kwargs["image_shape"] = det.image_hdu.data.shape
 
-            for n in range(self.meta["ndit"]):
+            for _ in range(self.meta["ndit"]):
                 det.image_hdu.data += make_ron_frame(**ron_kwargs)
 
         return det
