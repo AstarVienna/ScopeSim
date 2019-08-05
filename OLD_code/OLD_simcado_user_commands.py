@@ -620,7 +620,7 @@ class UserCommands(object):
         return psf_path
 
     def _update_lam_extremes(self):
-        """Gets the current lam_min and lam_max"""
+        """Gets the current wave_min and wave_max"""
         # if SIM_USE_FILTER_LAM is true, then use the filter curve to set the
         # wavelength boundaries where the filter is < SIM_FILTER_THRESHOLD
 

@@ -12,9 +12,9 @@ from ..mocks.py_objects.yaml_objects import _atmo_yaml_dict
 
 @pytest.fixture(scope="function")
 def atmo_yaml_dict():
-    rc.__config__["!SIM.spectral.lam_min"] = 0.5
-    rc.__config__["!SIM.spectral.lam_mid"] = 1.5
-    rc.__config__["!SIM.spectral.lam_max"] = 2.5
+    rc.__config__["!SIM.spectral.wave_min"] = 0.5
+    rc.__config__["!SIM.spectral.wave_mid"] = 1.5
+    rc.__config__["!SIM.spectral.wave_max"] = 2.5
     rc.__config__["!SIM.sub_pixel.fraction"] = 1
     rc.__config__["!INST.pixel_scale"] = 0.004
 
@@ -113,7 +113,7 @@ class TestGetPixelBorderWavesFromAtmoDisp:
 
         waves, shifts = get_pixel_border_waves_from_atmo_disp(**atmo_params)
 
-        assert shifts[0] - shifts[-1] == approx(0.53, rel=1e-2)
+        assert shifts[0] - shifts[-1] == approx(0.53, rel=2e-2)
         assert waves[0] == 0.5 and waves[-1] == 2.5
 
         atmo_params["wave_max"] = 1.5

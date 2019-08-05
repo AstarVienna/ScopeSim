@@ -28,7 +28,7 @@ MICADO default.yaml keywords
 ----------------------------
 OBS.airmass
 OBS.pupil_angle
-SIM.lam_mid
+SIM.wave_mid
 OBS.dit
 OBS.ndit
 OBS.filter_name

@@ -54,3 +54,22 @@ def _mvs_effects_list():
 def _detector_list():
     kwargs = {"filename": "LIST_detector_layout.dat"}
     return efs.DetectorList(**kwargs)
+
+
+def _atmospheric_dispersion(**kwargs):
+    from scopesim.effects import AtmosphericDispersion
+    atmo_params = {"airmass": 1.14,     # in deg
+                   "temperature": 7,    # in degC
+                   "humidity": 1,       # in %
+                   "pressure": 0.755,   # in mbar
+                   "latitude": -26.5,   # in deg
+                   "altitude": 2400,    # in m
+                   "wave_min": 0.5,     # in um
+                   "wave_mid": 1.5,
+                   "wave_max": 2.5,
+                   "pixel_scale": 0.004, # in arcsec
+                   "pupil_angle": 0,     # in deg
+                   "sub_pixel_fraction": 1,
+                   "num_steps": 1000}
+    atmo_params.update(kwargs)
+    return AtmosphericDispersion(**atmo_params)

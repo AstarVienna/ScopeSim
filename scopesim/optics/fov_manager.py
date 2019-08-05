@@ -53,9 +53,9 @@ class FOVManager:
     """
     def __init__(self, effects=[], **kwargs):
         self.meta = {"pixel_scale": "!INST.pixel_scale",
-                     "wave_min": "!SIM.spectral.lam_min",
-                     "wave_mid": "!SIM.spectral.lam_mid",
-                     "wave_max": "!SIM.spectral.lam_max",
+                     "wave_min": "!SIM.spectral.wave_min",
+                     "wave_mid": "!SIM.spectral.wave_mid",
+                     "wave_max": "!SIM.spectral.wave_max",
                      "sub_pixel_fraction": "!SIM.sub_pixel.fraction",
                      "chunk_size": "!SIM.computing.chunk_size"}
         self.meta.update(kwargs)
@@ -113,24 +113,31 @@ def get_3d_shifts(effects, **kwargs):
 
     """
     required_keys = ["wave_min", "wave_mid", "wave_max", "sub_pixel_fraction"]
-    check_keys(kwargs, required_keys, action="error")
+    check_keys(kwargs, required_keys, action="warning")
 
-    wave_bin_edges = []
     effects = get_all_effects(effects, Shift3D)
     if len(effects) > 0:
+        # shifts = [[waves], [x_shifts], [y_shifts]]
         shifts = [eff.fov_grid(which="shifts", **kwargs) for eff in effects]
 
-        # ..todo: Set this up so that it actually does something useful
-        wave_bin_edges = [shift[0] for shift in shifts if len(shift[0]) >= 2]
-        x_shifts = [shift[1] for shift in shifts if len(shift[0]) >= 2]
-        y_shifts = [shift[2] for shift in shifts if len(shift[0]) >= 2]
+        old_bin_edges = [shift[0] for shift in shifts if len(shift[0]) >= 2]
+        new_bin_edges = np.unique(np.sort(np.concatenate(old_bin_edges),
+                                           kind="stable"))
 
-    if len(wave_bin_edges) < 2:
-        wave_bin_edges = [kwargs["wave_min"], kwargs["wave_max"]]
-        x_shifts = [0, 0]
-        y_shifts = [0, 0]
+        x_shifts = np.zeros(len(new_bin_edges))
+        y_shifts = np.zeros(len(new_bin_edges))
+        for shift in shifts:
+            if not np.all(np.abs(shift[1]) < 1e-7):
+                x_shifts += np.interp(new_bin_edges, shift[0], shift[1])
+            if not np.all(np.abs(shift[2]) < 1e-7):
+                y_shifts += np.interp(new_bin_edges, shift[0], shift[2])
 
-    shift_dict = {"wavelengths": wave_bin_edges,
+    else:
+        new_bin_edges = np.array([kwargs["wave_min"], kwargs["wave_max"]])
+        x_shifts = np.zeros(2)
+        y_shifts = np.zeros(2)
+
+    shift_dict = {"wavelengths": new_bin_edges,
                   "x_shifts": x_shifts,
                   "y_shifts": y_shifts}
 

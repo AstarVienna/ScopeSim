@@ -6,10 +6,10 @@ description : simulation confiugration parameters
 
 properties :
   spectral :
-    lam_min : 0.3
-    lam_mid : 2.2
-    lam_max : 20
-    lam_unit : um
+    wave_min : 0.3
+    wave_mid : 2.2
+    wave_max : 20
+    wave_unit : um
 
     spectral_resolution : 1E-4
     minimum_throughput : 1E-6

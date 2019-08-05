@@ -222,7 +222,7 @@ def add_keyword(filename, keyword, value, comment="", ext=0):
     f.close()
 
 
-def add_SED_to_scopesim(file_in, file_out=None, lam_units="um"):
+def add_SED_to_scopesim(file_in, file_out=None, wave_units="um"):
     """
     Adds the SED given in ``file_in`` to the ScopeSim data directory
 
@@ -234,7 +234,7 @@ def add_SED_to_scopesim(file_in, file_out=None, lam_units="um"):
     file_out : str, optional
         Default is None. The file path to save the ASCII file. If ``None``, the SED
         is saved to the ScopeSim data directory i.e. to ``rc.__data_dir__``
-    lam_units : str, astropy.Units
+    wave_units : str, astropy.Units
         Units for the wavelength column, either as a string or as astropy units
         Default is [um]
 
@@ -253,7 +253,7 @@ def add_SED_to_scopesim(file_in, file_out=None, lam_units="um"):
     else:
         lam, val = ioascii.read(file_in)[:2]
 
-    lam = (lam * u.Unit(lam_units)).to(u.um)
+    lam = (lam * u.Unit(wave_units)).to(u.um)
     mask = (lam > 0.3*u.um) * (lam < 5.0*u.um)
 
     np.savetxt(file_out, np.array((lam[mask], val[mask]), dtype=np.float32).T,
@@ -856,11 +856,11 @@ def check_keys(input_dict, required_keys, action="error"):
     all_keys = True
     if not all([key in input_dict for key in required_keys]):
         all_keys = False
-        if action == "error":
+        if "error" in action:
             raise ValueError("One or more of the following keys missing "
                              "from input_dict: \n{} \n{}"
                              "".format(required_keys, input_dict.keys()))
-        elif action == "warn":
+        elif "warn" in action:
             warnings.warn("One or more of the following keys missing "
                           "from input_dict: \n{} \n{}"
                           "".format(required_keys, input_dict.keys()))

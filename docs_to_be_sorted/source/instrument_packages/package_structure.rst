@@ -128,9 +128,9 @@ An example of an additional ``SIM`` dictionary is::
             chunk_size : 512
 
         spectral :
-            lam_min : 0.7
-            lam_mid : 1.2
-            lam_max : 2.5
+            wave_min : 0.7
+            wave_mid : 1.2
+            wave_max : 2.5
 
 All default parameters can be found in the ``simcado.rc.__config__`` dictionary.
 

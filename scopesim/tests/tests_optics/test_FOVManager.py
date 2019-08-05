@@ -9,7 +9,8 @@ from scopesim.optics.fov_manager import FOVManager
 from scopesim.optics import fov_manager as fov_mgr
 from scopesim.optics.image_plane import ImagePlane
 
-from scopesim.tests.mocks.py_objects.effects_objects import _mvs_effects_list
+from scopesim.tests.mocks.py_objects.effects_objects import _mvs_effects_list, \
+    _atmospheric_dispersion
 from scopesim.tests.mocks.py_objects.yaml_objects import \
      _usr_cmds_min_viable_scope
 
@@ -96,10 +97,32 @@ class TestGenerateFovs:
         # assert np.all(implane.image == 1)
 
 
-@pytest.mark.usefixtures("mvs_effects_list", "mvs_usr_cmds")
 class TestGet3DShifts:
-    def test_returns_empty_for_the_moment(self):
-        pass
+    def test_returns_zeros_when_no_shift3d_effects_passed(self):
+        shifts = fov_mgr.get_3d_shifts([], wave_min=0.7, wave_max=3)
+        assert np.all(shifts["x_shifts"] == 0)
+        assert np.all(shifts["y_shifts"] == 0)
+
+    def test_returns_almost_zero_for_zenith_atmospheric_dispersion(self):
+        ad_zenith = _atmospheric_dispersion(airmass=1.)
+        shifts = fov_mgr.get_3d_shifts([ad_zenith])
+        assert np.all(shifts["x_shifts"] == 0)
+        assert np.all(shifts["y_shifts"] == 0)
+
+    def test_returns_non_zero_entries_for_off_zenith(self):
+        ad_am_1_14 = _atmospheric_dispersion()
+        shifts = fov_mgr.get_3d_shifts([ad_am_1_14])
+        print(shifts)
+        assert np.all(shifts["x_shifts"] == 0)
+        assert np.interp(0, shifts["y_shifts"][::-1],
+                         shifts["wavelengths"][::-1]) == pytest.approx(1.5)
+
+    def a(self):
+        ad_am_1_14 = _atmospheric_dispersion()
+        ad_am_1_05 = _atmospheric_dispersion(airmass=1.05, pupil_angle=90)
+        ad_am_1_00 = _atmospheric_dispersion(airmass=1.)
+        waves, dx, dy = fov_mgr.get_3d_shifts([ad_am_1_00, ad_am_1_05,
+                                               ad_am_1_14])
 
     def test_returns_zeros_when_adc_and_ad_are_equal(self):
         pass

@@ -50,11 +50,11 @@ class AtmosphericDispersion(Shift3D):
     Optional Parameters
     -------------------
     wave_min : float
-        [um] Defaults to "!SIM.spectral.lam_min"
+        [um] Defaults to "!SIM.spectral.wave_min"
     wave_mid : float
-        [um] Defaults to "!SIM.spectral.lam_mid"
+        [um] Defaults to "!SIM.spectral.wave_mid"
     wave_max : float
-        [um] Defaults to "!SIM.spectral.lam_max"
+        [um] Defaults to "!SIM.spectral.wave_max"
     sub_pixel_fraction : float
         [0..1] Defaults to "!SIM.sub_pixel.fraction"
     num_steps : int
@@ -65,9 +65,9 @@ class AtmosphericDispersion(Shift3D):
     def __init__(self, **kwargs):
         super(AtmosphericDispersion, self).__init__(**kwargs)
         self.meta["z_order"] = [31, 331]
-        self.meta["wave_min"] = "!SIM.spectral.lam_min"
-        self.meta["wave_mid"] = "!SIM.spectral.lam_mid"
-        self.meta["wave_max"] = "!SIM.spectral.lam_max"
+        self.meta["wave_min"] = "!SIM.spectral.wave_min"
+        self.meta["wave_mid"] = "!SIM.spectral.wave_mid"
+        self.meta["wave_max"] = "!SIM.spectral.wave_max"
         self.meta["sub_pixel_fraction"] = "!SIM.sub_pixel.fraction"
         self.meta["num_steps"] = 1000
         self.meta.update(kwargs)
@@ -247,17 +247,24 @@ def get_pixel_border_waves_from_atmo_disp(**kwargs):
     offset_ang = atmospheric_refraction(lam=wave_range, **atmo_disp_dict)
     offset_ang -= offset_mid
 
-    offset_step = kwargs["pixel_scale"] * kwargs["sub_pixel_fraction"]
-    offset_pix = offset_ang / offset_step
+    if np.any(offset_ang > 1e-7):
 
-    # interpolate to get the edge wavelengths of the pixels
-    y = wave_range[::-1]
-    x = offset_pix[::-1]
-    xnew = np.unique(x.astype(int))
-    xnew = np.array([xnew[0] - 1] + list(xnew) + [xnew[-1] + 1])
-    ynew = np.interp(xnew, x, y)
+        offset_step = kwargs["pixel_scale"] * kwargs["sub_pixel_fraction"]
+        offset_pix = offset_ang / offset_step
 
-    shifts_angle_edges = xnew[::-1] * offset_step
-    wave_pixel_edges = ynew[::-1]
+        # interpolate to get the edge wavelengths of the pixels
+        y = wave_range[::-1]
+        x = offset_pix[::-1]
+        xnew = np.unique(x.astype(int))
+        # ..todo:: this -1, +1 this is weird
+        xnew = np.array([xnew[0]-1] + list(xnew) + [xnew[-1]+1])
+        ynew = np.interp(xnew, x, y)
+
+        shifts_angle_edges = xnew[::-1] * offset_step
+        wave_pixel_edges = ynew[::-1]
+
+    else:
+        wave_pixel_edges = np.array([kwargs["wave_min"], kwargs["wave_max"]])
+        shifts_angle_edges = np.zeros(2)
 
     return wave_pixel_edges, shifts_angle_edges

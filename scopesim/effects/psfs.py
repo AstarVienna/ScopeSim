@@ -112,8 +112,8 @@ class NonCommonPathAberration(AnalyticalPSF):
         self.meta["z_order"] = [41, 341]
         self.meta["kernel_width"] = None
         self.meta["strehl_drift"] = 0.02
-        self.meta["wave_min"] = "!SIM.spectral.lam_min"
-        self.meta["wave_max"] = "!SIM.spectral.lam_max"
+        self.meta["wave_min"] = "!SIM.spectral.wave_min"
+        self.meta["wave_max"] = "!SIM.spectral.wave_max"
         self.apply_to_classes = FieldOfViewBase
 
         self._total_wfe = None

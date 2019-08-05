@@ -96,7 +96,7 @@ class TransmissionCurve(object):
         [um] float with the desired spectral resolution. Default is 0.001.
     min_step : float
         [um] the minimum bin size used when resampling. Default is 1E-4
-    lam_unit : str
+    wave_unit : str
         If the wavelength bins are in units other than micron. Default is "um"
     use_default_lam : bool
         Default is True. If True the curve is resmapled to a default range. This
@@ -120,7 +120,7 @@ class TransmissionCurve(object):
                        "lam_res"     : 0.001,
                        "Type"        : "Transmission",
                        "min_step"    : 1E-4,
-                       "lam_unit"    : u.um,
+                       "wave_unit"    : u.um,
                        "use_default_lam" : True,
                        "on_default_lam" : False,
                        "default_lam" : np.arange(0.3, 3.0, 0.01),
@@ -132,7 +132,7 @@ class TransmissionCurve(object):
         self.info["Type"] = self.params["Type"]
 
         self.lam_orig, self.val_orig = self._get_data()
-        self.lam_orig *= (1 * self.params["lam_unit"]).to(u.um).value
+        self.lam_orig *= (1 * self.params["wave_unit"]).to(u.um).value
 
         self.lam = self.lam_orig
         self.val = self.val_orig
