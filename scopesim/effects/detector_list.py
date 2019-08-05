@@ -11,7 +11,7 @@ __all__ = ["DetectorList"]
 class DetectorList(Effect):
     def __init__(self, **kwargs):
         super(Effect, self).__init__(**kwargs)
-        self.meta["z_order"] = [0, 100, 500]
+        self.meta["z_order"] = [90, 100, 500]
 
     def fov_grid(self, which="edges", **kwargs):
         """

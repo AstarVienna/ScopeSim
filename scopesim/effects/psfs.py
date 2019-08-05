@@ -84,10 +84,10 @@ class Vibration(AnalyticalPSF):
         super(Vibration, self).__init__(**kwargs)
         self.meta["z_order"] = [44, 444]
         self.meta["width_n_fwhms"] = 4
-        self.apply_to_classes = (ImagePlaneBase)
+        self.apply_to_classes = ImagePlaneBase
 
-        required_keys = ["fwhm", "pixel_scale"]
-        utils.check_keys(self.meta, required_keys, action="error")
+        self.required_keys = ["fwhm", "pixel_scale"]
+        utils.check_keys(self.meta, self.required_keys, action="error")
         self.kernel = None
 
     def get_kernel(self, implane):
@@ -106,8 +106,6 @@ class NonCommonPathAberration(AnalyticalPSF):
     """
     Needed: pixel_scale
     Accepted: kernel_width, strehl_drift
-
-    Initialises with waverange defined by "!SIM.spectral.lam_min" (lam_max)
     """
     def __init__(self, **kwargs):
         super(NonCommonPathAberration, self).__init__(**kwargs)
@@ -120,8 +118,8 @@ class NonCommonPathAberration(AnalyticalPSF):
 
         self.valid_waverange = [0.1 * u.um, 0.2 * u.um]
 
-        required_keys = ["pixel_scale"]
-        utils.check_keys(self.meta, required_keys, action="error")
+        self.required_keys = ["pixel_scale"]
+        utils.check_keys(self.meta, self.required_keys, action="error")
 
     def fov_grid(self, which="waveset", **kwargs):
 
@@ -255,6 +253,9 @@ class FieldConstantPSF(DiscretePSF):
         # sub_pixel_flag and flux_accuracy are taken care of in PSF base class
         super(FieldConstantPSF, self).__init__(**kwargs)
 
+        self.required_keys = ["filename"]
+        utils.check_keys(self.meta, self.required_keys, action="error")
+
         self.meta["z_order"] = [62, 362]
         self._waveset, self.kernel_indexes = get_psf_wave_exts(self._file)
         self.current_layer_id = None
@@ -300,6 +301,9 @@ class FieldVaryingPSF(DiscretePSF):
     def __init__(self, **kwargs):
         # sub_pixel_flag and flux_accuracy are taken care of in PSF base class
         super(FieldVaryingPSF, self).__init__(**kwargs)
+
+        self.required_keys = ["filename"]
+        utils.check_keys(self.meta, self.required_keys, action="error")
 
         self.meta["z_order"] = [61, 361]
         self._waveset, self.kernel_indexes = get_psf_wave_exts(self._file)

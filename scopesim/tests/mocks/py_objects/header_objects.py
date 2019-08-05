@@ -1,4 +1,5 @@
 from astropy import wcs
+from scopesim.optics.image_plane_utils import header_from_list_of_xy
 
 
 def _basic_fov_header():
@@ -69,3 +70,9 @@ def _fov_header():
     skyhdr["NAXIS2"] = h
 
     return skyhdr
+
+
+def _basic_dtcr_header(n=20, pix_size=0.01):
+    xs = [-pix_size * n/2, pix_size * n/2]
+    hdr = header_from_list_of_xy(xs, xs, pix_size, "D")
+    return hdr

@@ -41,7 +41,9 @@ DETECTOR_YAML = {"object": "detector",
                               "description": "SimpleCADO dark current",
                               "class": "DarkCurrent",
                               # [e-/s] level of dark currentSimpleCADO.yaml
-                              "kwargs": {"value": 0.2}
+                              "kwargs": {"value": 0.2,
+                                         "dit": "!OBS.dit",
+                                         "ndit": "!OBS.ndit",}
                               }]
                  }
 
