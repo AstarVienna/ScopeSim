@@ -62,10 +62,10 @@ class Effect(DataContainer):
 
         kwargs
         ------
-        waverange : list
+        wave_min, wave_max : float
             [um] list of wavelength
 
-        wave_mid
+        wave_mid : float
             [um] wavelength what will be centred on optical axis
 
 

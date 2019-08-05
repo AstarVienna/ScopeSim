@@ -104,8 +104,9 @@ class TestAddSurface:
 class TestFovGrid:
     def test_finds_borders_of_filter(self, filter_surface, surf_list):
         surf_list.add_surface(filter_surface, "filter")
-        surf_list.meta["SIM_MIN_THROUGHPUT"] = 2e-4
-        waverange = surf_list.fov_grid("waveset", waverange=(0.5, 2.5) * u.um)
+        surf_list.meta["min_throughput"] = 2e-4
+        waverange = surf_list.fov_grid("waveset",
+                                       wave_min=0.5*u.um, wave_max=2.5*u.um)
 
         # assuming surf is the K-filter
         assert waverange[0] > 1.9*u.um

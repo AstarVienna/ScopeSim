@@ -34,7 +34,7 @@ from .fov import FieldOfView
 from .. import effects as efs
 from ..effects.shifts import Shift3D
 from ..effects.effects_utils import get_all_effects, is_spectroscope
-from .. import rc
+from ..utils import check_keys, from_currsys
 
 
 class FOVManager:
@@ -52,8 +52,14 @@ class FOVManager:
 
     """
     def __init__(self, effects=[], **kwargs):
-        self.meta = {}
+        self.meta = {"pixel_scale": "!INST.pixel_scale",
+                     "wave_min": "!SIM.spectral.lam_min",
+                     "wave_mid": "!SIM.spectral.lam_mid",
+                     "wave_max": "!SIM.spectral.lam_max",
+                     "sub_pixel_fraction": "!SIM.sub_pixel.fraction",
+                     "chunk_size": "!SIM.computing.chunk_size"}
         self.meta.update(kwargs)
+
         self.effects = effects
         self._fovs_list = []
 
@@ -66,14 +72,7 @@ class FOVManager:
         fovs : list of FieldOfView objects
 
         """
-        pixel_size = rc.__currsys__["!SIM.sub_pixel.fraction"]
-        chunk_size = rc.__currsys__["!SIM.computing.chunk_size"]
-        self.meta["SIM_SUB_PIXEL_FRACTION"] = pixel_size
-        self.meta["SIM_CHUNK_SIZE"] = chunk_size
-        self.meta["SIM_PIXEL_SCALE"] = rc.__currsys__["!INST.pixel_scale"]
-        self.meta["SIM_LAM_MIN"] = rc.__currsys__["!SIM.spectral.lam_min"]
-        self.meta["SIM_LAM_MID"] = rc.__currsys__["!SIM.spectral.lam_mid"]
-        self.meta["SIM_LAM_MAX"] = rc.__currsys__["!SIM.spectral.lam_max"]
+        self.meta = from_currsys(self.meta)
 
         if is_spectroscope(self.effects):
             shifts  = get_3d_shifts(self.effects, **self.meta)
@@ -113,26 +112,13 @@ def get_3d_shifts(effects, **kwargs):
         fov_grid contains the edge wavelengths for each spectral layer
 
     """
-    # for the offsets
-    # OBS_FIELD_ROTATION
-    # ATMO_TEMPERATURE
-    # ATMO_PRESSURE
-    # ATMO_REL_HUMIDITY
-    # ATMO_PWV
-    # ATMO_AIRMASS
-
-    wave_min = kwargs["SIM_LAM_MIN"]
-    wave_mid = kwargs["SIM_LAM_MID"]
-    wave_max = kwargs["SIM_LAM_MAX"]
-    sub_pixel_frac = kwargs["SIM_SUB_PIXEL_FRACTION"]
+    required_keys = ["wave_min", "wave_mid", "wave_max", "sub_pixel_fraction"]
+    check_keys(kwargs, required_keys, action="error")
 
     wave_bin_edges = []
     effects = get_all_effects(effects, Shift3D)
     if len(effects) > 0:
-        shifts = [eff.fov_grid(which="shifts", waverange=[wave_min, wave_max],
-                               lam_mid=wave_mid, sub_pixel_frac=sub_pixel_frac,
-                               **kwargs)
-                  for eff in effects]
+        shifts = [eff.fov_grid(which="shifts", **kwargs) for eff in effects]
 
         # ..todo: Set this up so that it actually does something useful
         wave_bin_edges = [shift[0] for shift in shifts if len(shift[0]) >= 2]
@@ -140,7 +126,7 @@ def get_3d_shifts(effects, **kwargs):
         y_shifts = [shift[2] for shift in shifts if len(shift[0]) >= 2]
 
     if len(wave_bin_edges) < 2:
-        wave_bin_edges = [wave_min, wave_max]
+        wave_bin_edges = [kwargs["wave_min"], kwargs["wave_max"]]
         x_shifts = [0, 0]
         y_shifts = [0, 0]
 
@@ -170,18 +156,17 @@ def get_imaging_waveset(effects, **kwargs):
         # ..todo: get the effective wavelength range from SurfaceList
         pass
 
-    wave_min = kwargs["SIM_LAM_MIN"]
-    wave_max = kwargs["SIM_LAM_MAX"]
+    wave_min = kwargs["wave_min"]
+    wave_max = kwargs["wave_max"]
     wave_bin_edges = [wave_min, wave_max]
-    spf = kwargs["SIM_SUB_PIXEL_FRACTION"]
+    spf = kwargs["sub_pixel_fraction"]
 
     psfs = get_all_effects(effects, efs.PSF)
     if len(psfs) > 0:
         new_bin_edges = []
         for psf in psfs:
-            psf_waveset = psf.fov_grid(which="waveset",
-                                       waverange=[wave_min, wave_max],
-                                       sub_pixel_frac=spf)
+            psf_waveset = psf.fov_grid(which="waveset", sub_pixel_frac=spf,
+                                       wave_min=wave_min, wave_max=wave_max)
             if psf_waveset is not None and len(psf_waveset) > 1:
                 new_bin_edges += [psf_waveset]
 
@@ -224,7 +209,7 @@ def get_imaging_headers(effects, **kwargs):
         raise ValueError("At least 1 DetectorList must be specified: {}"
                          "".format(detector_arrays))
 
-    pixel_scale = kwargs["SIM_PIXEL_SCALE"] / 3600.         # " -> deg
+    pixel_scale = kwargs["pixel_scale"] / 3600.         # " -> deg
     pixel_size = detector_arrays[0].image_plane_header["CDELT1D"]  # mm
     deg2mm = pixel_size / pixel_scale
 
@@ -240,7 +225,7 @@ def get_imaging_headers(effects, **kwargs):
                          "least a DetectorList object must be passed: {}"
                          "".format(effects))
 
-    width = kwargs["SIM_CHUNK_SIZE"] * pixel_scale
+    width = kwargs["chunk_size"] * pixel_scale
     hdrs = []
     for xy_sky in sky_edges:
         x0, y0 = min(xy_sky[0]), min(xy_sky[1])

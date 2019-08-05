@@ -3,6 +3,8 @@ Welcome to ScopeSim's documentation!
 
 Hello world! This is a test to see if the docs are working on RTFD
 
+.. note:: ScopeSim only supports python versions >=3.5
+
 There are several packages in the ScopeSim_ ecosystem to be aware of:
 
 * ScopeSim_: The engine behind the whole simulator

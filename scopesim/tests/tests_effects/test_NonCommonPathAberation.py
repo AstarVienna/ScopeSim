@@ -129,7 +129,6 @@ class TestFovGrid:
 
 ################################################################################
 
-
 class TestFunctionStrehl2Gauss:
     def test_relationship_between_sigma_strehl_amplitude(self):
         # test that the central pixel is equal to the strehl ratio needed

@@ -112,7 +112,9 @@ class NonCommonPathAberration(AnalyticalPSF):
         self.meta["z_order"] = [41, 341]
         self.meta["kernel_width"] = None
         self.meta["strehl_drift"] = 0.02
-        self.apply_to_classes = (FieldOfViewBase)
+        self.meta["wave_min"] = "!SIM.spectral.lam_min"
+        self.meta["wave_max"] = "!SIM.spectral.lam_max"
+        self.apply_to_classes = FieldOfViewBase
 
         self._total_wfe = None
 
@@ -124,17 +126,16 @@ class NonCommonPathAberration(AnalyticalPSF):
     def fov_grid(self, which="waveset", **kwargs):
 
         if which == "waveset":
-            if "waverange" not in kwargs:
-                kwargs["waverange"] = (rc.__currsys__["!SIM.spectral.lam_min"],
-                                       rc.__currsys__["!SIM.spectral.lam_max"])
+            self.meta.update(kwargs)
+            self.meta = utils.from_currsys(self.meta)
 
-            min_sr = wfe2strehl(self.total_wfe, np.min(kwargs["waverange"]))
-            max_sr = wfe2strehl(self.total_wfe, np.max(kwargs["waverange"]))
+            min_sr = wfe2strehl(self.total_wfe, self.meta["wave_min"])
+            max_sr = wfe2strehl(self.total_wfe, self.meta["wave_max"])
 
             srs = np.arange(min_sr, max_sr, self.meta["strehl_drift"])
             waves = 6.2831853 * self.total_wfe * (-np.log(srs))**-0.5
             waves = utils.quantify(waves, "um")
-            waves = list(waves) + [utils.quantify(kwargs["waverange"][-1],
+            waves = list(waves) + [utils.quantify(self.meta["wave_max"],
                                                   waves.unit)]
         else:
             waves = []
@@ -391,7 +392,8 @@ class FieldVaryingPSF(DiscretePSF):
         layer_ids = np.round(np.unique(strl_cutout.data)).astype(int)
         if len(layer_ids) > 1:
             kernels = [self.current_data[ii] for ii in layer_ids]
-            masks = [strl_cutout.data.T == ii for ii in layer_ids]    # there's a .T in here that I don't like
+            # .. todo:: investigate. There's a .T in here that I don't like
+            masks = [strl_cutout.data.T == ii for ii in layer_ids]
             self.kernel = [[krnl, msk] for krnl, msk in zip(kernels, masks)]
         else:
             self.kernel = [[self.current_data[layer_ids[0]], None]]
@@ -421,8 +423,6 @@ class FieldVaryingPSF(DiscretePSF):
                 self._strehl_imagehdu = make_strehl_map_from_table(cat)
 
         return self._strehl_imagehdu
-
-
 
 
 ################################################################################
