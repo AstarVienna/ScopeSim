@@ -112,7 +112,8 @@ def get_3d_shifts(effects, **kwargs):
         fov_grid contains the edge wavelengths for each spectral layer
 
     """
-    required_keys = ["wave_min", "wave_mid", "wave_max", "sub_pixel_fraction"]
+    required_keys = ["wave_min", "wave_mid", "wave_max",
+                     "sub_pixel_fraction", "pixel_scale"]
     check_keys(kwargs, required_keys, action="warning")
 
     effects = get_all_effects(effects, Shift3D)
@@ -122,22 +123,35 @@ def get_3d_shifts(effects, **kwargs):
 
         old_bin_edges = [shift[0] for shift in shifts if len(shift[0]) >= 2]
         new_bin_edges = np.unique(np.sort(np.concatenate(old_bin_edges),
-                                           kind="stable"))
+                                          kind="stable"))
 
         x_shifts = np.zeros(len(new_bin_edges))
         y_shifts = np.zeros(len(new_bin_edges))
+        # .. todo:: replace the 1e-7 with a variable in !SIM
         for shift in shifts:
             if not np.all(np.abs(shift[1]) < 1e-7):
                 x_shifts += np.interp(new_bin_edges, shift[0], shift[1])
             if not np.all(np.abs(shift[2]) < 1e-7):
                 y_shifts += np.interp(new_bin_edges, shift[0], shift[2])
 
+        # After adding all the shifts together, work out a new wavelength set
+        z_edges = np.copy(new_bin_edges)
+        z_shifts = (x_shifts**2 + y_shifts**2)**0.5        # in arcsec
+        step_size = kwargs["pixel_scale"] * kwargs["sub_pixel_fraction"]
+        z_steps = (z_shifts / step_size).astype(int)
+        # find where the shift is larger than a sub pixel fraction size
+        ii = np.where(np.diff(z_steps) != 0)[0]
+
+        x_shifts = np.array([x_shifts[0]] + list(x_shifts[ii]) + [x_shifts[-1]])
+        y_shifts = np.array([y_shifts[0]] + list(y_shifts[ii]) + [y_shifts[-1]])
+        z_edges = np.array([z_edges[0]] + list(z_edges[ii]) + [z_edges[-1]])
+
     else:
-        new_bin_edges = np.array([kwargs["wave_min"], kwargs["wave_max"]])
+        z_edges = np.array([kwargs["wave_min"], kwargs["wave_max"]])
         x_shifts = np.zeros(2)
         y_shifts = np.zeros(2)
 
-    shift_dict = {"wavelengths": new_bin_edges,
+    shift_dict = {"wavelengths": z_edges,
                   "x_shifts": x_shifts,
                   "y_shifts": y_shifts}
 

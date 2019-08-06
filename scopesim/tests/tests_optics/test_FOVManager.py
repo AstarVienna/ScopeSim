@@ -1,5 +1,6 @@
 import os
 import pytest
+from pytest import approx
 
 import numpy as np
 
@@ -99,39 +100,55 @@ class TestGenerateFovs:
 
 class TestGet3DShifts:
     def test_returns_zeros_when_no_shift3d_effects_passed(self):
-        shifts = fov_mgr.get_3d_shifts([], wave_min=0.7, wave_max=3)
+        shifts = fov_mgr.get_3d_shifts([], wave_min=0.7, wave_max=3,
+                                       pixel_scale=0.004, sub_pixel_fraction=1)
         assert np.all(shifts["x_shifts"] == 0)
         assert np.all(shifts["y_shifts"] == 0)
 
     def test_returns_almost_zero_for_zenith_atmospheric_dispersion(self):
         ad_zenith = _atmospheric_dispersion(airmass=1.)
-        shifts = fov_mgr.get_3d_shifts([ad_zenith])
+        shifts = fov_mgr.get_3d_shifts([ad_zenith],
+                                       pixel_scale=0.004, sub_pixel_fraction=1)
         assert np.all(shifts["x_shifts"] == 0)
         assert np.all(shifts["y_shifts"] == 0)
 
     def test_returns_non_zero_entries_for_off_zenith(self):
         ad_am_1_14 = _atmospheric_dispersion()
-        shifts = fov_mgr.get_3d_shifts([ad_am_1_14])
-        print(shifts)
+        shifts = fov_mgr.get_3d_shifts([ad_am_1_14],
+                                       pixel_scale=0.004, sub_pixel_fraction=1)
         assert np.all(shifts["x_shifts"] == 0)
         assert np.interp(0, shifts["y_shifts"][::-1],
                          shifts["wavelengths"][::-1]) == pytest.approx(1.5)
 
-    def a(self):
-        ad_am_1_14 = _atmospheric_dispersion()
+    def test_shift_transferred_to_x_axis_for_90_deg_pupil_angle(self):
         ad_am_1_05 = _atmospheric_dispersion(airmass=1.05, pupil_angle=90)
-        ad_am_1_00 = _atmospheric_dispersion(airmass=1.)
-        waves, dx, dy = fov_mgr.get_3d_shifts([ad_am_1_00, ad_am_1_05,
-                                               ad_am_1_14])
+        shifts = fov_mgr.get_3d_shifts([ad_am_1_05],
+                                       pixel_scale=0.004, sub_pixel_fraction=1)
+        assert np.interp(0, shifts["x_shifts"][::-1],
+                         shifts["wavelengths"][::-1]) == pytest.approx(1.5)
+        assert np.all(shifts["y_shifts"] == 0)
 
-    def test_returns_zeros_when_adc_and_ad_are_equal(self):
-        pass
+    def test_shifts_cancel_out_when_equal_and_opposite(self):
+        ad_am_1_05 = _atmospheric_dispersion(airmass=1.05)
+        ad_am_neg_1_04 = _atmospheric_dispersion(airmass=-1.05)
+        shifts = fov_mgr.get_3d_shifts([ad_am_1_05, ad_am_neg_1_04],
+                                       pixel_scale=0.004, sub_pixel_fraction=1)
 
-    def test_returns_offset_when_adc_has_set_airmass(self):
-        pass
+        assert len(shifts["y_shifts"]) == 2
+        assert np.min(shifts["wavelengths"]) == ad_am_1_05.meta["wave_min"]
+        assert np.max(shifts["wavelengths"]) == ad_am_1_05.meta["wave_max"]
+
+    @pytest.mark.parametrize("sub_pix_frac", [1, 0.3, 0.1])
+    def test_combined_shifts_reduced_to_usable_number(self, sub_pix_frac):
+        ad_am_1_05 = _atmospheric_dispersion(airmass=1.05)
+        ad_am_neg_1_04 = _atmospheric_dispersion(airmass=-1.04)
+        shifts = fov_mgr.get_3d_shifts([ad_am_1_05, ad_am_neg_1_04],
+                                       pixel_scale=0.004,
+                                       sub_pixel_fraction=sub_pix_frac)
+
+        assert len(shifts["y_shifts"]) == approx(10 / sub_pix_frac, rel=0.2)
 
 
-@pytest.mark.usefixtures("mvs_effects_list", "mvs_usr_cmds")
 class TestGetImagingWaveset:
     def test_returns_waveset_from_cmds(self):
         pass
@@ -140,13 +157,11 @@ class TestGetImagingWaveset:
         pass
 
 
-@pytest.mark.usefixtures("mvs_effects_list", "mvs_usr_cmds")
 class TestGetImagingHeaders:
     def test_returns_header_grid_detector_size(self):
         pass
 
 
-@pytest.mark.usefixtures("mvs_effects_list", "mvs_usr_cmds")
 class TestGetImagingFOVs:
     def test_returns_header_grid_detector_size(self):
         pass
