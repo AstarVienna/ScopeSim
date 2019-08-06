@@ -8,6 +8,7 @@ TERCurves
 * 11 AtmosphericTERCurve
 * 12 SkycalcTERCurve
 * 13 QuantumEfficiencyCurve
+* 14 FilterCurve
 
 SurfaceLists
 * 20 SurfaceList

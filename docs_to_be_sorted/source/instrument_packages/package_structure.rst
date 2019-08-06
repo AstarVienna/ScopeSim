@@ -177,3 +177,15 @@ An example of a ``<package_name>.yaml`` file, note the ``filter_name`` property:
         kwargs:
             filename: "!OBS.filter_name"
 
+
+Quick note on exponent notation floats in yaml files
+----------------------------------------------------
+.. note:: Preface floats like `1e6` in yaml files with the ``!!float`` keyword
+
+    ``pyyaml`` is generally pretty good at recognising variable types.
+    However, if you want to specify a value in exponent notation, i.e. ``4.2e1``
+    instead of ``42``, ``pyyaml`` will assume that you have written a string,
+    not a number. To override this, make sure to preface the number with the
+    ``pyyaml`` keyword ``!!float``. E.g.
+
+    ``power_in_watts: !!float 1.21e9``

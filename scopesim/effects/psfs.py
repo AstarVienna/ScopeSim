@@ -134,11 +134,10 @@ class NonCommonPathAberration(AnalyticalPSF):
 
             srs = np.arange(min_sr, max_sr, self.meta["strehl_drift"])
             waves = 6.2831853 * self.total_wfe * (-np.log(srs))**-0.5
-            waves = utils.quantify(waves, "um")
-            waves = list(waves) + [utils.quantify(self.meta["wave_max"],
-                                                  waves.unit)]
+            waves = utils.quantify(waves, u.um).to(u.um).value
+            waves = (list(waves) + [self.meta["wave_max"]]) * u.um
         else:
-            waves = []
+            waves = [] * u.um
 
         return waves
 

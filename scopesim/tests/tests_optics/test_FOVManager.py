@@ -11,7 +11,7 @@ from scopesim.optics import fov_manager as fov_mgr
 from scopesim.optics.image_plane import ImagePlane
 
 from scopesim.tests.mocks.py_objects.effects_objects import _mvs_effects_list, \
-    _atmospheric_dispersion
+    _atmospheric_dispersion, _filter_tophat_curve, _const_psf, _ncpa_psf
 from scopesim.tests.mocks.py_objects.yaml_objects import \
      _usr_cmds_min_viable_scope
 
@@ -150,11 +150,37 @@ class TestGet3DShifts:
 
 
 class TestGetImagingWaveset:
-    def test_returns_waveset_from_cmds(self):
-        pass
+    def test_returns_default_wave_range_when_passed_no_effects(self):
+        wave_bin_edges = fov_mgr.get_imaging_waveset([])
+        assert len(wave_bin_edges) == 0
 
-    def test_returns_waveset_based_on_psfs(self):
-        pass
+    def test_returns_waveset_of_filter(self):
+        filt = _filter_tophat_curve()
+        kwargs = {"wave_min": 0.5, "wave_max": 2.5}
+        wave_bin_edges = fov_mgr.get_imaging_waveset([filt], **kwargs)
+        assert len(wave_bin_edges) == 2
+
+    def test_returns_waveset_of_psf(self):
+        psf = _const_psf()
+        kwargs = {"wave_min": 0.5, "wave_max": 2.5}
+        wave_bin_edges = fov_mgr.get_imaging_waveset([psf], **kwargs)
+        assert len(wave_bin_edges) == 3
+
+    def test_returns_waveset_of_psf_and_filter(self):
+        filt = _filter_tophat_curve()
+        psf = _const_psf()
+        kwargs = {"wave_min": 0.5, "wave_max": 2.5}
+        wave_bin_edges = fov_mgr.get_imaging_waveset([filt, psf], **kwargs)
+        assert len(wave_bin_edges) == 5
+
+    def test_returns_waveset_of_ncpa_psf_inside_filter_edges(self):
+        filt = _filter_tophat_curve()
+        psf = _ncpa_psf()
+        kwargs = {"wave_min": 0.5, "wave_max": 2.5}
+        wave_bin_edges = fov_mgr.get_imaging_waveset([psf, filt], **kwargs)
+        assert min(wave_bin_edges) == 1.
+        assert max(wave_bin_edges) == 2.
+        assert len(wave_bin_edges) == 9
 
 
 class TestGetImagingHeaders:

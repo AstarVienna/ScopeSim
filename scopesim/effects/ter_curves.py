@@ -1,8 +1,11 @@
+import numpy as np
+from astropy import units as u
+
 import skycalc_ipy
 
 from .effects import Effect
 from ..optics.surface import SpectralSurface
-from ..utils import from_currsys
+from ..utils import from_currsys, quantify
 
 
 class TERCurve(Effect):
@@ -75,3 +78,37 @@ class QuantumEfficiencyCurve(TERCurve):
         super(QuantumEfficiencyCurve, self).__init__(**kwargs)
         self.meta["action"] = "transmission"
         self.meta["z_order"] = [13, 213]
+
+
+class FilterCurve(TERCurve):
+    def __init__(self, **kwargs):
+        super(FilterCurve, self).__init__(**kwargs)
+        self.meta["z_order"] = [14, 214]
+        self.meta["action"] = "transmission"
+        self.meta["min_throughput"] = "!SIM.spectral.minimum_throughput"
+
+    def fov_grid(self, which="waveset", **kwargs):
+        if which == "waveset":
+            self.meta.update(kwargs)
+            self.meta = from_currsys(self.meta)
+            # ..todo:: replace the 101 with a variable in !SIM
+            wave = np.linspace(self.meta["wave_min"],
+                               self.meta["wave_max"], 101)
+            wave = quantify(wave, u.um).to(u.um)
+            throughput = self.surface.transmission(wave)
+            min_thru = self.meta["min_throughput"]
+            valid_waves = np.where(throughput.value > min_thru)[0]
+            if len(valid_waves) > 0:
+                wave_edges = [min(wave[valid_waves].value),
+                              max(wave[valid_waves].value)] * u.um
+            else:
+                raise ValueError("No transmission found above the threshold {} "
+                                 "in this wavelength range {}. Did you open "
+                                 "the shutter?"
+                                 "".format(self.meta["min_throughput"],
+                                           [self.meta["wave_min"],
+                                            self.meta["wave_max"]]))
+        else:
+            wave_edges = []
+
+        return wave_edges

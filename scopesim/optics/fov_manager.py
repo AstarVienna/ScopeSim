@@ -28,13 +28,15 @@
 #   AtmosphericDispersion
 
 import numpy as np
+from astropy import units as u
 
 from .image_plane_utils import header_from_list_of_xy
 from .fov import FieldOfView
 from .. import effects as efs
-from ..effects.shifts import Shift3D
+from ..effects import Shift3D
+from ..effects import FilterCurve, PSF, SpectralTraceList
 from ..effects.effects_utils import get_all_effects, is_spectroscope
-from ..utils import check_keys, from_currsys
+from ..utils import check_keys, from_currsys, quantify
 
 
 class FOVManager:
@@ -158,13 +160,13 @@ def get_3d_shifts(effects, **kwargs):
     return shift_dict
 
 
-def get_imaging_waveset(effects, **kwargs):
+def get_imaging_waveset(effects_list, **kwargs):
     """
     Returns the edge wavelengths for the spectral layers needed for simulation
 
     Parameters
     ----------
-    effects : list of Effect objects
+    effects_list : list of Effect objects
 
     Returns
     -------
@@ -172,32 +174,28 @@ def get_imaging_waveset(effects, **kwargs):
         [um] list of wavelengths
 
     """
+    # get the filter wavelengths first to set (wave_min, wave_max)
+    filters = get_all_effects(effects_list, FilterCurve)
 
-    if np.any([isinstance(effects, efs.SurfaceList)]):
-        # ..todo: get the effective wavelength range from SurfaceList
-        pass
+    wave_bin_edges = [filt.fov_grid(which="waveset", **kwargs)
+                      for filt in filters]
+    if len(wave_bin_edges) > 0:
+        kwargs["wave_min"] = np.min(wave_bin_edges)
+        kwargs["wave_max"] = np.max(wave_bin_edges)
 
-    wave_min = kwargs["wave_min"]
-    wave_max = kwargs["wave_max"]
-    wave_bin_edges = [wave_min, wave_max]
-    spf = kwargs["sub_pixel_fraction"]
+    for effect_class in (PSF, SpectralTraceList):
+        effects = get_all_effects(effects_list, effect_class)
+        for eff in effects:
+            wave_bin_edges += [eff.fov_grid(which="waveset", **kwargs)]
 
-    psfs = get_all_effects(effects, efs.PSF)
-    if len(psfs) > 0:
-        new_bin_edges = []
-        for psf in psfs:
-            psf_waveset = psf.fov_grid(which="waveset", sub_pixel_frac=spf,
-                                       wave_min=wave_min, wave_max=wave_max)
-            if psf_waveset is not None and len(psf_waveset) > 1:
-                new_bin_edges += [psf_waveset]
+    wave_set = []
+    for wbe in wave_bin_edges:
+        wbe = wbe.value if isinstance(wbe, u.Quantity) else wbe
+        wave_set += list(wbe)
+    # ..todo:: set variable in !SIM for the rounding to the 7th decimal
+    wave_set = np.unique(np.round(np.sort(wave_set, kind="stable"), 7))
 
-        # assume the longest array requires the highest spectral resolution
-        if len(new_bin_edges) > 0:
-            len_steps = np.array([len(wbe) for wbe in new_bin_edges])
-            ii = np.where(len_steps == max(len_steps))[0][0]
-            wave_bin_edges = new_bin_edges[ii]
-
-    return wave_bin_edges
+    return wave_set
 
 
 def get_imaging_headers(effects, **kwargs):
