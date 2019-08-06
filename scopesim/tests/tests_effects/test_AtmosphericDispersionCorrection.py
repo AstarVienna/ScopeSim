@@ -30,7 +30,9 @@ def atmo_params():
                     "altitude": 2400,
                     "pupil_angle": 0,
                     "pixel_scale": 1,
-                    "wave_mid": 0.5}
+                    "wave_min": 0.5,
+                    "wave_mid": 0.5,
+                    "wave_max": 2.5}
     return _atmo_params
 
 
@@ -111,8 +113,6 @@ class TestCombinedWithAtmoDisp:
         fov_shifts = new_crpix_d - old_crpix_d
         adc_x_shift = fov_shifts[0] * fov.header["CDELT1"] * 3600
         adc_y_shift = fov_shifts[1] * fov.header["CDELT1"] * 3600
-
-        print(adc_x_shift, ad_x_shift, adc_y_shift, ad_y_shift)
 
         assert adc_x_shift == approx(ad_x_shift, rel=1e-3)
         assert adc_y_shift == approx(ad_y_shift, rel=1e-3)

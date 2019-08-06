@@ -16,7 +16,6 @@ class TestInit:
     def test_initialises_with_nothing(self):
         if TRAVIS:
             assert isinstance(SkycalcTERCurve(), SkycalcTERCurve)
-            assert False
 
     def test_initialises_with_some_kwargs(self):
         if TRAVIS:

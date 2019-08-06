@@ -247,8 +247,7 @@ def get_pixel_border_waves_from_atmo_disp(**kwargs):
     offset_ang = atmospheric_refraction(lam=wave_range, **atmo_disp_dict)
     offset_ang -= offset_mid
 
-    if np.any(offset_ang > 1e-7):
-
+    if np.any(np.abs(offset_ang) > 1e-7):
         offset_step = kwargs["pixel_scale"] * kwargs["sub_pixel_fraction"]
         offset_pix = offset_ang / offset_step
 
