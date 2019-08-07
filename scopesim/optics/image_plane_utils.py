@@ -200,6 +200,8 @@ def header_from_list_of_xy(x, y, pixel_scale, wcs_suffix=""):
     return hdr
 
 
+
+
 ###############################################################################
 # Table overlays
 
@@ -669,3 +671,38 @@ def calc_footprint(header, wcs_suffix=""):
 
     return xsky, ysky
 
+
+def split_header(hdr, chunk_size, wcs_suffix=""):
+    """
+    Splits a header into many smaller parts of the chunk_size
+
+    Parameters
+    ----------
+    hdr
+    chunk_size
+    wcs_suffix
+
+    Returns
+    -------
+
+    """
+    # ..todo:: test that this works
+    s = wcs_suffix
+    naxis1, naxis2 = hdr["NAXIS1"+s], hdr["NAXIS2"+s]
+    x0_pix, y0_pix = hdr["CRPIX1"+s], hdr["CRPIX2"+s]       # pix
+    x0_sky, y0_sky = hdr["CRVAL1"+s], hdr["CRVAL2"+s]       # deg
+    x_delt, y_delt = hdr["CDELT1"+s], hdr["CDELT2"+s]       # deg / pix
+
+    hdr_list = []
+    for x1_pix in range(0, naxis1, chunk_size):
+        for y1_pix in range(0, naxis2, chunk_size):
+            x1_sky = x0_sky + (x1_pix - x0_pix) * x_delt
+            y1_sky = y0_sky + (y1_pix - y0_pix) * y_delt
+            x2_sky = x1_sky + x_delt * min(chunk_size, naxis1 - x1_pix)
+            y2_sky = y1_sky + y_delt * min(chunk_size, naxis1 - y1_pix)
+
+            hdr_sky = header_from_list_of_xy([x1_sky, x2_sky], [y1_sky, y2_sky],
+                                             pixel_scale=x_delt, wcs_suffix=s)
+            hdr_list += [hdr_sky]
+
+    return hdr_list

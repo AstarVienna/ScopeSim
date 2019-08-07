@@ -68,3 +68,4 @@ alias : INST
 
 properties :
   pixel_scale : 0
+  plate_scale : 0
