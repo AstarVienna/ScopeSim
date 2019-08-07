@@ -24,7 +24,7 @@ properties :
 
   computing :
     chunk_size : 512
-    max_segment_size : !!float 1.1E6
+    max_segment_size : 1048576
     oversampling : 1
     spline_order : 1
     flux_accuracy : !!float 1E-3

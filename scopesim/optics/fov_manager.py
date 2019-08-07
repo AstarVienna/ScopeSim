@@ -30,6 +30,7 @@
 import numpy as np
 from astropy import units as u
 
+import scopesim.effects.apertures
 from .image_plane_utils import header_from_list_of_xy
 from .fov import FieldOfView
 from .. import effects as efs
@@ -205,8 +206,8 @@ def get_imaging_headers(effects, **kwargs):
     Parameters
     ----------
     effects : list of Effect objects
-        Should contain all effects which define the spatial edges of all the
-        FieldOfView objects.
+        Should contain all effects which return a header defining the extent
+        of their spatial coverage
 
     Returns
     -------
@@ -220,48 +221,93 @@ def get_imaging_headers(effects, **kwargs):
     This may change in future versions of ScopeSim
 
     """
+    # look for apertures,
+    #   if no apertures, look for detectors, make aperture from detector
+    # get aperture headers via fov_grid()
+    # check size of aperture in pixels
+    #   if larger than max_chunk_size, split into smaller headers
 
-    aperture_masks = get_all_effects(effects, efs.ApertureMask)
-    detector_arrays = get_all_effects(effects, efs.DetectorList)
+    required_keys = ["pixel_scale", "chunk_size", "max_segment_size"]
+    check_keys(kwargs, required_keys, action="warning")
 
-    if len(detector_arrays) == 0:
-        raise ValueError("At least 1 DetectorList must be specified: {}"
-                         "".format(detector_arrays))
+    # look for apertures
+    aperture_effects = get_all_effects(effects, (efs.ApertureMask,
+                                                 efs.ApertureList))
+    if len(aperture_effects) == 0:
+        detector_arrays = get_all_effects(effects, efs.DetectorList)
+        if len(detector_arrays) > 0:
+            # ..todo:: add this functionality to DetectorList effect
+            pixel_scale = kwargs["pixel_scale"]
+            aperture_effects += [detarr.fov_grid(which="edges",
+                                                 pixel_scale=pixel_scale)
+                                 for detarr in detector_arrays]
+        else:
+            raise ValueError("No ApertureMask or DetectorList was provided. At "
+                             "least one must be passed to make an ImagePlane: "
+                             "{}".format(effects))
 
-    pixel_scale = kwargs["pixel_scale"] / 3600.         # " -> deg
-    pixel_size = detector_arrays[0].image_plane_header["CDELT1D"]  # mm
-    deg2mm = pixel_size / pixel_scale
-
-    sky_edges = []
-    if len(aperture_masks) > 0:
-        sky_edges += [apm.fov_grid(which="edges") for apm in aperture_masks]
-    elif len(detector_arrays) > 0:
-        edges = detector_arrays[0].fov_grid(which="edges",
-                                            pixel_scale=pixel_scale)
-        sky_edges += [edges]
-    else:
-        raise ValueError("No ApertureMask or DetectorList was provided. At "
-                         "least a DetectorList object must be passed: {}"
-                         "".format(effects))
-
-    width = kwargs["chunk_size"] * pixel_scale
+    # get aperture headers from fov_grid()
     hdrs = []
-    for xy_sky in sky_edges:
-        x0, y0 = min(xy_sky[0]), min(xy_sky[1])
-        x1, y1 = max(xy_sky[0]), max(xy_sky[1])
-        for xi in np.arange(x0, x1, width):
-            for yi in np.arange(y0, y1, width):
-                # xii = np.array([xi, xi + min(width, x1-xi)])
-                # yii = np.array([yi, yi + min(width, y1-yi)])
-                xii = np.array([xi, xi + width])
-                yii = np.array([yi, yi + width])
-                hdr_sky = header_from_list_of_xy(xii, yii, pixel_scale)
-                hdr_mm  = header_from_list_of_xy(xii * deg2mm, yii * deg2mm,
-                                                 pixel_size, "D")
-                hdr_mm.update(hdr_sky)
-                hdrs += [hdr_mm]
+    for ap_eff in aperture_effects:
+        # - for loop catches mutliple headers from ApertureList.fov_grid()
+        # ..todo:: add this functionality to ApertureList effect
+        hdr = ap_eff.fov_grid(which="edges")
+        hdrs += list(hdr) if isinstance(hdr, (list, tuple)) else [hdr]
 
-    return hdrs
+    # check size of aperture in pixels - split if necessary
+    new_hdrs = []
+    for hdr in hdrs:
+        if hdr["NAXIS1"] * hdr["NAXIS2"] > kwargs["max_segment_size"]:
+            new_hdrs += split_header(hdr, kwargs["chunk_size"])
+        else:
+            new_hdrs += [hdr]
+
+    return new_hdrs
+
+
+def make_aperture_from_detector(detector_arrays, pixel_scale):
+    pass
+
+
+def split_header(hdr, chunk_size):
+    pass
+
+
+    #
+    # pixel_scale_deg = kwargs["pixel_scale"] / 3600.         # " -> deg
+    # pixel_size = detector_arrays[0].image_plane_header["CDELT1D"]  # mm
+    # deg2mm = pixel_size / pixel_scale_deg
+    #
+    # sky_edges = []
+    # if len(aperture_masks) > 0:
+    #     sky_edges += [apm.fov_grid(which="edges") for apm in aperture_masks]
+    # elif len(detector_arrays) > 0:
+    #     edges = detector_arrays[0].fov_grid(which="edges",
+    #                                         pixel_scale=pixel_scale_deg)
+    #     sky_edges += [edges]
+    # else:
+    #     raise ValueError("No ApertureMask or DetectorList was provided. At "
+    #                      "least a DetectorList object must be passed: {}"
+    #                      "".format(effects))
+    #
+    # width = kwargs["chunk_size"] * pixel_scale_deg
+    # hdrs = []
+    # for xy_sky in sky_edges:
+    #     x0, y0 = min(xy_sky[0]), min(xy_sky[1])
+    #     x1, y1 = max(xy_sky[0]), max(xy_sky[1])
+    #     for xi in np.arange(x0, x1, width):
+    #         for yi in np.arange(y0, y1, width):
+    #             # xii = np.array([xi, xi + min(width, x1-xi)])
+    #             # yii = np.array([yi, yi + min(width, y1-yi)])
+    #             xii = np.array([xi, xi + width])
+    #             yii = np.array([yi, yi + width])
+    #             hdr_sky = header_from_list_of_xy(xii, yii, pixel_scale_deg)
+    #             hdr_mm  = header_from_list_of_xy(xii * deg2mm, yii * deg2mm,
+    #                                              pixel_size, "D")
+    #             hdr_mm.update(hdr_sky)
+    #             hdrs += [hdr_mm]
+    #
+    # return hdrs
 
 
 def get_imaging_fovs(headers, waveset, shifts):

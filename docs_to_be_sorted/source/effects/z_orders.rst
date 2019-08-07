@@ -39,17 +39,28 @@ Discrete PSFs
 * 61 FieldVaryingPSF
 * 62 FieldConstantPSF
 
+Apertures
+
+* 80 ApertureMask
+* 81 ApertureList
+* 82 SquareApertureList
+* 83 RoundApertureList
+* 84 PolygonApertureList
+
 Misc
 
 * 70 SpectralTraceList
-* 80 ApertureMask
 * 90 DetectorList
-
 
 100..199 - Make an image plane
 ------------------------------
-* 100 DetectorList
-
+* 70 SpectralTraceList
+* 110 ApertureMask
+* 111 ApertureList
+* 112 SquareApertureList
+* 113 RoundApertureList
+* 114 PolygonApertureList
+* 120 DetectorList
 
 200..299 - Source altering effects
 ----------------------------------

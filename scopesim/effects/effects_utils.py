@@ -2,6 +2,7 @@ from copy import deepcopy
 
 from astropy.table import Table
 
+import scopesim.effects.apertures
 from .. import effects as efs
 
 
@@ -27,7 +28,14 @@ def combine_surface_effects(surface_effects):
 
 
 def get_all_effects(effects, effect_class):
-    return [eff for eff in effects if isinstance(eff, effect_class)]
+    if isinstance(effect_class, (list, tuple)):
+        my_effects = []
+        for eff_cls in effect_class:
+            my_effects += get_all_effects(effects, eff_cls)
+    else:
+        my_effects = [eff for eff in effects if isinstance(eff, effect_class)]
+
+    return my_effects
 
 
 def make_effect(effect_dict, **properties):
@@ -52,7 +60,9 @@ def make_effect(effect_dict, **properties):
 def is_spectroscope(effects):
     has_trace_lists = sum([isinstance(eff, efs.SpectralTraceList)
                            for eff in effects])
-    has_apertures = sum([isinstance(eff, (efs.ApertureList, efs.ApertureMask))
+    has_apertures = sum([isinstance(eff, (
+    scopesim.effects.apertures.ApertureList,
+    scopesim.effects.apertures.ApertureMask))
                          for eff in effects])
 
     return bool(has_apertures and has_trace_lists)

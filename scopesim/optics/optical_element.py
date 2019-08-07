@@ -1,5 +1,6 @@
 import warnings
 
+import scopesim.effects.apertures
 from .. import effects as efs
 from ..effects.effects_utils import make_effect, get_all_effects
 from .. import rc
@@ -113,7 +114,8 @@ class OpticalElement:
     @property
     def mask_list(self):
         mask_list = [effect for effect in self.effects
-                     if isinstance(effect, efs.ApertureList)]
+                     if isinstance(effect,
+                                   scopesim.effects.apertures.ApertureList)]
         return mask_list
 
     def __add__(self, other):
