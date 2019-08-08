@@ -6,7 +6,7 @@ from astropy.table import Table
 
 from scopesim import rc
 from scopesim.effects import Effect
-from scopesim.effects import ApertureList
+from scopesim.effects.apertures import ApertureList
 from scopesim.effects import SurfaceList
 
 MOCK_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),

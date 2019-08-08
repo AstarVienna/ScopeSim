@@ -11,8 +11,8 @@ properties :
     wave_max : 20
     wave_unit : um
 
-    spectral_resolution : 1E-4
-    minimum_throughput : 1E-6
+    spectral_resolution : !!float 1E-4
+    minimum_throughput : !!float 1E-6
     minimum_pixel_flux : 1
 
   sub_pixel :
@@ -24,10 +24,10 @@ properties :
 
   computing :
     chunk_size : 512
-    max_segment_size : 1.1E6
+    max_segment_size : 1048576
     oversampling : 1
     spline_order : 1
-    flux_accuracy : 1E-3
+    flux_accuracy : !!float 1E-3
 
   file :
     local_packages_path : "./"
@@ -67,4 +67,5 @@ properties :
 alias : INST
 
 properties :
-  pixel_scale : 0
+  pixel_scale : 0     # ["]
+  plate_scale : 0     # ["/mm]

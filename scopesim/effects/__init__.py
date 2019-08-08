@@ -1,5 +1,6 @@
 from .effects import *
 
+from .apertures import *
 from .psfs import *
 from .shifts import *
 

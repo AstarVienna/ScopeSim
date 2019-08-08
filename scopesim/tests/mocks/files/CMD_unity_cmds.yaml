@@ -22,3 +22,4 @@ yamls : ["unity_sys.yaml"]
 alias : INST
 properties :
   pixel_scale : 1   # arcsec / pixel
+  plate_scale : 1   # arcsec / mm

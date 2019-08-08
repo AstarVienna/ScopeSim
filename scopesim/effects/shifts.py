@@ -78,27 +78,32 @@ class AtmosphericDispersion(Shift3D):
 
     def fov_grid(self, which="shifts", **kwargs):
         """
+        Returns
+        -------
+        waves :
+            [um]
+        dx, dy :
+            [arcsec]
+
         Notes
         -----
         Success! Returns the same values as:
         http://gtc-phase2.gtc.iac.es/science/astroweb/atmosRefraction.php
-
         """
-
-        self.meta = from_currsys(self.meta)
-        atmo_params = {"z0"     : airmass2zendist(self.meta["airmass"]),
-                       "temp"   : self.meta["temperature"],         # in degC
-                       "rel_hum": self.meta["humidity"] * 100,      # in %
-                       "pres"   : self.meta["pressure"] * 1000,     # in mbar
-                       "lat"    : self.meta["latitude"],            # in deg
-                       "h"      : self.meta["altitude"]}            # in m
-        self.meta.update(atmo_params)
-
-        waves, shifts = get_pixel_border_waves_from_atmo_disp(**self.meta)
-        dx = shifts * np.sin(np.deg2rad(self.meta["pupil_angle"]))
-        dy = shifts * np.cos(np.deg2rad(self.meta["pupil_angle"]))
-
         if which == "shifts":
+            self.meta = from_currsys(self.meta)
+            atmo_params = {"z0"     : airmass2zendist(self.meta["airmass"]),
+                           "temp"   : self.meta["temperature"],        # in degC
+                           "rel_hum": self.meta["humidity"] * 100,     # in %
+                           "pres"   : self.meta["pressure"] * 1000,    # in mbar
+                           "lat"    : self.meta["latitude"],           # in deg
+                           "h"      : self.meta["altitude"]}           # in m
+            self.meta.update(atmo_params)
+
+            waves, shifts = get_pixel_border_waves_from_atmo_disp(**self.meta)
+            dx = shifts * np.sin(np.deg2rad(self.meta["pupil_angle"]))
+            dy = shifts * np.cos(np.deg2rad(self.meta["pupil_angle"]))
+
             return waves, dx, dy
         else:
             return None
@@ -238,6 +243,16 @@ def atmospheric_refraction(lam, z0=60, temp=0, rel_hum=60, pres=750,
 
 
 def get_pixel_border_waves_from_atmo_disp(**kwargs):
+    """
+
+    Parameters
+    ----------
+    kwargs
+
+    Returns
+    -------
+
+    """
     atmo_disp_dict = {key: kwargs[key] for key in ["z0", "temp", "rel_hum",
                                                    "pres", "lat", "h"]}
     wave_range = np.linspace(kwargs["wave_min"], kwargs["wave_max"],
@@ -247,21 +262,29 @@ def get_pixel_border_waves_from_atmo_disp(**kwargs):
     offset_ang = atmospheric_refraction(lam=wave_range, **atmo_disp_dict)
     offset_ang -= offset_mid
 
-    if np.any(offset_ang > 1e-7):
-
+    # .. todo:: replace the 1e-7 with a variable in !SIM
+    if np.any(np.abs(offset_ang) > 1e-7):
         offset_step = kwargs["pixel_scale"] * kwargs["sub_pixel_fraction"]
         offset_pix = offset_ang / offset_step
 
         # interpolate to get the edge wavelengths of the pixels
-        y = wave_range[::-1]
-        x = offset_pix[::-1]
-        xnew = np.unique(x.astype(int))
-        # ..todo:: this -1, +1 this is weird
-        xnew = np.array([xnew[0]-1] + list(xnew) + [xnew[-1]+1])
-        ynew = np.interp(xnew, x, y)
+        # off_new is always increasing, thanks to np.unique
+        off_new = np.unique(offset_pix.astype(int))
+        # add 1 pixel to either end of the range covered by (wave_min, wave_max)
+        off_new = np.array([off_new[0]-1] + list(off_new) + [off_new[-1]+1])
 
-        shifts_angle_edges = xnew[::-1] * offset_step
-        wave_pixel_edges = ynew[::-1]
+        if offset_pix[0] > offset_pix[-1]:
+            wave_range = wave_range[::-1]
+            offset_pix = offset_pix[::-1]
+
+        wave_new = np.interp(off_new, offset_pix, wave_range)
+
+        if wave_new[0] > wave_new[-1]:
+            wave_new = wave_new[::-1]
+            off_new = off_new[::-1]
+
+        shifts_angle_edges = off_new * offset_step
+        wave_pixel_edges = wave_new
 
     else:
         wave_pixel_edges = np.array([kwargs["wave_min"], kwargs["wave_max"]])

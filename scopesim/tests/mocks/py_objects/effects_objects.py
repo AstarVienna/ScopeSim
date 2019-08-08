@@ -9,10 +9,10 @@ from scopesim.tests.mocks.py_objects.yaml_objects import _yaml_min_viable_scope
 
 from scopesim import rc
 
-YAMLS_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),
+FILES_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),
                                           "../files/"))
-if YAMLS_PATH not in rc.__search_path__:
-    rc.__search_path__ += [YAMLS_PATH]
+if FILES_PATH not in rc.__search_path__:
+    rc.__search_path__ += [FILES_PATH]
 
 
 def _surf_list():
@@ -55,6 +55,10 @@ def _detector_list():
     kwargs = {"filename": "LIST_detector_layout.dat"}
     return efs.DetectorList(**kwargs)
 
+def _full_detector_list():
+    kwargs = {"filename": "LIST_full_detector_layout.dat"}
+    return efs.DetectorList(**kwargs)
+
 
 def _atmospheric_dispersion(**kwargs):
     from scopesim.effects import AtmosphericDispersion
@@ -73,3 +77,38 @@ def _atmospheric_dispersion(**kwargs):
                    "num_steps": 1000}
     atmo_params.update(kwargs)
     return AtmosphericDispersion(**atmo_params)
+
+
+def _filter_tophat_curve():
+    kwargs = {"name": "1-2um box-hat filter",
+              "action": "transmission",
+              "outer": 0.1,
+              "temp": 0,
+              "wavelength_unit": "um",
+              "array_dict": {"wavelength": [0.3, 0.99, 1., 2., 2.01, 3.0],
+                             "transmission": [0, 0, 1, 1, 0, 0]}
+              }
+    return efs.FilterCurve(**kwargs)
+
+
+def _const_psf():
+    return efs.FieldConstantPSF(filename="test_ConstPSF.fits")
+
+
+def _ncpa_psf():
+    ncpa = efs.NonCommonPathAberration(pixel_scale=0.004)
+    ncpa._total_wfe = 0.076
+    return ncpa
+
+
+def _img_aperture_mask(**kwargs):
+    base_kwargs = {"array_dict": {"x": [-2, -1, 1, 2],
+                                  "y": [-1, -2, 2, 1]} ,
+                   "x_unit": "arcsec",
+                   "y_unit": "arcsec"}
+    base_kwargs.update(kwargs)
+    apm = efs.ApertureMask(**base_kwargs)
+    return apm
+
+
+

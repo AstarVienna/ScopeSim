@@ -2,6 +2,7 @@ import numpy as np
 from astropy import units as u
 
 from .effects import Effect
+from .apertures import ApertureMask
 from .. import utils
 from ..optics.image_plane_utils import header_from_list_of_xy, calc_footprint
 
@@ -11,34 +12,28 @@ __all__ = ["DetectorList"]
 class DetectorList(Effect):
     def __init__(self, **kwargs):
         super(Effect, self).__init__(**kwargs)
-        self.meta["z_order"] = [90, 100, 500]
+        self.meta["z_order"] = [90, 120, 500]
+        self.meta["pixel_scale"] = "!INST.pixel_scale"      # arcsec
+        self.meta.update(kwargs)
 
     def fov_grid(self, which="edges", **kwargs):
-        """
-
-        Parameters
-        ----------
-        which : str, optional
-            "edges"
-        kwargs
-
-        Returns
-        -------
-
-        """
+        """Returns an ApertureMask object. kwargs are "pixel_scale" [arcsec]"""
+        aperture_mask = None
         if which == "edges":
+            self.meta.update(kwargs)
+            self.meta = utils.from_currsys(self.meta)
+
             hdr = self.image_plane_header
-            pixel_scale = kwargs["pixel_scale"]  # ["] --> [deg]
-            pixel_size = hdr["CDELT1D"]
             x_mm, y_mm = calc_footprint(hdr, "D")
-            x_sky = x_mm * pixel_scale / pixel_size  # x[deg] = x[mm] * [deg] / [mm]
-            y_sky = y_mm * pixel_scale / pixel_size  # y[deg] = y[mm] * [deg] / [mm]
+            pixel_size = hdr["CDELT1D"]              # mm
+            pixel_scale = self.meta["pixel_scale"]   # ["]
+            x_sky = x_mm * pixel_scale / pixel_size  # x["] = x[mm] * ["] / [mm]
+            y_sky = y_mm * pixel_scale / pixel_size  # y["] = y[mm] * ["] / [mm]
 
-            edges = [x_sky, y_sky]
-        else:
-            edges = []
+            aperture_mask = ApertureMask(array_dict={"x": x_sky, "y": y_sky},
+                                         pixel_scale=pixel_scale)
 
-        return edges
+        return aperture_mask
 
     @property
     def image_plane_header(self):
@@ -106,9 +101,8 @@ class DetectorList(Effect):
 def sky_hdr_from_detector_hdr(header, pixel_scale):
     """ pixel_scale in degrees - returns header"""
 
-    pixel_size = header["CDELT1D"]
     x_mm, y_mm = calc_footprint(header, "D")
-    scale = pixel_scale / pixel_size            # (deg pix-1) / (mm pix-1)
+    scale = pixel_scale / header["CDELT1D"]          # (deg pix-1) / (mm pix-1)
     header = header_from_list_of_xy(x_mm * scale, y_mm * scale, pixel_scale)
 
     return header
