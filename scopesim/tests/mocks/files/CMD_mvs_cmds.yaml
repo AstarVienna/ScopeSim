@@ -22,3 +22,4 @@ yamls : ["min_viable_sys.yaml"]
 alias : INST
 properties :
   pixel_scale : 0.2   # arcsec / pixel
+  plate_scale : 1     # arcsec / mm

@@ -78,27 +78,32 @@ class AtmosphericDispersion(Shift3D):
 
     def fov_grid(self, which="shifts", **kwargs):
         """
+        Returns
+        -------
+        waves :
+            [um]
+        dx, dy :
+            [arcsec]
+
         Notes
         -----
         Success! Returns the same values as:
         http://gtc-phase2.gtc.iac.es/science/astroweb/atmosRefraction.php
-
         """
-
-        self.meta = from_currsys(self.meta)
-        atmo_params = {"z0"     : airmass2zendist(self.meta["airmass"]),
-                       "temp"   : self.meta["temperature"],         # in degC
-                       "rel_hum": self.meta["humidity"] * 100,      # in %
-                       "pres"   : self.meta["pressure"] * 1000,     # in mbar
-                       "lat"    : self.meta["latitude"],            # in deg
-                       "h"      : self.meta["altitude"]}            # in m
-        self.meta.update(atmo_params)
-
-        waves, shifts = get_pixel_border_waves_from_atmo_disp(**self.meta)
-        dx = shifts * np.sin(np.deg2rad(self.meta["pupil_angle"]))
-        dy = shifts * np.cos(np.deg2rad(self.meta["pupil_angle"]))
-
         if which == "shifts":
+            self.meta = from_currsys(self.meta)
+            atmo_params = {"z0"     : airmass2zendist(self.meta["airmass"]),
+                           "temp"   : self.meta["temperature"],        # in degC
+                           "rel_hum": self.meta["humidity"] * 100,     # in %
+                           "pres"   : self.meta["pressure"] * 1000,    # in mbar
+                           "lat"    : self.meta["latitude"],           # in deg
+                           "h"      : self.meta["altitude"]}           # in m
+            self.meta.update(atmo_params)
+
+            waves, shifts = get_pixel_border_waves_from_atmo_disp(**self.meta)
+            dx = shifts * np.sin(np.deg2rad(self.meta["pupil_angle"]))
+            dy = shifts * np.cos(np.deg2rad(self.meta["pupil_angle"]))
+
             return waves, dx, dy
         else:
             return None
@@ -238,6 +243,16 @@ def atmospheric_refraction(lam, z0=60, temp=0, rel_hum=60, pres=750,
 
 
 def get_pixel_border_waves_from_atmo_disp(**kwargs):
+    """
+
+    Parameters
+    ----------
+    kwargs
+
+    Returns
+    -------
+
+    """
     atmo_disp_dict = {key: kwargs[key] for key in ["z0", "temp", "rel_hum",
                                                    "pres", "lat", "h"]}
     wave_range = np.linspace(kwargs["wave_min"], kwargs["wave_max"],

@@ -47,9 +47,10 @@ DETECTOR_YAML = {"object": "detector",
                               }]
                  }
 
-OBSERVATIONS_DICT = {"!OBS.ndit": 1,            # Not yet implemented
-                     "!OBS.dit" : 10,           # [sec]
-                     "!INST.pixel_scale": 0.004 # because optical train still need this (stupidly)
+OBSERVATIONS_DICT = {"!OBS.ndit": 1,                # Not yet implemented
+                     "!OBS.dit" : 10,               # [sec]
+                     "!INST.pixel_scale": 0.004,    # because optical train still need this (stupidly)
+                     "!INST.plate_scale": 0.2666667 # because optical train still need this (stupidly)
                     }
 
 

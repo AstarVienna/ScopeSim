@@ -50,8 +50,9 @@ class TestInit:
 class TestGenerateFovs:
     def test_returns_the_desired_number_of_fovs(self, mvs_effects_list,
                                                 mvs_usr_cmds):
-        for yaml_dic in mvs_usr_cmds:
-            rc.__currsys__.cmds.update(yaml_dic)
+        from scopesim.commands import UserCommands
+        rc.__currsys__ = UserCommands(yamls=mvs_usr_cmds)
+
         fov_man = FOVManager(mvs_effects_list)
         fovs = fov_man.generate_fovs_list()
 
@@ -61,12 +62,13 @@ class TestGenerateFovs:
 
         assert len(fovs) == np.round(implane_size / chunk_size)**2 * wave_layers
 
+        # ..todo:: go searching for the white line
         if PLOTS:
             plt.subplot(121)
             for fov in fovs:
                 from scopesim.optics.image_plane_utils import calc_footprint
                 x, y = calc_footprint(fov.hdu.header)
-                plt.plot(x, y)
+                plt.fill(x*3600, y*3600)
 
             plt.subplot(122)
             for fov in fovs:
@@ -150,8 +152,9 @@ class TestGet3DShifts:
 
 class TestGetImagingWaveset:
     def test_returns_default_wave_range_when_passed_no_effects(self):
-        wave_bin_edges = fov_mgr.get_imaging_waveset([])
-        assert len(wave_bin_edges) == 0
+        kwargs = {"wave_min": 0.5, "wave_max": 2.5}
+        wave_bin_edges = fov_mgr.get_imaging_waveset([], **kwargs)
+        assert len(wave_bin_edges) == 2
 
     def test_returns_waveset_of_filter(self):
         filt = eo._filter_tophat_curve()
@@ -208,7 +211,7 @@ class TestGetImagingHeaders:
         area_sum = np.sum([hdr["NAXIS1"] * hdr["NAXIS2"] for hdr in hdrs])
         assert area_sum == 4096**2
 
-        if not PLOTS:
+        if PLOTS:
             plt.subplot(121)
             for hdr in hdrs:
                 from scopesim.optics.image_plane_utils import calc_footprint
@@ -228,12 +231,38 @@ class TestGetImagingHeaders:
             plt.show()
 
 
-
-
 class TestGetImagingFOVs:
+    def test_returns_FOV_objects_for_basic_input(self):
+        apm = eo._img_aperture_mask(array_dict={"x": [-1.0, 1.0, 1.0, -1.0],
+                                                "y": [-1.0, -1.0, 1.0, 1.0]})
+        kwargs = {"pixel_scale": 0.01, "plate_scale": 1,
+                  "max_segment_size": 100 ** 2, "chunk_size": 100}
 
+        hdrs = fov_mgr.get_imaging_headers([apm], **kwargs)
+        waveset = np.linspace(1, 2, 6)
+        shifts = {"wavelengths": np.array([1, 2]),
+                  "x_shifts": np.zeros(2),
+                  "y_shifts": np.array([0, 1]) / 3600}  # 0..1 arcsec shift
+        fovs = fov_mgr.get_imaging_fovs(headers=hdrs, waveset=waveset,
+                                        shifts=shifts)
 
+        assert len(fovs) == (len(waveset)-1) * len(hdrs)
 
+        if PLOTS:
+            plt.subplot(121)
+            for fov in fovs:
+                from scopesim.optics.image_plane_utils import calc_footprint
+                x, y = calc_footprint(fov.hdu.header)
+                plt.fill(x*3600, y*3600, alpha=0.1, c="b")
+                plt.title("Sky plane")
+                plt.xlabel("[arcsec]")
 
+            plt.subplot(122)
+            for fov in fovs:
+                from scopesim.optics.image_plane_utils import calc_footprint
+                x, y = calc_footprint(fov.hdu.header, "D")
+                plt.fill(x, y)
+                plt.title("Detector focal plane")
+                plt.xlabel("[mm]")
 
-    pass
+            plt.show()

@@ -27,6 +27,7 @@
 # DetectorList, or ApertureMask, plus any shift from
 #   AtmosphericDispersion
 
+from copy import deepcopy
 import numpy as np
 from astropy import units as u
 
@@ -59,8 +60,9 @@ class FOVManager:
                      "wave_min": "!SIM.spectral.wave_min",
                      "wave_mid": "!SIM.spectral.wave_mid",
                      "wave_max": "!SIM.spectral.wave_max",
-                     "sub_pixel_fraction": "!SIM.sub_pixel.fraction",
-                     "chunk_size": "!SIM.computing.chunk_size"}
+                     "chunk_size": "!SIM.computing.chunk_size",
+                     "max_segment_size": "!SIM.computing.max_segment_size",
+                     "sub_pixel_fraction": "!SIM.sub_pixel.fraction"}
         self.meta.update(kwargs)
 
         self.effects = effects
@@ -96,7 +98,7 @@ class FOVManager:
         return self._fovs_list
 
     @property
-    def fov_footprints(self):
+    def fov_footprints(self, which="both"):
         return None
 
 
@@ -113,6 +115,12 @@ def get_3d_shifts(effects, **kwargs):
     shift_dict : dict
         returns the x, y shifts for each wavelength in the fov_grid, where
         fov_grid contains the edge wavelengths for each spectral layer
+
+    Notes
+    -----
+    Units returned by fov_grid():
+    - wavelength: [um]
+    - x_shift, y_shift: [deg]
 
     """
     required_keys = ["wave_min", "wave_mid", "wave_max",
@@ -155,8 +163,8 @@ def get_3d_shifts(effects, **kwargs):
         y_shifts = np.zeros(2)
 
     shift_dict = {"wavelengths": z_edges,
-                  "x_shifts": x_shifts,
-                  "y_shifts": y_shifts}
+                  "x_shifts": x_shifts / 3600.,   # fov_grid returns [arcsec]
+                  "y_shifts": y_shifts / 3600.}   # get_3d_shifts returns [deg]
 
     return shift_dict
 
@@ -175,6 +183,9 @@ def get_imaging_waveset(effects_list, **kwargs):
         [um] list of wavelengths
 
     """
+    required_keys = ["wave_min", "wave_max"]
+    check_keys(kwargs, required_keys, action="error")
+
     # get the filter wavelengths first to set (wave_min, wave_max)
     filters = get_all_effects(effects_list, FilterCurve)
 
@@ -187,10 +198,35 @@ def get_imaging_waveset(effects_list, **kwargs):
     for effect_class in (PSF, SpectralTraceList):
         effects = get_all_effects(effects_list, effect_class)
         for eff in effects:
-            wave_bin_edges += [eff.fov_grid(which="waveset", **kwargs)]
+            waveset = eff.fov_grid(which="waveset", **kwargs)
+            if waveset is not None:
+                wave_bin_edges += [waveset]
 
+    wave_bin_edges = combine_wavesets(wave_bin_edges)
+
+    if len(wave_bin_edges) == 0:
+        wave_bin_edges = [kwargs["wave_min"], kwargs["wave_max"]]
+
+    return wave_bin_edges
+
+
+def combine_wavesets(waves_list):
+    """
+    Joins and sorts several sets of wavelengths into a single 1D array
+
+    Parameters
+    ----------
+    waves_list : list
+        A group of wavelength arrays or lists
+
+    Returns
+    -------
+    wave_set : np.ndarray
+        Combined set of wavelengths
+
+    """
     wave_set = []
-    for wbe in wave_bin_edges:
+    for wbe in waves_list:
         wbe = wbe.value if isinstance(wbe, u.Quantity) else wbe
         wave_set += list(wbe)
     # ..todo:: set variable in !SIM.computing for rounding to the 7th decimal
@@ -293,7 +329,8 @@ def get_imaging_fovs(headers, waveset, shifts):
 
     Parameters
     ----------
-    headers : list of Header objects
+    headers : list of fits.Header objects
+        Headers giving spatial extent of each FOV region
 
     waveset : list of floats
         [um] N+1 wavelengths for N spectral layers
@@ -307,18 +344,33 @@ def get_imaging_fovs(headers, waveset, shifts):
     fovs : list of FieldOfView objects
 
     """
+    shift_waves = shifts["wavelengths"]     # in [um]
+    shift_dx = shifts["x_shifts"]           # in [deg]
+    shift_dy = shifts["y_shifts"]
 
-    if len(shifts["wavelengths"]) > len(waveset):
-        waveset = shifts["wavelengths"]
-
-    # ..todo: add the shifts in somehow
+    # combine the wavelength bins from 1D spectral effects and 3D shift effects
+    if len(shifts["wavelengths"]) > 0:
+        mask = (shift_waves > np.min(waveset)) * (shift_waves < np.max(waveset))
+        waveset = combine_wavesets([waveset, shift_waves[mask]])
 
     counter = 0
     fovs = []
     for ii in range(len(waveset) - 1):
         for hdr in headers:
+            # add any pre-instrument shifts to the FOV sky coords
+            wave_mid = 0.5 * (waveset[ii] + waveset[ii+1])
+            x_shift = np.interp(wave_mid, shift_waves, shift_dx)
+            y_shift = np.interp(wave_mid, shift_waves, shift_dy)
+
+            fov_hdr = deepcopy(hdr)
+            fov_hdr["CRVAL1"] += x_shift      # headers are in [deg]
+            fov_hdr["CRVAL2"] += y_shift
+
+            # define the wavelength range for the FOV
             waverange = [waveset[ii], waveset[ii + 1]]
-            fov = FieldOfView(hdr, waverange)
+
+            # Make the FOV
+            fov = FieldOfView(fov_hdr, waverange)
             fov.meta["id"] = counter
             fovs += [fov]
 
