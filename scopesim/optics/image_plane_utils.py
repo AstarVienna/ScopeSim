@@ -173,8 +173,11 @@ def header_from_list_of_xy(x, y, pixel_scale, wcs_suffix=""):
     # crval1 = min(x)
     # crval2 = min(y)
 
-    naxis1 = int((max(x) - min(x)) // pixel_scale)
-    naxis2 = int((max(y) - min(y)) // pixel_scale)
+    # ..todo:: give the 9 a variable in !SIM.computing
+    dx = (max(x) - min(x)) / pixel_scale
+    dy = (max(y) - min(y)) / pixel_scale
+    naxis1 = int(np.round(dx))
+    naxis2 = int(np.round(dy))
 
     hdr["NAXIS"] = 2
     hdr["NAXIS1"] = naxis1
@@ -699,7 +702,7 @@ def split_header(hdr, chunk_size, wcs_suffix=""):
             x1_sky = x0_sky + (x1_pix - x0_pix) * x_delt
             y1_sky = y0_sky + (y1_pix - y0_pix) * y_delt
             x2_sky = x1_sky + x_delt * min(chunk_size, naxis1 - x1_pix)
-            y2_sky = y1_sky + y_delt * min(chunk_size, naxis1 - y1_pix)
+            y2_sky = y1_sky + y_delt * min(chunk_size, naxis2 - y1_pix)
 
             hdr_sky = header_from_list_of_xy([x1_sky, x2_sky], [y1_sky, y2_sky],
                                              pixel_scale=x_delt, wcs_suffix=s)

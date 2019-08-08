@@ -17,7 +17,7 @@ class DetectorList(Effect):
         self.meta.update(kwargs)
 
     def fov_grid(self, which="edges", **kwargs):
-        """ Returns an ApertureMask object. kwargs are "pixel_scale" """
+        """Returns an ApertureMask object. kwargs are "pixel_scale" [arcsec]"""
         aperture_mask = None
         if which == "edges":
             self.meta.update(kwargs)

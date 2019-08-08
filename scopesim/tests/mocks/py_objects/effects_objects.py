@@ -55,6 +55,10 @@ def _detector_list():
     kwargs = {"filename": "LIST_detector_layout.dat"}
     return efs.DetectorList(**kwargs)
 
+def _full_detector_list():
+    kwargs = {"filename": "LIST_full_detector_layout.dat"}
+    return efs.DetectorList(**kwargs)
+
 
 def _atmospheric_dispersion(**kwargs):
     from scopesim.effects import AtmosphericDispersion
@@ -95,3 +99,16 @@ def _ncpa_psf():
     ncpa = efs.NonCommonPathAberration(pixel_scale=0.004)
     ncpa._total_wfe = 0.076
     return ncpa
+
+
+def _img_aperture_mask(**kwargs):
+    base_kwargs = {"array_dict": {"x": [-2, -1, 1, 2],
+                                  "y": [-1, -2, 2, 1]} ,
+                   "x_unit": "arcsec",
+                   "y_unit": "arcsec"}
+    base_kwargs.update(kwargs)
+    apm = efs.ApertureMask(**base_kwargs)
+    return apm
+
+
+

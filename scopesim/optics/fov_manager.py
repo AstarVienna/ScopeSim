@@ -31,7 +31,7 @@ import numpy as np
 from astropy import units as u
 
 from .fov import FieldOfView
-from .image_plane_utils import split_header
+from . import image_plane_utils as imp_utils
 from .. import effects as efs
 from ..effects import Shift3D
 from ..effects import FilterCurve, PSF, SpectralTraceList
@@ -193,7 +193,7 @@ def get_imaging_waveset(effects_list, **kwargs):
     for wbe in wave_bin_edges:
         wbe = wbe.value if isinstance(wbe, u.Quantity) else wbe
         wave_set += list(wbe)
-    # ..todo:: set variable in !SIM for the rounding to the 7th decimal
+    # ..todo:: set variable in !SIM.computing for rounding to the 7th decimal
     wave_set = np.unique(np.round(np.sort(wave_set, kind="stable"), 7))
 
     return wave_set
@@ -230,7 +230,10 @@ def get_imaging_headers(effects, **kwargs):
 
     required_keys = ["pixel_scale", "plate_scale",
                      "chunk_size", "max_segment_size"]
-    check_keys(kwargs, required_keys, action="warning")
+    check_keys(kwargs, required_keys, action="error")
+
+    plate_scale = kwargs["plate_scale"]     # ["/pix]
+    pixel_scale = kwargs["pixel_scale"]     # ["/mm]
 
     # look for apertures
     aperture_effects = get_all_effects(effects, (efs.ApertureMask,
@@ -238,7 +241,6 @@ def get_imaging_headers(effects, **kwargs):
     if len(aperture_effects) == 0:
         detector_arrays = get_all_effects(effects, efs.DetectorList)
         if len(detector_arrays) > 0:
-            pixel_scale = kwargs["pixel_scale"]
             aperture_effects += [detarr.fov_grid(which="edges",
                                                  pixel_scale=pixel_scale)
                                  for detarr in detector_arrays]
@@ -248,28 +250,41 @@ def get_imaging_headers(effects, **kwargs):
                              "{}".format(effects))
 
     # get aperture headers from fov_grid()
+    # - for loop catches mutliple headers from ApertureList.fov_grid()
     hdrs = []
     for ap_eff in aperture_effects:
-        # - for loop catches mutliple headers from ApertureList.fov_grid()
         # ..todo:: add this functionality to ApertureList effect
-        hdr = ap_eff.fov_grid(which="edges")
+        hdr = ap_eff.fov_grid(which="edges", pixel_scale=pixel_scale)
         hdrs += hdr if isinstance(hdr, (list, tuple)) else [hdr]
 
     # check size of aperture in pixels - split if necessary
-    new_hdrs = []
+    sky_hdrs = []
     for hdr in hdrs:
         if hdr["NAXIS1"] * hdr["NAXIS2"] > kwargs["max_segment_size"]:
-            new_hdrs += split_header(hdr, kwargs["chunk_size"])
+            sky_hdrs += imp_utils.split_header(hdr, kwargs["chunk_size"])
         else:
-            new_hdrs += [hdr]
+            sky_hdrs += [hdr]
+
+    # ..todo:: Deal with the case that two or more ApertureMasks overlap
 
     # map the on-sky apertures directly to the image plane using plate_scale
     # - further changes can be made by the individual effects
-    for hdr in new_hdrs:
-        add_image_plane_wcs(hdr, plate_scale)
 
+    # plate_scale ["/mm] --> deg
+    # pixel_scale ["/pix]
+    # x_sky [deg] / (plate_scale/3600) [deg/mm] --> x_det [mm]
 
-    return new_hdrs
+    pixel_size = pixel_scale / plate_scale
+    plate_scale_deg = plate_scale / 3600.   # ["/mm] / 3600 = [deg/mm]
+    for skyhdr in sky_hdrs:
+        x_sky, y_sky = imp_utils.calc_footprint(skyhdr)
+        x_det = x_sky / plate_scale_deg
+        y_det = y_sky / plate_scale_deg
+
+        dethdr = imp_utils.header_from_list_of_xy(x_det, y_det, pixel_size, "D")
+        skyhdr.update(dethdr)
+
+    return sky_hdrs
 
 
 def get_imaging_fovs(headers, waveset, shifts):

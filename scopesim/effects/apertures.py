@@ -31,6 +31,7 @@ class ApertureMask(Effect):
         super(ApertureMask, self).__init__(**kwargs)
         self.meta["z_order"] = [80, 110]
         self.meta["pixel_scale"] = "!INST.pixel_scale"
+        self.meta["no_mask"] = True
         self.meta["angle"] = 0
 
         self.meta.update(kwargs)
@@ -41,6 +42,7 @@ class ApertureMask(Effect):
 
     def fov_grid(self, which="edges", **kwargs):
         """ Returns a header with the sky coordinates """
+        self.meta.update(kwargs)
         return self.header
 
     @property
@@ -71,11 +73,14 @@ class ApertureMask(Effect):
         return self._mask
 
     def get_mask(self):
-        x = quantity_from_table("x", self.table, u.arcsec).to(u.deg).value
-        y = quantity_from_table("y", self.table, u.arcsec).to(u.deg).value
-        pixel_scale_deg = self.meta["pixel_scale"] / 3600.
-        angle_deg  = self.meta["angle"],
-        mask = mask_from_coords(x, y, angle_deg, pixel_scale_deg)
+        if self.meta["no_mask"] is False:
+            x = quantity_from_table("x", self.table, u.arcsec).to(u.deg).value
+            y = quantity_from_table("y", self.table, u.arcsec).to(u.deg).value
+            pixel_scale_deg = self.meta["pixel_scale"] / 3600.
+            angle_deg = self.meta["angle"]
+            mask = mask_from_coords(x, y, angle_deg, pixel_scale_deg)
+        else:
+            mask = None
 
         return mask
 

@@ -56,7 +56,8 @@ class TestMask:
                                  "y": [-0.01, -0.01, 0.01, 0.01]},
                   "x_unit": "arcsec",
                   "y_unit": "arcsec",
-                  "pixel_scale": 0.004}
+                  "pixel_scale": 0.004,
+                  "no_mask": False}
         apm = ApertureMask(**kwargs)
         assert np.all(apm.mask)
 

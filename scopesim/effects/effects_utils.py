@@ -60,12 +60,7 @@ def make_effect(effect_dict, **properties):
 def is_spectroscope(effects):
     has_trace_lists = sum([isinstance(eff, efs.SpectralTraceList)
                            for eff in effects])
-    has_apertures = sum([isinstance(eff, (
-    scopesim.effects.apertures.ApertureList,
-    scopesim.effects.apertures.ApertureMask))
-                         for eff in effects])
-
-    return bool(has_apertures and has_trace_lists)
+    return bool(has_trace_lists)
 
 
 def empty_surface_list():
