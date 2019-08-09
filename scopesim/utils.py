@@ -479,6 +479,9 @@ def find_file(filename, path=None, silent=False):
     if filename is None or filename.lower() == "none":
         return None
 
+    if filename[0] == "!":
+        filename = from_currsys(filename)
+
     if path is None:
         path = rc.__search_path__
 

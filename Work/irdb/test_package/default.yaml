@@ -1,0 +1,16 @@
+# Instrument
+object : observation
+alias : OBS
+name : test_instrument
+
+packages :
+- test_package
+
+yamls :
+- test_package.yaml
+- test_telescope.yaml
+- test_instrument.yaml
+- test_detector.yaml
+
+properties :
+  airmass : 1.

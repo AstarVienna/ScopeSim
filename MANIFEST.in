@@ -1,5 +1,6 @@
 include *.txt
 include README.md
-include scopesim/.default.yaml
+include scopesim/defaults.yaml
 prune scopesim/tests*
 prune *OLD_*
+prune *docs_to_be_sorted*

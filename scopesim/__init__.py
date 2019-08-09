@@ -37,6 +37,10 @@ from . import utils
 
 from .utils import bug_report
 from .optics.optical_train import OpticalTrain
+from .commands.user_commands import UserCommands
+
+from .server.database import list_packages, download_package
+
 
 ################################################################################
 #                          VERSION INFORMATION                                 #
