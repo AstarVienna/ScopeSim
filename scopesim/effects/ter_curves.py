@@ -82,6 +82,16 @@ class QuantumEfficiencyCurve(TERCurve):
 
 class FilterCurve(TERCurve):
     def __init__(self, **kwargs):
+        if "filename" not in kwargs:
+            if "filter_name" in kwargs and "filename_format" in kwargs:
+                filt_name = from_currsys(kwargs["filter_name"])
+                file_format = kwargs["filename_format"]
+                kwargs["filename"] = file_format.format(filt_name)
+            else:
+                raise ValueError("FilterCurve must be passed `filename`"
+                                 "or (`filter_name` and `filename_format`):"
+                                 "{}".format(kwargs))
+
         super(FilterCurve, self).__init__(**kwargs)
         self.meta["z_order"] = [14, 214]
         self.meta["action"] = "transmission"

@@ -72,6 +72,7 @@ class OpticalElement:
                         continue
 
                     self.effects += [make_effect(eff_dic, **self.properties)]
+        print(self.effects[-1])
 
     def add_effect(self, effect):
         if isinstance(effect, efs.Effect):

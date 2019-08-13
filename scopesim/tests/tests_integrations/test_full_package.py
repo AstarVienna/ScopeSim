@@ -6,14 +6,20 @@ import shutil
 import scopesim
 from scopesim import rc
 
-CLEAN_UP = True
 rc.__config__["!SIM.file.local_packages_path"] = "./scopesim_pkg_dir_tmp/"
 # rc.__config__["!SIM.file.local_packages_path"] = "C:/Work/irdb/"
 
-PKGS = {"Armazones": "locations/Armazones.zip",
-        "ELT": "telescopes/ELT.zip",
-        "MAORY": "instruments/MAORY.zip",
-        "MICADO": "instruments/MICADO.zip"}
+# PKGS = {"Armazones": "locations/Armazones.zip",
+#         "ELT": "telescopes/ELT.zip",
+#         "MAORY": "instruments/MAORY.zip",
+#         "MICADO": "instruments/MICADO.zip"}
+
+PKGS = {"Paranal": "locations/Paranal.zip",
+        "VLT": "telescopes/VLT.zip",
+        "HAWKI": "instruments/HAWKI.zip"}
+
+USE_INST = "HAWKI"
+CLEAN_UP = True
 
 
 def setup_module():
@@ -45,9 +51,9 @@ class TestInit:
 
 class TestLoadUserCommands:
     def test_user_commands_loads_with_throwing_errors(self, capsys):
-        cmd = scopesim.UserCommands(use_instrument="MICADO")
+        cmd = scopesim.UserCommands(use_instrument=USE_INST)
         assert isinstance(cmd, scopesim.UserCommands)
-        for key in ["SIM", "OBS", "ATMO", "TEL", "INST", "RO", "INST", "DET"]:
+        for key in ["SIM", "OBS", "ATMO", "TEL", "INST", "DET"]:
             assert key in cmd and len(cmd[key]) > 0
 
         stdout = capsys.readouterr()
@@ -56,7 +62,7 @@ class TestLoadUserCommands:
 
 class TestMakeOpticalTrain:
     def test_works_seamlessly_for_micado_package(self, capsys):
-        cmd = scopesim.UserCommands(use_instrument="MICADO")
+        cmd = scopesim.UserCommands(use_instrument=USE_INST)
         opt = scopesim.OpticalTrain(cmd)
         assert isinstance(opt, scopesim.OpticalTrain)
 
