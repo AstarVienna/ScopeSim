@@ -98,7 +98,9 @@ class SurfaceList(Effect):
 
     def add_surface(self, surface, name, position=-1, add_to_table=True):
         if isinstance(surface, TERCurve):
+            ter_meta = surface.meta
             surface = surface.surface
+            surface.meta.update(ter_meta)
         self.radiometry_table.add_surface(surface, name, position, add_to_table)
 
     def add_surface_list(self, surface_list, prepend=False):

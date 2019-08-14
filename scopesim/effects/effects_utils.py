@@ -64,8 +64,8 @@ def is_spectroscope(effects):
 
 
 def empty_surface_list():
-    tbl = Table(names=["Name", "Outer", "Inner", "Angle",
-                       "Temp", "Action", "Filename"],
+    tbl = Table(names=["name", "outer", "inner", "angle",
+                       "temperature", "action", "filename"],
                 meta={"outer_unit": "m", "inner_unit": "m",
-                      "angle_unit": "deg", "temp_unit": "deg_C"})
+                      "angle_unit": "deg", "temperature_unit": "deg_C"})
     return efs.SurfaceList(table=tbl)

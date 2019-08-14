@@ -38,6 +38,7 @@ properties :
   reports :
     verbose : False
 
+
 ---
 ### OBSERVATION PARAMETERS
 object : observation
@@ -54,6 +55,7 @@ ignore_effects : []
 add_effects : []
 override_effect_values : []
 
+
 ---
 # MANDATORY TELESCOPE PARAMETERS
 alias : TEL
@@ -61,6 +63,7 @@ alias : TEL
 properties :
   etendue : 0
   area : 0
+
 
 ---
 # MANDATORY INSTRUMENT PARAMETERS

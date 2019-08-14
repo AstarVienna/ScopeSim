@@ -19,9 +19,9 @@ class PSF(Effect):
         self.kernel = None
         self.valid_waverange = None
         self._waveset = None
-        flux_accuracy = rc.__config__["!SIM.computing.flux_accuracy"]
         super(PSF, self).__init__(**kwargs)
 
+        flux_accuracy = rc.__config__["!SIM.computing.flux_accuracy"]
         self.meta["flux_accuracy"] = float(flux_accuracy)
         self.meta["sub_pixel_flag"] = rc.__config__["!SIM.sub_pixel.flag"]
         self.meta.update(kwargs)
@@ -54,11 +54,18 @@ class PSF(Effect):
         return obj
 
     def fov_grid(self, which="waveset", **kwargs):
-        waves = []
+        waveset = []
         if which == "waveset":
-            waves = self._waveset
+            if self._waveset is not None:
+                _waveset = self._waveset
+                waves = 0.5 * (np.array(_waveset)[1:] +
+                               np.array(_waveset)[:-1])
+                wave_min = kwargs["wave_min"] if "wave_min" in kwargs else np.min(_waveset)
+                wave_max = kwargs["wave_max"] if "wave_max" in kwargs else np.max(_waveset)
+                mask = (wave_min < waves) * (waves < wave_max)
+                waveset = np.unique([wave_min] + list(waves[mask]) + [wave_max])
 
-        return waves
+        return waveset
 
     def get_kernel(self, obj):
         self.valid_waverange = None
@@ -506,6 +513,9 @@ def get_psf_wave_exts(hdu_list):
                 if "WAVE0" in hdu_list[ii].header]
     wave_set = [hdu.header["WAVE0"] for hdu in hdu_list
                 if "WAVE0" in hdu.header]
+
+    # ..todo:: implement a way of getting the units from WAVEUNIT
+    # until then assume everything is in um
     wave_set = utils.quantify(wave_set, u.um)
 
     return wave_set, wave_ext

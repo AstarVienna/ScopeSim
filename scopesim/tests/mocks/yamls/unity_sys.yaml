@@ -19,13 +19,13 @@ effects :
 - name: Scope Surface List
   class: SurfaceList
   kwargs:
-    array_dict: {"Name": ["M1"], "Outer": [1.], "Inner": [0.], "Angle": [0.],
-                 "Temp": [-270.], "Action": ["transmission"],
-                 "Filename": ["TER_unity.dat"]}
+    array_dict: {"name": ["M1"], "outer": [1.], "inner": [0.], "angle": [0.],
+                 "temperature": [-270.], "action": ["transmission"],
+                 "filename": ["TER_unity.dat"]}
     outer_unit: m
     inner_unit: m
     angle_unit: deg
-    temp_unit: deg_C
+    temperature_unit: deg_C
 
 - name: filter TC
   class: TERCurve

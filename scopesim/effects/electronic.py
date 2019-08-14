@@ -16,7 +16,7 @@ class BasicReadoutNoise(Effect):
         self.meta["read_fraction"] = 0.4
         self.meta["line_fraction"] = 0.25
         self.meta["channel_fraction"] = 0.05
-        self.meta["random_seed"] = rc.__currsys__["!SIM.random.seed"]
+        self.meta["random_seed"] = "!SIM.random.seed"
         self.meta.update(kwargs)
 
         self.required_keys = ["noise_std", "n_channels", "ndit"]
@@ -44,7 +44,7 @@ class ShotNoise(Effect):
     def __init__(self, **kwargs):
         super(Effect, self).__init__(**kwargs)
         self.meta["z_order"] = [520]
-        self.meta["random_seed"] = rc.__currsys__["!SIM.random.seed"]
+        self.meta["random_seed"] = "!SIM.random.seed"
         self.meta.update(kwargs)
 
     def apply_to(self, det, **kwargs):

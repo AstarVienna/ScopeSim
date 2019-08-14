@@ -27,10 +27,10 @@ class SpectralSurface:
     """
     def __init__(self, filename=None, **kwargs):
         filename = find_file(filename)
-        self.meta = {"filename"   : filename,
-                     "temp"       : -270*u.deg_C,  # deg C
-                     "emission_unit" : "",
-                     "wavelength_unit" : u.um}
+        self.meta = {"filename"         : filename,
+                     "temperature"      : -270*u.deg_C,  # deg C
+                     "emission_unit"    : "",
+                     "wavelength_unit"  : u.um}
 
         self.table = Table()
         if filename is not None and os.path.exists(filename):
@@ -85,7 +85,7 @@ class SpectralSurface:
         """
         Looks for an emission array in self.meta. If it doesn't find this, it
         defaults to creating a blackbody and multiplies this by the emissivity.
-        Assumption is that self.meta["temp"] is in deg_C
+        Assumption is that self.meta["temperature"] is in deg_C
         Return units are in PHOTLAM arcsec^-2, even though arcsec^-2 is not
         given
         """
@@ -94,9 +94,9 @@ class SpectralSurface:
         if flux is not None:
             wave = self._get_array("wavelength")
             flux = make_emission_from_array(flux, wave, meta=self.meta)
-        elif "temp" in self.meta:
+        elif "temperature" in self.meta:
             emiss = self.emissivity                     # SpectralElement [0..1]
-            temp = quantify(self.meta["temp"], u.deg_C).value + 273.
+            temp = quantify(self.meta["temperature"], u.deg_C).value + 273.
             flux = make_emission_from_emissivity(temp, emiss)
         else:
             flux = None

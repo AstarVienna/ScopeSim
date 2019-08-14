@@ -28,14 +28,14 @@ effects:
 - name: Telescope Surface List
   class: SurfaceList
   kwargs:
-    array_dict: {"Name": ["M1", "M2"], "Outer": [2., 1.], "Inner": [0., 0.],
-                 "Angle": [0., 0.], "Temp": [0., 0.],
-                 "Action": ["transmission", "transmission"],
-                 "Filename": ["TER_blank.dat", "TER_blank.dat"]}
+    array_dict: {"name": ["M1", "M2"], "outer": [2., 1.], "inner": [0., 0.],
+                 "angle": [0., 0.], "temperature": [0., 0.],
+                 "action": ["transmission", "transmission"],
+                 "filename": ["TER_blank.dat", "TER_blank.dat"]}
     outer_unit: m
     inner_unit: m
     angle_unit: deg
-    temp_unit: deg_C
+    temperature_unit: deg_C
 
 ---
 

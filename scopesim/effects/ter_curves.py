@@ -82,20 +82,22 @@ class QuantumEfficiencyCurve(TERCurve):
 
 class FilterCurve(TERCurve):
     def __init__(self, **kwargs):
-        if "filename" not in kwargs:
+        if np.all([key not in kwargs for key in ["filename", "table",
+                                                 "array_dict"]]):
             if "filter_name" in kwargs and "filename_format" in kwargs:
                 filt_name = from_currsys(kwargs["filter_name"])
                 file_format = kwargs["filename_format"]
                 kwargs["filename"] = file_format.format(filt_name)
             else:
-                raise ValueError("FilterCurve must be passed `filename`"
-                                 "or (`filter_name` and `filename_format`):"
+                raise ValueError("FilterCurve must be passed one of (`filename`"
+                                 " `array_dict`, `table`) or both "
+                                 "(`filter_name`, `filename_format`):"
                                  "{}".format(kwargs))
 
         super(FilterCurve, self).__init__(**kwargs)
         self.meta["z_order"] = [14, 214]
-        self.meta["action"] = "transmission"
         self.meta["min_throughput"] = "!SIM.spectral.minimum_throughput"
+        self.meta["action"] = "transmission"
 
     def fov_grid(self, which="waveset", **kwargs):
         if which == "waveset":

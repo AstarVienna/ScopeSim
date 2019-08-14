@@ -166,14 +166,14 @@ class TestGetImagingWaveset:
         psf = eo._const_psf()
         kwargs = {"wave_min": 0.5, "wave_max": 2.5}
         wave_bin_edges = fov_mgr.get_imaging_waveset([psf], **kwargs)
-        assert len(wave_bin_edges) == 3
+        assert len(wave_bin_edges) == 4
 
     def test_returns_waveset_of_psf_and_filter(self):
         filt = eo._filter_tophat_curve()
         psf = eo._const_psf()
         kwargs = {"wave_min": 0.5, "wave_max": 2.5}
         wave_bin_edges = fov_mgr.get_imaging_waveset([filt, psf], **kwargs)
-        assert len(wave_bin_edges) == 5
+        assert len(wave_bin_edges) == 4
 
     def test_returns_waveset_of_ncpa_psf_inside_filter_edges(self):
         filt = eo._filter_tophat_curve()
@@ -249,9 +249,9 @@ class TestGetImagingFOVs:
         assert len(fovs) == (len(waveset)-1) * len(hdrs)
 
         if PLOTS:
+            from scopesim.optics.image_plane_utils import calc_footprint
             plt.subplot(121)
             for fov in fovs:
-                from scopesim.optics.image_plane_utils import calc_footprint
                 x, y = calc_footprint(fov.hdu.header)
                 plt.fill(x*3600, y*3600, alpha=0.1, c="b")
                 plt.title("Sky plane")
@@ -259,7 +259,6 @@ class TestGetImagingFOVs:
 
             plt.subplot(122)
             for fov in fovs:
-                from scopesim.optics.image_plane_utils import calc_footprint
                 x, y = calc_footprint(fov.hdu.header, "D")
                 plt.fill(x, y)
                 plt.title("Detector focal plane")

@@ -143,10 +143,10 @@ class TestSpectralSurfaceEmissionProperty:
         wave = np.logspace(-1, 3, n) * u.um
         srf = opt_surf.SpectralSurface(wavelength=wave,
                                        transmission=np.zeros(n),
-                                       temp=0*u.deg_C)
+                                       temperature=0*u.deg_C)
         emission_raw = SourceSpectrum(BlackBody1D, temperature=273)
         assert isinstance(srf.emission, SourceSpectrum)
-        assert np.all(np.isclose(emission_raw(wave) /  srf.emission(wave),
+        assert np.all(np.isclose(emission_raw(wave) / srf.emission(wave),
                                  np.array([sr2arcsec]*n)))
 
 
