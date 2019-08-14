@@ -72,6 +72,8 @@ def combine_throughputs(tbl, surfaces, rows_indexes):
         row = tbl[row_num]
         surf = surfaces[row[r_name]]
         action_attr = row[r_action]
+        if action_attr == "":
+            raise ValueError("No action in surf.meta: {}".format(surf.meta))
 
         if isinstance(surf, SpectralSurface):
             surf_throughput = getattr(surf, action_attr)

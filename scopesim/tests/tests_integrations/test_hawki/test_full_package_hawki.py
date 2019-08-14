@@ -15,18 +15,11 @@ from matplotlib.colors import LogNorm
 
 
 rc.__config__["!SIM.file.local_packages_path"] = "./scopesim_pkg_dir_tmp/"
-# rc.__config__["!SIM.file.local_packages_path"] = "C:/Work/irdb/"
-
-# PKGS = {"Armazones": "locations/Armazones.zip",
-#         "ELT": "telescopes/ELT.zip",
-#         "MAORY": "instruments/MAORY.zip",
-#         "MICADO": "instruments/MICADO.zip"}
 
 PKGS = {"Paranal": "locations/Paranal.zip",
         "VLT": "telescopes/VLT.zip",
         "HAWKI": "instruments/HAWKI.zip"}
 
-USE_INST = "HAWKI"
 CLEAN_UP = False
 PLOTS = False
 
@@ -60,7 +53,7 @@ class TestInit:
 
 class TestLoadUserCommands:
     def test_user_commands_loads_with_throwing_errors(self, capsys):
-        cmd = scopesim.UserCommands(use_instrument=USE_INST)
+        cmd = scopesim.UserCommands(use_instrument="HAWKI")
         assert isinstance(cmd, scopesim.UserCommands)
         for key in ["SIM", "OBS", "ATMO", "TEL", "INST", "DET"]:
             assert key in cmd and len(cmd[key]) > 0
