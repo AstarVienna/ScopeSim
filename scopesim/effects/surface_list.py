@@ -53,7 +53,8 @@ class SurfaceList(Effect):
             self.radiometry_table.add_surface_list(data)
 
     def apply_to(self, obj, **kwargs):
-        if not self.is_empty and isinstance(obj, SourceBase):
+        ""
+        if isinstance(obj, SourceBase) and not self.is_empty:
             for ii in range(len(obj.spectra)):
                 compound_spec = obj.spectra[ii] * self.throughput
                 wave = compound_spec.waveset
@@ -62,13 +63,16 @@ class SurfaceList(Effect):
                                             lookup_table=spec)
                 obj.spectra[ii] = new_source
 
-        elif not self.is_empty and isinstance(obj, ImagePlaneBase):
+        elif isinstance(obj, ImagePlaneBase) and not self.is_empty:
             # by calling use_area, the surface area is taken into account, but
             # the units are stuck in PHOTLAM for synphot
             emission = self.get_emission(use_area=True)  # --> PHOTLAM * area
-            wave = emission.waveset  # angstrom
-            flux = emission(wave)    # PHOTLAM --> ph s-1 cm-2 AA-1 * cm2
-            phs = (np.trapz(flux, wave) * u.cm**2).to(u.Unit("ph s-1"))
+            if emission is not None:
+                wave = emission.waveset  # angstrom
+                flux = emission(wave)    # PHOTLAM --> ph s-1 cm-2 AA-1 * cm2
+                phs = (np.trapz(flux, wave) * u.cm**2).to(u.Unit("ph s-1"))
+            else:
+                phs = 0 << (u.ph / u.s)
 
             obj.hdu.data += phs.value
 

@@ -32,6 +32,9 @@ class AtmosphericTERCurve(TERCurve):
     def __init__(self, **kwargs):
         super(AtmosphericTERCurve, self).__init__(**kwargs)
         self.meta["z_order"] = [11, 211]
+        self.meta["area"] = "!TEL.area"
+        self.meta["area_unit"] = "m2"
+        self.meta.update(kwargs)
 
 
 class SkycalcTERCurve(TERCurve):
@@ -53,6 +56,9 @@ class SkycalcTERCurve(TERCurve):
         super(SkycalcTERCurve, self).__init__(**kwargs)
         self.meta["z_order"] = [12, 212]
         self.meta["action"] = "transmission"
+        self.meta["area"] = "!TEL.area"
+        self.meta["area_unit"] = "m2"
+        self.meta.update(kwargs)
 
         self.skycalc_conn = skycalc_ipy.SkyCalc()
         self.query_server(**kwargs)

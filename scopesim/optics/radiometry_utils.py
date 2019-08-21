@@ -34,7 +34,7 @@ def combine_emissions(tbl, surfaces, row_indexes, etendue, use_area=False):
 
             area = surf.area
             if area is not None:
-                surf_emission = surf.emission
+                surf_emission = surf.emission       # PHOTLAM * arcsec**-2
                 surf_eff_area = area * np.cos(surf.mirror_angle)
                 surf_eff_solid_angle = (etendue / surf_eff_area).to(u.arcsec**2)
                 surf_emission *= surf_eff_solid_angle.value

@@ -133,21 +133,17 @@ class TestMakeOpticalTrain:
 class TestObserveOpticalTrain:
     def test_background_is_similar_to_online_etc(self):
         cmd = scopesim.UserCommands(use_instrument="HAWKI")
-        cmd.ignore_effects = ["paranal_atmo_default_ter_curve", ""]
+        # cmd.ignore_effects = [
+        #                       "paranal_atmo_default_ter_curve",
+        #                       "vlt_mirror_list",
+        #                       "hawki_mirror_list"
+        #                       ]
         opt = scopesim.OpticalTrain(cmd)
+        for el in opt.optics_manager.optical_elements: print(el)
+
         src = scopesim.source.source_utils.empty_sky()
 
         # ETC gives 2613 e-/DIT for a 1s DET at airmass=1.2, pwv=2.5
         opt.observe(src)
 
         print(np.average(opt.image_plane.data))
-
-        wave = np.linspace(0.7, 2.5, 1801) * u.um
-        flux = opt.optics_manager.surfaces_table.emission(wave).to(u.Unit("ph s-1 m-2 um-1"))       # PHOTLAM is ph/s/cm2/ang
-        plt.plot(wave, flux)
-        # plt.show()
-        sum_flux = np.trapz(flux, wave)
-        area = rc.__currsys__["!TEL.area"].to(u.m ** 2)
-        print("VLT area:", area, "unit_flux:", sum_flux)
-        print("\nVLT+HAWKI thermal background:", sum_flux * area)
-
