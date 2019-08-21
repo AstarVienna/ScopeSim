@@ -2,6 +2,7 @@ import os
 import yaml
 
 from .system_dict import SystemDict
+from .commands.user_commands import UserCommands
 
 __pkg_dir__ = os.path.dirname(__file__)
 

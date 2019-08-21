@@ -66,10 +66,10 @@ class OpticalElement:
                 for eff_dic in yaml_dict["effects"]:
                     if "include" in eff_dic and eff_dic["include"] is False:
                         continue
-                    if "name" in eff_dic and \
-                            hasattr(rc.__currsys__, "ignore_effects") and \
-                            eff_dic["name"] in rc.__currsys__.ignore_effects:
-                        continue
+                    if "name" in eff_dic and hasattr(rc.__currsys__,
+                                                     "ignore_effects"):
+                        if eff_dic["name"] in rc.__currsys__.ignore_effects:
+                            continue
 
                     self.effects += [make_effect(eff_dic, **self.properties)]
 
@@ -106,17 +106,16 @@ class OpticalElement:
         return effects
 
     @property
-    def ter_list(self):
-        ter_list = [effect for effect in self.effects
-                    if isinstance(effect, (efs.SurfaceList, efs.TERCurve))]
-        return ter_list
+    def surfaces_list(self):
+        _ter_list = [effect for effect in self.effects
+                     if isinstance(effect, (efs.SurfaceList, efs.TERCurve))]
+        return _ter_list
 
     @property
-    def mask_list(self):
-        mask_list = [effect for effect in self.effects
-                     if isinstance(effect,
-                                   scopesim.effects.apertures.ApertureList)]
-        return mask_list
+    def masks_list(self):
+        _mask_list = [effect for effect in self.effects if
+                      isinstance(effect, (efs.ApertureList, efs.ApertureMask))]
+        return _mask_list
 
     def __add__(self, other):
         self.add_effect(other)

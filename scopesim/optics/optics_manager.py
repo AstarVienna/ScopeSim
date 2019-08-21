@@ -225,7 +225,7 @@ class OpticsManager:
     def surfaces_table(self):
         surface_like_effects = []
         for opt_el in self.optical_elements:
-            surface_like_effects += opt_el.ter_list
+            surface_like_effects += opt_el.surfaces_list
 
         surf_table = combine_surface_effects(surface_like_effects)
         self._surfaces_table = surf_table

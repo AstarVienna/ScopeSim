@@ -65,7 +65,7 @@ class TestLoadUserCommands:
 
 
 class TestMakeOpticalTrain:
-    def test_works_seamlessly_for_hawki_package(self, capsys):
+    def test_works_seamlessly_for_micado_package(self, capsys):
         from time import time
         start = time()
 

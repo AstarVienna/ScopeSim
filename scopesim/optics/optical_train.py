@@ -92,9 +92,12 @@ class OpticalTrain:
         self.update(**kwargs)
 
         source = deepcopy(orig_source)
-        for effect in self.optics_manager.source_effects:
-                source = effect.apply_to(source)
 
+        # [1D - transmisison curves]
+        for effect in self.optics_manager.source_effects:
+            source = effect.apply_to(source)
+
+        # [3D - Atmospheric shifts, PSF, NCPAs, Grating shift/distortion]
         for fov in self.fov_manager.fovs:
             fov.extract_from(source)
             for effect in self.optics_manager.fov_effects:
@@ -104,6 +107,7 @@ class OpticalTrain:
                 fov.view()
             self.image_plane.add(fov.hdu, wcs_suffix="D")
 
+        # [2D - Vibration, flat fielding, chopping+nodding]
         for effect in self.optics_manager.image_plane_effects:
             self.image_plane = effect.apply_to(self.image_plane)
 

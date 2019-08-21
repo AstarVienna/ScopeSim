@@ -286,7 +286,11 @@ class FieldConstantPSF(DiscretePSF):
             self.current_layer_id = ext
 
             # compare kernel and fov pixel scales, rescale if needed
-            kernel_pixel_scale = self._file[ext].header["CDELT1"]
+            unit_factor = 1
+            if "CUNIT1" in self._file[ext].header:
+                unit_factor = u.Unit(self._file[ext].header["CUNIT1"]).to(u.deg)
+
+            kernel_pixel_scale = self._file[ext].header["CDELT1"] * unit_factor
             fov_pixel_scale = fov.hdu.header["CDELT1"]
 
             # rescaling kept inside loop to avoid rescaling for every fov
