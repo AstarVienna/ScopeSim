@@ -220,8 +220,11 @@ def check_for_updates(package_name):
             "TRAVIS" not in os.environ:
         front_matter = rc.__currsys__["!SIM.file.server_base_url"]
         back_matter = "api.php?package_name={}".format(package_name)
-        response = requests.get(url=front_matter+back_matter).json()
-
+        try:
+            response = requests.get(url=front_matter+back_matter).json()
+        except:
+            print("Offline. Cannot check for updates for {}"
+                  "".format(package_name))
     return response
 
 
