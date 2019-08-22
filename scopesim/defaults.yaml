@@ -37,6 +37,10 @@ properties :
 
   reports :
     verbose : False
+    # for our own statistics, we track exclusively your institute's ip address
+    # WE DO NOT TRACK OR SAVE ANY PERSONAL INFORMATION
+    # however you can become completely anonymous by setting this flag to True
+    block_ip_tracking : False
 
 
 ---
