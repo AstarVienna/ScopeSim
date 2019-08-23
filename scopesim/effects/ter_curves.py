@@ -20,7 +20,7 @@ class TERCurve(Effect):
     """
     def __init__(self, **kwargs):
         super(TERCurve, self).__init__(**kwargs)
-        self.meta["z_order"] = [10, 210]
+        self.meta["z_order"] = [10]
         self.surface = SpectralSurface()
         self.surface.meta.update(self.meta)
         data = self.get_data()
@@ -31,7 +31,7 @@ class TERCurve(Effect):
 class AtmosphericTERCurve(TERCurve):
     def __init__(self, **kwargs):
         super(AtmosphericTERCurve, self).__init__(**kwargs)
-        self.meta["z_order"] = [11, 211]
+        self.meta["z_order"] = [11]
         self.meta["area"] = "!TEL.area"
         self.meta["area_unit"] = "m2"
         self.meta.update(kwargs)

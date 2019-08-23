@@ -1,126 +1,137 @@
 z-orders
 ========
 
-0..99 - Make a FOV list
------------------------
-TERCurves
-* 10 TERCurve
-* 11 AtmosphericTERCurve
-* 12 SkycalcTERCurve
-* 13 QuantumEfficiencyCurve
-* 14 FilterCurve
-
-SurfaceLists
+0..99 Base classes
+------------------
+Source
+* 10 TERCurve               !!! Add scaling for mags
 * 20 SurfaceList
-
-Shift3Ds
-
+FOVs
 * 30 Shift3D
-* 31 AtmosphericDispersion
-* 32 AtmosphericDispersionCorrection
-
-Analytical PSFs
-
-* 40 AnalyticalPSF
-* 41 NonCommonPathAberration
-* 42 GaussianDiffractionPSF
-* 43 Seeing (PSF)
-* 44 Vibration (PSF)
-
-Semi Analytical PSFs
-
-* 50 SemiAnalyticalPSF
-* 51 PoppyFieldVaryingPSF
-* 52 PoppyFieldConstantPSF
-
-Discrete PSFs
-
-* 60 DiscretePSF
-* 61 FieldVaryingPSF
-* 62 FieldConstantPSF
-
-Apertures
-
+* 40 PSf
+* 41 AnalyticalPSF
+* 42 SemiAnalyticalPSF
+* 43 DiscretePSF
+* 50 PupilPlaneEffect       !!! Write   (Integrated rotation etc)
+ImagePlane
+* 60 FieldPlaneEffect       !!! Write   (Distortion, Vignetting)
+* 70 SpectralTraceList      !!! Write
 * 80 ApertureMask
-* 81 ApertureList
-* 82 SquareApertureList
-* 83 RoundApertureList
-* 84 PolygonApertureList
-
-Misc
-
-* 70 SpectralTraceList
+* 81 ApertureList           !!! Write
+Detector
 * 90 DetectorList
 
-100..199 - Make an image plane
-------------------------------
-* 70 SpectralTraceList
-* 110 ApertureMask
-* 111 ApertureList
-* 112 SquareApertureList
-* 113 RoundApertureList
-* 114 PolygonApertureList
-* 120 DetectorList
 
-200..299 - Source altering effects
-----------------------------------
-* 210 TERCurve
-* 211 AtmosphericTERCurve
-* 212 SkycalcTERCurve
-* 213 QuantumEfficiencyCurve
-* 220 SurfaceList
+100..199 Make SystemThroughput (1D)
+-----------------------------------
+<OpticsManager>.surfaces_table
+
+TERCurves
+* 110 TERCurve              !!! Add scaling for mags
+* 111 AtmosphericTERCurve
+* 112 SkycalcTERCurve
+* 113 QuantumEfficiencyCurve
+* 114 FilterCurve
+
+SurfaceLists
+* 120 SurfaceList
+* 121 MasterSurfaceList     !!! Write
 
 
-300..399 - (3D) FOV specific effects
-------------------------------------
+200..299 Make FOVs (3D)
+-----------------------
+<OpticsManager>.fov_setup_effects
 
-Shift3D
-* 330 Shift3D
-* 331 AtmosphericDispersion
-* 332 AtmosphericDispersionCorrection
+SurfaceLists
+* 221 MasterSurfaceList     !!! Write
+
+Shift3Ds
+* 231 AtmosphericDispersion
 
 Analytical PSFs
-* 340 AnalyticalPSF
-* 341 NonCommonPathAberration
-* 342 GaussianDiffractionPSF
-* 343 Seeing (PSF)
+* 241 NonCommonPathAberration
+* 242 GaussianDiffractionPSF
+* 243 Seeing (PSF)
+* 244 Vibration (PSF)
 
 Semi Analytical PSFs
-* 350 SemiAnalyticalPSF
-* 351 PoppyFieldVaryingPSF
-* 352 PoppyFieldConstantPSF
+* 251 PoppyFieldVaryingPSF
+* 252 PoppyFieldConstantPSF
 
 Discrete PSFs
-* 360 DiscretePSF
-* 361 FieldVaryingPSF
-* 362 FieldConstantPSF
+* 261 FieldVaryingPSF
+* 262 FieldConstantPSF
+
+Spectroscopic Trace maps
+* 271 LongSlitTraceMap      !!! Write
+* 272 IfuTraceMap           !!! Write
+* 273 MosTraceMap           !!! Write
+
+Apertures
+* 280 ApertureMask
+* 281 ApertureList          !!! Write
+* 282 SquareApertureList    !!! Write
+* 283 RoundApertureList     !!! Write
+* 284 PolygonApertureList   !!! Write
+
+Detectors
+* 290 DetectorList
 
 
-400..499 - (2D) FOV-independent effects
----------------------------------------
-* 444 VibrationPSF
-
-500..599 - Electronic effects
+300..399 Make ImagePlane (2D)
 -----------------------------
-* 500 DetectorList
+<OpticsManager>.image_plane_setup_effects
 
-* 510 ReadNoise
-* 511 RandomReadNoise
-* 512 HawaiiReadNoise
-* 513 AquariusReadNoise
-
-* 520 ShotNoise
-
-* 530 DarkCurrent
-
-* 540 LinearityCurve
-* 541 PixelCrossTalk
-* 542 PixelLeakage
-
-* 550 BadPixelMask
-* 551 GainMask
-* 552 PedestalMask
+* 310 ApertureMask
+* 370 SpectralTraceList
+* 390 DetectorList
 
 
+400..499 Make Detector (0D)
+---------------------------
+* 390 DetectorList
 
 
+500..599 apply-to(Source)
+-------------------------
+* 521 MasterSurfaceList     !!! Write   (system throughput)
+
+
+600..699 apply-to(FieldOfView)
+------------------------------
+* 632 AtmosphericDispersionCorrection
+* 640 PSF
+* 650 PupilPlaneEffect      !!! Write   (Integrated rotation etc)
+* 651 IntegratedPupilRotation ! Write
+* 652 NonSiderialTracking
+
+
+700..799 apply-to(ImagePlane)
+-----------------------------
+* 721 MasterSurfaceList     !!! Write  (bg emission)
+* 744 Vibration
+* 761 Vignetting            !!! Write
+* 762 Distortion            !!! Write
+* 763 Chopping              !!! Write
+
+
+800..899 apply-to(Detector)
+---------------------------
+
+Noises
+* 810 ReadNoise
+* 811 BasicReadNoise
+* 812 HawaiiReadNoise       !!! Write
+* 813 AquariusReadNoise     !!! Write
+* 820 ShotNoise
+
+Extra flux
+* 830 DarkCurrent
+
+Electronic phenomena
+* 840 LinearityCurve
+* 841 PixelCrossTalk        !!! Write
+* 842 PixelLeakage          !!! Write
+* 850 BadPixelMask          !!! Write
+* 851 GainMask              !!! Write
+* 852 PedestalMask          !!! Write

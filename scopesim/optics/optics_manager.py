@@ -206,6 +206,10 @@ class OpticsManager:
         return src_effects
 
     @property
+    def detector_setup_effects(self):
+        return self.get_all(efs.DetectorList)
+
+    @property
     def image_plane_setup_effects(self):
         implane_setup_effects = []
         for opt_el in self.optical_elements:
