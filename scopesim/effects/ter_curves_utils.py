@@ -116,12 +116,44 @@ def st_spectrum(mag=0):
     return SourceSpectrum(ConstFlux1D, amplitude=mag*u.STmag)
 
 
-def zero_mag_flux(filter_name, photometric_system):
+def zero_mag_flux(filter_name, photometric_system, return_filter=False):
+    """
+    Returns the zero magnitude photon flux for a filter
+
+    Acceptable filter names are those given in
+    ``scopesim.effects.ter_curves_utils.FILTER_DEFAULTS`` or a string with an
+    appropriate name for a filter in the Spanish-VO filter-service. Such strings
+    must use the naming convention: observatory/instrument.filter. E.g:
+    ``paranal/HAWKI.Ks``, or ``Gemini/GMOS-N.CaT``.
+
+    Parameters
+    ----------
+    filter_name : str
+        Name of the filter - see above
+
+    photometric_system : str
+        ["vega", "AB", "ST"] Name of the photometric system
+
+    return_filter : bool, optional
+        If True, also returns the filter curve object
+
+    Returns
+    -------
+    flux : float
+        [``PHOTLAM``]
+    filt : ``synphot.SpectralElement``
+        If ``return_filter`` is True
+
+    """
+
     filt = get_filter(filter_name)
     spec = get_zero_mag_spectrum(photometric_system)
 
     obs = Observation(spec, filt)
     flux = obs.effstim(flux_unit=PHOTLAM)
 
-    return flux
+    if return_filter:
+        return flux, filt
+    else:
+        return flux
 

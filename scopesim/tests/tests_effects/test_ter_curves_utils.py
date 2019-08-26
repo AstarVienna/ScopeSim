@@ -46,7 +46,7 @@ def test_zero_mag_flux(filter_name, phot_system, flux):
     http://www.astronomy.ohio-state.edu/~martini/usefuldata.html
     """
     new_flux = terutils.zero_mag_flux(filter_name, phot_system)
-    assert flux == approx(new_flux.value, rel=0.1)
+    assert flux == approx(new_flux.value, rel=0.08)
 
 
 
