@@ -24,6 +24,7 @@ class PSF(Effect):
         flux_accuracy = rc.__config__["!SIM.computing.flux_accuracy"]
         self.meta["flux_accuracy"] = float(flux_accuracy)
         self.meta["sub_pixel_flag"] = rc.__config__["!SIM.sub_pixel.flag"]
+        self.meta["z_order"] = [40, 640]
         self.meta.update(kwargs)
         self.apply_to_classes = (FieldOfViewBase, ImagePlaneBase)
 
@@ -80,7 +81,7 @@ class PSF(Effect):
 class AnalyticalPSF(PSF):
     def __init__(self, **kwargs):
         super(AnalyticalPSF, self).__init__(**kwargs)
-        self.meta["z_order"] = [40, 340]
+        self.meta["z_order"] = [41, 641]
 
 
 class Vibration(AnalyticalPSF):
@@ -89,7 +90,7 @@ class Vibration(AnalyticalPSF):
     """
     def __init__(self, **kwargs):
         super(Vibration, self).__init__(**kwargs)
-        self.meta["z_order"] = [44, 444]
+        self.meta["z_order"] = [244, 744]
         self.meta["width_n_fwhms"] = 4
         self.apply_to_classes = ImagePlaneBase
 
@@ -116,7 +117,7 @@ class NonCommonPathAberration(AnalyticalPSF):
     """
     def __init__(self, **kwargs):
         super(NonCommonPathAberration, self).__init__(**kwargs)
-        self.meta["z_order"] = [41, 341]
+        self.meta["z_order"] = [241, 641]
         self.meta["kernel_width"] = None
         self.meta["strehl_drift"] = 0.02
         self.meta["wave_min"] = "!SIM.spectral.wave_min"
@@ -176,14 +177,14 @@ class NonCommonPathAberration(AnalyticalPSF):
 class Seeing(AnalyticalPSF):
     def __init__(self, **kwargs):
         super(Seeing, self).__init__(**kwargs)
-        self.meta["z_order"] = [43, 343]
+        self.meta["z_order"] = [243, 643]
 
 
 class GaussianDiffractionPSF(AnalyticalPSF):
     def __init__(self, diameter, **kwargs):
         super(GaussianDiffractionPSF, self).__init__(**kwargs)
         self.meta["diameter"] = diameter
-        self.meta["z_order"] = [42, 342]
+        self.meta["z_order"] = [242, 642]
 
     def fov_grid(self, which="waveset", **kwargs):
         wavelengths = []
@@ -230,19 +231,19 @@ class GaussianDiffractionPSF(AnalyticalPSF):
 class SemiAnalyticalPSF(PSF):
     def __init__(self, **kwargs):
         super(SemiAnalyticalPSF, self).__init__(**kwargs)
-        self.meta["z_order"] = [50, 350]
+        self.meta["z_order"] = [42]
 
 
 class PoppyFieldVaryingPSF(SemiAnalyticalPSF):
     def __init__(self, **kwargs):
         super(PoppyFieldVaryingPSF, self).__init__(**kwargs)
-        self.meta["z_order"] = [51, 351]
+        self.meta["z_order"] = [251, 651]
 
 
 class PoppyFieldConstantPSF(SemiAnalyticalPSF):
     def __init__(self, **kwargs):
         super(PoppyFieldConstantPSF, self).__init__(**kwargs)
-        self.meta["z_order"] = [52, 352]
+        self.meta["z_order"] = [252, 652]
 
 
 ################################################################################
@@ -252,7 +253,7 @@ class PoppyFieldConstantPSF(SemiAnalyticalPSF):
 class DiscretePSF(PSF):
     def __init__(self, **kwargs):
         super(DiscretePSF, self).__init__(**kwargs)
-        self.meta["z_order"] = [60, 360]
+        self.meta["z_order"] = [43]
 
 
 class FieldConstantPSF(DiscretePSF):
@@ -263,7 +264,7 @@ class FieldConstantPSF(DiscretePSF):
         self.required_keys = ["filename"]
         utils.check_keys(self.meta, self.required_keys, action="error")
 
-        self.meta["z_order"] = [62, 362]
+        self.meta["z_order"] = [262, 662]
         self._waveset, self.kernel_indexes = get_psf_wave_exts(self._file)
         self.current_layer_id = None
         self.current_ext = None
@@ -316,7 +317,7 @@ class FieldVaryingPSF(DiscretePSF):
         self.required_keys = ["filename"]
         utils.check_keys(self.meta, self.required_keys, action="error")
 
-        self.meta["z_order"] = [61, 361]
+        self.meta["z_order"] = [261, 661]
         self._waveset, self.kernel_indexes = get_psf_wave_exts(self._file)
         self.current_ext = None
         self.current_data = None

@@ -37,7 +37,7 @@ class SurfaceList(Effect):
     """
     def __init__(self, **kwargs):
         super(SurfaceList, self).__init__(**kwargs)
-        self.meta["z_order"] = [20, 220]
+        self.meta["z_order"] = [20, 120]
         self.meta["min_throughput"] = "!SIM.spectral.minimum_throughput"
         self.meta["wave_min"] = "!SIM.spectral.wave_min"
         self.meta["wave_max"] = "!SIM.spectral.wave_max"
@@ -53,7 +53,11 @@ class SurfaceList(Effect):
             self.radiometry_table.add_surface_list(data)
 
     def apply_to(self, obj, **kwargs):
-        ""
+        """
+        obj == SourceBase - applies throughput
+        obj == ImagePlaneBase - applies emission
+
+        """
         if isinstance(obj, SourceBase) and not self.is_empty:
             for ii in range(len(obj.spectra)):
                 compound_spec = obj.spectra[ii] * self.throughput
@@ -155,4 +159,3 @@ class SurfaceList(Effect):
     @property
     def is_empty(self):
         return len(self.radiometry_table.table) == 0
-

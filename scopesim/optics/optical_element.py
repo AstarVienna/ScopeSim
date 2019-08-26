@@ -1,9 +1,9 @@
 import warnings
 
-import scopesim.effects.apertures
 from .. import effects as efs
 from ..effects.effects_utils import make_effect, get_all_effects
 from .. import rc
+
 
 class OpticalElement:
     """
@@ -90,7 +90,7 @@ class OpticalElement:
         elif isinstance(z_level, (tuple, list)):
             zmin, zmax = z_level[:2]
         else:
-            zmin, zmax = 0, 600
+            zmin, zmax = 0, 999
 
         effects = []
         for eff in self.effects:

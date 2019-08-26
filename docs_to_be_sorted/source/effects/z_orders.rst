@@ -6,6 +6,7 @@ z-orders
 Source
 * 10 TERCurve               !!! Add scaling for mags
 * 20 SurfaceList
+
 FOVs
 * 30 Shift3D
 * 40 PSf
@@ -13,12 +14,14 @@ FOVs
 * 42 SemiAnalyticalPSF
 * 43 DiscretePSF
 * 50 PupilPlaneEffect       !!! Write   (Integrated rotation etc)
+
 ImagePlane
 * 60 FieldPlaneEffect       !!! Write   (Distortion, Vignetting)
 * 70 SpectralTraceList      !!! Write
 * 80 ApertureMask
 * 81 ApertureList           !!! Write
 Detector
+
 * 90 DetectorList
 
 
@@ -41,6 +44,9 @@ SurfaceLists
 200..299 Make FOVs (3D)
 -----------------------
 <OpticsManager>.fov_setup_effects
+
+TERCurves
+* 214 FilterCurve
 
 SurfaceLists
 * 221 MasterSurfaceList     !!! Write
@@ -82,32 +88,43 @@ Detectors
 -----------------------------
 <OpticsManager>.image_plane_setup_effects
 
-* 310 ApertureMask
 * 370 SpectralTraceList
+* 380 ApertureMask
 * 390 DetectorList
 
 
 400..499 Make Detector (0D)
 ---------------------------
-* 390 DetectorList
+<OpticsManager>.detector_setup_effects
+
+* 490 DetectorList
 
 
 500..599 apply-to(Source)
 -------------------------
+<OpticsManager>.source_effects
+
 * 521 MasterSurfaceList     !!! Write   (system throughput)
 
 
 600..699 apply-to(FieldOfView)
 ------------------------------
+<OpticsManager>.fov_effects
+
 * 632 AtmosphericDispersionCorrection
 * 640 PSF
+    * in all variations
 * 650 PupilPlaneEffect      !!! Write   (Integrated rotation etc)
 * 651 IntegratedPupilRotation ! Write
 * 652 NonSiderialTracking
+* 670 SpectralTraceList
+    * in all variations
 
 
 700..799 apply-to(ImagePlane)
 -----------------------------
+<OpticsManager>.image_plane_effects
+
 * 721 MasterSurfaceList     !!! Write  (bg emission)
 * 744 Vibration
 * 761 Vignetting            !!! Write
@@ -117,6 +134,7 @@ Detectors
 
 800..899 apply-to(Detector)
 ---------------------------
+<OpticsManager>.detector_effects
 
 Noises
 * 810 ReadNoise
@@ -128,7 +146,7 @@ Noises
 Extra flux
 * 830 DarkCurrent
 
-Electronic phenomena
+Other phenomena
 * 840 LinearityCurve
 * 841 PixelCrossTalk        !!! Write
 * 842 PixelLeakage          !!! Write

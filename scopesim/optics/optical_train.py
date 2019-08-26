@@ -60,11 +60,11 @@ class OpticalTrain:
 
         """
         self.optics_manager.update(**kwargs)
-        self.fov_manager = FOVManager(self.optics_manager.fov_setup_effects,
-                                      **kwargs)
-        self.image_plane = ImagePlane(self.optics_manager.image_plane_header,
-                                      **kwargs)
-        self.detector_array = DetectorArray(**kwargs)
+        opt_man = self.optics_manager
+        self.fov_manager = FOVManager(opt_man.fov_setup_effects, **kwargs)
+        self.image_plane = ImagePlane(opt_man.image_plane_header, **kwargs)
+        self.detector_array = DetectorArray(opt_man.detector_setup_effects,
+                                            **kwargs)
 
     def observe(self, orig_source, **kwargs):
         """

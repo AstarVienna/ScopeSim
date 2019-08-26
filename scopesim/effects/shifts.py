@@ -10,7 +10,7 @@ from ..base_classes import FieldOfViewBase, ImagePlaneBase, SourceBase
 class Shift3D(Effect):
     def __init__(self, **kwargs):
         super(Shift3D, self).__init__(**kwargs)
-        self.meta["z_order"] = [30, 330]
+        self.meta["z_order"] = [30]
 
     def apply_to(self, obj, **kwargs):
         return obj
@@ -64,7 +64,7 @@ class AtmosphericDispersion(Shift3D):
     """
     def __init__(self, **kwargs):
         super(AtmosphericDispersion, self).__init__(**kwargs)
-        self.meta["z_order"] = [31, 331]
+        self.meta["z_order"] = [231]
         self.meta["wave_min"] = "!SIM.spectral.wave_min"
         self.meta["wave_mid"] = "!SIM.spectral.wave_mid"
         self.meta["wave_max"] = "!SIM.spectral.wave_max"
@@ -120,7 +120,7 @@ class AtmosphericDispersionCorrection(Shift3D):
         kwargs
         """
         super(AtmosphericDispersionCorrection, self).__init__(**kwargs)
-        self.meta["z_order"] = [32, 332]
+        self.meta["z_order"] = [632]
         self.apply_to_classes = FieldOfViewBase
 
         required_keys = ["airmass", "temperature", "humidity", "pressure",

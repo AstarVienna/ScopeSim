@@ -20,7 +20,7 @@ class TERCurve(Effect):
     """
     def __init__(self, **kwargs):
         super(TERCurve, self).__init__(**kwargs)
-        self.meta["z_order"] = [10]
+        self.meta["z_order"] = [10, 110]
         self.surface = SpectralSurface()
         self.surface.meta.update(self.meta)
         data = self.get_data()
@@ -31,9 +31,10 @@ class TERCurve(Effect):
 class AtmosphericTERCurve(TERCurve):
     def __init__(self, **kwargs):
         super(AtmosphericTERCurve, self).__init__(**kwargs)
-        self.meta["z_order"] = [11]
+        self.meta["z_order"] = [111]
         self.meta["area"] = "!TEL.area"
         self.meta["area_unit"] = "m2"
+        self.meta["position"] = 0       # position in surface table
         self.meta.update(kwargs)
 
 
@@ -54,10 +55,11 @@ class SkycalcTERCurve(TERCurve):
         """
 
         super(SkycalcTERCurve, self).__init__(**kwargs)
-        self.meta["z_order"] = [12, 212]
+        self.meta["z_order"] = [112]
         self.meta["action"] = "transmission"
         self.meta["area"] = "!TEL.area"
         self.meta["area_unit"] = "m2"
+        self.meta["position"] = 0  # position in surface table
         self.meta.update(kwargs)
 
         self.skycalc_conn = skycalc_ipy.SkyCalc()
@@ -83,10 +85,31 @@ class QuantumEfficiencyCurve(TERCurve):
     def __init__(self, **kwargs):
         super(QuantumEfficiencyCurve, self).__init__(**kwargs)
         self.meta["action"] = "transmission"
-        self.meta["z_order"] = [13, 213]
+        self.meta["z_order"] = [113]
+        self.meta["position"] = -1          # position in surface table
 
 
 class FilterCurve(TERCurve):
+    """
+    kwargs
+    ------
+    position : int
+    filter_name : str
+        ``Ks`` - corresponding to the filter name in the filename pattern
+    filename_format : str
+        ``TC_filter_{}.dat``
+
+    Can either be created using the standard 3 options:
+    - ``filename``: direct filename of the filer curve
+    - ``table``: an ``astropy.Table``
+    - ``array_dict``: a dictionary version of a table: ``{col_name1: values, }``
+
+    or by passing the combination of ``filter_name`` and ``filename_format`` as
+    kwargs. Here all filter file names follow a pattern (e.g. see above) and the
+    ``{}`` are replaced by ``filter_name`` at run time. ``filter_name`` can
+    also be a !bang string for a ``__currsys__`` entry: ``"!INST.filter_name"``
+
+    """
     def __init__(self, **kwargs):
         if np.all([key not in kwargs for key in ["filename", "table",
                                                  "array_dict"]]):
@@ -101,9 +124,11 @@ class FilterCurve(TERCurve):
                                  "{}".format(kwargs))
 
         super(FilterCurve, self).__init__(**kwargs)
-        self.meta["z_order"] = [14, 214]
+        self.meta["z_order"] = [114, 214]
         self.meta["min_throughput"] = "!SIM.spectral.minimum_throughput"
         self.meta["action"] = "transmission"
+        self.meta["position"] = -1          # position in surface table
+        self.meta.update(kwargs)
 
     def fov_grid(self, which="waveset", **kwargs):
         if which == "waveset":
