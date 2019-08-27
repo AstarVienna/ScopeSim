@@ -138,27 +138,10 @@ class TestMakeOpticalTrain:
 class TestObserveOpticalTrain:
     def test_background_is_similar_to_online_etc(self):
         cmd = scopesim.UserCommands(use_instrument="HAWKI")
-        # cmd.ignore_effects = [
-        #                       "paranal_atmo_default_ter_curve",
-        #                       "vlt_mirror_list",
-        #                       "hawki_mirror_list"
-        #                       ]
         opt = scopesim.OpticalTrain(cmd)
-
-        # for el in opt.optics_manager.optical_elements: print(el)
-        #
-        # efs_groups = [getattr(opt.optics_manager, name) for name in
-        #              ["surfaces_table", "fov_setup_effects",
-        #               "image_plane_setup_effects", "detector_setup_effects",
-        #               "source_effects", "fov_effects", "image_plane_effects",
-        #               "detector_effects"]]
-        # for group in efs_groups: print(group)
-
         src = scopesim.source.source_utils.empty_sky()
 
-        # ETC gives 2613 e-/DIT for a 1s DET at airmass=1.2, pwv=2.5
+        # ETC gives 2700 e-/DIT for a 1s DET at airmass=1.2, pwv=2.5
         opt.observe(src)
+        assert np.average(opt.image_plane.data) == approx(2700, rel=0.2)
 
-        # currently the atmosphere delivers ~600 ph/s, however there is a 1.5mag
-        # difference between skycalc and the paranal Ks BG
-        print(np.average(opt.image_plane.data))

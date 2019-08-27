@@ -1,6 +1,8 @@
 import numpy as np
 from astropy import units as u
 
+from synphot import SourceSpectrum
+
 import skycalc_ipy
 
 from .effects import Effect
@@ -17,6 +19,38 @@ class TERCurve(Effect):
     Additionally in the header there
     should be the following keywords: wavelength_unit
 
+    kwargs that can be passed::
+
+        "rescale_emission" : { "filter_name": str, "value": float, "unit": str}
+
+    Examples
+    --------
+    Inside a YAML file description::
+
+        name: bogus_surface
+        class: TERCurve
+        kwargs:
+            array_dict:
+                wavelength: [0.3, 3.0]
+                transmission: [0.9, 0.9]
+                emission: [1, 1]
+            wavelength_unit: um
+            emission_unit: ph s-1 m-2 um-1
+            rescale_emission:
+                filter_name: "Paranal/HAWKI.Ks"
+                value: 15.5
+                unit: ABmag
+
+    Inside an ASCII file::
+
+        # name: bogus_surface
+        # wavelength_unit: um
+        # emission_unit: ph s-1 m-2 um-1
+        # rescale_emission: {filter_name: "Paranal/HAWKI.Ks", value: 36.3, unit: Jy}
+        wavelength  transmission    emission
+        0.3         0.9             1
+        3.0         0.9             1
+
     """
     def __init__(self, **kwargs):
         super(TERCurve, self).__init__(**kwargs)
@@ -32,13 +66,14 @@ class AtmosphericTERCurve(TERCurve):
     def __init__(self, **kwargs):
         super(AtmosphericTERCurve, self).__init__(**kwargs)
         self.meta["z_order"] = [111]
+        self.meta["action"] = "transmission"
         self.meta["area"] = "!TEL.area"
         self.meta["area_unit"] = "m2"
         self.meta["position"] = 0       # position in surface table
         self.meta.update(kwargs)
 
 
-class SkycalcTERCurve(TERCurve):
+class SkycalcTERCurve(AtmosphericTERCurve):
     def __init__(self, **kwargs):
         """
         Retrieves an atmospheric spectrum from ESO's skycalc server
@@ -47,6 +82,7 @@ class SkycalcTERCurve(TERCurve):
         ----------------
         skycalc parameters can be found by calling::
 
+            >>> import skycalc_ipy
             >>> skycalc_ipy.SkyCalc().keys
 
         .. note:: Compared to skycalc_ipy, wmin and wmax must be given in units
@@ -56,10 +92,6 @@ class SkycalcTERCurve(TERCurve):
 
         super(SkycalcTERCurve, self).__init__(**kwargs)
         self.meta["z_order"] = [112]
-        self.meta["action"] = "transmission"
-        self.meta["area"] = "!TEL.area"
-        self.meta["area_unit"] = "m2"
-        self.meta["position"] = 0  # position in surface table
         self.meta.update(kwargs)
 
         self.skycalc_conn = skycalc_ipy.SkyCalc()
@@ -115,7 +147,7 @@ class FilterCurve(TERCurve):
                                                  "array_dict"]]):
             if "filter_name" in kwargs and "filename_format" in kwargs:
                 filt_name = from_currsys(kwargs["filter_name"])
-                file_format = kwargs["filename_format"]
+                file_format = from_currsys(kwargs["filename_format"])
                 kwargs["filename"] = file_format.format(filt_name)
             else:
                 raise ValueError("FilterCurve must be passed one of (`filename`"

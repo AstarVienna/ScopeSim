@@ -76,7 +76,7 @@ class SurfaceList(Effect):
                 flux = emission(wave)    # PHOTLAM --> ph s-1 cm-2 AA-1 * cm2
                 phs = (np.trapz(flux, wave) * u.cm**2).to(u.Unit("ph s-1"))
             else:
-                phs = 0 << (u.ph / u.s)
+                phs = 0 * (u.ph / u.s)
 
             obj.hdu.data += phs.value
 
