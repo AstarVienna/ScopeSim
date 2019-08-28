@@ -21,7 +21,7 @@ PKGS = {"Paranal": "locations/Paranal.zip",
         "HAWKI": "instruments/HAWKI.zip"}
 
 CLEAN_UP = False
-PLOTS = True
+PLOTS = False
 
 
 def setup_module():
