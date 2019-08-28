@@ -71,7 +71,7 @@ class TestRadiometryTableAddSurfaceList:
     def test_all_surfaces_where_added_to_dict_surface(self, input_tables):
         rad_table = opt_rad.RadiometryTable()
         rad_table.add_surface_list(input_tables)
-        names = rad_table.table["Name"]
+        names = rad_table.table["name"]
         assert np.all(name in rad_table.surface for name in names)
 
 
@@ -308,10 +308,10 @@ class TestAddSurfaceToTable:
     @pytest.mark.parametrize("position", [0, 2, 5])
     def test_(self, input_tables, position):
         tbl = ioascii.read(input_tables[0])
-        surf = opt_surf.SpectralSurface(tbl[0]["Filename"])
+        surf = opt_surf.SpectralSurface(tbl[0]["filename"])
         tbl = rad_utils.add_surface_to_table(tbl, surf, "new_row", position)
-        assert tbl[position]["Filename"] == surf.meta["filename"]
-        assert tbl[position]["Name"] == "new_row"
+        assert tbl[position]["filename"] == surf.meta["filename"]
+        assert tbl[position]["name"] == "new_row"
 
 
 class TestRadiometryTableFromELT:
@@ -324,7 +324,7 @@ class TestRadiometryTableFromELT:
 
         fname = "TER_ELT_System_20190611.dat"
         eso = scopesim.effects.TERCurve(filename=fname)
-        eso.surface.meta["temp"] = 0
+        eso.surface.meta["temperature"] = 0
 
         from matplotlib import pyplot as plt
         wave = np.arange(0.3, 3, 0.001) * 1e4

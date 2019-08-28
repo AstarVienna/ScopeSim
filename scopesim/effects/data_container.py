@@ -101,7 +101,8 @@ class DataContainer:
         self.table.meta.update(self.meta)
 
     def _load_ascii(self):
-        self.table = ioascii.read(self.meta["filename"])
+        self.table = ioascii.read(self.meta["filename"],
+                                  format="basic", guess=False)
         hdr_dict = utils.convert_table_comments_to_dict(self.table)
         if isinstance(hdr_dict, dict):
             self.headers += [hdr_dict]

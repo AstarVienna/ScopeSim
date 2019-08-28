@@ -1,6 +1,8 @@
 import numpy as np
 from astropy import units as u
 
+from synphot import SourceSpectrum
+
 import skycalc_ipy
 
 from .effects import Effect
@@ -17,10 +19,42 @@ class TERCurve(Effect):
     Additionally in the header there
     should be the following keywords: wavelength_unit
 
+    kwargs that can be passed::
+
+        "rescale_emission" : { "filter_name": str, "value": float, "unit": str}
+
+    Examples
+    --------
+    Inside a YAML file description::
+
+        name: bogus_surface
+        class: TERCurve
+        kwargs:
+            array_dict:
+                wavelength: [0.3, 3.0]
+                transmission: [0.9, 0.9]
+                emission: [1, 1]
+            wavelength_unit: um
+            emission_unit: ph s-1 m-2 um-1
+            rescale_emission:
+                filter_name: "Paranal/HAWKI.Ks"
+                value: 15.5
+                unit: ABmag
+
+    Inside an ASCII file::
+
+        # name: bogus_surface
+        # wavelength_unit: um
+        # emission_unit: ph s-1 m-2 um-1
+        # rescale_emission: {filter_name: "Paranal/HAWKI.Ks", value: 36.3, unit: Jy}
+        wavelength  transmission    emission
+        0.3         0.9             1
+        3.0         0.9             1
+
     """
     def __init__(self, **kwargs):
         super(TERCurve, self).__init__(**kwargs)
-        self.meta["z_order"] = [10, 210]
+        self.meta["z_order"] = [10, 110]
         self.surface = SpectralSurface()
         self.surface.meta.update(self.meta)
         data = self.get_data()
@@ -31,10 +65,15 @@ class TERCurve(Effect):
 class AtmosphericTERCurve(TERCurve):
     def __init__(self, **kwargs):
         super(AtmosphericTERCurve, self).__init__(**kwargs)
-        self.meta["z_order"] = [11, 211]
+        self.meta["z_order"] = [111]
+        self.meta["action"] = "transmission"
+        self.meta["area"] = "!TEL.area"
+        self.meta["area_unit"] = "m2"
+        self.meta["position"] = 0       # position in surface table
+        self.meta.update(kwargs)
 
 
-class SkycalcTERCurve(TERCurve):
+class SkycalcTERCurve(AtmosphericTERCurve):
     def __init__(self, **kwargs):
         """
         Retrieves an atmospheric spectrum from ESO's skycalc server
@@ -43,6 +82,7 @@ class SkycalcTERCurve(TERCurve):
         ----------------
         skycalc parameters can be found by calling::
 
+            >>> import skycalc_ipy
             >>> skycalc_ipy.SkyCalc().keys
 
         .. note:: Compared to skycalc_ipy, wmin and wmax must be given in units
@@ -51,8 +91,8 @@ class SkycalcTERCurve(TERCurve):
         """
 
         super(SkycalcTERCurve, self).__init__(**kwargs)
-        self.meta["z_order"] = [12, 212]
-        self.meta["action"] = "transmission"
+        self.meta["z_order"] = [112]
+        self.meta.update(kwargs)
 
         self.skycalc_conn = skycalc_ipy.SkyCalc()
         self.query_server(**kwargs)
@@ -77,15 +117,50 @@ class QuantumEfficiencyCurve(TERCurve):
     def __init__(self, **kwargs):
         super(QuantumEfficiencyCurve, self).__init__(**kwargs)
         self.meta["action"] = "transmission"
-        self.meta["z_order"] = [13, 213]
+        self.meta["z_order"] = [113]
+        self.meta["position"] = -1          # position in surface table
 
 
 class FilterCurve(TERCurve):
+    """
+    kwargs
+    ------
+    position : int
+    filter_name : str
+        ``Ks`` - corresponding to the filter name in the filename pattern
+    filename_format : str
+        ``TC_filter_{}.dat``
+
+    Can either be created using the standard 3 options:
+    - ``filename``: direct filename of the filer curve
+    - ``table``: an ``astropy.Table``
+    - ``array_dict``: a dictionary version of a table: ``{col_name1: values, }``
+
+    or by passing the combination of ``filter_name`` and ``filename_format`` as
+    kwargs. Here all filter file names follow a pattern (e.g. see above) and the
+    ``{}`` are replaced by ``filter_name`` at run time. ``filter_name`` can
+    also be a !bang string for a ``__currsys__`` entry: ``"!INST.filter_name"``
+
+    """
     def __init__(self, **kwargs):
+        if np.all([key not in kwargs for key in ["filename", "table",
+                                                 "array_dict"]]):
+            if "filter_name" in kwargs and "filename_format" in kwargs:
+                filt_name = from_currsys(kwargs["filter_name"])
+                file_format = from_currsys(kwargs["filename_format"])
+                kwargs["filename"] = file_format.format(filt_name)
+            else:
+                raise ValueError("FilterCurve must be passed one of (`filename`"
+                                 " `array_dict`, `table`) or both "
+                                 "(`filter_name`, `filename_format`):"
+                                 "{}".format(kwargs))
+
         super(FilterCurve, self).__init__(**kwargs)
-        self.meta["z_order"] = [14, 214]
-        self.meta["action"] = "transmission"
+        self.meta["z_order"] = [114, 214]
         self.meta["min_throughput"] = "!SIM.spectral.minimum_throughput"
+        self.meta["action"] = "transmission"
+        self.meta["position"] = -1          # position in surface table
+        self.meta.update(kwargs)
 
     def fov_grid(self, which="waveset", **kwargs):
         if which == "waveset":

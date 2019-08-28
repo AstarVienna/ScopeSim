@@ -37,6 +37,11 @@ properties :
 
   reports :
     verbose : False
+    # for our own statistics, we track exclusively your institute's ip address
+    # WE DO NOT TRACK OR SAVE ANY PERSONAL INFORMATION
+    # however you can become completely anonymous by setting this flag to True
+    block_ip_tracking : False
+
 
 ---
 ### OBSERVATION PARAMETERS
@@ -54,6 +59,7 @@ ignore_effects : []
 add_effects : []
 override_effect_values : []
 
+
 ---
 # MANDATORY TELESCOPE PARAMETERS
 alias : TEL
@@ -62,10 +68,11 @@ properties :
   etendue : 0
   area : 0
 
+
 ---
 # MANDATORY INSTRUMENT PARAMETERS
 alias : INST
 
 properties :
-  pixel_scale : 0     # ["]
+  pixel_scale : 0     # ["/pix]
   plate_scale : 0     # ["/mm]

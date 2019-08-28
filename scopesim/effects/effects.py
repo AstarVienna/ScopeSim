@@ -35,8 +35,6 @@ class Effect(DataContainer):
 
     def __init__(self, **kwargs):
         super(Effect, self).__init__(**kwargs)
-        # .. todo:: should this be here, or only in apply_to() and fov_grid()?
-        self.update_bang_keywords()
         self.meta["z_order"] = []
 
     def apply_to(self, obj):
@@ -88,13 +86,13 @@ class Effect(DataContainer):
 
     def update(self, **kwargs):
         self.meta.update(kwargs)
-        self.update_bang_keywords()
+        # self.update_bang_keywords()
 
-    def update_bang_keywords(self):
-        for key in self.meta:
-            if isinstance(self.meta[key], str) and self.meta[key][0] == "!":
-                bang_key = self.meta[key]
-                self.meta[key] = rc.__currsys__[bang_key]
+    # def update_bang_keywords(self):
+    #     for key in self.meta:
+    #         if isinstance(self.meta[key], str) and self.meta[key][0] == "!":
+    #             bang_key = self.meta[key]
+    #             self.meta[key] = rc.__currsys__[bang_key]
 
     def __repr__(self):
         if "name" not in self.meta:

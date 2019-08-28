@@ -23,10 +23,10 @@ def _surf_list():
 
 
 def _surf_list_empty():
-    tbl = Table(names=["Name", "Outer", "Inner", "Angle",
-                       "Temp", "Action", "Filename"],
+    tbl = Table(names=["name", "outer", "inner", "angle",
+                       "temperature", "action", "filename"],
                 meta={"outer_unit": "m", "inner_unit": "m", "angle_unit": "deg",
-                      "temp_unit": "deg_C"})
+                      "temperature_unit": "deg_C"})
     kwargs = {"etendue": 5776 * u.m ** 2 * u.mas ** 2,
               "table": tbl,
               "name": "Empty Surface List"}
@@ -38,7 +38,7 @@ def _filter_surface():
               "name": "filter",
               "action": "transmission",
               "outer": 0.1,
-              "temp": 0}
+              "temperature": 0}
     return efs.TERCurve(**kwargs)
 
 
@@ -83,7 +83,7 @@ def _filter_tophat_curve():
     kwargs = {"name": "1-2um box-hat filter",
               "action": "transmission",
               "outer": 0.1,
-              "temp": 0,
+              "temperature": 0,
               "wavelength_unit": "um",
               "array_dict": {"wavelength": [0.3, 0.99, 1., 2., 2.01, 3.0],
                              "transmission": [0, 0, 1, 1, 0, 0]}

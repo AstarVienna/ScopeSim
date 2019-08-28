@@ -160,7 +160,7 @@ class OpticsManager:
 
     @property
     def image_plane_header(self):
-        detector_lists = self.get_all(efs.DetectorList)
+        detector_lists = self.detector_setup_effects
         header = detector_lists[0].image_plane_header
 
         if len(detector_lists) != 1:
@@ -171,66 +171,37 @@ class OpticsManager:
 
     @property
     def detector_effects(self):
-        dtcr_effects = []
-        for opt_el in self.optical_elements:
-            dtcr_effects += opt_el.get_z_order_effects([500, 599])
-
-        return dtcr_effects
+        return self.get_z_order_effects(800)
 
     @property
     def image_plane_effects(self):
-        surfaces_table = self.surfaces_table
-        imp_effects = [surfaces_table] if surfaces_table is not None else []
-
-        for opt_el in self.optical_elements:
-            imp_effects += opt_el.get_z_order_effects([400, 499])
-
-        return imp_effects
+        return self.get_z_order_effects(700) + [self.surfaces_table]
 
     @property
     def fov_effects(self):
-        fov_effects = []
-        for opt_el in self.optical_elements:
-            fov_effects += opt_el.get_z_order_effects([300, 399])
-
-        return fov_effects
+        return self.get_z_order_effects(600)
 
     @property
     def source_effects(self):
-        surfaces_table = self.surfaces_table
-        src_effects = [surfaces_table] if surfaces_table is not None else []
+        return self.get_z_order_effects(500) + [self.surfaces_table]
 
-        for opt_el in self.optical_elements:
-            src_effects += opt_el.get_z_order_effects([200, 299])
-
-        return src_effects
+    @property
+    def detector_setup_effects(self):
+        return self.get_z_order_effects(400)
 
     @property
     def image_plane_setup_effects(self):
-        implane_setup_effects = []
-        for opt_el in self.optical_elements:
-            implane_setup_effects += opt_el.get_z_order_effects([100, 199])
-
-        return implane_setup_effects
+        return self.get_z_order_effects(300)
 
     @property
     def fov_setup_effects(self):
-        fovmanager_effects = [self.surfaces_table]
-        for opt_el in self.optical_elements:
-            fovmanager_effects += opt_el.get_z_order_effects([0, 99])
-
-        return fovmanager_effects
+        return self.get_z_order_effects(200) + [self.surfaces_table]
 
     @property
     def surfaces_table(self):
-        surface_like_effects = []
-        for opt_el in self.optical_elements:
-            surface_like_effects += opt_el.ter_list
-
-        surf_table = combine_surface_effects(surface_like_effects)
-        self._surfaces_table = surf_table
-
-        return surf_table
+        surface_like_effects = self.get_z_order_effects(100)
+        self._surfaces_table = combine_surface_effects(surface_like_effects)
+        return self._surfaces_table
 
     def __add__(self, other):
         self.add_effect(other)

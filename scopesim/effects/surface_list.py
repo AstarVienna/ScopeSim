@@ -37,7 +37,7 @@ class SurfaceList(Effect):
     """
     def __init__(self, **kwargs):
         super(SurfaceList, self).__init__(**kwargs)
-        self.meta["z_order"] = [20, 220]
+        self.meta["z_order"] = [20, 120]
         self.meta["min_throughput"] = "!SIM.spectral.minimum_throughput"
         self.meta["wave_min"] = "!SIM.spectral.wave_min"
         self.meta["wave_max"] = "!SIM.spectral.wave_max"
@@ -52,8 +52,13 @@ class SurfaceList(Effect):
         if data is not None:
             self.radiometry_table.add_surface_list(data)
 
-    def apply_to(self, obj, **kwargs):
-        if not self.is_empty and isinstance(obj, SourceBase):
+    def apply_to(self, obj):
+        """
+        obj == SourceBase - applies throughput
+        obj == ImagePlaneBase - applies emission
+
+        """
+        if isinstance(obj, SourceBase) and not self.is_empty:
             for ii in range(len(obj.spectra)):
                 compound_spec = obj.spectra[ii] * self.throughput
                 wave = compound_spec.waveset
@@ -62,13 +67,16 @@ class SurfaceList(Effect):
                                             lookup_table=spec)
                 obj.spectra[ii] = new_source
 
-        elif not self.is_empty and isinstance(obj, ImagePlaneBase):
+        elif isinstance(obj, ImagePlaneBase) and not self.is_empty:
             # by calling use_area, the surface area is taken into account, but
             # the units are stuck in PHOTLAM for synphot
             emission = self.get_emission(use_area=True)  # --> PHOTLAM * area
-            wave = emission.waveset  # angstrom
-            flux = emission(wave)    # PHOTLAM --> ph s-1 cm-2 AA-1 * cm2
-            phs = (np.trapz(flux, wave) * u.cm**2).to(u.Unit("ph s-1"))
+            if emission is not None:
+                wave = emission.waveset  # angstrom
+                flux = emission(wave)    # PHOTLAM --> ph s-1 cm-2 AA-1 * cm2
+                phs = (np.trapz(flux, wave) * u.cm**2).to(u.Unit("ph s-1"))
+            else:
+                phs = 0 * (u.ph / u.s)
 
             obj.hdu.data += phs.value
 
@@ -98,7 +106,9 @@ class SurfaceList(Effect):
 
     def add_surface(self, surface, name, position=-1, add_to_table=True):
         if isinstance(surface, TERCurve):
+            ter_meta = surface.meta
             surface = surface.surface
+            surface.meta.update(ter_meta)
         self.radiometry_table.add_surface(surface, name, position, add_to_table)
 
     def add_surface_list(self, surface_list, prepend=False):
@@ -149,4 +159,3 @@ class SurfaceList(Effect):
     @property
     def is_empty(self):
         return len(self.radiometry_table.table) == 0
-

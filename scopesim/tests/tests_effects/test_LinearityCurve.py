@@ -21,10 +21,11 @@ class TestInit:
     def test_initialises_with_direct_ndit(self):
         assert isinstance(LinearityCurve(ndit=1), LinearityCurve)
 
-    def test_initialises_with_bangkey_ndit(self):
-        rc.__currsys__["!OBS.ndit"] = 2
-        lincurve = LinearityCurve(ndit="!OBS.ndit")
-        assert lincurve.meta["ndit"] == 2
+    # Not relevant because the bangkeys are now called just-in-time
+    # def test_initialises_with_bangkey_ndit(self):
+    #     rc.__currsys__["!OBS.ndit"] = 2
+    #     lincurve = LinearityCurve(ndit="!OBS.ndit")
+    #     assert lincurve.meta["ndit"] == 2
 
     def test_throws_error_with_no_keywords(self):
         with pytest.raises(ValueError):

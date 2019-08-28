@@ -30,12 +30,16 @@ class TestGetServerElements:
 class TestListPackages:
     def test_returns_all_packages_when_nothing_specified(self):
         pkgs = db.list_packages()
-        assert len(pkgs) > 0
+        assert pkgs is None
 
     def test_returns_empty_list_when_url_wrong(self):
         url = rc.__config__["!SIM.file.server_base_url"][:-2]
         pkgs = db.list_packages(url)
-        assert len(pkgs) == 0
+        assert pkgs is None
+
+    def test_returns_list_from_server_when_told_to(self):
+        pkgs = db.list_packages(location="server", return_pkgs=True)
+        assert isinstance(pkgs, list)
 
 
 class TestDownloadPackage:

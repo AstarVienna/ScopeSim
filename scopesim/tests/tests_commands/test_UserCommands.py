@@ -8,7 +8,6 @@ from scopesim.server.database import download_package
 
 LOCAL_PKGS_PATH = "./scopesim_pkg_dir_tmp/"
 rc.__config__["!SIM.file.local_packages_path"] = os.path.abspath(LOCAL_PKGS_PATH)
-# rc.__config__["!SIM.file.local_packages_path"] = "D:/Work/irdb/"
 
 
 def setup_module():
@@ -18,7 +17,7 @@ def setup_module():
 
 
 def teardown_module():
-    shutil.rmtree(LOCAL_PKGS_PATH)
+        shutil.rmtree(LOCAL_PKGS_PATH)
 
 
 class TestInit:
@@ -87,3 +86,8 @@ class TestListLocalPackages:
         from scopesim.commands import user_commands as uc2
         real_pkgs, ext_pkgs = uc2.list_local_packages(action="return")
         assert len(real_pkgs) > 0
+
+
+class TestTrackIpAddress:
+    def test_see_if_theres_an_entry_on_the_server_log_file(self):
+        cmds = UserCommands(use_instrument="test_package")

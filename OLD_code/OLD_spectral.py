@@ -682,7 +682,7 @@ class BlackbodyCurve(EmissionCurve):
     """
 
     def __init__(self, lam, temp, **kwargs):
-        self.params = {"pix_res":0.004, "area":978, "temp":temp}
+        self.params = {"pix_res": 0.004, "area": 978, "temperature": temp}
         self.params.update(kwargs)
 
         # FOr some wierd reason it returns NaNs for temp < 266

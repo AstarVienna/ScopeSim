@@ -479,6 +479,9 @@ def find_file(filename, path=None, silent=False):
     if filename is None or filename.lower() == "none":
         return None
 
+    if filename[0] == "!":
+        filename = from_currsys(filename)
+
     if path is None:
         path = rc.__search_path__
 
@@ -634,12 +637,16 @@ def get_meta_quantity(meta_dict, name, fallback_unit=""):
 
     """
 
+    if isinstance(meta_dict[name], str) and meta_dict[name][0] == "!":
+        meta_dict[name] = from_currsys(meta_dict[name])
+
     if isinstance(meta_dict[name], u.Quantity):
         unit = meta_dict[name].unit
     elif name + "_unit" in meta_dict:
         unit = meta_dict[name + "_unit"]
     else:
         unit = u.Unit(fallback_unit)
+
     quant = quantify(meta_dict[name], unit)
 
     return quant

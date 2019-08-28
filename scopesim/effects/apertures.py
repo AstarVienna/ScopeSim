@@ -29,7 +29,7 @@ class ApertureMask(Effect):
     """
     def __init__(self, **kwargs):
         super(ApertureMask, self).__init__(**kwargs)
-        self.meta["z_order"] = [80, 110]
+        self.meta["z_order"] = [80, 280, 380]
         self.meta["pixel_scale"] = "!INST.pixel_scale"
         self.meta["no_mask"] = True
         self.meta["angle"] = 0
@@ -85,6 +85,37 @@ class ApertureMask(Effect):
         return mask
 
 
+class ApertureList(Effect):
+    def __init__(self, **kwargs):
+        super(ApertureList, self).__init__(**kwargs)
+        self.meta["z_order"] = [81, 281]
+
+    def fov_grid(self, which="edges", **kwargs):
+        """ Returns a list of ApertureMasks """
+        return []
+
+
+class SquareApertureList(ApertureList):
+    def __init__(self, **kwargs):
+        super(SquareApertureList, self).__init__(**kwargs)
+        self.meta["z_order"] = [282]
+
+
+class RoundApertureList(ApertureList):
+    def __init__(self, **kwargs):
+        super(RoundApertureList, self).__init__(**kwargs)
+        self.meta["z_order"] = [283]
+
+
+class PolygonApertureList(ApertureList):
+    def __init__(self, **kwargs):
+        super(PolygonApertureList, self).__init__(**kwargs)
+        self.meta["z_order"] = [284]
+
+
+################################################################################
+
+
 def mask_from_coords(x0, y0, angle, pixel_scale):
     angle = np.deg2rad(angle)
     c, s = np.cos(angle), np.sin(angle)
@@ -104,31 +135,3 @@ def mask_from_coords(x0, y0, angle, pixel_scale):
     mask = path.contains_points(coords, radius=0.005).reshape((naxis1, naxis2))
 
     return mask
-
-
-class ApertureList(Effect):
-    def __init__(self, **kwargs):
-        super(ApertureList, self).__init__(**kwargs)
-        self.meta["z_order"] = [81, 111]
-
-    def fov_grid(self, which="edges", **kwargs):
-        """ Returns a list of ApertureMasks """
-        return []
-
-
-class SquareApertureList(ApertureList):
-    def __init__(self, **kwargs):
-        super(SquareApertureList, self).__init__(**kwargs)
-        self.meta["z_order"] = [82, 112]
-
-
-class RoundApertureList(ApertureList):
-    def __init__(self, **kwargs):
-        super(RoundApertureList, self).__init__(**kwargs)
-        self.meta["z_order"] = [83, 113]
-
-
-class PolygonApertureList(ApertureList):
-    def __init__(self, **kwargs):
-        super(PolygonApertureList, self).__init__(**kwargs)
-        self.meta["z_order"] = [84, 114]

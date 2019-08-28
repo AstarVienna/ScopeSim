@@ -4,6 +4,7 @@ import copy
 
 import numpy as np
 import yaml
+import requests
 
 from .. import rc
 from ..utils import find_file
@@ -97,6 +98,37 @@ class UserCommands:
         ...                            "properties": {"pwv": 9001}}],
         ...                    properties={"!ATMO.pwv": 8999})
 
+    Notes
+    -----
+    .. attention:: We track your IP address when ``ScopeSim`` checks for updates
+
+        When initialising a UserCommands object via ``use_instrument=``,
+        ``ScopeSim`` checks on the database whether there are updates to the
+        instrument package. Our server records the IP address of each query for
+        out own statistics only.
+
+        WE DO NOT STORE OR TRACK PERSONAL DATA. THESE STATISTICS ARE NEEDED FOR
+        GETTING MORE FUNDING TO CONTINUE DEVELOPING THIS PROJECT.
+
+        We are doing this solely as a way of showing the austrian funding agency
+        that people are indeed using this software (or not). Your participation
+        in this effort greatly helps our chances of securing the next grant.
+
+        However, if you would still like to avoid your IP address being stored,
+        you can run ``scopesim`` 100% anonymously by setting::
+
+            >>> scopsim.rc.__config__["!SIM.reports.block_ip_tracking"] = True
+
+        at the beginning of each session. Alternatively you can also pass the
+        same bang keyword when generating a ``UserCommand`` object::
+
+            >>> from scopesim import UserCommands
+            >>> UserCommands(use_instrument="MICADO",
+            >>>              properties={"!SIM.reports.block_ip_tracking": True})
+
+        If you use a custom ``yaml`` configuration file, you can also add this
+        keyword to the ``properties`` section of the ``yaml`` file.
+
     """
 
     def __init__(self, **kwargs):
@@ -105,6 +137,7 @@ class UserCommands:
         self.yaml_dicts = []
         self.kwargs = kwargs
         self.ignore_effects = []
+        self.package_name = ""
 
         self.update(**kwargs)
 
@@ -116,8 +149,11 @@ class UserCommands:
         """
 
         if "use_instrument" in kwargs:
+            self.package_name = kwargs["use_instrument"]
             self.update(packages=[kwargs["use_instrument"]],
                         yamls=["default.yaml"])
+
+            check_for_updates(self.package_name)
 
         if "packages" in kwargs:
             add_packages_to_rc_search(self["!SIM.file.local_packages_path"],
@@ -171,6 +207,25 @@ class UserCommands:
 
     def __repr__(self):
         return self.cmds.__repr__()
+
+
+def check_for_updates(package_name):
+    """
+    Asks IRDB server if there are newer versions of the instrument package
+    """
+    response = {}
+
+    # tracking **exclusively** your IP address for our internal stats
+    if not rc.__currsys__["!SIM.reports.block_ip_tracking"] and \
+            "TRAVIS" not in os.environ:
+        front_matter = rc.__currsys__["!SIM.file.server_base_url"]
+        back_matter = "api.php?package_name={}".format(package_name)
+        try:
+            response = requests.get(url=front_matter+back_matter).json()
+        except:
+            print("Offline. Cannot check for updates for {}"
+                  "".format(package_name))
+    return response
 
 
 def add_packages_to_rc_search(local_path, package_list):

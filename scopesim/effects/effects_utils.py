@@ -2,7 +2,6 @@ from copy import deepcopy
 
 from astropy.table import Table
 
-import scopesim.effects.apertures
 from .. import effects as efs
 
 
@@ -22,7 +21,10 @@ def combine_surface_effects(surface_effects):
         new_surflist.add_surface_list(surflist)
 
     for surf in surf_list:
-        new_surflist.add_surface(surf, surf.meta["name"])
+        position = surf.meta["position"] if "position" in surf.meta else -1
+        new_surflist.add_surface(surf, surf.meta["name"], position=position)
+
+    new_surflist.table = new_surflist.radiometry_table.table
 
     return new_surflist
 
@@ -64,8 +66,8 @@ def is_spectroscope(effects):
 
 
 def empty_surface_list():
-    tbl = Table(names=["Name", "Outer", "Inner", "Angle",
-                       "Temp", "Action", "Filename"],
+    tbl = Table(names=["name", "outer", "inner", "angle",
+                       "temperature", "action", "filename"],
                 meta={"outer_unit": "m", "inner_unit": "m",
-                      "angle_unit": "deg", "temp_unit": "deg_C"})
+                      "angle_unit": "deg", "temperature_unit": "deg_C"})
     return efs.SurfaceList(table=tbl)

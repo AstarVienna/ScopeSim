@@ -9,11 +9,11 @@
 # outer_unit : m
 # inner_unit : m
 # angle_unit : deg
-# temp_unit : deg_C
+# temperature_unit : deg_C
 #
 # changes :
 # - 2018-11-19 (KL) Added meta data
 # - 2019-01-22 Added unit information
 #
-Name        Outer   Inner   Angle   Temp    Action      Filename
-M6          1.1     0.      45.     0.      reflection  TER_mirror_gold.dat
+name        outer   inner   angle   temperature     action      filename
+M6          1.1     0.      45.     0.              reflection  TER_mirror_gold.dat

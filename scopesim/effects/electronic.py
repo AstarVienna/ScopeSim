@@ -11,12 +11,12 @@ from ..utils import real_colname, from_currsys, check_keys
 class BasicReadoutNoise(Effect):
     def __init__(self, **kwargs):
         super(BasicReadoutNoise, self).__init__(**kwargs)
-        self.meta["z_order"] = [510]
+        self.meta["z_order"] = [811]
         self.meta["pedestal_fraction"] = 0.3
         self.meta["read_fraction"] = 0.4
         self.meta["line_fraction"] = 0.25
         self.meta["channel_fraction"] = 0.05
-        self.meta["random_seed"] = rc.__currsys__["!SIM.random.seed"]
+        self.meta["random_seed"] = "!SIM.random.seed"
         self.meta.update(kwargs)
 
         self.required_keys = ["noise_std", "n_channels", "ndit"]
@@ -43,11 +43,11 @@ class BasicReadoutNoise(Effect):
 class ShotNoise(Effect):
     def __init__(self, **kwargs):
         super(Effect, self).__init__(**kwargs)
-        self.meta["z_order"] = [520]
-        self.meta["random_seed"] = rc.__currsys__["!SIM.random.seed"]
+        self.meta["z_order"] = [820]
+        self.meta["random_seed"] = "!SIM.random.seed"
         self.meta.update(kwargs)
 
-    def apply_to(self, det, **kwargs):
+    def apply_to(self, det):
         if isinstance(det, DetectorBase):
             self.meta["random_seed"] = from_currsys(self.meta["random_seed"])
             if self.meta["random_seed"] is not None:
@@ -75,7 +75,7 @@ class DarkCurrent(Effect):
     """
     def __init__(self, **kwargs):
         super(Effect, self).__init__(**kwargs)
-        self.meta["z_order"] = [530]
+        self.meta["z_order"] = [830]
 
         required_keys = ["value", "dit", "ndit"]
         check_keys(self.meta, required_keys, action="error")
@@ -102,7 +102,7 @@ class DarkCurrent(Effect):
 class LinearityCurve(Effect):
     def __init__(self, **kwargs):
         super(LinearityCurve, self).__init__(**kwargs)
-        self.meta["z_order"] = [540]
+        self.meta["z_order"] = [840]
 
         self.required_keys = ["ndit"]
         check_keys(self.meta, self.required_keys, action="error")
@@ -122,6 +122,9 @@ class LinearityCurve(Effect):
             det.image_hdu.data = new_image
 
         return det
+
+
+################################################################################
 
 
 def make_ron_frame(image_shape, noise_std, n_channels, channel_fraction,

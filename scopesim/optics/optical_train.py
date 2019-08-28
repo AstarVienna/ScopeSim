@@ -60,11 +60,11 @@ class OpticalTrain:
 
         """
         self.optics_manager.update(**kwargs)
-        self.fov_manager = FOVManager(self.optics_manager.fov_setup_effects,
-                                      **kwargs)
-        self.image_plane = ImagePlane(self.optics_manager.image_plane_header,
-                                      **kwargs)
-        self.detector_array = DetectorArray(**kwargs)
+        opt_man = self.optics_manager
+        self.fov_manager = FOVManager(opt_man.fov_setup_effects, **kwargs)
+        self.image_plane = ImagePlane(opt_man.image_plane_header, **kwargs)
+        self.detector_array = DetectorArray(opt_man.detector_setup_effects,
+                                            **kwargs)
 
     def observe(self, orig_source, **kwargs):
         """
@@ -92,9 +92,12 @@ class OpticalTrain:
         self.update(**kwargs)
 
         source = deepcopy(orig_source)
-        for effect in self.optics_manager.source_effects:
-                source = effect.apply_to(source)
 
+        # [1D - transmisison curves]
+        for effect in self.optics_manager.source_effects:
+            source = effect.apply_to(source)
+
+        # [3D - Atmospheric shifts, PSF, NCPAs, Grating shift/distortion]
         for fov in self.fov_manager.fovs:
             fov.extract_from(source)
             for effect in self.optics_manager.fov_effects:
@@ -104,6 +107,7 @@ class OpticalTrain:
                 fov.view()
             self.image_plane.add(fov.hdu, wcs_suffix="D")
 
+        # [2D - Vibration, flat fielding, chopping+nodding]
         for effect in self.optics_manager.image_plane_effects:
             self.image_plane = effect.apply_to(self.image_plane)
 

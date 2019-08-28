@@ -10,9 +10,10 @@ from .. import utils
 
 
 class DetectorArray:
-    def __init__(self, **kwargs):
+    def __init__(self, detector_lists=[], **kwargs):
         self.meta = {}
         self.meta.update(kwargs)
+        self.detector_lists = detector_lists
         self.effects = []
         self.detectors = []
         self.latest_exposure = None
@@ -52,7 +53,7 @@ class DetectorArray:
         self.meta.update(kwargs)
 
         # 1. make a series of Detectors for each row in a DetectorList object
-        detector_list = get_detector_list(self.effects)
+        detector_list = get_detector_list(self.detector_lists)
         self.detectors = [Detector(hdr, **self.meta)
                           for hdr in detector_list.detector_headers()]
 
@@ -62,8 +63,7 @@ class DetectorArray:
 
             # 3. apply all effects (to all Detectors)
             for effect in self.effects:
-                if any([500 <= z < 600 for z in effect.meta["z_order"]]):
-                    detector = effect.apply_to(detector, **self.meta)
+                detector = effect.apply_to(detector)
 
             # 4. add necessary header keywords
             # .. todo: add keywords
@@ -94,10 +94,10 @@ def make_effects_hdu(effects):
 
 
 def get_detector_list(effects):
-    detector_list = get_all_effects(effects, efs.DetectorList)
+    detector_lists = get_all_effects(effects, efs.DetectorList)
 
-    if len(detector_list) != 1:
+    if len(detector_lists) != 1:
         warnings.warn("None or more than one DetectorList found. Using the"
-                      " first instance.{}".format(detector_list))
+                      " first instance.{}".format(detector_lists))
 
-    return detector_list[0]
+    return detector_lists[0]

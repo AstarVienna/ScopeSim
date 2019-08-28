@@ -33,15 +33,15 @@ def setup_package():
     # Rewrite the version file every time
     write_version_py()
 
-    setup(name = 'ScopeSim',
-          version = VERSION,
-          description = "Telescope observation simulator",
-          author = "Kieran Leschinski",
-          author_email = "kieran.leschinski@unive.ac.at",
-          url = "https://github.com/astronomyk/ScopeSim",
+    setup(name='ScopeSim',
+          version=VERSION,
+          description="Telescope observation simulator",
+          author="Kieran Leschinski",
+          author_email="kieran.leschinski@unive.ac.at",
+          url="https://github.com/astronomyk/ScopeSim",
           package_dir={'scopesim': 'scopesim'},
           packages=find_packages(),
-          package_data = {'scopesim': []},
+          include_package_data=True,
           install_requires=["numpy>=1.13",
                             "scipy>0.17",
                             "astropy>1.1.2",

@@ -19,11 +19,12 @@ class PSF(Effect):
         self.kernel = None
         self.valid_waverange = None
         self._waveset = None
-        flux_accuracy = rc.__config__["!SIM.computing.flux_accuracy"]
         super(PSF, self).__init__(**kwargs)
 
+        flux_accuracy = rc.__config__["!SIM.computing.flux_accuracy"]
         self.meta["flux_accuracy"] = float(flux_accuracy)
         self.meta["sub_pixel_flag"] = rc.__config__["!SIM.sub_pixel.flag"]
+        self.meta["z_order"] = [40, 640]
         self.meta.update(kwargs)
         self.apply_to_classes = (FieldOfViewBase, ImagePlaneBase)
 
@@ -54,11 +55,18 @@ class PSF(Effect):
         return obj
 
     def fov_grid(self, which="waveset", **kwargs):
-        waves = []
+        waveset = []
         if which == "waveset":
-            waves = self._waveset
+            if self._waveset is not None:
+                _waveset = self._waveset
+                waves = 0.5 * (np.array(_waveset)[1:] +
+                               np.array(_waveset)[:-1])
+                wave_min = kwargs["wave_min"] if "wave_min" in kwargs else np.min(_waveset)
+                wave_max = kwargs["wave_max"] if "wave_max" in kwargs else np.max(_waveset)
+                mask = (wave_min < waves) * (waves < wave_max)
+                waveset = np.unique([wave_min] + list(waves[mask]) + [wave_max])
 
-        return waves
+        return waveset
 
     def get_kernel(self, obj):
         self.valid_waverange = None
@@ -73,7 +81,7 @@ class PSF(Effect):
 class AnalyticalPSF(PSF):
     def __init__(self, **kwargs):
         super(AnalyticalPSF, self).__init__(**kwargs)
-        self.meta["z_order"] = [40, 340]
+        self.meta["z_order"] = [41, 641]
 
 
 class Vibration(AnalyticalPSF):
@@ -82,7 +90,7 @@ class Vibration(AnalyticalPSF):
     """
     def __init__(self, **kwargs):
         super(Vibration, self).__init__(**kwargs)
-        self.meta["z_order"] = [44, 444]
+        self.meta["z_order"] = [244, 744]
         self.meta["width_n_fwhms"] = 4
         self.apply_to_classes = ImagePlaneBase
 
@@ -109,7 +117,7 @@ class NonCommonPathAberration(AnalyticalPSF):
     """
     def __init__(self, **kwargs):
         super(NonCommonPathAberration, self).__init__(**kwargs)
-        self.meta["z_order"] = [41, 341]
+        self.meta["z_order"] = [241, 641]
         self.meta["kernel_width"] = None
         self.meta["strehl_drift"] = 0.02
         self.meta["wave_min"] = "!SIM.spectral.wave_min"
@@ -169,14 +177,14 @@ class NonCommonPathAberration(AnalyticalPSF):
 class Seeing(AnalyticalPSF):
     def __init__(self, **kwargs):
         super(Seeing, self).__init__(**kwargs)
-        self.meta["z_order"] = [43, 343]
+        self.meta["z_order"] = [243, 643]
 
 
 class GaussianDiffractionPSF(AnalyticalPSF):
     def __init__(self, diameter, **kwargs):
         super(GaussianDiffractionPSF, self).__init__(**kwargs)
         self.meta["diameter"] = diameter
-        self.meta["z_order"] = [42, 342]
+        self.meta["z_order"] = [242, 642]
 
     def fov_grid(self, which="waveset", **kwargs):
         wavelengths = []
@@ -223,19 +231,19 @@ class GaussianDiffractionPSF(AnalyticalPSF):
 class SemiAnalyticalPSF(PSF):
     def __init__(self, **kwargs):
         super(SemiAnalyticalPSF, self).__init__(**kwargs)
-        self.meta["z_order"] = [50, 350]
+        self.meta["z_order"] = [42]
 
 
 class PoppyFieldVaryingPSF(SemiAnalyticalPSF):
     def __init__(self, **kwargs):
         super(PoppyFieldVaryingPSF, self).__init__(**kwargs)
-        self.meta["z_order"] = [51, 351]
+        self.meta["z_order"] = [251, 651]
 
 
 class PoppyFieldConstantPSF(SemiAnalyticalPSF):
     def __init__(self, **kwargs):
         super(PoppyFieldConstantPSF, self).__init__(**kwargs)
-        self.meta["z_order"] = [52, 352]
+        self.meta["z_order"] = [252, 652]
 
 
 ################################################################################
@@ -245,7 +253,7 @@ class PoppyFieldConstantPSF(SemiAnalyticalPSF):
 class DiscretePSF(PSF):
     def __init__(self, **kwargs):
         super(DiscretePSF, self).__init__(**kwargs)
-        self.meta["z_order"] = [60, 360]
+        self.meta["z_order"] = [43]
 
 
 class FieldConstantPSF(DiscretePSF):
@@ -256,7 +264,7 @@ class FieldConstantPSF(DiscretePSF):
         self.required_keys = ["filename"]
         utils.check_keys(self.meta, self.required_keys, action="error")
 
-        self.meta["z_order"] = [62, 362]
+        self.meta["z_order"] = [262, 662]
         self._waveset, self.kernel_indexes = get_psf_wave_exts(self._file)
         self.current_layer_id = None
         self.current_ext = None
@@ -279,7 +287,11 @@ class FieldConstantPSF(DiscretePSF):
             self.current_layer_id = ext
 
             # compare kernel and fov pixel scales, rescale if needed
-            kernel_pixel_scale = self._file[ext].header["CDELT1"]
+            unit_factor = 1
+            if "CUNIT1" in self._file[ext].header:
+                unit_factor = u.Unit(self._file[ext].header["CUNIT1"]).to(u.deg)
+
+            kernel_pixel_scale = self._file[ext].header["CDELT1"] * unit_factor
             fov_pixel_scale = fov.hdu.header["CDELT1"]
 
             # rescaling kept inside loop to avoid rescaling for every fov
@@ -305,7 +317,7 @@ class FieldVaryingPSF(DiscretePSF):
         self.required_keys = ["filename"]
         utils.check_keys(self.meta, self.required_keys, action="error")
 
-        self.meta["z_order"] = [61, 361]
+        self.meta["z_order"] = [261, 661]
         self._waveset, self.kernel_indexes = get_psf_wave_exts(self._file)
         self.current_ext = None
         self.current_data = None
@@ -506,6 +518,9 @@ def get_psf_wave_exts(hdu_list):
                 if "WAVE0" in hdu_list[ii].header]
     wave_set = [hdu.header["WAVE0"] for hdu in hdu_list
                 if "WAVE0" in hdu.header]
+
+    # ..todo:: implement a way of getting the units from WAVEUNIT
+    # until then assume everything is in um
     wave_set = utils.quantify(wave_set, u.um)
 
     return wave_set, wave_ext

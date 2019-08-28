@@ -14,7 +14,7 @@ Effects come in either 0, 1, 2, or 3 (2+1) dimensions
 * 1D: Single dimensional vectors which act in the spectral range. These are 
   generally descriptions of effects which act in the spectral domain, and 
   therefore contain columns "Wavelength" and "Values", where "Values" can 
-  include: "Transmissivity", "Emissivity", "Emission", "Reflectivity".
+  include: "Transmission", "Emissivity", "Emission", "Reflection".
   Input files will primarily be **ASCII files**
 
 * 2D: Two dimensional spatial effects. There are effects which are independent 
@@ -24,7 +24,7 @@ Effects come in either 0, 1, 2, or 3 (2+1) dimensions
   full field of a detector, e.g. the hot/dead pixel map of a detector. 
   Input files will primarily be **FITS files**
 
-* 3D: (2D+1D) Three dimensional spectrospatial effects. These are spatial 
+* 3D: (2D+1D) Three dimensional spectro-spatial effects. These are spatial
   effects which have a wavelength dependence. E.g. the diffraction limited PSF 
   core increases with wavelength. Input files will primarily be **FITS files**
 
@@ -846,12 +846,12 @@ spectral characteristics for Transmission, Emission, and Reflection.
 
 An ASCII table with the following columns:
 
-===== ==== ==== ===== ===== ===== ===== ============ 
-order name type outer inner angle temp  ter_filename
------ ---- ---- ----- ----- ----- ----- ------------
-int   str  str  float float float float str
-...   ...  ...  m     m     deg   degC  ...
-===== ==== ==== ===== ===== ===== ===== ============
+===== ==== ==== ===== ===== ===== =========== ========
+order name type outer inner angle temperature filename
+----- ---- ---- ----- ----- ----- ----------- --------
+int   str  str  float float float float       str
+...   ...  ...  m     m     deg   degC        ...
+===== ==== ==== ===== ===== ===== =========== ========
     
 where:
 
@@ -860,12 +860,12 @@ where:
 * "type" of surface regarding throughput: reflective (r) or transmittive (t)
 * "outer", "inner" are the outer and inner diameters in [m] of the optical element,
 * "angle" is the angle at which the element is rotated w.r.t the optical axis,
-* "temp" is the temperature in degrees Celcius of the optical element,
-* "ter_filename" refenences the file containing the spectral response curves for
+* "temperature" is the temperature in degrees Celcius of the optical element,
+* "filename" refenences the file containing the spectral response curves for
   transmission, emission, and reflection
   
   
-Transmissivity, Emissivity, Reflectivity (TER) Curve
+Transmission, Emissivity, Reflection (TER) Curve
 ++++++++++++++++++++++++++++++++++++++++++++++++++++
   
 **Description**: A table containing the wavelength dependent coefficients for 
@@ -898,21 +898,21 @@ the spectral response of an optical element.
 
 An ASCII table with the following columns:
 
-===== ============== ========== ============
-lam   transmissivity emissivity reflectivity
------ -------------- ---------- ------------
+===== ============ ========== ==========
+lam   transmission emissivity reflection
+----- ------------ ---------- ----------
 float float          float      float
 um    0..1           0..1       0..1
-===== ============== ========== ============
+===== ============ ========== ==========
 
 where
 
 * "lam" is the wavelength in [um],
-* "transmissivity" is the coefficient of transmissivity between [0,1]
+* "transmission" is the coefficient of transmission between [0,1]
 * "emissivity" is the coefficient of emissivity between [0,1]
-* "reflectivity" is the coefficient of reflectivity between [0,1]
+* "reflection" is the coefficient of reflection between [0,1]
 
-In general the transmissivity + reflectivity should equal 1. Emissivity is a 
+In general the transmission + reflection should equal 1. Emissivity is a
 the coefficient applied to a blackbody emission curve for the optical element.
  
 

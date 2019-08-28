@@ -35,17 +35,15 @@ class TestInit:
 class TestReadout:
     def test_returns_hdu_for_empty_effects_list(self, image_plane,
                                                 detector_list_effect):
-        effects = [detector_list_effect]
-        dtcr_arr = DetectorArray()
-        hdu = dtcr_arr.readout(image_plane, effects)
+        dtcr_arr = DetectorArray([detector_list_effect])
+        hdu = dtcr_arr.readout(image_plane)
 
         assert isinstance(hdu, fits.HDUList)
 
     def test_hdu_data_is_lots_of_zeros_for_empty_input(self, image_plane,
                                                        detector_list_effect):
-        effects = [detector_list_effect]
-        dtcr_arr = DetectorArray()
-        hdu = dtcr_arr.readout(image_plane, effects)
+        dtcr_arr = DetectorArray([detector_list_effect])
+        hdu = dtcr_arr.readout(image_plane)
 
         assert np.all(hdu[1].data == 0)
-        assert hdu[1].shape[0] == effects[0].table["x_len"]
+        assert hdu[1].shape[0] == detector_list_effect.table["x_len"]
