@@ -10,6 +10,7 @@ from astropy.table import Table
 from synphot import SpectralElement
 from synphot.models import Empirical1D
 
+from ..effects import ter_curves_utils as ter_utils
 from ..utils import get_meta_quantity, quantify, extract_type_from_unit, \
     convert_table_comments_to_dict, find_file
 from .surface_utils import make_emission_from_emissivity,\
@@ -109,6 +110,16 @@ class SpectralSurface:
             flux.meta["solid_angle"] = u.arcsec**-2
             flux.meta["history"] += ["Converted to arcsec-2: {}"
                                      "".format(conversion_factor)]
+
+        if flux is not None and "rescale_emission" in self.meta:
+            dic = self.meta["rescale_emission"]
+            amplitude = dic["value"] * u.Unit(dic["unit"])
+            from ..utils import from_currsys
+            filter_name = from_currsys(dic["filter_name"])
+            if "filename_format" in dic:
+                filename_format = from_currsys(dic["filename_format"])
+                filter_name = filename_format.format(filter_name)
+            flux = ter_utils.scale_spectrum(flux, filter_name, amplitude)
 
         return flux
 

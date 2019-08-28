@@ -76,6 +76,7 @@ def get_filter(filter_name):
     # check generics
     # check spanish_vo
     path = find_file(filter_name, silent=True)
+
     if path is not None:
         tbl = ioascii.read(path)
         wave = quantity_from_table("wavelength", tbl, u.um).to(u.um)
@@ -156,4 +157,76 @@ def zero_mag_flux(filter_name, photometric_system, return_filter=False):
         return flux, filt
     else:
         return flux
+
+
+def scale_spectrum(spectrum, filter_name, amplitude):
+    """
+    Scales a SourceSpectrum to a value in a filter
+
+    Parameters
+    ----------
+    spectrum : synphot.SourceSpectrum
+
+    filter_name : str
+        Name of a filter from
+        - a local instrument package (available in ``rc.__search_path__``)
+        - a generic filter name (see ``ter_curves_utils.FILTER_DEFAULTS``)
+        - a spanish-vo filter service reference (e.g. ``"Paranal/HAWKI.Ks"``)
+
+    amplitude : ``astropy.Quantity``, float
+        The value that the spectrum should have in the given filter. Acceptable
+        astropy quantities are:
+        - u.mag : Vega magnitudes
+        - u.ABmag : AB magnitudes
+        - u.STmag : HST magnitudes
+        - u.Jy : Jansky per filter bandpass
+        Additionally the ``FLAM`` and ``FNU`` units from ``synphot.units`` can
+        be used when passing the quantity for ``amplitude``:
+
+    Returns
+    -------
+    spectrum : synphot.SourceSpectrum
+        Input spectrum scaled to the given amplitude in the given filter
+
+    Examples
+    --------
+    ::
+
+        >>> from scopesim.effects.ter_curves_utils as ter_utils
+        >>>
+        >>> spec = ter_utils.vega_spectrum()
+        >>> vega_185 = ter_utils.scale_spectrum(spec, "Ks", -1.85 * u.mag)
+        >>> ab_0 = ter_utils.scale_spectrum(spec, "Ks", 0 * u.ABmag)
+        >>> jy_3630 = ter_utils.scale_spectrum(spec, "Ks", 3630 * u.Jy)
+
+    """
+
+    if isinstance(amplitude, u.Quantity):
+        if amplitude.unit.physical_type == "spectral flux density":
+            if amplitude.unit != u.ABmag:
+                amplitude = amplitude.to(u.ABmag)
+            ref_spec = ab_spectrum(amplitude.value)
+
+        elif amplitude.unit.physical_type == "spectral flux density wav":
+            if amplitude.unit != u.STmag:
+                amplitude = amplitude.to(u.STmag)
+            ref_spec = st_spectrum(amplitude.value)
+
+        elif amplitude.unit == u.mag:
+            ref_spec = vega_spectrum(amplitude.value)
+
+        else:
+            raise ValueError("Units of amplitude must be one of "
+                             "[u.mag, u.ABmag, u.STmag]: {}".format(amplitude))
+    else:
+        ref_spec = vega_spectrum(amplitude)
+
+    filt = get_filter(filter_name)
+    ref_flux = Observation(ref_spec, filt).effstim(flux_unit=PHOTLAM)
+
+    real_flux = Observation(spectrum, filt).effstim(flux_unit=PHOTLAM)
+    scale_factor = ref_flux / real_flux
+    spectrum *= scale_factor.value
+
+    return spectrum
 
