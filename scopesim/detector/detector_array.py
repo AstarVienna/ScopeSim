@@ -63,7 +63,7 @@ class DetectorArray:
 
             # 3. apply all effects (to all Detectors)
             for effect in self.effects:
-                detector = effect.apply_to(detector, **self.meta)
+                detector = effect.apply_to(detector)
 
             # 4. add necessary header keywords
             # .. todo: add keywords

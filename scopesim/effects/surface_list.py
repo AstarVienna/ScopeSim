@@ -52,7 +52,7 @@ class SurfaceList(Effect):
         if data is not None:
             self.radiometry_table.add_surface_list(data)
 
-    def apply_to(self, obj, **kwargs):
+    def apply_to(self, obj):
         """
         obj == SourceBase - applies throughput
         obj == ImagePlaneBase - applies emission

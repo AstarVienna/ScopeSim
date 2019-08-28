@@ -47,7 +47,7 @@ class ShotNoise(Effect):
         self.meta["random_seed"] = "!SIM.random.seed"
         self.meta.update(kwargs)
 
-    def apply_to(self, det, **kwargs):
+    def apply_to(self, det):
         if isinstance(det, DetectorBase):
             self.meta["random_seed"] = from_currsys(self.meta["random_seed"])
             if self.meta["random_seed"] is not None:

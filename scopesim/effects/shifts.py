@@ -12,7 +12,7 @@ class Shift3D(Effect):
         super(Shift3D, self).__init__(**kwargs)
         self.meta["z_order"] = [30]
 
-    def apply_to(self, obj, **kwargs):
+    def apply_to(self, obj):
         return obj
 
     def fov_grid(self, which="shifts", **kwargs):
