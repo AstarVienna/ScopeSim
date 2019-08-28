@@ -13,7 +13,6 @@ from scopesim import rc
 from matplotlib import pyplot as plt
 from matplotlib.colors import LogNorm
 
-
 rc.__config__["!SIM.file.local_packages_path"] = "./scopesim_pkg_dir_tmp/"
 
 PKGS = {"Paranal": "locations/Paranal.zip",
