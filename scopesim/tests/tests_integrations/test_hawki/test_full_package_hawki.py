@@ -79,7 +79,7 @@ class TestMakeOpticalTrain:
         tc = opt.optics_manager.surfaces_table.throughput
         ec = opt.optics_manager.surfaces_table.emission
         # ..todo:: something super wierd is going on here when running pytest in the top directory
-        assert 0.55 < np.max(tc(wave)) < 0.6
+        assert 0.55 < np.max(tc(wave)) < 0.7
 
         if PLOTS:
             plt.plot(wave, tc(wave))
