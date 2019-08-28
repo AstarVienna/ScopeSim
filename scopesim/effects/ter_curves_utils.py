@@ -140,7 +140,7 @@ def zero_mag_flux(filter_name, photometric_system, return_filter=False):
     Returns
     -------
     flux : float
-        [``PHOTLAM``]
+        [PHOTLAM]
     filt : ``synphot.SpectralElement``
         If ``return_filter`` is True
 
