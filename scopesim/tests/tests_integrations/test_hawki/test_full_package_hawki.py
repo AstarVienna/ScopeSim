@@ -19,7 +19,7 @@ PKGS = {"Paranal": "locations/Paranal.zip",
         "VLT": "telescopes/VLT.zip",
         "HAWKI": "instruments/HAWKI.zip"}
 
-CLEAN_UP = False
+CLEAN_UP = True
 PLOTS = False
 
 
