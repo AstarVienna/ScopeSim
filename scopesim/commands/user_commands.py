@@ -138,6 +138,7 @@ class UserCommands:
         self.kwargs = kwargs
         self.ignore_effects = []
         self.package_name = ""
+        self.modes_dict = {}
 
         self.update(**kwargs)
 
@@ -169,12 +170,12 @@ class UserCommands:
                         warnings.warn("{} could not be found".format(yaml_input))
 
                 elif isinstance(yaml_input, dict):
-                    for key in ["packages", "yamls"]:
-                        if key in yaml_input:
-                            self.update(**{key: yaml_input[key]})
-
                     self.cmds.update(yaml_input)
                     self.yaml_dicts += [yaml_input]
+
+                    for key in ["packages", "yamls", "mode_yamls"]:
+                        if key in yaml_input:
+                            self.update(**{key: yaml_input[key]})
 
                 else:
                     raise ValueError("yaml_dicts must be a filename or a "
@@ -184,6 +185,11 @@ class UserCommands:
             props_dict = kwargs["properties"]
             for key in props_dict:
                 self.cmds[key] = props_dict[key]
+
+        if "mode_yamls" in kwargs:
+            self.modes_dict = {my["name"]: my for my in kwargs["mode_yamls"]}
+            if "mode" in self.cmds["!OBS"]:
+                self.update(yamls=self.modes_dict[self.cmds["!OBS.mode"]]["yamls"])
 
         if "ignore_effects" in kwargs:
             self.ignore_effects = kwargs["ignore_effects"]

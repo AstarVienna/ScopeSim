@@ -22,7 +22,7 @@ PKGS = {"Armazones": "locations/Armazones.zip",
         "MAORY": "instruments/MAORY.zip",
         "MICADO": "instruments/MICADO.zip"}
 
-CLEAN_UP = False
+CLEAN_UP = True
 PLOTS = False
 
 
@@ -54,7 +54,7 @@ class TestInit:
 
 
 class TestLoadUserCommands:
-    def test_user_commands_loads_with_throwing_errors(self, capsys):
+    def test_user_commands_loads_without_throwing_errors(self, capsys):
         cmd = scopesim.UserCommands(use_instrument="MICADO")
         assert isinstance(cmd, scopesim.UserCommands)
         for key in ["SIM", "OBS", "ATMO", "TEL", "INST", "DET"]:
@@ -62,6 +62,9 @@ class TestLoadUserCommands:
 
         stdout = capsys.readouterr()
         assert len(stdout.out) == 0
+
+    def test_user_commands_loads_mode_files(self):
+        cmd = scopesim.UserCommands(use_instrument="MICADO")
 
 
 class TestMakeOpticalTrain:
