@@ -65,6 +65,19 @@ class TestLoadUserCommands:
 
     def test_user_commands_loads_mode_files(self):
         cmd = scopesim.UserCommands(use_instrument="MICADO")
+        assert "MICADO_IMG_LR" in [yd["name"] for yd in cmd.yaml_dicts]
+
+    def test_user_commands_can_change_modes(self):
+        cmd = scopesim.UserCommands(use_instrument="MICADO")
+        cmd.set_mode("mcao_spec")
+        assert "MAORY" in [yd["name"] for yd in cmd.yaml_dicts]
+        assert "MICADO_SPEC" in [yd["name"] for yd in cmd.yaml_dicts]
+
+    def test_user_commands_can_change_modes_via_init(self):
+        cmd = scopesim.UserCommands(use_instrument="MICADO",
+                                    set_mode="mcao_spec")
+        assert "MAORY" in [yd["name"] for yd in cmd.yaml_dicts]
+        assert "MICADO_SPEC" in [yd["name"] for yd in cmd.yaml_dicts]
 
 
 class TestMakeOpticalTrain:

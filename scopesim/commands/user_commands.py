@@ -138,6 +138,7 @@ class UserCommands:
         self.kwargs = kwargs
         self.ignore_effects = []
         self.package_name = ""
+        self.default_yamls = []
         self.modes_dict = {}
 
         self.update(**kwargs)
@@ -165,7 +166,10 @@ class UserCommands:
                 if isinstance(yaml_input, str):
                     yaml_file = find_file(yaml_input)
                     if yaml_file is not None:
-                        self.update(yamls=load_yaml_dicts(yaml_file))
+                        yaml_dict = load_yaml_dicts(yaml_file)
+                        self.update(yamls=yaml_dict)
+                        if yaml_input == "default.yaml":
+                            self.default_yamls = yaml_dict
                     else:
                         warnings.warn("{} could not be found".format(yaml_input))
 
@@ -181,15 +185,19 @@ class UserCommands:
                     raise ValueError("yaml_dicts must be a filename or a "
                                      "dictionary: {}".format(yaml_input))
 
+        if "mode_yamls" in kwargs:
+            self.modes_dict = {my["name"]: my for my in kwargs["mode_yamls"]}
+            if "mode" in self.cmds["!OBS"]:
+                mode_name = self.cmds["!OBS.mode"]
+                self.update(yamls=self.modes_dict[mode_name]["yamls"])
+
         if "properties" in kwargs:
             props_dict = kwargs["properties"]
             for key in props_dict:
                 self.cmds[key] = props_dict[key]
 
-        if "mode_yamls" in kwargs:
-            self.modes_dict = {my["name"]: my for my in kwargs["mode_yamls"]}
-            if "mode" in self.cmds["!OBS"]:
-                self.update(yamls=self.modes_dict[self.cmds["!OBS.mode"]]["yamls"])
+        if "set_mode" in kwargs:
+            self.set_mode(mode=kwargs["set_mode"])
 
         if "ignore_effects" in kwargs:
             self.ignore_effects = kwargs["ignore_effects"]
@@ -201,6 +209,15 @@ class UserCommands:
         if "override_effect_values" in kwargs:
             # ..todo: implement this
             pass
+
+    def set_mode(self, mode=None):
+        if mode is not None and mode in self.modes_dict:
+            for i in range(len(self.default_yamls)):
+                if "properties" in self.default_yamls[i] and \
+                         "mode" in self.default_yamls[i]["properties"]:
+                    self.default_yamls[i]["properties"]["mode"] = mode
+
+            self.__init__(yamls=self.default_yamls)
 
     def __setitem__(self, key, value):
         self.cmds.__setitem__(key, value)
