@@ -22,7 +22,7 @@ PKGS = {"Armazones": "locations/Armazones.zip",
         "MAORY": "instruments/MAORY.zip",
         "MICADO": "instruments/MICADO.zip"}
 
-CLEAN_UP = True
+CLEAN_UP = False
 PLOTS = False
 
 
