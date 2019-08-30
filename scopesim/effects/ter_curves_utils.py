@@ -5,7 +5,7 @@ from astropy.io import ascii as ioascii
 from synphot import SpectralElement, Empirical1D, Observation
 from synphot.units import PHOTLAM
 
-from scopesim.source.source_templates import vega_spectrum, st_spectrum, \
+from ..source.source_templates import vega_spectrum, st_spectrum, \
     ab_spectrum
 from ..utils import find_file, quantity_from_table
 
