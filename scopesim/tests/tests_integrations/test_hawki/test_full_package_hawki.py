@@ -21,7 +21,7 @@ PKGS = {"Paranal": "locations/Paranal.zip",
         "HAWKI": "instruments/HAWKI.zip"}
 
 CLEAN_UP = True
-PLOTS = True
+PLOTS = False
 
 
 def setup_module():
@@ -157,6 +157,10 @@ class TestObserveOpticalTrain:
         # ETC gives 2700 e-/DIT for a 1s DET at airmass=1.2, pwv=2.5
         opt.observe(src)
         hdu = opt.readout()
+
+        implane_av = np.average(opt.image_plane.data)
+        hdu_av = np.average([hdu[i].data for i in range(1,5)])
+        assert hdu_av == approx(implane_av * cmd["!OBS.ndit"] * cmd["!OBS.dit"])
 
         if not PLOTS:
             plt.subplot(1, 2, 1)

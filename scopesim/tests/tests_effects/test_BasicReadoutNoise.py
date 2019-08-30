@@ -23,7 +23,7 @@ class TestApplyTo:
         ron = BasicReadoutNoise(noise_std=noise_std, n_channels=64, ndit=1)
         dtcr = ron.apply_to(dtcr)
 
-        assert np.std(dtcr.image_hdu.data) == approx(noise_std, rel=0.05)
+        assert np.std(dtcr._hdu.data) == approx(noise_std, rel=0.05)
 
     @pytest.mark.parametrize("noise_std", [1, 9, 100])
     @pytest.mark.parametrize("ndit", [1, 9, 100])
@@ -31,7 +31,7 @@ class TestApplyTo:
         dtcr = _basic_detector(width=256)
         ron = BasicReadoutNoise(noise_std=noise_std, n_channels=64, ndit=ndit)
         dtcr = ron.apply_to(dtcr)
-        noise_real = np.std(dtcr.image_hdu.data)
+        noise_real = np.std(dtcr._hdu.data)
 
         assert noise_real == approx(noise_std * ndit**0.5, rel=0.05)
 

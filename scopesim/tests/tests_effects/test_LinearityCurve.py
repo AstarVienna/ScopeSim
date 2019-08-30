@@ -49,12 +49,12 @@ class TestApplyTo:
                                                    (60, 60), (1e5, 60)])
     def test_only_applied_to_detector(self, in_flux, out_flux):
         dtcr = _basic_detector()
-        dtcr.image_hdu.data[0, 0] = in_flux
+        dtcr._hdu.data[0, 0] = in_flux
 
         lincurve = LinearityCurve(ndit=1, filename="test_linearity.dat")
         new_dtcr = lincurve.apply_to(dtcr)
-        assert new_dtcr.image_hdu.data[0, 0] == out_flux
-        assert np.min(new_dtcr.image_hdu.data) == 0
+        assert new_dtcr._hdu.data[0, 0] == out_flux
+        assert np.min(new_dtcr._hdu.data) == 0
 
     def test_bypasses_non_detector_objects(self):
         lincurve = LinearityCurve(ndit=1, filename="test_linearity.dat")

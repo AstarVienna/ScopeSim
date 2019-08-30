@@ -26,7 +26,39 @@ def empty_sky():
 
 
 def star_field(n, mmin, mmax, width, height=None, photometric_system="vega"):
+    """
+    Creates a super basic field of stars with random positions and brightnesses
 
+    Parameters
+    ----------
+    n : int
+        number of stars
+
+    mmin, mmax : float
+        [mag] minimum and maximum magnitudes of the population
+
+    width : float
+        [arcsec] width of region to put stars in
+
+    height : float, optional
+        [arcsec] if None, then height=width
+
+    photometric_system : str, optional
+        [vega, AB]
+
+
+    Returns
+    -------
+    stars : scopesim.Source object
+        A Source object with a field of stars that can be fed into the method:
+        ``<OpticalTrain>.observe()``
+
+    See Also
+    --------
+    ``<OpticalTrain>.observe``
+    ``<OpticalTrain>.readout``
+
+    """
     if height is None:
         height = width
 
