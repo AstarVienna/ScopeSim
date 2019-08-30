@@ -153,3 +153,6 @@ Other phenomena
 * 850 BadPixelMask          !!! Write
 * 851 GainMask              !!! Write
 * 852 PedestalMask          !!! Write
+
+Exposures
+* 860 SummedExposure

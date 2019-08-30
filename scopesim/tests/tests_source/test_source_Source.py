@@ -156,8 +156,8 @@ class TestSourceInit:
     def test_initialises_with_image_and_0_spectra(self, input_hdulist):
         with pytest.raises(NotImplementedError):
             src = Source(image_hdu=input_hdulist[0])
-            # assert len(src.spectra) == 0
-            # assert src.fields[0].header["SPEC_REF"] == ""
+            # assert len(st.spectra) == 0
+            # assert st.fields[0].header["SPEC_REF"] == ""
 
     @pytest.mark.parametrize("ii, dtype",
                              [(0, fits.ImageHDU),

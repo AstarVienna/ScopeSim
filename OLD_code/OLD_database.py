@@ -89,7 +89,7 @@ def local_db_paths(name=None):
     Parameters
     ----------
     name : str, optional
-        None, "inst", "psf", "src"
+        None, "inst", "psf", "st"
 
     Returns
     -------
@@ -98,7 +98,7 @@ def local_db_paths(name=None):
     """
 
     local_dict = {"inst" : _local_inst_db(), "psf" : _local_psf_db(),
-                  "src" : _local_src_db()}
+                  "st" : _local_src_db()}
     if name is None:
         return local_dict
     else:
@@ -112,7 +112,7 @@ def server_db_urls(name=None):
     Parameters
     ----------
     name : str, optional
-        None, "inst", "psf", "src"
+        None, "inst", "psf", "st"
 
     Returns
     -------
@@ -121,7 +121,7 @@ def server_db_urls(name=None):
     """
 
     svr_dict = {"inst": _svr_inst_db(), "psf": _svr_psf_db(),
-                "src": _svr_src_db()}
+                "st": _svr_src_db()}
     if name is None:
         return svr_dict
     else:
@@ -196,7 +196,7 @@ def get_local_packages(path=None):
 
         scopesim.server.local_db_paths(<name>)
 
-    where ``name`` can be ``None``,``inst``, ``psf``, or ``src``
+    where ``name`` can be ``None``,``inst``, ``psf``, or ``st``
 
 
     Parameters
@@ -280,7 +280,7 @@ def get_server_packages(path=None):
 
         scopesim.server.svr_db_dict(<name>)
 
-    where ``name`` can be ``None``,``inst``, ``psf``, or ``src``
+    where ``name`` can be ``None``,``inst``, ``psf``, or ``st``
 
 
     Parameters
@@ -438,8 +438,8 @@ def list_source_packages(local_path=None, server_url=None, return_table=False):
 
     By default `list_source_pkgs` looks in
 
-    * `scopesim.server.local_db_paths("src")`
-    * `scopesim.server.server_db_urls("src")`
+    * `scopesim.server.local_db_paths("st")`
+    * `scopesim.server.server_db_urls("st")`
 
 
     Parameters
@@ -538,7 +538,7 @@ def get_package_table_entry(pkg_name, db_table):
 
 
 def determine_type_of_package(svr_db_filename):
-    """Guess what the package type is: 'inst', 'psf', 'src'"""
+    """Guess what the package type is: 'inst', 'psf', 'st'"""
 
     pkg_type = None
     if "inst" in svr_db_filename.lower():
@@ -546,7 +546,7 @@ def determine_type_of_package(svr_db_filename):
     elif "psf" in svr_db_filename.lower():
         pkg_type = "psf"
     elif "source" in svr_db_filename.lower():
-        pkg_type = "src"
+        pkg_type = "st"
 
     return pkg_type
 

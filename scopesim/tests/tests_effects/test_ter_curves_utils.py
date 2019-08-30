@@ -3,25 +3,13 @@ from pytest import approx
 
 import numpy as np
 from matplotlib import pyplot as plt
-from matplotlib.colors import LogNorm
 
 from astropy import units as u
-import synphot as sp
 
+import scopesim.source.source_templates as src_ts
 from scopesim.effects import ter_curves_utils as ter_utils
 
 PLOTS = False
-
-
-def test_all_zero_spectra_line_up():
-    mag = 0
-    vega = ter_utils.vega_spectrum(mag)
-    ab = ter_utils.ab_spectrum(mag)
-    st = ter_utils.st_spectrum(mag)
-
-    wave = 0.55 * u.um
-    assert st(wave).value == approx(vega(wave).value, rel=0.03)
-    assert ab(wave).value == approx(vega(wave).value, rel=0.03)
 
 
 class TestFunctionGetFilter:
@@ -60,7 +48,7 @@ def test_compare_br_gamma():
 
 class TestScaleSpectrum:
     def test_scales_vega_spectrum_to_vega_ab_or_jansky(self):
-        spec = ter_utils.vega_spectrum()
+        spec = src_ts.vega_spectrum()
         vega_185 = ter_utils.scale_spectrum(spec, "Ks", -1.85 * u.mag)
         ab_0 = ter_utils.scale_spectrum(spec, "Ks", 0 * u.ABmag)
         jy_3630 = ter_utils.scale_spectrum(spec, "Ks", 3630 * u.Jy)

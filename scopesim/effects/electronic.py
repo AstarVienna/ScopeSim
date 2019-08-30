@@ -8,6 +8,24 @@ from ..base_classes import DetectorBase
 from ..utils import real_colname, from_currsys, check_keys
 
 
+class SummedExposure(Effect):
+    def __init__(self, **kwargs):
+        super(Effect, self).__init__(**kwargs)
+        self.meta["z_order"] = [860]
+
+        required_keys = ["dit", "ndit"]
+        check_keys(self.meta, required_keys, action="error")
+
+    def apply_to(self, obj):
+        if isinstance(obj, DetectorBase):
+            dit = from_currsys(self.meta["dit"])
+            ndit = from_currsys(self.meta["ndit"])
+
+            obj._hdu.data *= dit * ndit
+
+        return obj
+
+
 class BasicReadoutNoise(Effect):
     def __init__(self, **kwargs):
         super(BasicReadoutNoise, self).__init__(**kwargs)
@@ -32,10 +50,10 @@ class BasicReadoutNoise(Effect):
             ron_keys = ["noise_std", "n_channels", "channel_fraction",
                         "line_fraction", "pedestal_fraction", "read_fraction"]
             ron_kwargs = {key: self.meta[key] for key in ron_keys}
-            ron_kwargs["image_shape"] = det.image_hdu.data.shape
+            ron_kwargs["image_shape"] = det._hdu.data.shape
 
             for _ in range(self.meta["ndit"]):
-                det.image_hdu.data += make_ron_frame(**ron_kwargs)
+                det._hdu.data += make_ron_frame(**ron_kwargs)
 
         return det
 
@@ -53,17 +71,17 @@ class ShotNoise(Effect):
             if self.meta["random_seed"] is not None:
                 np.random.seed(self.meta["random_seed"])
 
-            orig_type = type(det.image_hdu.data[0, 0])
-            if not isinstance(det.image_hdu.data[0, 0], np.float64):
-                det.image_hdu.data = det.image_hdu.data.astype(np.float64)
+            orig_type = type(det._hdu.data[0, 0])
+            if not isinstance(det._hdu.data[0, 0], np.float64):
+                det._hdu.data = det._hdu.data.astype(np.float64)
 
-            data = det.image_hdu.data
+            data = det._hdu.data
             # ..todo FIX THIS!!!
             # (KL) it seems to have fixed itself... lets wait and see
             data = np.random.poisson(data).astype(orig_type)
 
-            new_imagehdu = fits.ImageHDU(data=data, header=det.image_hdu.header)
-            det.image_hdu = new_imagehdu
+            new_imagehdu = fits.ImageHDU(data=data, header=det._hdu.header)
+            det._hdu = new_imagehdu
 
         return det
 
@@ -94,7 +112,7 @@ class DarkCurrent(Effect):
             dit = from_currsys(self.meta["dit"])
             ndit = from_currsys(self.meta["ndit"])
 
-            obj.image_hdu.data += dark * dit * ndit
+            obj._hdu.data += dark * dit * ndit
 
         return obj
 
@@ -113,13 +131,13 @@ class LinearityCurve(Effect):
             incident = self.table["incident"] * ndit
             measured = self.table["measured"] * ndit
 
-            image = det.image_hdu.data
+            image = det._hdu.data
             shape = image.shape
             flat_image = image.flatten()
             new_flat_image = np.interp(flat_image, incident, measured)
             new_image = new_flat_image.reshape(shape)
 
-            det.image_hdu.data = new_image
+            det._hdu.data = new_image
 
         return det
 

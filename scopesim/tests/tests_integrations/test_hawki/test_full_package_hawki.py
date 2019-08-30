@@ -8,6 +8,7 @@ import numpy as np
 from astropy import units as u
 
 import scopesim
+import scopesim.source.source_templates
 from scopesim import rc
 
 from matplotlib import pyplot as plt
@@ -20,7 +21,7 @@ PKGS = {"Paranal": "locations/Paranal.zip",
         "HAWKI": "instruments/HAWKI.zip"}
 
 CLEAN_UP = True
-PLOTS = False
+PLOTS = True
 
 
 def setup_module():
@@ -138,9 +139,30 @@ class TestObserveOpticalTrain:
     def test_background_is_similar_to_online_etc(self):
         cmd = scopesim.UserCommands(use_instrument="HAWKI")
         opt = scopesim.OpticalTrain(cmd)
-        src = scopesim.source.source_utils.empty_sky()
+        src = scopesim.source.source_templates.empty_sky()
 
         # ETC gives 2700 e-/DIT for a 1s DET at airmass=1.2, pwv=2.5
         opt.observe(src)
         assert np.average(opt.image_plane.data) == approx(2700, rel=0.2)
+
+    def test_actually_produces_stars(self):
+        cmd = scopesim.UserCommands(use_instrument="HAWKI",
+                                    properties={"!OBS.dit": 360,
+                                                "!OBS.ndit": 10})
+        cmd.ignore_effects += ["detector_linearity"]
+
+        opt = scopesim.OpticalTrain(cmd)
+        src = scopesim.source.source_templates.star_field(10000, 5, 15, 440)
+
+        # ETC gives 2700 e-/DIT for a 1s DET at airmass=1.2, pwv=2.5
+        opt.observe(src)
+        hdu = opt.readout()
+
+        if not PLOTS:
+            plt.subplot(1, 2, 1)
+            plt.imshow(opt.image_plane.image[128:2048, 128:2048].T, norm=LogNorm())
+
+            plt.subplot(1, 2, 2)
+            plt.imshow(hdu[1].data[128:2048, 128:2048].T, norm=LogNorm())
+            plt.show()
 

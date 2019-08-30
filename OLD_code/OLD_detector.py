@@ -66,8 +66,8 @@ Astropy ``HDUList``. The ``HDUList`` is then written to disk.
     >>>
     >>> # Pass photons from a 10^4 Msun open cluster in the LMC through to the detector
     >>>
-    >>> src = sim.source.source_1E4_Msun_cluster()
-    >>> src.apply_optical_train(opt_train, fpa)
+    >>> st = sim.source.source_1E4_Msun_cluster()
+    >>> st.apply_optical_train(opt_train, fpa)
     >>>
     >>># Read out the detector array to a FITS file
     >>>

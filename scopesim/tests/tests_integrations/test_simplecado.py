@@ -5,6 +5,7 @@ import scopesim as sim
 import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm
 
+import scopesim.source.source_templates
 import scopesim.source.source_utils
 
 PLOTS = False
@@ -56,7 +57,7 @@ OBSERVATIONS_DICT = {"!OBS.ndit": 1,                # Not yet implemented
 
 def test_simplecado():
 
-    src = scopesim.source.source_utils.empty_sky()
+    src = scopesim.source.source_templates.empty_sky()
     cmd = sim.commands.UserCommands(yamls=[DETECTOR_YAML],
                                     properties=OBSERVATIONS_DICT)
 
@@ -86,7 +87,7 @@ def read_in_simplecado_package():
     opt = sim.OpticalTrain(cmds=cmd)
     assert opt.optics_manager.optical_elements[1].meta["object"] == "detector"
 
-    src = scopesim.source.source_utils.empty_sky()
+    src = scopesim.source.source_templates.empty_sky()
     opt.observe(src)
     hdu = opt.readout()
 

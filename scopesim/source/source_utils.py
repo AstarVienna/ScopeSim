@@ -5,7 +5,6 @@ from astropy import wcs, units as u
 from astropy.io import fits
 from astropy.table import Table
 from synphot import SourceSpectrum, Empirical1D, SpectralElement
-from synphot.units import convert_flux
 
 from .. import utils
 
@@ -16,14 +15,14 @@ def validate_source_input(**kwargs):
         if utils.find_file(filename) is None:
             warnings.warn("filename was not found: {}".format(filename))
 
-    if "image" in kwargs and kwargs["image_hdu"] is not None:
-        image_hdu = kwargs["image_hdu"]
+    if "image" in kwargs and kwargs["image"] is not None:
+        image_hdu = kwargs["image"]
         if not isinstance(image_hdu, (fits.PrimaryHDU, fits.ImageHDU)):
-            raise ValueError("image_hdu must be fits.HDU object with a WCS."
+            raise ValueError("image must be fits.HDU object with a WCS."
                              "type(image) == {}".format(type(image_hdu)))
 
         if len(wcs.find_all_wcs(image_hdu.header)) == 0:
-            warnings.warn("image_hdu does not contain valid WCS. {}"
+            warnings.warn("image does not contain valid WCS. {}"
                           "".format(wcs.WCS(image_hdu)))
 
     if "table" in kwargs and kwargs["table"] is not None:
@@ -238,17 +237,3 @@ def scale_imagehdu(imagehdu, waverange, area=None):
 #
 #     return unit
 
-
-def empty_sky():
-    """
-    Returns an empty source so that instrumental fluxes can be simulated
-
-    Returns
-    -------
-    sky : Source
-
-    """
-    from .source import Source
-    sky = Source(lam=np.array([0.3, 3.0]), spectra=np.array([0, 0]),
-                 x=[0], y=[0], ref=[0], weight=[0])
-    return sky

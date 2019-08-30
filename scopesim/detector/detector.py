@@ -11,7 +11,7 @@ from astropy.io import fits
 class Detector(DetectorBase):
     def __init__(self, header, **kwargs):
         image = np.zeros((header["NAXIS1"], header["NAXIS2"]))
-        self.image_hdu = fits.ImageHDU(header=header, data=image)
+        self._hdu = fits.ImageHDU(header=header, data=image)
         self.meta = {}
         self.meta.update(header)
         self.meta.update(kwargs)
@@ -21,23 +21,23 @@ class Detector(DetectorBase):
             raise ValueError("image_plane must be an ImagePlane object: {}"
                              "".format(type(image_plane)))
 
-        self.image_hdu = imp_utils.add_imagehdu_to_imagehdu(image_plane.hdu,
-                                                            self.hdu, order,
-                                                            wcs_suffix="D")
+        self._hdu = imp_utils.add_imagehdu_to_imagehdu(image_plane.hdu,
+                                                       self.hdu, order,
+                                                       wcs_suffix="D")
 
     @property
     def hdu(self):
         new_meta = utils.stringify_dict(self.meta)
-        self.image_hdu.header.update(new_meta)
-        return self.image_hdu
+        self._hdu.header.update(new_meta)
+        return self._hdu
 
     @property
     def header(self):
-        return self.image_hdu.header
+        return self._hdu.header
 
     @property
     def data(self):
-        return self.image_hdu.data
+        return self._hdu.data
 
     @property
     def image(self):

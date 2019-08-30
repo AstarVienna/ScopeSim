@@ -62,7 +62,7 @@ def run(src, mode="wide", cmds=None, opt_train=None, fpa=None,
     pass
 
 
-def check_chip_positions(filename="src.fits", x_cen=17.084, y_cen=17.084,
+def check_chip_positions(filename="st.fits", x_cen=17.084, y_cen=17.084,
                          n=0.3, mode="wide"):
     """
     Creates a series of grids of stars and generates the output images
@@ -835,10 +835,10 @@ def snr(exptimes, mags, filter_name="Ks", cmds=None, **kwargs):
 
     # sn = []
     # for mag in mags:
-        # src = sim.source.star(mag)
+        # st = sim.source.star(mag)
 
         # fpa = sim.Detector(cmd)
-        # src.apply_optical_train(opt, fpa, chips=0)
+        # st.apply_optical_train(opt, fpa, chips=0)
         # hdu = fpa.read_out()
 
         # im = hdu[0].data

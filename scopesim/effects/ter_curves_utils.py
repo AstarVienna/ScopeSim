@@ -1,17 +1,13 @@
-from os import path as pth
-import numpy as np
-
 from astropy import units as u
 from astropy.table import Table
 from astropy.utils.data import download_file
 from astropy.io import ascii as ioascii
-from synphot import SpectralElement, Empirical1D, SourceSpectrum, ConstFlux1D, \
-    Observation
+from synphot import SpectralElement, Empirical1D, Observation
 from synphot.units import PHOTLAM
 
+from scopesim.source.source_templates import vega_spectrum, st_spectrum, \
+    ab_spectrum
 from ..utils import find_file, quantity_from_table
-from ..rc import __pkg_dir__
-
 
 FILTER_DEFAULTS = {"U": "Generic/Bessell.U",
                    "B": "Generic/Bessell.B",
@@ -102,19 +98,6 @@ def get_zero_mag_spectrum(system_name="AB"):
         spec = st_spectrum()
 
     return spec
-
-
-def vega_spectrum(mag=0):
-    vega = SourceSpectrum.from_file(pth.join(__pkg_dir__, "vega.fits"))
-    return vega * 10**(-0.4 * mag)
-
-
-def ab_spectrum(mag=0):
-    return SourceSpectrum(ConstFlux1D, amplitude=mag*u.ABmag)
-
-
-def st_spectrum(mag=0):
-    return SourceSpectrum(ConstFlux1D, amplitude=mag*u.STmag)
 
 
 def zero_mag_flux(filter_name, photometric_system, return_filter=False):

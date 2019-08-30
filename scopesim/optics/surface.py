@@ -10,6 +10,8 @@ from astropy.table import Table
 from synphot import SpectralElement
 from synphot.models import Empirical1D
 
+import scopesim.effects.ter_curves_utils
+import scopesim.source.source_utils
 from ..effects import ter_curves_utils as ter_utils
 from ..utils import get_meta_quantity, quantify, extract_type_from_unit, \
     convert_table_comments_to_dict, find_file
@@ -119,7 +121,7 @@ class SpectralSurface:
             if "filename_format" in dic:
                 filename_format = from_currsys(dic["filename_format"])
                 filter_name = filename_format.format(filter_name)
-            flux = ter_utils.scale_spectrum(flux, filter_name, amplitude)
+            flux = scopesim.effects.ter_curves_utils.scale_spectrum(flux, filter_name, amplitude)
 
         return flux
 
