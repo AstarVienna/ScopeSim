@@ -350,16 +350,16 @@ Spectral Traces
 +++++++++++++++
 
 **Description:** A file to hold all of the trace maps for a spectrograph.
-The catalogue (EXT 1) connects a single trace to a sky mask (either slit of 
-fibre). The traces provide the position on the focal plane where light of a 
-certain wavelength will fall.
+The catalogue (EXT 1) connects a single trace to a sky mask (either slit or
+fibre) and a specific image plane. The traces provide the position on the image
+plane where light of a certain wavelength will fall.
 
 .. Caution:: 
     Dependency Warning
     
     This number of masks references in the EXT 1 table must be compatible with 
     the number of masks described in the file describing masks. These are
-    seperate files as the positions of the masks (in the case of fibres) is not
+    separate files as the positions of the masks (in the case of fibres) is not
     always fixed on the focal plane. Hence different spatial configurations 
     for MOS instruments should still reference the same trace layout.
 
@@ -368,7 +368,8 @@ certain wavelength will fall.
 **File contents**:
 
 * EXT 0: Meta data
-* EXT 1: BinTable with the catalogue of trace to masks
+* EXT 1: BinTable with the catalogue connecting projection traces to on-sky
+  apertures and image planes
 * EXT 2..N: BinTables, each with a single trace mapping in the detector plane
 
 **Required header keywords**:
@@ -395,6 +396,7 @@ certain wavelength will fall.
     Optional header info
     TRACNAME    # Name of trace
     MASKID      # Mask number that produces the trace
+    PLANEID     # Image plane number - which image plane receives the trace
     
 **Required data format**
 
@@ -403,20 +405,22 @@ certain wavelength will fall.
   The catalogue table which connects a trace to a mask (slit/fibre). It should 
   contain the following columns:
   
-  === ==== ====
-  ext name mask
-  --- ---- ----
-  int str  int
-  === ==== ====
+  === ==== =========== =============
+  ext name aperture_id imageplane_id
+  --- ---- ----------- -------------
+  int str  int         int
+  === ==== =========== =============
 
   where:
 
   * "ext" is the extension number (2..N) for the Trace, 
-  * "name" is the name of the fibre / order / slit, and 
-  * "mask" is identifying number of the slit / fibre in the file containing the 
-    description of the slits / fibres
+  * "name" is the name of the fibre / order / slit,
+  * "aperture_id" is identifying number of the slit / fibre in the file
+    containing the description of the slits / fibres
+  * "imageplane_id" is the identifying number of the image plane that will be
+    used for the projection of the aperture
 
-  .
+
 * EXT 2 (BinTable)
 
   Each extension represents the path of a single spectral trace over the detector.
@@ -497,7 +501,7 @@ wavelength dependent distortions.
     EDATA : 1      # In which extension does the real data start
 
 * EXT 1..N Header (3D image)::
-    
+
     WAVE0       # Wavelength valid for extension. -1 if achromatic
     WAVEUNIT    # Unit of wavelength. If absent assumption is [um]
     Standard WCS for the images

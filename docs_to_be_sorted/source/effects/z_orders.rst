@@ -20,8 +20,8 @@ ImagePlane
 * 70 SpectralTraceList      !!! Write
 * 80 ApertureMask
 * 81 ApertureList           !!! Write
-Detector
 
+Detector
 * 90 DetectorList
 
 
