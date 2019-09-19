@@ -55,6 +55,7 @@ class FieldOfView(FieldOfViewBase):
         self.hdu.header["NAXIS2"] = header["NAXIS2"]
 
         self.fields = []
+        self.image_plane_id = 0
 
     def extract_from(self, src):
         """ ..assumption: Bandpass has been applied"""

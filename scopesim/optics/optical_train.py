@@ -105,6 +105,8 @@ class OpticalTrain:
 
             if fov.hdu.data is None:
                 fov.view()
+                # ..todo:: add this in properly
+                ii = fov.image_plane_id
             self.image_plane.add(fov.hdu, wcs_suffix="D")
 
         # [2D - Vibration, flat fielding, chopping+nodding]

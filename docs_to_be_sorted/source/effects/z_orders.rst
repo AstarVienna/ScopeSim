@@ -9,7 +9,7 @@ Source
 
 FOVs
 * 30 Shift3D
-* 40 PSf
+* 40 PSF
 * 41 AnalyticalPSF
 * 42 SemiAnalyticalPSF
 * 43 DiscretePSF
