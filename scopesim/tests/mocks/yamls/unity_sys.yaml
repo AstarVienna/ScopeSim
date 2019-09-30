@@ -3,6 +3,9 @@ object: atmosphere
 alias: ATMO
 name: test_atmosphere
 
+properties :
+  image_plane_id : 0
+
 effects :
 - name: atmospheric transmission
   class: AtmosphericTERCurve

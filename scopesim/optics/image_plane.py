@@ -47,6 +47,7 @@ class ImagePlane(ImagePlaneBase):
         max_seg_size = rc.__config__["!SIM.computing.max_segment_size"]
         self.meta = {"SIM_MAX_SEGMENT_SIZE" : max_seg_size}
         self.meta.update(kwargs)
+        self.id = header["IMGPLANE"] if "IMGPLANE" in header else 0
 
         if not any([utils.has_needed_keywords(header, s)
                     for s in ["", "D", "S"]]):

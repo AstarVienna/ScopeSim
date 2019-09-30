@@ -159,15 +159,15 @@ class OpticsManager:
         return effects
 
     @property
-    def image_plane_header(self):
+    def image_plane_headers(self):
         detector_lists = self.detector_setup_effects
-        header = detector_lists[0].image_plane_header
+        headers = [det_list.image_plane_header for det_list in detector_lists]
 
-        if len(detector_lists) != 1:
-            warnings.warn("None or more than one DetectorList found. Using the"
-                          " first instance.{}".format(detector_lists))
+        if len(detector_lists) == 0:
+            raise ValueError("No DetectorList objects found. {}"
+                             "".format(detector_lists))
 
-        return header
+        return headers
 
     @property
     def detector_effects(self):
@@ -187,6 +187,7 @@ class OpticsManager:
 
     @property
     def detector_setup_effects(self):
+        # !!! Only DetectorLists go in here !!!
         return self.get_z_order_effects(400)
 
     @property

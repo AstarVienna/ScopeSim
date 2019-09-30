@@ -65,6 +65,9 @@ object: detector
 alias: DET
 name: test_detector
 
+properties:
+  image_plane_id: 0
+
 effects:
 - name: detector array list
   class: DetectorList

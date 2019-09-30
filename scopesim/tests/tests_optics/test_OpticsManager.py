@@ -60,4 +60,4 @@ class TestOpticsManagerImagePlaneHeader:
         opt_man = opt_mgr.OpticsManager(detector_yaml_dict)
         opt_man.meta["SIM_PIXEL_SCALE"] = 0.004
         print(opt_man)
-        assert isinstance(opt_man.image_plane_header, fits.Header)
+        assert isinstance(opt_man.image_plane_headers[0], fits.Header)

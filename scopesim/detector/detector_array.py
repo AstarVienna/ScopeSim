@@ -10,22 +10,22 @@ from .. import utils
 
 
 class DetectorArray:
-    def __init__(self, detector_lists=[], **kwargs):
+    def __init__(self, detector_list=None, **kwargs):
         self.meta = {}
         self.meta.update(kwargs)
-        self.detector_lists = detector_lists
+        self.detector_list = detector_list
         self.effects = []
         self.detectors = []
         self.latest_exposure = None
 
-    def readout(self, image_plane, effects=[], **kwargs):
+    def readout(self, image_planes, effects=[], **kwargs):
         """
         Read out the detector array into a FITS file
 
         Parameters
         ----------
-        image_plane : ImagePlane objects
-            Celestial scene as it appears on the image plane
+        image_planes : list of ImagePlane objects
+            The correct image plane is automatically chosen from the list
 
         effects : list of Effect objects
             A list of detector related effects
@@ -39,6 +39,7 @@ class DetectorArray:
         # .. note:: Detector is what used to be called Chip
         #           DetectorArray is the old Detector
 
+        # 0. Select the relevant image plane to extract images from
         # 1. make a series of Detectors for each row in a DetectorList object
         # 2. iterate through all Detectors, extract image from image_plane
         # 3. apply all effects (to all Detectors)
@@ -52,10 +53,14 @@ class DetectorArray:
         self.effects += effects
         self.meta.update(kwargs)
 
+        # 0. Get the image plane that corresponds to this detector array
+        image_plane_id = self.detector_list.meta["image_plane_id"]
+        image_plane = [implane for implane in image_planes if
+                       implane.id == image_plane_id][0]
+
         # 1. make a series of Detectors for each row in a DetectorList object
-        detector_list = get_detector_list(self.detector_lists)
         self.detectors = [Detector(hdr, **self.meta)
-                          for hdr in detector_list.detector_headers()]
+                          for hdr in self.detector_list.detector_headers()]
 
         # 2. iterate through all Detectors, extract image from image_plane
         for detector in self.detectors:
@@ -93,11 +98,11 @@ def make_effects_hdu(effects):
     return fits.TableHDU()
 
 
-def get_detector_list(effects):
-    detector_lists = get_all_effects(effects, efs.DetectorList)
-
-    if len(detector_lists) != 1:
-        warnings.warn("None or more than one DetectorList found. Using the"
-                      " first instance.{}".format(detector_lists))
-
-    return detector_lists[0]
+# def get_detector_list(effects):
+#     detector_lists = get_all_effects(effects, efs.DetectorList)
+#
+#     if len(detector_lists) != 1:
+#         warnings.warn("None or more than one DetectorList found. Using the"
+#                       " first instance.{}".format(detector_lists))
+#
+#     return detector_lists[0]

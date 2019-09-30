@@ -25,7 +25,9 @@ PLOTS = False
 
 
 def setup_module():
+    rc.__config__["!SIM.file.use_cached_downloads"] = False
     rc_local_path = rc.__config__["!SIM.file.local_packages_path"]
+
     if not os.path.exists(rc_local_path):
         os.mkdir(rc_local_path)
         rc.__config__["!SIM.file.local_packages_path"] = os.path.abspath(

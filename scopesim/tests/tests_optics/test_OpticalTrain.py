@@ -89,7 +89,7 @@ class TestInit:
 
     def test_has_image_plane_object_after_initialising(self, cmds):
         opt = OpticalTrain(cmds=cmds)
-        assert isinstance(opt.image_plane, ImagePlane)
+        assert isinstance(opt.image_planes[0], ImagePlane)
 
     def test_has_yaml_dict_object_after_initialising(self, cmds):
         opt = OpticalTrain(cmds=cmds)
@@ -133,7 +133,8 @@ class TestObserve:
         unit = u.Unit("ph s-1 m-2 um-1")
         print(opt.optics_manager.surfaces_table.emission(wave).to(unit))
         print(opt.optics_manager.surfaces_table.table)
-        final_sum = np.sum(opt.image_plane.image)
+        implane = opt.image_planes[0]
+        final_sum = np.sum(implane.image)
         print(orig_sum, final_sum)
 
         if PLOTS:
@@ -141,11 +142,11 @@ class TestObserve:
                 cnrs = fov.corners[1]
                 plt.plot(cnrs[0], cnrs[1])
 
-            plt.imshow(opt.image_plane.image.T, origin="lower", norm=LogNorm(),
-                       extent=(-opt.image_plane.hdu.header["NAXIS1"] / 2,
-                               opt.image_plane.hdu.header["NAXIS1"] / 2,
-                               -opt.image_plane.hdu.header["NAXIS2"] / 2,
-                               opt.image_plane.hdu.header["NAXIS2"] / 2,))
+            plt.imshow(implane.image.T, origin="lower", norm=LogNorm(),
+                       extent=(-implane.hdu.header["NAXIS1"] / 2,
+                               implane.hdu.header["NAXIS1"] / 2,
+                               -implane.hdu.header["NAXIS2"] / 2,
+                               implane.hdu.header["NAXIS2"] / 2,))
             plt.colorbar()
             plt.show()
 
@@ -167,7 +168,8 @@ class TestObserve:
         opt = OpticalTrain(cmds)
         opt.observe(multi_img)
 
-        final_sum = np.sum(opt.image_plane.image)
+        implane = opt.image_planes[0]
+        final_sum = np.sum(implane.image)
         print(orig_sum, final_sum)
 
         if PLOTS:
@@ -175,11 +177,11 @@ class TestObserve:
                 cnrs = fov.corners[1]
                 plt.plot(cnrs[0], cnrs[1])
 
-            plt.imshow(opt.image_plane.image.T, origin="lower", norm=LogNorm(),
-                       extent=(-opt.image_plane.hdu.header["NAXIS1"] / 2,
-                               opt.image_plane.hdu.header["NAXIS1"] / 2,
-                               -opt.image_plane.hdu.header["NAXIS2"] / 2,
-                               opt.image_plane.hdu.header["NAXIS2"] / 2,))
+            plt.imshow(implane.image.T, origin="lower", norm=LogNorm(),
+                       extent=(-implane.hdu.header["NAXIS1"] / 2,
+                               implane.hdu.header["NAXIS1"] / 2,
+                               -implane.hdu.header["NAXIS2"] / 2,
+                               implane.hdu.header["NAXIS2"] / 2,))
             plt.colorbar()
             plt.show()
 
@@ -190,7 +192,8 @@ class TestReadout:
 
         opt = OpticalTrain(unity_cmds)
         opt.observe(unity_src)
-        hdu = opt.readout()
+        hdus = opt.readout()
+        hdu = hdus[0]
 
         if PLOTS:
             plt.subplot(221)
@@ -198,7 +201,7 @@ class TestReadout:
             plt.colorbar()
 
             plt.subplot(222)
-            plt.imshow(opt.image_plane.image)
+            plt.imshow(opt.image_planes[0].image)
             plt.colorbar()
 
             plt.subplot(223)

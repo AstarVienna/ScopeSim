@@ -73,6 +73,9 @@ class ApertureMask(Effect):
         return self._mask
 
     def get_mask(self):
+        """
+        For placing over FOVs if the Aperture is rotated w.r.t. the field
+        """
         if self.meta["no_mask"] is False:
             x = quantity_from_table("x", self.table, u.arcsec).to(u.deg).value
             y = quantity_from_table("y", self.table, u.arcsec).to(u.deg).value

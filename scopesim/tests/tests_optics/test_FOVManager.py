@@ -9,6 +9,7 @@ from scopesim import rc
 from scopesim.optics.fov_manager import FOVManager
 from scopesim.optics import fov_manager as fov_mgr
 from scopesim.optics.image_plane import ImagePlane
+from scopesim.commands import UserCommands
 
 from scopesim.tests.mocks.py_objects import effects_objects as eo
 from scopesim.tests.mocks.py_objects.yaml_objects import \
@@ -50,7 +51,6 @@ class TestInit:
 class TestGenerateFovs:
     def test_returns_the_desired_number_of_fovs(self, mvs_effects_list,
                                                 mvs_usr_cmds):
-        from scopesim.commands import UserCommands
         rc.__currsys__ = UserCommands(yamls=mvs_usr_cmds)
 
         fov_man = FOVManager(mvs_effects_list)
@@ -79,9 +79,7 @@ class TestGenerateFovs:
             plt.show()
 
     def test_fovs_dont_overlap_on_canvas(self, mvs_effects_list, mvs_usr_cmds):
-
-        for yaml_dic in mvs_usr_cmds:
-            rc.__currsys__.cmds.update(yaml_dic)
+        rc.__currsys__ = UserCommands(yamls=mvs_usr_cmds)
 
         implane = ImagePlane(mvs_effects_list[-2].image_plane_header)
         fov_man = FOVManager(mvs_effects_list)

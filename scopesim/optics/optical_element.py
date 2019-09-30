@@ -62,6 +62,8 @@ class OpticalElement:
                               if key not in ["properties", "effects"]})
             if "properties" in yaml_dict:
                 self.properties = yaml_dict["properties"]
+            if "name" in yaml_dict:
+                self.properties["element_name"] = yaml_dict["name"]
             if "effects" in yaml_dict and len(yaml_dict["effects"]) > 0:
                 for eff_dic in yaml_dict["effects"]:
                     if "include" in eff_dic and eff_dic["include"] is False:
