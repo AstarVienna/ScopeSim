@@ -100,42 +100,37 @@ def list_packages(location="all", url=None, local_dir=None,
         The full string should be passed to download_package
 
     """
-    if url is None:
-        url = rc.__config__["!SIM.file.server_base_url"]
-    if local_dir is None:
-        local_dir = rc.__config__["!SIM.file.local_packages_path"]
-
-    server_pkgs = []
-    folders = get_server_elements(url, "/")
-    for folder in folders:
-        pkgs = get_server_elements(url + folder, ".zip")
-        server_pkgs += [folder + pkg for pkg in pkgs]
-
-    local_pkgs = get_local_packages(local_dir)
 
     def print_package_list(the_pkgs, loc=""):
         print("\nPackages saved {}".format(loc) + "\n" + "=" * (len(loc) + 15))
         for pkg in the_pkgs:
             print(pkg)
 
-    if "local" in location:
-        if not silent:
-            print_package_list(local_pkgs, "locally: {}".format(local_dir))
-        if return_pkgs:
-            return local_pkgs
+    if url is None:
+        url = rc.__config__["!SIM.file.server_base_url"]
+    if local_dir is None:
+        local_dir = rc.__config__["!SIM.file.local_packages_path"]
 
-    elif "server" in location:
+    return_pkgs_list = []
+
+    if location.lower() in ["server", "all"]:
+        server_pkgs = []
+        folders = get_server_elements(url, "/")
+        for folder in folders:
+            pkgs = get_server_elements(url + folder, ".zip")
+            server_pkgs += [folder + pkg for pkg in pkgs]
         if not silent:
             print_package_list(server_pkgs, "on the server: {}".format(url))
-        if return_pkgs:
-            return local_pkgs
+            return_pkgs_list += server_pkgs
 
-    elif "all" in location:
+    if location.lower() in ["local", "all"]:
+        local_pkgs = get_local_packages(local_dir)
         if not silent:
-            print_package_list(server_pkgs, "on the server: {}".format(url))
             print_package_list(local_pkgs, "locally: {}".format(local_dir))
-        if return_pkgs:
-            return server_pkgs, local_pkgs
+            return_pkgs_list += local_pkgs
+
+    if return_pkgs:
+        return return_pkgs_list
 
 
 def download_package(pkg_path, save_dir=None, url=None):

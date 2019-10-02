@@ -210,31 +210,6 @@ def get_imaging_waveset(effects_list, **kwargs):
     return wave_bin_edges
 
 
-def combine_wavesets(waves_list):
-    """
-    Joins and sorts several sets of wavelengths into a single 1D array
-
-    Parameters
-    ----------
-    waves_list : list
-        A group of wavelength arrays or lists
-
-    Returns
-    -------
-    wave_set : np.ndarray
-        Combined set of wavelengths
-
-    """
-    wave_set = []
-    for wbe in waves_list:
-        wbe = wbe.value if isinstance(wbe, u.Quantity) else wbe
-        wave_set += list(wbe)
-    # ..todo:: set variable in !SIM.computing for rounding to the 7th decimal
-    wave_set = np.unique(np.round(np.sort(wave_set, kind="stable"), 7))
-
-    return wave_set
-
-
 def get_imaging_headers(effects, **kwargs):
     """
     Returns a list of Header objects for each of the FieldOfVIew objects
@@ -382,6 +357,9 @@ def get_spectroscopy_waveset(effects, **kwargs):
     # for each trace dlam along the trace centre in increments
     #   of SIM_SUB_PIXEL_FRACTION
     # Must be accompanied by an ApertureList
+
+    # return {aperture_no : wavelengths}
+
     pass
 
 
@@ -391,8 +369,79 @@ def get_spectroscopy_headers(effects, **kwargs):
     #   plus any shifts from AtmosphericDispersion
     # Set the Image plane footprint centred on the image plane
     #   position
+
+
     pass
 
 
 def get_spectroscopy_fovs(fields, waveset, shifts):
     pass
+
+
+
+
+
+def get_spectroscopy_fovs2():
+    # self.effects --> fov_setup_effects [ApertureList, TraceList]
+    #
+    # generate a set of sky headers for each aperture in the list
+    #
+    # for each trace in tracelist,
+    #   note the aperture_id
+    #   note the image_plane_id
+    #
+    #   get the pixel_size [plate_scale / pixel_scale - or given in tracelist table]
+    #   crawl along trace
+    #       find the red/blue extreme pixel edge wavelengths
+    #       get the wavelength of the nearest full pixel jump (x or y)
+    #
+    #   interpolate the image plane positions of the trace table for the new wavelength array
+    #   for each new wavelength
+    #       get the rotation angle of the fov
+    #       get the shear of the fov wrt the next fov
+    #
+    #       generate an image-plane header for each wavelength
+    #
+    # get the combined 3d-shifts
+    # for each trace
+    #   interpolate the 3d-shifts for all wavelengths
+    #   apply the required fov-shift to each fov header
+    #
+
+    pass
+
+
+
+
+
+
+
+
+
+
+
+
+
+def combine_wavesets(waveset_list):
+    """
+    Joins and sorts several sets of wavelengths into a single 1D array
+
+    Parameters
+    ----------
+    waveset_list : list
+        A group of wavelength arrays or lists
+
+    Returns
+    -------
+    wave_set : np.ndarray
+        Combined set of wavelengths
+
+    """
+    wave_set = []
+    for wbe in waveset_list:
+        wbe = wbe.value if isinstance(wbe, u.Quantity) else wbe
+        wave_set += list(wbe)
+    # ..todo:: set variable in !SIM.computing for rounding to the 7th decimal
+    wave_set = np.unique(np.round(np.sort(wave_set, kind="stable"), 7))
+
+    return wave_set

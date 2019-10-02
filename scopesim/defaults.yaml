@@ -32,7 +32,7 @@ properties :
   file :
     local_packages_path : "./"
     server_base_url : "https://www.univie.ac.at/simcado/InstPkgSvr/"
-    use_cached_downloads : False
+    use_cached_downloads : True
     search_path : ["./"]
 
   reports :
@@ -41,6 +41,9 @@ properties :
     # WE DO NOT TRACK OR SAVE ANY PERSONAL INFORMATION
     # however you can become completely anonymous by setting this flag to True
     block_ip_tracking : False
+
+  tests :
+    ignore_integration_tests : True
 
 
 ---

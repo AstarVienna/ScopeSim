@@ -15,14 +15,18 @@ from matplotlib import pyplot as plt
 from matplotlib.colors import LogNorm
 
 
+if rc.__config__["!SIM.tests.ignore_integration_tests"]:
+    pytestmark = pytest.mark.skip("Ignoring MICADO integration tests")
+
 rc.__config__["!SIM.file.local_packages_path"] = "./scopesim_pkg_dir_tmp/"
+
 
 PKGS = {"Armazones": "locations/Armazones.zip",
         "ELT": "telescopes/ELT.zip",
         "MAORY": "instruments/MAORY.zip",
         "MICADO": "instruments/MICADO.zip"}
 
-CLEAN_UP = False
+CLEAN_UP = True
 PLOTS = False
 
 
@@ -47,8 +51,8 @@ def teardown_module():
 
 class TestInit:
     def test_all_packages_are_available(self):
+        rc_local_path = rc.__config__["!SIM.file.local_packages_path"]
         for pkg_name in PKGS:
-            rc_local_path = rc.__config__["!SIM.file.local_packages_path"]
             assert os.path.isdir(os.path.join(rc_local_path, pkg_name))
         print("irdb" not in rc_local_path)
 
@@ -94,5 +98,5 @@ class TestMakeOpticalTrain:
 
         # ..todo:: add source object here!
         # opt.observe(src)
-        hdu = opt.readout()
+        hdu = opt.readout()[0]
         assert isinstance(hdu, fits.HDUList)
