@@ -243,8 +243,8 @@ def get_imaging_headers(effects, **kwargs):
                      "chunk_size", "max_segment_size"]
     check_keys(kwargs, required_keys, action="error")
 
-    plate_scale = kwargs["plate_scale"]     # ["/pix]
-    pixel_scale = kwargs["pixel_scale"]     # ["/mm]
+    plate_scale = kwargs["plate_scale"]     # ["/mm]
+    pixel_scale = kwargs["pixel_scale"]     # ["/pix]
 
     # look for apertures
     aperture_effects = get_all_effects(effects, (efs.ApertureMask,
@@ -381,8 +381,27 @@ def get_spectroscopy_fovs(fields, waveset, shifts):
 
 
 
-def get_spectroscopy_fovs2():
-    # self.effects --> fov_setup_effects [ApertureList, TraceList]
+def get_spectroscopy_fovs2(effects, **kwargs):
+
+    aptr_lists = get_all_effects(efs.ApertureList)
+    dtcr_lists = get_all_effects(efs.DetectorList)
+    trac_lists = get_all_effects(efs.SpectralTraceList)
+
+    if len(aptr_lists) > 1:
+        aptr_list = efs.ApertureList()
+        for al in aptr_lists:
+            aptr_list += al
+
+
+
+
+
+    aptr_headers = [apl for apl in aptr_lists]
+
+    fovs_list = []
+
+
+    # self.effects --> fov_setup_effects [ApertureList, TraceList, DetectorList]
     #
     # generate a set of sky headers for each aperture in the list
     #
@@ -390,7 +409,7 @@ def get_spectroscopy_fovs2():
     #   note the aperture_id
     #   note the image_plane_id
     #
-    #   get the pixel_size [plate_scale / pixel_scale - or given in tracelist table]
+    #   get the pixel_size [from DetectorList.table["pixsize"]]
     #   crawl along trace
     #       find the red/blue extreme pixel edge wavelengths
     #       get the wavelength of the nearest full pixel jump (x or y)
@@ -407,6 +426,10 @@ def get_spectroscopy_fovs2():
     #   interpolate the 3d-shifts for all wavelengths
     #   apply the required fov-shift to each fov header
     #
+
+
+
+
 
     pass
 

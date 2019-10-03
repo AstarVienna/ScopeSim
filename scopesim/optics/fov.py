@@ -44,7 +44,8 @@ class FieldOfView(FieldOfViewBase):
                                      "offset": [0, 0],
                                      "shear": [1, 1],
                                      "rotation": 0,
-                                     "warp": None}
+                                     "warp": None},
+                     "conserve_image": True,
                      }
         self.meta.update(kwargs)
 

@@ -50,10 +50,10 @@ def teardown_module():
 
 class TestInit:
     def test_all_packages_are_available(self):
-        for pkg_name in PKGS:
-            rc_local_path = rc.__config__["!SIM.file.local_packages_path"]
-            assert os.path.isdir(os.path.join(rc_local_path, pkg_name))
+        rc_local_path = rc.__config__["!SIM.file.local_packages_path"]
         print("irdb" not in rc_local_path)
+        for pkg_name in PKGS:
+            assert os.path.isdir(os.path.join(rc_local_path, pkg_name))
 
 
 class TestLoadUserCommands:

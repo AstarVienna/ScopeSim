@@ -856,8 +856,6 @@ def from_currsys(item):
     if isinstance(item, str) and item.lower() == "none":
         item = None
 
-
-
     return item
 
 

@@ -263,3 +263,8 @@ class TestGetImagingFOVs:
                 plt.xlabel("[mm]")
 
             plt.show()
+
+
+class TestGetSpectroscopyFovs2:
+    fov_mgr.get_spectroscopy_fovs2()
+

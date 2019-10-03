@@ -33,6 +33,8 @@ class ApertureMask(Effect):
         self.meta["pixel_scale"] = "!INST.pixel_scale"
         self.meta["no_mask"] = True
         self.meta["angle"] = 0
+        self.meta["shape"] = "rect"
+        self.meta["conserve_image"] = True
 
         self.meta.update(kwargs)
 
@@ -93,27 +95,32 @@ class ApertureList(Effect):
         super(ApertureList, self).__init__(**kwargs)
         self.meta["z_order"] = [81, 281]
 
-    def fov_grid(self, which="edges", **kwargs):
-        """ Returns a list of ApertureMasks """
-        return []
+    @property
+    def aperture_masks(self):
+        for row in self.table:
+            kwargs = {"array_dict": {"x": [row["left"],  row["left"],
+                                           row["right"], row["right"]],
+                                     "y": [row["top"], row["bottom"],
+                                           row["top"], row["bottom"]]},
+                      "angle": row["angle"],
+                      "shape": row["shape"],
+                      "conserve_image": row["conserve_image"],
+                      }
+            kwargs.update(self.meta)
+
+    def __add__(self, other):
+        if isinstance(other, ApertureList):
+            from astropy.table import vstack
+            self.table = vstack([self.table, other.table])
+
+            return self
+        else:
+            raise ValueError("other not of type ApertureList: {}"
+                             "".format(type(other)))
 
 
-class SquareApertureList(ApertureList):
-    def __init__(self, **kwargs):
-        super(SquareApertureList, self).__init__(**kwargs)
-        self.meta["z_order"] = [282]
 
 
-class RoundApertureList(ApertureList):
-    def __init__(self, **kwargs):
-        super(RoundApertureList, self).__init__(**kwargs)
-        self.meta["z_order"] = [283]
-
-
-class PolygonApertureList(ApertureList):
-    def __init__(self, **kwargs):
-        super(PolygonApertureList, self).__init__(**kwargs)
-        self.meta["z_order"] = [284]
 
 
 ################################################################################
