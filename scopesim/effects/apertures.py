@@ -97,6 +97,7 @@ class ApertureList(Effect):
 
     @property
     def aperture_masks(self):
+        mask_list = []
         for row in self.table:
             kwargs = {"array_dict": {"x": [row["left"],  row["left"],
                                            row["right"], row["right"]],
@@ -107,6 +108,7 @@ class ApertureList(Effect):
                       "conserve_image": row["conserve_image"],
                       }
             kwargs.update(self.meta)
+            mask_list += []
 
     def __add__(self, other):
         if isinstance(other, ApertureList):

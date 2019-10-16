@@ -34,7 +34,7 @@ def data_files():
 
 
 @pytest.mark.usefixtures("data_files")
-class TestDataContainerInit:
+class TestInit:
     def test_initialised_with_no_input(self):
         dat = DataContainer()
         assert isinstance(dat, DataContainer)
@@ -58,7 +58,7 @@ class TestDataContainerInit:
 
 
 @pytest.mark.usefixtures("data_files")
-class TestDataContainerGetData:
+class TestGetData:
     def test_no_file_returns_no_input(self):
         dat = DataContainer()
         assert dat.get_data() is None

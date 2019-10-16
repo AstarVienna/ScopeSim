@@ -266,5 +266,6 @@ class TestGetImagingFOVs:
 
 
 class TestGetSpectroscopyFovs2:
-    fov_mgr.get_spectroscopy_fovs2()
+    # fov_mgr.get_spectroscopy_fovs2()
+    pass
 
