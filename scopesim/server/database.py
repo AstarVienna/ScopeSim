@@ -3,6 +3,7 @@ import os
 import zipfile
 from urllib3.exceptions import HTTPError
 import glob
+import warnings
 
 import requests
 import bs4
@@ -161,6 +162,10 @@ def download_package(pkg_path, save_dir=None, url=None):
         save_path = [download_package(pkg, save_dir, url) for pkg in pkg_path]
 
     elif isinstance(pkg_path, str):
+        if pkg_path[-4:] != ".zip":
+            warnings.warn("Appended '.zip' to {}".format(pkg_path))
+            pkg_path += ".zip"
+
         if url is None:
             url = rc.__config__["!SIM.file.server_base_url"]
         if save_dir is None:

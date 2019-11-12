@@ -14,8 +14,10 @@ from scopesim import rc
 from matplotlib import pyplot as plt
 from matplotlib.colors import LogNorm
 
-if rc.__config__["!SIM.tests.ignore_integration_tests"]:
+pytest_plugins = ['pytest_profiling']
+if not rc.__config__["!SIM.tests.ignore_integration_tests"]:
     pytestmark = pytest.mark.skip("Ignoring HAWKI integration tests")
+
 
 rc.__config__["!SIM.file.local_packages_path"] = "./scopesim_pkg_dir_tmp/"
 
@@ -174,8 +176,11 @@ class TestObserveOpticalTrain:
             plt.subplot(1, 2, 1)
             plt.imshow(opt.image_planes[0].image[128:2048, 128:2048].T,
                        norm=LogNorm())
+            plt.colorbar()
 
             plt.subplot(1, 2, 2)
-            plt.imshow(hdu[1].data[128:2048, 128:2048].T, norm=LogNorm())
-            plt.show()
+            plt.imshow(hdu[1].data[128:2048, 128:2048].T, norm=LogNorm(),
+                       vmax=3e7)
+            plt.colorbar()
 
+            plt.show()

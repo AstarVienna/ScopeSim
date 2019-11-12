@@ -1,0 +1,15 @@
+# author : Kieran Leschinski
+# source : Ric Davies
+# date_created : 2016-11-22
+# date_modified : 2019-01-28
+# status : Design - pre PDR list of MAORY mirrors
+# type : mirror:reflection
+# wavelength_unit : um
+# description : Unprotected Gold
+# changes :
+# - 2019-01-28 : (KL) added meta data
+# - 2019-08-13 : (KL) copied from MICADO to HAWKI
+#
+wavelength  reflection
+0.3         0.985
+3.0         0.985

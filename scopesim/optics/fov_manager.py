@@ -155,7 +155,7 @@ def get_3d_shifts(effects, **kwargs):
 
         x_shifts = np.array([x_shifts[0]] + list(x_shifts[ii]) + [x_shifts[-1]])
         y_shifts = np.array([y_shifts[0]] + list(y_shifts[ii]) + [y_shifts[-1]])
-        z_edges = np.array([z_edges[0]] + list(z_edges[ii]) + [z_edges[-1]])
+        z_edges  = np.array([z_edges[0]]  + list(z_edges[ii])  + [z_edges[-1]])
 
     else:
         z_edges = np.array([kwargs["wave_min"], kwargs["wave_max"]])
@@ -319,6 +319,7 @@ def get_imaging_fovs(headers, waveset, shifts):
     fovs : list of FieldOfView objects
 
     """
+
     shift_waves = shifts["wavelengths"]     # in [um]
     shift_dx = shifts["x_shifts"]           # in [deg]
     shift_dy = shifts["y_shifts"]
@@ -330,6 +331,10 @@ def get_imaging_fovs(headers, waveset, shifts):
 
     counter = 0
     fovs = []
+
+    print("Preparing {} FieldOfViews".format(len(waveset)*len(headers)),
+          flush=True)
+
     for ii in range(len(waveset) - 1):
         for hdr in headers:
             # add any pre-instrument shifts to the FOV sky coords
@@ -461,7 +466,7 @@ def combine_wavesets(waveset_list):
 
     """
     wave_set = []
-    for wbe in waveset_list:
+    for wbe in waveset_list:        # wbe = waveset bin edges
         wbe = wbe.value if isinstance(wbe, u.Quantity) else wbe
         wave_set += list(wbe)
     # ..todo:: set variable in !SIM.computing for rounding to the 7th decimal

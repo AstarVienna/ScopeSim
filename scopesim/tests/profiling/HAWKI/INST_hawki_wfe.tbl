@@ -1,0 +1,6 @@
+#wfe_rms    no_surfaces     material    optics
+#[nm]       [#]             [str]       [str]
+15          7               gold        mirror
+10          4               glass       entrance_window
+10          2               glass       filter
+10          0               glass       ADC

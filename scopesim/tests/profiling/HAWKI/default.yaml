@@ -1,0 +1,42 @@
+### default observation parameters needed for a HAWKI simulation
+object : configuration
+alias : OBS
+name : HAWKI_default_configuration
+description : default parameters needed for a HAWKI simulation
+
+packages:
+- Paranal
+- VLT
+- HAWKI
+
+yamls:
+- Paranal.yaml
+- VLT.yaml
+- HAWKI.yaml
+- HAWKI_H2RG.yaml
+
+properties :
+  filter_name : Ks
+  airmass : 1.2
+  declination : -30
+  hour_angle : 0
+  pupil_angle : 0
+  dit : 60
+  ndit : 1
+
+
+---
+### default simulation parameters needed for a HAWKI simulation
+object : simulation
+alias : SIM
+name : HAWKI_simulation_paramters
+description : RC simulation paramters which need to change for a HAWKI run
+
+properties :
+  random :
+    seed : 9001
+
+  spectral :
+    wave_min : 0.85
+    wave_mid : 1.6
+    wave_max : 2.5

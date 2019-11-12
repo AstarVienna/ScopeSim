@@ -15,7 +15,7 @@ from matplotlib import pyplot as plt
 from matplotlib.colors import LogNorm
 
 
-if rc.__config__["!SIM.tests.ignore_integration_tests"]:
+if not rc.__config__["!SIM.tests.ignore_integration_tests"]:
     pytestmark = pytest.mark.skip("Ignoring MICADO integration tests")
 
 rc.__config__["!SIM.file.local_packages_path"] = "./scopesim_pkg_dir_tmp/"
@@ -26,13 +26,13 @@ PKGS = {"Armazones": "locations/Armazones.zip",
         "MAORY": "instruments/MAORY.zip",
         "MICADO": "instruments/MICADO.zip"}
 
-CLEAN_UP = True
+CLEAN_UP = False
 PLOTS = False
 
 
 def setup_module():
     rc_local_path = rc.__config__["!SIM.file.local_packages_path"]
-    if not os.path.exists(rc_local_path) or CLEAN_UP:
+    if not os.path.exists(rc_local_path):
         os.mkdir(rc_local_path)
         rc.__config__["!SIM.file.local_packages_path"] = os.path.abspath(
             rc_local_path)
@@ -89,14 +89,15 @@ class TestLoadUserCommands:
 
 class TestMakeOpticalTrain:
     def test_works_seamlessly_for_micado_package(self, capsys):
-
-        src = scopesim.source.source_templates.star_field(10000, 10, 25, 60)
-        src = scopesim.source.source_templates.empty_sky()
         cmd = scopesim.UserCommands(use_instrument="MICADO")
         opt = scopesim.OpticalTrain(cmd)
         assert isinstance(opt, scopesim.OpticalTrain)
 
-        # ..todo:: add source object here!
-        # opt.observe(src)
-        hdu = opt.readout()[0]
-        assert isinstance(hdu, fits.HDUList)
+        src = scopesim.source.source_templates.star_field(10000, 10, 25, 20)
+        # src = scopesim.source.source_templates.empty_sky()
+        opt.observe(src)
+        hdu_list = opt.readout()[0]
+        assert isinstance(hdu_list, fits.HDUList)
+
+        opt.image_planes[0].hdu.writeto("flux_frame_TEST.fits", overwrite=True)
+        hdu_list.writeto("full_frame_TEST.fits", overwrite=True)

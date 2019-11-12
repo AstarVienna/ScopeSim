@@ -1,0 +1,47 @@
+### Config file for the Paranal optical element
+object : atmosphere
+alias : ATMO
+name : paranal
+description : Atmosphere and location details for Paranal
+
+properties :
+    altitude :      2635        # m
+    longitude :     -70.4042    # deg
+    latitude :      -24.6272    # deg
+    temperature :   9           # deg C
+    humidity :      0.15        # [0..1]
+    pressure :      0.75        # [bar]
+    pwv :           2.5         # [mm]
+    airmass :       "!OBS.airmass"
+    pupil_angle :   "!OBS.pupil_angle"
+    pixel_scale :   "!INST.pixel_scale"
+
+effects :
+-   name : paranal_atmo_default_ter_curve
+    description : atmospheric emission and transmission
+    class : AtmosphericTERCurve
+    kwargs :
+        filename: "TER_paranal_default_NIR_IMG.dat"
+        rescale_emission:
+            filter_name: "Ks"
+            filename_format: "!INST.filter_file_format"
+            value: 13.6
+            unit: mag
+
+-   name : paranal_atmo_dispersion
+    description : atmospheric dispersion
+    class : AtmosphericDispersion
+
+
+####################### Alternative effects ####################################
+
+-   name : paranal_atmo_skycalc_ter_curve
+    description : atmospheric spectra pulled from the skycalc server
+    class : SkycalcTERCurve
+    include : False
+    kwargs :
+        observatory : paranal
+        wmin : "!SIM.spectral.wave_min"
+        wmax : "!SIM.spectral.wave_max"
+        wunit : um
+        wdelta : "!SIM.spectral.spectral_resolution"

@@ -1,0 +1,30 @@
+object: instrument
+alias: INST
+name: HAWKI
+
+properties:
+  temperature: -198   # deg C
+  pixel_scale: 0.106  # "/pix
+  plate_scale: 10.6   # "/mm
+  filter_file_format : "TC_filter_{}.dat"
+
+effects:
+- name: entrance_aperture
+  class: ApertureMask
+  kwargs:
+    array_dict:
+      x: [-240,  240, 240, -240]
+      y: [-240, -240, 240,  240]
+    x_unit: arcsec
+    y_unit: arcsec
+
+- name: hawki_mirror_list
+  class: SurfaceList
+  kwargs:
+    filename: LIST_HAWKI_mirrors.dat
+
+- name: filter_curve
+  class: FilterCurve
+  kwargs:
+    filter_name: "!OBS.filter_name"
+    filename_format: "!INST.filter_file_format"

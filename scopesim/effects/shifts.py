@@ -113,7 +113,11 @@ class AtmosphericDispersionCorrection(Shift3D):
     def __init__(self, **kwargs):
         """
         Alters the position on the detector for a FOV object (WCS_prefix="D")
-        Only acts on FOVs during the main effects loop in OpticalTrain
+
+        Only acts on FOVs during the main effects loop in OpticalTrain.
+        For the sake of computational efficiency, the ADC can be instructed to
+        counteract the atmospheric diffraction during the OpticalTrain setup
+        phase, by passing the kwarg: ``quick_adc=True``
 
         Parameters
         ----------
@@ -121,6 +125,10 @@ class AtmosphericDispersionCorrection(Shift3D):
         """
         super(AtmosphericDispersionCorrection, self).__init__(**kwargs)
         self.meta["z_order"] = [632]
+        if "quick_adc" in self.meta and self.meta["quick_adc"] is True:
+            self.meta["z_order"] += [232]
+        if "efficiency" not in self.meta:
+            self.meta["efficiency"] = 1
         self.apply_to_classes = FieldOfViewBase
 
         required_keys = ["airmass", "temperature", "humidity", "pressure",
@@ -163,9 +171,16 @@ class AtmosphericDispersionCorrection(Shift3D):
 
         return fov
 
-    # def fov_grid()
-    #   Not needed because the correction only happens on FOVs.
-    #   The ADC only reacts to, and doesn't drive, the simulation
+    def fov_grid(self, which="shifts", **kwargs):
+        kwargs.update(self.meta)
+        if "quick_adc" in self.meta:
+            ad = AtmosphericDispersion(**self.meta)
+            waves, dx, dy = ad.fov_grid()
+            dx *= -self.meta["efficiency"]
+            dy *= -self.meta["efficiency"]
+            return waves, dx, dy
+        else:
+            return None
 
 
 def atmospheric_refraction(lam, z0=60, temp=0, rel_hum=60, pres=750,

@@ -90,9 +90,7 @@ class OpticalTrain:
         - [Apply detector plane (0D, 2D) effects - z_order = 500..599]
 
         """
-
         self.update(**kwargs)
-
         source = deepcopy(orig_source)
 
         # [1D - transmission curves]
@@ -100,7 +98,10 @@ class OpticalTrain:
             source = effect.apply_to(source)
 
         # [3D - Atmospheric shifts, PSF, NCPAs, Grating shift/distortion]
-        for fov in self.fov_manager.fovs:
+        fovs = self.fov_manager.fovs
+        n_fovs = len(fovs)
+        for fov_i, fov in enumerate(fovs):
+            print("FOV", fov_i, "of", n_fovs, flush=True)
             fov.extract_from(source)
             for effect in self.optics_manager.fov_effects:
                 fov = effect.apply_to(fov)
@@ -112,6 +113,7 @@ class OpticalTrain:
                   if implane.id == fov.image_plane_id]
             if len(ii) == 1:
                 self.image_planes[ii[0]].add(fov.hdu, wcs_suffix="D")
+            # ..todo: finish off the multiple image plane stuff
 
         # [2D - Vibration, flat fielding, chopping+nodding]
         for effect in self.optics_manager.image_plane_effects:

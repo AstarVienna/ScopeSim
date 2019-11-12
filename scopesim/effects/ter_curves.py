@@ -157,7 +157,7 @@ class FilterCurve(TERCurve):
 
         super(FilterCurve, self).__init__(**kwargs)
         self.meta["z_order"] = [114, 214]
-        self.meta["min_throughput"] = "!SIM.spectral.minimum_throughput"
+        self.meta["minimum_throughput"] = "!SIM.spectral.minimum_throughput"
         self.meta["action"] = "transmission"
         self.meta["position"] = -1          # position in surface table
         self.meta.update(kwargs)
@@ -171,7 +171,7 @@ class FilterCurve(TERCurve):
                                self.meta["wave_max"], 101)
             wave = quantify(wave, u.um).to(u.um)
             throughput = self.surface.transmission(wave)
-            min_thru = self.meta["min_throughput"]
+            min_thru = self.meta["minimum_throughput"]
             valid_waves = np.where(throughput.value > min_thru)[0]
             if len(valid_waves) > 0:
                 wave_edges = [min(wave[valid_waves].value),
@@ -180,7 +180,7 @@ class FilterCurve(TERCurve):
                 raise ValueError("No transmission found above the threshold {} "
                                  "in this wavelength range {}. Did you open "
                                  "the shutter?"
-                                 "".format(self.meta["min_throughput"],
+                                 "".format(self.meta["minimum_throughput"],
                                            [self.meta["wave_min"],
                                             self.meta["wave_max"]]))
         else:
