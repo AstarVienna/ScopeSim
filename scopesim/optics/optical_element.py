@@ -123,7 +123,13 @@ class OpticalElement:
         self.add_effect(other)
 
     def __getitem__(self, item):
-        return self.get_all(item)
+        if isinstance(item, efs.Effect):
+            return self.get_all(item)
+        elif isinstance(item, int):
+            return self.effects[item]
+        elif isinstance(item, str):
+            return [eff for eff in self.effects
+                    if eff.meta["name"] == item][0]
 
     def __repr__(self):
         msg = '\nOpticalElement : "{}" contains {} Effects: \n' \

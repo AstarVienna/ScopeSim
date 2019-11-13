@@ -14,7 +14,7 @@ from scopesim import rc
 from matplotlib import pyplot as plt
 from matplotlib.colors import LogNorm
 
-pytest_plugins = ['pytest_profiling']
+# pytest_plugins = ['pytest_profiling']
 if not rc.__config__["!SIM.tests.ignore_integration_tests"]:
     pytestmark = pytest.mark.skip("Ignoring HAWKI integration tests")
 

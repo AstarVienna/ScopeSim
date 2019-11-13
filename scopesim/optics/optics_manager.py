@@ -24,7 +24,7 @@ class OpticsManager:
     """
 
     def __init__(self, yaml_dicts=[], **kwargs):
-        self.optical_elements = [OpticalElement({"name": "misc"})]
+        self.optical_elements = []
         self.meta = {}
         self.meta.update(kwargs)
         self._surfaces_table = None
@@ -76,7 +76,7 @@ class OpticsManager:
         if isinstance(yaml_dicts, dict):
             yaml_dicts = [yaml_dicts]
         self.optical_elements += [OpticalElement(dic, **kwargs)
-                                  for dic in yaml_dicts]
+                                  for dic in yaml_dicts if "effects" in dic]
 
     def add_effect(self, effect, ext=0):
         """
@@ -215,6 +215,9 @@ class OpticsManager:
             return effects
         elif isinstance(item, int):
             return self.optical_elements[item]
+        elif isinstance(item, str):
+            return [opt_el for opt_el in self.optical_elements
+                    if opt_el.meta["name"] == item][0]
 
     def __repr__(self):
         msg = "\nOpticsManager contains {} OpticalElements \n" \

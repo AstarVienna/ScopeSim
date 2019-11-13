@@ -15,7 +15,7 @@ from matplotlib import pyplot as plt
 from matplotlib.colors import LogNorm
 
 
-if not rc.__config__["!SIM.tests.ignore_integration_tests"]:
+if rc.__config__["!SIM.tests.ignore_integration_tests"]:
     pytestmark = pytest.mark.skip("Ignoring MICADO integration tests")
 
 rc.__config__["!SIM.file.local_packages_path"] = "./scopesim_pkg_dir_tmp/"
@@ -88,16 +88,78 @@ class TestLoadUserCommands:
 
 
 class TestMakeOpticalTrain:
-    def test_works_seamlessly_for_micado_package(self, capsys):
-        cmd = scopesim.UserCommands(use_instrument="MICADO")
+    def test_works_seamlessly_for_micado_wide_mode(self, capsys):
+        cmd = scopesim.UserCommands(use_instrument="MICADO",
+                                    properties={"!OBS.filter_name": "Ks"})
         opt = scopesim.OpticalTrain(cmd)
         assert isinstance(opt, scopesim.OpticalTrain)
 
-        src = scopesim.source.source_templates.star_field(10000, 10, 25, 20)
-        # src = scopesim.source.source_templates.empty_sky()
+        # src = scopesim.source.source_templates.star_field(10000, 10, 25, 20)
+        src = scopesim.source.source_templates.empty_sky()
         opt.observe(src)
         hdu_list = opt.readout()[0]
         assert isinstance(hdu_list, fits.HDUList)
 
-        opt.image_planes[0].hdu.writeto("flux_frame_TEST.fits", overwrite=True)
-        hdu_list.writeto("full_frame_TEST.fits", overwrite=True)
+        opt.image_planes[0].hdu.writeto("small_LR_flux_TEST.fits",
+                                        overwrite=True)
+        hdu_list.writeto("small_LR_TEST.fits", overwrite=True)
+
+    def test_works_seamlessly_for_micado_zoom_mode(self, capsys):
+        cmd = scopesim.UserCommands(use_instrument="MICADO",
+                                    set_mode="scao_hri",
+                                    properties={"!OBS.filter_name": "Ks"})
+        opt = scopesim.OpticalTrain(cmd)
+        assert isinstance(opt, scopesim.OpticalTrain)
+
+        # src = scopesim.source.source_templates.star_field(10000, 10, 25, 20)
+        src = scopesim.source.source_templates.empty_sky()
+        opt.observe(src)
+        hdu_list = opt.readout()[0]
+        assert isinstance(hdu_list, fits.HDUList)
+        opt.image_planes[0].hdu.writeto("small_HR_flux_TEST.fits",
+                                        overwrite=True)
+        hdu_list.writeto("small_HR_TEST.fits", overwrite=True)
+
+
+class TestSkyBackgroundIsRealistic:
+    @pytest.mark.parametrize("mode_name, filt_name, etc_flux_values, mag_diff",
+                             [("scao_hri", "Ks", 147, 2.05),  # ph/s/pix
+                              ("scao_lri", "Ks", 147, 2.05),
+                              ("scao_hri", "H", 108, 0.25),
+                              ("scao_lri", "H", 108, 0.25),
+                              ("scao_hri", "J", 27, 0.75),
+                              ("scao_lri", "J", 27, 0.75)])
+    def test_background_is_within_2x_of_eso_etc(self, mode_name, filt_name,
+                                                etc_flux_values, mag_diff):
+        """
+        Comparison of the scopesim MICADO package against the ESO ETC
+
+        Notes
+        -----
+        - mag_diff the discrepancy between the ETC and the skycalc BG mags
+        - The ETC uses 1100m2 area and 5mas pixel sizes
+        - ETC sky BG mags can be found on the ETC website, skycalc BG mags can
+          be given when getting a spectrum on the skycalc website
+        """
+
+        cmd = scopesim.UserCommands(use_instrument="MICADO",
+                                    set_mode=mode_name,
+                                    properties={"!OBS.filter_name": filt_name})
+        opt = scopesim.OpticalTrain(cmd)
+        src = scopesim.source.source_templates.empty_sky()
+        opt.observe(src)
+        av_sim_bg = np.average(opt.image_planes[0].hdu.data)
+
+        sim_pix_scale = cmd["!INST.pixel_scale"]
+        sim_area = cmd["!TEL.area"].value
+        etc_pix_scale = 0.005
+        etc_area = 1100
+        scale_factor = sim_pix_scale**2 / etc_pix_scale**2 * sim_area / etc_area
+        scale_factor *= 2.512**-mag_diff
+
+        scaled_etc_bg = etc_flux_values * scale_factor
+        assert 0.5 < scaled_etc_bg / av_sim_bg < 2
+
+        print(filt_name, scaled_etc_bg, av_sim_bg)
+
+

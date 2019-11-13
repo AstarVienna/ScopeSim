@@ -43,7 +43,7 @@ properties :
     block_ip_tracking : False
 
   tests :
-    ignore_integration_tests : True
+    ignore_integration_tests : False
 
 
 ---
