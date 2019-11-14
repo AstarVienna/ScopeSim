@@ -17,6 +17,7 @@ The same applies for the templates package: `ScopeSim templates`_::
 .. toctree::
     :maxdepth: 2
     :caption: Contents:
+
     controlling_simulations
     list_of_commands
     instrument_packages
