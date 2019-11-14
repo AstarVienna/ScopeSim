@@ -1,6 +1,14 @@
 Effect objects
 ==============
 
+.. toctree::
+    :maxdepth: 2
+    :caption: Contents:
+
+    Effect_Descriptions
+    z_orders
+
+
 What are effects
 ----------------
 
