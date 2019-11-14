@@ -19,7 +19,7 @@ The same applies for the templates package: `ScopeSim templates`_::
     :caption: Contents:
 
     interfaces/controlling_simulations
-    examples/index
+    use_examples/index
     interfaces/index
     architecture/index
     effects/index
