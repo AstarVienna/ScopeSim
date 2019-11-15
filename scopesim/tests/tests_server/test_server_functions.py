@@ -10,12 +10,11 @@ from scopesim.server import database as db
 
 
 rc.__config__["!SIM.file.local_packages_path"] = "./scopesim_pkg_dir_tmp/"
-CLEAN_UP = True
 
 
 def setup_module():
     rc_local_path = rc.__config__["!SIM.file.local_packages_path"]
-    if not os.path.exists(rc_local_path) or CLEAN_UP:
+    if not os.path.exists(rc_local_path):
         os.mkdir(rc_local_path)
         rc.__config__["!SIM.file.local_packages_path"] = os.path.abspath(
             rc_local_path)

@@ -101,7 +101,7 @@ class OpticalTrain:
         fovs = self.fov_manager.fovs
         n_fovs = len(fovs)
         for fov_i, fov in enumerate(fovs):
-            print("FOV", fov_i, "of", n_fovs, flush=True)
+            print("FOV", fov_i+1, "of", n_fovs, flush=True)
             fov.extract_from(source)
             for effect in self.optics_manager.fov_effects:
                 fov = effect.apply_to(fov)

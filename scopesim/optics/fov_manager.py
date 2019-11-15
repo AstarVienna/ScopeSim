@@ -261,7 +261,7 @@ def get_imaging_headers(effects, **kwargs):
                              "{}".format(effects))
 
     # get aperture headers from fov_grid()
-    # - for loop catches mutliple headers from ApertureList.fov_grid()
+    # - for-loop catches mutliple headers from ApertureList.fov_grid()
     hdrs = []
     for ap_eff in aperture_effects:
         # ..todo:: add this functionality to ApertureList effect
@@ -332,7 +332,7 @@ def get_imaging_fovs(headers, waveset, shifts):
     counter = 0
     fovs = []
 
-    print("Preparing {} FieldOfViews".format(len(waveset)*len(headers)),
+    print("Preparing {} FieldOfViews".format((len(waveset)-1)*len(headers)),
           flush=True)
 
     for ii in range(len(waveset) - 1):

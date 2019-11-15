@@ -43,6 +43,7 @@ properties :
     block_ip_tracking : False
 
   tests :
+    # overridden in tests/__init__.py
     ignore_integration_tests : False
 
 

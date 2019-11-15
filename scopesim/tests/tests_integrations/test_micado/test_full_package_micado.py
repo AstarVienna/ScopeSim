@@ -45,7 +45,7 @@ def setup_module():
 
 def teardown_module():
     rc_local_path = rc.__config__["!SIM.file.local_packages_path"]
-    if CLEAN_UP and "irdb" not in rc_local_path:
+    if CLEAN_UP and "irdb" not in rc_local_path and os._exists():
         shutil.rmtree(rc.__config__["!SIM.file.local_packages_path"])
 
 
@@ -88,7 +88,7 @@ class TestLoadUserCommands:
 
 
 class TestMakeOpticalTrain:
-    def test_works_seamlessly_for_micado_wide_mode(self, capsys):
+    def test_works_seamlessly_for_micado_wide_mode(self):
         cmd = scopesim.UserCommands(use_instrument="MICADO",
                                     properties={"!OBS.filter_name": "Ks"})
         opt = scopesim.OpticalTrain(cmd)
@@ -98,13 +98,14 @@ class TestMakeOpticalTrain:
         src = scopesim.source.source_templates.empty_sky()
         opt.observe(src)
         hdu_list = opt.readout()[0]
+
         assert isinstance(hdu_list, fits.HDUList)
 
-        opt.image_planes[0].hdu.writeto("small_LR_flux_TEST.fits",
-                                        overwrite=True)
-        hdu_list.writeto("small_LR_TEST.fits", overwrite=True)
+        # opt.image_planes[0].hdu.writeto("small_LR_flux_TEST.fits",
+        #                                 overwrite=True)
+        # hdu_list.writeto("small_LR_TEST.fits", overwrite=True)
 
-    def test_works_seamlessly_for_micado_zoom_mode(self, capsys):
+    def test_works_seamlessly_for_micado_zoom_mode(self):
         cmd = scopesim.UserCommands(use_instrument="MICADO",
                                     set_mode="scao_hri",
                                     properties={"!OBS.filter_name": "Ks"})
@@ -115,10 +116,22 @@ class TestMakeOpticalTrain:
         src = scopesim.source.source_templates.empty_sky()
         opt.observe(src)
         hdu_list = opt.readout()[0]
+
         assert isinstance(hdu_list, fits.HDUList)
-        opt.image_planes[0].hdu.writeto("small_HR_flux_TEST.fits",
-                                        overwrite=True)
-        hdu_list.writeto("small_HR_TEST.fits", overwrite=True)
+
+        # opt.image_planes[0].hdu.writeto("small_HR_flux_TEST.fits",
+        #                                 overwrite=True)
+        # hdu_list.writeto("small_HR_TEST.fits", overwrite=True)
+
+    def test_works_for_full_frame(self):
+        pass
+
+
+
+
+
+
+
 
 
 class TestSkyBackgroundIsRealistic:
@@ -137,7 +150,7 @@ class TestSkyBackgroundIsRealistic:
         Notes
         -----
         - mag_diff the discrepancy between the ETC and the skycalc BG mags
-        - The ETC uses 1100m2 area and 5mas pixel sizes
+        - The ETC uses 1100m2 area and 5mas pixel size
         - ETC sky BG mags can be found on the ETC website, skycalc BG mags can
           be given when getting a spectrum on the skycalc website
         """
@@ -161,5 +174,6 @@ class TestSkyBackgroundIsRealistic:
         assert 0.5 < scaled_etc_bg / av_sim_bg < 2
 
         print(filt_name, scaled_etc_bg, av_sim_bg)
+
 
 

@@ -52,6 +52,7 @@ class TestGenerateFovs:
     def test_returns_the_desired_number_of_fovs(self, mvs_effects_list,
                                                 mvs_usr_cmds):
         rc.__currsys__ = UserCommands(yamls=mvs_usr_cmds)
+        rc.__currsys__["!SIM.computing.max_segment_size"] = 2**20
 
         fov_man = FOVManager(mvs_effects_list)
         fovs = fov_man.generate_fovs_list()

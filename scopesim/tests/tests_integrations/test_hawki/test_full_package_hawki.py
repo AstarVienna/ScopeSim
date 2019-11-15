@@ -15,11 +15,9 @@ from matplotlib import pyplot as plt
 from matplotlib.colors import LogNorm
 
 # pytest_plugins = ['pytest_profiling']
-if not rc.__config__["!SIM.tests.ignore_integration_tests"]:
+if rc.__config__["!SIM.tests.ignore_integration_tests"]:
     pytestmark = pytest.mark.skip("Ignoring HAWKI integration tests")
 
-
-rc.__config__["!SIM.file.local_packages_path"] = "./scopesim_pkg_dir_tmp/"
 
 PKGS = {"Paranal": "locations/Paranal.zip",
         "VLT": "telescopes/VLT.zip",
@@ -98,7 +96,7 @@ class TestMakeOpticalTrain:
             plt.show()
 
         # test that we have the correct number of FOVs for Ks band
-        assert len(opt.fov_manager.fovs) == 81
+        assert len(opt.fov_manager.fovs) == 9
 
         if PLOTS:
             fovs = opt.fov_manager.fovs
