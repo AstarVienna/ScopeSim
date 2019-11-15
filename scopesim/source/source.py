@@ -110,8 +110,7 @@ class Source(SourceBase):
     See Also
     --------
     ``synphot`` - https://synphot.readthedocs.io/en/latest/
-    
-    
+
     """
 
     def __init__(self, filename=None,
