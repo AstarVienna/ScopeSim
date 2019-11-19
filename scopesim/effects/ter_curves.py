@@ -7,7 +7,8 @@ import skycalc_ipy
 
 from .effects import Effect
 from ..optics.surface import SpectralSurface
-from ..utils import from_currsys, quantify
+from ..utils import from_currsys, quantify, check_keys
+from .ter_curves_utils import download_svo_filter
 
 
 class TERCurve(Effect):
@@ -187,3 +188,12 @@ class FilterCurve(TERCurve):
             wave_edges = []
 
         return wave_edges
+
+
+class DownloadableFilterCurve(FilterCurve):
+    def __init__(self, **kwargs):
+        required_keys = ["filter_name", "filename_format"]
+        check_keys(kwargs, required_keys, action="error")
+        filt_str = kwargs["filename_format"].format(kwargs["filter_name"])
+        tbl = download_svo_filter(filt_str, return_style="table")
+        super(FilterCurve, self).__init__(table=tbl, **kwargs)

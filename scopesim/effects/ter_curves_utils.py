@@ -37,7 +37,7 @@ FILTER_DEFAULTS = {"U": "Generic/Bessell.U",
                    }
 
 
-def download_svo_filter(filter_name):
+def download_svo_filter(filter_name, return_style="synphot"):
     """
     Query the SVO service for the true transmittance for a given filter
 
@@ -45,13 +45,21 @@ def download_svo_filter(filter_name):
 
     Parameters
     ----------
-    filter_name : str
+    filt : str
         Name of the filter as available on the spanish VO filter service
         e.g: ``Paranal/HAWKI.Ks``
 
+    return_style : str, optional
+        Defines the format the data is returned
+        - synphot: synphot.SpectralElement
+        - table: astropy.table.Table
+        - quantity: astropy.unit.Quantity [wave, trans]
+        - array: np.ndarray [wave, trans], where wave is in Angstrom
+        - vo_table : astropy.table.Table - original output from SVO service
+
     Returns
     -------
-    filt_curve : ``synphot.SpectralElement``
+    filt_curve : See return_style
         Astronomical filter object.
 
     """
@@ -59,12 +67,22 @@ def download_svo_filter(filter_name):
                          'theory/fps3/fps.php?ID={}'.format(filter_name),
                          cache=True)
 
-    true_transmittance = Table.read(path, format='votable')
-    wave = true_transmittance['Wavelength'].data.data * u.Angstrom
-    trans = true_transmittance['Transmission'].data.data
-    filt_curve = SpectralElement(Empirical1D, points=wave, lookup_table=trans)
+    tbl = Table.read(path, format='votable')
+    wave = u.Quantity(tbl['Wavelength'].data.data, u.Angstrom, copy=False)
+    trans = tbl['Transmission'].data.data
+    if return_style == "synphot":
+        filt = SpectralElement(Empirical1D, points=wave, lookup_table=trans)
+    elif return_style == "table":
+        filt = Table(data=[wave, trans], names=["wavelength", "transmission"])
+        filt.meta["wavelength_unit"] = "Angstrom"
+    elif return_style == "quantity":
+        filt = [wave, trans]
+    elif return_style == "array":
+        filt = [wave.value, trans]
+    elif return_style == "vo_table":
+        filt = tbl
 
-    return filt_curve
+    return filt
 
 
 def get_filter(filter_name):
