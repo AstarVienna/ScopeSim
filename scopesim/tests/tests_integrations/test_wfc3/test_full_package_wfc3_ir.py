@@ -18,7 +18,7 @@ from matplotlib.colors import LogNorm
 if rc.__config__["!SIM.tests.ignore_integration_tests"]:
     pytestmark = pytest.mark.skip("Ignoring HAWKI integration tests")
 
-rc.__config__["!SIM.file.local_packages_path"] = "./wfc3_tmp/"
+rc.__config__["!SIM.file.local_packages_path"] = "./scopesim_pkg_dir_tmp/wfc3_tmp/"
 
 PKGS = {"HST": "telescopes/HST.zip",
         "WFC3": "instruments/WFC3.zip"}
