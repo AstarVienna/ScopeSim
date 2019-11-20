@@ -1,5 +1,5 @@
-Package structure
-=================
+Instrument Package structure
+============================
 
 Management of properties associated with optical elements
 ---------------------------------------------------------
@@ -58,7 +58,6 @@ look like this:
 
 ``default.yaml``
 ++++++++++++++++
-
 
 The default yaml file contains a list of everything needed for an
 ``OpticalTrain`` to be successfully built. This means it needs to reference any

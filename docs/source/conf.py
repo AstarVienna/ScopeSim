@@ -184,7 +184,17 @@ epub_exclude_files = ['search.html']
 # -- Options for intersphinx extension ---------------------------------------
 
 # Example configuration for intersphinx: refer to the Python standard library.
-intersphinx_mapping = {'https://docs.python.org/': None}
+intersphinx_mapping = {'python': ('http://docs.python.org/', None),
+                       'numpy': ('http://docs.scipy.org/doc/numpy/', None),
+                       'scipy': ('http://docs.scipy.org/doc/scipy/reference/', None),
+                       'matplotlib': ('http://matplotlib.org/', None),
+                       'astropy': ('http://docs.astropy.org/en/stable/', None),
+                       'synphot': ('https://synphot.readthedocs.io/en/latest/', None),
+                       'scopesim_templates': ('https://scopesim_templates.readthedocs.io/en/latest/', None),
+                       'pyckles': ('https://pyckles.readthedocs.io/en/latest/', None),
+                       'anisocado': ('https://anisocado.readthedocs.io/en/latest/', None),
+                       }
+
 
 # -- Options for todo extension ----------------------------------------------
 
