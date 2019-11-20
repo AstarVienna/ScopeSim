@@ -1,0 +1,36 @@
+### MAORY RELAY OPTICS
+object : relay_optics
+alias : RO
+name : MAORY
+description : MAORY AO relay module
+
+properties :
+    temperature : "!ATMO.temperature"
+
+effects :
+-   name: maory_surface_list
+    description : list of surfaces in MAORY
+    class: SurfaceList
+    kwargs:
+        filename: LIST_mirrors_MCAO_MAORY.tbl
+
+-   name : maory_generic_psf
+    description : MAORY field varying MCAO PSF
+    class : FieldConstantPSF
+    kwargs:
+        filename : PSF_MCAO_ConstPSF_40_18_6.fits
+        warning : "Default PSF is not Field Varying. See Documentation"
+
+
+####################### Alternative effects ####################################
+
+-   name : maory_psf
+    description : MAORY field varying MCAO PSF
+    class : FieldVaryingPSF
+    include : False
+    kwargs:
+        filename : "!OBS.psf_filename"
+        use_field_rotation : True
+        dit : "!OBS.dit"
+        ndit : "!OBS.ndit"
+

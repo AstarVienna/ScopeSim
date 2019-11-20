@@ -1,0 +1,15 @@
+# author : Kieran Leschinski
+# source : E-MAO-000-INA-TNO-002, Section 4 ("MAORY for dummies")
+# date_created : 2018-11-19
+# date_modified : 2018-11-19
+# status : Design - taken from a sentence from MAORY for dummies
+# type : dichroic:transmission
+# changes :
+#
+# waveunit : um
+#
+Wavelength      Reflection  Emissivity  Transmission
+0.3             0.0         0.0         1.0
+0.6             0.0         0.0         1.0
+0.601           1.0         0.0         0.0
+3.0             1.0         0.0         0.0

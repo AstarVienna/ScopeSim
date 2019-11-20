@@ -1,0 +1,32 @@
+# yaml extension for the zoom imaging mode
+object : instrument
+alias : INST
+name : MICADO_IMG_HR
+description : additional effects for the zoom imaging mode
+
+properties :
+    pixel_scale : 0.0015    # arcsec / pixel
+    plate_scale : 0.1       # arcsec / mm
+
+effects :
+-   name: zoom_mirror_list
+    description: list of extra mirror needed for the zoom imaging mode
+    class: SurfaceList
+    kwargs:
+        filename: LIST_MICADO_mirrors_zoom.dat
+
+-   name: adc_3D_shift
+    description : atmospheric disperson corrector
+    class: AtmosphericDispersionCorrection
+    kwargs:
+        altitude : "!ATMO.altitude"
+        longitude : "!ATMO.longitude"
+        latitude : "!ATMO.latitude"
+        airmass : "!OBS.airmass"
+        temperature : "!ATMO.temperature"
+        humidity : "!ATMO.humidity"
+        pressure : "!ATMO.pressure"
+        pupil_angle : "!OBS.pupil_angle"
+        wave_mid: "!SIM.spectral.wave_mid"
+        efficiency: 1
+        quick_adc: True

@@ -1,0 +1,19 @@
+# yaml extension for the spectroscopy imaging mode
+object : instrument
+alias : INST
+name : MICADO_SPEC
+description : additional effects for the spectroscopy mode
+
+properties :
+    pixel_scale : 0.004
+
+effects :
+-   name : spec_mode_optics
+    description : list of extra mirror needed for the spectroscopy mode
+    class : SurfaceList
+    kwargs :
+        filename : LIST_MICADO_mirrors_spec.dat
+
+-   name: spec_trace_list
+    description : list of spectral order trace geometry on the focal plane
+    class : TraceList

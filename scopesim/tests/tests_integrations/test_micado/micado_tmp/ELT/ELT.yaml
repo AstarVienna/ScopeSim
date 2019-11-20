@@ -1,0 +1,32 @@
+### ELT TELESCOPE
+object : telescope
+alias : TEL
+name : ELT
+description : The extremely large telescope
+
+properties :
+    temperature : "!ATMO.temperature"
+
+effects :
+-   name : scope_surface_list
+    description : list of ELT surfaces
+    class : SurfaceList
+    kwargs :
+        filename : LIST_mirrors_ELT.tbl
+
+-   name : scope_vibration
+    description : residual vibration of telescope
+    class : Vibration
+    kwargs :
+        fwhm : 0.001    # [arcsec] FWHM of Gaussian kernel
+        pixel_scale : "!INST.pixel_scale"
+
+
+####################### Alternative effects ####################################
+
+-   name : eso_combined_reflection
+    description : single combined reflection curve for clean ELT 5 mirror combination
+    class : TERCurve
+    include : False
+    kwargs :
+        filename : "TER_ELT_System_20190611.dat"

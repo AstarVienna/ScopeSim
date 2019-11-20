@@ -1,0 +1,42 @@
+### Config file for the Armazones optical element
+object : atmosphere
+alias : ATMO
+name : armazones
+description : Atmosphere and location details for Cerro Armazones
+
+properties :
+    altitude :      3060        # m
+    longitude :     -70.1918    # deg
+    latitude :      -24.5899    # deg
+    temperature :   7           # deg C
+    humidity :      0.1         # [0..1]
+    pressure :      0.755       # [bar]
+    pwv :           2.5         # [mm]
+    airmass :       "!OBS.airmass"
+    pupil_angle :   "!OBS.pupil_angle"
+    pixel_scale :   "!INST.pixel_scale"
+
+effects :
+-   name : armazones_atmo_default_ter_curve
+    description : atmospheric emission and transmission
+    class : AtmosphericTERCurve
+    kwargs :
+        filename: "TER_armazones_default_NIR_IMG.dat"
+
+-   name : armazones_atmo_dispersion
+    description : atmospheric dispersion
+    class : AtmosphericDispersion
+
+
+####################### Alternative effects ####################################
+
+-   name : armazones_atmo_skycalc_ter_curve
+    description : atmospheric spectra pulled from the skycalc server
+    class : SkycalcTERCurve
+    include : False
+    kwargs :
+        observatory : armazones
+        wmin : "!SIM.spectral.wave_min"
+        wmax : "!SIM.spectral.wave_max"
+        wunit : um
+        wdelta : "!SIM.spectral.spectral_resolution"

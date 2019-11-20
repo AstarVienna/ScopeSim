@@ -1,0 +1,17 @@
+# description : Slit mask for the short, wide slit  (3 arcsec x 48 mas)
+# author : Kieran Leschinski
+# source : My imagination
+# date_created  : 2019-07-10
+# date_modified : 2019-07-10
+# status : Guess - in the train on the way home from CM13
+# type : aperture:slit_geometry
+# x_unit : arcsec
+# y_unit : arcsec
+# changes :
+# - 2019-07-10 : (KL) Created the file
+#
+x   y
+-1.5    -0.024
+1.5     -0.024
+1.5     0.024
+-1.5    0.024

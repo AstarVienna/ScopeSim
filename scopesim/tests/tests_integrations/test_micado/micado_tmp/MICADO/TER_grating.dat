@@ -1,0 +1,14 @@
+# author : Kieran Leschinski
+# source : Conversation with Ric Davies during CM13
+# date_created : 2019-07-10
+# date_modified : 2019-07-10
+# status : Guess
+# type : grating:reflection
+# description : Unprotected Gold
+# wavelength_unit : um
+# changes :
+# - 2019-07-10 : (KL) Created the file
+#
+wavelength  reflection
+0.3         0.6
+3.0         0.6

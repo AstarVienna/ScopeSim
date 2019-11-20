@@ -1,0 +1,17 @@
+# author : Kieran Leschinski
+# sources : Ric Davies email
+# date_created  : 2016-11-21
+# date_modified : 2018-11-19
+# type : instrument:wavefront_errors_list
+# status : Idea - based on the WFE budget and emails with Ric
+# changes :
+# - 2018-11-19 (KL) updated meta data to new format
+#
+# description : RMS wavefront error table
+# wfe_rms_unit : nm
+#
+element         material    n_surfaces  wfe_rms
+mirror          gold        11          20          
+entrance_window glass       4           10          
+filter          glass       2           10          
+ADC             glass       8           10          

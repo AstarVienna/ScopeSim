@@ -1,0 +1,27 @@
+# yaml extension for the wide field imaging mode
+object : instrument
+alias : INST
+name : MICADO_IMG_HCI
+description : additional effects for the high contrast imaging mode
+
+properties :
+    pixel_scale : 0.004
+
+effects :
+-   name: hci_mirror_list
+    description: list of extra mirror needed for the wide field mode
+    class: SurfaceList
+    kwargs:
+        filename: LIST_MICADO_mirrors_zoom.dat
+
+-   name: hci_pupil_optics
+    description: entrance pupil HCI optics transmission curve
+    class: TERCurve
+    kwargs:
+        filename: TC_filter_blank.dat
+
+-   name: hci_psf
+    description: alterations to the PSF due to the coronagraph
+    class: CoronagraphPSF
+    kwargs:
+        filename: None

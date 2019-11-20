@@ -1,0 +1,32 @@
+### MICADO INSTRUMENT WIDE FIELD MODE
+object : instrument
+alias : INST
+name : MICADO
+description : base configuration for MICADO
+
+properties : 
+    temperature : -190
+
+effects : 
+-   name: micado_static_surfaces
+    description : surfaces list for wide field optics
+    class: SurfaceList
+    kwargs:
+        filename: LIST_MICADO_mirrors_static.dat
+        
+-   name: micado_filter
+    description : transmission curve for filter
+    class: FilterCurve
+    kwargs:
+        filter_name: "!OBS.filter_name"
+        filename_format: "TC_filter_{}.dat"
+        minimum_throughput: !!float 1.01E-4
+        outer: 0.2
+        outer_unit: "m"
+        
+-   name : micado_ncpas_psf
+    description : Effective NCPA induced PSF kernel
+    class : NonCommonPathAberration
+    kwargs :
+        pixel_scale : "!INST.pixel_scale"
+        filename : "INST_MICADO_wavefront_error_budget.dat"
