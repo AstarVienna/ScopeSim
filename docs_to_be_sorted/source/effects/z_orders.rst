@@ -131,6 +131,7 @@ Detectors
 * 761 Vignetting            !!! Write
 * 762 Distortion            !!! Write
 * 763 Chopping              !!! Write
+* 780 ReferencePixelBorder
 
 
 800..899 apply-to(Detector)

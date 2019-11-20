@@ -4,7 +4,7 @@ from astropy.io import fits
 
 from .. import rc
 from . import Effect
-from ..base_classes import DetectorBase
+from ..base_classes import DetectorBase, ImagePlaneBase
 from ..utils import real_colname, from_currsys, check_keys
 
 
@@ -71,15 +71,17 @@ class ShotNoise(Effect):
             if self.meta["random_seed"] is not None:
                 np.random.seed(self.meta["random_seed"])
 
-            orig_type = type(det._hdu.data[0, 0])
-            if not isinstance(det._hdu.data[0, 0], np.float64):
-                det._hdu.data = det._hdu.data.astype(np.float64)
-
+            # ! poisson(x) === normal(mu=x, sigma=x**0.5)
+            # Windows has a porblem with generating poisson values above 2**30
+            # Above ~100 counts the poisson and normal distribution are
+            # basically the same. For large arrays the normal distribution
+            # takes only 60% as long as the poisson distribution
             data = det._hdu.data
-            # ..todo FIX THIS!!!
-            # (KL) it seems to have fixed itself... lets wait and see
-            data = np.random.poisson(data).astype(orig_type)
-
+            below = data < 2**10
+            above = np.invert(below)
+            data[below] = np.random.poisson(data[below]).astype(float)
+            data[above] = np.random.normal(data[above], np.sqrt(data[above]))
+            data = np.floor(data)
             new_imagehdu = fits.ImageHDU(data=data, header=det._hdu.header)
             det._hdu = new_imagehdu
 
@@ -140,6 +142,32 @@ class LinearityCurve(Effect):
             det._hdu.data = new_image
 
         return det
+
+
+class ReferencePixelBorder(Effect):
+    def __init__(self, **kwargs):
+        super(ReferencePixelBorder, self).__init__(**kwargs)
+        self.meta["z_order"] = [780]
+        val = 0
+        if "all" in kwargs:
+            val = int(kwargs["all"])
+        widths = {key: val for key in ["top", "bottom", "left", "right"]}
+        self.meta.update(widths)
+        self.meta.update(kwargs)
+
+    def apply_to(self, implane):
+        if isinstance(implane, ImagePlaneBase):
+            if self.meta["top"] > 0:
+                implane.hdu.data[:, -self.meta["top"]:] = 0
+            if self.meta["bottom"] > 0:
+                implane.hdu.data[:, :self.meta["bottom"]] = 0
+            if self.meta["right"] > 0:
+                implane.hdu.data[-self.meta["right"]:, :] = 0
+            if self.meta["left"] > 0:
+                implane.hdu.data[:self.meta["left"], :] = 0
+
+        return implane
+
 
 
 ################################################################################

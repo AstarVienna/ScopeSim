@@ -87,7 +87,8 @@ def star_field(n, mmin, mmax, width, height=None, photometric_system="vega"):
 
 def vega_spectrum(mag=0):
     vega = SourceSpectrum.from_file(pth.join(__pkg_dir__, "vega.fits"))
-    return vega * 10**(-0.4 * mag)
+    vega = vega * 10 ** (-0.4 * mag)
+    return vega
 
 
 def st_spectrum(mag=0):
