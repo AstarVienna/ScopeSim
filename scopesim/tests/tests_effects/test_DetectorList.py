@@ -14,25 +14,29 @@ class TestInit:
         assert isinstance(DetectorList(), DetectorList)
 
     def test_initialises_with_filename(self):
-        det_list = DetectorList(filename="FPA_array_layout.dat")
+        det_list = DetectorList(filename="FPA_array_layout.dat",
+                                image_plane_id=0)
         assert isinstance(det_list, DetectorList)
 
 
 class TestImagePlaneHeader:
     def test_header_is_sensical(self):
-        det_list = DetectorList(filename="FPA_array_layout.dat")
+        det_list = DetectorList(filename="FPA_array_layout.dat",
+                                image_plane_id=0)
         hdr_big = det_list.image_plane_header
         assert hdr_big["NAXIS1"] > 4096*3
 
 
 class TestFovGrid:
     def test_returns_aperture_mask_object(self):
-        det_list = DetectorList(filename="FPA_array_layout.dat")
+        det_list = DetectorList(filename="FPA_array_layout.dat",
+                                image_plane_id=0)
         apm = det_list.fov_grid(pixel_scale=0.004)
         assert isinstance(apm, ApertureMask)
 
     def test_aperture_mask_header_covers_all_of_detector_header(self):
-        det_list = DetectorList(filename="FPA_array_layout.dat")
+        det_list = DetectorList(filename="FPA_array_layout.dat",
+                                image_plane_id=0)
         apm = det_list.fov_grid(pixel_scale=0.004)
         apm_hdr = apm.header
         det_hdr = det_list.image_plane_header

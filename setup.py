@@ -31,7 +31,7 @@ date    = '{}'
 
 def setup_package():
     # Rewrite the version file every time
-    write_version_py()
+    # write_version_py()
 
     setup(name='ScopeSim',
           version=VERSION,

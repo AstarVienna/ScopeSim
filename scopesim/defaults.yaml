@@ -23,8 +23,8 @@ properties :
     seed :
 
   computing :
-    chunk_size : 512
-    max_segment_size : 1048576
+    chunk_size : 2048
+    max_segment_size : 16777217
     oversampling : 1
     spline_order : 1
     flux_accuracy : !!float 1E-3
@@ -32,7 +32,7 @@ properties :
   file :
     local_packages_path : "./"
     server_base_url : "https://www.univie.ac.at/simcado/InstPkgSvr/"
-    use_cached_downloads : False
+    use_cached_downloads : True
     search_path : ["./"]
 
   reports :
@@ -41,6 +41,10 @@ properties :
     # WE DO NOT TRACK OR SAVE ANY PERSONAL INFORMATION
     # however you can become completely anonymous by setting this flag to True
     block_ip_tracking : False
+
+  tests :
+    # overridden in tests/__init__.py
+    ignore_integration_tests : False
 
 
 ---

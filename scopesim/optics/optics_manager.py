@@ -24,7 +24,7 @@ class OpticsManager:
     """
 
     def __init__(self, yaml_dicts=[], **kwargs):
-        self.optical_elements = [OpticalElement({"name": "misc"})]
+        self.optical_elements = []
         self.meta = {}
         self.meta.update(kwargs)
         self._surfaces_table = None
@@ -76,7 +76,7 @@ class OpticsManager:
         if isinstance(yaml_dicts, dict):
             yaml_dicts = [yaml_dicts]
         self.optical_elements += [OpticalElement(dic, **kwargs)
-                                  for dic in yaml_dicts]
+                                  for dic in yaml_dicts if "effects" in dic]
 
     def add_effect(self, effect, ext=0):
         """
@@ -159,15 +159,15 @@ class OpticsManager:
         return effects
 
     @property
-    def image_plane_header(self):
+    def image_plane_headers(self):
         detector_lists = self.detector_setup_effects
-        header = detector_lists[0].image_plane_header
+        headers = [det_list.image_plane_header for det_list in detector_lists]
 
-        if len(detector_lists) != 1:
-            warnings.warn("None or more than one DetectorList found. Using the"
-                          " first instance.{}".format(detector_lists))
+        if len(detector_lists) == 0:
+            raise ValueError("No DetectorList objects found. {}"
+                             "".format(detector_lists))
 
-        return header
+        return headers
 
     @property
     def detector_effects(self):
@@ -187,6 +187,7 @@ class OpticsManager:
 
     @property
     def detector_setup_effects(self):
+        # !!! Only DetectorLists go in here !!!
         return self.get_z_order_effects(400)
 
     @property
@@ -214,6 +215,9 @@ class OpticsManager:
             return effects
         elif isinstance(item, int):
             return self.optical_elements[item]
+        elif isinstance(item, str):
+            return [opt_el for opt_el in self.optical_elements
+                    if opt_el.meta["name"] == item][0]
 
     def __repr__(self):
         msg = "\nOpticsManager contains {} OpticalElements \n" \

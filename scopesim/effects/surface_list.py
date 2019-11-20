@@ -38,7 +38,7 @@ class SurfaceList(Effect):
     def __init__(self, **kwargs):
         super(SurfaceList, self).__init__(**kwargs)
         self.meta["z_order"] = [20, 120]
-        self.meta["min_throughput"] = "!SIM.spectral.minimum_throughput"
+        self.meta["minimum_throughput"] = "!SIM.spectral.minimum_throughput"
         self.meta["wave_min"] = "!SIM.spectral.wave_min"
         self.meta["wave_max"] = "!SIM.spectral.wave_max"
         self.meta.update(kwargs)
@@ -89,14 +89,14 @@ class SurfaceList(Effect):
             wave = np.linspace(self.meta["wave_min"],
                                self.meta["wave_max"], 100)
             throughput = self.throughput(wave)
-            valid_waves = np.where(throughput > self.meta["min_throughput"])[0]
+            valid_waves = np.where(throughput > self.meta["minimum_throughput"])[0]
             if len(valid_waves) > 0:
                 wave_edges = [min(wave[valid_waves]), max(wave[valid_waves])]
             else:
                 raise ValueError("No transmission found above the threshold {} "
                                  "in this wavelength range {}. Did you open "
                                  "the shutter?"
-                                 "".format(self.meta["min_throughput"],
+                                 "".format(self.meta["minimum_throughput"],
                                            [self.meta["wave_min"],
                                             self.meta["wave_max"]]))
         else:

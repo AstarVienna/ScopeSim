@@ -99,6 +99,7 @@ inst_pkg_name : micado
 properties :
     temperature : -190
     dark_current : 0.1
+    image_plane_id : 0
 
 effects :
 -   name : detector_qe_curve

@@ -7,7 +7,8 @@ import skycalc_ipy
 
 from .effects import Effect
 from ..optics.surface import SpectralSurface
-from ..utils import from_currsys, quantify
+from ..utils import from_currsys, quantify, check_keys
+from .ter_curves_utils import download_svo_filter
 
 
 class TERCurve(Effect):
@@ -157,7 +158,7 @@ class FilterCurve(TERCurve):
 
         super(FilterCurve, self).__init__(**kwargs)
         self.meta["z_order"] = [114, 214]
-        self.meta["min_throughput"] = "!SIM.spectral.minimum_throughput"
+        self.meta["minimum_throughput"] = "!SIM.spectral.minimum_throughput"
         self.meta["action"] = "transmission"
         self.meta["position"] = -1          # position in surface table
         self.meta.update(kwargs)
@@ -171,7 +172,7 @@ class FilterCurve(TERCurve):
                                self.meta["wave_max"], 101)
             wave = quantify(wave, u.um).to(u.um)
             throughput = self.surface.transmission(wave)
-            min_thru = self.meta["min_throughput"]
+            min_thru = self.meta["minimum_throughput"]
             valid_waves = np.where(throughput.value > min_thru)[0]
             if len(valid_waves) > 0:
                 wave_edges = [min(wave[valid_waves].value),
@@ -180,10 +181,19 @@ class FilterCurve(TERCurve):
                 raise ValueError("No transmission found above the threshold {} "
                                  "in this wavelength range {}. Did you open "
                                  "the shutter?"
-                                 "".format(self.meta["min_throughput"],
+                                 "".format(self.meta["minimum_throughput"],
                                            [self.meta["wave_min"],
                                             self.meta["wave_max"]]))
         else:
             wave_edges = []
 
         return wave_edges
+
+
+class DownloadableFilterCurve(FilterCurve):
+    def __init__(self, **kwargs):
+        required_keys = ["filter_name", "filename_format"]
+        check_keys(kwargs, required_keys, action="error")
+        filt_str = kwargs["filename_format"].format(kwargs["filter_name"])
+        tbl = download_svo_filter(filt_str, return_style="table")
+        super(FilterCurve, self).__init__(table=tbl, **kwargs)

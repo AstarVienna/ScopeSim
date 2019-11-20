@@ -44,14 +44,14 @@ class TestOpticsManager:
                                         inst_yaml_dict):
         opt_man = opt_mgr.OpticsManager([detector_yaml_dict, inst_yaml_dict])
         assert isinstance(opt_man, opt_mgr.OpticsManager)
-        assert len(opt_man.optical_elements) == 3
+        assert len(opt_man.optical_elements) == 2
 
     def test_has_effects_loaded(self, detector_yaml_dict):
         opt_man = opt_mgr.OpticsManager([detector_yaml_dict])
         # print(opt_man.optical_elements[1])
-        assert isinstance(opt_man.optical_elements[1],
+        assert isinstance(opt_man.optical_elements[0],
                           opt_mgr.OpticalElement)
-        assert isinstance(opt_man.optical_elements[1].effects[0], Effect)
+        assert isinstance(opt_man.optical_elements[0].effects[0], Effect)
 
 
 @pytest.mark.usefixtures("detector_yaml_dict")
@@ -60,4 +60,4 @@ class TestOpticsManagerImagePlaneHeader:
         opt_man = opt_mgr.OpticsManager(detector_yaml_dict)
         opt_man.meta["SIM_PIXEL_SCALE"] = 0.004
         print(opt_man)
-        assert isinstance(opt_man.image_plane_header, fits.Header)
+        assert isinstance(opt_man.image_plane_headers[0], fits.Header)

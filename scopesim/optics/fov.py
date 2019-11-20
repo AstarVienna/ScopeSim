@@ -39,7 +39,14 @@ class FieldOfView(FieldOfViewBase):
                      "wave_min" : utils.quantify(waverange[0], u.um),
                      "wave_max" : utils.quantify(waverange[1], u.um),
                      "area" : 1 * u.m**2,
-                     "sub_pixel" : rc.__config__["!SIM.sub_pixel.flag"]}
+                     "sub_pixel" : rc.__config__["!SIM.sub_pixel.flag"],
+                     "distortion" : {"scale": [1, 1],
+                                     "offset": [0, 0],
+                                     "shear": [1, 1],
+                                     "rotation": 0,
+                                     "warp": None},
+                     "conserve_image": True,
+                     }
         self.meta.update(kwargs)
 
         if not any([utils.has_needed_keywords(header, s) for s in ["", "S"]]):

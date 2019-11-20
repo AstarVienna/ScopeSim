@@ -52,6 +52,7 @@ class DetectorList(Effect):
 
         pixel_size = pixel_size.to(u.mm).value
         hdr = header_from_list_of_xy(x_det, y_det, pixel_size, "D")
+        hdr["IMGPLANE"] = self.meta["image_plane_id"]
 
         return hdr
 

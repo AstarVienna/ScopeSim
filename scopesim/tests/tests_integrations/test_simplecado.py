@@ -17,7 +17,8 @@ PLOTS = False
 DETECTOR_YAML = {"object": "detector",
                  "alias": "DET",
                  "name": "test_detector",
-                 "properties": {"dit": "!OBS.dit"},
+                 "properties": {"dit": "!OBS.dit",
+                                "image_plane_id": 0},
                  "effects": [{"name": "detector_array_list",
                               "description": "SimpleCADO detector array list",
                               "class": "DetectorList",
@@ -35,7 +36,7 @@ DETECTOR_YAML = {"object": "detector",
                                          "yhw_unit" : "mm",
                                          "pixsize_unit" : "mm",
                                          "angle_unit" : "deg",
-                                         "gain_unit" : "electron/adu"
+                                         "gain_unit" : "electron/adu",
                                          }
                               },
                              {"name": "dark_current",
@@ -63,12 +64,13 @@ def test_simplecado():
 
     opt = sim.OpticalTrain(cmd)
     opt.observe(src)
-    hdu = opt.readout()
+    hdus = opt.readout()
+    hdu = hdus[0]
 
     # Finished - now just testing the output
     # No rogue photon torpedoes
-    print(opt.image_plane.image)
-    assert np.all(opt.image_plane.image) == 0
+    print(opt.image_planes[0].image)
+    assert np.all(opt.image_planes[0].image) == 0
 
     # dark = 0.2 ct/s, DIT = 10s, NDIT = 1
     print(hdu[1].data)

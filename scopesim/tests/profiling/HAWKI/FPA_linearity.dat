@@ -1,0 +1,38 @@
+# name : H2RG linearity curve
+# author : Kieran Leschinski
+# sources: Extracted from HAWKI images
+# date_created : 2016-01-01
+# date_modified : 2019-08-13
+# type : detector:linearity
+# status : Design - approximated from the H2RG
+# incident_unit : ph
+# measured_unit : ph
+#
+# changes :
+# - 2019-08-13 (KL) updated number format for scopesim
+#
+incident        measured
+0               0
+10              10
+10000           10000
+13600           13000
+15900           15400
+18800           16500
+22300           20700
+26700           23800
+32200           28300
+39200           34100
+48300           41800
+60100           52300
+75600           66100
+96500           86300
+125000          116000
+164000          143000
+220000          190000
+301000          250000
+420000          200000
+520000          100000
+620000          10000
+720000          1000
+800000          0
+1e99            0

@@ -1,0 +1,39 @@
+# author : Kieran Leschinski
+# sources : Finger+ 2008 SPIE
+# date_created  : 2016-01-01
+# date_modified : 2019-08-09
+# type : detector:quantum_efficiency
+# status : Design - guestimated by reading off the graph in Finger+ 2008
+# description : H2RG chip quantum efficiency
+# action : transmission
+# wavelength_unit : um
+# changes :
+# - 2018-11-19 : (KL) updated meta data to new format
+# - 2019-08-09 : (KL) Added action keyword to meta data
+#
+wavelength  transmission
+0.7         0.0
+0.76        0.02
+0.82        0.15
+0.85        0.6
+0.88        0.9
+0.90        0.97
+0.96        0.96
+0.99        0.92
+1.06        0.9
+1.19        0.88
+1.52        0.88
+1.55        0.86
+1.65        0.9
+1.69        0.89
+1.75        0.9
+1.87        0.82
+1.98        0.87
+2.08        0.87
+2.2         0.85
+2.39        0.82
+2.45        0.78
+2.5         0.68
+2.57        0.23
+2.63        0.02
+2.7         0.0

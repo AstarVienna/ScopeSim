@@ -46,17 +46,19 @@ def _mvs_effects_list():
     effects_list = []
     for dic in _yaml_min_viable_scope():
         effects = dic["effects"]
-        effects_list += [make_effect(eff) for eff in effects]
+        propeties = dic["properties"] if "properties" in dic else {}
+        effects_list += [make_effect(eff, **propeties) for eff in effects]
 
     return effects_list
 
 
 def _detector_list():
-    kwargs = {"filename": "LIST_detector_layout.dat"}
+    kwargs = {"filename": "LIST_detector_layout.dat", "image_plane_id": 0}
     return efs.DetectorList(**kwargs)
 
+
 def _full_detector_list():
-    kwargs = {"filename": "LIST_full_detector_layout.dat"}
+    kwargs = {"filename": "LIST_full_detector_layout.dat", "image_plane_id": 0}
     return efs.DetectorList(**kwargs)
 
 
@@ -103,7 +105,7 @@ def _ncpa_psf():
 
 def _img_aperture_mask(**kwargs):
     base_kwargs = {"array_dict": {"x": [-2, -1, 1, 2],
-                                  "y": [-1, -2, 2, 1]} ,
+                                  "y": [-1, -2, 2, 1]},
                    "x_unit": "arcsec",
                    "y_unit": "arcsec"}
     base_kwargs.update(kwargs)

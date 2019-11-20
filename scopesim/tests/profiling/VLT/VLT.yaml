@@ -1,0 +1,21 @@
+### VLT Unit Telescope 4
+object: instrument
+alias: TEL
+name: VLT
+description : The very large telescope UT4
+
+properties:
+  temperture: "!ATMO.temperature"
+
+effects:
+- name: vlt_mirror_list
+  class: SurfaceList
+  kwargs:
+    filename: LIST_VLT_mirrors.dat
+
+- name: vlt_generic_psf
+  description: Field constant PSF
+  class: FieldConstantPSF
+  kwargs:
+    filename: PSF_VLT_poppy.fits
+    warning: "Default PSF was generated Poppy for a UT4 optical system"

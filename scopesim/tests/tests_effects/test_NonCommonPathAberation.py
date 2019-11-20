@@ -158,8 +158,3 @@ class TestFunctionStrehl2Gauss:
         assert np.all(np.abs(ratios-1) < 0.01)
         assert np.all([k.shape == (3, 3) for k in kernels])
         assert np.all([np.sum(k) == approx(1) for k in kernels])
-
-
-
-
-

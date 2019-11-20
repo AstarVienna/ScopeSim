@@ -7,6 +7,7 @@ from .shifts import *
 from .spectroscopy_effects import *
 from .surface_list import *
 from .ter_curves import *
+from . import ter_curves_utils
 
 from .detector_list import *
 from .electronic import *

@@ -26,7 +26,6 @@ for NEW_PATH in [YAMLS_PATH, FILES_PATH]:
         rc.__search_path__ += [NEW_PATH]
 
 
-
 def _basic_cmds():
     return UserCommands(yamls=["CMD_unity_cmds.yaml"])
 
@@ -52,12 +51,13 @@ class TestObserve:
     def test_flux_is_conserved_for_no_bg_emission(self, cmds, tbl_src):
         opt = OpticalTrain(cmds)
         opt.observe(tbl_src)
-        im = opt.image_plane.image
+        im = opt.image_planes[0].image
         bg_flux = np.pi / 4 * np.prod(im.shape)
         src_flux = tbl_src.photons_in_range(1, 2, 1)[0].value
 
         if PLOTS:
-            plt.imshow(opt.image_plane.image.T, origin="lower", norm=LogNorm())
+            implane = opt.image_planes[0]
+            plt.imshow(implane.image.T, origin="lower", norm=LogNorm())
             plt.colorbar()
             plt.show()
 

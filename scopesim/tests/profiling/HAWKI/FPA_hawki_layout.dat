@@ -1,0 +1,24 @@
+# name : HAWKI H2RG-15 FPA
+# author : Kieran Leschinski
+# sources: VLT-MAN-ESO-14800-3486_v103.pdf
+# date_created  : 2019-08-13
+# date_modified : 2019-08-13
+# type : detector:chip_list
+# x_cen_unit : mm
+# y_cen_unit : mm
+# xhw_unit : mm
+# yhw_unit : mm
+# x_len_unit : pix
+# y_len_unit : pix
+# pixsize_unit : mm
+# angle_unit : deg
+# gain_unit : electron/adu
+#
+# changes:
+# - 2018-11-19 : (KL) updated meta data to new format
+#
+id    x_cen    y_cen    xhw    yhw  x_len  y_len  pixsize  angle   gain
+ 1  -11.390  -11.400  10.24  10.24   2048   2048    0.010   0.00  1.705
+ 2   10.615  -11.375  10.24  10.24   2048   2048    0.010   0.13  1.870
+ 3   10.660   10.520  10.24  10.24   2048   2048    0.010   0.04  1.735
+ 4  -11.340   10.495  10.24  10.24   2048   2048    0.010   0.03  2.110

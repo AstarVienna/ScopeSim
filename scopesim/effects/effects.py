@@ -36,6 +36,7 @@ class Effect(DataContainer):
     def __init__(self, **kwargs):
         super(Effect, self).__init__(**kwargs)
         self.meta["z_order"] = []
+        self.meta["include"] = True
 
     def apply_to(self, obj):
         if not isinstance(obj, (SourceBase, FieldOfViewBase,
@@ -94,9 +95,13 @@ class Effect(DataContainer):
     #             bang_key = self.meta[key]
     #             self.meta[key] = rc.__currsys__[bang_key]
 
+    @property
+    def include(self):
+        return self.meta["include"]
+
+    @include.setter
+    def include(self, item):
+        self.meta["include"] = item
+
     def __repr__(self):
-        if "name" not in self.meta:
-            self.meta["name"] = "<unknown name>"
         return '{}: "{}"'.format(type(self).__name__, self.meta["name"])
-
-

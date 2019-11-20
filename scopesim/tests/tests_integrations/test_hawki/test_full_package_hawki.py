@@ -1,4 +1,4 @@
-# integration test using everything and the MICADO package
+# integration test using everything and the HAWKI package
 import pytest
 from pytest import approx
 import os
@@ -14,7 +14,11 @@ from scopesim import rc
 from matplotlib import pyplot as plt
 from matplotlib.colors import LogNorm
 
-rc.__config__["!SIM.file.local_packages_path"] = "./scopesim_pkg_dir_tmp/"
+# pytest_plugins = ['pytest_profiling']
+if rc.__config__["!SIM.tests.ignore_integration_tests"]:
+    pytestmark = pytest.mark.skip("Ignoring HAWKI integration tests")
+
+rc.__config__["!SIM.file.local_packages_path"] = "./scopesim_pkg_dir_tmp/hawki_tmp/"
 
 PKGS = {"Paranal": "locations/Paranal.zip",
         "VLT": "telescopes/VLT.zip",
@@ -25,7 +29,9 @@ PLOTS = False
 
 
 def setup_module():
+    rc.__config__["!SIM.file.use_cached_downloads"] = False
     rc_local_path = rc.__config__["!SIM.file.local_packages_path"]
+
     if not os.path.exists(rc_local_path):
         os.mkdir(rc_local_path)
         rc.__config__["!SIM.file.local_packages_path"] = os.path.abspath(
@@ -45,14 +51,14 @@ def teardown_module():
 
 class TestInit:
     def test_all_packages_are_available(self):
-        for pkg_name in PKGS:
-            rc_local_path = rc.__config__["!SIM.file.local_packages_path"]
-            assert os.path.isdir(os.path.join(rc_local_path, pkg_name))
+        rc_local_path = rc.__config__["!SIM.file.local_packages_path"]
         print("irdb" not in rc_local_path)
+        for pkg_name in PKGS:
+            assert os.path.isdir(os.path.join(rc_local_path, pkg_name))
 
 
 class TestLoadUserCommands:
-    def test_user_commands_loads_with_throwing_errors(self, capsys):
+    def test_user_commands_loads_without_throwing_errors(self, capsys):
         cmd = scopesim.UserCommands(use_instrument="HAWKI")
         assert isinstance(cmd, scopesim.UserCommands)
         for key in ["SIM", "OBS", "ATMO", "TEL", "INST", "DET"]:
@@ -91,7 +97,7 @@ class TestMakeOpticalTrain:
             plt.show()
 
         # test that we have the correct number of FOVs for Ks band
-        assert len(opt.fov_manager.fovs) == 81
+        assert len(opt.fov_manager.fovs) == 9
 
         if PLOTS:
             fovs = opt.fov_manager.fovs
@@ -113,14 +119,14 @@ class TestMakeOpticalTrain:
             plt.show()
 
         # test that the ImagePlane is large enough
-        assert opt.image_plane.header["NAXIS1"] > 4200
-        assert opt.image_plane.header["NAXIS2"] > 4200
-        assert np.all(opt.image_plane.data == 0)
+        assert opt.image_planes[0].header["NAXIS1"] > 4200
+        assert opt.image_planes[0].header["NAXIS2"] > 4200
+        assert np.all(opt.image_planes[0].data == 0)
 
         # test assert there are 4 detectors, each 2048x2048 pixels
-        hdu = opt.readout()
-        assert len(opt.detector_array.detectors) == 4
-        for detector in opt.detector_array.detectors:
+        hdu = opt.readout()[0]
+        assert len(opt.detector_arrays[0].detectors) == 4
+        for detector in opt.detector_arrays[0].detectors:
             assert detector.hdu.header["NAXIS1"] == 2048
             assert detector.hdu.header["NAXIS2"] == 2048
 
@@ -143,7 +149,7 @@ class TestObserveOpticalTrain:
 
         # ETC gives 2700 e-/DIT for a 1s DET at airmass=1.2, pwv=2.5
         opt.observe(src)
-        assert np.average(opt.image_plane.data) == approx(2700, rel=0.2)
+        assert np.average(opt.image_planes[0].data) == approx(2700, rel=0.2)
 
     def test_actually_produces_stars(self):
         cmd = scopesim.UserCommands(use_instrument="HAWKI",
@@ -155,11 +161,11 @@ class TestObserveOpticalTrain:
         src = scopesim.source.source_templates.star_field(10000, 5, 15, 440)
 
         # ETC gives 2700 e-/DIT for a 1s DET at airmass=1.2, pwv=2.5
-        # background shoule therefore be ~ 8.300.000
+        # background should therefore be ~ 8.300.000
         opt.observe(src)
-        hdu = opt.readout()
+        hdu = opt.readout()[0]
 
-        implane_av = np.average(opt.image_plane.data)
+        implane_av = np.average(opt.image_planes[0].data)
         hdu_av = np.average([hdu[i].data for i in range(1, 5)])
         exptime = cmd["!OBS.ndit"] * cmd["!OBS.dit"]
 
@@ -167,9 +173,13 @@ class TestObserveOpticalTrain:
 
         if PLOTS:
             plt.subplot(1, 2, 1)
-            plt.imshow(opt.image_plane.image[128:2048, 128:2048].T, norm=LogNorm())
+            plt.imshow(opt.image_planes[0].image[128:2048, 128:2048].T,
+                       norm=LogNorm())
+            plt.colorbar()
 
             plt.subplot(1, 2, 2)
-            plt.imshow(hdu[1].data[128:2048, 128:2048].T, norm=LogNorm())
-            plt.show()
+            plt.imshow(hdu[1].data[128:2048, 128:2048].T, norm=LogNorm(),
+                       vmax=3e7)
+            plt.colorbar()
 
+            plt.show()

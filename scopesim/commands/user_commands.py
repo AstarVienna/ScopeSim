@@ -186,18 +186,20 @@ class UserCommands:
                                      "dictionary: {}".format(yaml_input))
 
         if "mode_yamls" in kwargs:
+            # Convert the yaml list of modes to a dict object
             self.modes_dict = {my["name"]: my for my in kwargs["mode_yamls"]}
             if "mode" in self.cmds["!OBS"]:
                 mode_name = self.cmds["!OBS.mode"]
                 self.update(yamls=self.modes_dict[mode_name]["yamls"])
 
+        if "set_mode" in kwargs:
+            self.set_mode(mode=kwargs["set_mode"])
+
         if "properties" in kwargs:
+            # anything that you want to change on initialisation
             props_dict = kwargs["properties"]
             for key in props_dict:
                 self.cmds[key] = props_dict[key]
-
-        if "set_mode" in kwargs:
-            self.set_mode(mode=kwargs["set_mode"])
 
         if "ignore_effects" in kwargs:
             self.ignore_effects = kwargs["ignore_effects"]
@@ -218,6 +220,8 @@ class UserCommands:
                     self.default_yamls[i]["properties"]["mode"] = mode
 
             self.__init__(yamls=self.default_yamls)
+        else:
+            raise ValueError("mode '{}' was not recognised".format(mode))
 
     def __setitem__(self, key, value):
         self.cmds.__setitem__(key, value)

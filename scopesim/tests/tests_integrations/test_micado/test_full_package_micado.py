@@ -15,20 +15,24 @@ from matplotlib import pyplot as plt
 from matplotlib.colors import LogNorm
 
 
-rc.__config__["!SIM.file.local_packages_path"] = "./scopesim_pkg_dir_tmp/"
+if rc.__config__["!SIM.tests.ignore_integration_tests"]:
+    pytestmark = pytest.mark.skip("Ignoring MICADO integration tests")
+
+rc.__config__["!SIM.file.local_packages_path"] = "./scopesim_pkg_dir_tmp/micado_tmp/"
+
 
 PKGS = {"Armazones": "locations/Armazones.zip",
         "ELT": "telescopes/ELT.zip",
         "MAORY": "instruments/MAORY.zip",
         "MICADO": "instruments/MICADO.zip"}
 
-CLEAN_UP = False
+CLEAN_UP = True
 PLOTS = False
 
 
 def setup_module():
     rc_local_path = rc.__config__["!SIM.file.local_packages_path"]
-    if not os.path.exists(rc_local_path) or CLEAN_UP:
+    if not os.path.exists(rc_local_path):
         os.mkdir(rc_local_path)
         rc.__config__["!SIM.file.local_packages_path"] = os.path.abspath(
             rc_local_path)
@@ -47,8 +51,8 @@ def teardown_module():
 
 class TestInit:
     def test_all_packages_are_available(self):
+        rc_local_path = rc.__config__["!SIM.file.local_packages_path"]
         for pkg_name in PKGS:
-            rc_local_path = rc.__config__["!SIM.file.local_packages_path"]
             assert os.path.isdir(os.path.join(rc_local_path, pkg_name))
         print("irdb" not in rc_local_path)
 
@@ -84,15 +88,92 @@ class TestLoadUserCommands:
 
 
 class TestMakeOpticalTrain:
-    def test_works_seamlessly_for_micado_package(self, capsys):
-
-        src = scopesim.source.source_templates.star_field(10000, 10, 25, 60)
-        src = scopesim.source.source_templates.empty_sky()
-        cmd = scopesim.UserCommands(use_instrument="MICADO")
+    def test_works_seamlessly_for_micado_wide_mode(self):
+        cmd = scopesim.UserCommands(use_instrument="MICADO",
+                                    properties={"!OBS.filter_name": "Ks"})
         opt = scopesim.OpticalTrain(cmd)
         assert isinstance(opt, scopesim.OpticalTrain)
 
-        # ..todo:: add source object here!
-        # opt.observe(src)
-        hdu = opt.readout()
-        assert isinstance(hdu, fits.HDUList)
+        # src = scopesim.source.source_templates.star_field(10000, 10, 25, 20)
+        src = scopesim.source.source_templates.empty_sky()
+        opt.observe(src)
+        hdu_list = opt.readout()[0]
+
+        assert isinstance(hdu_list, fits.HDUList)
+
+        # opt.image_planes[0].hdu.writeto("small_LR_flux_TEST.fits",
+        #                                 overwrite=True)
+        # hdu_list.writeto("small_LR_TEST.fits", overwrite=True)
+
+    def test_works_seamlessly_for_micado_zoom_mode(self):
+        cmd = scopesim.UserCommands(use_instrument="MICADO",
+                                    set_mode="scao_hri",
+                                    properties={"!OBS.filter_name": "Ks"})
+        opt = scopesim.OpticalTrain(cmd)
+        assert isinstance(opt, scopesim.OpticalTrain)
+
+        # src = scopesim.source.source_templates.star_field(10000, 10, 25, 20)
+        src = scopesim.source.source_templates.empty_sky()
+        opt.observe(src)
+        hdu_list = opt.readout()[0]
+
+        assert isinstance(hdu_list, fits.HDUList)
+
+        # opt.image_planes[0].hdu.writeto("small_HR_flux_TEST.fits",
+        #                                 overwrite=True)
+        # hdu_list.writeto("small_HR_TEST.fits", overwrite=True)
+
+    def test_works_for_full_frame(self):
+        pass
+
+
+
+
+
+
+
+
+
+class TestSkyBackgroundIsRealistic:
+    @pytest.mark.parametrize("mode_name, filt_name, etc_flux_values, mag_diff",
+                             [("scao_hri", "Ks", 147, 2.05),  # ph/s/pix
+                              ("scao_lri", "Ks", 147, 2.05),
+                              ("scao_hri", "H", 108, 0.25),
+                              ("scao_lri", "H", 108, 0.25),
+                              ("scao_hri", "J", 27, 0.75),
+                              ("scao_lri", "J", 27, 0.75)])
+    def test_background_is_within_2x_of_eso_etc(self, mode_name, filt_name,
+                                                etc_flux_values, mag_diff):
+        """
+        Comparison of the scopesim MICADO package against the ESO ETC
+
+        Notes
+        -----
+        - mag_diff the discrepancy between the ETC and the skycalc BG mags
+        - The ETC uses 1100m2 area and 5mas pixel size
+        - ETC sky BG mags can be found on the ETC website, skycalc BG mags can
+          be given when getting a spectrum on the skycalc website
+        """
+
+        cmd = scopesim.UserCommands(use_instrument="MICADO",
+                                    set_mode=mode_name,
+                                    properties={"!OBS.filter_name": filt_name})
+        opt = scopesim.OpticalTrain(cmd)
+        src = scopesim.source.source_templates.empty_sky()
+        opt.observe(src)
+        av_sim_bg = np.average(opt.image_planes[0].hdu.data)
+
+        sim_pix_scale = cmd["!INST.pixel_scale"]
+        sim_area = cmd["!TEL.area"].value
+        etc_pix_scale = 0.005
+        etc_area = 1100
+        scale_factor = sim_pix_scale**2 / etc_pix_scale**2 * sim_area / etc_area
+        scale_factor *= 2.512**-mag_diff
+
+        scaled_etc_bg = etc_flux_values * scale_factor
+        assert 0.5 < scaled_etc_bg / av_sim_bg < 2
+
+        print(filt_name, scaled_etc_bg, av_sim_bg)
+
+
+

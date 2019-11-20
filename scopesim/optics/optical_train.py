@@ -23,8 +23,8 @@ class OpticalTrain:
         self.cmds = cmds
         self.optics_manager = None
         self.fov_manager = None
-        self.image_plane = None
-        self.detector_array = None
+        self.image_planes = []
+        self.detector_arrays = []
         self.yaml_dicts = None
 
         if cmds is not None:
@@ -61,10 +61,12 @@ class OpticalTrain:
         """
         self.optics_manager.update(**kwargs)
         opt_man = self.optics_manager
+
         self.fov_manager = FOVManager(opt_man.fov_setup_effects, **kwargs)
-        self.image_plane = ImagePlane(opt_man.image_plane_header, **kwargs)
-        self.detector_array = DetectorArray(opt_man.detector_setup_effects,
-                                            **kwargs)
+        self.image_planes = [ImagePlane(hdr, **kwargs)
+                             for hdr in opt_man.image_plane_headers]
+        self.detector_arrays = [DetectorArray(det_list, **kwargs)
+                                for det_list in opt_man.detector_setup_effects]
 
     def observe(self, orig_source, **kwargs):
         """
@@ -88,30 +90,35 @@ class OpticalTrain:
         - [Apply detector plane (0D, 2D) effects - z_order = 500..599]
 
         """
-
         self.update(**kwargs)
-
         source = deepcopy(orig_source)
 
-        # [1D - transmisison curves]
+        # [1D - transmission curves]
         for effect in self.optics_manager.source_effects:
             source = effect.apply_to(source)
 
         # [3D - Atmospheric shifts, PSF, NCPAs, Grating shift/distortion]
-        for fov in self.fov_manager.fovs:
+        fovs = self.fov_manager.fovs
+        n_fovs = len(fovs)
+        for fov_i, fov in enumerate(fovs):
+            print("FOV", fov_i+1, "of", n_fovs, flush=True)
             fov.extract_from(source)
             for effect in self.optics_manager.fov_effects:
                 fov = effect.apply_to(fov)
 
             if fov.hdu.data is None:
                 fov.view()
-                # ..todo:: add this in properly
-                ii = fov.image_plane_id
-            self.image_plane.add(fov.hdu, wcs_suffix="D")
+
+            ii = [implane.id for implane in self.image_planes
+                  if implane.id == fov.image_plane_id]
+            if len(ii) == 1:
+                self.image_planes[ii[0]].add(fov.hdu, wcs_suffix="D")
+            # ..todo: finish off the multiple image plane stuff
 
         # [2D - Vibration, flat fielding, chopping+nodding]
         for effect in self.optics_manager.image_plane_effects:
-            self.image_plane = effect.apply_to(self.image_plane)
+            for ii in range(len(self.image_planes)):
+                self.image_planes[ii] = effect.apply_to(self.image_planes[ii])
 
     def readout(self, filename=None, **kwargs):
         """
@@ -131,13 +138,15 @@ class OpticalTrain:
 
         """
 
-        hdu = None
-        if self.detector_array is not None:
+        hdus = []
+        for detector_array in self.detector_arrays:
             dtcr_effects = self.optics_manager.detector_effects
-            hdu = self.detector_array.readout(self.image_plane, dtcr_effects,
-                                              **kwargs)
+            hdu = detector_array.readout(self.image_planes, dtcr_effects,
+                                         **kwargs)
 
-        if filename is not None and isinstance(filename, str):
-            hdu.writeto(filename, overwrite=True)
+            if filename is not None and isinstance(filename, str):
+                hdu.writeto(filename, overwrite=True)
 
-        return hdu
+            hdus += [hdu]
+
+        return hdus
