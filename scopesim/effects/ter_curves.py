@@ -3,8 +3,6 @@ from astropy import units as u
 
 from synphot import SourceSpectrum
 
-import skycalc_ipy
-
 from .effects import Effect
 from ..optics.surface import SpectralSurface
 from ..utils import from_currsys, quantify, check_keys
@@ -90,6 +88,7 @@ class SkycalcTERCurve(AtmosphericTERCurve):
             of ``um``
 
         """
+        import skycalc_ipy
 
         super(SkycalcTERCurve, self).__init__(**kwargs)
         self.meta["z_order"] = [112]
