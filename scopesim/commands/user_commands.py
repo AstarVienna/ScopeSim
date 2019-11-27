@@ -276,7 +276,13 @@ def add_packages_to_rc_search(local_path, package_list):
             # todo: keep here, but add test for this by downloading test_package
             # raise ValueError("Package could not be found: {}".format(pkg_dir))
             warnings.warn("Package could not be found: {}".format(pkg_dir))
-        rc.__search_path__ += [pkg_dir]
+
+        if pkg_dir in rc.__search_path__:
+            # if package is already in search_path, move it to the first place
+            ii = np.where(np.array(rc.__search_path__) == pkg_dir)[0][0]
+            rc.__search_path__.pop(ii)
+
+        rc.__search_path__ = [pkg_dir] + rc.__search_path__
 
 
 def load_yaml_dicts(filename):

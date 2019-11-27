@@ -6,11 +6,11 @@ data  simulators.
 
 ScopeSim_ hasn't yet been released on pip, but it is in a usable state::
 
-    pip install git+https://github.com/astronomyk/ScopeSim
+    pip install scopesim
 
 The same applies for the templates package: `ScopeSim templates`_::
 
-    pip install git+https://github.com/astronomyk/ScopeSim_templates
+    pip install scopesim_templates
 
 .. note:: ScopeSim only supports python 3.5 and above
 

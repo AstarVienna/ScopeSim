@@ -90,6 +90,11 @@ class OpticalTrain:
         - [Apply detector plane (0D, 2D) effects - z_order = 500..599]
 
         """
+        # put focus back on current instrument package
+        self.cmds.update(**kwargs)
+        self.cmds.update(packages=self.cmds.default_yamls[0]["packages"])
+        rc.__currsys__ = self.cmds
+
         self.update(**kwargs)
         source = deepcopy(orig_source)
 
