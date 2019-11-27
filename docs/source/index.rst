@@ -4,11 +4,11 @@ Welcome to ScopeSim's documentation!
 An attempt at creating a common pythonic framework for telescope instrument
 data  simulators.
 
-ScopeSim_ hasn't yet been released on pip, but it is in a usable state::
+ScopeSim_ is on pip::
 
     pip install scopesim
 
-The same applies for the templates package: `ScopeSim templates`_::
+`ScopeSim templates`_ provides templates for creating on-sky sources::
 
     pip install scopesim_templates
 
@@ -33,7 +33,9 @@ A basic simulation of VLT/HAWKI image would look something like this::
     from scopesim.server.database import download_package
     import scopesim
 
-    scopesim.download_package(["instrument/Paranal", "VLT", "HAWKI"])
+    scopesim.download_package(["locations/Paranal",
+                               "telescopes/VLT",
+                               "instruments/HAWKI"])
     cmd = scopesim.UserCommands(use_instrument="HAWKI",
                                 properties={"!OBS.dit": 60, "!OBS.ndit": 10,
                                             "!INST.filter_name": "Ks"})
@@ -76,8 +78,8 @@ We start of by specifying which instrument we want to load with
 ``use_instrument=``. Next we pass a dictionary of keyword-value pairs
 containing the settings we would like to change
 
-
-Bang-strings
+Bang-strings shorten the syntax for accessing hierarchical dictionaries.
+e.g. ``cmd["!OBS.ndit"]`` is the equivalent of ``cmd["OBS"]["ndit"]``
 
 
 The ScopeSim python ecosystem
@@ -87,24 +89,22 @@ There are several packages in the ScopeSim_ ecosystem to be aware of:
 
 * ScopeSim_: The engine behind the whole simulator
 * `ScopeSim Templates`_: A series of helper function to generate on-sky targets
+* Pyckles_: Pythonic access to the Pickles (1998) spectral library and
+  Brown (2014) spectral library
 * IRDB_: The Instrument Reference Database, where the instrument packages are
   stored
 * AnisoCADO_: For making SCAO PSF cubes that readable by ScopeSim
 * skycalc_ipy_: Connects to ESOs SkyCalc server to get atmospheric spectra
 
-.. _ScopeSim: https://github.com/astronomyk/ScopeSim
-.. _`ScopeSim Templates`: https://github.com/astronomyk/ScopeSim_Templates
-.. _IRDB: https://github.com/astronomyk/irdb
-.. _AnisoCADO: https://github.com/astronomyk/AnisoCADO
-.. _skycalc_ipy: https://github.com/astronomyk/skycalc_ipy
-
-
+.. _ScopeSim:    https://scopesim.readthedocs.io/en/latest/
+.. _`ScopeSim Templates`: https://scopesim-templates.readthedocs.io/en/latest/
+.. _IRDB:        https://github.com/astronomyk/irdb
+.. _AnisoCADO:   https://anisocado.readthedocs.io/en/latest/
+.. _skycalc_ipy: https://skycalc-ipy.readthedocs.io/en/latest/
+.. _Pyckles:     https://scopesim-templates.readthedocs.io/en/latest/
 
 
 .. note:: Much more information on these packages will be coming very soon!
-
-
-
 
 
 Indices and tables
