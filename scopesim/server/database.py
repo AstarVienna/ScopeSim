@@ -63,7 +63,7 @@ def get_server_elements(url, unique_str="/"):
 
     soup = bs4.BeautifulSoup(result)
     paths = soup.findAll("a", href=True)
-    paths = [tmp.string for tmp in paths if unique_str in tmp.string]
+    paths = [tmp.string for tmp in paths if tmp.string is not None and unique_str in tmp.string]
 
     return paths
 
