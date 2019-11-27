@@ -33,7 +33,7 @@ A basic simulation of VLT/HAWKI image would look something like this::
     from scopesim.server.database import download_package
     import scopesim
 
-    download_package(["Paranal", "VLT", "HAWKI"])
+    scopesim.download_package(["instrument/Paranal", "VLT", "HAWKI"])
     cmd = scopesim.UserCommands(use_instrument="HAWKI",
                                 properties={"!OBS.dit": 60, "!OBS.ndit": 10,
                                             "!INST.filter_name": "Ks"})

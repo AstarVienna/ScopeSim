@@ -36,7 +36,9 @@ def setup_package():
                             "synphot>0.1",
                             "matplotlib>1.5.0",
                             "pyyaml>3",
-                            "beautifulsoup4"
+                            "beautifulsoup4",
+                            "skycalc_ipy",
+                            "anisocado",
                             ],
           classifiers=["Programming Language :: Python :: 3",
                        "License :: OSI Approved :: MIT License",
