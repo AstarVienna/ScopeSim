@@ -90,11 +90,7 @@ class OpticalTrain:
         - [Apply detector plane (0D, 2D) effects - z_order = 500..599]
 
         """
-        # put focus back on current instrument package
-        self.cmds.update(**kwargs)
-        self.cmds.update(packages=self.cmds.default_yamls[0]["packages"])
-        rc.__currsys__ = self.cmds
-
+        self.set_focus(kwargs)    # put focus back on current instrument package
         self.update(**kwargs)
         source = deepcopy(orig_source)
 
@@ -155,3 +151,10 @@ class OpticalTrain:
             hdus += [hdu]
 
         return hdus
+
+    def set_focus(self, kwargs):
+        self.cmds.update(**kwargs)
+        dy = self.cmds.default_yamls
+        if len(dy) > 0 and "packages" in dy:
+            self.cmds.update(packages=self.default_yamls[0]["packages"])
+        rc.__currsys__ = self.cmds

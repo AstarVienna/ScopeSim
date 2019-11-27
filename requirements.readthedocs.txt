@@ -9,6 +9,7 @@ pyyaml
 
 synphot
 skycalc_ipy
+anisocado
 
 numpydoc==0.6.0
 sphinxcontrib-apidoc
