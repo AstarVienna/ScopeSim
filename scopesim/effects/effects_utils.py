@@ -35,7 +35,8 @@ def get_all_effects(effects, effect_class):
         for eff_cls in effect_class:
             my_effects += get_all_effects(effects, eff_cls)
     else:
-        my_effects = [eff for eff in effects if isinstance(eff, effect_class)]
+        my_effects = [eff for eff in effects
+                      if isinstance(eff, effect_class) and eff.meta["include"]]
 
     return my_effects
 

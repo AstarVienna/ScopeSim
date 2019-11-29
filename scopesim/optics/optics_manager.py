@@ -208,16 +208,29 @@ class OpticsManager:
         self.add_effect(other)
 
     def __getitem__(self, item):
+        obj = None
         if isinstance(item, efs.Effect):
             effects = []
             for opt_el in self.optical_elements:
                 effects += opt_el.get_all(item)
-            return effects
+            obj = effects
         elif isinstance(item, int):
-            return self.optical_elements[item]
+            obj = self.optical_elements[item]
         elif isinstance(item, str):
-            return [opt_el for opt_el in self.optical_elements
-                    if opt_el.meta["name"] == item][0]
+            obj = [opt_el for opt_el in self.optical_elements
+                   if opt_el.meta["name"] == item]
+            obj += [opt_el[item] for opt_el in self.optical_elements]
+
+        return obj
+
+    def __setitem__(self, key, value):
+        obj = self.__getitem__(key)
+        if isinstance(obj, efs.Effect) and isinstance(value, dict):
+            if len(obj) == 1:
+                obj.meta.update(value)
+            else:
+                warnings.warn("{} does not return a singular object:\n {}"
+                              "".format(key, obj))
 
     def __repr__(self):
         msg = "\nOpticsManager contains {} OpticalElements \n" \

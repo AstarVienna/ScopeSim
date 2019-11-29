@@ -158,3 +158,11 @@ class OpticalTrain:
         if len(dy) > 0 and "packages" in dy:
             self.cmds.update(packages=self.default_yamls[0]["packages"])
         rc.__currsys__ = self.cmds
+
+    def __getitem__(self, item):
+        # search optical elements, then effects
+        return self.optics_manager[item]
+
+    def __setitem__(self, key, value):
+        # ..todo:: search optical elements, then effects
+        self.optics_manager[key] = value
