@@ -7,6 +7,14 @@ from scopesim import rc
 TRAVIS = True if "TRAVIS" in os.environ else False
 
 
+def setup_module():
+    rc_local_path = rc.__config__["!SIM.file.local_packages_path"]
+    if not os.path.exists(rc_local_path):
+        os.mkdir(rc_local_path)
+        rc.__config__["!SIM.file.local_packages_path"] = os.path.abspath(
+            rc_local_path)
+
+
 def teardown_module():
     if os.path.exists("skycalc_temp.fits"):
         os.remove("skycalc_temp.fits")
