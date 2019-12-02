@@ -8,7 +8,13 @@ __pkg_dir__ = os.path.dirname(__file__)
 
 with open(os.path.join(__pkg_dir__, "defaults.yaml")) as f:
     dicts = [dic for dic in yaml.load_all(f)]
-__config__ = SystemDict(dicts)
+
+user_rc_path = os.path.expanduser("~/.scopesim_rc.yaml")
+if os.path.exists(user_rc_path):
+    with open(user_rc_path) as f:
+        user_dicts = [dic for dic in yaml.load_all(f)]
+
+__config__ = SystemDict(dicts + user_dicts)
 __currsys__ = __config__
 
 __search_path__ = ['./',
