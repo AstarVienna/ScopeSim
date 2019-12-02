@@ -10,7 +10,7 @@ from ..utils import real_colname, from_currsys, check_keys
 
 class SummedExposure(Effect):
     def __init__(self, **kwargs):
-        super(Effect, self).__init__(**kwargs)
+        super(SummedExposure, self).__init__(**kwargs)
         self.meta["z_order"] = [860]
 
         required_keys = ["dit", "ndit"]
@@ -60,7 +60,7 @@ class BasicReadoutNoise(Effect):
 
 class ShotNoise(Effect):
     def __init__(self, **kwargs):
-        super(Effect, self).__init__(**kwargs)
+        super(ShotNoise, self).__init__(**kwargs)
         self.meta["z_order"] = [820]
         self.meta["random_seed"] = "!SIM.random.seed"
         self.meta.update(kwargs)
@@ -77,7 +77,7 @@ class ShotNoise(Effect):
             # basically the same. For large arrays the normal distribution
             # takes only 60% as long as the poisson distribution
             data = det._hdu.data
-            below = data < 2**10
+            below = data < 2**20
             above = np.invert(below)
             data[below] = np.random.poisson(data[below]).astype(float)
             data[above] = np.random.normal(data[above], np.sqrt(data[above]))
@@ -94,7 +94,7 @@ class DarkCurrent(Effect):
 
     """
     def __init__(self, **kwargs):
-        super(Effect, self).__init__(**kwargs)
+        super(DarkCurrent, self).__init__(**kwargs)
         self.meta["z_order"] = [830]
 
         required_keys = ["value", "dit", "ndit"]

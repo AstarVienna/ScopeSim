@@ -1,4 +1,5 @@
 import warnings
+from inspect import isclass
 
 from .. import effects as efs
 from ..effects.effects_utils import make_effect, get_all_effects
@@ -69,7 +70,7 @@ class OpticalElement:
                     if "name" in eff_dic and hasattr(rc.__currsys__,
                                                      "ignore_effects"):
                         if eff_dic["name"] in rc.__currsys__.ignore_effects:
-                            continue
+                            eff_dic["include"] = False
 
                     self.effects += [make_effect(eff_dic, **self.properties)]
 
@@ -125,7 +126,7 @@ class OpticalElement:
 
     def __getitem__(self, item):
         obj = None
-        if isinstance(item, efs.Effect):
+        if isclass(item):
             obj = self.get_all(item)
         elif isinstance(item, int):
             obj = self.effects[item]

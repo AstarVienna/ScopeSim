@@ -1,9 +1,14 @@
 ### DETECTOR
 object: detector
+alias: DET
 name: test_detector
+properties:
+  ndit: "!OBS.ndit"
+  dit: "!OBS.dit"
 
 effects:
-- name: SimpleCADO detector array list
+- name: test_detector_list
+  description: SimpleCADO detector array list
   class: DetectorList
   kwargs:
     array_dict: {"id": [1], "pixsize": [0.015], "angle": [0.], "gain": [1.0],
@@ -15,8 +20,38 @@ effects:
     pixsize_unit : mm
     angle_unit : deg
     gain_unit : electron/adu
+    image_plane_id: 0
 
-- name: SimpleCADO dark current
+- name: dark_current
+  description: SimpleCADO dark current
   class: DarkCurrent
   kwargs:
     value: 0.1    # [e-/s] level of dark currentSimpleCADO.yaml
+
+- name: alt_dark_current
+  description: SimpleCADO dark current
+  class: DarkCurrent
+  include: False
+  kwargs:
+    value: 0.5    # [e-/s] level of dark currentSimpleCADO.yaml
+
+---
+
+alias: OBS
+properties:
+  ndit: 1
+  dit: 10
+
+---
+
+alias: INST
+properties:
+  pixel_scale: 0.004
+  plate_scale: 0.2666667 # because optical train still need this (stupidly)
+
+---
+
+alias: TEL
+properties:
+  area: 1
+  area_unit: m2

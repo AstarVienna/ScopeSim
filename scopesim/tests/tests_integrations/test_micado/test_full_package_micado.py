@@ -18,7 +18,7 @@ from matplotlib.colors import LogNorm
 if rc.__config__["!SIM.tests.ignore_integration_tests"]:
     pytestmark = pytest.mark.skip("Ignoring MICADO integration tests")
 
-rc.__config__["!SIM.file.local_packages_path"] = "./scopesim_pkg_dir_tmp/micado_tmp/"
+rc.__config__["!SIM.file.local_packages_path"] = "./micado_temp/"
 
 
 PKGS = {"Armazones": "locations/Armazones.zip",
@@ -26,7 +26,7 @@ PKGS = {"Armazones": "locations/Armazones.zip",
         "MAORY": "instruments/MAORY.zip",
         "MICADO": "instruments/MICADO.zip"}
 
-CLEAN_UP = True
+CLEAN_UP = False
 PLOTS = False
 
 

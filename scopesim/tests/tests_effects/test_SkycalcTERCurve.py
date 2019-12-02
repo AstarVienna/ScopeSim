@@ -29,3 +29,8 @@ class TestInit:
             assert sky_ter.skycalc_conn.values["pwv"] == 20.0
             assert isinstance(sky_ter.surface.transmission, SpectralElement)
             assert isinstance(sky_ter.surface.emission, SourceSpectrum)
+
+    def test_initialises_with_non_skycalc_keys(self):
+        if TRAVIS:
+            sky_ter = SkycalcTERCurve(name="bogus")
+            assert "name" not in sky_ter.skycalc_conn.values

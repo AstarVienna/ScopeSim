@@ -5,6 +5,7 @@ from pytest import approx
 
 import numpy as np
 from astropy import units as u
+from astropy.table import Table
 
 import scopesim as sim
 from scopesim import rc
@@ -12,7 +13,9 @@ from scopesim.optics.fov_manager import FOVManager
 from scopesim.optics.image_plane import ImagePlane
 from scopesim.optics.optical_train import OpticalTrain
 from scopesim.optics.optics_manager import OpticsManager
+from scopesim.optics.optical_element import OpticalElement
 from scopesim.commands.user_commands import UserCommands
+from scopesim.effects import Effect, DetectorList, DarkCurrent
 from scopesim.utils import find_file
 
 from scopesim.tests.mocks.py_objects import source_objects as src_objs
@@ -29,7 +32,7 @@ YAMLS_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),
 
 for NEW_PATH in [YAMLS_PATH, FILES_PATH]:
     if NEW_PATH not in rc.__search_path__:
-        rc.__search_path__ += [NEW_PATH]
+        rc.__search_path__.insert(0, NEW_PATH)
 
 
 def _basic_cmds():
@@ -42,7 +45,7 @@ def _unity_cmds():
 
 @pytest.fixture(scope="function")
 def cmds():
-    return _basic_cmds()\
+    return _basic_cmds()
 
 
 @pytest.fixture(scope="function")
@@ -63,6 +66,13 @@ def im_src():
 @pytest.fixture(scope="function")
 def unity_src():
     return src_objs._unity_source()
+
+
+@pytest.fixture(scope="class")
+def simplecado_opt():
+    simplecado_yaml = os.path.join(YAMLS_PATH, "SimpleCADO.yaml")
+    cmd = sim.UserCommands(yamls=[simplecado_yaml])
+    return sim.OpticalTrain(cmd)
 
 
 @pytest.mark.usefixtures("cmds")
@@ -211,3 +221,47 @@ class TestReadout:
 
         src_average = np.average(unity_src.fields[0].data)
         assert np.average(hdu[1].data) == approx(src_average, rel=1e-3)
+
+
+@pytest.mark.usefixtures("simplecado_opt")
+class TestGetItems:
+    def test_optical_element_returned_for_unique_name(self, simplecado_opt):
+        print(type(simplecado_opt["test_detector"]))
+        assert isinstance(simplecado_opt["test_detector"], OpticalElement)
+
+    def test_effect_returned_for_unique_name(self, simplecado_opt):
+        assert isinstance(simplecado_opt["test_detector_list"], Effect)
+
+    def test_returns_nothing_for_bogus_string(self, simplecado_opt):
+        assert isinstance(simplecado_opt["bogus"], list)
+        assert len(simplecado_opt["bogus"]) == 0
+
+    def test_list_of_effects_returned_for_effect_class(self, simplecado_opt):
+        effects = simplecado_opt[DetectorList]
+        assert isinstance(effects, list)
+        assert len(effects) == 1
+
+
+@pytest.mark.usefixtures("simplecado_opt")
+class TestSetItems:
+    def test_effect_kwarg_can_be_changed_using(self, simplecado_opt):
+        simplecado_opt["dark_current"] = {"value": 0.2}
+        assert simplecado_opt["dark_current"].meta["value"] == 0.2
+
+    def test_effect_include_can_be_toggled_with_setitem(self, simplecado_opt):
+        assert simplecado_opt["dark_current"].include is True
+        simplecado_opt["dark_current"].include = False
+        assert simplecado_opt["dark_current"].include is False
+        assert simplecado_opt["dark_current"].meta["include"] is False
+
+
+@pytest.mark.usefixtures("simplecado_opt")
+class TestListEffects:
+    def test_effects_listed_in_table(self, simplecado_opt):
+        assert isinstance(simplecado_opt.effects, Table)
+        simplecado_opt["dark_current"].include = False
+        assert simplecado_opt.effects["included"][1] == False
+        simplecado_opt["alt_dark_current"].include = True
+        assert simplecado_opt.effects["included"][2] == True
+
+        print("\n", simplecado_opt.effects)

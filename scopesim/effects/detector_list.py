@@ -11,7 +11,7 @@ __all__ = ["DetectorList"]
 
 class DetectorList(Effect):
     def __init__(self, **kwargs):
-        super(Effect, self).__init__(**kwargs)
+        super(DetectorList, self).__init__(**kwargs)
         self.meta["z_order"] = [90, 290, 390, 490]
         self.meta["pixel_scale"] = "!INST.pixel_scale"      # arcsec
         self.meta.update(kwargs)

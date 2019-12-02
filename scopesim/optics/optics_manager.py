@@ -1,6 +1,8 @@
 import warnings
+from inspect import isclass
 
 from astropy import units as u
+from astropy.table import Table
 
 from .optical_element import OpticalElement
 from .. import effects as efs
@@ -204,33 +206,54 @@ class OpticsManager:
         self._surfaces_table = combine_surface_effects(surface_like_effects)
         return self._surfaces_table
 
+    def list_effects(self):
+        elements = []
+        names = []
+        classes = []
+        included = []
+        z_orders = []
+
+        for opt_el in self.optical_elements:
+            for eff in opt_el.effects:
+                elements += [opt_el.meta["name"]]
+                names += [eff.meta["name"]]
+                classes += [eff.__class__.__name__]
+                included += [eff.meta["include"]]
+                z_orders += [eff.meta["z_order"]]
+
+        colnames = ["element", "name", "class", "included", "z_orders"]
+        data =     [ elements,  names,  classes, included,   z_orders]
+        tbl = Table(names=colnames, data=data, copy=False)
+
+        return tbl
+
     def __add__(self, other):
         self.add_effect(other)
 
     def __getitem__(self, item):
-        obj = None
-        if isinstance(item, efs.Effect):
-            effects = []
-            for opt_el in self.optical_elements:
-                effects += opt_el.get_all(item)
-            obj = effects
+        obj = []
+        if isclass(item):
+            obj += [opt_el.get_all(item) for opt_el in self.optical_elements]
         elif isinstance(item, int):
             obj = self.optical_elements[item]
         elif isinstance(item, str):
             obj = [opt_el for opt_el in self.optical_elements
                    if opt_el.meta["name"] == item]
-            obj += [opt_el[item] for opt_el in self.optical_elements]
+            for opt_el in self.optical_elements:
+                obj += opt_el[item]
+
+        if isinstance(obj, list) and len(obj) == 1:
+            obj = obj[0]
 
         return obj
 
     def __setitem__(self, key, value):
         obj = self.__getitem__(key)
-        if isinstance(obj, efs.Effect) and isinstance(value, dict):
-            if len(obj) == 1:
-                obj.meta.update(value)
-            else:
-                warnings.warn("{} does not return a singular object:\n {}"
-                              "".format(key, obj))
+        if isinstance(obj, list) and len(obj) > 1:
+            warnings.warn("{} does not return a singular object:\n {}"
+                          "".format(key, obj))
+        elif isinstance(obj, efs.Effect) and isinstance(value, dict):
+            obj.meta.update(value)
 
     def __repr__(self):
         msg = "\nOpticsManager contains {} OpticalElements \n" \

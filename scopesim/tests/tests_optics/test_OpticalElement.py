@@ -37,24 +37,17 @@ class TestOpticalElementInit:
 
         assert opt_el.properties["temperature"] == 0
 
-    # Test is obsolete because Effects object should clean keywords, if needed,
-    #   not here in OpticalElement
-    # def test_cleans_obs_keywords_from_yaml_dict_effects(self, atmo_yaml_dict):
-    #     rc.__currsys__["!OBS.airmass"] = 1.5
-    #     atmo_yaml_dict["effects"][1]["kwargs"]["airmass"] = "!OBS.airmass"
-    #     opt_el = opt_elem.OpticalElement(atmo_yaml_dict)
-    #
-    #     assert opt_el.effects[1].meta["airmass"] == 1.5
-
-    def test_ignores_effects_with_keyword_include_false(self, atmo_yaml_dict):
+    def test_make_not_included_effects_but_set_flag_false(self, atmo_yaml_dict):
         opt_el = opt_elem.OpticalElement(atmo_yaml_dict)
-        assert len(opt_el.effects) == 2
+        assert len(opt_el.effects) == 3
+        assert opt_el.effects[2].include is False
 
-    def test_ignores_effects_in_currsys_ignore_effects(self, atmo_yaml_dict):
+    def test_currsys_ignore_effects_have_false_include_flag(self, atmo_yaml_dict):
         rc.__currsys__ = UserCommands()
         rc.__currsys__.ignore_effects = ["super_psf", "atmo_dispersion"]
         opt_el = opt_elem.OpticalElement(atmo_yaml_dict)
-        assert len(opt_el.effects) == 0
+        for ii in range(2):
+            assert opt_el.effects[ii].include is False
 
 
 @pytest.mark.usefixtures("detector_yaml_dict")
