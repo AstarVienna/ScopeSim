@@ -37,6 +37,7 @@ class Effect(DataContainer):
         super(Effect, self).__init__(**kwargs)
         self.meta["z_order"] = []
         self.meta["include"] = True
+        self.meta.update(kwargs)
 
     def apply_to(self, obj):
         if not isinstance(obj, (SourceBase, FieldOfViewBase,

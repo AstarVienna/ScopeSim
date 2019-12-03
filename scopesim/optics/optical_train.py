@@ -14,7 +14,52 @@ class OpticalTrain:
 
     Parameters
     ----------
-    cmds : UserCommands
+    cmds : UserCommands, str
+        If the name of an instrument is passed, OpticalTrain tries to find the
+        instrument package, and internally creates the UserCommands object
+
+    Examples
+    --------
+    Create an optical train::
+
+        >>> import scopesim as im
+        >>> cmd = sim.UserCommands("MICADO")
+        >>> opt = sim.OpticalTrain(cmd)
+
+    Observe a Source object::
+
+        >>> src = sim.source.source_templates.empty_sky()
+        >>> opt.observe(src)
+        >>> hdus = opt.readout()
+
+    List the effects modelled in an OpticalTrain::
+
+        >>> print(opt.effects)
+
+    Effects can be accessed by using the name of the effect::
+
+        >>> print(opt["dark_current"])
+
+    To include or exclude an effect during a simulation run, use the
+    ``.include`` attribute of the effect::
+
+         >>> opt["dark_current"].include = False
+
+    Data used by an Effect object is contained in the ``.data`` attribute, while
+    other information is contained in the ``.meta`` attribute::
+
+        >>> opt["dark_current"].data
+        >>> opt["dark_current"].meta
+
+    Meta data values can be set by either using the ``.meta`` attribute
+    directly::
+
+        >>> opt["dark_current"].meta["value"] = 0.5
+
+    or by passing a dictionary (with one or multiple entries) to the
+    OpticalTrain object::
+
+        >>> opt["dark_current"] = {"value": 0.75, "dit": 30}
 
     """
 
@@ -39,6 +84,9 @@ class OpticalTrain:
         user_commands : UserCommands
 
         """
+
+        if isinstance(user_commands, str):
+            cmds = UserCommands(use_instrument=user_commands)
 
         if not isinstance(user_commands, UserCommands):
             raise ValueError("user_commands must be a UserCommands object: "
@@ -158,3 +206,14 @@ class OpticalTrain:
         if len(dy) > 0 and "packages" in dy:
             self.cmds.update(packages=self.default_yamls[0]["packages"])
         rc.__currsys__ = self.cmds
+
+    @property
+    def effects(self):
+        return self.optics_manager.list_effects()
+
+    def __getitem__(self, item):
+        return self.optics_manager[item]
+
+    def __setitem__(self, key, value):
+        self.optics_manager[key] = value
+

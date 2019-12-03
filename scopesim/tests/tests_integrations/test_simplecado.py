@@ -42,10 +42,10 @@ DETECTOR_YAML = {"object": "detector",
                              {"name": "dark_current",
                               "description": "SimpleCADO dark current",
                               "class": "DarkCurrent",
-                              # [e-/s] level of dark currentSimpleCADO.yaml
+                              # [e-/s] level of dark current
                               "kwargs": {"value": 0.2,
                                          "dit": "!OBS.dit",
-                                         "ndit": "!OBS.ndit",}
+                                         "ndit": "!OBS.ndit"}
                               }]
                  }
 
@@ -53,7 +53,7 @@ OBSERVATIONS_DICT = {"!OBS.ndit": 1,                # Not yet implemented
                      "!OBS.dit" : 10,               # [sec]
                      "!INST.pixel_scale": 0.004,    # because optical train still need this (stupidly)
                      "!INST.plate_scale": 0.2666667 # because optical train still need this (stupidly)
-                    }
+                     }
 
 
 def test_simplecado():
@@ -75,6 +75,19 @@ def test_simplecado():
     # dark = 0.2 ct/s, DIT = 10s, NDIT = 1
     print(hdu[1].data)
     assert np.all(hdu[1].data == 2.0)
+
+
+def test_setitem_in_optical_train():
+    src = scopesim.source.source_templates.empty_sky()
+    cmd = sim.commands.UserCommands(yamls=[DETECTOR_YAML],
+                                    properties=OBSERVATIONS_DICT)
+
+    opt = sim.OpticalTrain(cmd)
+    opt["dark_current"].meta["include"] = False
+    assert opt["dark_current"].meta["include"] is False
+
+    opt["dark_current"].meta["include"] = True
+    assert opt["dark_current"].meta["include"] is True
 
 
 def read_in_simplecado_package():

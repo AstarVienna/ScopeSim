@@ -1,4 +1,5 @@
 import warnings
+from inspect import isclass
 
 from .. import effects as efs
 from ..effects.effects_utils import make_effect, get_all_effects
@@ -66,12 +67,10 @@ class OpticalElement:
                 self.properties["element_name"] = yaml_dict["name"]
             if "effects" in yaml_dict and len(yaml_dict["effects"]) > 0:
                 for eff_dic in yaml_dict["effects"]:
-                    if "include" in eff_dic and eff_dic["include"] is False:
-                        continue
                     if "name" in eff_dic and hasattr(rc.__currsys__,
                                                      "ignore_effects"):
                         if eff_dic["name"] in rc.__currsys__.ignore_effects:
-                            continue
+                            eff_dic["include"] = False
 
                     self.effects += [make_effect(eff_dic, **self.properties)]
 
@@ -96,6 +95,9 @@ class OpticalElement:
 
         effects = []
         for eff in self.effects:
+            if not eff.meta["include"]:
+                continue
+
             if "z_order" in eff.meta:
                 z = eff.meta["z_order"]
                 if isinstance(z, (list, tuple)):
@@ -123,13 +125,16 @@ class OpticalElement:
         self.add_effect(other)
 
     def __getitem__(self, item):
-        if isinstance(item, efs.Effect):
-            return self.get_all(item)
+        obj = None
+        if isclass(item):
+            obj = self.get_all(item)
         elif isinstance(item, int):
-            return self.effects[item]
+            obj = self.effects[item]
         elif isinstance(item, str):
-            return [eff for eff in self.effects
-                    if eff.meta["name"] == item][0]
+            obj = [eff for eff in self.effects
+                   if eff.meta["name"] == item]
+
+        return obj
 
     def __repr__(self):
         msg = '\nOpticalElement : "{}" contains {} Effects: \n' \

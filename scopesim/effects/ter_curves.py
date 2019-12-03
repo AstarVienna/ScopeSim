@@ -1,5 +1,6 @@
 import numpy as np
 from astropy import units as u
+from os import path as pth
 
 from synphot import SourceSpectrum
 
@@ -95,16 +96,29 @@ class SkycalcTERCurve(AtmosphericTERCurve):
         self.meta.update(kwargs)
 
         self.skycalc_conn = skycalc_ipy.SkyCalc()
-        self.query_server(**kwargs)
+        self.query_server()
 
         if "name" not in self.meta:
             self.meta["name"] = self.skycalc_conn["observatory"]
 
     def query_server(self, **kwargs):
-        kwargs = from_currsys(kwargs)
-        self.skycalc_conn.values.update(kwargs)
+        self.meta.update(kwargs)
 
-        tbl = self.skycalc_conn.get_sky_spectrum(return_type="table")
+        if "wunit" in self.meta:
+            scale_factor = u.Unit(self.meta["wunit"]).to(u.nm)
+            for key in ["wmin", "wmax", "wdelta"]:
+                if key in self.meta:
+                    self.meta[key] = from_currsys(self.meta[key]) * scale_factor
+
+        conn_kwargs = {key : self.meta[key] for key in self.meta
+                       if key in self.skycalc_conn.defaults}
+        conn_kwargs = from_currsys(conn_kwargs)
+        self.skycalc_conn.values.update(conn_kwargs)
+
+        local_path = from_currsys("!SIM.file.local_packages_path")
+        filename = pth.join(local_path, "skycalc_temp.fits")
+        tbl = self.skycalc_conn.get_sky_spectrum(return_type="table",
+                                                 filename=filename)
         for i, colname in enumerate(["wavelength", "transmission", "emission"]):
             tbl.columns[i].name = colname
         tbl.meta["wavelength_unit"] = tbl.columns[0].unit

@@ -39,7 +39,7 @@ YAMLS_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),
                                           "../mocks/yamls/"))
 for NEW_PATH in [YAMLS_PATH, FILES_PATH]:
     if NEW_PATH not in rc.__search_path__:
-        rc.__search_path__ += [NEW_PATH]
+        rc.__search_path__.insert(0, NEW_PATH)
 
 
 @pytest.fixture(scope="function")
