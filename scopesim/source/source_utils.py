@@ -116,7 +116,7 @@ def photons_in_range(spectra, wave_min, wave_max, area=None, bandpass=None):
             counts += [np.trapz(y, x)]
 
     # counts = flux [ph s-1 cm-2]
-    counts = 1E4 * np.array(counts)    # to get from cm-2 to m-2
+    counts = 1E4 * np.array([c.value for c in counts])    # to get from cm-2 to m-2
     counts *= u.ph * u.s**-1 * u.m**-2
     if area is not None:
         counts *= utils.quantify(area, u.m ** 2)
