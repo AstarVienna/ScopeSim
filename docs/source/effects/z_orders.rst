@@ -17,9 +17,9 @@ FOVs
 
 ImagePlane
 * 60 FieldPlaneEffect       !!! Write   (Distortion, Vignetting)
-* 70 SpectralTraceList      !!! Write
+* 70 SpectralTraceList
 * 80 ApertureMask
-* 81 ApertureList           !!! Write
+* 81 ApertureList
 
 Detector
 * 90 DetectorList
@@ -70,16 +70,11 @@ Discrete PSFs
 * 262 FieldConstantPSF
 
 Spectroscopic Trace maps
-* 271 LongSlitTraceMap      !!! Write
-* 272 IfuTraceMap           !!! Write
-* 273 MosTraceMap           !!! Write
+* 270 SpectralTraceList
 
 Apertures
 * 280 ApertureMask
-* 281 ApertureList          !!! Write
-* 282 SquareApertureList    !!! Write
-* 283 RoundApertureList     !!! Write
-* 284 PolygonApertureList   !!! Write
+* 281 ApertureList
 
 Detectors
 * 290 DetectorList
@@ -89,7 +84,6 @@ Detectors
 -----------------------------
 <OpticsManager>.image_plane_setup_effects
 
-* 370 SpectralTraceList
 * 380 ApertureMask
 * 390 DetectorList
 
@@ -118,8 +112,6 @@ Detectors
 * 650 PupilPlaneEffect      !!! Write   (Integrated rotation etc)
 * 651 IntegratedPupilRotation ! Write
 * 652 NonSiderialTracking
-* 670 SpectralTraceList
-    * in all variations
 
 
 700..799 apply-to(ImagePlane)

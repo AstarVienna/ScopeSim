@@ -1,3 +1,4 @@
+
 import numpy as np
 
 from astropy import units as u
@@ -7,7 +8,8 @@ from synphot.models import Empirical1D
 
 from .. import rc
 from .. import utils
-from ..base_classes import SourceBase, ImagePlaneBase
+from ..utils import quantify
+from ..base_classes import SourceBase, ImagePlaneBase, FieldOfViewBase
 from ..optics.radiometry import RadiometryTable
 from .effects import Effect
 from .ter_curves import TERCurve
@@ -55,16 +57,25 @@ class SurfaceList(Effect):
     def apply_to(self, obj):
         """
         obj == SourceBase - applies throughput
-        obj == ImagePlaneBase - applies emission
+        obj == ImagePlaneBase - applies emission if Imager
+        obj == FieldOfViewBase - applies emission if Spectrograph
 
         """
         if isinstance(obj, SourceBase) and not self.is_empty:
+            self.meta = utils.from_currsys(self.meta)
             for ii in range(len(obj.spectra)):
-                compound_spec = obj.spectra[ii] * self.throughput
-                wave = compound_spec.waveset
-                spec = compound_spec(wave)
+                spec = obj.spectra[ii]
+                wave_val = spec.waveset.value
+                wave_unit = spec.waveset.unit  # angstrom
+                wave_min = quantify(self.meta["wave_min"], u.um).to(u.AA)
+                wave_max = quantify(self.meta["wave_max"], u.um).to(u.AA)
+                mask = (wave_val >= wave_min.value) * (wave_val <= wave_max.value)
+                wave = wave_val[mask] * wave_unit
+                thru = self.throughput(wave)
+                flux = spec(wave)
+                flux *= thru
                 new_source = SourceSpectrum(Empirical1D, points=wave,
-                                            lookup_table=spec)
+                                            lookup_table=flux)
                 obj.spectra[ii] = new_source
 
         elif isinstance(obj, ImagePlaneBase) and not self.is_empty:
@@ -80,16 +91,38 @@ class SurfaceList(Effect):
 
             obj.hdu.data += phs.value
 
+        elif isinstance(obj, FieldOfViewBase) and not self.is_empty:
+            # ..todo:: Super hacky, FIX THIS!!
+            emission = self.get_emission(use_area=True)  # --> PHOTLAM * area
+            if emission is not None:
+                wave_val = emission.waveset.value
+                wave_unit = emission.waveset.unit   # angstrom
+                wave_min = quantify(obj.meta["wave_min"], u.um).to(wave_unit)
+                wave_max = quantify(obj.meta["wave_max"], u.um).to(wave_unit)
+                mask = (wave_val > wave_min.value) * (wave_val < wave_max.value)
+
+                wave = ([wave_min.value] + list(wave_val[mask]) +
+                        [wave_max.value]) * wave_unit
+                flux = emission(wave)    # PHOTLAM --> ph s-1 cm-2 AA-1 * cm2
+                phs = (np.trapz(flux, wave) * u.cm**2).to(u.Unit("ph s-1"))
+            else:
+                phs = 0 * (u.ph / u.s)
+
+            obj.hdu.data += phs.value
+
         return obj
 
     def fov_grid(self, which="waveset", **kwargs):
         if which == "waveset":
             self.meta.update(kwargs)
             self.meta = utils.from_currsys(self.meta)
-            wave = np.linspace(self.meta["wave_min"],
-                               self.meta["wave_max"], 100)
+            wave_min = utils.quantify(self.meta["wave_min"], u.um)
+            wave_max = utils.quantify(self.meta["wave_max"], u.um)
+            # ..todo:: add 1001 to default.yaml somewhere
+            wave = np.linspace(wave_min, wave_max, 1001)
             throughput = self.throughput(wave)
-            valid_waves = np.where(throughput > self.meta["minimum_throughput"])[0]
+            threshold = self.meta["minimum_throughput"]
+            valid_waves = np.where(throughput >= threshold)[0]
             if len(valid_waves) > 0:
                 wave_edges = [min(wave[valid_waves]), max(wave[valid_waves])]
             else:

@@ -20,7 +20,7 @@ def _image_hdu_square(wcs_suffix=""):
     # ca, sa = np.cos(np.deg2rad(theta)), np.sin(np.deg2rad(theta))
     # the_wcs.wcs.pc = np.array([[ca, sa], [-sa, ca]])
 
-    image = np.zeros((width, width))
+    image = np.ones((width, width))
     hdu = fits.ImageHDU(data=image, header=the_wcs.to_header())
 
     return hdu

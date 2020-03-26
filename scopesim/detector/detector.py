@@ -10,7 +10,7 @@ from astropy.io import fits
 
 class Detector(DetectorBase):
     def __init__(self, header, **kwargs):
-        image = np.zeros((header["NAXIS1"], header["NAXIS2"]))
+        image = np.zeros((header["NAXIS2"], header["NAXIS1"]))
         self._hdu = fits.ImageHDU(header=header, data=image)
         self.meta = {}
         self.meta.update(header)

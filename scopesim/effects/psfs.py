@@ -21,11 +21,13 @@ class PSF(Effect):
         self._waveset = None
         super(PSF, self).__init__(**kwargs)
 
-        flux_accuracy = rc.__config__["!SIM.computing.flux_accuracy"]
-        self.meta["flux_accuracy"] = float(flux_accuracy)
-        self.meta["sub_pixel_flag"] = rc.__config__["!SIM.sub_pixel.flag"]
-        self.meta["z_order"] = [40, 640]
+        params = {"flux_accuracy": "!SIM.computing.flux_accuracy",
+                  "sub_pixel_flag": "!SIM.sub_pixel.flag",
+                  "z_order": [40, 640],
+                  "convolve_mode": "full"}       # "full", "same"
+        self.meta.update(params)
         self.meta.update(kwargs)
+        self.meta = utils.from_currsys(self.meta)
         self.apply_to_classes = (FieldOfViewBase, ImagePlaneBase)
 
     def apply_to(self, obj):
@@ -38,19 +40,17 @@ class PSF(Effect):
                 old_shape = obj.hdu.data.shape
 
                 kernel = self.get_kernel(obj)
-                new_image = convolve(obj.hdu.data, kernel, mode="full")
+                mode = self.meta["convolve_mode"]
+                new_image = convolve(obj.hdu.data, kernel, mode=mode)
                 new_shape = new_image.shape
 
                 obj.hdu.data = new_image
 
                 # ..todo: careful with which dimensions mean what
-                if "CRPIX1" in obj.hdu.header:
-                    obj.hdu.header["CRPIX1"] += (new_shape[0] - old_shape[0]) / 2
-                    obj.hdu.header["CRPIX2"] += (new_shape[1] - old_shape[1]) / 2
-
-                if "CRPIX1D" in obj.hdu.header:
-                    obj.hdu.header["CRPIX1D"] += (new_shape[0] - old_shape[0]) / 2
-                    obj.hdu.header["CRPIX2D"] += (new_shape[1] - old_shape[1]) / 2
+                for s in ["", "D"]:
+                    if "CRPIX1"+s in obj.hdu.header:
+                        obj.hdu.header["CRPIX1"+s] += (new_shape[1] - old_shape[1]) / 2
+                        obj.hdu.header["CRPIX2"+s] += (new_shape[0] - old_shape[0]) / 2
 
         return obj
 
@@ -142,7 +142,7 @@ class NonCommonPathAberration(AnalyticalPSF):
 
             srs = np.arange(min_sr, max_sr, self.meta["strehl_drift"])
             waves = 6.2831853 * self.total_wfe * (-np.log(srs))**-0.5
-            waves = utils.quantify(waves, u.um).to(u.um).value
+            waves = utils.quantify(waves, u.um).value
             waves = (list(waves) + [self.meta["wave_max"]]) * u.um
         else:
             waves = [] * u.um
@@ -208,6 +208,7 @@ class GaussianDiffractionPSF(AnalyticalPSF):
             self.meta["diameter"] = kwargs["diameter"]
 
     def get_kernel(self, fov):
+        # called by .apply_to() from the base PSF class
 
         pixel_scale = fov.header["CDELT1"] * u.deg.to(u.arcsec)
         pixel_scale = utils.quantify(pixel_scale, u.arcsec)
@@ -279,25 +280,30 @@ class FieldConstantPSF(DiscretePSF):
 
     def get_kernel(self, fov):
         # find nearest wavelength and pull kernel from file
-        fov_wave = 0.5 * (fov.meta["wave_min"] + fov.meta["wave_max"])
-        ii = nearest_index(fov_wave, self._waveset)
+        ii = nearest_index(fov.wavelength, self._waveset)
         ext = self.kernel_indexes[ii]
         if ext != self.current_layer_id:
             self.kernel = self._file[ext].data
             self.current_layer_id = ext
+            hdr = self._file[ext].header
 
             # compare kernel and fov pixel scales, rescale if needed
-            unit_factor = 1
-            if "CUNIT1" in self._file[ext].header:
-                unit_factor = u.Unit(self._file[ext].header["CUNIT1"]).to(u.deg)
+            if "CUNIT1" in hdr:
+                unit_factor = u.Unit(hdr["CUNIT1"]).to(u.deg)
+            else:
+                unit_factor = 1/3600.
 
-            kernel_pixel_scale = self._file[ext].header["CDELT1"] * unit_factor
+            kernel_pixel_scale = hdr["CDELT1"] * unit_factor
             fov_pixel_scale = fov.hdu.header["CDELT1"]
 
             # rescaling kept inside loop to avoid rescaling for every fov
             pix_ratio = kernel_pixel_scale / fov_pixel_scale
             if abs(pix_ratio - 1) > self.meta["flux_accuracy"]:
-                self.kernel = resize_array(self.kernel, pix_ratio)
+                self.kernel = rescale_kernel(self.kernel, pix_ratio)
+
+            if fov.header["NAXIS1"] < hdr["NAXIS1"] or \
+                    fov.header["NAXIS2"] < hdr["NAXIS2"]:
+                self.kernel = cutout_kernel(self.kernel, fov.header)
 
         return self.kernel
 
@@ -416,7 +422,7 @@ class FieldVaryingPSF(DiscretePSF):
         pix_ratio = fov_pixel_scale / kernel_pixel_scale
         if abs(pix_ratio - 1) > self.meta["flux_accuracy"]:
             for ii in range(len(self.kernel)):
-                self.kernel[ii][0] = resize_array(self.kernel[ii][0], pix_ratio)
+                self.kernel[ii][0] = rescale_kernel(self.kernel[ii][0], pix_ratio)
 
         return self.kernel
 
@@ -467,7 +473,7 @@ def make_strehl_map_from_table(tbl, pixel_scale=1*u.arcsec):
     return map_hdu
 
 
-def resize_array(image, scale_factor, order=None):
+def rescale_kernel(image, scale_factor, order=None):
     if order is None:
         order = rc.__currsys__["!SIM.computing.spline_order"]
     sum_image = np.sum(image)
@@ -479,9 +485,21 @@ def resize_array(image, scale_factor, order=None):
     return image
 
 
+def cutout_kernel(image, fov_header):
+    h, w = image.shape
+    xcen, ycen = 0.5 * w, 0.5 * h 
+    dx = 0.5 * fov_header["NAXIS1"]
+    dy = 0.5 * fov_header["NAXIS2"]
+    x0, x1 = max(0, int(xcen-dx)), min(w, int(xcen+dx)) 
+    y0, y1 = max(0, int(ycen-dy)), min(w, int(ycen+dy))
+    image_cutout = image[y0:y1, x0:x1]
+
+    return image_cutout
+
+
 def get_strehl_cutout(fov_header, strehl_imagehdu):
 
-    image = np.zeros((fov_header["NAXIS1"], fov_header["NAXIS2"]))
+    image = np.zeros((fov_header["NAXIS2"], fov_header["NAXIS1"]))
     canvas_hdu = fits.ImageHDU(header=fov_header, data=image)
     canvas_hdu = imp_utils.add_imagehdu_to_imagehdu(strehl_imagehdu,
                                                     canvas_hdu, order=0,

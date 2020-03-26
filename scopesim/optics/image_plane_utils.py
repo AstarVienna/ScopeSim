@@ -254,8 +254,8 @@ def add_table_to_imagehdu(table, canvas_hdu, sub_pixel=True, wcs_suffix=""):
     xpix, ypix = val2pix(canvas_hdu.header, x.value, y.value, s)
 
     # Weird FITS / astropy behaviour. Axis1 == y, Axis2 == x.
-    naxis2 = canvas_hdu.header["NAXIS1"]
-    naxis1 = canvas_hdu.header["NAXIS2"]
+    naxis1 = canvas_hdu.header["NAXIS1"]
+    naxis2 = canvas_hdu.header["NAXIS2"]
     # Also occasionally 0 is returned as ~ -1e-11
     eps = -1e-7
     mask = (xpix >= eps) * (xpix < naxis1) * (ypix >= eps) * (ypix < naxis2)
@@ -277,7 +277,7 @@ def _add_intpixel_sources_to_canvas(canvas_hdu, xpix, ypix, flux, mask):
     ypix = ypix.astype(int)
     for ii in range(len(xpix)):
         if mask[ii]:
-            canvas_hdu.data[xpix[ii], ypix[ii]] += flux[ii].value
+            canvas_hdu.data[ypix[ii], xpix[ii]] += flux[ii].value
 
     return canvas_hdu
 
@@ -289,7 +289,7 @@ def _add_subpixel_sources_to_canvas(canvas_hdu, xpix, ypix, flux, mask):
         if mask[ii]:
             xx, yy, fracs = sub_pixel_fractions(xpix[ii], ypix[ii])
             for x, y, frac in zip(xx, yy, fracs):
-                canvas_hdu.data[x, y] += frac * flux[ii].value
+                canvas_hdu.data[y, x] += frac * flux[ii].value
 
     return canvas_hdu
 
@@ -348,7 +348,46 @@ def sub_pixel_fractions(x, y):
 
 ###############################################################################
 # Image overlays
-
+#
+#
+# def overlay_image_old(small_im, big_im, coords, mask=None, sub_pixel=False):
+#     """
+#     Overlay small_im on top of big_im at the position specified by coords
+#
+#     ``small_im`` will be centred at ``coords``
+#
+#     Adapted from:
+#     ``https://stackoverflow.com/questions/14063070/
+#         overlay-a-smaller-image-on-a-larger-image-python-opencv``
+#
+#     """
+#
+#     # TODO - Add in a catch for sub-pixel shifts
+#     if sub_pixel:
+#         raise NotImplementedError
+#
+#     x, y = np.array(coords, dtype=int) - np.array(small_im.shape) // 2
+#
+#     # Image ranges
+#     x1, x2 = max(0, x), min(big_im.shape[0], x + small_im.shape[0])
+#     y1, y2 = max(0, y), min(big_im.shape[1], y + small_im.shape[1])
+#
+#     # Overlay ranges
+#     x1o, x2o = max(0, -x), min(small_im.shape[0], big_im.shape[0] - x)
+#     y1o, y2o = max(0, -y), min(small_im.shape[1], big_im.shape[1] - y)
+#
+#     # Exit if nothing to do
+#     if y1 >= y2 or x1 >= x2 or y1o >= y2o or x1o >= x2o:
+#         return big_im
+#
+#     if mask is None:
+#         big_im[x1:x2, y1:y2] += small_im[x1o:x2o, y1o:y2o]
+#     else:
+#         mask = mask[x1o:x2o, y1o:y2o].astype(bool)
+#         big_im[x1:x2, y1:y2][mask] += small_im[x1o:x2o, y1o:y2o][mask]
+#
+#     return big_im
+#
 
 def overlay_image(small_im, big_im, coords, mask=None, sub_pixel=False):
     """
@@ -366,31 +405,31 @@ def overlay_image(small_im, big_im, coords, mask=None, sub_pixel=False):
     if sub_pixel:
         raise NotImplementedError
 
-    x, y = np.array(coords, dtype=int) - np.array(small_im.shape) // 2
+    y, x = np.array(coords, dtype=int)[::-1] - np.array(small_im.shape) // 2
 
     # Image ranges
-    x1, x2 = max(0, x), min(big_im.shape[0], x + small_im.shape[0])
-    y1, y2 = max(0, y), min(big_im.shape[1], y + small_im.shape[1])
+    x1, x2 = max(0, x), min(big_im.shape[1], x + small_im.shape[1])
+    y1, y2 = max(0, y), min(big_im.shape[0], y + small_im.shape[0])
 
     # Overlay ranges
-    x1o, x2o = max(0, -x), min(small_im.shape[0], big_im.shape[0] - x)
-    y1o, y2o = max(0, -y), min(small_im.shape[1], big_im.shape[1] - y)
+    x1o, x2o = max(0, -x), min(small_im.shape[1], big_im.shape[1] - x)
+    y1o, y2o = max(0, -y), min(small_im.shape[0], big_im.shape[0] - y)
 
     # Exit if nothing to do
     if y1 >= y2 or x1 >= x2 or y1o >= y2o or x1o >= x2o:
         return big_im
 
     if mask is None:
-        big_im[x1:x2, y1:y2] += small_im[x1o:x2o, y1o:y2o]
+        big_im[y1:y2, x1:x2] += small_im[y1o:y2o, x1o:x2o]
     else:
-        mask = mask[x1o:x2o, y1o:y2o].astype(bool)
-        big_im[x1:x2, y1:y2][mask] += small_im[x1o:x2o, y1o:y2o][mask]
+        mask = mask[y1o:y2o, x1o:x2o].astype(bool)
+        big_im[y1:y2, x1:x2][mask] += small_im[y1o:y2o, x1o:x2o][mask]
 
     return big_im
 
 
 def rescale_imagehdu(imagehdu, pixel_scale, wcs_suffix="", conserve_flux=True,
-                     **kwargs):
+                     order=1):
     """
     Scales the .data array by the ratio of pixel_scale [deg] and CDELTn
 
@@ -405,8 +444,6 @@ def rescale_imagehdu(imagehdu, pixel_scale, wcs_suffix="", conserve_flux=True,
 
     conserve_flux : bool
 
-    kwargs
-    ------
     order : int
         [1..5] Order of the spline interpolation used by
         ``scipy.ndimage.rotate``
@@ -426,7 +463,7 @@ def rescale_imagehdu(imagehdu, pixel_scale, wcs_suffix="", conserve_flux=True,
 
     if zoom1 != 1 or zoom2 != 1:
         sum_orig = np.sum(imagehdu.data)
-        new_im = ndi.zoom(imagehdu.data, (zoom1, zoom2), **kwargs)
+        new_im = ndi.zoom(imagehdu.data, (zoom1, zoom2), order=order)
 
         if conserve_flux:
             new_im = np.nan_to_num(new_im, copy=False)
@@ -448,9 +485,9 @@ def rescale_imagehdu(imagehdu, pixel_scale, wcs_suffix="", conserve_flux=True,
     return imagehdu
 
 
-def reorient_imagehdu(imagehdu, wcs_suffix="", conserve_flux=True, **kwargs):
+def reorient_imagehdu(imagehdu, wcs_suffix="", conserve_flux=True, order=1):
     """
-    Rotates the .data array by the angle given in the PC matrix of the header
+    Applies an affine transformation to the image, as given in its header
 
     Parameters
     ----------
@@ -458,8 +495,8 @@ def reorient_imagehdu(imagehdu, wcs_suffix="", conserve_flux=True, **kwargs):
 
     wcs_suffix : str
 
-    kwargs
-    ------
+    conserve_flux : bool
+
     order : int
         [1..5] Order of the spline interpolation used by
         ``scipy.ndimage.rotate``
@@ -471,15 +508,20 @@ def reorient_imagehdu(imagehdu, wcs_suffix="", conserve_flux=True, **kwargs):
     """
 
     s = wcs_suffix
+    rad2deg = np.pi / 180
 
-    if "PC1_1"+s in imagehdu.header:
-        hdr = imagehdu.header
+    hdr = imagehdu.header
+    pc_keys = ["PC1_1", "PC1_2", "PC2_1", "PC2_2"]
+    if all(key+s in hdr for key in pc_keys) and imagehdu.data is not None:
         xscen, yscen = pix2val(hdr, hdr["NAXIS1"] / 2., hdr["NAXIS2"] / 2., s)
-        hdr["CRVAL1"+s] = xscen
-        hdr["CRVAL2"+s] = yscen
+        hdr["CRVAL1" + s] = xscen
+        hdr["CRVAL2" + s] = yscen
 
-        angle = np.rad2deg(np.arctan2(hdr["PC1_2"+s], hdr["PC1_1"+s]))
-        new_im = ndi.rotate(imagehdu.data, angle, reshape=True, **kwargs)
+        mat = np.array([[hdr["PC1_1" + s], hdr["PC1_2" + s]],
+                        [hdr["PC2_1" + s], hdr["PC2_2" + s]]])      #
+        new_im = affine_map(imagehdu.data, mat, reshape=True, order=order)
+        # new_im = ndi.rotate(imagehdu.data, angle, reshape=True, order=order)
+
         if conserve_flux:
             new_im = np.nan_to_num(new_im, copy=False)
             new_im *= np.sum(imagehdu.data) / np.sum(new_im)
@@ -541,7 +583,8 @@ def add_imagehdu_to_imagehdu(image_hdu, canvas_hdu, order=1, wcs_suffix="",
     new_hdu = rescale_imagehdu(image_hdu, pixel_scale=pixel_scale,
                                wcs_suffix=wcs_suffix, order=order,
                                conserve_flux=conserve_flux)
-    new_hdu = reorient_imagehdu(new_hdu, wcs_suffix=wcs_suffix, order=order,
+    new_hdu = reorient_imagehdu(new_hdu,
+                                wcs_suffix=wcs_suffix, order=order,
                                 conserve_flux=conserve_flux)
 
     xcen_im = new_hdu.header["NAXIS1"] // 2
@@ -549,6 +592,9 @@ def add_imagehdu_to_imagehdu(image_hdu, canvas_hdu, order=1, wcs_suffix="",
 
     xsky0, ysky0 = pix2val(new_hdu.header, xcen_im, ycen_im, wcs_suffix)
     xpix0, ypix0 = val2pix(canvas_hdu.header, xsky0, ysky0, wcs_suffix)
+
+    # again, I need to add this transpose operation - WHY????
+    # Image plane tests need the transpose operation, but FOV broadcast tests don't. Weird
     canvas_hdu.data = overlay_image(new_hdu.data, canvas_hdu.data,
                                     coords=(xpix0, ypix0))
 
@@ -709,3 +755,71 @@ def split_header(hdr, chunk_size, wcs_suffix=""):
             hdr_list += [hdr_sky]
 
     return hdr_list
+
+
+def affine_map(input, matrix=None, rotation_angle=0, shear_angle=0,
+               scale_factor=None, reshape=True, order=3):
+    """
+    Applies an affine transformation matrix to an image around its centre
+
+    Similar functionality to ``scipy.ndimage.rotate`` but for the
+    ``affine_transformation`` function
+
+    Either a 2x2 affine transformation matrix can be supplied, or the rotation,
+    shear, and scaling values which are the basis of an affine transformation.
+
+
+    Parameters
+    ----------
+    input : array_like
+        The input array
+    matrix : ndarray, optional
+        A 2x2 affine transformation matrix
+    rotation_angle : float, optional
+        [deg] If matrix==None, a rotation matrix is built from this angle
+    shear_angle : float, optional
+        [deg] If matrix==None, a y-axis shear matrix is built from this angle
+    scale_factor : list, array
+        [mx, my] If matrix==None, a scaling matrix is built from this list
+    reshape : bool, optional
+        If True, the array is re-sized to contain the whole transformed image
+    order : int, optional
+        Default is 3. Spline interpolation order
+
+    Returns
+    -------
+    output : array-like
+        The new mapping of the image
+
+    """
+
+    d2r = np.pi / 180.
+    if matrix is None:
+        c = np.cos(rotation_angle * d2r) if rotation_angle != 0. else 1.
+        s = np.sin(rotation_angle * d2r) if rotation_angle != 0. else 0.
+        t = np.tan(shear_angle * d2r) if shear_angle != 0. else 0.
+        sx = scale_factor[0] if scale_factor is not None else 1.
+        sy = scale_factor[1] if scale_factor is not None else 1.
+        mat = np.array([[c, s], [-s, c]]) @ \
+              np.array([[1, t], [0, 1]]) @ \
+              np.array([[sx, 0], [0, sy]])
+    else:
+        mat = np.array(matrix)
+
+    h, w = np.array(input.shape)
+    if reshape:
+        # Find the new corner coordinates using the py3.5+ matmul operator
+        x, y = mat @ np.array([[0, w, w, 0], [0, 0, h, h]])
+        out = np.ceil(np.array([y.max() - y.min(),
+                                x.max() - x.min()])).astype(int)
+    else:
+        out = np.array([h, w])
+
+    c_out = 0.5 * out
+    c_in = 0.5 * np.array([h, w])
+    offset = c_in - c_out.dot(mat)
+
+    output = ndi.affine_transform(input, mat.T, output_shape=out,
+                                  offset=offset, order=order)
+
+    return output

@@ -66,6 +66,23 @@ class TestInit:
         assert cmd["!TEL.temperature"] > 9000
         assert len(cmd.yaml_dicts) == 4     # 3 yamls filenames + default
 
+    def test_mode_yamls(self):
+        yamls = [{"alias": "OBS", "properties": {"modes": ["mode1"],
+                                                 "life": 9001}}]
+        mode_yamls = [{"name": "mode1",
+                       "yamls": [{"alias": "OBS",
+                                  "properties": {"life": 42}}]}]
+        cmd = UserCommands(yamls=yamls, mode_yamls=mode_yamls)
+        assert cmd["!OBS.life"] == 42
+
+        print(cmd.list_modes())
+
+    def test_mode_yamls_read_from_file(self):
+        cmd = UserCommands(use_instrument="test_package")
+        assert cmd["!TEL.temperature"] < 9000
+        assert cmd["!OBS.airmass"] == 2
+        assert cmd.yaml_dicts[-1]["effects"][0]["kwargs"]["meaning_of_life"] == 42
+
 
 class TestMiscFeatures:
     def test_updates_with_yaml_dict(self):
@@ -91,3 +108,5 @@ class TestListLocalPackages:
 class TestTrackIpAddress:
     def test_see_if_theres_an_entry_on_the_server_log_file(self):
         cmds = UserCommands(use_instrument="test_package")
+
+

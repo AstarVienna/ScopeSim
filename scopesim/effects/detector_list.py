@@ -10,10 +10,24 @@ __all__ = ["DetectorList"]
 
 
 class DetectorList(Effect):
+    """
+
+    Examples
+    --------
+    ::
+        - name : full_detector
+          class : DetectorList
+          kwargs :
+            filename : "FPA_array_layout.dat"
+            active_detectors : [1, 5]
+
+    """
+
     def __init__(self, **kwargs):
         super(DetectorList, self).__init__(**kwargs)
         self.meta["z_order"] = [90, 290, 390, 490]
         self.meta["pixel_scale"] = "!INST.pixel_scale"      # arcsec
+        self.meta["active_detectors"] = "all"
         self.meta.update(kwargs)
 
     def fov_grid(self, which="edges", **kwargs):
@@ -37,7 +51,7 @@ class DetectorList(Effect):
 
     @property
     def image_plane_header(self):
-        tbl = self.get_data()
+        tbl = self.active_table
         pixel_size = np.min(utils.quantity_from_table("pixsize", tbl, u.mm))
         x_unit = utils.unit_from_table("x_cen", tbl, u.mm)
         y_unit = utils.unit_from_table("y_cen", tbl, u.mm)
@@ -56,14 +70,26 @@ class DetectorList(Effect):
 
         return hdr
 
-    def detector_headers(self, ids=None):
+    @property
+    def active_table(self):
+        if self.meta["active_detectors"] == "all":
+            tbl = self.table
+        elif isinstance(self.meta["active_detectors"], (list, tuple)):
+            mask = [det_id in self.meta["active_detectors"]
+                    for det_id in self.table["id"]]
+            tbl = self.table[mask]
+        else:
+            raise ValueError("Could not determine which detectors are active: "
+                             "{}, {}, ".format(self.meta["active_detectors"],
+                                               self.table))
+        return tbl
 
-        if ids is None:
-            ids = range(len(self.table))
+    def detector_headers(self, ids=None):
+        if ids is not None and all([isinstance(ii, int) for ii in ids]):
+            self.meta["active_detectors"] = list(ids)
 
         hdrs = []
-        for ii in ids:
-            row = self.table[ii]
+        for row in self.active_table:
             xcen, ycen = row["x_cen"], row["y_cen"]
             dx, dy = row["xhw"], row["yhw"]
             cdelt = row["pixsize"]
@@ -87,23 +113,38 @@ class DetectorList(Effect):
 
         return hdrs
 
-    def detector_row_dicts(self, ids=None):
-        if ids is None:
-            ids = range(len(self.table))
+    def plot(self):
+        import matplotlib.pyplot as plt
 
-        row_dicts = []
-        for ii in ids:
-            row = self.table[ii]
-            row_dicts += [{col: row[col] for col in row.colnames}]
+        for hdr in self.detector_headers():
+            x_mm, y_mm = calc_footprint(hdr, "D")
+            x_cen, y_cen = np.average(x_mm), np.average(y_mm)
+            x_mm = list(x_mm) + [x_mm[0]]
+            y_mm = list(y_mm) + [y_mm[0]]
+            plt.plot(x_mm, y_mm)
+            plt.text(x_cen, y_cen, hdr["ID"])
 
-        return row_dicts
+        plt.gca().set_aspect("equal")
 
 
-def sky_hdr_from_detector_hdr(header, pixel_scale):
-    """ pixel_scale in degrees - returns header"""
 
-    x_mm, y_mm = calc_footprint(header, "D")
-    scale = pixel_scale / header["CDELT1D"]          # (deg pix-1) / (mm pix-1)
-    header = header_from_list_of_xy(x_mm * scale, y_mm * scale, pixel_scale)
 
-    return header
+    # def detector_row_dicts(self, ids=None):
+    #     if ids is None:
+    #         ids = range(len(self.table))
+    #
+    #     row_dicts = []
+    #     for ii in ids:
+    #         row = self.table[ii]
+    #         row_dicts += [{col: row[col] for col in row.colnames}]
+    #
+    #     return row_dicts
+#
+# def sky_hdr_from_detector_hdr(header, pixel_scale):
+#     """ pixel_scale in degrees - returns header"""
+#
+#     x_mm, y_mm = calc_footprint(header, "D")
+#     scale = pixel_scale / header["CDELT1D"]          # (deg pix-1) / (mm pix-1)
+#     header = header_from_list_of_xy(x_mm * scale, y_mm * scale, pixel_scale)
+#
+#     return header

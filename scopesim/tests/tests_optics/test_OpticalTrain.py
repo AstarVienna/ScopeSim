@@ -260,8 +260,8 @@ class TestListEffects:
     def test_effects_listed_in_table(self, simplecado_opt):
         assert isinstance(simplecado_opt.effects, Table)
         simplecado_opt["dark_current"].include = False
-        assert simplecado_opt.effects["included"][1] == False
+        assert simplecado_opt.effects["included"][1] is False
         simplecado_opt["alt_dark_current"].include = True
-        assert simplecado_opt.effects["included"][2] == True
+        assert simplecado_opt.effects["included"][2] is True
 
         print("\n", simplecado_opt.effects)

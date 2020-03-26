@@ -798,7 +798,7 @@
         1    0.000    0.000    0.001    0.001 fov_manager.py:105(get_3d_shifts)
         1    0.000    0.000    0.000    0.000 fov_manager.py:133(<listcomp>)
         1    0.000    0.000    0.000    0.000 fov_manager.py:135(<listcomp>)
-        1    0.000    0.000    0.001    0.001 fov_manager.py:172(get_imaging_waveset)
+        1    0.000    0.000    0.001    0.001 fov_manager.py:172(get_waveset)
         1    0.000    0.000    0.001    0.001 fov_manager.py:192(<listcomp>)
         1    0.001    0.001    0.331    0.331 fov_manager.py:213(get_imaging_headers)
         1    0.001    0.001    0.197    0.197 fov_manager.py:301(get_imaging_fovs)

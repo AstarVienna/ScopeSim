@@ -1,0 +1,79 @@
+# INSTRUMENT OPTICS
+object : instrument
+alias : INST
+name : micado_spec
+inst_pkg_name : micado
+
+properties :
+    temperature : -190
+    pixel_scale : 0.004
+    plate_scale : 0.26666667
+
+effects :
+- name : skycalc_background
+  class : SkycalcTERCurve
+  kwargs :
+    wunit : "!SIM.spectral.wave_unit"
+    wmin : "!SIM.spectral.wave_min"
+    wmax : "!SIM.spectral.wave_max"
+    wdelta : 0.0001
+    outer : 1
+    outer_unit : "m"
+
+- name : random_filter
+  class : FilterCurve
+  kwargs :
+    filename : "TC_filter_Spec_HK.dat"
+
+- name : spectral_traces
+  class : SpectralTraceList
+  kwargs :
+    filename : "TRACE_3arcsec.fits"
+    wave_colname : "lam"
+    s_colname : "xi"
+    col_number_start : 1
+    invalid_value : 0
+
+- name : slit_3000x50mas
+  class : ApertureMask
+  kwargs :
+    filename : "SLIT_3000x50mas.dat"
+
+- name : micado_psf
+  class : FieldConstantPSF
+  kwargs :
+    filename : "PSF_SCAO_ConstPSF_0_5off.fits"
+
+- name : full_detector
+  class : DetectorList
+  kwargs :
+    filename : "FPA_small.dat"
+    active_detectors : "all"
+
+---
+
+### SIMULATION PARAMETERS
+object : simulation
+name : micado_spec_simulation_params
+alias : SIM
+
+properties :
+  spectral :
+    wave_min : 1.45
+    wave_mid : 1.66
+    wave_max : 2.45
+    wave_unit : um
+
+  computing :
+    preload_field_of_views : True
+
+---
+
+### OBSERVATION PARAMETERS
+object : observation
+name : micado_spec_observation_params
+alias : OBS
+
+properties:
+  dit : 1
+  ndit : 1

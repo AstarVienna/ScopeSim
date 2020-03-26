@@ -117,14 +117,14 @@ class UserCommands:
         However, if you would still like to avoid your IP address being stored,
         you can run ``scopesim`` 100% anonymously by setting::
 
-            >>> scopsim.rc.__config__["!SIM.reports.block_ip_tracking"] = True
+            >>> scopsim.rc.__config__["!SIM.reports.ip_tracking"] = True
 
         at the beginning of each session. Alternatively you can also pass the
         same bang keyword when generating a ``UserCommand`` object::
 
             >>> from scopesim import UserCommands
             >>> UserCommands(use_instrument="MICADO",
-            >>>              properties={"!SIM.reports.block_ip_tracking": True})
+            >>>              properties={"!SIM.reports.ip_tracking": False})
 
         If you use a custom ``yaml`` configuration file, you can also add this
         keyword to the ``properties`` section of the ``yaml`` file.
@@ -188,18 +188,18 @@ class UserCommands:
         if "mode_yamls" in kwargs:
             # Convert the yaml list of modes to a dict object
             self.modes_dict = {my["name"]: my for my in kwargs["mode_yamls"]}
-            if "mode" in self.cmds["!OBS"]:
-                mode_name = self.cmds["!OBS.mode"]
-                self.update(yamls=self.modes_dict[mode_name]["yamls"])
+            if "modes" in self.cmds["!OBS"]:
+                if not isinstance(self.cmds["!OBS.modes"], list):
+                    self.cmds["!OBS.modes"] = [self.cmds["!OBS.modes"]]
+                for mode_name in self.cmds["!OBS.modes"]:
+                    mode_yaml = self.modes_dict[mode_name]
+                    self.update(yamls=[mode_yaml])
 
-        if "set_mode" in kwargs:
-            self.set_mode(mode=kwargs["set_mode"])
+        if "set_modes" in kwargs:
+            self.set_modes(modes=kwargs["set_modes"])
 
         if "properties" in kwargs:
-            # anything that you want to change on initialisation
-            props_dict = kwargs["properties"]
-            for key in props_dict:
-                self.cmds[key] = props_dict[key]
+            self.cmds.update(kwargs["properties"])
 
         if "ignore_effects" in kwargs:
             self.ignore_effects = kwargs["ignore_effects"]
@@ -212,16 +212,32 @@ class UserCommands:
             # ..todo: implement this
             pass
 
-    def set_mode(self, mode=None):
-        if mode is not None and mode in self.modes_dict:
-            for i in range(len(self.default_yamls)):
-                if "properties" in self.default_yamls[i] and \
-                         "mode" in self.default_yamls[i]["properties"]:
-                    self.default_yamls[i]["properties"]["mode"] = mode
+    def set_modes(self, modes=None):
+        if not isinstance(modes, list):
+            modes = [modes]
+        for mode in modes:
+            if mode is not None and mode in self.modes_dict:
+                for i in range(len(self.default_yamls)):
+                    if "properties" in self.default_yamls[i] and \
+                             "mode" in self.default_yamls[i]["properties"]:
+                        self.default_yamls[i]["properties"]["mode"] = mode
 
-            self.__init__(yamls=self.default_yamls)
+                self.__init__(yamls=self.default_yamls)
+            else:
+                raise ValueError("mode '{}' was not recognised".format(mode))
+
+    def list_modes(self):
+        if isinstance(self.modes_dict, dict):
+            modes = {}
+            for mode_name in self.modes_dict:
+                dic = self.modes_dict[mode_name]
+                desc = dic["description"] if "description" in dic else "<None>"
+                modes[mode_name] = desc
+
+            msg = "\n".join(["{}: {}".format(key, modes[key]) for key in modes])
         else:
-            raise ValueError("mode '{}' was not recognised".format(mode))
+            msg = "No modes found"
+        return msg
 
     def __setitem__(self, key, value):
         self.cmds.__setitem__(key, value)
@@ -243,7 +259,7 @@ def check_for_updates(package_name):
     response = {}
 
     # tracking **exclusively** your IP address for our internal stats
-    if not rc.__currsys__["!SIM.reports.block_ip_tracking"] and \
+    if rc.__currsys__["!SIM.reports.ip_tracking"] and \
             "TRAVIS" not in os.environ:
         front_matter = rc.__currsys__["!SIM.file.server_base_url"]
         back_matter = "api.php?package_name={}".format(package_name)

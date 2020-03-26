@@ -80,11 +80,6 @@ effects :
         latitude : 0
         altitude : 0
         pupil_angle : 0
-
--   name : pupil_mask
-    class : ApertureList
-    kwargs :
-        file_name : aperture_list.tbl        
         
     """
     return yaml.load(text)

@@ -42,7 +42,7 @@ from astropy.io import ascii as ioascii
 from astropy.io import fits
 from astropy import units as u
 
-from synphot import SpectralElement
+from synphot import SpectralElement, SourceSpectrum, Empirical1D
 
 from ..optics.image_plane import ImagePlane
 from ..optics import image_plane_utils as imp_utils
@@ -72,17 +72,32 @@ class Source(SourceBase):
     * on disk FITS files
     * on disk ASCII tables
     
-    while the spectral descriptions can be passed as either ``synphot.SourceSpectrum``
-    objects, or a set of two equal length arrays for wavelength and flux.
+    while the spectral descriptions can be passed as either
+    ``synphot.SourceSpectrum`` objects, or a set of two equal length arrays
+    for wavelength and flux.
 
+    .. hint:: Initialisation parameter combinations include:
+
+       New ScopeSim-style input
+       - ``table=<astropy.Table>, spectra=<list of synphot.SourceSpectrum>``
+       - ``table=<astropy.Table>, lam=<array>, spectra=<list of array>
+       - ``image_hdu=<fits.ImageHDU>, spectra=<list of synphot.SourceSpectrum>``
+       - ``image_hdu=<fits.ImageHDU>, lam=<array>, spectra=<list of array>
+
+       Old SimCADO-style input
+       - ``x=<array>, y=<array>, ref=<array>, spectra=<list of synphot.SourceSpectrum>``
+       - ``x=<array>, y=<array>, ref=<array>, spectra=<list of array>, lam=<array>``
+       - ``x=<array>, y=<array>, ref=<array>, weight=<array>, spectra=<list of array>, lam=<array>``
+
+       More details on the content of these combinations can be found in the
+       use-case documentation.
 
     Parameters
     ----------
-    spectra : array, or 
+    image_hdu : fits.ImageHDU
+
     filename : str
-        
-    or
-    
+
     lam : np.array
         [um] Wavelength bins of length (m)
     spectra : np.array
@@ -92,7 +107,7 @@ class Source(SourceBase):
         centre of the field of view
     ref : np.array
         the index for .spectra which connects a position (x, y) to a spectrum
-        ``f(x[i], y[i]) = spectra[ref[i]] * weight[i]``
+        ``flux(x[i], y[i]) = spectra[ref[i]] * weight[i]``
     weight : np.array
         A weighting to scale the relevant spectrum for each position
 
@@ -181,6 +196,12 @@ class Source(SourceBase):
             warnings.warn("No spectrum was provided. SPEC_REF set to ''. "
                           "This could cause problems later")
             raise NotImplementedError
+
+        for i in range(1, 3):
+            unit = u.Unit(image_hdu.header["CUNIT"+str(i)].lower())
+            val = float(image_hdu.header["CDELT"+str(i)])
+            image_hdu.header["CUNIT"+str(i)] = "DEG"
+            image_hdu.header["CDELT"+str(i)] = val * unit.to(u.deg)
 
         self.fields += [image_hdu]
 
@@ -290,6 +311,16 @@ class Source(SourceBase):
         with open(filename, 'wb') as fp1:
             pickle.dump(self, fp1)
 
+    # def collapse_spectra(self, wave_min=None, wave_max=None):
+    #     for spec in self.spectra:
+    #         waves = spec.waveset
+    #         if wave_min is not None and wave_max is not None:
+    #             mask = (waves >= wave_min) * (waves <= wave_max)
+    #             waves = waves[mask]
+    #         fluxes = spec(waves)
+    #         spec = SourceSpectrum(Empirical1D, points=waves,
+    #                               lookup_table=fluxes)
+
     def shift(self, dx=0, dy=0, layers=None):
 
         if layers is None:
@@ -305,8 +336,8 @@ class Source(SourceBase):
                 y += utils.quantify(dy, u.arcsec)
                 self.fields[ii]["y"] = y
             elif isinstance(self.fields[ii], fits.ImageHDU):
-                dx = utils.quantify(dx, "arcsec").to(u.deg)
-                dy = utils.quantify(dy, "arcsec").to(u.deg)
+                dx = utils.quantify(dx, u.arcsec).to(u.deg)
+                dy = utils.quantify(dy, u.arcsec).to(u.deg)
                 self.fields[ii].header["CRVAL1"] += dx.value
                 self.fields[ii].header["CRVAL2"] += dy.value
 
@@ -335,6 +366,21 @@ class Source(SourceBase):
         else:
             raise ValueError("Cannot add {} object to Source object"
                              "".format(type(new_source)))
+
+    def plot(self):
+        import matplotlib.pyplot as plt
+        clrs = "rgbcymk" * (len(self.fields) // 7 + 1)
+        for c, field in zip(clrs, self.fields):
+            if isinstance(field, Table):
+                plt.plot(field["x"], field["y"], c+".")
+            elif isinstance(field, fits.ImageHDU):
+                x, y = imp_utils.calc_footprint(field.header)
+                x *= 3600   # Because ImageHDUs are always in CUNIT=DEG
+                y *= 3600
+                x = list(x) + [x[0]]
+                y = list(y) + [y[0]]
+                plt.plot(x, y, c)
+        plt.gca().set_aspect("equal")
 
     def __add__(self, new_source):
         self_copy = deepcopy(self)

@@ -6,6 +6,7 @@ from astropy.table import Table
 
 from .optical_element import OpticalElement
 from .. import effects as efs
+from ..effects.effects_utils import is_spectroscope
 from ..effects.effects_utils import combine_surface_effects
 from .. import rc
 
@@ -161,6 +162,10 @@ class OpticsManager:
         return effects
 
     @property
+    def is_spectroscope(self):
+        return bool(len(self.get_all(efs.SpectralTraceList)))
+
+    @property
     def image_plane_headers(self):
         detector_lists = self.detector_setup_effects
         headers = [det_list.image_plane_header for det_list in detector_lists]
@@ -177,15 +182,21 @@ class OpticsManager:
 
     @property
     def image_plane_effects(self):
-        return self.get_z_order_effects(700) + [self.surfaces_table]
+        effects = self.get_z_order_effects(700)
+        if not self.is_spectroscope:
+            effects += [self.surfaces_table]   # Background Emission if Imager
+        return effects
 
     @property
     def fov_effects(self):
-        return self.get_z_order_effects(600)
+        effects = self.get_z_order_effects(600)
+        if self.is_spectroscope:
+            effects += [self.surfaces_table]   # Background Emission if Spectroscope
+        return effects
 
     @property
     def source_effects(self):
-        return self.get_z_order_effects(500) + [self.surfaces_table]
+        return self.get_z_order_effects(500) + [self.surfaces_table]    # Transmission
 
     @property
     def detector_setup_effects(self):
@@ -198,12 +209,13 @@ class OpticsManager:
 
     @property
     def fov_setup_effects(self):
-        return self.get_z_order_effects(200) + [self.surfaces_table]
+        return self.get_z_order_effects(200) + [self.surfaces_table]    # Working out where to set wave_min, wave_max
 
     @property
     def surfaces_table(self):
-        surface_like_effects = self.get_z_order_effects(100)
-        self._surfaces_table = combine_surface_effects(surface_like_effects)
+        if self._surfaces_table is None:
+            surface_like_effects = self.get_z_order_effects(100)
+            self._surfaces_table = combine_surface_effects(surface_like_effects)
         return self._surfaces_table
 
     def list_effects(self):

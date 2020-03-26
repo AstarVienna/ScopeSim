@@ -303,7 +303,7 @@ class TestAddTableToImageHDU:
 
         if PLOTS:
             "top left is green, top right is yellow"
-            plt.imshow(canvas_hdu.data.T, origin="lower")
+            plt.imshow(canvas_hdu.data, origin="lower")
             plt.show()
 
     def test_mm_points_are_added_to_small_canvas(self, input_table_mm):
@@ -319,7 +319,7 @@ class TestAddTableToImageHDU:
 
         if PLOTS:
             "top left is green, top right is yellow"
-            plt.imshow(canvas_hdu.data.T, origin="lower")
+            plt.imshow(canvas_hdu.data, origin="lower")
             plt.show()
 
     # add a paramaterised test here to check border cases
@@ -336,20 +336,20 @@ class TestAddTableToImageHDU:
         hdr = imp_utils.get_canvas_header([tbl1, tbl2, tbl3],
                                           pixel_scale=1*u.arcsec)
 
-        im = np.zeros((hdr["NAXIS1"], hdr["NAXIS2"]))
+        im = np.zeros((hdr["NAXIS2"], hdr["NAXIS1"]))
         canvas_hdu = fits.ImageHDU(header=hdr, data=im)
 
         for tbl in [tbl1, tbl2, tbl3]:
             canvas_hdu = imp_utils.add_table_to_imagehdu(tbl, canvas_hdu, True)
 
-        total_flux = np.sum([tbl1["flux"], tbl1["flux"], tbl1["flux"]])
+        total_flux = np.sum([tbl1["flux"], tbl2["flux"], tbl3["flux"]])
         assert np.sum(canvas_hdu.data) == total_flux
 
         if PLOTS:
             x, y = imp_utils.val2pix(hdr, 0, 0)
             plt.plot(x, y, "ro")
             "top left is green, top right is yellow"
-            plt.imshow(canvas_hdu.data.T, origin="lower")
+            plt.imshow(canvas_hdu.data, origin="lower")
             plt.show()
 
     def test_mm_points_are_added_to_massive_canvas(self, input_table_mm):
@@ -364,7 +364,7 @@ class TestAddTableToImageHDU:
 
         hdr = imp_utils.get_canvas_header([tbl1, tbl2, tbl3],
                                           pixel_scale=1*u.mm)
-        im = np.zeros((hdr["NAXIS1"], hdr["NAXIS2"]))
+        im = np.zeros((hdr["NAXIS2"], hdr["NAXIS1"]))
         canvas_hdu = fits.ImageHDU(header=hdr, data=im)
 
         for tbl in [tbl1, tbl2, tbl3]:
@@ -378,254 +378,256 @@ class TestAddTableToImageHDU:
             x, y = imp_utils.val2pix(hdr, 0, 0, "D")
             plt.plot(x, y, "ro")
             "top left is green, top right is yellow"
-            plt.imshow(canvas_hdu.data.T, origin="lower")
+            plt.imshow(canvas_hdu.data, origin="lower")
             plt.show()
 
 
 @pytest.mark.usefixtures("image_hdu_square", "image_hdu_rect",
                          "image_hdu_square_mm", "image_hdu_rect_mm",
                          "input_table", "input_table_mm")
-# class TestAddImageHDUToImageHDU:
-#     def test_image_is_added_to_small_canvas(self, image_hdu_rect,
-#                                             image_hdu_square):
-#         im_hdu = image_hdu_rect
-#         im_hdu.header["CRVAL1"] -= 150*u.arcsec.to(u.deg)
-#         im_hdu.header["CRVAL2"] += 40*u.arcsec.to(u.deg)
-#         hdr = imp_utils.get_canvas_header([im_hdu, image_hdu_square])
-#
-#         im = np.zeros((hdr["NAXIS1"], hdr["NAXIS2"]))
-#         canvas_hdu = fits.ImageHDU(header=hdr, data=im)
-#         canvas_hdu = imp_utils.add_imagehdu_to_imagehdu(im_hdu, canvas_hdu)
-#
-#         assert np.sum(canvas_hdu.data) == approx(np.sum(im_hdu.data))
-#
-#         if PLOTS:
-#             for im in [im_hdu, image_hdu_square]:
-#                 x, y = imp_utils.calc_footprint(im.header)
-#                 x, y = imp_utils.val2pix(canvas_hdu.header, x, y)
-#                 plt.plot(x, y, "r-")
-#
-#             x0, y0 = imp_utils.val2pix(canvas_hdu.header, 0, 0)
-#             plt.plot(x0, y0, "ro")
-#             plt.gca().set_aspect(1)
-#
-#             plt.imshow(canvas_hdu.data.T, origin="lower")
-#
-#             plt.show()
-#
-#     def test_mm_image_is_added_to_small_canvas(self, image_hdu_rect_mm,
-#                                             image_hdu_square_mm):
-#         im_hdu = image_hdu_rect_mm
-#         im_hdu.header["CRVAL1D"] -= 150
-#         im_hdu.header["CRVAL2D"] += 40
-#         hdr = imp_utils.get_canvas_header([im_hdu, image_hdu_square_mm],
-#                                           pixel_scale=1*u.mm)
-#
-#         im = np.zeros((hdr["NAXIS1"], hdr["NAXIS2"]))
-#         canvas_hdu = fits.ImageHDU(header=hdr, data=im)
-#         canvas_hdu = imp_utils.add_imagehdu_to_imagehdu(im_hdu, canvas_hdu,
-#                                                         wcs_suffix="D")
-#
-#         assert np.sum(canvas_hdu.data) == approx(np.sum(im_hdu.data))
-#
-#         if PLOTS:
-#             for im in [im_hdu, image_hdu_square_mm]:
-#                 x, y = imp_utils.calc_footprint(im.header, "D")
-#                 x, y = imp_utils.val2pix(canvas_hdu.header, x, y, "D")
-#                 plt.plot(x, y, "r-")
-#
-#             x0, y0 = imp_utils.val2pix(canvas_hdu.header, 0, 0, "D")
-#             plt.plot(x0, y0, "ro")
-#             plt.gca().set_aspect(1)
-#
-#             plt.imshow(canvas_hdu.data.T, origin="lower")
-#
-#             plt.show()
-#
-#     def test_image_and_tables_on_large_canvas(self, input_table, image_hdu_rect,
-#                                               image_hdu_square):
-#         tbl1 = deepcopy(input_table)
-#         tbl2 = deepcopy(input_table)
-#
-#         tbl1["y"] -= 100
-#         tbl2["x"] += 100
-#         tbl2["y"] += 100
-#
-#         im_hdu = image_hdu_rect
-#         im_hdu.header["CRVAL1"] -= 150*u.arcsec.to(u.deg)
-#         im_hdu.header["CRVAL2"] += 20*u.arcsec.to(u.deg)
-#
-#         hdr = imp_utils.get_canvas_header([im_hdu, image_hdu_square,
-#                                            tbl1, tbl2], pixel_scale=3*u.arcsec)
-#         im = np.zeros((hdr["NAXIS1"], hdr["NAXIS2"]))
-#         canvas_hdu = fits.ImageHDU(header=hdr, data=im)
-#
-#         canvas_hdu = imp_utils.add_table_to_imagehdu(tbl1, canvas_hdu)
-#         canvas_hdu = imp_utils.add_table_to_imagehdu(tbl2, canvas_hdu)
-#         canvas_hdu = imp_utils.add_imagehdu_to_imagehdu(im_hdu, canvas_hdu)
-#         canvas_hdu = imp_utils.add_imagehdu_to_imagehdu(image_hdu_square,
-#                                                         canvas_hdu)
-#
-#         total_flux = np.sum(tbl1["flux"]) + np.sum(tbl2["flux"]) + \
-#                      np.sum(im_hdu.data) + np.sum(image_hdu_square.data)
-#         assert np.sum(canvas_hdu.data) == approx(total_flux)
-#
-#         if PLOTS:
-#
-#             for im in [im_hdu, image_hdu_square]:
-#                 x, y = imp_utils.calc_footprint(im)
-#                 x, y = imp_utils.val2pix(canvas_hdu, x, y)
-#                 plt.plot(x, y, "r-")
-#
-#             x0, y0 = imp_utils.val2pix(canvas_hdu, 0, 0)
-#             plt.plot(x0, y0, "ro")
-#             plt.gca().set_aspect(1)
-#
-#             plt.imshow(canvas_hdu.data.T, origin="lower")
-#
-#             plt.show()
-#
-#     def test_mm_image_and_tables_on_large_canvas(self, input_table_mm,
-#                                                  image_hdu_rect_mm,
-#                                                  image_hdu_square_mm):
-#         image_hdu_rect = image_hdu_rect_mm
-#         image_hdu_square = image_hdu_square_mm
-#         tbl1 = deepcopy(input_table_mm)
-#         tbl2 = deepcopy(input_table_mm)
-#
-#         tbl1["y_mm"] -= 100
-#         tbl2["x_mm"] += 100
-#         tbl2["y_mm"] += 100
-#
-#         im_hdu = image_hdu_rect
-#         im_hdu.header["CRVAL1D"] -= 150
-#         im_hdu.header["CRVAL2D"] += 20
-#
-#         hdr = imp_utils.get_canvas_header([im_hdu, image_hdu_square,
-#                                            tbl1, tbl2], pixel_scale=3*u.mm)
-#         im = np.zeros((hdr["NAXIS1"], hdr["NAXIS2"]))
-#         canvas_hdu = fits.ImageHDU(header=hdr, data=im)
-#
-#         canvas_hdu = imp_utils.add_table_to_imagehdu(tbl1, canvas_hdu,
-#                                                      wcs_suffix="D")
-#         canvas_hdu = imp_utils.add_table_to_imagehdu(tbl2, canvas_hdu,
-#                                                      wcs_suffix="D")
-#         canvas_hdu = imp_utils.add_imagehdu_to_imagehdu(im_hdu, canvas_hdu,
-#                                                         wcs_suffix="D")
-#         canvas_hdu = imp_utils.add_imagehdu_to_imagehdu(image_hdu_square,
-#                                                         canvas_hdu,
-#                                                         wcs_suffix="D")
-#
-#         total_flux = np.sum(tbl1["flux"]) + np.sum(tbl2["flux"]) + \
-#                      np.sum(im_hdu.data) + np.sum(image_hdu_square.data)
-#         assert np.sum(canvas_hdu.data) == approx(total_flux)
-#
-#         if PLOTS:
-#
-#             for im in [im_hdu, image_hdu_square]:
-#                 x, y = imp_utils.calc_footprint(im, "D")
-#                 x, y = imp_utils.val2pix(canvas_hdu, x, y, "D")
-#                 plt.plot(x, y, "r-")
-#
-#             x0, y0 = imp_utils.val2pix(canvas_hdu, 0, 0, "D")
-#             plt.plot(x0, y0, "ro")
-#             plt.gca().set_aspect(1)
-#
-#             plt.imshow(canvas_hdu.data.T, origin="lower")
-#
-#             plt.show()
-#
-#
-# @pytest.mark.usefixtures("image_hdu_square", "image_hdu_rect",
-#                          "image_hdu_square_mm", "image_hdu_rect_mm",
-#                          "input_table", "input_table_mm")
-# class TestImagePlaneAdd:
-#     def test_add_many_tables_and_imagehdus(self, input_table, image_hdu_rect,
-#                                            image_hdu_square):
-#         tbl1 = deepcopy(input_table)
-#         tbl2 = deepcopy(input_table)
-#
-#         tbl1["y"] -= 50
-#         tbl2["x"] += 50
-#         tbl2["y"] += 50
-#
-#         im_hdu = image_hdu_rect
-#         im_hdu.header["CRVAL1"] -= 150*u.arcsec.to(u.deg)
-#         im_hdu.header["CRVAL2"] += 20*u.arcsec.to(u.deg)
-#
-#         fields = [im_hdu, tbl1, tbl2, image_hdu_square]
-#         hdr = imp_utils.get_canvas_header(fields, pixel_scale=1 * u.arcsec)
-#
-#         implane = opt_imp.ImagePlane(hdr)
-#         implane.add(fields)
-#
-#         total_flux = np.sum(tbl1["flux"]) + np.sum(tbl2["flux"]) + \
-#                      np.sum(im_hdu.data) + np.sum(image_hdu_square.data)
-#         assert np.sum(implane.data) == approx(total_flux)
-#
-#         if PLOTS:
-#             for im in [im_hdu, image_hdu_square]:
-#                 x, y = imp_utils.calc_footprint(im.header)
-#                 x, y = imp_utils.val2pix(implane.header, x, y)
-#                 plt.plot(x, y, "r-")
-#
-#             for tbl in [tbl1, tbl2]:
-#                 hdr = imp_utils._make_bounding_header_for_tables([tbl])
-#                 x, y = imp_utils.calc_footprint(hdr)
-#                 x, y = imp_utils.val2pix(implane.header, x, y)
-#                 plt.plot(x, y, "r-")
-#
-#             x0, y0 = imp_utils.val2pix(implane.header, 0, 0)
-#             plt.plot(x0, y0, "ro")
-#             plt.gca().set_aspect(1)
-#
-#             plt.imshow(implane.data.T, origin="lower", norm=LogNorm())
-#             plt.show()
-#
-#     def test_add_many_mm_tables_and_imagehdus(self, input_table_mm,
-#                                               image_hdu_rect_mm,
-#                                               image_hdu_square_mm):
-#         image_hdu_rect = image_hdu_rect_mm
-#         image_hdu_square = image_hdu_square_mm
-#         tbl1 = deepcopy(input_table_mm)
-#         tbl2 = deepcopy(input_table_mm)
-#
-#         tbl1["y_mm"] -= 50
-#         tbl2["x_mm"] += 50
-#         tbl2["y_mm"] += 50
-#
-#         im_hdu = image_hdu_rect
-#         im_hdu.header["CRVAL1D"] -= 150 # mm
-#         im_hdu.header["CRVAL2D"] += 20
-#
-#         fields = [im_hdu, tbl1, tbl2, image_hdu_square]
-#         hdr = imp_utils.get_canvas_header(fields, pixel_scale=1*u.mm)
-#         implane = opt_imp.ImagePlane(hdr)
-#         implane.add(fields, wcs_suffix="D")
-#
-#         total_flux = np.sum(tbl1["flux"]) + np.sum(tbl2["flux"]) + \
-#                      np.sum(im_hdu.data) + np.sum(image_hdu_square.data)
-#         assert np.sum(implane.data) == approx(total_flux)
-#
-#         if PLOTS:
-#             for im in [im_hdu, image_hdu_square]:
-#                 x, y = imp_utils.calc_footprint(im.header, "D")
-#                 x, y = imp_utils.val2pix(implane.header, x, y, "D")
-#                 plt.plot(x, y, "r-")
-#
-#             for tbl in [tbl1, tbl2]:
-#                 hdr = imp_utils._make_bounding_header_for_tables([tbl],
-#                                                                  pixel_scale=1*u.mm)
-#                 x, y = imp_utils.calc_footprint(hdr, "D")
-#                 x, y = imp_utils.val2pix(implane.header, x, y, "D")
-#                 plt.plot(x, y, "r-")
-#
-#             x0, y0 = imp_utils.val2pix(implane.header, 0, 0, "D")
-#             plt.plot(x0, y0, "ro")
-#             plt.gca().set_aspect(1)
-#
-#             plt.imshow(implane.data.T, origin="lower", norm=LogNorm())
-#             plt.show()
+class TestAddImageHDUToImageHDU:
+    def test_image_is_added_to_small_canvas(self, image_hdu_rect,
+                                            image_hdu_square):
+        im_hdu = image_hdu_rect
+        im_hdu.header["CRVAL1"] -= 150*u.arcsec.to(u.deg)
+        im_hdu.header["CRVAL2"] += 40*u.arcsec.to(u.deg)
+        hdr = imp_utils.get_canvas_header([im_hdu, image_hdu_square])
+
+        im = np.zeros((hdr["NAXIS2"], hdr["NAXIS1"]))
+        canvas_hdu = fits.ImageHDU(header=hdr, data=im)
+        canvas_hdu = imp_utils.add_imagehdu_to_imagehdu(im_hdu, canvas_hdu)
+        canvas_hdu = imp_utils.add_imagehdu_to_imagehdu(image_hdu_square, canvas_hdu)
+
+        flux = np.sum(im_hdu.data) + np.sum(image_hdu_square.data)
+        assert np.sum(canvas_hdu.data) == approx(flux)
+
+        if PLOTS:
+            for im in [im_hdu, image_hdu_square]:
+                x, y = imp_utils.calc_footprint(im.header)
+                x, y = imp_utils.val2pix(canvas_hdu.header, x, y)
+                plt.plot(x, y, "r-")
+
+            x0, y0 = imp_utils.val2pix(canvas_hdu.header, 0, 0)
+            plt.plot(x0, y0, "ro")
+            plt.gca().set_aspect(1)
+
+            plt.imshow(canvas_hdu.data, origin="lower")
+
+            plt.show()
+
+    def test_mm_image_is_added_to_small_canvas(self, image_hdu_rect_mm,
+                                               image_hdu_square_mm):
+        im_hdu = image_hdu_rect_mm
+        im_hdu.header["CRVAL1D"] -= 150
+        im_hdu.header["CRVAL2D"] += 40
+        hdr = imp_utils.get_canvas_header([im_hdu, image_hdu_square_mm],
+                                          pixel_scale=1*u.mm)
+
+        im = np.zeros((hdr["NAXIS2"], hdr["NAXIS1"]))
+        canvas_hdu = fits.ImageHDU(header=hdr, data=im)
+        canvas_hdu = imp_utils.add_imagehdu_to_imagehdu(im_hdu, canvas_hdu,
+                                                        wcs_suffix="D")
+
+        assert np.sum(canvas_hdu.data) == approx(np.sum(im_hdu.data))
+
+        if PLOTS:
+            for im in [im_hdu, image_hdu_square_mm]:
+                x, y = imp_utils.calc_footprint(im.header, "D")
+                x, y = imp_utils.val2pix(canvas_hdu.header, x, y, "D")
+                plt.plot(x, y, "r-")
+
+            x0, y0 = imp_utils.val2pix(canvas_hdu.header, 0, 0, "D")
+            plt.plot(x0, y0, "ro")
+            plt.gca().set_aspect(1)
+
+            plt.imshow(canvas_hdu.data, origin="lower")
+
+            plt.show()
+
+    def test_image_and_tables_on_large_canvas(self, input_table, image_hdu_rect,
+                                              image_hdu_square):
+        tbl1 = deepcopy(input_table)
+        tbl2 = deepcopy(input_table)
+
+        tbl1["y"] -= 100
+        tbl2["x"] += 100
+        tbl2["y"] += 100
+
+        im_hdu = image_hdu_rect
+        im_hdu.header["CRVAL1"] -= 150*u.arcsec.to(u.deg)
+        im_hdu.header["CRVAL2"] += 20*u.arcsec.to(u.deg)
+
+        hdr = imp_utils.get_canvas_header([im_hdu, image_hdu_square,
+                                           tbl1, tbl2], pixel_scale=3*u.arcsec)
+        im = np.zeros((hdr["NAXIS2"], hdr["NAXIS1"]))
+        canvas_hdu = fits.ImageHDU(header=hdr, data=im)
+
+        canvas_hdu = imp_utils.add_table_to_imagehdu(tbl1, canvas_hdu)
+        canvas_hdu = imp_utils.add_table_to_imagehdu(tbl2, canvas_hdu)
+        canvas_hdu = imp_utils.add_imagehdu_to_imagehdu(im_hdu, canvas_hdu)
+        canvas_hdu = imp_utils.add_imagehdu_to_imagehdu(image_hdu_square,
+                                                        canvas_hdu)
+
+        total_flux = np.sum(tbl1["flux"]) + np.sum(tbl2["flux"]) + \
+                     np.sum(im_hdu.data) + np.sum(image_hdu_square.data)
+        assert np.sum(canvas_hdu.data) == approx(total_flux)
+
+        if PLOTS:
+
+            for im in [im_hdu, image_hdu_square]:
+                x, y = imp_utils.calc_footprint(im)
+                x, y = imp_utils.val2pix(canvas_hdu, x, y)
+                plt.plot(x, y, "r-")
+
+            x0, y0 = imp_utils.val2pix(canvas_hdu, 0, 0)
+            plt.plot(x0, y0, "ro")
+            plt.gca().set_aspect(1)
+
+            plt.imshow(canvas_hdu.data, origin="lower")
+
+            plt.show()
+
+    def test_mm_image_and_tables_on_large_canvas(self, input_table_mm,
+                                                 image_hdu_rect_mm,
+                                                 image_hdu_square_mm):
+        image_hdu_rect = image_hdu_rect_mm
+        image_hdu_square = image_hdu_square_mm
+        tbl1 = deepcopy(input_table_mm)
+        tbl2 = deepcopy(input_table_mm)
+
+        tbl1["y_mm"] -= 100
+        tbl2["x_mm"] += 100
+        tbl2["y_mm"] += 100
+
+        im_hdu = image_hdu_rect
+        im_hdu.header["CRVAL1D"] -= 150
+        im_hdu.header["CRVAL2D"] += 20
+
+        hdr = imp_utils.get_canvas_header([im_hdu, image_hdu_square,
+                                           tbl1, tbl2], pixel_scale=3*u.mm)
+        im = np.zeros((hdr["NAXIS2"], hdr["NAXIS1"]))
+        canvas_hdu = fits.ImageHDU(header=hdr, data=im)
+
+        canvas_hdu = imp_utils.add_table_to_imagehdu(tbl1, canvas_hdu,
+                                                     wcs_suffix="D")
+        canvas_hdu = imp_utils.add_table_to_imagehdu(tbl2, canvas_hdu,
+                                                     wcs_suffix="D")
+        canvas_hdu = imp_utils.add_imagehdu_to_imagehdu(im_hdu, canvas_hdu,
+                                                        wcs_suffix="D")
+        canvas_hdu = imp_utils.add_imagehdu_to_imagehdu(image_hdu_square,
+                                                        canvas_hdu,
+                                                        wcs_suffix="D")
+
+        total_flux = np.sum(tbl1["flux"]) + np.sum(tbl2["flux"]) + \
+                     np.sum(im_hdu.data) + np.sum(image_hdu_square.data)
+        assert np.sum(canvas_hdu.data) == approx(total_flux)
+
+        if PLOTS:
+
+            for im in [im_hdu, image_hdu_square]:
+                x, y = imp_utils.calc_footprint(im, "D")
+                x, y = imp_utils.val2pix(canvas_hdu, x, y, "D")
+                plt.plot(x, y, "r-")
+
+            x0, y0 = imp_utils.val2pix(canvas_hdu, 0, 0, "D")
+            plt.plot(x0, y0, "ro")
+            plt.gca().set_aspect(1)
+
+            plt.imshow(canvas_hdu.data, origin="lower")
+
+            plt.show()
+
+
+@pytest.mark.usefixtures("image_hdu_square", "image_hdu_rect",
+                         "image_hdu_square_mm", "image_hdu_rect_mm",
+                         "input_table", "input_table_mm")
+class TestImagePlaneAdd:
+    def test_add_many_tables_and_imagehdus(self, input_table, image_hdu_rect,
+                                           image_hdu_square):
+        tbl1 = deepcopy(input_table)
+        tbl2 = deepcopy(input_table)
+
+        tbl1["y"] -= 50
+        tbl2["x"] += 50
+        tbl2["y"] += 50
+
+        im_hdu = image_hdu_rect
+        im_hdu.header["CRVAL1"] -= 150*u.arcsec.to(u.deg)
+        im_hdu.header["CRVAL2"] += 20*u.arcsec.to(u.deg)
+
+        fields = [im_hdu, tbl1, tbl2, image_hdu_square]
+        hdr = imp_utils.get_canvas_header(fields, pixel_scale=1 * u.arcsec)
+
+        implane = opt_imp.ImagePlane(hdr)
+        implane.add(fields)
+
+        total_flux = np.sum(tbl1["flux"]) + np.sum(tbl2["flux"]) + \
+                     np.sum(im_hdu.data) + np.sum(image_hdu_square.data)
+        assert np.sum(implane.data) == approx(total_flux)
+
+        if PLOTS:
+            for im in [im_hdu, image_hdu_square]:
+                x, y = imp_utils.calc_footprint(im.header)
+                x, y = imp_utils.val2pix(implane.header, x, y)
+                plt.plot(x, y, "r-")
+
+            for tbl in [tbl1, tbl2]:
+                hdr = imp_utils._make_bounding_header_for_tables([tbl])
+                x, y = imp_utils.calc_footprint(hdr)
+                x, y = imp_utils.val2pix(implane.header, x, y)
+                plt.plot(x, y, "r-")
+
+            x0, y0 = imp_utils.val2pix(implane.header, 0, 0)
+            plt.plot(x0, y0, "ro")
+            plt.gca().set_aspect(1)
+
+            plt.imshow(implane.data, origin="lower", norm=LogNorm())
+            plt.show()
+
+    def test_add_many_mm_tables_and_imagehdus(self, input_table_mm,
+                                              image_hdu_rect_mm,
+                                              image_hdu_square_mm):
+        image_hdu_rect = image_hdu_rect_mm
+        image_hdu_square = image_hdu_square_mm
+        tbl1 = deepcopy(input_table_mm)
+        tbl2 = deepcopy(input_table_mm)
+
+        tbl1["y_mm"] -= 50
+        tbl2["x_mm"] += 50
+        tbl2["y_mm"] += 50
+
+        im_hdu = image_hdu_rect
+        im_hdu.header["CRVAL1D"] -= 150 # mm
+        im_hdu.header["CRVAL2D"] += 20
+
+        fields = [im_hdu, tbl1, tbl2, image_hdu_square]
+        hdr = imp_utils.get_canvas_header(fields, pixel_scale=1*u.mm)
+        implane = opt_imp.ImagePlane(hdr)
+        implane.add(fields, wcs_suffix="D")
+
+        total_flux = np.sum(tbl1["flux"]) + np.sum(tbl2["flux"]) + \
+                     np.sum(im_hdu.data) + np.sum(image_hdu_square.data)
+        assert np.sum(implane.data) == approx(total_flux)
+
+        if PLOTS:
+            for im in [im_hdu, image_hdu_square]:
+                x, y = imp_utils.calc_footprint(im.header, "D")
+                x, y = imp_utils.val2pix(implane.header, x, y, "D")
+                plt.plot(x, y, "r-")
+
+            for tbl in [tbl1, tbl2]:
+                hdr = imp_utils._make_bounding_header_for_tables([tbl],
+                                                                 pixel_scale=1*u.mm)
+                x, y = imp_utils.calc_footprint(hdr, "D")
+                x, y = imp_utils.val2pix(implane.header, x, y, "D")
+                plt.plot(x, y, "r-")
+
+            x0, y0 = imp_utils.val2pix(implane.header, 0, 0, "D")
+            plt.plot(x0, y0, "ro")
+            plt.gca().set_aspect(1)
+
+            plt.imshow(implane.data, origin="lower", norm=LogNorm())
+            plt.show()
 
 
 @pytest.mark.usefixtures("image_hdu_rect", "image_hdu_rect_mm")
@@ -893,13 +895,13 @@ class TestRescaleImageHDU:
 #         implane = opt_imp.ImagePlane(hdr)
 #         implane.add(image_hdu_rect)
 #
-#         plt.imshow(image_hdu_rect.data.T)
+#         plt.imshow(image_hdu_rect.data)
 #         x, y = wcs.WCS(image_hdu_rect).wcs_world2pix(0, 0, 1)
 #         print(x, y)
 #         plt.plot(x, y, "ro")
 #         plt.show()
 #
-#         plt.imshow(implane.data.T)
+#         plt.imshow(implane.data)
 #         x, y = wcs.WCS(image_hdu_rect).wcs_world2pix(0, 0, 1)
 #         print(x, y)
 #         plt.plot(x, y, "ro")

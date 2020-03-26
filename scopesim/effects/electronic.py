@@ -5,7 +5,7 @@ from astropy.io import fits
 from .. import rc
 from . import Effect
 from ..base_classes import DetectorBase, ImagePlaneBase
-from ..utils import real_colname, from_currsys, check_keys
+from ..utils import real_colname, from_currsys, check_keys, interp2
 
 
 class SummedExposure(Effect):

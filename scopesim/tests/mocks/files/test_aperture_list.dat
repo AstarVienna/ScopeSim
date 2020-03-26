@@ -1,0 +1,10 @@
+# author: Kieran Leschinski
+# x_unit: arcsec
+# y_unit: arcsec
+# angle_unit: deg
+#
+id  left    right   top     bottom  angle   conserve_image  shape
+0   -2      2       1       0       0       True            "rect"
+1   -1      1       0       -1      0       True            "round"
+2   -2      -1      0       -1      0       False           "oct"
+3   1       2       0       -1      0       False           4

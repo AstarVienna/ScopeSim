@@ -115,7 +115,7 @@ class TestGetKernel:
 class TestApplyTo:
     def test_convolution_with_central_psf_for_central_region(self, centre_fov):
         nax1, nax2 = centre_fov.header["NAXIS1"], centre_fov.header["NAXIS2"]
-        centre_fov.hdu.data = np.zeros((nax1, nax2))
+        centre_fov.hdu.data = np.zeros((nax2, nax1))
         centre_fov.hdu.data[::3, ::3] = 1
         sum_orig = np.sum(centre_fov.hdu.data)
 
@@ -125,12 +125,12 @@ class TestApplyTo:
         assert np.sum(fov_back.hdu.data) == sum_orig
 
         if PLOTS:
-            plt.imshow(fov_back.hdu.data.T, origin="lower")
+            plt.imshow(fov_back.hdu.data, origin="lower")
             plt.show()
 
     def test_convolution_with_fvpsfs_for_shifted_region(self, centre_fov):
         nax1, nax2 = centre_fov.header["NAXIS1"], centre_fov.header["NAXIS2"]
-        centre_fov.hdu.data = np.zeros((nax1, nax2))
+        centre_fov.hdu.data = np.zeros((nax2, nax1))
         centre_fov.hdu.data[1::5, 1::5] = 1
         centre_fov.fields = [1]
         sum_orig = np.sum(centre_fov.hdu.data)
@@ -141,13 +141,13 @@ class TestApplyTo:
         assert np.sum(fov_back.hdu.data) == approx(sum_orig, rel=1E-2)
 
         if PLOTS:
-            plt.imshow(fov_back.hdu.data.T, origin="lower")
+            plt.imshow(fov_back.hdu.data, origin="lower")
             plt.show()
 
     def test_circular_fvpsf(self, basic_circular_fvpsf):
         centre_fov = _centre_fov(n=62)
         nax1, nax2 = centre_fov.header["NAXIS1"], centre_fov.header["NAXIS2"]
-        centre_fov.hdu.data = np.zeros((nax1, nax2))
+        centre_fov.hdu.data = np.zeros((nax2, nax1))
 
         x, y = np.random.randint(6, nax1-6, (2, 150))
         centre_fov.hdu.data[x, y] = 1
@@ -159,7 +159,7 @@ class TestApplyTo:
         fov_back = fvpsf.apply_to(centre_fov)
 
         if PLOTS:
-            plt.imshow(fov_back.hdu.data.T, origin="lower", vmax=0.1)
+            plt.imshow(fov_back.hdu.data, origin="lower", vmax=0.1)
             plt.show()
 
         # print(np.sum(fov_back.hdu.data), sum_orig)
@@ -180,7 +180,7 @@ class TestFunctionGetStrehlCutout:
                                             fvpsf.strehl_imagehdu)
 
         if PLOTS:
-            plt.imshow(strehl_hdu.data.T, origin="lower")
+            plt.imshow(strehl_hdu.data, origin="lower")
             plt.colorbar()
             plt.show()
 

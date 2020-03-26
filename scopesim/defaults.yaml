@@ -28,6 +28,7 @@ properties :
     oversampling : 1
     spline_order : 1
     flux_accuracy : !!float 1E-3
+    preload_field_of_views : True
 
   file :
     local_packages_path : "./"
@@ -40,11 +41,12 @@ properties :
     # for our own statistics, we track exclusively your institute's ip address
     # WE DO NOT TRACK OR SAVE ANY PERSONAL INFORMATION
     # however you can become completely anonymous by setting this flag to True
-    block_ip_tracking : False
+    ip_tracking : True
 
   tests :
     # overridden in tests/__init__.py
-    ignore_integration_tests : False
+    run_integration_tests : True
+    run_skycalc_ter_tests : True
 
 
 ---

@@ -24,3 +24,14 @@ class TestDownloadableFilterCurveInit:
         assert isinstance(filt, tc.DownloadableFilterCurve)
         assert isinstance(filt, tc.FilterCurve)
 
+
+class TestSpanishVOFilterCurveInit:
+    @pytest.mark.parametrize("observatory, instrument, filt_name",
+                             [("Paranal", "HAWKI", "Ks"),
+                              ("HST", "WFC3_IR", "F160W"),
+                              ("JWST", "NIRCam", "F164N")])
+    def test_returns_filter_as_wanted(self, observatory, instrument, filt_name):
+        filt = tc.SpanishVOFilterCurve(observatory=observatory,
+                                       instrument=instrument,
+                                       filter_name=filt_name)
+        assert isinstance(filt, tc.FilterCurve)

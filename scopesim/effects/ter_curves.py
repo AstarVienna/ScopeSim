@@ -1,5 +1,6 @@
 import numpy as np
 from astropy import units as u
+from astropy.table import Table
 from os import path as pth
 
 from synphot import SourceSpectrum
@@ -55,11 +56,28 @@ class TERCurve(Effect):
     def __init__(self, **kwargs):
         super(TERCurve, self).__init__(**kwargs)
         self.meta["z_order"] = [10, 110]
+        self.meta["ignore_wings"] = False
+        self.meta.update(kwargs)
         self.surface = SpectralSurface()
         self.surface.meta.update(self.meta)
         data = self.get_data()
+        if self.meta["ignore_wings"]:
+            data = add_edge_zeros(data, "wavelength")
         if data is not None:
             self.surface.table = data
+
+
+def add_edge_zeros(tbl, wave_colname):
+    if isinstance(tbl, Table):
+        vals = np.zeros(len(tbl.colnames))
+        col_i = np.where(col == wave_colname for col in tbl.colnames)[0][0]
+        sgn = np.sign(np.diff(tbl[wave_colname][:2]))
+        vals[col_i] = tbl[wave_colname][0] * (1 - 1e-7 * sgn)
+        tbl.insert_row(0, vals)
+        vals[col_i] = tbl[wave_colname][-1] * (1 + 1e-7 * sgn)
+        tbl.insert_row(len(tbl), vals)
+
+    return tbl
 
 
 class AtmosphericTERCurve(TERCurve):
@@ -88,6 +106,20 @@ class SkycalcTERCurve(AtmosphericTERCurve):
         .. note:: Compared to skycalc_ipy, wmin and wmax must be given in units
             of ``um``
 
+        Examples
+        --------
+        ::
+            - name : skycalc_background
+              class : SkycalcTERCurve
+              kwargs :
+                wunit : "!SIM.spectral.wave_unit"
+                wmin : "!SIM.spectral.wave_min"
+                wmax : "!SIM.spectral.wave_max"
+                wdelta : 0.0001     # 0.1nm bin width
+                outer : 1
+                outer_unit : "m"
+
+
         """
         import skycalc_ipy
 
@@ -105,12 +137,12 @@ class SkycalcTERCurve(AtmosphericTERCurve):
         self.meta.update(kwargs)
 
         if "wunit" in self.meta:
-            scale_factor = u.Unit(self.meta["wunit"]).to(u.nm)
+            scale_factor = u.Unit(from_currsys(self.meta["wunit"])).to(u.nm)
             for key in ["wmin", "wmax", "wdelta"]:
                 if key in self.meta:
                     self.meta[key] = from_currsys(self.meta[key]) * scale_factor
 
-        conn_kwargs = {key : self.meta[key] for key in self.meta
+        conn_kwargs = {key: self.meta[key] for key in self.meta
                        if key in self.skycalc_conn.defaults}
         conn_kwargs = from_currsys(conn_kwargs)
         self.skycalc_conn.values.update(conn_kwargs)
@@ -174,6 +206,7 @@ class FilterCurve(TERCurve):
         self.meta["minimum_throughput"] = "!SIM.spectral.minimum_throughput"
         self.meta["action"] = "transmission"
         self.meta["position"] = -1          # position in surface table
+        self.meta["wing_flux_level"] = None
         self.meta.update(kwargs)
 
     def fov_grid(self, which="waveset", **kwargs):
@@ -183,7 +216,7 @@ class FilterCurve(TERCurve):
             # ..todo:: replace the 101 with a variable in !SIM
             wave = np.linspace(self.meta["wave_min"],
                                self.meta["wave_max"], 101)
-            wave = quantify(wave, u.um).to(u.um)
+            wave = quantify(wave, u.um)
             throughput = self.surface.transmission(wave)
             min_thru = self.meta["minimum_throughput"]
             valid_waves = np.where(throughput.value > min_thru)[0]
@@ -209,4 +242,16 @@ class DownloadableFilterCurve(FilterCurve):
         check_keys(kwargs, required_keys, action="error")
         filt_str = kwargs["filename_format"].format(kwargs["filter_name"])
         tbl = download_svo_filter(filt_str, return_style="table")
-        super(FilterCurve, self).__init__(table=tbl, **kwargs)
+        super(DownloadableFilterCurve, self).__init__(table=tbl, **kwargs)
+
+
+class SpanishVOFilterCurve(FilterCurve):
+    def __init__(self, **kwargs):
+        required_keys = ["observatory", "instrument", "filter_name"]
+        check_keys(kwargs, required_keys, action="error")
+        filt_str = "{}/{}.{}".format(kwargs["observatory"],
+                                     kwargs["instrument"],
+                                     kwargs["filter_name"])
+        tbl = download_svo_filter(filt_str, return_style="table")
+        super(SpanishVOFilterCurve, self).__init__(table=tbl, **kwargs)
+

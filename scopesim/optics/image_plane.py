@@ -54,7 +54,7 @@ class ImagePlane(ImagePlaneBase):
             raise ValueError("header must have a valid image-plane WCS: {}"
                              "".format(dict(header)))
 
-        image = np.zeros((header["NAXIS1"]+1, header["NAXIS2"]+1))
+        image = np.zeros((header["NAXIS2"]+1, header["NAXIS1"]+1))
         self.hdu = fits.ImageHDU(data=image, header=header)
 
     def add(self, hdus_or_tables, sub_pixel=False, order=1, wcs_suffix=""):

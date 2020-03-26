@@ -116,13 +116,15 @@ class OpticalTrain:
         self.detector_arrays = [DetectorArray(det_list, **kwargs)
                                 for det_list in opt_man.detector_setup_effects]
 
-    def observe(self, orig_source, **kwargs):
+    def observe(self, orig_source, update=False, **kwargs):
         """
         Main controlling method for observing ``Source`` objects
 
         Parameters
         ----------
         orig_source : Source
+        update : bool
+            Reload optical system
         kwargs : **dict
             Any keyword-value pairs from a config file
 
@@ -130,6 +132,7 @@ class OpticalTrain:
         -----
         How the list of Effects is split between the 5 main tasks:
 
+        .. todo:: List is out of date - update
         - Make a FOV list - z_order = 0..99
         - Make a image plane - z_order = 100..199
         - Apply Source altering effects - z_order = 200..299
@@ -139,7 +142,9 @@ class OpticalTrain:
 
         """
         self.set_focus(kwargs)    # put focus back on current instrument package
-        self.update(**kwargs)
+        if update:
+            self.update(**kwargs)
+
         source = deepcopy(orig_source)
 
         # [1D - transmission curves]
@@ -148,15 +153,13 @@ class OpticalTrain:
 
         # [3D - Atmospheric shifts, PSF, NCPAs, Grating shift/distortion]
         fovs = self.fov_manager.fovs
-        n_fovs = len(fovs)
         for fov_i, fov in enumerate(fovs):
-            print("FOV", fov_i+1, "of", n_fovs, flush=True)
+            # print("FOV", fov_i+1, "of", n_fovs, flush=True)
             fov.extract_from(source)
+            fov.view()
+
             for effect in self.optics_manager.fov_effects:
                 fov = effect.apply_to(fov)
-
-            if fov.hdu.data is None:
-                fov.view()
 
             ii = [implane.id for implane in self.image_planes
                   if implane.id == fov.image_plane_id]

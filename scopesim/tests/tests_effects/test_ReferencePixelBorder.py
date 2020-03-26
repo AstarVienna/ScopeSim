@@ -48,7 +48,7 @@ class TestApplyTo:
         implane = rpb.apply_to(implane)
 
         if PLOTS:
-            plt.imshow(implane.data.T, origin="bottom")
+            plt.imshow(implane.data, origin="bottom")
             plt.show()
 
         assert np.sum(implane.data) == 7371

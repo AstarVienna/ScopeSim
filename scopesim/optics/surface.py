@@ -11,8 +11,8 @@ from synphot import SpectralElement
 from synphot.models import Empirical1D
 
 from ..effects import ter_curves_utils as ter_utils
-from ..utils import get_meta_quantity, quantify, extract_type_from_unit, \
-    convert_table_comments_to_dict, find_file
+from ..utils import get_meta_quantity, quantify, extract_type_from_unit
+from ..utils import from_currsys, convert_table_comments_to_dict, find_file
 from .surface_utils import make_emission_from_emissivity,\
     make_emission_from_array
 
@@ -114,7 +114,6 @@ class SpectralSurface:
         if flux is not None and "rescale_emission" in self.meta:
             dic = self.meta["rescale_emission"]
             amplitude = dic["value"] * u.Unit(dic["unit"])
-            from ..utils import from_currsys
             filter_name = from_currsys(dic["filter_name"])
             if "filename_format" in dic:
                 filename_format = from_currsys(dic["filename_format"])
@@ -169,6 +168,7 @@ class SpectralSurface:
         value_arr = self._get_array(ter_property)
         if value_arr is None:
             value_arr = self._compliment_array(*compliment_names)
+
         if value_arr is not None and wave is not None:
             response_curve = SpectralElement(Empirical1D, points=wave,
                                              lookup_table=value_arr)

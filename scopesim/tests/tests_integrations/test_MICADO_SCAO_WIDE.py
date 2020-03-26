@@ -48,7 +48,7 @@ PLOTS = False
 class Test_MICADO_MVP_YAML:
     def yaml_file_can_be_loaded_into_optical_train(self):
         # .. todo: get this working on Travis
-        filename = os.path.join(TEST_PATH, "MICADO_SCAO_WIDE_2.config")
+        filename = os.path.join(TEST_PATH, "MICADO_SCAO_WIDE_2.yaml")
 
         cmds = UserCommands(yamls=[filename])
         assert isinstance(cmds, UserCommands)
@@ -69,7 +69,7 @@ class Test_MICADO_MVP_YAML:
         assert isinstance(opt.fov_manager, FOVManager)
         assert len(opt.fov_manager.fovs) == 64
 
-        if PLOTS:
+        if not PLOTS:
             for fov in opt.fov_manager.fovs:
                 sky_cnrs, det_cnrs = fov.corners
                 plt.plot(sky_cnrs[0], sky_cnrs[1])

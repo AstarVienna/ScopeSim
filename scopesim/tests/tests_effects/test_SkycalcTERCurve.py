@@ -3,8 +3,10 @@ from synphot import SpectralElement, SourceSpectrum
 
 from scopesim.effects import SkycalcTERCurve
 from scopesim import rc
+from scopesim.utils import from_currsys
 
-TRAVIS = True if "TRAVIS" in os.environ else False
+local_skycalc_tests = from_currsys("!SIM.tests.run_skycalc_ter_tests")
+TRAVIS = True if "TRAVIS" in os.environ else local_skycalc_tests
 
 
 def setup_module():
