@@ -98,118 +98,11 @@ class TestGenerateFovs:
         # assert np.all(implane.image == 1)
 
 
-class TestGet3DShifts:
-    def test_returns_zeros_when_no_shift3d_effects_passed(self):
-        shifts = fov_mgr.get_3d_shifts([], wave_min=0.7, wave_max=3,
-                                       pixel_scale=0.004, sub_pixel_fraction=1)
-        assert np.all(shifts["x_shifts"] == 0)
-        assert np.all(shifts["y_shifts"] == 0)
-
-    def test_returns_almost_zero_for_zenith_atmospheric_dispersion(self):
-        ad_zenith = eo._atmospheric_dispersion(airmass=1.)
-        shifts = fov_mgr.get_3d_shifts([ad_zenith],
-                                       pixel_scale=0.004, sub_pixel_fraction=1)
-        assert np.all(shifts["x_shifts"] == 0)
-        assert np.all(shifts["y_shifts"] == 0)
-
-    def test_returns_non_zero_entries_for_off_zenith(self):
-        ad_am_1_14 = eo._atmospheric_dispersion()
-        shifts = fov_mgr.get_3d_shifts([ad_am_1_14],
-                                       pixel_scale=0.004, sub_pixel_fraction=1)
-        assert np.all(shifts["x_shifts"] == 0)
-        assert np.interp(0, shifts["y_shifts"][::-1],
-                         shifts["wavelengths"][::-1]) == pytest.approx(1.5)
-
-    def test_shift_transferred_to_x_axis_for_90_deg_pupil_angle(self):
-        ad_am_1_05 = eo._atmospheric_dispersion(airmass=1.05, pupil_angle=90)
-        shifts = fov_mgr.get_3d_shifts([ad_am_1_05],
-                                       pixel_scale=0.004, sub_pixel_fraction=1)
-        assert np.interp(0, shifts["x_shifts"][::-1],
-                         shifts["wavelengths"][::-1]) == pytest.approx(1.5)
-        assert np.all(shifts["y_shifts"] == 0)
-
-    def test_shifts_cancel_out_when_equal_and_opposite(self):
-        ad_am_1_05 = eo._atmospheric_dispersion(airmass=1.05)
-        ad_am_neg_1_04 = eo._atmospheric_dispersion(airmass=-1.05)
-        shifts = fov_mgr.get_3d_shifts([ad_am_1_05, ad_am_neg_1_04],
-                                       pixel_scale=0.004, sub_pixel_fraction=1)
-
-        assert len(shifts["y_shifts"]) == 2
-        assert np.min(shifts["wavelengths"]) == ad_am_1_05.meta["wave_min"]
-        assert np.max(shifts["wavelengths"]) == ad_am_1_05.meta["wave_max"]
-
-    @pytest.mark.parametrize("sub_pix_frac", [1, 0.3, 0.1])
-    def test_combined_shifts_reduced_to_usable_number(self, sub_pix_frac):
-        ad_am_1_05 = eo._atmospheric_dispersion(airmass=1.05)
-        ad_am_neg_1_04 = eo._atmospheric_dispersion(airmass=-1.04)
-        shifts = fov_mgr.get_3d_shifts([ad_am_1_05, ad_am_neg_1_04],
-                                       pixel_scale=0.004,
-                                       sub_pixel_fraction=sub_pix_frac)
-
-        assert len(shifts["y_shifts"]) == approx(10 / sub_pix_frac, rel=0.2)
-
-
-class TestGetImagingWaveset:
-    def test_returns_default_wave_range_when_passed_no_effects(self):
-        kwargs = {"wave_min": 0.5, "wave_max": 2.5}
-        wave_bin_edges = fov_mgr.get_imaging_waveset([], **kwargs)
-        assert len(wave_bin_edges) == 2
-
-    def test_returns_waveset_of_filter(self):
-        filt = eo._filter_tophat_curve()
-        kwargs = {"wave_min": 0.5, "wave_max": 2.5}
-        wave_bin_edges = fov_mgr.get_imaging_waveset([filt], **kwargs)
-        assert len(wave_bin_edges) == 2
-
-    def test_returns_waveset_of_psf(self):
-        psf = eo._const_psf()
-        kwargs = {"wave_min": 0.5, "wave_max": 2.5}
-        wave_bin_edges = fov_mgr.get_imaging_waveset([psf], **kwargs)
-        assert len(wave_bin_edges) == 4
-
-    def test_returns_waveset_of_psf_and_filter(self):
-        filt = eo._filter_tophat_curve()
-        psf = eo._const_psf()
-        kwargs = {"wave_min": 0.5, "wave_max": 2.5}
-        wave_bin_edges = fov_mgr.get_imaging_waveset([filt, psf], **kwargs)
-        assert len(wave_bin_edges) == 4
-
-    def test_returns_waveset_of_ncpa_psf_inside_filter_edges(self):
-        filt = eo._filter_tophat_curve()
-        psf = eo._ncpa_psf()
-        kwargs = {"wave_min": 0.5, "wave_max": 2.5}
-        wave_bin_edges = fov_mgr.get_imaging_waveset([psf, filt], **kwargs)
-        assert min(wave_bin_edges) == 1.
-        assert max(wave_bin_edges) == 2.
-        assert len(wave_bin_edges) == 9
-
-
-class TestGetImagingHeaders:
-    def test_throws_error_if_not_all_keywords_are_passed(self):
-        apm = eo._img_aperture_mask()
-        with pytest.raises(ValueError):
-            fov_mgr.get_imaging_headers([apm])
-
-    def test_returns_set_of_headers_from_aperture_effects(self):
-        apm = eo._img_aperture_mask(array_dict={"x": [-1.28, 1., 1., -1.28],
-                                                "y": [-1.28, -1.28, 2., 2.]})
-        kwargs = {"pixel_scale": 0.01, "plate_scale": 1,
-                  "max_segment_size": 128**2, "chunk_size": 64}
-        hdrs = fov_mgr.get_imaging_headers([apm], **kwargs)
-
-        area_sum = np.sum([hdr["NAXIS1"] * hdr["NAXIS2"] for hdr in hdrs])
-        assert area_sum == 228 * 328
-
-    def test_returns_set_of_headers_from_detector_list_effect(self):
-        # det = eo._full_detector_list()
-        det = eo._detector_list()
-        kwargs = {"pixel_scale": 0.004, "plate_scale": 0.26666666666,
-                  "max_segment_size": 2048 ** 2, "chunk_size": 1024}
-        hdrs = fov_mgr.get_imaging_headers([det], **kwargs)
-
-        area_sum = np.sum([hdr["NAXIS1"] * hdr["NAXIS2"] for hdr in hdrs])
-        assert area_sum == 4096**2
-
+@pytest.mark.usefixtures("ap_list", "spt_list", "det_list",
+                         "config_yaml", "spec_source")
+class TestGenerateFOVsSpectroscopyMode:
+    def test_input_data_checks_out(self, ap_list, spt_list, det_list,
+                                   config_yaml):
         if PLOTS:
             plt.subplot(121)
             for hdr in hdrs:
@@ -256,13 +149,13 @@ class TestGetImagingFOVs:
                 plt.title("Sky plane")
                 plt.xlabel("[arcsec]")
 
-            plt.subplot(122)
-            for fov in fovs:
-                x, y = calc_footprint(fov.hdu.header, "D")
-                plt.fill(x, y)
-                plt.title("Detector focal plane")
-                plt.xlabel("[mm]")
+        if PLOTS:
+            det_arr = DetectorArray(det_list)
+            hdus = det_arr.readout([implane])
 
+            for i, hdu in enumerate(hdus[1:5]):
+                plt.subplot(2, 2, i+1)
+                plt.imshow(hdu.data, origin="lower")
             plt.show()
 
 
