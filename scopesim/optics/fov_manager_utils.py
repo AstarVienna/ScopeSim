@@ -272,18 +272,24 @@ def get_spectroscopy_headers(effects, **kwargs):
                      "wave_min", "wave_max"]
     check_keys(kwargs, required_keys, action="error")
 
-    surface_list = get_all_effects(effects, efs.SurfaceList)[0]
-    detector_list = get_all_effects(effects, efs.DetectorList)[0]
+    surface_list_effects = get_all_effects(effects, efs.SurfaceList)
+    detector_list_effects = get_all_effects(effects, efs.DetectorList)
     spec_trace_effects = get_all_effects(effects, efs.SpectralTraceList)
     aperture_effects = get_all_effects(effects, (efs.ApertureList,
                                                  efs.ApertureMask))
 
-    waves = surface_list.fov_grid(which="waveset")
-    if len(waves) == 2:
-        kwargs["wave_min"] = np.max([waves[0].value, kwargs["wave_min"]])
-        kwargs["wave_max"] = np.min([waves[1].value, kwargs["wave_max"]])
+    if len(surface_list_effects) > 0:
+        waves = surface_list_effects[0].fov_grid(which="waveset")
+        if len(waves) == 2:
+            kwargs["wave_min"] = np.max([waves[0].value, kwargs["wave_min"]])
+            kwargs["wave_max"] = np.min([waves[1].value, kwargs["wave_max"]])
 
-    implane_hdr = detector_list.image_plane_header
+    if len(detector_list_effects) > 0:
+        implane_hdr = detector_list_effects[0].image_plane_header
+    elif len(spec_trace_effects) > 0:
+        implane_hdr = spec_trace_effects[0].image_plane_header
+    else:
+        raise ValueError("Missing a way to determine the image plane size")
 
     # ..todo: deal with multiple trace lists
     if len(spec_trace_effects) != 1:

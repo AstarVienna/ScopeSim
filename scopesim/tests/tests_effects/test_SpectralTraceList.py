@@ -48,16 +48,18 @@ class TestInit:
         assert spt.get_data(2, fits.BinTableHDU)
 
     def test_initialises_with_filename(self):
-        spt = SpectralTraceList(filename="TRACE_15arcsec.fits")
+        spt = SpectralTraceList(filename="TRACE_15arcsec.fits",
+                                wave_colname="lam", s_colname="xi")
         assert isinstance(spt, SpectralTraceList)
 
 
 class TestGetFOVHeaders:
     @pytest.mark.usefixtures("full_trace_list", "slit_header")
     def test_gets_the_headers(self, full_trace_list, slit_header):
-        spt = SpectralTraceList(hdulist=full_trace_list,
-                                pixel_scale=0.015, plate_scale=0.26666)
-        hdrs = spt.get_fov_headers(slit_header)
+        spt = SpectralTraceList(hdulist=full_trace_list)
+        params = {"pixel_scale": 0.015, "plate_scale": 0.26666,
+                  "wave_min": 0.7, "wave_max": 2.5}
+        hdrs = spt.get_fov_headers(slit_header, **params)
 
         # assert all([isinstance(hdr, fits.Header) for hdr in hdrs])
         assert all([isinstance(hdr, PoorMansHeader) for hdr in hdrs])
@@ -80,16 +82,14 @@ class TestGetFOVHeaders:
         wave_min = 1.0
         wave_max = 1.3
         spt = SpectralTraceList(filename="TRACE_15arcsec.fits",
-                                pixel_scale=0.004,
-                                plate_scale=0.26666666,
                                 s_colname="xi",
                                 wave_colname="lam",
                                 col_number_start=1,
-                                wave_min=wave_min,
-                                wave_max=wave_max,
                                 invalid_value=0.,
                                 spline_order=1)
-        hdrs = spt.get_fov_headers(slit_hdr)
+        params = {"wave_min": wave_min, "wave_max": wave_max,
+                  "pixel_scale": 0.004, "plate_scale": 0.266666667}
+        hdrs = spt.get_fov_headers(slit_hdr, **params)
         assert isinstance(spt, SpectralTraceList)
 
         print(len(hdrs))

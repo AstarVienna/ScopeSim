@@ -86,7 +86,7 @@ def _short_micado_slit_header():
     y = np.array([-0.01, 0.01]) / 3600.
     pix_scale_deg = 0.004 / 3600.
     header = imp_utils.header_from_list_of_xy(x, y, pix_scale_deg)
-    header["ID"] = 0
+    header["APERTURE"] = 0
 
     return header
 
@@ -96,7 +96,7 @@ def _long_micado_slit_header():
     y = np.array([-0.01, 0.01]) / 3600.
     pix_scale_deg = 0.004 / 3600.
     header = imp_utils.header_from_list_of_xy(x, y, pix_scale_deg)
-    header["ID"] = 0
+    header["APERTURE"] = 0
 
     return header
 

@@ -56,15 +56,14 @@ class TestInit:
         assert cmd["!INST.pixel_scale"] == 0.5
 
     def test_initialised_with_filename_for_default_file(self):
-        cmd = UserCommands(packages=["test_package"],
-                           yamls=["default.yaml"])
-        assert cmd["!TEL.temperature"] > 9000
-        assert len(cmd.yaml_dicts) == 4     # 3 yamls filenames + default
+        cmd = UserCommands(packages=["test_package"], yamls=["default.yaml"])
+        assert cmd["!TEL.temperature"] < 9000
+        assert len(cmd.yaml_dicts) == 7     # 3 yamls filenames + default
 
     def test_initialised_with_use_instrument(self):
         cmd = UserCommands(use_instrument="test_package")
-        assert cmd["!TEL.temperature"] > 9000
-        assert len(cmd.yaml_dicts) == 4     # 3 yamls filenames + default
+        assert cmd["!TEL.temperature"] < 9000
+        assert len(cmd.yaml_dicts) == 7     # 3 yamls filenames + default
 
     def test_mode_yamls(self):
         yamls = [{"alias": "OBS", "properties": {"modes": ["mode1"],

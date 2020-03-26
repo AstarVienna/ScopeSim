@@ -21,7 +21,16 @@ class SystemDict(object):
             else:
                 self.dic[alias] = new_dict["properties"]
         else:
-            self.dic = recursive_update(self.dic, new_dict)
+            to_pop = []
+            for key in new_dict:
+                if key[0] == "!":
+                    self[key] = new_dict[key]
+                    to_pop += [key]
+            for key in to_pop:
+                new_dict.pop(key)
+
+            if len(new_dict) > 0:
+                self.dic = recursive_update(self.dic, new_dict)
 
     def __getitem__(self, item):
         if isinstance(item, str) and item[0] == "!":

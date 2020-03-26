@@ -72,19 +72,15 @@ class ApertureMask(Effect):
 
     """
     def __init__(self, **kwargs):
-        super(ApertureMask, self).__init__(**kwargs)
-        if "width" in kwargs and "height" in kwargs and \
-                "filename_format" in kwargs:
-            kwargs = from_currsys(kwargs)
-            file_format = kwargs["filename_format"]
-            width, height = kwargs["width"], kwargs["height"]
-            kwargs["filename"] = kwargs["filename_format"].format(width, height)
-        else:
-            raise ValueError("FilterCurve must be passed one of (`filename`"
-                             " `array_dict`, `table`) or all "
-                             "(`width`, 'height`, `filename_format`):"
-                             "{}".format(kwargs))
+        if not np.any([key in kwargs for key in ["filename", "table",
+                                                 "array_dict"]]):
+            if "width" in kwargs and "height" in kwargs and \
+                    "filename_format" in kwargs:
+                kwargs = from_currsys(kwargs)
+                w, h = kwargs["width"], kwargs["height"]
+                kwargs["filename"] = kwargs["filename_format"].format(w, h)
 
+        super(ApertureMask, self).__init__(**kwargs)
         params = {"pixel_scale": "!INST.pixel_scale",
                   "no_mask": True,
                   "angle": 0,

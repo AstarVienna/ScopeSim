@@ -73,10 +73,11 @@ def mvs_usr_cmds():
 @pytest.mark.usefixtures("mvs_effects_list")
 class TestInit:
     def test_initialises_with_nothing(self):
-        assert isinstance(FOVManager(), FOVManager)
+        assert isinstance(FOVManager(preload_fovs=False), FOVManager)
 
     def test_initialises_with_list_of_effects(self, mvs_effects_list):
-        assert isinstance(FOVManager(mvs_effects_list), FOVManager)
+        assert isinstance(FOVManager(mvs_effects_list,
+                                     preload_fovs=False), FOVManager)
 
 
 @pytest.mark.usefixtures("mvs_effects_list", "mvs_usr_cmds")
@@ -158,12 +159,12 @@ class TestGenerateFOVsSpectroscopyMode:
 
         assert all([isinstance(fov, FieldOfView) for fov in fovs])
 
-        implane = ImagePlane(det_list.image_plane_header)
-        for fov in fovs:
-            fov.extract_from(spec_source)
-            fov.view()
-            implane.add(fov.hdu, wcs_suffix="D")
+        if PLOTS:
+            implane = ImagePlane(det_list.image_plane_header)
+            for fov in fovs:
+                fov.extract_from(spec_source)
+                fov.view()
+                implane.add(fov.hdu, wcs_suffix="D")
 
-        if not PLOTS:
             plt.imshow(implane.data, origin="lower")
             plt.show()

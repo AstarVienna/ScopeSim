@@ -194,8 +194,7 @@ class TestGetSpectroscopyHeaders:
     def test_returns_headers(self, full_trace_list):
         params = {"pixel_scale": 0.1, "plate_scale": 0.1,
                   "wave_min": 0.7, "wave_max": 2.5}
-        spt = SpectralTraceList(**params)
-        spt._file = full_trace_list
+        spt = SpectralTraceList(hdulist=full_trace_list, **params)
         apm = apo._basic_aperture()
 
         hdrs = fm_utils.get_spectroscopy_headers(effects=[spt, apm], **params)
@@ -216,8 +215,7 @@ class TestGetSpectroscopyFOVs:
     def test_returns_fovs(self, full_trace_list):
         params = {"pixel_scale": 0.1, "plate_scale": 0.1,
                   "wave_min": 0.7, "wave_max": 2.5}
-        spt = SpectralTraceList(**params)
-        spt._file = full_trace_list
+        spt = SpectralTraceList(hdulist=full_trace_list, **params)
         apm = apo._basic_aperture()
 
         shifts = {"wavelengths": np.array([0.7, 2.5]),

@@ -97,6 +97,14 @@ class SpectralTrace:
             self.get_pixel_wavelength_edges(pixel_size)
         return self._wave_bin_centers
 
+    @property
+    def footprint(self):
+        x = self.table[self.meta["x_colname"]]
+        y = self.table[self.meta["y_colname"]]
+        xs = [np.min(x), np.max(x), np.max(x), np.min(x)]
+        ys = [np.min(y), np.min(y), np.max(y), np.max(y)]
+        return x, y
+
     def get_trace_curves(self, pixel_size, wave_min=None, wave_max=None,
                          xy_edges=None):
         """Returns a list of MonochromeTraceCurves for projecting apertures

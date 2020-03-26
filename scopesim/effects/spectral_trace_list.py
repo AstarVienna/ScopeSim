@@ -1,9 +1,12 @@
+import numpy as np
+
 from astropy.io import fits
 from astropy.table import Table
 
 from .effects import Effect
 from ..optics.spectral_trace import SpectralTrace
 from ..utils import from_currsys, check_keys
+from ..optics.image_plane_utils import header_from_list_of_xy
 
 
 class SpectralTraceList(Effect):
@@ -95,6 +98,26 @@ class SpectralTraceList(Effect):
 
     def apply_to(self, fov):
         return fov
+
+    @property
+    def footprint(self):
+        xs, ys = [], []
+        for spt in self.spectral_traces:
+            xi, yi = spt.footprint
+            xs += xi
+            ys += yi
+
+        xs = [np.min(xs), np.max(xs), np.max(xs), np.min(xs)]
+        ys = [np.min(ys), np.min(ys), np.max(ys), np.max(ys)]
+
+        return xs, ys
+
+    @property
+    def image_plane_header(self):
+        x, y = self.footprint
+        pixel_scale = from_currsys(self.meta["pixel_scale"])
+        hdr = header_from_list_of_xy(x, y, pixel_scale, "D")
+        return hdr
 
     def plot(self, wave_min=None, wave_max=None, **kwargs):
         if self.spectral_traces is not None:

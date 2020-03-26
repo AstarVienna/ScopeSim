@@ -189,7 +189,7 @@ class FilterCurve(TERCurve):
 
     """
     def __init__(self, **kwargs):
-        if np.all([key not in kwargs for key in ["filename", "table",
+        if not np.any([key in kwargs for key in ["filename", "table",
                                                  "array_dict"]]):
             if "filter_name" in kwargs and "filename_format" in kwargs:
                 filt_name = from_currsys(kwargs["filter_name"])
@@ -202,11 +202,12 @@ class FilterCurve(TERCurve):
                                  "{}".format(kwargs))
 
         super(FilterCurve, self).__init__(**kwargs)
+        params = {"minimum_throughput": "!SIM.spectral.minimum_throughput",
+                  "action": "transmission",
+                  "position": -1,               # position in surface table
+                  "wing_flux_level": None}
+        self.meta.update(params)
         self.meta["z_order"] = [114, 214]
-        self.meta["minimum_throughput"] = "!SIM.spectral.minimum_throughput"
-        self.meta["action"] = "transmission"
-        self.meta["position"] = -1          # position in surface table
-        self.meta["wing_flux_level"] = None
         self.meta.update(kwargs)
 
     def fov_grid(self, which="waveset", **kwargs):
