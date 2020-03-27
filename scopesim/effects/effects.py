@@ -105,4 +105,8 @@ class Effect(DataContainer):
         self.meta["include"] = item
 
     def __repr__(self):
-        return '{}: "{}"'.format(type(self).__name__, self.meta["name"])
+        name = self.meta["name"]
+        if name == "<empty>":
+            name = self.meta["filename"]
+
+        return '{}: "{}"'.format(type(self).__name__, name)

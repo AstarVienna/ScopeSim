@@ -46,6 +46,11 @@ class SpectralTrace:
         self.waves = self.table[self.meta["wave_colname"]]
         self.n_traces = len([col for col in self.table.colnames
                              if self.meta["y_colname"] in col])
+        k, n = self.meta["col_number_start"], self.n_traces
+        self.s_colnames = [self.meta["s_colname"]+str(i) for i in range(k, n+k)]
+        self.x_colnames = [self.meta["x_colname"]+str(i) for i in range(k, n+k)]
+        self.y_colnames = [self.meta["y_colname"]+str(i) for i in range(k, n+k)]
+
         self.wave_min = quantify(np.min(self.waves), u.um).value
         self.wave_max = quantify(np.max(self.waves), u.um).value
 
@@ -99,11 +104,11 @@ class SpectralTrace:
 
     @property
     def footprint(self):
-        x = self.table[self.meta["x_colname"]]
-        y = self.table[self.meta["y_colname"]]
+        x = [self.table[col] for col in self.x_colnames]
+        y = [self.table[col] for col in self.y_colnames]
         xs = [np.min(x), np.max(x), np.max(x), np.min(x)]
         ys = [np.min(y), np.min(y), np.max(y), np.max(y)]
-        return x, y
+        return xs, ys
 
     def get_trace_curves(self, pixel_size, wave_min=None, wave_max=None,
                          xy_edges=None):

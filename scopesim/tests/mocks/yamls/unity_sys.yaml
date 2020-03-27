@@ -1,7 +1,7 @@
 ### ATMOSPHERE
 object: atmosphere
 alias: ATMO
-name: test_atmosphere
+name: test_full_optical_train
 
 properties :
   image_plane_id : 0

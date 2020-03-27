@@ -65,7 +65,7 @@ def im_src():
 
 @pytest.fixture(scope="function")
 def unity_src():
-    return src_objs._unity_source()
+    return src_objs._unity_source(n=10001)
 
 
 @pytest.fixture(scope="class")
@@ -220,7 +220,7 @@ class TestReadout:
             plt.show()
 
         src_average = np.average(unity_src.fields[0].data)
-        assert np.average(hdu[1].data) == approx(src_average, rel=1e-3)
+        assert np.average(hdu[1].data) == approx(np.pi / 4., rel=1e-3)
 
 
 @pytest.mark.usefixtures("simplecado_opt")
@@ -260,8 +260,8 @@ class TestListEffects:
     def test_effects_listed_in_table(self, simplecado_opt):
         assert isinstance(simplecado_opt.effects, Table)
         simplecado_opt["dark_current"].include = False
-        assert simplecado_opt.effects["included"][1] is False
+        assert bool(simplecado_opt.effects["included"][1]) is False
         simplecado_opt["alt_dark_current"].include = True
-        assert simplecado_opt.effects["included"][2] is True
+        assert bool(simplecado_opt.effects["included"][2]) is True
 
         print("\n", simplecado_opt.effects)

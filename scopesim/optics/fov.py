@@ -148,7 +148,7 @@ class FieldOfView(FieldOfViewBase):
     @property
     def wavelength(self):
         if self._wavelength is None:
-            self._wavelength = 0.5 * (self.meta["wave_max"] +
+            self._wavelength = 0.5 * (self.meta["wave_min"] +
                                       self.meta["wave_max"])
         return self._wavelength
 

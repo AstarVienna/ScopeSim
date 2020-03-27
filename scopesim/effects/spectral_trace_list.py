@@ -117,6 +117,7 @@ class SpectralTraceList(Effect):
         x, y = self.footprint
         pixel_scale = from_currsys(self.meta["pixel_scale"])
         hdr = header_from_list_of_xy(x, y, pixel_scale, "D")
+
         return hdr
 
     def plot(self, wave_min=None, wave_max=None, **kwargs):

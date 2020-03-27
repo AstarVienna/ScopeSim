@@ -291,7 +291,7 @@ class FieldConstantPSF(DiscretePSF):
             if "CUNIT1" in hdr:
                 unit_factor = u.Unit(hdr["CUNIT1"]).to(u.deg)
             else:
-                unit_factor = 1/3600.
+                unit_factor = 1
 
             kernel_pixel_scale = hdr["CDELT1"] * unit_factor
             fov_pixel_scale = fov.hdu.header["CDELT1"]

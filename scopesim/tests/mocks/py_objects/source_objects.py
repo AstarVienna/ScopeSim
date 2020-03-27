@@ -28,7 +28,7 @@ def _table_source():
     return tbl_source
 
 
-def _image_source(dx=0, dy=0, angle=0, weights=[1e-9, 5, 5, 10, 5]):
+def _image_source(dx=0, dy=0, angle=0, weight=1):
     """
     An image with 3 point sources on a random BG
 
@@ -58,11 +58,11 @@ def _image_source(dx=0, dy=0, angle=0, weights=[1e-9, 5, 5, 10, 5]):
     im_wcs.wcs.crpix = [n//2, n//2]
     im_wcs.wcs.ctype = ["RA---TAN", "DEC--TAN"]
 
-    im = np.random.random(size=(n+1, n+1)) * weights[0]
-    im[n-1, 1] += weights[1]
-    im[1, 1] += weights[2]
-    im[n//2, n//2] += weights[3]
-    im[n//2, n-1] += weights[4]
+    im = np.random.random(size=(n+1, n+1)) * 1e-9 * weight
+    im[n-1, 1] += 5 * weight
+    im[1, 1] += 5 * weight
+    im[n//2, n//2] += 10 * weight
+    im[n//2, n-1] += 5 * weight
 
     im_hdu = fits.ImageHDU(data=im, header=im_wcs.to_header())
     im_hdu.header["SPEC_REF"] = 0
@@ -112,8 +112,7 @@ def _single_table_source(weight=1):
     return tbl_source
 
 
-def _unity_source(dx=0, dy=0, angle=0, weight=1):
-    n = 100
+def _unity_source(dx=0, dy=0, angle=0, weight=1, n=100):
     unit = u.Unit("ph s-1 m-2 um-1")
     wave = np.linspace(0.5, 2.5, n) * u.um
     specs = [SourceSpectrum(Empirical1D, points=wave,
