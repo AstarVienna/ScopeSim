@@ -21,6 +21,7 @@ class SystemDict(object):
             else:
                 self.dic[alias] = new_dict["properties"]
         else:
+            "Catch any bang-string properties keys"
             to_pop = []
             for key in new_dict:
                 if key[0] == "!":

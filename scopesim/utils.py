@@ -490,7 +490,7 @@ def find_file(filename, path=None, silent=False):
         trynames = [filename]
     else:
         # try to find the file in a search path
-        trynames = [os.path.join(trydir, filename)
+        trynames = [os.path.join(trydir, *os.path.split(filename))
                     for trydir in path if trydir is not None]
 
     for fname in trynames:

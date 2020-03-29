@@ -65,6 +65,7 @@ class TERCurve(Effect):
             data = add_edge_zeros(data, "wavelength")
         if data is not None:
             self.surface.table = data
+            self.surface.table.meta.update(self.meta)
 
 
 def add_edge_zeros(tbl, wave_colname):

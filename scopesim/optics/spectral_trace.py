@@ -189,7 +189,7 @@ class SpectralTrace:
         pixel_D_scale = sky_header["CDELT1"] / (kwargs["plate_scale"] / 3600)
 
         detector_edges = None
-        if "det_header" in kwargs:
+        if "det_header" in kwargs and kwargs["det_header"] is not None:
             xdet, ydet = imp_utils.calc_footprint(kwargs["det_header"], "D")
             detector_edges = {"x_min": np.min(xdet), "x_max": np.max(xdet),
                               "y_min": np.min(ydet), "y_max": np.max(ydet)}

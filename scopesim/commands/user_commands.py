@@ -215,16 +215,17 @@ class UserCommands:
     def set_modes(self, modes=None):
         if not isinstance(modes, list):
             modes = [modes]
-        for mode in modes:
-            if mode is not None and mode in self.modes_dict:
-                for i in range(len(self.default_yamls)):
-                    if "properties" in self.default_yamls[i] and \
-                             "mode" in self.default_yamls[i]["properties"]:
-                        self.default_yamls[i]["properties"]["mode"] = mode
+        for defyam in self.default_yamls:
+            if "properties" in defyam and "modes" in defyam["properties"]:
+                defyam["properties"]["modes"] = []
+                for mode in modes:
+                    if mode in self.modes_dict:
+                        defyam["properties"]["modes"] += [mode]
+                    else:
+                        raise ValueError("mode '{}' was not recognised"
+                                         "".format(mode))
 
-                self.__init__(yamls=self.default_yamls)
-            else:
-                raise ValueError("mode '{}' was not recognised".format(mode))
+        self.__init__(yamls=self.default_yamls)
 
     def list_modes(self):
         if isinstance(self.modes_dict, dict):

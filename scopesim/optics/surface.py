@@ -258,3 +258,11 @@ class SpectralSurface:
                              "".format(colname))
 
         return val_out
+
+    def __repr__(self):
+        meta = self.meta
+        name = meta["name"] if "name" in meta else meta["filename"]
+        cols = "".join([col[0].upper() for col in self.table.colnames])
+        msg = '<SpectralSurface> [{}] "{}"'.format(cols, name)
+
+        return msg

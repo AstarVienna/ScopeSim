@@ -21,8 +21,8 @@ def empty_sky(flux=0):
     sky : Source
 
     """
-    sky = Source(lam=np.array([0.3, 3.0]*u.um), spectra=np.array([flux, flux]),
-                 x=[0], y=[0], ref=[0], weight=[1], flux_unit=PHOTLAM)
+    sky = Source(lam=[0.3, 3.0]*u.um, spectra=[flux, flux]*PHOTLAM,
+                 x=[0], y=[0], ref=[0], weight=[1])
     return sky
 
 

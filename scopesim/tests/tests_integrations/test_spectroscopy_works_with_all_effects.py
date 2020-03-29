@@ -14,7 +14,7 @@ MOCK_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__),
                                         "../mocks/MICADO_SPEC/"))
 rc.__search_path__.insert(0, MOCK_DIR)
 
-PLOTS = True
+PLOTS = False
 
 ################################################################################
 # Everything needed to test the FOVManager in Spectroscopy mode
@@ -214,6 +214,7 @@ class TestSpectroscopyMICADO:
         print("# waves:", len(waves))
 
         params = {"sky_header": ap_mask.header,
+                  "det_header": None,
                   "pixel_scale": "!INST.pixel_scale",
                   "plate_scale": "!INST.plate_scale",
                   "wave_min": "!SIM.spectral.wave_min",

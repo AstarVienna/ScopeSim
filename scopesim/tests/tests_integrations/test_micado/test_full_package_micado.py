@@ -15,8 +15,8 @@ from matplotlib import pyplot as plt
 from matplotlib.colors import LogNorm
 
 
-if rc.__config__["!SIM.tests.run_integration_tests"] is False:
-    pytestmark = pytest.mark.skip("Ignoring MICADO integration tests")
+# if rc.__config__["!SIM.tests.run_integration_tests"] is False:
+#     pytestmark = pytest.mark.skip("Ignoring MICADO integration tests")
 
 rc.__config__["!SIM.file.local_packages_path"] = "./micado_temp/"
 
@@ -26,7 +26,7 @@ PKGS = {"Armazones": "locations/Armazones.zip",
         "MAORY": "instruments/MAORY.zip",
         "MICADO": "instruments/MICADO.zip"}
 
-CLEAN_UP = False
+CLEAN_UP = True
 PLOTS = False
 
 
@@ -76,13 +76,13 @@ class TestLoadUserCommands:
 
     def test_user_commands_can_change_modes(self):
         cmd = scopesim.UserCommands(use_instrument="MICADO")
-        cmd.set_mode("mcao_spec")
+        cmd.set_modes(["MCAO", "SPEC_3000x50"])
         assert "MAORY" in [yd["name"] for yd in cmd.yaml_dicts]
         assert "MICADO_SPEC" in [yd["name"] for yd in cmd.yaml_dicts]
 
     def test_user_commands_can_change_modes_via_init(self):
         cmd = scopesim.UserCommands(use_instrument="MICADO",
-                                    set_mode="mcao_spec")
+                                    set_modes=["MCAO", "SPEC_3000x50"])
         assert "MAORY" in [yd["name"] for yd in cmd.yaml_dicts]
         assert "MICADO_SPEC" in [yd["name"] for yd in cmd.yaml_dicts]
 
@@ -101,13 +101,13 @@ class TestMakeOpticalTrain:
 
         assert isinstance(hdu_list, fits.HDUList)
 
-        # opt.image_planes[0].hdu.writeto("small_LR_flux_TEST.fits",
+        # opt.image_planes[0].hdu.writeto("temp_small_LR_flux_TEST.fits",
         #                                 overwrite=True)
-        # hdu_list.writeto("small_LR_TEST.fits", overwrite=True)
+        # hdu_list.writeto("temp_small_LR_TEST.fits", overwrite=True)
 
     def test_works_seamlessly_for_micado_zoom_mode(self):
         cmd = scopesim.UserCommands(use_instrument="MICADO",
-                                    set_mode="scao_hri",
+                                    set_modes=["SCAO", "IMG_1.5mas"],
                                     properties={"!OBS.filter_name": "Ks"})
         opt = scopesim.OpticalTrain(cmd)
         assert isinstance(opt, scopesim.OpticalTrain)
@@ -135,14 +135,14 @@ class TestMakeOpticalTrain:
 
 
 class TestSkyBackgroundIsRealistic:
-    @pytest.mark.parametrize("mode_name, filt_name, etc_flux_values, mag_diff",
-                             [("scao_hri", "Ks", 147, 2.05),  # ph/s/pix
-                              ("scao_lri", "Ks", 147, 2.05),
-                              ("scao_hri", "H", 108, 0.25),
-                              ("scao_lri", "H", 108, 0.25),
-                              ("scao_hri", "J", 27, 0.75),
-                              ("scao_lri", "J", 27, 0.75)])
-    def test_background_is_within_2x_of_eso_etc(self, mode_name, filt_name,
+    @pytest.mark.parametrize("mode_names, filt_name, etc_flux_values, mag_diff",
+                             [(["SCAO", "IMG_4mas"], "Ks", 147, 2.05),  # ph/s/pix
+                              (["SCAO", "IMG_1.5mas"], "Ks", 147, 2.05),
+                              (["SCAO", "IMG_4mas"], "H", 108, 0.25),
+                              (["SCAO", "IMG_1.5mas"], "H", 108, 0.25),
+                              (["SCAO", "IMG_4mas"], "J", 27, 0.75),
+                              (["SCAO", "IMG_1.5mas"], "J", 27, 0.75)])
+    def test_background_is_within_2x_of_eso_etc(self, mode_names, filt_name,
                                                 etc_flux_values, mag_diff):
         """
         Comparison of the scopesim MICADO package against the ESO ETC
@@ -156,7 +156,7 @@ class TestSkyBackgroundIsRealistic:
         """
 
         cmd = scopesim.UserCommands(use_instrument="MICADO",
-                                    set_mode=mode_name,
+                                    set_modes=mode_names,
                                     properties={"!OBS.filter_name": filt_name})
         opt = scopesim.OpticalTrain(cmd)
         src = scopesim.source.source_templates.empty_sky()

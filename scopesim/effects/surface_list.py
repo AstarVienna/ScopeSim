@@ -69,8 +69,10 @@ class SurfaceList(Effect):
                 wave_unit = spec.waveset.unit  # angstrom
                 wave_min = quantify(self.meta["wave_min"], u.um).to(u.AA)
                 wave_max = quantify(self.meta["wave_max"], u.um).to(u.AA)
-                mask = (wave_val >= wave_min.value) * (wave_val <= wave_max.value)
-                wave = wave_val[mask] * wave_unit
+                mask = (wave_val > wave_min.value) * (wave_val < wave_max.value)
+
+                wave = ([wave_min.value] + list(wave_val[mask]) +
+                        [wave_max.value]) * wave_unit
                 thru = self.throughput(wave)
                 flux = spec(wave)
                 flux *= thru

@@ -15,10 +15,10 @@ from matplotlib import pyplot as plt
 from matplotlib.colors import LogNorm
 
 # pytest_plugins = ['pytest_profiling']
-if rc.__config__["!SIM.tests.run_integration_tests"] is False:
-    pytestmark = pytest.mark.skip("Ignoring HAWKI integration tests")
+# if rc.__config__["!SIM.tests.run_integration_tests"] is False:
+#     pytestmark = pytest.mark.skip("Ignoring HAWKI integration tests")
 
-rc.__config__["!SIM.file.local_packages_path"] = "./scopesim_pkg_dir_tmp/wfc3_tmp/"
+rc.__config__["!SIM.file.local_packages_path"] = "./wfc3_temp/"
 
 PKGS = {"HST": "telescopes/HST.zip",
         "WFC3": "instruments/WFC3.zip"}

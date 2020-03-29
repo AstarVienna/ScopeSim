@@ -1,6 +1,6 @@
-numpy>=1.13
+numpy
 scipy
-astropy
+astropy<4
 matplotlib
 
 requests

@@ -69,7 +69,7 @@ class Test_MICADO_MVP_YAML:
         assert isinstance(opt.fov_manager, FOVManager)
         assert len(opt.fov_manager.fovs) == 64
 
-        if not PLOTS:
+        if PLOTS:
             for fov in opt.fov_manager.fovs:
                 sky_cnrs, det_cnrs = fov.corners
                 plt.plot(sky_cnrs[0], sky_cnrs[1])
