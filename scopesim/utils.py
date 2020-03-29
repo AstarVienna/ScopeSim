@@ -434,8 +434,8 @@ def bug_report():
     except ImportError:
         import_module = __import__
 
-    packages = ["scopesim", "astropy", "numpy", "scipy", "synphot",
-                "requests", "pyyaml", "beautifulsoup"]
+    packages = ["scopesim", "numpy", "scipy", "astropy", "matplotlib",
+                "synphot", "requests", "bs4", "yaml"]
 
     # Check Python version
     print("Python:\n", sys.version)
