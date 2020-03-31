@@ -43,9 +43,9 @@ This code was originally based on the [SimCADO](www.univie.ac.at/simcado) packag
 
 ```
 numpy >= 1.13
-scipy
-astropy
-synphot
+scipy == 1.2.0
+astropy < 4.0
+synphot < 0.2
 pyyaml
 requests
 beautifulsoup

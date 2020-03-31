@@ -29,11 +29,11 @@ class TestMicadoSpec:
         assert isinstance(opt, OpticalTrain)
 
         opt.observe(src)
+        opt.readout(filename="temp_speclecado.fits")
 
-        # opt.image_planes[0].hdu.writeto("implane.fits", overwrite=True)
-        # opt.readout(filename="speclecado.fits")
+        opt.image_planes[0].hdu.writeto("temp_implane.fits", overwrite=True)
 
-        if PLOTS:
+        if not PLOTS:
             plt.imshow(opt.image_planes[0].data, origin="lower", norm=LogNorm())
             plt.show()
 

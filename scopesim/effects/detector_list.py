@@ -1,12 +1,13 @@
 import numpy as np
 from astropy import units as u
+from astropy.table import Table
 
 from .effects import Effect
 from .apertures import ApertureMask
 from .. import utils
 from ..optics.image_plane_utils import header_from_list_of_xy, calc_footprint
 
-__all__ = ["DetectorList"]
+__all__ = ["DetectorList", "DetectorWindow"]
 
 
 class DetectorList(Effect):
@@ -127,24 +128,33 @@ class DetectorList(Effect):
         plt.gca().set_aspect("equal")
 
 
+class DetectorWindow(DetectorList):
+    """
+    For when a full DetectorList if too cumbersome
 
+    Parameters
+    ----------
+    pixel_size : float
+        [mm / pix] Physical pixel size
+    x, y : float
+        [mm] Position of window centre relative to optical axis
+    width, height=None : float
+        [mm] Dimensions of window. If height is None, height=width
+    angle : float, optional
+        [deg] Rotation of window
+    gain : float, optional
+        [ADU/e-]
 
-    # def detector_row_dicts(self, ids=None):
-    #     if ids is None:
-    #         ids = range(len(self.table))
-    #
-    #     row_dicts = []
-    #     for ii in ids:
-    #         row = self.table[ii]
-    #         row_dicts += [{col: row[col] for col in row.colnames}]
-    #
-    #     return row_dicts
-#
-# def sky_hdr_from_detector_hdr(header, pixel_scale):
-#     """ pixel_scale in degrees - returns header"""
-#
-#     x_mm, y_mm = calc_footprint(header, "D")
-#     scale = pixel_scale / header["CDELT1D"]          # (deg pix-1) / (mm pix-1)
-#     header = header_from_list_of_xy(x_mm * scale, y_mm * scale, pixel_scale)
-#
-#     return header
+    """
+    def __init__(self, pixel_size, x, y, width, height=None, angle=0, gain=1,
+                 **kwargs):
+        if height is None:
+            height = width
+        tbl = Table(data=[[0], [x], [y], [width / 2.], [height / 2.],
+                          [angle], [gain], [pixel_size]],
+                    names=["id", "x_cen", "y_cen", "xhw", "yhw",
+                           "angle", "gain", "pixsize"])
+        if "image_plane_id" not in kwargs:
+            kwargs["image_plane_id"] = 0
+
+        super(DetectorWindow, self).__init__(table=tbl, **kwargs)

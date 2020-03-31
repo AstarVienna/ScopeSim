@@ -240,6 +240,10 @@ class UserCommands:
             msg = "No modes found"
         return msg
 
+    @property
+    def modes(self):
+        print(self.list_modes())
+
     def __setitem__(self, key, value):
         self.cmds.__setitem__(key, value)
 

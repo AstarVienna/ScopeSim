@@ -100,12 +100,11 @@ def photons_in_range(spectra, wave_min, wave_max, area=None, bandpass=None):
 
     counts = []
     for spec in spectra:
-        mask = (spec.model.points[0] > wave_min) * \
-               (spec.model.points[0] < wave_max)
-        x = spec.model.points[0][mask]
+        waveset = spec.waveset.value
+        mask = (waveset > wave_min) * (waveset < wave_max)
+        x = waveset[mask]
         x = np.append(np.append(wave_min, x), wave_max)
-        y = spec.model.lookup_table[mask]
-        y = np.append(np.append(spec(wave_min), y), spec(wave_max))
+        y = spec(x).value
 
         # flux [ph s-1 cm-2] == y [ph s-1 cm-2 AA-1] * x [AA]
         if isinstance(bandpass, SpectralElement):

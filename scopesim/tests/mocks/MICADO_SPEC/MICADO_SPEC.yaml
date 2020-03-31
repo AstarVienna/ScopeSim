@@ -20,10 +20,11 @@ effects :
     outer : 1
     outer_unit : "m"
 
-- name : random_filter
+- name : spec_filter
   class : FilterCurve
   kwargs :
     filename : "TC_filter_Spec_HK.dat"
+    minimum_throughput : 0.00101
 
 - name : spectral_traces
   class : SpectralTraceList
@@ -47,8 +48,8 @@ effects :
 - name : full_detector
   class : DetectorList
   kwargs :
-    filename : "FPA_small.dat"
-    active_detectors : "all"
+    filename : "FPA_array_layout.dat"
+    active_detectors : all
 
 ---
 
@@ -59,10 +60,11 @@ alias : SIM
 
 properties :
   spectral :
-    wave_min : 1.45
-    wave_mid : 1.66
-    wave_max : 2.45
+    wave_min : 1.23
+    wave_mid : 1.6
+    wave_max : 2.5
     wave_unit : um
+    minimum_throughput : 0.00101
 
   computing :
     preload_field_of_views : True

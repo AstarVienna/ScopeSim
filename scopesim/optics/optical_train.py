@@ -6,6 +6,7 @@ from .optics_manager import OpticsManager
 from .fov_manager import FOVManager
 from .image_plane import ImagePlane
 from ..detector import DetectorArray
+from ..utils import from_currsys
 
 
 class OpticalTrain:
@@ -141,9 +142,10 @@ class OpticalTrain:
         - [Apply detector plane (0D, 2D) effects - z_order = 500..599]
 
         """
-        self.set_focus(kwargs)    # put focus back on current instrument package
         if update:
             self.update(**kwargs)
+
+        self.set_focus(kwargs)    # put focus back on current instrument package
 
         source = deepcopy(orig_source)
 
@@ -161,10 +163,7 @@ class OpticalTrain:
             for effect in self.optics_manager.fov_effects:
                 fov = effect.apply_to(fov)
 
-            ii = [implane.id for implane in self.image_planes
-                  if implane.id == fov.image_plane_id]
-            if len(ii) == 1:
-                self.image_planes[ii[0]].add(fov.hdu, wcs_suffix="D")
+            self.image_planes[fov.image_plane_id].add(fov.hdu, wcs_suffix="D")
             # ..todo: finish off the multiple image plane stuff
 
         # [2D - Vibration, flat fielding, chopping+nodding]

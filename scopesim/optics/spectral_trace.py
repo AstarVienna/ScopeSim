@@ -131,6 +131,10 @@ class SpectralTrace:
         mask = (self._wave_bin_edges >= wave_min) * \
                (self._wave_bin_edges <= wave_max)
 
+        if sum(mask) == 0:
+            self._curves = []
+            return self._curves
+
         wave_edges = self._wave_bin_edges[mask]
         wave_cens = 0.5 * (wave_edges[:-1] + wave_edges[1:])
 
@@ -157,6 +161,11 @@ class SpectralTrace:
                           (coords["y"] <= xy_edges["y_max"]), axis=0)
         else:
             mask = [True] * len(wave_cens)
+
+        # ..todo: Don't like this - fix it!
+        if sum(mask) == 0:
+            self._curves = []
+            return self._curves
 
         rotation, shear = spt_utils.get_affine_parameters(coords)
         self._curves = [MonochromeTraceCurve(x=coords["x"][:, ii],
@@ -202,8 +211,9 @@ class SpectralTrace:
             pixel_size = kwargs["pixel_scale"] / kwargs["plate_scale"]
             curve_hdrs = self.get_curve_headers(pixel_size, wave_min, wave_max,
                                                 detector_edges=detector_edges)
-            print("Generated {} headers from {}".format(len(curve_hdrs),
-                                                        self.__repr__()))
+            if len(curve_hdrs) > 0:
+                print("Generated {} headers from {}".format(len(curve_hdrs),
+                                                            self.__repr__()))
 
             for mtc_hdr in curve_hdrs:
                 mtc_hdr["EXT"] = self.meta["extension_id"]

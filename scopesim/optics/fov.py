@@ -36,7 +36,7 @@ class FieldOfView(FieldOfViewBase):
                      "wave_min": utils.quantify(waverange[0], u.um),
                      "wave_max": utils.quantify(waverange[1], u.um),
                      "area": 0 * u.m**2,
-                     "sub_pixel": False,
+                     "sub_pixel": "!SIM.sub_pixel.flag",
                      "distortion": {"scale": [1, 1],
                                     "offset": [0, 0],
                                     "shear": [1, 1],
@@ -106,7 +106,10 @@ class FieldOfView(FieldOfViewBase):
                                                          area)
             self.fields += [imagehdu]
 
-    def view(self, sub_pixel=False):
+    def view(self, sub_pixel=None):
+        if sub_pixel is None:
+            sub_pixel = utils.from_currsys(self.meta["sub_pixel"])
+
         self.hdu.data = np.zeros((self.hdu.header["NAXIS2"],
                                   self.hdu.header["NAXIS1"]))
         if len(self.fields) > 0:

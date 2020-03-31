@@ -156,10 +156,10 @@ def _empty_sky():
     return tbl_source
 
 
-def _vega_source(mag=0):
+def _vega_source(mag=0, x=0, y=0):
     specs = [vega_spectrum(mag)]
     tbl = Table(names=["x", "y", "ref", "weight"],
-                data=[[0]*u.arcsec, [0]*u.arcsec, [0], [1]])
+                data=[[x]*u.arcsec, [y]*u.arcsec, [0], [1]])
     tbl_source = Source(table=tbl, spectra=specs)
 
     return tbl_source

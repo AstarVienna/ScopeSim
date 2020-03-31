@@ -1,7 +1,8 @@
 import os
+import pytest
 
 from scopesim import rc
-from scopesim.effects import DetectorList, ApertureMask
+from scopesim.effects import DetectorList, DetectorWindow, ApertureMask
 
 MOCK_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),
                                          "../mocks/MICADO_SCAO_WIDE/"))
@@ -9,7 +10,7 @@ if MOCK_PATH not in rc.__search_path__:
     rc.__search_path__ += [MOCK_PATH]
 
 
-class TestInit:
+class TestDetectorListInit:
     def test_initialises_with_nothing(self):
         assert isinstance(DetectorList(), DetectorList)
 
@@ -59,3 +60,18 @@ class TestFovGrid:
         assert apm_hdr["NAXIS2"] == det_hdr["NAXIS2"]
 
 
+class TestDetectorWindowInit:
+    def test_throws_error_when_initialises_with_nothing(self):
+        with pytest.raises(TypeError):
+            DetectorWindow()
+
+    def test_initialises_with_correct_parameters(self):
+        det_window = DetectorWindow(pixel_size=0.1, x=0, y=0, width=10)
+        assert det_window.data["x_cen"][0] == 0
+        assert det_window.data["yhw"][0] == 5
+        assert det_window.data["pixsize"][0] == 0.1
+
+    def test_recognised_as_detector_list(self):
+        det_window = DetectorWindow(pixel_size=0.1, x=0, y=0, width=10)
+        assert isinstance(det_window, DetectorWindow)
+        assert isinstance(det_window, DetectorList)

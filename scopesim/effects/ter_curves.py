@@ -211,6 +211,9 @@ class FilterCurve(TERCurve):
         self.meta["z_order"] = [114, 214]
         self.meta.update(kwargs)
 
+        mask = self.table["transmission"] < self.meta["minimum_throughput"]
+        self.table["transmission"][mask] = 0
+
     def fov_grid(self, which="waveset", **kwargs):
         if which == "waveset":
             self.meta.update(kwargs)

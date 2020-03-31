@@ -1,6 +1,12 @@
 #!/usr/bin/env python3
 """
 ScopeSim: A python package to simulate telescope observations
+
+How to compile and put these on pip::
+
+    $ python setup.py sdist
+    $ twine upload dist/*
+
 """
 from setuptools import setup, find_packages
 
@@ -17,7 +23,7 @@ def setup_package():
     # write_version_py()
 
     setup(name='ScopeSim',
-          version="0.0.2",
+          version="0.0.3",
           description="Generalised telescope observation simulator",
           long_description=__readme__,
           long_description_content_type='text/markdown',

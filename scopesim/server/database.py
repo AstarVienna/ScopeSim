@@ -134,7 +134,7 @@ def list_packages(location="all", url=None, local_dir=None,
         return return_pkgs_list
 
 
-def download_package(pkg_path, save_dir=None, url=None):
+def download_package(pkg_path, save_dir=None, url=None, from_cache=None):
     """
     Downloads a package to the local disk
 
@@ -151,6 +151,10 @@ def download_package(pkg_path, save_dir=None, url=None):
     url : str
         The URL of the IRDB HTTP server. If left as None, defaults to the
         value in scopesim.rc.__config__["!SIM.file.server_base_url"]
+
+    from_cache : bool
+        Use the cached versions of the packages. If None, defaults to the RC
+        value: ``!SIM.file.use_cached_downloads``
 
     Returns
     -------
@@ -172,8 +176,9 @@ def download_package(pkg_path, save_dir=None, url=None):
             save_dir = rc.__config__["!SIM.file.local_packages_path"]
 
         try:
-            use_cached_file = rc.__config__["!SIM.file.use_cached_downloads"]
-            cache_path = download_file(url + pkg_path, cache=use_cached_file)
+            if from_cache is None:
+                from_cache = rc.__config__["!SIM.file.use_cached_downloads"]
+            cache_path = download_file(url + pkg_path, cache=from_cache)
             save_path = os.path.join(save_dir, os.path.basename(pkg_path))
             file_path = shutil.copy2(cache_path, save_path)
 
