@@ -16,7 +16,9 @@ class Detector(DetectorBase):
         self.meta.update(header)
         self.meta.update(kwargs)
 
-    def extract_from(self, image_plane, order=1):
+    def extract_from(self, image_plane, order=1, reset=True):
+        if reset:
+            self.reset()
         if not isinstance(image_plane, ImagePlaneBase):
             raise ValueError("image_plane must be an ImagePlane object: {}"
                              "".format(type(image_plane)))
@@ -24,6 +26,9 @@ class Detector(DetectorBase):
         self._hdu = imp_utils.add_imagehdu_to_imagehdu(image_plane.hdu,
                                                        self.hdu, order,
                                                        wcs_suffix="D")
+
+    def reset(self):
+        self._hdu.data = np.zeros(self._hdu.data.shape)
 
     @property
     def hdu(self):

@@ -23,7 +23,7 @@ def setup_package():
     # write_version_py()
 
     setup(name='ScopeSim',
-          version="0.0.3",
+          version="0.0.4",
           description="Generalised telescope observation simulator",
           long_description=__readme__,
           long_description_content_type='text/markdown',

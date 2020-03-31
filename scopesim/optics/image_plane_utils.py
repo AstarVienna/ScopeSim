@@ -285,11 +285,13 @@ def _add_intpixel_sources_to_canvas(canvas_hdu, xpix, ypix, flux, mask):
 def _add_subpixel_sources_to_canvas(canvas_hdu, xpix, ypix, flux, mask):
     canvas_hdu.header["comment"] = "Adding {} sub-pixel files" \
                                    "".format(len(flux))
+    canvas_shape = canvas_hdu.data.shape
     for ii in range(len(xpix)):
         if mask[ii]:
             xx, yy, fracs = sub_pixel_fractions(xpix[ii], ypix[ii])
             for x, y, frac in zip(xx, yy, fracs):
-                canvas_hdu.data[y, x] += frac * flux[ii].value
+                if y < canvas_shape[0] and x < canvas_shape[1]:
+                    canvas_hdu.data[y, x] += frac * flux[ii].value
 
     return canvas_hdu
 

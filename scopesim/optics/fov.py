@@ -9,7 +9,6 @@ from . import image_plane_utils as imp_utils
 
 from ..base_classes import SourceBase, FieldOfViewBase, PoorMansHeader
 from .. import utils
-from .. import rc
 
 
 class FieldOfView(FieldOfViewBase):
@@ -108,7 +107,7 @@ class FieldOfView(FieldOfViewBase):
 
     def view(self, sub_pixel=None):
         if sub_pixel is None:
-            sub_pixel = utils.from_currsys(self.meta["sub_pixel"])
+            sub_pixel = self.meta["sub_pixel"]
 
         self.hdu.data = np.zeros((self.hdu.header["NAXIS2"],
                                   self.hdu.header["NAXIS1"]))

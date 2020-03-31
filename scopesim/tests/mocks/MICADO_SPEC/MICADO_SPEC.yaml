@@ -48,7 +48,7 @@ effects :
 - name : full_detector
   class : DetectorList
   kwargs :
-    filename : "FPA_array_layout.dat"
+    filename : "FPA_small.dat"
     active_detectors : all
 
 ---
