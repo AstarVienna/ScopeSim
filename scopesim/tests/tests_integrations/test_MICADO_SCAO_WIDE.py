@@ -48,7 +48,7 @@ PLOTS = False
 class Test_MICADO_MVP_YAML:
     def yaml_file_can_be_loaded_into_optical_train(self):
         # .. todo: get this working on Travis
-        filename = os.path.join(TEST_PATH, "MICADO_SCAO_WIDE_2.config")
+        filename = os.path.join(TEST_PATH, "MICADO_SCAO_WIDE_2.yaml")
 
         cmds = UserCommands(yamls=[filename])
         assert isinstance(cmds, UserCommands)

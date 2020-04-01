@@ -5,6 +5,7 @@ from astropy.table import Table
 from synphot import SourceSpectrum, Empirical1D
 
 from scopesim.source.source import Source
+from scopesim.source.source_templates import vega_spectrum
 
 
 def _table_source():
@@ -28,6 +29,21 @@ def _table_source():
 
 
 def _image_source(dx=0, dy=0, angle=0, weight=1):
+    """
+    An image with 3 point sources on a random BG
+
+    Parameters
+    ----------
+    dx, dy : float
+        [arcsec] Offset from optical axis
+    angle : float
+        [deg]
+    weight : float
+
+    Returns
+    -------
+
+    """
     n = 50
     unit = u.Unit("ph s-1 m-2 um-1")
     wave = np.linspace(0.5, 2.5, n) * u.um
@@ -42,24 +58,23 @@ def _image_source(dx=0, dy=0, angle=0, weight=1):
     im_wcs.wcs.crpix = [n//2, n//2]
     im_wcs.wcs.ctype = ["RA---TAN", "DEC--TAN"]
 
-    im = np.random.random(size=(n+1, n+1)) * 1E-9
-    im[n-1, 1] += 5
-    im[1, 1] += 5
-    im[n//2, n//2] += 10
-    im[n//2, n-1] += 5
+    im = np.random.random(size=(n+1, n+1)) * 1e-9 * weight
+    im[n-1, 1] += 5 * weight
+    im[1, 1] += 5 * weight
+    im[n//2, n//2] += 10 * weight
+    im[n//2, n-1] += 5 * weight
 
     im_hdu = fits.ImageHDU(data=im, header=im_wcs.to_header())
     im_hdu.header["SPEC_REF"] = 0
     im_source = Source(image_hdu=im_hdu, spectra=specs)
 
     angle = angle * np.pi / 180
-    im_source.fields[0].header["CRVAL1"] += dx * u.arcsec.to(u.deg)
-    im_source.fields[0].header["CRVAL2"] += dy * u.arcsec.to(u.deg)
+    im_source.fields[0].header["CRVAL1"] += dx / 3600
+    im_source.fields[0].header["CRVAL2"] += dy / 3600
     im_source.fields[0].header["PC1_1"] = np.cos(angle)
     im_source.fields[0].header["PC1_2"] = np.sin(angle)
     im_source.fields[0].header["PC2_1"] = -np.sin(angle)
     im_source.fields[0].header["PC2_2"] = np.cos(angle)
-    im_source.fields[0].data *= weight
 
     return im_source
 
@@ -84,12 +99,12 @@ def _combined_source(im_angle=0, dx=[0, 0, 0], dy=[0, 0, 0], weight=[1, 1, 1]):
     return src
 
 
-def _single_table_source():
+def _single_table_source(weight=1):
     n = 3
     unit = u.Unit("ph s-1 m-2 um-1")
     wave = np.linspace(0.5, 2.5, n) * u.um
     specs = [SourceSpectrum(Empirical1D, points=wave,
-                            lookup_table=np.ones(n) * unit)]
+                            lookup_table=np.ones(n) * weight * unit)]
     tbl = Table(names=["x", "y", "ref", "weight"],
                 data=[[0]*u.arcsec, [0]*u.arcsec, [0], [1]])
     tbl_source = Source(table=tbl, spectra=specs)
@@ -97,8 +112,7 @@ def _single_table_source():
     return tbl_source
 
 
-def _unity_source(dx=0, dy=0, angle=0, weight=1):
-    n = 100
+def _unity_source(dx=0, dy=0, angle=0, weight=1, n=100):
     unit = u.Unit("ph s-1 m-2 um-1")
     wave = np.linspace(0.5, 2.5, n) * u.um
     specs = [SourceSpectrum(Empirical1D, points=wave,
@@ -127,3 +141,25 @@ def _unity_source(dx=0, dy=0, angle=0, weight=1):
     im_source.fields[0].data *= weight
 
     return im_source
+
+
+def _empty_sky():
+    n = 3
+    unit = u.Unit("ph s-1 m-2 um-1")
+    wave = np.linspace(0.5, 2.5, n) * u.um
+    specs = [SourceSpectrum(Empirical1D, points=wave,
+                            lookup_table=np.zeros(n) * unit)]
+    tbl = Table(names=["x", "y", "ref", "weight"],
+                data=[[0], [0], [0], [0]])
+    tbl_source = Source(table=tbl, spectra=specs)
+
+    return tbl_source
+
+
+def _vega_source(mag=0, x=0, y=0):
+    specs = [vega_spectrum(mag)]
+    tbl = Table(names=["x", "y", "ref", "weight"],
+                data=[[x]*u.arcsec, [y]*u.arcsec, [0], [1]])
+    tbl_source = Source(table=tbl, spectra=specs)
+
+    return tbl_source

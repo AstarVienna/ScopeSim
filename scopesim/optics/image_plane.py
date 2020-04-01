@@ -1,5 +1,6 @@
 import numpy as np
 
+
 from astropy.io import fits
 from astropy.table import Table
 
@@ -54,10 +55,10 @@ class ImagePlane(ImagePlaneBase):
             raise ValueError("header must have a valid image-plane WCS: {}"
                              "".format(dict(header)))
 
-        image = np.zeros((header["NAXIS1"]+1, header["NAXIS2"]+1))
+        image = np.zeros((header["NAXIS2"]+1, header["NAXIS1"]+1))
         self.hdu = fits.ImageHDU(data=image, header=header)
 
-    def add(self, hdus_or_tables, sub_pixel=False, order=1, wcs_suffix=""):
+    def add(self, hdus_or_tables, sub_pixel=None, order=None, wcs_suffix=""):
         """
         Add a projection of an image or table files to the canvas
 
@@ -97,6 +98,10 @@ class ImagePlane(ImagePlaneBase):
             Default "". For sky coords - "" or "S", Detector coords - "D"
 
         """
+        if sub_pixel is None:
+            sub_pixel = utils.from_currsys("!SIM.sub_pixel.flag")
+        if order is None:
+            order = utils.from_currsys("!SIM.computing.spline_order")
 
         if isinstance(hdus_or_tables, (list, tuple)):
             for hdu_or_table in hdus_or_tables:

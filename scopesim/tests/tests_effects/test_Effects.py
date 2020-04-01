@@ -6,7 +6,6 @@ from astropy.table import Table
 
 from scopesim import rc
 from scopesim.effects import Effect
-from scopesim.effects.apertures import ApertureList
 from scopesim.effects import SurfaceList
 
 MOCK_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),
@@ -15,15 +14,8 @@ if MOCK_PATH not in rc.__search_path__:
     rc.__search_path__ += [MOCK_PATH]
 
 
-
 @pytest.fixture()
 def surf_list_file():
-    fname = os.path.join(MOCK_PATH, "LIST_mirrors_MICADO_Wide.tbl")
-    return fname
-
-
-@pytest.fixture()
-def aperture_list_file():
     fname = os.path.join(MOCK_PATH, "LIST_mirrors_MICADO_Wide.tbl")
     return fname
 
@@ -54,14 +46,3 @@ class TestSurfaceListInit:
         surf_list = SurfaceList(filename=surf_list_file)
         assert isinstance(surf_list, SurfaceList)
         assert isinstance(surf_list.data, Table)
-
-
-@pytest.mark.usefixtures("aperture_list_file")
-class TestApertureListInit:
-    def test_initialises_with_nothing(self):
-        assert isinstance(ApertureList(), ApertureList)
-
-    def test_initialises_with_valid_filename(self, surf_list_file):
-        aperture_list = ApertureList(filename=surf_list_file)
-        assert isinstance(aperture_list, ApertureList)
-        assert isinstance(aperture_list.data, Table)

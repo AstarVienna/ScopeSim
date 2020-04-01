@@ -10,13 +10,15 @@ from astropy.io import fits
 
 class Detector(DetectorBase):
     def __init__(self, header, **kwargs):
-        image = np.zeros((header["NAXIS1"], header["NAXIS2"]))
+        image = np.zeros((header["NAXIS2"], header["NAXIS1"]))
         self._hdu = fits.ImageHDU(header=header, data=image)
         self.meta = {}
         self.meta.update(header)
         self.meta.update(kwargs)
 
-    def extract_from(self, image_plane, order=1):
+    def extract_from(self, image_plane, order=1, reset=True):
+        if reset:
+            self.reset()
         if not isinstance(image_plane, ImagePlaneBase):
             raise ValueError("image_plane must be an ImagePlane object: {}"
                              "".format(type(image_plane)))
@@ -24,6 +26,9 @@ class Detector(DetectorBase):
         self._hdu = imp_utils.add_imagehdu_to_imagehdu(image_plane.hdu,
                                                        self.hdu, order,
                                                        wcs_suffix="D")
+
+    def reset(self):
+        self._hdu.data = np.zeros(self._hdu.data.shape)
 
     @property
     def hdu(self):

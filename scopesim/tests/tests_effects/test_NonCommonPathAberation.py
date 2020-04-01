@@ -30,7 +30,7 @@ PLOTS = False
 @pytest.fixture(scope="function")
 def fov_Ks():
     _src = _single_table_source()
-    _fov = FieldOfView(header=_fov_header(), waverange=(1.9, 2.4))
+    _fov = FieldOfView(header=_fov_header(), waverange=(1.9, 2.4), area=1*u.m**2)
     _fov.extract_from(_src)
     return _fov
 

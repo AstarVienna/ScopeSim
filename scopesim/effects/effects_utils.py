@@ -36,7 +36,7 @@ def get_all_effects(effects, effect_class):
             my_effects += get_all_effects(effects, eff_cls)
     else:
         my_effects = [eff for eff in effects
-                      if isinstance(eff, effect_class) and eff.meta["include"]]
+                      if isinstance(eff, effect_class) and eff.include]
 
     return my_effects
 
@@ -61,9 +61,7 @@ def make_effect(effect_dict, **properties):
 
 
 def is_spectroscope(effects):
-    has_trace_lists = sum([isinstance(eff, efs.SpectralTraceList)
-                           for eff in effects])
-    return bool(has_trace_lists)
+    return any([isinstance(eff, efs.SpectralTraceList) for eff in effects])
 
 
 def empty_surface_list():

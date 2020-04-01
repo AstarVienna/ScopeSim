@@ -17,7 +17,7 @@ def detector_list_effect():
 def image_plane():
     dtcr_list = efs_objs._detector_list()
     implane = ImagePlane(header=dtcr_list.image_plane_header)
-    implane.hdu.data = np.zeros((implane.header["NAXIS1"],
+    implane.hdu.data = np.zeros((implane.header["NAXIS2"],
                                  implane.header["NAXIS1"]))
     return implane
 

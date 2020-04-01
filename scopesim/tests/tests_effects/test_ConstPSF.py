@@ -95,14 +95,14 @@ class TestApplyTo:
     def test_convolves_with_basic_fov_for_each_waveleng(self, waves, max_pixel):
         centre_fov = _centre_fov(n=10, waverange=waves)
         nax1, nax2 = centre_fov.header["NAXIS1"], centre_fov.header["NAXIS2"]
-        centre_fov.hdu.data = np.zeros((nax1, nax2))
+        centre_fov.hdu.data = np.zeros((nax2, nax1))
         centre_fov.hdu.data[1::4, 1::4] = 1
 
         constpsf = FieldConstantPSF(filename="test_ConstPSF.fits")
         fov_returned = constpsf.apply_to(centre_fov)
 
         if PLOTS:
-            plt.imshow(fov_returned.hdu.data.T, origin="lower")
+            plt.imshow(fov_returned.hdu.data, origin="lower")
             plt.show()
 
         assert np.max(fov_returned.hdu.data) == approx(max_pixel)

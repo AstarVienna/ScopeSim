@@ -127,6 +127,25 @@ class DataContainer:
                                  "".format(self.meta["filename"])]
 
     def get_data(self, ext=0, layer=None):
+        """
+        Returns either a
+
+        .. note:: Use this call for reading in individual FITS extensions.
+           The ``.data'' handle will read in **all** extensions and return an
+           HDUList object
+
+        Parameters
+        ----------
+        ext : int
+        layer : int
+            If the FITS extension is a data cube, layer corresponds to a slice
+            from this cube of ``<ImageHDU>.data[layer, :, :]``
+
+        Returns
+        -------
+        data_set : astropy.Table, fits.ImageHDU
+
+        """
         data_set = None
         if self.is_fits:
             if isinstance(self._file[ext], fits.BinTableHDU):
@@ -145,7 +164,13 @@ class DataContainer:
 
     @property
     def is_fits(self):
-        return utils.is_fits(self.meta["filename"])
+        flag = False
+        if isinstance(self._file, fits.HDUList):
+            flag = True
+        elif isinstance(self.meta["filename"], str):
+            flag = utils.is_fits(self.meta["filename"])
+
+        return flag
 
     @property
     def data(self):

@@ -19,7 +19,7 @@ PLOTS = False
 
 def _basic_fov():
     src = _image_source()
-    fov = FieldOfView(_basic_fov_header(), waverange=[1, 2]*u.um)
+    fov = FieldOfView(_basic_fov_header(), waverange=[1, 2]*u.um, area=1*u.m**2)
     fov.extract_from(src)
 
     return fov
@@ -57,10 +57,10 @@ class TestApplyTo:
         if PLOTS:
 
             plt.subplot(121)
-            plt.imshow(basic_fov.fields[0].data.T, origin="lower",
+            plt.imshow(basic_fov.fields[0].data, origin="lower",
                        norm=LogNorm())
             plt.subplot(122)
-            plt.imshow(basic_fov.data.T, origin="lower", norm=LogNorm())
+            plt.imshow(basic_fov.data, origin="lower", norm=LogNorm())
             plt.show()
 
         assert new_size > orig_size

@@ -2,22 +2,25 @@ import numpy as np
 from astropy import units as u
 
 from .effects import Effect
-from ..optics.fov import sky2fp
 from ..utils import airmass2zendist, from_currsys, check_keys, quantify
-from ..base_classes import FieldOfViewBase, ImagePlaneBase, SourceBase
+from ..base_classes import FieldOfViewBase
 
 
 class Shift3D(Effect):
     def __init__(self, **kwargs):
         super(Shift3D, self).__init__(**kwargs)
-        self.meta["z_order"] = [30]
+        self.meta["z_order"] = [30, 230]
 
     def apply_to(self, obj):
         return obj
 
     def fov_grid(self, which="shifts", **kwargs):
         if which == "shifts":
-            waves, dx, dy = [], [], []
+            if self.table is not None:
+                col_names = ["wavelength", "dx", "dy"]
+                waves, dx, dy = [self.table[col] for col in col_names]
+            else:
+                waves, dx, dy = [], [], []
             return waves, dx, dy
         else:
             return None
@@ -91,6 +94,8 @@ class AtmosphericDispersion(Shift3D):
         http://gtc-phase2.gtc.iac.es/science/astroweb/atmosRefraction.php
         """
         if which == "shifts":
+            if len(kwargs) > 0:
+                self.meta.update(kwargs)
             self.meta = from_currsys(self.meta)
             atmo_params = {"z0"     : airmass2zendist(self.meta["airmass"]),
                            "temp"   : self.meta["temperature"],        # in degC
@@ -137,6 +142,8 @@ class AtmosphericDispersionCorrection(Shift3D):
         check_keys(self.meta, required_keys, action="error")
 
     def apply_to(self, fov):
+        # .. todo:: Currently applying shift with pixel_scale to CRPIX-D
+        # .. todo:: Change this to be applying to CRVAL-D using plate_scale
         # get mid wavelength of fov
         # work out on-sky shift
         # work out pupil-plane shift
@@ -151,8 +158,8 @@ class AtmosphericDispersionCorrection(Shift3D):
                            "pres":      self.meta["pressure"] * 1000, # in mbar
                            "lat":       self.meta["latitude"],  # in deg
                            "h":         self.meta["altitude"]}  # in m
-            fov_wave_mid = 0.5 * (fov.meta["wave_max"] + fov.meta["wave_min"])
-            fov_wave_mid = quantify(fov_wave_mid, u.um).to(u.um).value
+            fov_wave_mid = quantify(fov.wavelength, u.um).value
+            # .. todo:: why are we comparing to shift_obs. Is this static?
             obs_wave_mid = self.meta["wave_mid"]
             shift_obs = atmospheric_refraction(lam=obs_wave_mid, **atmo_params)
             shift_fov = atmospheric_refraction(lam=fov_wave_mid, **atmo_params)
@@ -176,8 +183,8 @@ class AtmosphericDispersionCorrection(Shift3D):
         if "quick_adc" in self.meta:
             ad = AtmosphericDispersion(**self.meta)
             waves, dx, dy = ad.fov_grid()
-            dx *= -self.meta["efficiency"]
-            dy *= -self.meta["efficiency"]
+            dx *= -(1 - self.meta["efficiency"])
+            dy *= -(1 - self.meta["efficiency"])
             return waves, dx, dy
         else:
             return None

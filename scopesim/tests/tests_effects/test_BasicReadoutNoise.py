@@ -42,3 +42,9 @@ class TestMakeRonFrame:
         frames = np.array([make_ron_frame((256, 256), 10, 2, 0.1, 0.2, 0.3, 0.4)
                            for _ in range(n)])
         assert np.std(np.sum(frames, axis=0)) == approx(10*n**0.5, rel=0.1)
+
+    @pytest.mark.parametrize("shape", [(3, 7), (7, 3)])
+    def test_makes_frame_sizes_for_non_integer_n_channels(self, shape):
+        n_channels = 2
+        frame = make_ron_frame(shape, 5, n_channels, 0.25, 0.25, 0.25, 0.25)
+        assert frame.shape > (0, 0)

@@ -1,19 +1,34 @@
 import numpy as np
 from astropy import units as u
+from astropy.table import Table
 
 from .effects import Effect
 from .apertures import ApertureMask
 from .. import utils
 from ..optics.image_plane_utils import header_from_list_of_xy, calc_footprint
 
-__all__ = ["DetectorList"]
+__all__ = ["DetectorList", "DetectorWindow"]
 
 
 class DetectorList(Effect):
+    """
+
+    Examples
+    --------
+    ::
+        - name : full_detector
+          class : DetectorList
+          kwargs :
+            filename : "FPA_array_layout.dat"
+            active_detectors : [1, 5]
+
+    """
+
     def __init__(self, **kwargs):
         super(DetectorList, self).__init__(**kwargs)
         self.meta["z_order"] = [90, 290, 390, 490]
         self.meta["pixel_scale"] = "!INST.pixel_scale"      # arcsec
+        self.meta["active_detectors"] = "all"
         self.meta.update(kwargs)
 
     def fov_grid(self, which="edges", **kwargs):
@@ -37,7 +52,7 @@ class DetectorList(Effect):
 
     @property
     def image_plane_header(self):
-        tbl = self.get_data()
+        tbl = self.active_table
         pixel_size = np.min(utils.quantity_from_table("pixsize", tbl, u.mm))
         x_unit = utils.unit_from_table("x_cen", tbl, u.mm)
         y_unit = utils.unit_from_table("y_cen", tbl, u.mm)
@@ -56,14 +71,26 @@ class DetectorList(Effect):
 
         return hdr
 
-    def detector_headers(self, ids=None):
+    @property
+    def active_table(self):
+        if self.meta["active_detectors"] == "all":
+            tbl = self.table
+        elif isinstance(self.meta["active_detectors"], (list, tuple)):
+            mask = [det_id in self.meta["active_detectors"]
+                    for det_id in self.table["id"]]
+            tbl = self.table[mask]
+        else:
+            raise ValueError("Could not determine which detectors are active: "
+                             "{}, {}, ".format(self.meta["active_detectors"],
+                                               self.table))
+        return tbl
 
-        if ids is None:
-            ids = range(len(self.table))
+    def detector_headers(self, ids=None):
+        if ids is not None and all([isinstance(ii, int) for ii in ids]):
+            self.meta["active_detectors"] = list(ids)
 
         hdrs = []
-        for ii in ids:
-            row = self.table[ii]
+        for row in self.active_table:
             xcen, ycen = row["x_cen"], row["y_cen"]
             dx, dy = row["xhw"], row["yhw"]
             cdelt = row["pixsize"]
@@ -87,23 +114,47 @@ class DetectorList(Effect):
 
         return hdrs
 
-    def detector_row_dicts(self, ids=None):
-        if ids is None:
-            ids = range(len(self.table))
+    def plot(self):
+        import matplotlib.pyplot as plt
 
-        row_dicts = []
-        for ii in ids:
-            row = self.table[ii]
-            row_dicts += [{col: row[col] for col in row.colnames}]
+        for hdr in self.detector_headers():
+            x_mm, y_mm = calc_footprint(hdr, "D")
+            x_cen, y_cen = np.average(x_mm), np.average(y_mm)
+            x_mm = list(x_mm) + [x_mm[0]]
+            y_mm = list(y_mm) + [y_mm[0]]
+            plt.plot(x_mm, y_mm)
+            plt.text(x_cen, y_cen, hdr["ID"])
 
-        return row_dicts
+        plt.gca().set_aspect("equal")
 
 
-def sky_hdr_from_detector_hdr(header, pixel_scale):
-    """ pixel_scale in degrees - returns header"""
+class DetectorWindow(DetectorList):
+    """
+    For when a full DetectorList if too cumbersome
 
-    x_mm, y_mm = calc_footprint(header, "D")
-    scale = pixel_scale / header["CDELT1D"]          # (deg pix-1) / (mm pix-1)
-    header = header_from_list_of_xy(x_mm * scale, y_mm * scale, pixel_scale)
+    Parameters
+    ----------
+    pixel_size : float
+        [mm / pix] Physical pixel size
+    x, y : float
+        [mm] Position of window centre relative to optical axis
+    width, height=None : float
+        [mm] Dimensions of window. If height is None, height=width
+    angle : float, optional
+        [deg] Rotation of window
+    gain : float, optional
+        [ADU/e-]
 
-    return header
+    """
+    def __init__(self, pixel_size, x, y, width, height=None, angle=0, gain=1,
+                 **kwargs):
+        if height is None:
+            height = width
+        tbl = Table(data=[[0], [x], [y], [width / 2.], [height / 2.],
+                          [angle], [gain], [pixel_size]],
+                    names=["id", "x_cen", "y_cen", "xhw", "yhw",
+                           "angle", "gain", "pixsize"])
+        if "image_plane_id" not in kwargs:
+            kwargs["image_plane_id"] = 0
+
+        super(DetectorWindow, self).__init__(table=tbl, **kwargs)

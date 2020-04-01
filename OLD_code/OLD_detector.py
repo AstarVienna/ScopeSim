@@ -777,7 +777,7 @@ class Chip(object):
                         (self.naxis1 * self.naxis1 / cmds["HXRG_NUM_OUTPUTS"])
 
         if self.array is None:
-            self.array = np.zeros((self.naxis1, self.naxis2), dtype=np.float32)
+            self.array = np.zeros((self.naxis2, self.naxis1), dtype=np.float32)
 
         # At this point, the only negatives come from the convolution.
         # Remove them for the Poisson process

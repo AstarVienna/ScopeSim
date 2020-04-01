@@ -5,6 +5,7 @@ Control keywords, targets, and instrument packages
     :maxdepth: 2
     :caption: Contents:
 
+    file_formats/index
     controlling_simulations
     list_of_commands
     sources

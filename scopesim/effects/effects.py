@@ -1,6 +1,7 @@
 from ..effects.data_container import DataContainer
 from ..base_classes import SourceBase, FieldOfViewBase, ImagePlaneBase, \
     DetectorBase
+from ..utils import from_currsys
 from .. import rc
 
 
@@ -98,11 +99,15 @@ class Effect(DataContainer):
 
     @property
     def include(self):
-        return self.meta["include"]
+        return from_currsys(self.meta["include"])
 
     @include.setter
     def include(self, item):
         self.meta["include"] = item
 
     def __repr__(self):
-        return '{}: "{}"'.format(type(self).__name__, self.meta["name"])
+        name = self.meta["name"]
+        if name == "<empty>":
+            name = self.meta["filename"]
+
+        return '{}: "{}"'.format(type(self).__name__, name)

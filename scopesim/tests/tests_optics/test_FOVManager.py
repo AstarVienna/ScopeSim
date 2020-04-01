@@ -1,19 +1,16 @@
 import os
 import pytest
-from pytest import approx
 
 import numpy as np
 
 import scopesim as sim
 from scopesim import rc
-from scopesim.optics.fov_manager import FOVManager
-from scopesim.optics import fov_manager as fov_mgr
-from scopesim.optics.image_plane import ImagePlane
+from scopesim.optics import FieldOfView, FOVManager, ImagePlane
 from scopesim.commands import UserCommands
 
 from scopesim.tests.mocks.py_objects import effects_objects as eo
-from scopesim.tests.mocks.py_objects.yaml_objects import \
-     _usr_cmds_min_viable_scope
+from scopesim.tests.mocks.py_objects import yaml_objects as yo
+from scopesim.tests.mocks.py_objects import integr_spectroscopy_objects as iso
 
 import matplotlib.pyplot as plt
 
@@ -28,6 +25,38 @@ for NEW_PATH in [YAMLS_PATH, FILES_PATH]:
         rc.__search_path__.insert(0, NEW_PATH)
 
 
+################################################################################
+# Everything needed to test the FOVManager in Spectroscopy mode
+
+
+@pytest.fixture(scope="function")
+def ap_list():
+    return iso.mock_aperture_list()
+
+
+@pytest.fixture(scope="function")
+def spt_list():
+    return iso.mock_spectral_trace_list()
+
+
+@pytest.fixture(scope="function")
+def det_list():
+    return iso.mock_detector_list()
+
+
+@pytest.fixture(scope="function")
+def config_yaml():
+    return iso.mock_config_yaml()
+
+
+@pytest.fixture(scope="function")
+def spec_source():
+    return iso.mock_point_source_object()
+
+
+################################################################################
+# Needed for FOVManager in Imaging mode
+
 @pytest.fixture(scope="function")
 def mvs_effects_list():
     return eo._mvs_effects_list()
@@ -35,20 +64,24 @@ def mvs_effects_list():
 
 @pytest.fixture(scope="function")
 def mvs_usr_cmds():
-    return _usr_cmds_min_viable_scope()
+    return yo._usr_cmds_min_viable_scope()
+
+
+################################################################################
 
 
 @pytest.mark.usefixtures("mvs_effects_list")
 class TestInit:
     def test_initialises_with_nothing(self):
-        assert isinstance(FOVManager(), FOVManager)
+        assert isinstance(FOVManager(preload_fovs=False), FOVManager)
 
     def test_initialises_with_list_of_effects(self, mvs_effects_list):
-        assert isinstance(FOVManager(mvs_effects_list), FOVManager)
+        assert isinstance(FOVManager(mvs_effects_list,
+                                     preload_fovs=False), FOVManager)
 
 
 @pytest.mark.usefixtures("mvs_effects_list", "mvs_usr_cmds")
-class TestGenerateFovs:
+class TestGenerateFovsImagingMode:
     def test_returns_the_desired_number_of_fovs(self, mvs_effects_list,
                                                 mvs_usr_cmds):
         rc.__currsys__ = UserCommands(yamls=mvs_usr_cmds)
@@ -105,61 +138,33 @@ class TestGenerateFOVsSpectroscopyMode:
                                    config_yaml):
         if PLOTS:
             plt.subplot(121)
-            for hdr in hdrs:
-                from scopesim.optics.image_plane_utils import calc_footprint
-                x, y = calc_footprint(hdr)
-                plt.plot(x*3600, y*3600)
-                plt.title("Sky plane")
-                plt.xlabel("[arcsec]")
-
+            ap_list.plot()
             plt.subplot(122)
-            for hdr in hdrs:
-                from scopesim.optics.image_plane_utils import calc_footprint
-                x, y = calc_footprint(hdr, "D")
-                plt.plot(x, y)
-                plt.title("Detector focal plane")
-                plt.xlabel("[mm]")
-
+            spt_list.plot(0.8, 2.5)
+            det_list.plot()
             plt.show()
 
+    def test_generates_fovs_for_spectroscopy_mode(self, ap_list, spt_list,
+                                                  det_list, config_yaml,
+                                                  spec_source):
+        # Uses a basic SpectralTraceList with 4 traces and 2 apertures
+        # 2 traces attached to each apertures
+        config_yaml["wave_min"] = 1.0
+        config_yaml["wave_max"] = 2.5
 
-class TestGetImagingFOVs:
-    def test_returns_FOV_objects_for_basic_input(self):
-        apm = eo._img_aperture_mask(array_dict={"x": [-1.0, 1.0, 1.0, -1.0],
-                                                "y": [-1.0, -1.0, 1.0, 1.0]})
-        kwargs = {"pixel_scale": 0.01, "plate_scale": 1,
-                  "max_segment_size": 100 ** 2, "chunk_size": 100}
+        effects = [ap_list, spt_list, det_list]
+        fov_mgr = FOVManager(effects=effects, **config_yaml)
+        fovs = fov_mgr.fovs
+        print(len(fovs))
 
-        hdrs = fov_mgr.get_imaging_headers([apm], **kwargs)
-        waveset = np.linspace(1, 2, 6)
-        shifts = {"wavelengths": np.array([1, 2]),
-                  "x_shifts": np.zeros(2),
-                  "y_shifts": np.array([0, 1]) / 3600}  # 0..1 arcsec shift
-        fovs = fov_mgr.get_imaging_fovs(headers=hdrs, waveset=waveset,
-                                        shifts=shifts)
-
-        assert len(fovs) == (len(waveset)-1) * len(hdrs)
+        assert all([isinstance(fov, FieldOfView) for fov in fovs])
 
         if PLOTS:
-            from scopesim.optics.image_plane_utils import calc_footprint
-            plt.subplot(121)
+            implane = ImagePlane(det_list.image_plane_header)
             for fov in fovs:
-                x, y = calc_footprint(fov.hdu.header)
-                plt.fill(x*3600, y*3600, alpha=0.1, c="b")
-                plt.title("Sky plane")
-                plt.xlabel("[arcsec]")
+                fov.extract_from(spec_source)
+                fov.view()
+                implane.add(fov.hdu, wcs_suffix="D")
 
-        if PLOTS:
-            det_arr = DetectorArray(det_list)
-            hdus = det_arr.readout([implane])
-
-            for i, hdu in enumerate(hdus[1:5]):
-                plt.subplot(2, 2, i+1)
-                plt.imshow(hdu.data, origin="lower")
+            plt.imshow(implane.data, origin="lower")
             plt.show()
-
-
-class TestGetSpectroscopyFovs2:
-    # fov_mgr.get_spectroscopy_fovs2()
-    pass
-

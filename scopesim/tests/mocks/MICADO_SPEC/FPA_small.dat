@@ -1,0 +1,13 @@
+# x_cen_unit : mm
+# y_cen_unit : mm
+# xhw_unit : mm
+# yhw_unit : mm
+# x_len_unit : pix
+# y_len_unit : pix
+# pixsize_unit : mm
+# angle_unit : deg
+# gain_unit : electron/adu
+# image_plane_id : 0
+#
+   id   x_cen  y_cen    xhw    yhw  x_len  y_len  pixsize  angle    gain
+    5    0.00   0.00   7.68   7.68   1024   1024    0.015    0.0     1.0

@@ -1,3 +1,4 @@
+import pytest
 import numpy as np
 from astropy.io import fits
 import scopesim as sim
@@ -8,59 +9,67 @@ from matplotlib.colors import LogNorm
 import scopesim.source.source_templates
 import scopesim.source.source_utils
 
+from scopesim import rc
+
 PLOTS = False
 
 # DETECTOR nested dictionary
 # Ideally I would like to have "kwargs" : {"filename" : "MICADO_detectors.tbl"}
 # so that MICADO_detectors.tbl is the one place where the detector description
 # is stored. This however is more suited to storing the info in a database
-DETECTOR_YAML = {"object": "detector",
-                 "alias": "DET",
-                 "name": "test_detector",
-                 "properties": {"dit": "!OBS.dit",
-                                "image_plane_id": 0},
-                 "effects": [{"name": "detector_array_list",
-                              "description": "SimpleCADO detector array list",
-                              "class": "DetectorList",
-                              "kwargs": {"array_dict": {"id": [1],
-                                                        "pixsize": [0.015],
-                                                        "angle": [0.],
-                                                        "gain": [1.0],
-                                                        "x_cen": [0],
-                                                        "y_cen":[0],
-                                                        "xhw": [30.72],
-                                                        "yhw": [30.72]},
-                                         "x_cen_unit" : "mm",
-                                         "y_cen_unit" : "mm",
-                                         "xhw_unit" : "mm",
-                                         "yhw_unit" : "mm",
-                                         "pixsize_unit" : "mm",
-                                         "angle_unit" : "deg",
-                                         "gain_unit" : "electron/adu",
-                                         }
-                              },
-                             {"name": "dark_current",
-                              "description": "SimpleCADO dark current",
-                              "class": "DarkCurrent",
-                              # [e-/s] level of dark current
-                              "kwargs": {"value": 0.2,
-                                         "dit": "!OBS.dit",
-                                         "ndit": "!OBS.ndit"}
-                              }]
-                 }
-
-OBSERVATIONS_DICT = {"!OBS.ndit": 1,                # Not yet implemented
-                     "!OBS.dit" : 10,               # [sec]
-                     "!INST.pixel_scale": 0.004,    # because optical train still need this (stupidly)
-                     "!INST.plate_scale": 0.2666667 # because optical train still need this (stupidly)
-                     }
+@pytest.fixture(scope="function")
+def det_yaml():
+    return {"object": "detector",
+            "alias": "DET",
+            "name": "test_detector",
+            "properties": {"dit": "!OBS.dit",
+                        "image_plane_id": 0},
+            "effects": [ {"name": "detector_array_list",
+                          "description": "SimpleCADO detector array list",
+                          "class": "DetectorList",
+                          "kwargs": {"array_dict": {"id": [1],
+                                                    "pixsize": [0.015],
+                                                    "angle": [0.],
+                                                    "gain": [1.0],
+                                                    "x_cen": [0],
+                                                    "y_cen":[0],
+                                                    "xhw": [30.72],
+                                                    "yhw": [30.72]},
+                                     "x_cen_unit" : "mm",
+                                     "y_cen_unit" : "mm",
+                                     "xhw_unit" : "mm",
+                                     "yhw_unit" : "mm",
+                                     "pixsize_unit" : "mm",
+                                     "angle_unit" : "deg",
+                                     "gain_unit" : "electron/adu",
+                                     }
+                          },
+                         {"name": "dark_current",
+                          "description": "SimpleCADO dark current",
+                          "class": "DarkCurrent",
+                          # [e-/s] level of dark current
+                          "kwargs": {"value": 0.2,
+                                     "dit": "!OBS.dit",
+                                     "ndit": "!OBS.ndit"}
+                          }
+                         ]
+            }
 
 
-def test_simplecado():
+@pytest.fixture(scope="function")
+def obs_dict():
+    return {"!OBS.ndit": 1,                # Not yet implemented
+            "!OBS.dit" : 10,               # [sec]
+            "!INST.pixel_scale": 0.004,    # because optical train still need this (stupidly)
+            "!INST.plate_scale": 0.2666667 # because optical train still need this (stupidly)
+            }
+
+
+@pytest.mark.usefixtures("obs_dict", "det_yaml")
+def test_simplecado(obs_dict, det_yaml):
 
     src = scopesim.source.source_templates.empty_sky()
-    cmd = sim.commands.UserCommands(yamls=[DETECTOR_YAML],
-                                    properties=OBSERVATIONS_DICT)
+    cmd = sim.commands.UserCommands(yamls=[det_yaml], properties=obs_dict)
 
     opt = sim.OpticalTrain(cmd)
     opt.observe(src)
@@ -77,10 +86,10 @@ def test_simplecado():
     assert np.all(hdu[1].data == 2.0)
 
 
-def test_setitem_in_optical_train():
-    src = scopesim.source.source_templates.empty_sky()
-    cmd = sim.commands.UserCommands(yamls=[DETECTOR_YAML],
-                                    properties=OBSERVATIONS_DICT)
+@pytest.mark.usefixtures("obs_dict", "det_yaml")
+def test_setitem_in_optical_train(obs_dict, det_yaml):
+    currsys = rc.__currsys__
+    cmd = sim.commands.UserCommands(yamls=[det_yaml], properties=obs_dict)
 
     opt = sim.OpticalTrain(cmd)
     opt["dark_current"].meta["include"] = False

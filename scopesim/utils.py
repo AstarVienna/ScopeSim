@@ -434,8 +434,8 @@ def bug_report():
     except ImportError:
         import_module = __import__
 
-    packages = ["scopesim", "astropy", "numpy", "scipy", "synphot",
-                "requests", "pyyaml", "beautifulsoup"]
+    packages = ["scopesim", "numpy", "scipy", "astropy", "matplotlib",
+                "synphot", "requests", "bs4", "yaml"]
 
     # Check Python version
     print("Python:\n", sys.version)
@@ -490,7 +490,7 @@ def find_file(filename, path=None, silent=False):
         trynames = [filename]
     else:
         # try to find the file in a search path
-        trynames = [os.path.join(trydir, filename)
+        trynames = [os.path.join(trydir, *os.path.split(filename))
                     for trydir in path if trydir is not None]
 
     for fname in trynames:
@@ -859,10 +859,20 @@ def from_currsys(item):
     return item
 
 
-def check_keys(input_dict, required_keys, action="error"):
-    all_keys = True
-    if not all([key in input_dict for key in required_keys]):
-        all_keys = False
+def check_keys(input_dict, required_keys, action="error", all_any="all"):
+    """ Checks to see if all/any of the required keys are present in a dict """
+
+    if isinstance(input_dict, (list, tuple)):
+        input_dict = {key: None for key in input_dict}
+
+    if all_any == "all":
+        keys_present = all([key in input_dict for key in required_keys])
+    elif all_any == "any":
+        keys_present = any([key in input_dict for key in required_keys])
+    else:
+        raise ValueError("all_any must be either 'all' or 'any'")
+
+    if not keys_present:
         if "error" in action:
             raise ValueError("One or more of the following keys missing "
                              "from input_dict: \n{} \n{}"
@@ -872,4 +882,15 @@ def check_keys(input_dict, required_keys, action="error"):
                           "from input_dict: \n{} \n{}"
                           "".format(required_keys, input_dict.keys()))
 
-    return all_keys
+    return keys_present
+
+
+def interp2(x_new, x_orig, y_orig):
+    """Checks and corrects for decreasing x_orig values"""
+
+    if x_orig[0] < x_orig[-1]:
+        y_new = np.interp(x_new, x_orig, y_orig)
+    else:
+        y_new = np.interp(x_new, x_orig[::-1], y_orig[::-1])
+
+    return y_new

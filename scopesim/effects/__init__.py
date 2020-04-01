@@ -4,7 +4,7 @@ from .apertures import *
 from .psfs import *
 from .shifts import *
 
-from .spectroscopy_effects import *
+from .spectral_trace_list import *
 from .surface_list import *
 from .ter_curves import *
 from . import ter_curves_utils

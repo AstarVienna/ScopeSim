@@ -27,17 +27,9 @@
 # DetectorList, or ApertureMask, plus any shift from
 #   AtmosphericDispersion
 
-from copy import deepcopy
-import numpy as np
-from astropy import units as u
-
-from .fov import FieldOfView
-from . import image_plane_utils as imp_utils
-from .. import effects as efs
-from ..effects import Shift3D
-from ..effects import FilterCurve, PSF, SpectralTraceList
-from ..effects.effects_utils import get_all_effects, is_spectroscope
-from ..utils import check_keys, from_currsys
+from . import fov_manager_utils as fmu
+from ..effects.effects_utils import is_spectroscope
+from ..utils import from_currsys
 
 
 class FOVManager:
@@ -55,18 +47,24 @@ class FOVManager:
 
     """
     def __init__(self, effects=[], **kwargs):
-        self.meta = {"pixel_scale": "!INST.pixel_scale",
+        self.meta = {"area": "!TEL.area",
+                     "pixel_scale": "!INST.pixel_scale",
                      "plate_scale": "!INST.plate_scale",
                      "wave_min": "!SIM.spectral.wave_min",
                      "wave_mid": "!SIM.spectral.wave_mid",
                      "wave_max": "!SIM.spectral.wave_max",
                      "chunk_size": "!SIM.computing.chunk_size",
                      "max_segment_size": "!SIM.computing.max_segment_size",
-                     "sub_pixel_fraction": "!SIM.sub_pixel.fraction"}
+                     "sub_pixel": "!SIM.sub_pixel.flag",
+                     "sub_pixel_fraction": "!SIM.sub_pixel.fraction",
+                     "preload_fovs": "!SIM.computing.preload_field_of_views"}
         self.meta.update(kwargs)
 
         self.effects = effects
-        self._fovs_list = []
+        if from_currsys(self.meta["preload_fovs"]) is True:
+            self._fovs_list = self.generate_fovs_list()
+        else:
+            self._fovs_list = []
 
     def generate_fovs_list(self):
         """
@@ -77,399 +75,61 @@ class FOVManager:
         fovs : list of FieldOfView objects
 
         """
+
         self.meta = from_currsys(self.meta)
+        fov_meta_keys = ["area", "sub_pixel"]
+        fov_meta = {key: self.meta[key] for key in fov_meta_keys}
 
         if is_spectroscope(self.effects):
-            shifts  = get_3d_shifts(self.effects, **self.meta)
-            waveset = get_spectroscopy_waveset(self.effects, **self.meta)
-            headers = get_spectroscopy_headers(self.effects, **self.meta)
-            fovs    = get_spectroscopy_fovs(headers, waveset, shifts)
+            headers = fmu.get_spectroscopy_headers(self.effects, **self.meta)
+            shifts = fmu.get_3d_shifts(self.effects, **self.meta)
+            fovs = fmu.get_spectroscopy_fovs(headers, shifts, self.effects,
+                                             **fov_meta)
         else:
-            shifts  = get_3d_shifts(self.effects, **self.meta)
-            waveset = get_imaging_waveset(self.effects, **self.meta)
-            headers = get_imaging_headers(self.effects, **self.meta)
-            fovs    = get_imaging_fovs(headers, waveset, shifts)
+            headers = fmu.get_imaging_headers(self.effects, **self.meta)
+            waveset = fmu.get_imaging_waveset(self.effects, **self.meta)
+            shifts = fmu.get_3d_shifts(self.effects, **self.meta)
+            fovs = fmu.get_imaging_fovs(headers, waveset, shifts, **fov_meta)
 
         return fovs
 
     @property
     def fovs(self):
-        self._fovs_list = self.generate_fovs_list()
+        if from_currsys(self.meta["preload_fovs"]) is False:
+            self._fovs_list = self.generate_fovs_list()
         return self._fovs_list
 
     @property
     def fov_footprints(self, which="both"):
         return None
 
+# Spectroscopy FOV setup
+# ======================
+#
+# self.effects --> fov_setup_effects [ApertureList, TraceList, DetectorList]
+#
+# generate a set of sky headers for each aperture in the list
+#
+# for each trace in tracelist,
+#   note the aperture_id
+#   note the image_plane_id
+#
+#   get the pixel_size [from DetectorList.table["pixsize"]]
+#   crawl along trace
+#       find the red/blue extreme pixel edge wavelengths
+#       get the wavelength of the nearest full pixel jump (x or y)
+#
+#   interpolate the image plane positions of the trace table for the new
+#       wavelength array
+#   for each new wavelength
+#       get the rotation angle of the fov
+#       get the shear of the fov wrt the next fov
+#
+#       generate an image-plane header for each wavelength
+#
+# get the combined 3d-shifts
+# for each trace
+#   interpolate the 3d-shifts for all wavelengths
+#   apply the required fov-shift to each fov header
 
-def get_3d_shifts(effects, **kwargs):
-    """
-    Returns the total 3D shifts (x,y,lam) from a series of Shift3D objects
 
-    Parameters
-    ----------
-    effects : list of Shift3D effects
-
-    Returns
-    -------
-    shift_dict : dict
-        returns the x, y shifts for each wavelength in the fov_grid, where
-        fov_grid contains the edge wavelengths for each spectral layer
-
-    Notes
-    -----
-    Units returned by fov_grid():
-    - wavelength: [um]
-    - x_shift, y_shift: [deg]
-
-    """
-    required_keys = ["wave_min", "wave_mid", "wave_max",
-                     "sub_pixel_fraction", "pixel_scale"]
-    check_keys(kwargs, required_keys, action="warning")
-
-    effects = get_all_effects(effects, Shift3D)
-    if len(effects) > 0:
-        # shifts = [[waves], [x_shifts], [y_shifts]]
-        shifts = [eff.fov_grid(which="shifts", **kwargs) for eff in effects]
-
-        old_bin_edges = [shift[0] for shift in shifts if len(shift[0]) >= 2]
-        new_bin_edges = np.unique(np.sort(np.concatenate(old_bin_edges),
-                                          kind="stable"))
-
-        x_shifts = np.zeros(len(new_bin_edges))
-        y_shifts = np.zeros(len(new_bin_edges))
-        # .. todo:: replace the 1e-7 with a variable in !SIM
-        for shift in shifts:
-            if not np.all(np.abs(shift[1]) < 1e-7):
-                x_shifts += np.interp(new_bin_edges, shift[0], shift[1])
-            if not np.all(np.abs(shift[2]) < 1e-7):
-                y_shifts += np.interp(new_bin_edges, shift[0], shift[2])
-
-        # After adding all the shifts together, work out a new wavelength set
-        z_edges = np.copy(new_bin_edges)
-        z_shifts = (x_shifts**2 + y_shifts**2)**0.5        # in arcsec
-        step_size = kwargs["pixel_scale"] * kwargs["sub_pixel_fraction"]
-        z_steps = (z_shifts / step_size).astype(int)
-        # find where the shift is larger than a sub pixel fraction size
-        ii = np.where(np.diff(z_steps) != 0)[0]
-
-        x_shifts = np.array([x_shifts[0]] + list(x_shifts[ii]) + [x_shifts[-1]])
-        y_shifts = np.array([y_shifts[0]] + list(y_shifts[ii]) + [y_shifts[-1]])
-        z_edges  = np.array([z_edges[0]]  + list(z_edges[ii])  + [z_edges[-1]])
-
-    else:
-        z_edges = np.array([kwargs["wave_min"], kwargs["wave_max"]])
-        x_shifts = np.zeros(2)
-        y_shifts = np.zeros(2)
-
-    shift_dict = {"wavelengths": z_edges,
-                  "x_shifts": x_shifts / 3600.,   # fov_grid returns [arcsec]
-                  "y_shifts": y_shifts / 3600.}   # get_3d_shifts returns [deg]
-
-    return shift_dict
-
-
-def get_imaging_waveset(effects_list, **kwargs):
-    """
-    Returns the edge wavelengths for the spectral layers needed for simulation
-
-    Parameters
-    ----------
-    effects_list : list of Effect objects
-
-    Returns
-    -------
-    wave_bin_edges : list
-        [um] list of wavelengths
-
-    """
-    required_keys = ["wave_min", "wave_max"]
-    check_keys(kwargs, required_keys, action="error")
-
-    # get the filter wavelengths first to set (wave_min, wave_max)
-    filters = get_all_effects(effects_list, FilterCurve)
-
-    wave_bin_edges = [filt.fov_grid(which="waveset", **kwargs)
-                      for filt in filters]
-    if len(wave_bin_edges) > 0:
-        kwargs["wave_min"] = np.min(wave_bin_edges)
-        kwargs["wave_max"] = np.max(wave_bin_edges)
-
-    for effect_class in (PSF, SpectralTraceList):
-        effects = get_all_effects(effects_list, effect_class)
-        for eff in effects:
-            waveset = eff.fov_grid(which="waveset", **kwargs)
-            if waveset is not None:
-                wave_bin_edges += [waveset]
-
-    wave_bin_edges = combine_wavesets(wave_bin_edges)
-
-    if len(wave_bin_edges) == 0:
-        wave_bin_edges = [kwargs["wave_min"], kwargs["wave_max"]]
-
-    return wave_bin_edges
-
-
-def get_imaging_headers(effects, **kwargs):
-    """
-    Returns a list of Header objects for each of the FieldOfVIew objects
-
-    Parameters
-    ----------
-    effects : list of Effect objects
-        Should contain all effects which return a header defining the extent
-        of their spatial coverage
-
-    Returns
-    -------
-    hdrs : list of Header objects
-
-    Notes
-    -----
-    FOV headers use the return values from the ``<Effect>.fov_grid()``
-    method. The ``fov_grid`` dict must contain the entry ``edges``
-
-    This may change in future versions of ScopeSim
-
-    """
-    # look for apertures,
-    #   if no apertures, look for detectors, make aperture from detector
-    # get aperture headers via fov_grid()
-    # check size of aperture in pixels
-    #   if larger than max_chunk_size, split into smaller headers
-    # add image plane WCS information for a direct projection
-
-    required_keys = ["pixel_scale", "plate_scale",
-                     "chunk_size", "max_segment_size"]
-    check_keys(kwargs, required_keys, action="error")
-
-    plate_scale = kwargs["plate_scale"]     # ["/mm]
-    pixel_scale = kwargs["pixel_scale"]     # ["/pix]
-
-    # look for apertures
-    aperture_effects = get_all_effects(effects, (efs.ApertureMask,
-                                                 efs.ApertureList))
-    if len(aperture_effects) == 0:
-        detector_arrays = get_all_effects(effects, efs.DetectorList)
-        if len(detector_arrays) > 0:
-            aperture_effects += [detarr.fov_grid(which="edges",
-                                                 pixel_scale=pixel_scale)
-                                 for detarr in detector_arrays]
-        else:
-            raise ValueError("No ApertureMask or DetectorList was provided. At "
-                             "least one must be passed to make an ImagePlane: "
-                             "{}".format(effects))
-
-    # get aperture headers from fov_grid()
-    # - for-loop catches mutliple headers from ApertureList.fov_grid()
-    hdrs = []
-    for ap_eff in aperture_effects:
-        # ..todo:: add this functionality to ApertureList effect
-        hdr = ap_eff.fov_grid(which="edges", pixel_scale=pixel_scale)
-        hdrs += hdr if isinstance(hdr, (list, tuple)) else [hdr]
-
-    # check size of aperture in pixels - split if necessary
-    sky_hdrs = []
-    for hdr in hdrs:
-        if hdr["NAXIS1"] * hdr["NAXIS2"] > kwargs["max_segment_size"]:
-            sky_hdrs += imp_utils.split_header(hdr, kwargs["chunk_size"])
-        else:
-            sky_hdrs += [hdr]
-
-    # ..todo:: Deal with the case that two or more ApertureMasks overlap
-
-    # map the on-sky apertures directly to the image plane using plate_scale
-    # - further changes can be made by the individual effects
-
-    # plate_scale ["/mm] --> deg
-    # pixel_scale ["/pix]
-    # x_sky [deg] / (plate_scale/3600) [deg/mm] --> x_det [mm]
-
-    pixel_size = pixel_scale / plate_scale
-    plate_scale_deg = plate_scale / 3600.   # ["/mm] / 3600 = [deg/mm]
-    for skyhdr in sky_hdrs:
-        x_sky, y_sky = imp_utils.calc_footprint(skyhdr)
-        x_det = x_sky / plate_scale_deg
-        y_det = y_sky / plate_scale_deg
-
-        dethdr = imp_utils.header_from_list_of_xy(x_det, y_det, pixel_size, "D")
-        skyhdr.update(dethdr)
-
-    return sky_hdrs
-
-
-def get_imaging_fovs(headers, waveset, shifts):
-    """
-    Returns a list of ``FieldOfView`` objects
-
-    Parameters
-    ----------
-    headers : list of fits.Header objects
-        Headers giving spatial extent of each FOV region
-
-    waveset : list of floats
-        [um] N+1 wavelengths for N spectral layers
-
-    shifts : list of tuples
-        [deg] x,y shifts w.r.t to the optical axis plane. N shifts for N
-        spectral layers
-
-    Returns
-    -------
-    fovs : list of FieldOfView objects
-
-    """
-
-    shift_waves = shifts["wavelengths"]     # in [um]
-    shift_dx = shifts["x_shifts"]           # in [deg]
-    shift_dy = shifts["y_shifts"]
-
-    # combine the wavelength bins from 1D spectral effects and 3D shift effects
-    if len(shifts["wavelengths"]) > 0:
-        mask = (shift_waves > np.min(waveset)) * (shift_waves < np.max(waveset))
-        waveset = combine_wavesets([waveset, shift_waves[mask]])
-
-    counter = 0
-    fovs = []
-
-    print("Preparing {} FieldOfViews".format((len(waveset)-1)*len(headers)),
-          flush=True)
-
-    for ii in range(len(waveset) - 1):
-        for hdr in headers:
-            # add any pre-instrument shifts to the FOV sky coords
-            wave_mid = 0.5 * (waveset[ii] + waveset[ii+1])
-            x_shift = np.interp(wave_mid, shift_waves, shift_dx)
-            y_shift = np.interp(wave_mid, shift_waves, shift_dy)
-
-            fov_hdr = deepcopy(hdr)
-            fov_hdr["CRVAL1"] += x_shift      # headers are in [deg]
-            fov_hdr["CRVAL2"] += y_shift
-
-            # define the wavelength range for the FOV
-            waverange = [waveset[ii], waveset[ii + 1]]
-
-            # Make the FOV
-            fov = FieldOfView(fov_hdr, waverange)
-            fov.meta["id"] = counter
-            fovs += [fov]
-
-    return fovs
-
-
-def get_spectroscopy_waveset(effects, **kwargs):
-    # TraceList
-    # for each trace dlam along the trace centre in increments
-    #   of SIM_SUB_PIXEL_FRACTION
-    # Must be accompanied by an ApertureList
-
-    # return {aperture_no : wavelengths}
-
-    pass
-
-
-def get_spectroscopy_headers(effects, **kwargs):
-    # ApertureList
-    # For each Trace set the sky header to the aperture footprint
-    #   plus any shifts from AtmosphericDispersion
-    # Set the Image plane footprint centred on the image plane
-    #   position
-
-
-    pass
-
-
-def get_spectroscopy_fovs(fields, waveset, shifts):
-    pass
-
-
-
-
-
-def get_spectroscopy_fovs2(effects, **kwargs):
-
-    aptr_lists = get_all_effects(efs.ApertureList)
-    dtcr_lists = get_all_effects(efs.DetectorList)
-    trac_lists = get_all_effects(efs.SpectralTraceList)
-
-    if len(aptr_lists) > 1:
-        aptr_list = efs.ApertureList()
-        for al in aptr_lists:
-            aptr_list += al
-
-
-
-
-
-    aptr_headers = [apl for apl in aptr_lists]
-
-    fovs_list = []
-
-
-    # self.effects --> fov_setup_effects [ApertureList, TraceList, DetectorList]
-    #
-    # generate a set of sky headers for each aperture in the list
-    #
-    # for each trace in tracelist,
-    #   note the aperture_id
-    #   note the image_plane_id
-    #
-    #   get the pixel_size [from DetectorList.table["pixsize"]]
-    #   crawl along trace
-    #       find the red/blue extreme pixel edge wavelengths
-    #       get the wavelength of the nearest full pixel jump (x or y)
-    #
-    #   interpolate the image plane positions of the trace table for the new wavelength array
-    #   for each new wavelength
-    #       get the rotation angle of the fov
-    #       get the shear of the fov wrt the next fov
-    #
-    #       generate an image-plane header for each wavelength
-    #
-    # get the combined 3d-shifts
-    # for each trace
-    #   interpolate the 3d-shifts for all wavelengths
-    #   apply the required fov-shift to each fov header
-    #
-
-
-
-
-
-    pass
-
-
-
-
-
-
-
-
-
-
-
-
-
-def combine_wavesets(waveset_list):
-    """
-    Joins and sorts several sets of wavelengths into a single 1D array
-
-    Parameters
-    ----------
-    waveset_list : list
-        A group of wavelength arrays or lists
-
-    Returns
-    -------
-    wave_set : np.ndarray
-        Combined set of wavelengths
-
-    """
-    wave_set = []
-    for wbe in waveset_list:        # wbe = waveset bin edges
-        wbe = wbe.value if isinstance(wbe, u.Quantity) else wbe
-        wave_set += list(wbe)
-    # ..todo:: set variable in !SIM.computing for rounding to the 7th decimal
-    wave_set = np.unique(np.round(np.sort(wave_set, kind="stable"), 7))
-
-    return wave_set

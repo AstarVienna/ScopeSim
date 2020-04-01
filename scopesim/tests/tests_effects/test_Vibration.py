@@ -1,6 +1,7 @@
 import pytest
 from pytest import approx
 import numpy as np
+from astropy import units as u
 
 from scopesim.effects import Vibration
 from scopesim.optics.fov import FieldOfView
@@ -43,7 +44,7 @@ class TestInit:
 @pytest.mark.usefixtures("fov_hdr", "implane_hdr")
 class TestApplyTo:
     def test_nothing_happens_if_apply_to_fov(self, fov_hdr):
-        fov = FieldOfView(header=fov_hdr, waverange=[0.5, 2.5])
+        fov = FieldOfView(header=fov_hdr, waverange=[0.5, 2.5], area=1*u.m**2)
         fov.hdu.data = np.zeros((11, 11))
         fov.hdu.data[5, 5] = 1
         vibration = Vibration(**{"fwhm": 0.01, "pixel_scale": 0.004})

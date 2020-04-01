@@ -5,7 +5,7 @@ from astropy.io import fits
 from .. import rc
 from . import Effect
 from ..base_classes import DetectorBase, ImagePlaneBase
-from ..utils import real_colname, from_currsys, check_keys
+from ..utils import real_colname, from_currsys, check_keys, interp2
 
 
 class SummedExposure(Effect):
@@ -169,14 +169,13 @@ class ReferencePixelBorder(Effect):
         return implane
 
 
-
 ################################################################################
 
 
 def make_ron_frame(image_shape, noise_std, n_channels, channel_fraction,
                    line_fraction, pedestal_fraction, read_fraction):
     shape = image_shape
-    w_chan = shape[0] // n_channels
+    w_chan = max(1, shape[0] // n_channels)
 
     pixel_std = noise_std * (pedestal_fraction + read_fraction)**0.5
     line_std = noise_std * line_fraction**0.5
@@ -189,10 +188,9 @@ def make_ron_frame(image_shape, noise_std, n_channels, channel_fraction,
 
     channel_std = noise_std * channel_fraction**0.5
     channel = np.repeat(np.random.normal(loc=0, scale=channel_std,
-                                         size=n_channels),
-                        w_chan, axis=0)
+                                         size=n_channels), w_chan + 1, axis=0)
 
-    ron_frame = (pixel + line).T + channel
+    ron_frame = (pixel + line).T + channel[:shape[0]]
 
     return ron_frame
 

@@ -51,8 +51,9 @@ class TestAddImageHDUtoImageHDU:
         ycen, xcen = np.array(big.data.shape) // 2
         assert np.sum(big.data[:ycen, xcen:]) == np.sum(small.data)
 
-        plt.imshow(big.data, origin="lower")
-        plt.show()
+        if PLOTS:
+            plt.imshow(big.data, origin="lower")
+            plt.show()
 
     def test_python_image_coords(self):
         # numpy uses a system of im[y, x]

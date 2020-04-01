@@ -1,0 +1,10 @@
+# x_unit: arcsec
+# y_unit: arcsec
+# id: 0
+# conserve_image: True
+#
+x       y
+-1.5    -0.025
+13.5     -0.025
+13.5     0.025
+-1.5    0.025

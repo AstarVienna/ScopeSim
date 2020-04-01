@@ -95,10 +95,7 @@ class OpticalElement:
 
         effects = []
         for eff in self.effects:
-            if not eff.meta["include"]:
-                continue
-
-            if "z_order" in eff.meta:
+            if eff.include and "z_order" in eff.meta:
                 z = eff.meta["z_order"]
                 if isinstance(z, (list, tuple)):
                     if any([zmin <= zi <= zmax for zi in z]):

@@ -63,5 +63,6 @@ class TestObserve:
 
         # given a 1 um bandpass
         print(src_flux, bg_flux)
+        area = opt.optics_manager.surfaces_table.area.value
         assert src_flux == approx(1)          # u.Unit("ph s-1")
-        assert np.sum(im) == approx(src_flux, rel=2e-3)
+        assert np.sum(im) == approx(src_flux * area, rel=2e-3)
