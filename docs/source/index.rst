@@ -54,15 +54,18 @@ There are three major components of any simulation workflow:
 3. the observation.
 
 The three ``import`` statements are representative of this.
+
 Firstly we have ``import scopesim_templates`` which the package that can
 generate a description of our target. It contains lots of helper functions
 which return the ``Source`` objects accepted during a ``scopesim`` observation.
-Secondly we have the data descriping the optical system, which are kept in
+
+Secondly we have the data describing the optical system, which are kept in
 "instrument packages" held on a server. Hence the first time we want to
 simulate anything, we need to use ``download_package`` to get the relevant
 instrument packages from the server. In this case we want to use HAWKI at the
 VLT, hence we need not only the main HAWKI package, but also the two support
 packages for ``HAWKI``: the ``VLT`` and ``Paranal``.
+
 Finally we ``import scopesim``, the package which generates simulated
 observation data sets from the two sets of input.
 

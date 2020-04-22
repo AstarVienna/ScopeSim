@@ -77,7 +77,6 @@ weights map that covers the field of view
     define where the borders are between these regions
   * "layer" is the position along the M dimension of the PSF cube
 
-  .
 
 * EXT 1 (Image 2D/3D)
 
