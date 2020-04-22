@@ -88,7 +88,7 @@ describing the relative sensitivity of each pixel
   A cube with dimensions (x,y,N) where each (x,y) plane is the pixel sensitivitiy
   map for chip N in the detector array
 
-  
+
 Persistence maps
 ----------------
 
