@@ -18,8 +18,8 @@ Topics included in this notebook:
 `Notebook: "ScopeSim Basic Intro" <https://github.com/astronomyk/ScopeSim/blob/master/docs/source/_static/scopesim_basic_intro.ipynb>`_
 
 
-Adding custom ``Effect objects
-------------------------------
+Adding custom ``Effect`` objects
+--------------------------------
 Topics included in this notebook:
 
 - sub-pixel shifts of point sources
