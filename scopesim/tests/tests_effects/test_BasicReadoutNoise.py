@@ -2,25 +2,25 @@ import pytest
 from pytest import approx
 import numpy as np
 
-from scopesim.effects import BasicReadoutNoise, make_ron_frame
+from scopesim.effects import PoorMansHxRGReadoutNoise, make_ron_frame
 from scopesim.tests.mocks.py_objects.detector_objects import _basic_detector
 
 
 class TestInit:
     def test_initialises_with_proper_keywords(self):
-        isinstance(BasicReadoutNoise(noise_std=13, n_channels=64, ndit=1),
-                   BasicReadoutNoise)
+        isinstance(PoorMansHxRGReadoutNoise(noise_std=13, n_channels=64, ndit=1),
+                   PoorMansHxRGReadoutNoise)
 
     def test_throws_error_without_needed_keywords(self):
         with pytest.raises(ValueError):
-            BasicReadoutNoise()
+            PoorMansHxRGReadoutNoise()
 
 
 class TestApplyTo:
     @pytest.mark.parametrize("noise_std", [13, 30, 200])
     def test_creates_noise_std_as_needed(self, noise_std):
         dtcr = _basic_detector(width=256)
-        ron = BasicReadoutNoise(noise_std=noise_std, n_channels=64, ndit=1)
+        ron = PoorMansHxRGReadoutNoise(noise_std=noise_std, n_channels=64, ndit=1)
         dtcr = ron.apply_to(dtcr)
 
         assert np.std(dtcr._hdu.data) == approx(noise_std, rel=0.05)
@@ -29,7 +29,7 @@ class TestApplyTo:
     @pytest.mark.parametrize("ndit", [1, 9, 100])
     def test_noise_reduces_with_square_root_of_ndit(self, ndit, noise_std):
         dtcr = _basic_detector(width=256)
-        ron = BasicReadoutNoise(noise_std=noise_std, n_channels=64, ndit=ndit)
+        ron = PoorMansHxRGReadoutNoise(noise_std=noise_std, n_channels=64, ndit=ndit)
         dtcr = ron.apply_to(dtcr)
         noise_real = np.std(dtcr._hdu.data)
 

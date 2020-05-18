@@ -87,7 +87,7 @@ class OpticalTrain:
         """
 
         if isinstance(user_commands, str):
-            cmds = UserCommands(use_instrument=user_commands)
+            user_commands = UserCommands(use_instrument=user_commands)
 
         if not isinstance(user_commands, UserCommands):
             raise ValueError("user_commands must be a UserCommands object: "

@@ -26,7 +26,8 @@ def empty_sky(flux=0):
     return sky
 
 
-def star_field(n, mmin, mmax, width, height=None, photometric_system="vega"):
+def star_field(n, mmin, mmax, width, height=None, photometric_system="vega",
+               use_grid=False):
     """
     Creates a super basic field of stars with random positions and brightnesses
 
@@ -47,6 +48,8 @@ def star_field(n, mmin, mmax, width, height=None, photometric_system="vega"):
     photometric_system : str, optional
         [vega, AB]
 
+    use_grid : bool, optional
+        Place stars randomly or on a grid
 
     Returns
     -------
@@ -71,10 +74,17 @@ def star_field(n, mmin, mmax, width, height=None, photometric_system="vega"):
     if rc.__config__["!SIM.random.seed"] is not None:
         np.random.seed(rc.__config__["!SIM.random.seed"])
 
-    rands = np.random.random(size=(2, n)) - 0.5
-    x = width * rands[0]
-    y = height * rands[1]
-    mags = np.random.random(size=n) * (mmax - mmin) + mmin
+    if use_grid:
+        nw = np.ceil(n**0.5)
+        nh = np.ceil(n / nw)
+        x, y = np.mgrid[0:1:1/nw, 0:1:1/nh] - 0.5
+        positions = x.flatten(), y.flatten()
+    else:
+        positions = np.random.random(size=(2, n)) - 0.5
+
+    x = width * positions[0]
+    y = height * positions[1]
+    mags = np.linspace(mmin, mmax, n)
     w = 10**(-0.4 * mags)
     ref = np.zeros(n, dtype=int)
 

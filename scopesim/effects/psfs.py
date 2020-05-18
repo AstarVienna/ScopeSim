@@ -174,10 +174,41 @@ class NonCommonPathAberration(AnalyticalPSF):
         return self._total_wfe
 
 
-class Seeing(AnalyticalPSF):
-    def __init__(self, **kwargs):
-        super(Seeing, self).__init__(**kwargs)
-        self.meta["z_order"] = [243, 643]
+class SeeingPSF(AnalyticalPSF):
+    """
+    Currently only returns a 1.5" seeing gaussian kernel
+    """
+    def __init__(self, seeing, **kwargs):
+        super(SeeingPSF, self).__init__(**kwargs)
+        self.meta["seeing"] = seeing
+        self.meta["z_order"] = [242, 642]
+
+    def fov_grid(self, which="waveset", **kwargs):
+        wavelengths = []
+        if which == "waveset" and \
+                "waverange" in kwargs and \
+                "pixel_scale" in kwargs:
+            waverange = utils.quantify(kwargs["waverange"], u.um)
+            wavelengths = waverange
+            # ..todo: return something useful
+
+        # .. todo: check that this is actually correct
+        return wavelengths
+
+    def get_kernel(self, fov):
+        # called by .apply_to() from the base PSF class
+
+        pixel_scale = fov.header["CDELT1"] * u.deg.to(u.arcsec)
+        pixel_scale = utils.quantify(pixel_scale, u.arcsec)
+        wave = fov.wavelength
+
+        ### add in the conversion to fwhm from seeing and wavelength here
+        fwhm = self.meta["seeing"] * u.arcsec / pixel_scale
+
+        sigma = fwhm.value / 2.35
+        kernel = Gaussian2DKernel(sigma, mode="center").array
+
+        return kernel
 
 
 class GaussianDiffractionPSF(AnalyticalPSF):

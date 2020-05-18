@@ -127,13 +127,6 @@ class TestMakeOpticalTrain:
         pass
 
 
-
-
-
-
-
-
-
 class TestSkyBackgroundIsRealistic:
     @pytest.mark.parametrize("mode_names, filt_name, etc_flux_values, mag_diff",
                              [(["SCAO", "IMG_4mas"], "Ks", 147, 2.05),  # ph/s/pix
@@ -175,5 +168,39 @@ class TestSkyBackgroundIsRealistic:
 
         print(filt_name, scaled_etc_bg, av_sim_bg)
 
+
+class TestDetector:
+    @pytest.mark.parametrize("ndit, dit", [(1, 3600)])
+    def test_returns_ndit_dit_scaled_image(self, ndit, dit):
+        cmd = scopesim.UserCommands(use_instrument="MICADO",
+                                    properties={"!OBS.filter_name": "Ks",
+                                                "!OBS.dit": dit,
+                                                "!OBS.ndit": ndit})
+        opt = scopesim.OpticalTrain(cmd)
+        opt["armazones_atmo_dispersion"].include = False
+        opt["micado_adc_3D_shift"].include = False
+        opt["detector_linearity"].include = False
+        src = scopesim.source.source_templates.star_field(16, 20, 35, 3,
+                                                          use_grid=True)
+        opt.observe(src)
+        implane_image = opt.image_planes[0].data
+
+        hdus = opt.readout()
+        readout_image = hdus[0][1].data
+
+        imp_av = np.median(implane_image) * ndit * dit
+        hdu_av = np.median(readout_image)
+        assert imp_av == approx(hdu_av, rel=0.05)
+
+        if not PLOTS:
+            plt.subplot(121)
+            plt.imshow(implane_image, norm=LogNorm())
+            plt.colorbar()
+
+            plt.subplot(122)
+            plt.imshow(readout_image, norm=LogNorm())
+            plt.colorbar()
+
+            plt.show()
 
 

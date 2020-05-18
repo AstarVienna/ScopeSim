@@ -114,6 +114,12 @@ def list_packages(location="all", url=None, local_dir=None,
 
     return_pkgs_list = []
 
+    if location.lower() in ["local", "all"]:
+        local_pkgs = get_local_packages(local_dir)
+        if not silent:
+            print_package_list(local_pkgs, "locally: {}".format(local_dir))
+            return_pkgs_list += local_pkgs
+
     if location.lower() in ["server", "all"]:
         server_pkgs = []
         folders = get_server_elements(url, "/")
@@ -123,12 +129,6 @@ def list_packages(location="all", url=None, local_dir=None,
         if not silent:
             print_package_list(server_pkgs, "on the server: {}".format(url))
             return_pkgs_list += server_pkgs
-
-    if location.lower() in ["local", "all"]:
-        local_pkgs = get_local_packages(local_dir)
-        if not silent:
-            print_package_list(local_pkgs, "locally: {}".format(local_dir))
-            return_pkgs_list += local_pkgs
 
     if return_pkgs:
         return return_pkgs_list

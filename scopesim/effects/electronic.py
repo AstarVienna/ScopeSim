@@ -26,9 +26,9 @@ class SummedExposure(Effect):
         return obj
 
 
-class BasicReadoutNoise(Effect):
+class PoorMansHxRGReadoutNoise(Effect):
     def __init__(self, **kwargs):
-        super(BasicReadoutNoise, self).__init__(**kwargs)
+        super(PoorMansHxRGReadoutNoise, self).__init__(**kwargs)
         self.meta["z_order"] = [811]
         self.meta["pedestal_fraction"] = 0.3
         self.meta["read_fraction"] = 0.4
@@ -54,6 +54,29 @@ class BasicReadoutNoise(Effect):
 
             for _ in range(self.meta["ndit"]):
                 det._hdu.data += make_ron_frame(**ron_kwargs)
+
+        return det
+
+
+class BasicReadoutNoise(Effect):
+    def __init__(self, **kwargs):
+        super(BasicReadoutNoise, self).__init__(**kwargs)
+        self.meta["z_order"] = [811]
+        self.meta["random_seed"] = "!SIM.random.seed"
+        self.meta.update(kwargs)
+
+        self.required_keys = ["noise_std", "ndit"]
+        check_keys(self.meta, self.required_keys, action="error")
+
+    def apply_to(self, det):
+        if isinstance(det, DetectorBase):
+            self.meta = from_currsys(self.meta)
+            if self.meta["random_seed"] is not None:
+                np.random.seed(self.meta["random_seed"])
+
+            noise_std = self.meta["noise_std"] * np.sqrt(float(self.meta["ndit"]))
+            det._hdu.data += np.random.normal(loc=0, scale=noise_std,
+                                              size=det._hdu.data.shape)
 
         return det
 
@@ -91,7 +114,6 @@ class ShotNoise(Effect):
 class DarkCurrent(Effect):
     """
     required: dit, ndit, value
-
     """
     def __init__(self, **kwargs):
         super(DarkCurrent, self).__init__(**kwargs)
