@@ -191,6 +191,25 @@ class ReferencePixelBorder(Effect):
         return implane
 
 
+class BinnedImage(Effect):
+    def __init__(self, **kwargs):
+        super(BinnedImage, self).__init__(**kwargs)
+        self.meta["z_order"] = [870]
+
+        self.required_keys = ["bin_size"]
+        check_keys(self.meta, self.required_keys, action="error")
+
+    def apply_to(self, det):
+        if isinstance(det, DetectorBase):
+            bs = from_currsys(self.meta["bin_size"])
+            image = det._hdu.data
+            h, w = image.shape
+            new_image = image.reshape((h//bs, bs, w//bs, bs))
+            det._hdu.data = new_image.sum(axis=3).sum(axis=1)
+
+        return det
+
+
 ################################################################################
 
 

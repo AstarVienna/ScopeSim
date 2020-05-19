@@ -112,11 +112,11 @@ class SpectralSurface:
                                      "".format(conversion_factor)]
 
         if flux is not None and "rescale_emission" in self.meta:
-            dic = self.meta["rescale_emission"]
+            dic = from_currsys(self.meta["rescale_emission"])
             amplitude = dic["value"] * u.Unit(dic["unit"])
-            filter_name = from_currsys(dic["filter_name"])
+            filter_name = dic["filter_name"]
             if "filename_format" in dic:
-                filename_format = from_currsys(dic["filename_format"])
+                filename_format = dic["filename_format"]
                 filter_name = filename_format.format(filter_name)
             flux = ter_utils.scale_spectrum(flux, filter_name, amplitude)
 

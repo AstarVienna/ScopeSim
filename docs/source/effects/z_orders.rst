@@ -90,7 +90,7 @@ Analytical PSFs
 
 * 241 NonCommonPathAberration
 * 242 GaussianDiffractionPSF
-* 243 Seeing (PSF)
+* 243 SeeingPSF (PSF)
 * 244 Vibration (PSF)
 
 Semi Analytical PSFs
@@ -191,3 +191,4 @@ Other phenomena
 Exposures
 
 * 860 SummedExposure
+* 870 BinnedImage

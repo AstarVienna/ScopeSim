@@ -541,7 +541,7 @@ def airmass2zendist(airmass):
 
 def convert_table_comments_to_dict(tbl):
 
-    comments_dict = None
+    comments_dict = {}
     if "comments" in tbl.meta:
         try:
             comments_str = "\n".join(tbl.meta["comments"])
@@ -757,13 +757,18 @@ def quantity_from_table(colname, table, default_unit=""):
     if col.unit is not None:
         col = col.data * col.unit
     else:
-        if colname+"_unit" in table.meta:
-            col = col * u.Unit(table.meta[colname+"_unit"])
+        colname_u = colname + "_unit"
+        if colname_u in table.meta:
+            col = col * u.Unit(table.meta[colname_u])
         else:
-            col = col * u.Unit(default_unit)
-            warnings.warn(
-                "{}_unit was not found in table.meta: {}. Default to: {}"
-                "".format(colname, table.meta, default_unit))
+            com_tbl = convert_table_comments_to_dict(table)
+            if colname_u in com_tbl:
+                col = col * u.Unit(com_tbl[colname_u])
+            else:
+                col = col * u.Unit(default_unit)
+                warnings.warn(
+                    "{}_unit was not found in table.meta: {}. Default to: {}"
+                    "".format(colname, table.meta, default_unit))
 
     return col
 
@@ -772,15 +777,21 @@ def unit_from_table(colname, table, default_unit=""):
     """
     Looks for the unit for a column based on the meta dict keyword "<col>_unit"
     """
+    colname_u = colname + "_unit"
     col = table[colname]
     if col.unit is not None:
         unit = col.unit
-    elif colname + "_unit" in table.meta:
-        unit = u.Unit(table.meta[colname+"_unit"])
+    elif colname_u in table.meta:
+        unit = u.Unit(table.meta[colname_u])
     else:
-        warnings.warn("{}_unit was not found in table.meta: {}. Default to: {}"
-                      "".format(colname, table.meta, default_unit))
-        unit = u.Unit(default_unit)
+        com_tbl = convert_table_comments_to_dict(table)
+        if colname_u in com_tbl:
+            unit = u.Unit(com_tbl[colname_u])
+        else:
+            warnings.warn("{}_unit was not found in table.meta: {}. "
+                          "Default to: {}"
+                          "".format(colname, table.meta, default_unit))
+            unit = u.Unit(default_unit)
 
     return unit
 

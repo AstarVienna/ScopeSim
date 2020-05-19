@@ -23,7 +23,7 @@ rc.__config__["!SIM.file.use_cached_downloads"] = False
 
 PKGS = {"LFOA": "telescopes/LFOA.zip"}
 
-CLEAN_UP = True
+CLEAN_UP = False
 PLOTS = False
 
 
@@ -66,17 +66,23 @@ class TestLoadUserCommands:
 class TestMakeOpticalTrain:
     def test_load_lfao(self):
         cmd = scopesim.UserCommands(use_instrument="LFOA",
-                                    properties={"!OBS.filter_name": "OIII",
-                                                "!OBS.dit": 0})
+                                    properties={"!OBS.filter_name": "V",
+                                                "!OBS.dit": 60,
+                                                "!DET.bin_size": 1,
+                                                "!OBS.sky.bg_mag": 20,
+                                                "!OBS.sky.filter_name": "V"})
         opt = scopesim.OpticalTrain(cmd)
+        opt["detector_linearity"].include = False
         assert isinstance(opt, scopesim.OpticalTrain)
 
-        src = scopesim.source.source_templates.star_field(5000, 10, 20, 700)
+        src = scopesim.source.source_templates.star_field(10000, 10, 20, 700)
         # src = scopesim.source.source_templates.empty_sky()
         opt.observe(src)
         hdu_list = opt.readout()[0]
 
         assert isinstance(hdu_list, fits.HDUList)
 
-        plt.imshow(hdu_list[1].data, norm=LogNorm())
-        plt.show()
+        print(np.average(hdu_list[1].data))
+        if not PLOTS:
+            plt.imshow(hdu_list[1].data, norm=LogNorm())
+            plt.show()

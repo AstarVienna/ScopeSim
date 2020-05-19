@@ -176,11 +176,11 @@ class NonCommonPathAberration(AnalyticalPSF):
 
 class SeeingPSF(AnalyticalPSF):
     """
-    Currently only returns a 1.5" seeing gaussian kernel
+    Currently only returns gaussian kernel with a ``fwhm`` [arcsec]
     """
-    def __init__(self, seeing, **kwargs):
+    def __init__(self, fwhm=1.5, **kwargs):
         super(SeeingPSF, self).__init__(**kwargs)
-        self.meta["seeing"] = seeing
+        self.meta["fwhm"] = fwhm
         self.meta["z_order"] = [242, 642]
 
     def fov_grid(self, which="waveset", **kwargs):
@@ -203,7 +203,7 @@ class SeeingPSF(AnalyticalPSF):
         wave = fov.wavelength
 
         ### add in the conversion to fwhm from seeing and wavelength here
-        fwhm = self.meta["seeing"] * u.arcsec / pixel_scale
+        fwhm = self.meta["fwhm"] * u.arcsec / pixel_scale
 
         sigma = fwhm.value / 2.35
         kernel = Gaussian2DKernel(sigma, mode="center").array
