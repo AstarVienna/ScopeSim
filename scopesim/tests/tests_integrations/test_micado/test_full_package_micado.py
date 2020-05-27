@@ -15,8 +15,8 @@ from matplotlib import pyplot as plt
 from matplotlib.colors import LogNorm
 
 
-# if rc.__config__["!SIM.tests.run_integration_tests"] is False:
-#     pytestmark = pytest.mark.skip("Ignoring MICADO integration tests")
+if rc.__config__["!SIM.tests.run_integration_tests"] is False:
+    pytestmark = pytest.mark.skip("Ignoring MICADO integration tests")
 
 rc.__config__["!SIM.file.local_packages_path"] = "./micado_temp/"
 

@@ -41,15 +41,21 @@ This code was originally based on the [SimCADO](www.univie.ac.at/simcado) packag
 
 ## Dependencies
 
-```
-numpy >= 1.13
-scipy == 1.2.0
-astropy < 4.0
-synphot < 0.2
-pyyaml
-requests
-beautifulsoup
-```
+For Python version 3.6 and above the latest versions of these packages are compatible ScopeSim:
+
+    numpy
+    scipy
+    astropy
+    pyyaml
+    requests
+    beautifulsoup4
+    synphot
+
+For Python 3.5 the following versions are required:
+
+    astropy <= 3.2.3
+    synphot <= 0.1.3
+
 
 ## Documentation
 The main set of documentation can be found here: 

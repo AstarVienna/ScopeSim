@@ -24,6 +24,12 @@ MOCK_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__),
 sim.rc.__search_path__.insert(0, MOCK_DIR)
 
 
+def synphot_version():
+    from synphot.version import version
+    nums = version.split(".")
+    return float(nums[0]) + float(nums[1]) * 0.1
+
+
 @pytest.fixture(scope="module")
 def input_tables():
     filenames = ["LIST_mirrors_ELT.tbl",
@@ -105,7 +111,11 @@ class TestRadiometryTableGetThroughput:
         rt = opt_rad.RadiometryTable(input_tables)
         thru = rt.get_throughput(start=1, end=3)
         assert isinstance(thru, SpectralElement)
-        assert thru.model.n_submodels == 2
+
+        if float(synphot_version()) < 0.2:
+            assert thru.model.n_submodels() == 2
+        else:
+            assert thru.model.n_submodels == 2
 
     def test_return_none_for_empty_radiometry_table(self):
         rt = opt_rad.RadiometryTable()
@@ -126,7 +136,11 @@ class TestRadiometryTableGetEmission:
         etendue = 996 * u.m ** 2 * (0.004 * u.arcsec) ** 2
         emiss = rt.get_emission(etendue=etendue, start=1, end=3)
         assert isinstance(emiss, SourceSpectrum)
-        assert emiss.model.n_submodels == 9
+
+        if float(synphot_version()) < 0.2:
+            assert emiss.model.n_submodels() == 9
+        else:
+            assert emiss.model.n_submodels == 9
 
     def test_return_none_for_empty_radiometry_table(self):
         rt = opt_rad.RadiometryTable()

@@ -1,13 +1,13 @@
-numpy           #>=1.16.0
-scipy           #==1.2.0
+numpy
+scipy
 astropy
-matplotlib      #==3.0.2
+matplotlib
 
 requests
 beautifulsoup4
 pyyaml
 
-synphot         #<0.2
+synphot
 skycalc_ipy
 anisocado
 
