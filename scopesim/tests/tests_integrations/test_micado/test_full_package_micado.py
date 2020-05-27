@@ -207,7 +207,7 @@ class TestDetector:
 class TestLimitingMagnitudes:
     def test_get_lim_mags_for_micado(self):
         dit, ndit = 3.6, 5000
-        filter_name = "KS"
+        filter_name = "Ks"
         bg_mag = 13.6
 
         from scopesim.source.source_templates import star_field
