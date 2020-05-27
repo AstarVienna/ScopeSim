@@ -1,6 +1,6 @@
 numpy           #==1.16.0
 scipy==1.2.0
-astropy<4.0
+astropy
 matplotlib      #==3.0.2
 
 requests

@@ -5,6 +5,8 @@ from astropy import units as u
 from scopesim.tests.mocks.py_objects import source_objects as so
 from scopesim import OpticalTrain, UserCommands
 
+PLOTS = False
+
 
 def test_sub_pixels_integration():
     yaml = {"alias": "DET",
@@ -25,5 +27,6 @@ def test_sub_pixels_integration():
     src = so._vega_source(mag=15, x=0.001, y=0.)
 
     opt.observe(src)
-    plt.imshow(opt.image_planes[0].data, origin="lower")
-    plt.show()
+    if PLOTS:
+        plt.imshow(opt.image_planes[0].data, origin="lower")
+        plt.show()

@@ -83,6 +83,6 @@ class TestMakeOpticalTrain:
         assert isinstance(hdu_list, fits.HDUList)
 
         print(np.average(hdu_list[1].data))
-        if not PLOTS:
+        if PLOTS:
             plt.imshow(hdu_list[1].data, norm=LogNorm())
             plt.show()

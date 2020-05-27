@@ -122,20 +122,19 @@ class TestDerivPolynomial2D:
 
 class TestConvertCommentsToDict:
     def test_converts_list_of_strings_to_dict_if_comments_in_table_meta(self):
-        tbl = ioascii.read("""
-                         # key1 : val 1 
-                         # key2 : extra long entry
-                         col1    col2
-                         0       1 """)
+        tbl = ioascii.read("""# key1 : val 1 
+                              # key2 : extra long entry
+                              col1    col2
+                              0       1 """)
         dic = convert_table_comments_to_dict(tbl)
         assert dic["key1"] == "val 1"
         assert len(dic) == 2
 
-    def test_returns_none_if_comments_not_in_table_meta(self):
+    def test_returns_empty_dict_if_comments_not_in_table_meta(self):
         tbl = ioascii.read("""col1    col2
                               0       1 """)
         dic = convert_table_comments_to_dict(tbl)
-        assert dic is None
+        assert dic == {}
 
     def test_returns_input_if_conversion_doesnt_work(self):
         tbl_str = """

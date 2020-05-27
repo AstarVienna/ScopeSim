@@ -26,7 +26,7 @@ PKGS = {"Armazones": "locations/Armazones.zip",
         "MAORY": "instruments/MAORY.zip",
         "MICADO": "instruments/MICADO.zip"}
 
-CLEAN_UP = True
+CLEAN_UP = False
 PLOTS = False
 
 
@@ -192,7 +192,7 @@ class TestDetector:
         hdu_av = np.median(readout_image)
         assert imp_av == approx(hdu_av, rel=0.05)
 
-        if not PLOTS:
+        if PLOTS:
             plt.subplot(121)
             plt.imshow(implane_image, norm=LogNorm())
             plt.colorbar()
@@ -204,3 +204,65 @@ class TestDetector:
             plt.show()
 
 
+class TestLimitingMagnitudes:
+    def test_get_lim_mags_for_micado(self):
+        dit, ndit = 3.6, 5000
+        filter_name = "KS"
+        bg_mag = 13.6
+
+        from scopesim.source.source_templates import star_field
+        src = star_field(8*8, 26, 33, 3, use_grid=True)
+        cmd = scopesim.UserCommands(use_instrument="MICADO",
+                                    properties={"!OBS.filter_name": filter_name,
+                                                "!OBS.dit": dit,
+                                                "!OBS.ndit": ndit})
+        opt = scopesim.OpticalTrain(cmd)
+        opt["armazones_atmo_dispersion"].include = False
+        opt["micado_adc_3D_shift"].include = False
+        opt["detector_linearity"].include = False
+        opt["detector_window"].include = True
+        opt["full_detector_array"].include = False
+
+        new_kwargs = {"rescale_emission": {"filter_name": filter_name,
+                                           "filename_format": "filters/TC_filter_{}.dat",
+                                           "value": bg_mag,
+                                           "unit": "mag"}}
+        opt["armazones_atmo_default_ter_curve"] = new_kwargs
+
+        opt.observe(src)
+        hdus = opt.readout()
+        # hdus = opt.readout(filename=f"test_{dit}s.fits")
+
+        print(opt.effects)
+
+        image = hdus[0][1].data
+        pixel_scale = opt.cmds["!INST.pixel_scale"]
+        xs = src.fields[0]["x"] / pixel_scale + image.shape[1] / 2
+        ys = src.fields[0]["y"] / pixel_scale + image.shape[1] / 2
+
+        if PLOTS:
+            plt.imshow(image, norm=LogNorm())
+            # plt.plot(xs, ys, "r.")
+            plt.show()
+
+            snr = get_snr(xs=xs, ys=ys, image=hdus[0][1].data, inner=5, outer=10)
+            plt.plot(src.fields[0]["weight"], snr)
+            plt.show()
+
+
+def get_snr(xs, ys, image, inner, outer):
+    img = np.copy(image)
+    snrs = []
+    for x, y in zip(xs.astype(int), ys.astype(int)):
+        img_in = np.copy(img[y-inner:y+inner, x-inner:x+inner])
+        img[y-inner:y+inner, x-inner:x+inner] = 0
+        img_out = np.copy(img[y-outer:y+outer, x-outer:x+outer])
+
+        bg = np.median(img_out[img_out != 0])
+        noise = np.std(img_out[img_out != 0] - bg)
+        signal = np.sum(img_in - bg)
+        snrs += [signal / noise]
+
+        print(x, y, signal, noise, signal/noise)
+
+    return snrs

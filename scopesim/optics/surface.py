@@ -116,8 +116,7 @@ class SpectralSurface:
             amplitude = dic["value"] * u.Unit(dic["unit"])
             filter_name = dic["filter_name"]
             if "filename_format" in dic:
-                filename_format = dic["filename_format"]
-                filter_name = filename_format.format(filter_name)
+                filter_name = dic["filename_format"].format(filter_name)
             flux = ter_utils.scale_spectrum(flux, filter_name, amplitude)
 
         return flux

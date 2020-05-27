@@ -105,9 +105,9 @@ class TestRadiometryTableGetThroughput:
         rt = opt_rad.RadiometryTable(input_tables)
         thru = rt.get_throughput(start=1, end=3)
         assert isinstance(thru, SpectralElement)
-        assert thru.model.n_submodels() == 2
+        assert thru.model.n_submodels == 2
 
-    def test_return_none_for_empty_radimetry_table(self):
+    def test_return_none_for_empty_radiometry_table(self):
         rt = opt_rad.RadiometryTable()
         thru = rt.get_throughput()
         assert thru is None
@@ -126,9 +126,9 @@ class TestRadiometryTableGetEmission:
         etendue = 996 * u.m ** 2 * (0.004 * u.arcsec) ** 2
         emiss = rt.get_emission(etendue=etendue, start=1, end=3)
         assert isinstance(emiss, SourceSpectrum)
-        assert emiss.model.n_submodels() == 9
+        assert emiss.model.n_submodels == 9
 
-    def test_return_none_for_empty_radimetry_table(self):
+    def test_return_none_for_empty_radiometry_table(self):
         rt = opt_rad.RadiometryTable()
         emiss = rt.get_throughput()
         assert emiss is None
