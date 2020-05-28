@@ -1,0 +1,16 @@
+numpy
+scipy
+astropy
+matplotlib
+
+requests
+beautifulsoup4
+pyyaml
+
+synphot
+skycalc_ipy
+anisocado
+
+# Just so that readthedocs doesn't include the tests module - yes it's hacky
+skycalc_cli
+
