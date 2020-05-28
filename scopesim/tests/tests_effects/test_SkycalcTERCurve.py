@@ -1,3 +1,4 @@
+import pytest
 import os
 from synphot import SpectralElement, SourceSpectrum
 
@@ -5,8 +6,8 @@ from scopesim.effects import SkycalcTERCurve
 from scopesim import rc
 from scopesim.utils import from_currsys
 
-local_skycalc_tests = from_currsys("!SIM.tests.run_skycalc_ter_tests")
-TRAVIS = True if "TRAVIS" in os.environ else local_skycalc_tests
+if rc.__config__["!SIM.tests.run_skycalc_ter_tests"] is False:
+    pytestmark = pytest.mark.skip("Ignoring SkyCalc integration tests")
 
 
 def setup_module():
@@ -24,23 +25,19 @@ def teardown_module():
 
 class TestInit:
     def test_initialises_with_nothing(self):
-        if TRAVIS:
-            assert isinstance(SkycalcTERCurve(), SkycalcTERCurve)
+        assert isinstance(SkycalcTERCurve(), SkycalcTERCurve)
 
     def test_initialises_with_some_kwargs(self):
-        if TRAVIS:
-            sky_ter = SkycalcTERCurve(pwv=1.0, observatory="paranal")
-            assert str(sky_ter.surface.meta["wavelength_unit"]) == "um"
+        sky_ter = SkycalcTERCurve(pwv=1.0, observatory="paranal")
+        assert str(sky_ter.surface.meta["wavelength_unit"]) == "um"
 
     def test_initialises_with_bang_strings(self):
-        if TRAVIS:
-            rc.__currsys__["!OBS.pwv"] = 20.0
-            sky_ter = SkycalcTERCurve(pwv="!OBS.pwv")
-            assert sky_ter.skycalc_conn.values["pwv"] == 20.0
-            assert isinstance(sky_ter.surface.transmission, SpectralElement)
-            assert isinstance(sky_ter.surface.emission, SourceSpectrum)
+        rc.__currsys__["!OBS.pwv"] = 20.0
+        sky_ter = SkycalcTERCurve(pwv="!OBS.pwv")
+        assert sky_ter.skycalc_conn.values["pwv"] == 20.0
+        assert isinstance(sky_ter.surface.transmission, SpectralElement)
+        assert isinstance(sky_ter.surface.emission, SourceSpectrum)
 
     def test_initialises_with_non_skycalc_keys(self):
-        if TRAVIS:
-            sky_ter = SkycalcTERCurve(name="bogus")
-            assert "name" not in sky_ter.skycalc_conn.values
+        sky_ter = SkycalcTERCurve(name="bogus")
+        assert "name" not in sky_ter.skycalc_conn.values
