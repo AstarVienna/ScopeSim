@@ -55,9 +55,9 @@ For [![Python 3.5](https://img.shields.io/badge/Python-3.5-yellow.svg)]() the fo
 [![Scipy](https://img.shields.io/badge/Scipy-1.0.0-brightgreen.svg)]()
 
 [![Synphot](https://img.shields.io/badge/Synphot-0.1.3-brightgreen.svg)]()
-[![requests](https://img.shields.io/badge/requests-2.0-brightgreen.svg)]()
+[![requests](https://img.shields.io/badge/requests-2.20.0-brightgreen.svg)]()
 [![beautifulsoup4](https://img.shields.io/badge/beautifulsoup4-4.4-brightgreen.svg)]()
-[![pyyaml](https://img.shields.io/badge/pyyaml-3.10-brightgreen.svg)]()
+[![pyyaml](https://img.shields.io/badge/pyyaml-5.1-brightgreen.svg)]()
 
 #### Things to watch out for with Synphot
 Numpy>=1.16 must be used for synphot to work
