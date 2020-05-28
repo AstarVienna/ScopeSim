@@ -39,9 +39,10 @@ class PSF(Effect):
                     obj.view(self.meta["sub_pixel_flag"])
                 old_shape = obj.hdu.data.shape
 
-                kernel = self.get_kernel(obj)
                 mode = self.meta["convolve_mode"]
-                new_image = convolve(obj.hdu.data, kernel, mode=mode)
+                kernel = self.get_kernel(obj).astype(float)
+                image = obj.hdu.data.astype(float)
+                new_image = convolve(image, kernel, mode=mode)
                 new_shape = new_image.shape
 
                 obj.hdu.data = new_image
@@ -107,7 +108,7 @@ class Vibration(AnalyticalPSF):
             self.kernel = Gaussian2DKernel(sigma, x_size=width, y_size=width,
                                            mode="center").array
 
-        return self.kernel
+        return self.kernel.astype(float)
 
 
 class NonCommonPathAberration(AnalyticalPSF):
@@ -383,7 +384,9 @@ class FieldVaryingPSF(DiscretePSF):
                     kernel /= sum_kernel
 
                 # image convolution
-                new_image = convolve(fov.hdu.data, kernel, mode="same")
+                image = fov.hdu.data.astype(float)
+                kernel = kernel.astype(float)
+                new_image = convolve(image, kernel, mode="same")
                 if canvas is None:
                     canvas = np.zeros(new_image.shape)
 
