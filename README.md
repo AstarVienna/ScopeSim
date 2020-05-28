@@ -9,16 +9,16 @@
 [![Python 3.5](https://img.shields.io/badge/Python-3.5-brightgreen.svg)]()
 [![Python 3.6](https://img.shields.io/badge/Python-3.6-brightgreen.svg)]()
 [![Python 3.7](https://img.shields.io/badge/Python-3.7-brightgreen.svg)]()
-[![Python 3.8](https://img.shields.io/badge/Python-3.8-red.svg)]()
+[![Python 3.8](https://img.shields.io/badge/Python-3.8-brightgreen.svg)]()
 
 #### Dependencies
 
-[![Numpy](https://img.shields.io/badge/Numpy->=1.13-brightgreen.svg)]()
-[![Scipy](https://img.shields.io/badge/Scipy-1.2.0-orange.svg)]()
+[![Numpy](https://img.shields.io/badge/Numpy->=1.16-brightgreen.svg)]()
+[![Scipy](https://img.shields.io/badge/Scipy->=1.2.0-brightgreen.svg)]()
 [![Matplotlib](https://img.shields.io/badge/Matplotlib->=3.0-brightgreen.svg)]()
 
-[![Astropy](https://img.shields.io/badge/Astropy-<=3.9-yellow.svg)]()
-[![Synphot](https://img.shields.io/badge/Synphot-0.1.3-orange.svg)]()
+[![Astropy](https://img.shields.io/badge/Astropy->=3.2-brightgreen.svg)]()
+[![Synphot](https://img.shields.io/badge/Synphot->=0.1.3-brightgreen.svg)]()
 
 [![requests](https://img.shields.io/badge/requests->=2.21-brightgreen.svg)]()
 [![beautifulsoup4](https://img.shields.io/badge/beautifulsoup4->=4.7-brightgreen.svg)]()
@@ -43,7 +43,7 @@ This code was originally based on the [SimCADO](www.univie.ac.at/simcado) packag
 
 For Python version 3.6 and above the latest versions of these packages are compatible ScopeSim:
 
-    numpy
+    numpy >= 1.16
     scipy
     astropy
     pyyaml
@@ -55,7 +55,6 @@ For Python 3.5 the following versions are required:
 
     astropy <= 3.2.3
     synphot <= 0.1.3
-
 
 ## Documentation
 The main set of documentation can be found here: 
