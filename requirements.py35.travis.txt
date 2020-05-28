@@ -3,7 +3,7 @@ scipy==1.0.0
 astropy==2.0
 matplotlib==1.5
 
-requests==2.0
+requests==2.20.0
 beautifulsoup4==4.4
 pyyaml==5.1
 synphot==0.1.3
