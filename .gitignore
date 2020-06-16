@@ -49,6 +49,7 @@ dist
 *test_downloads_dir/
 *scopesim_pkg_dir_tmp/
 *misc/
+*temp/
 *TEST.fits
 *temp*
 *speclecado*.fits

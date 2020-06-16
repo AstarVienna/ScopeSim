@@ -16,7 +16,6 @@
 # import sys
 # sys.path.insert(0, os.path.abspath('.'))
 
-
 # -- Project information -----------------------------------------------------
 
 project = 'ScopeSim'
@@ -45,7 +44,17 @@ extensions = [
     'sphinx.ext.coverage',
     'sphinx.ext.mathjax',
     'sphinx.ext.viewcode',
+    # 'pyquickhelper.sphinxext.sphinxext_runpython_extension',
+    # 'sphinx_autorun',
+    # 'pyexec',
+    'sphinx_execute_code',
+    'numpydoc',
+    'sphinxcontrib.apidoc',
+    'matplotlib.sphinxext.plot_directive',
 ]
+
+# Matplotlib plot directive config parameters
+plot_html_show_source_link = False
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']

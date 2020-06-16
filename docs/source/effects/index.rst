@@ -5,8 +5,7 @@ Effect objects
     :maxdepth: 2
     :caption: Contents:
 
-    ..
-       Effect_Descriptions
+    Effect_Descriptions
     z_orders
 
 

@@ -36,8 +36,8 @@ For [![Python 3.6](https://img.shields.io/badge/Python-3.6-brightgreen.svg)]() a
     numpy >= 1.16
     scipy >= 1.0.0
     astropy >= 2.0
-    pyyaml >= 3.10
-    requests >= 2.0
+    pyyaml >= 5.1
+    requests >= 2.20
     beautifulsoup4 >= 4.4
     synphot >= 0.1.3
 

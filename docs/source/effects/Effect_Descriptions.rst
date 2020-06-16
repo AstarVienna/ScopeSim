@@ -1,5 +1,5 @@
 ScopeSim 1.0 Effect Descriptions
-===============================
+================================
 Useful for the definition of data formats which describe the optical effects of
 a certain instrument + telescope configuration
 

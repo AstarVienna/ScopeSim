@@ -1,7 +1,8 @@
 Jupyter Notebooks
 =================
 
-A series of use case examples in jupyter notebooks
+A series of use case examples in jupyter notebooks.
+These are longer and more in-depth that the 5-liners.
 
 Basic introduction to ScopeSim
 ------------------------------

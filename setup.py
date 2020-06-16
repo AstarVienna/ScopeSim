@@ -17,13 +17,13 @@ with open('README.md') as f:
 with open('LICENCE') as f:
     __license__ = f.read()
 
+with open('scopesim/version.py') as f:
+    __version__ = f.readline().split("'")[1]
+
 
 def setup_package():
-    # Rewrite the version file every time
-    # write_version_py()
-
     setup(name='ScopeSim',
-          version="0.0.4",
+          version=__version__,
           description="Generalised telescope observation simulator",
           long_description=__readme__,
           long_description_content_type='text/markdown',
@@ -35,14 +35,14 @@ def setup_package():
           include_package_data=True,
           packages=find_packages(exclude=('tests', 'data', 'docs_to_be_sorted',
                                           'misc', 'OLD_code', )),
-          install_requires=["numpy>=1.13",
-                            "scipy>0.17",
-                            "astropy>1.1.2",
-                            "requests>2.0",
-                            "synphot>0.1",
-                            "matplotlib>1.5.0",
-                            "pyyaml>3",
-                            "beautifulsoup4",
+          install_requires=["numpy>=1.16",
+                            "scipy>=1.0.0",
+                            "astropy>=2.0",
+                            "matplotlib>=1.5",
+                            "pyyaml>5.1",
+                            "requests>=2.20",
+                            "beautifulsoup4>=4.4",
+                            "synphot>0.1.3",
                             "skycalc_ipy",
                             "anisocado",
                             ],
@@ -56,5 +56,3 @@ def setup_package():
 
 if __name__ == '__main__':
     setup_package()
-
-

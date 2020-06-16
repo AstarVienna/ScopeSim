@@ -7,6 +7,3 @@ File formats
     :glob:
 
     *
-    instrument_config
-    simulation_config
-
