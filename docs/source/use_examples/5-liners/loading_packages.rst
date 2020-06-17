@@ -4,27 +4,20 @@ Loading Packages
 TL;DR
 -----
 
-.. plot::
-   :context:
+.. jupyter-execute::
 
-   import os, scopesim
-   pkg_path = os.path.join(os.getcwd(), "temp")
-   scopesim.rc.__config__["!SIM.file.local_packages_path"] = pkg_path
+    import scopesim
 
+    scopesim.rc.__config__["!SIM.file.local_packages_path"] = "./temp/"
 
-.. plot::
-   :context:
-   :include-source:
+    pkg_names = ["locations/Paranal", "telescopes/VLT", "instruments/HAWKI"]
+    scopesim.server.download_package(pkg_names)
 
-   import scopesim
+    cmds = scopesim.UserCommands(use_instrument="HAWKI")
+    hawki = scopesim.OpticalTrain(cmds)
 
-   scopesim.rc.__config__["!SIM.file.local_packages_path"]
-
-   pkg_names = ["locations/Paranal", "telescopes/VLT", "instruments/HAWKI"]
-   scopesim.server.download_package(pkg_names)
-
-   cmds = scopesim.UserCommands(use_instrument="HAWKI")
-   hawki = scopesim.OpticalTrain(cmds)
+    import matplotlib.pyplot as plt
+    plt.plot([0,1], [0,1])
 
 
 Explanation
@@ -33,15 +26,10 @@ Explanation
 Before we can load anything we need to download the instrument packages from the
 instrument reference database (https://github.com/astronomyk/irdb).
 
-We can list all the available packages like so::
+We can list all the available packages like so:
 
-    scopesim.server.list_packages()
+.. jupyter-execute::
 
-.. execute_code::
-   :hide_headers:
-   :hide_code:
-
-   import scopesim
    scopesim.server.list_packages()
 
 
@@ -54,11 +42,7 @@ Note that the packages are split into three categories:
 To use an instrument package, we will need to download the support packages (location and telescope) that are relevant to the instrument.
 In the case HAWKI, this means also getting the VLT and Paranal packages:
 
-.. plot::
-   :context:
-   :include-source:
-
-   import scopesim
+.. jupyter-execute::
 
    pkg_names = ["locations/Paranal", "telescopes/VLT", "instruments/HAWKI"]
    scopesim.server.download_package(pkg_names)
@@ -68,9 +52,7 @@ The standard way to load an instrument package is to create a ``UserCommands``
 object and the ``use_instrument=`` parameter:
 
 
-.. plot::
-   :context:
-   :include-source:
+.. jupyter-execute::
 
    hawki_cmds = scopesim.UserCommands(use_instrument="HAWKI")
 
@@ -79,9 +61,7 @@ of the whole optical system.
 The optical model is created by passing the ``UserCommands`` object to an
 ``OpticalTrain`` object:
 
-.. plot::
-   :context:
-   :include-source:
+.. jupyter-execute::
 
    hawki = scopesim.OpticalTrain(hawki_cmds)
 
@@ -89,9 +69,7 @@ However if we are happy to accept all the default values and simply want to
 simulate an observation, we can bypass the user commands step, and initialise
 the ``OpticalTrain`` with the name of package that we have on the local disc.
 
-.. plot::
-   :context:
-   :include-source:
+.. jupyter-execute::
 
    hawki = scopesim.OpticalTrain("HAWKI")
 
