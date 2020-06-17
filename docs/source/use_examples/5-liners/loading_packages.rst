@@ -16,9 +16,6 @@ TL;DR
     cmds = scopesim.UserCommands(use_instrument="HAWKI")
     hawki = scopesim.OpticalTrain(cmds)
 
-    import matplotlib.pyplot as plt
-    plt.plot([0,1], [0,1])
-
 
 Explanation
 -----------

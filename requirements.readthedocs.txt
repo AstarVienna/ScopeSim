@@ -11,7 +11,7 @@ synphot
 skycalc_ipy
 anisocado
 
+jupyter_sphinx
 numpydoc==0.6.0
 sphinxcontrib-apidoc
-sphinx-execute-code
 sphinx==1.6.7

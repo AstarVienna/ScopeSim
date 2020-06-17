@@ -93,6 +93,7 @@ class OpticalTrain:
             raise ValueError("user_commands must be a UserCommands object: "
                              "{}".format(type(user_commands)))
 
+        self.cmds = user_commands
         rc.__currsys__ = user_commands
         self.yaml_dicts = rc.__currsys__.yaml_dicts
         self.optics_manager = OpticsManager(self.yaml_dicts)

@@ -197,7 +197,8 @@ class Source(SourceBase):
                           "This could cause problems later")
             raise NotImplementedError
 
-        for i in range(1, 3):
+        for i in [1, 2]:
+            # Do not test for CUNIT or CDELT so that it throws an exception
             unit = u.Unit(image_hdu.header["CUNIT"+str(i)].lower())
             val = float(image_hdu.header["CDELT"+str(i)])
             image_hdu.header["CUNIT"+str(i)] = "DEG"
