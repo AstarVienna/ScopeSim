@@ -44,9 +44,9 @@ def test_plot_spec_trace_layout():
                                 invalid_value=0, col_number_start=1)
     det = efs.DetectorList(filename="FPA_array_layout.dat")
 
-    spt.plot(1.4, 2.5)
-    det.plot()
     if PLOTS:
+        spt.plot(1.4, 2.5)
+        det.plot()
         plt.show()
 
 
