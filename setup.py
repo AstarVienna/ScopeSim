@@ -42,7 +42,7 @@ def setup_package():
                             "pyyaml>5.1",
                             "requests>=2.20",
                             "beautifulsoup4>=4.4",
-                            "synphot>0.1.3",
+                            "synphot>=0.1.3",
                             "skycalc_ipy",
                             "anisocado",
                             ],
