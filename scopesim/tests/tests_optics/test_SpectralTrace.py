@@ -284,8 +284,8 @@ class TestPlot:
     @pytest.mark.usefixtures("curved_trace")
     def test_plots(self, curved_trace):
         spt = SpectralTrace(curved_trace)
-        spt.plot(0.5, 2.5)
         if PLOTS:
+            spt.plot(0.5, 2.5)
             plt.show()
 
 
