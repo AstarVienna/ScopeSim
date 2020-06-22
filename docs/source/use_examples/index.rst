@@ -43,6 +43,7 @@ in a jupyter-notebook environment and the output is also displayed::
        print("Hello World!")
 
 .. jupyter-execute::
+
    print("Hello World!")
 
 To display plots with matplotlib, make sure to include the command
