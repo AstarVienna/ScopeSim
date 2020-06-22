@@ -39,10 +39,11 @@ Code snippets are included inside a ``jupyter_execute`` tag. This code is run
 in a jupyter-notebook environment and the output is also displayed::
 
     .. jupyter-execute::
+
        print("Hello World!")
 
 .. jupyter-execute::
    print("Hello World!")
 
-To
-
+To display plots with matplotlib, make sure to include the command
+``%matplotlib inline`` after ``import matplotlib``.
