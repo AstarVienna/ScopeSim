@@ -11,6 +11,6 @@ synphot
 skycalc_ipy
 anisocado
 
-jupyter_sphinx
+jupyter_sphinx==0.2.3
 numpydoc
 sphinxcontrib-apidoc
