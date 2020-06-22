@@ -18,3 +18,31 @@ Import statements, setup code, etc **does not** count towards the 5 lines.
 
     5-liners/*
     jupyter_notebooks
+
+
+Want to add a 5-liner?
+----------------------
+To add a 5-liner, add your code to a Sphinx-friendly `ReStructuredText (``.rst``)
+file <https://docutils.sourceforge.io/docs/user/rst/quickref.html>`_.
+The full code goes in a ``TL;DR`` "overview" section. If needed, please explain
+what the code does in the ``Explanation`` section::
+
+    TL;DR
+    -----
+    add all code here
+
+    Explanation
+    -----------
+    a short explanation of what the scopesim code does
+
+Code snippets are included inside a ``jupyter_execute`` tag. This code is run
+in a jupyter-notebook environment and the output is also displayed::
+
+    .. jupyter-execute::
+       print("Hello World!")
+
+.. jupyter-execute::
+   print("Hello World!")
+
+To
+
