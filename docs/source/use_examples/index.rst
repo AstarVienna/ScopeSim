@@ -12,12 +12,11 @@ but simply a guideline to avoid introducing too much at once.
 Import statements, setup code, etc **does not** count towards the 5 lines.
 
 .. toctree::
-    :maxdepth: 2
+    :maxdepth: 1
     :caption: Contents:
     :glob:
 
     5-liners/*
-    jupyter_notebooks
 
 
 Want to add a 5-liner?

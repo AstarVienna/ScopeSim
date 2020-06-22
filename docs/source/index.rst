@@ -18,8 +18,9 @@ ScopeSim_ is on pip::
     :maxdepth: 2
     :caption: Contents:
 
-    interfaces/controlling_simulations
+
     use_examples/index
+    use_examples/jupyter_notebooks
     interfaces/index
     architecture/index
     effects/index
