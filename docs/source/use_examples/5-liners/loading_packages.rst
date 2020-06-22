@@ -6,7 +6,7 @@ TL;DR
 
 .. jupyter-execute::
 
-    import scopesim
+    import scopesim, os
     os.mkdir("./temp/")
 
     scopesim.rc.__config__["!SIM.file.local_packages_path"] = "./temp/"
