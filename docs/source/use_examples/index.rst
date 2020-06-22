@@ -16,5 +16,5 @@ Import statements, setup code, etc **does not** count towards the 5 lines.
     :caption: Contents:
     :glob:
 
-    5-liners/*
+    5-liners/jupyter_exec
     jupyter_notebooks
