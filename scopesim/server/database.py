@@ -174,6 +174,9 @@ def download_package(pkg_path, save_dir=None, url=None, from_cache=None):
             url = rc.__config__["!SIM.file.server_base_url"]
         if save_dir is None:
             save_dir = rc.__config__["!SIM.file.local_packages_path"]
+        print(save_dir, os.path.exists(save_dir))
+        if not os.path.exists(save_dir):
+            os.mkdir(save_dir)
 
         try:
             if from_cache is None:

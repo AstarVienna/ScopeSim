@@ -648,7 +648,7 @@ def download_package(pkg_name, unzip_package=True, save_dir=None,
     if pkg_entry is None:
         raise ValueError("{} wasn't found on the server".format(pkg_name))
 
-    pkg_url  = rc.__rc__["FILE_SERVER_BASE_URL"] + pkg_entry["path"]
+    pkg_url = rc.__rc__["FILE_SERVER_BASE_URL"] + pkg_entry["path"]
     pkg_type = determine_type_of_package(svr_db)
 
     if not check_package_exists(pkg_name, server_db_urls()[pkg_type]):
@@ -657,6 +657,9 @@ def download_package(pkg_name, unzip_package=True, save_dir=None,
     if save_dir is None:
         stem = os.path.dirname(pkg_entry["path"])
         save_dir = os.path.join(rc.__rc__["FILE_LOCAL_DOWNLOADS_PATH"], stem)
+
+    if not os.path.exists(save_dir):
+        os.mkdir(save_dir)
 
     local_filename = download_file(pkg_url, save_dir)
     print("Saved {} in {}".format(pkg_name, local_filename))
