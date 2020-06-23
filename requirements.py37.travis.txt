@@ -2,6 +2,7 @@ numpy>=1.16
 scipy
 astropy
 matplotlib
+jupyter
 
 requests
 beautifulsoup4
