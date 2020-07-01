@@ -144,12 +144,23 @@ class DetectorWindow(DetectorList):
         [deg] Rotation of window
     gain : float, optional
         [ADU/e-]
+    units : str, optional
+        Default "mm". Sets the input parameter units. If "pixel", ``x``, ``y``,
+        ``width``, and ``height`` are divided by ``pixel_size``
 
     """
     def __init__(self, pixel_size, x, y, width, height=None, angle=0, gain=1,
-                 **kwargs):
+                 units="mm", **kwargs):
         if height is None:
             height = width
+
+        # allow sizes to also be given in
+        if "pix" in units.lower():
+            x *= pixel_size
+            y *= pixel_size
+            width *= pixel_size
+            height *= pixel_size
+
         tbl = Table(data=[[0], [x], [y], [width / 2.], [height / 2.],
                           [angle], [gain], [pixel_size]],
                     names=["id", "x_cen", "y_cen", "xhw", "yhw",

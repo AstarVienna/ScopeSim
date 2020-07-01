@@ -1,11 +1,20 @@
 #!/usr/bin/env python3
 """
 ScopeSim: A python package to simulate telescope observations
+=============================================================
 
 How to compile and put these on pip::
 
     $ python setup.py sdist bdist_wheel
     $ twine upload dist/*
+
+Errors
+------
+
+- 'long_description_content_type not found':
+  Can occur because the licence string is too long.
+  Consider just referencing the GNU licences rather than including the full
+  thing in the licence section.
 
 """
 from setuptools import setup, find_packages
