@@ -31,6 +31,15 @@ class DetectorList(Effect):
         self.meta["active_detectors"] = "all"
         self.meta.update(kwargs)
 
+        # for backwards compatibility
+        new_colnames = {"xhw": "x_size", "yhw": "y_size", "pixsize": "pixel_size"}
+        mult_cols = {"xhw": 2., "yhw": 2., "pixsize": 1.}
+        if isinstance(self.table, Table):
+            for col in new_colnames:
+                if col in self.table.colnames:
+                    self.table[col] = self.table[col] * mult_cols[col]
+                    self.table.rename_column(col, new_colnames[col])
+
     def fov_grid(self, which="edges", **kwargs):
         """Returns an ApertureMask object. kwargs are "pixel_scale" [arcsec]"""
         aperture_mask = None
@@ -53,14 +62,17 @@ class DetectorList(Effect):
     @property
     def image_plane_header(self):
         tbl = self.active_table
-        pixel_size = np.min(utils.quantity_from_table("pixsize", tbl, u.mm))
+        pixel_size = np.min(utils.quantity_from_table("pixel_size", tbl, u.mm))
         x_unit = utils.unit_from_table("x_cen", tbl, u.mm)
         y_unit = utils.unit_from_table("y_cen", tbl, u.mm)
 
-        x_det_min = np.min(tbl["x_cen"] - tbl["xhw"]) * x_unit
-        x_det_max = np.max(tbl["x_cen"] + tbl["xhw"]) * x_unit
-        y_det_min = np.min(tbl["y_cen"] - tbl["yhw"]) * y_unit
-        y_det_max = np.max(tbl["y_cen"] + tbl["yhw"]) * y_unit
+        dx, dy = 0.5 * tbl["x_size"], 0.5 * tbl["y_size"]
+        xcen, ycen = tbl["x_cen"], tbl["y_cen"]
+
+        x_det_min = np.min(xcen - dx) * x_unit
+        x_det_max = np.max(xcen + dx) * x_unit
+        y_det_min = np.min(ycen - dy) * y_unit
+        y_det_max = np.max(ycen + dy) * y_unit
 
         x_det = [x_det_min.to(u.mm).value, x_det_max.to(u.mm).value]
         y_det = [y_det_min.to(u.mm).value, y_det_max.to(u.mm).value]
@@ -92,8 +104,8 @@ class DetectorList(Effect):
         hdrs = []
         for row in self.active_table:
             xcen, ycen = row["x_cen"], row["y_cen"]
-            dx, dy = row["xhw"], row["yhw"]
-            cdelt = row["pixsize"]
+            dx, dy = row["x_size"] / 2., row["y_size"] / 2.
+            cdelt = row["pixel_size"]
 
             hdr = header_from_list_of_xy([xcen-dx, xcen+dx], [ycen-dy, ycen+dy],
                                          pixel_scale=cdelt, wcs_suffix="D")
@@ -161,10 +173,10 @@ class DetectorWindow(DetectorList):
             width *= pixel_size
             height *= pixel_size
 
-        tbl = Table(data=[[0], [x], [y], [width / 2.], [height / 2.],
+        tbl = Table(data=[[0], [x], [y], [width], [height],
                           [angle], [gain], [pixel_size]],
-                    names=["id", "x_cen", "y_cen", "xhw", "yhw",
-                           "angle", "gain", "pixsize"])
+                    names=["id", "x_cen", "y_cen", "x_size", "y_size",
+                           "angle", "gain", "pixel_size"])
         if "image_plane_id" not in kwargs:
             kwargs["image_plane_id"] = 0
 
