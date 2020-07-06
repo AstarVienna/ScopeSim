@@ -31,5 +31,4 @@ jobs:
 
 script: 
   - pytest
-  # - pytest --doctest-modules
-  - jupyter nbconvert --execute docs/source/_static/scopesim_basic_intro.ipynb
+#  - jupyter nbconvert --execute docs/source/_static/scopesim_basic_intro.ipynb
