@@ -10,6 +10,7 @@ pyyaml
 synphot
 skycalc_ipy
 anisocado
+scopesim_templates
 
 jupyter_sphinx==0.2.3
 numpydoc

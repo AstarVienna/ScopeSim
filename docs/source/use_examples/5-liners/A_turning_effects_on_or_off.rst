@@ -1,18 +1,15 @@
 Turning Effect objects on or off
 ================================
 
-TL;DR
------
-
 .. jupyter-execute::
     :hide-code:
     :raises:
 
-    import os, scopesim
-    pkg_path = os.path.join(os.getcwd(), "temp")
-    if not os.path.exists(pkg_path):
-        os.mkdir(pkg_path)
-    scopesim.rc.__config__["!SIM.file.local_packages_path"] = pkg_path
+    import scopesim
+    scopesim.rc.__config__["!SIM.file.local_packages_path"] = "./temp/"
+
+TL;DR
+-----
 
 .. jupyter-execute::
     :raises:
@@ -29,8 +26,8 @@ Background
 
 This 5-liner uses concepts from:
 
-- :doc:`loading_packages`: downloading instrument packages
-- :doc:`bang_strings`: accessing top- and lower-level parameters.
+- :doc:`A_loading_packages`: downloading instrument packages
+- :doc:`A_bang_strings`: accessing top- and lower-level parameters.
 
 
 Explanation

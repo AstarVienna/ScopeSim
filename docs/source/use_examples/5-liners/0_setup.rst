@@ -8,5 +8,10 @@ Setup for the docs
     if not os.path.exists("./temp/"):
         os.mkdir("./temp/")
     scopesim.rc.__config__["!SIM.file.local_packages_path"] = "./temp/"
-    pkg_names = ["locations/Paranal", "telescopes/VLT", "instruments/HAWKI"]
+
+    pkg_names = ["locations/Paranal",
+                 "telescopes/VLT",
+                 "instruments/HAWKI",
+                 "telescopes/LFOA"]
+
     scopesim.server.download_package(pkg_names)

@@ -1,19 +1,15 @@
-Using Bang (!) strings to control ScopeSim
+Using bang "!" strings to control ScopeSim
 ==========================================
-
-TL;DR
------
 
 .. jupyter-execute::
     :hide-code:
     :raises:
 
-    import os, scopesim
-    if not os.path.exists("./temp/"): os.mkdir("./temp/")
+    import scopesim
     scopesim.rc.__config__["!SIM.file.local_packages_path"] = "./temp/"
-    pkg_names = ["locations/Paranal", "telescopes/VLT", "instruments/HAWKI"]
-    scopesim.server.download_package(pkg_names)
 
+TL;DR
+-----
 
 .. jupyter-execute::
     :raises:
@@ -30,7 +26,7 @@ TL;DR
 
 This 5-liner uses concepts from:
 
-- :doc:`loading_packages`: downloading instrument packages
+- :doc:`A_loading_packages`: downloading instrument packages
 
 
 Explanation
@@ -41,7 +37,7 @@ Top level parameters
 
 Let's assume we are in out working directory and have already downloaded the
 packages needed to model HAWKI at the VLT (i.e. Paranal, VLT, HAWKI).
-If not, see :doc:`loading_packages`
+If not, see :doc:`A_loading_packages`
 
 We can start by loading an ``OpticalTrain`` object for HAWKI
 
