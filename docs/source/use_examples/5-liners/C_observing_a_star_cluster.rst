@@ -21,8 +21,8 @@ TL;DR
 
     scopesim.server.download_package("telescopes/LFOA")
     lfoa = scopesim.OpticalTrain("LFOA")
-    lfoa.observe(src)
-    lfoa.readout(filename="lfoa_cluster.fits")
+    lfoa.observe(my_cluster)
+    lfoa.readout(filename="TEST.fits")
 
 
 This 5-liner uses concepts from:
@@ -92,7 +92,7 @@ If we want to set more andvaced features, like selecting a different filter, we 
     :raises:
 
     cmds = scopesim.UserCommands(use_instrument="LFOA")
-    cmds[``!OBS.filter_name``] = "sloan_z"
+    cmds["!OBS.filter_name"] = "sloan_z"
     lfoa = scopesim.OpticalTrain(cmds)
 
 As a side note, if the sky background is too low, we can also increase this with the bang-string keyword ``!OBS.sky.bg_mag``.
