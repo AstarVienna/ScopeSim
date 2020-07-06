@@ -2,6 +2,7 @@ Setup for the docs
 ==================
 
 .. jupyter-execute::
+
     import os, scopesim
 
     if not os.path.exists("./temp/"):
