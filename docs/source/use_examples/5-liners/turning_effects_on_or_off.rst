@@ -6,6 +6,7 @@ TL;DR
 
 .. jupyter-execute::
     :hide-code:
+    :raises:
 
     import os, scopesim
     pkg_path = os.path.join(os.getcwd(), "temp")
@@ -14,6 +15,7 @@ TL;DR
     scopesim.rc.__config__["!SIM.file.local_packages_path"] = pkg_path
 
 .. jupyter-execute::
+    :raises:
 
     hawki = scopesim.OpticalTrain("HAWKI")
 

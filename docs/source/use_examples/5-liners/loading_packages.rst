@@ -5,6 +5,7 @@ TL;DR
 -----
 
 .. jupyter-execute::
+    :raises:
 
     import scopesim, os
     if not os.path.exists("./temp/"): os.mkdir("./temp/")

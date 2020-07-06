@@ -157,8 +157,9 @@ class DetectorWindow(DetectorList):
     gain : float, optional
         [ADU/e-]
     units : str, optional
-        Default "mm". Sets the input parameter units. If "pixel", ``x``, ``y``,
-        ``width``, and ``height`` are divided by ``pixel_size``
+        [mm, pixel] Default "mm". Sets the input parameter units.
+        If ``"pixel"``, ``x``, ``y``, ``width``, and ``height`` are divided by
+        ``pixel_size``
 
     """
     def __init__(self, pixel_size, x, y, width, height=None, angle=0, gain=1,

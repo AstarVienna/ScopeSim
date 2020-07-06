@@ -5,6 +5,7 @@ TL;DR
 -----
 
 .. jupyter-execute::
+    :raises:
 
     import scopesim, scipy, astropy.io.fits as fits
 

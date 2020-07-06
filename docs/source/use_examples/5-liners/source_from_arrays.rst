@@ -5,6 +5,7 @@ TL;DR
 -----
 
 .. jupyter-execute::
+    :raises:
 
     import scopesim, numpy as np
 
