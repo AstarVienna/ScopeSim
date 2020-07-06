@@ -1,5 +1,5 @@
-Using Bang (!) strings to control ScopeSim
-==========================================
+Turning Effect objects on or off
+================================
 
 TL;DR
 -----
@@ -28,6 +28,7 @@ Background
 ----------
 
 This 5-liner uses concepts from:
+
 - :doc:`loading_packages`: downloading instrument packages
 - :doc:`bang_strings`: accessing top- and lower-level parameters.
 
@@ -41,7 +42,7 @@ To list all the effects in the HAWKI optical train, we do:
     :raises:
 
     hawki = scopesim.OpticalTrain("HAWKI")
-    hawki.effects
+    print(hawki.effects)
 
 This table already shows us which ``Effect`` objects are turned on.
 

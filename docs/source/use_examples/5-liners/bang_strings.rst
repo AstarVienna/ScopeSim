@@ -9,10 +9,11 @@ TL;DR
     :raises:
 
     import os, scopesim
-    pkg_path = os.path.join(os.getcwd(), "temp")
-    if not os.path.exists(pkg_path):
-        os.mkdir(pkg_path)
-    scopesim.rc.__config__["!SIM.file.local_packages_path"] = pkg_path
+    if not os.path.exists("./temp/"): os.mkdir("./temp/")
+    scopesim.rc.__config__["!SIM.file.local_packages_path"] = "./temp/"
+    pkg_names = ["locations/Paranal", "telescopes/VLT", "instruments/HAWKI"]
+    scopesim.server.download_package(pkg_names)
+
 
 .. jupyter-execute::
     :raises:
@@ -28,6 +29,7 @@ TL;DR
 
 
 This 5-liner uses concepts from:
+
 - :doc:`loading_packages`: downloading instrument packages
 
 
