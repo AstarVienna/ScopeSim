@@ -19,7 +19,7 @@ TL;DR
 
     my_cluster = sim_tp.basic.stars.cluster(mass=10000, distance=2000, core_radius=1)
 
-    sim.server.download_package("telescopes/LFOA")
+    scopesim.server.download_package("telescopes/LFOA")
     lfoa = scopesim.OpticalTrain("LFOA")
     lfoa.observe(src)
     lfoa.readout(filename="lfoa_cluster.fits")
@@ -88,7 +88,10 @@ To simply observe using default telescope values, we can use the shortcut option
 
 If we want to set more andvaced features, like selecting a different filter, we need create a ``UserCommands`` object, and set the bang-string keyword ``!OBS.filter_name``:
 
-    cmds = scopesim.UserCommands(use_instrument="LFOA)
+.. jupyter-execute::
+    :raises:
+
+    cmds = scopesim.UserCommands(use_instrument="LFOA")
     cmds[``!OBS.filter_name``] = "sloan_z"
     lfoa = scopesim.OpticalTrain(cmds)
 
@@ -108,6 +111,7 @@ We can view the spectral response of the system by using internal optic manager:
 .. jupyter-execute::
     :raises:
 
+    import numpy as np
     import matplotlib.pyplot as plt
     from matplotlib.colors import LogNorm
     %matplotlib inline
@@ -145,9 +149,12 @@ We can provide a ``filename`` if we want to save a ``FITS`` image to disc;
 .. jupyter-execute::
     :raises:
 
-    lfoa.readout(filename="lfoa_cluster.fits")
+    lfoa.readout(filename="TEST.fits")
 
 Or we can work directly with the returned list of ``astropy.fits.HDUList`` objects:
+
+.. jupyter-execute::
+    :raises:
 
     hdus = lfoa.readout()
 

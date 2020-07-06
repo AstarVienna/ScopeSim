@@ -8,6 +8,7 @@ Setup for the docs
     if not os.path.exists("./temp/"):
         os.mkdir("./temp/")
     scopesim.rc.__config__["!SIM.file.local_packages_path"] = "./temp/"
+    scopesim.rc.__config__["!SIM.file.use_cached_downloads"] = False
 
     pkg_names = ["locations/Paranal",
                  "telescopes/VLT",
