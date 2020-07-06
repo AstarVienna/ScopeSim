@@ -44,6 +44,7 @@ If not, see :doc:`loading_packages`
 We can start by loading an ``OpticalTrain`` object for HAWKI
 
 .. jupyter-execute::
+    :raises:
 
     hawki = scopesim.OpticalTrain("HAWKI")
 
@@ -55,6 +56,7 @@ To view all "user"-facing commands, we can simply print ``hawki.cmds``.
 To print just a subset, use "!" plus the alias. E.g:
 
 .. jupyter-execute::
+    :raises:
 
     hawki.cmds["!OBS"]
 
@@ -74,6 +76,7 @@ files, some parameters may themselves also be dictionaries (of dictionaries).
 We can navigate down the layers using the "." separator:
 
 .. jupyter-execute::
+    :raises:
 
     hawki.cmds["!SIM.random.seed"] = 9001
 
@@ -89,6 +92,7 @@ need to know the name of the effect we are looking for.
 To list all the effects contained in the HAWKI system, we call:
 
 .. jupyter-execute::
+    :raises:
 
     hawki.effects
 
@@ -96,6 +100,7 @@ By treating ``hawki`` as a dictionary, we can access the individual ``Effect``
 objects. The configuration parameters are contained in the ``.meta`` dictionary.
 
 .. jupyter-execute::
+    :raises:
 
     hawki["filter_curve"].meta["filter_name"]
 
@@ -106,5 +111,6 @@ parameter.
 If we want to use another filter, we can still use the "bang"-string format:
 
 .. jupyter-execute::
+    :raises:
 
     hawki.cmds["!OBS.filter_name"] = "H"

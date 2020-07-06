@@ -38,6 +38,7 @@ Explanation
 To list all the effects in the HAWKI optical train, we do:
 
 .. jupyter-execute::
+    :raises:
 
     hawki = scopesim.OpticalTrain("HAWKI")
     hawki.effects
@@ -48,6 +49,7 @@ To turn ``Effect`` object on or off manually, we use the ``.include`` attribute.
 Here we must call the ``Effect`` by it's name as given in the previous table:
 
 .. jupyter-execute::
+    :raises:
 
     hawki["detector_linearity"].include = False
     hawki["detector_linearity"].include
@@ -55,6 +57,7 @@ Here we must call the ``Effect`` by it's name as given in the previous table:
 Turning back on is simple:
 
 .. jupyter-execute::
+    :raises:
 
     hawki["detector_linearity"].include = True
 
@@ -62,5 +65,6 @@ If we want to change many parameters at once, including ``include`` we can
 access it via the ``.meta`` dictionary:
 
 .. jupyter-execute::
+    :raises:
 
     hawki["detector_linearity"].meta["include"] = True
