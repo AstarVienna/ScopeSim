@@ -16,8 +16,6 @@ Topics included in this notebook:
 - Making an empty Sky ``Source`` object
 - Observing with the instrument
 
-`Notebook: "ScopeSim Basic Intro" <https://github.com/astronomyk/ScopeSim/blob/master/docs/source/_static/scopesim_basic_intro.ipynb>`_
-
 
 Adding custom ``Effect`` objects
 --------------------------------

@@ -8,9 +8,9 @@ TL;DR
     :raises:
 
     import scopesim, os
-    if not os.path.exists("./temp/"): os.mkdir("./temp/")
+    if not os.path.exists("../temp/"): os.mkdir("../temp/")
 
-    scopesim.rc.__config__["!SIM.file.local_packages_path"] = "./temp/"
+    scopesim.rc.__config__["!SIM.file.local_packages_path"] = "../temp/"
 
     pkg_names = ["locations/Paranal", "telescopes/VLT", "instruments/HAWKI"]
     scopesim.server.download_package(pkg_names)
@@ -81,5 +81,5 @@ the ``OpticalTrain`` with the name of package that we have on the local disc.
 
    This can be changed by setting the following ``rc`` entry::
 
-   scopesim.rc.__config__["!SIM.file.local_packages_path"]
+       scopesim.rc.__config__["!SIM.file.local_packages_path"]
 
