@@ -1,10 +1,11 @@
-Basic Source from ImageHDUs
-===========================
+Source: From ImageHDUs
+======================
 
 TL;DR
 -----
 
 .. jupyter-execute::
+    :raises:
 
     import scopesim, scipy, astropy.io.fits as fits
 
@@ -24,6 +25,7 @@ Explanation
 -----------
 
 .. jupyter-execute::
+    :raises:
 
     import matplotlib.pyplot as plt
     %matplotlib inline

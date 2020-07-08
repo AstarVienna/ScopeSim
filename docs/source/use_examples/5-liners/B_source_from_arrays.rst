@@ -1,10 +1,11 @@
-Basic Source from Arrays
-========================
+Source: From Arrays
+===================
 
 TL;DR
 -----
 
 .. jupyter-execute::
+    :raises:
 
     import scopesim, numpy as np
 

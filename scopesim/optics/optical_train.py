@@ -174,10 +174,12 @@ class OpticalTrain:
 
     def readout(self, filename=None, **kwargs):
         """
+        Produces detector readouts for the observed image
 
         Parameters
         ----------
-        filename : str
+        filename : str, optional
+            Where to save the FITS file
         kwargs
 
         Returns

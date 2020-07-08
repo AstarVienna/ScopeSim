@@ -1,19 +1,18 @@
-Using Bang (!) strings to control ScopeSim
-==========================================
+Control: Using bang "!" strings in ScopeSim
+===========================================
+
+.. jupyter-execute::
+    :hide-code:
+    :raises:
+
+    import scopesim
+    scopesim.rc.__config__["!SIM.file.local_packages_path"] = "./temp/"
 
 TL;DR
 -----
 
 .. jupyter-execute::
-    :hide-code:
-
-    import os, scopesim
-    pkg_path = os.path.join(os.getcwd(), "temp")
-    if not os.path.exists(pkg_path):
-        os.mkdir(pkg_path)
-    scopesim.rc.__config__["!SIM.file.local_packages_path"] = pkg_path
-
-.. jupyter-execute::
+    :raises:
 
     hawki = scopesim.OpticalTrain("HAWKI")
 
@@ -26,7 +25,8 @@ TL;DR
 
 
 This 5-liner uses concepts from:
-- :doc:`loading_packages`: downloading instrument packages
+
+- :doc:`A_loading_packages`: downloading instrument packages
 
 
 Explanation
@@ -37,11 +37,12 @@ Top level parameters
 
 Let's assume we are in out working directory and have already downloaded the
 packages needed to model HAWKI at the VLT (i.e. Paranal, VLT, HAWKI).
-If not, see :doc:`loading_packages`
+If not, see :doc:`A_loading_packages`
 
 We can start by loading an ``OpticalTrain`` object for HAWKI
 
 .. jupyter-execute::
+    :raises:
 
     hawki = scopesim.OpticalTrain("HAWKI")
 
@@ -53,6 +54,7 @@ To view all "user"-facing commands, we can simply print ``hawki.cmds``.
 To print just a subset, use "!" plus the alias. E.g:
 
 .. jupyter-execute::
+    :raises:
 
     hawki.cmds["!OBS"]
 
@@ -72,6 +74,7 @@ files, some parameters may themselves also be dictionaries (of dictionaries).
 We can navigate down the layers using the "." separator:
 
 .. jupyter-execute::
+    :raises:
 
     hawki.cmds["!SIM.random.seed"] = 9001
 
@@ -87,6 +90,7 @@ need to know the name of the effect we are looking for.
 To list all the effects contained in the HAWKI system, we call:
 
 .. jupyter-execute::
+    :raises:
 
     hawki.effects
 
@@ -94,6 +98,7 @@ By treating ``hawki`` as a dictionary, we can access the individual ``Effect``
 objects. The configuration parameters are contained in the ``.meta`` dictionary.
 
 .. jupyter-execute::
+    :raises:
 
     hawki["filter_curve"].meta["filter_name"]
 
@@ -104,5 +109,6 @@ parameter.
 If we want to use another filter, we can still use the "bang"-string format:
 
 .. jupyter-execute::
+    :raises:
 
     hawki.cmds["!OBS.filter_name"] = "H"

@@ -54,6 +54,23 @@ class TestInit:
     def test_initalises_with_list_of_surfaces(self, surf_list):
         assert isinstance(surf_list, SurfaceList)
 
+    def test_initialises_with_array_dict_of_surfaces(self):
+        surf_list = SurfaceList(array_dict={"name": ["M1"],
+                                            "outer": [1],
+                                            "angle": [0],
+                                            "temperature": [0],
+                                            "action": ["transmission"],
+                                            "wavelength": [[0.8, 2.5]],
+                                            "transmission": [[0.1, 1]]
+                                            },
+                                outer_unit="m",
+                                angle_unit="deg",
+                                temperature_unit="deg_c",
+                                wavelength_unit="um")
+        wave = np.arange(0.8, 2.5, 0.01) * u.um
+        assert np.all(surf_list.throughput(wave) > 0)
+        assert isinstance(surf_list, SurfaceList)
+
 
 @pytest.mark.usefixtures("surf_list")
 class TestRadiometryTableAttribute:

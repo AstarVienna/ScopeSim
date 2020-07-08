@@ -1,5 +1,6 @@
 import os
 import pytest
+from astropy.table import Table
 
 from scopesim import rc
 from scopesim.effects import DetectorList, DetectorWindow, ApertureMask
@@ -18,6 +19,28 @@ class TestDetectorListInit:
         det_list = DetectorList(filename="FPA_array_layout.dat",
                                 image_plane_id=0)
         assert isinstance(det_list, DetectorList)
+        assert "x_size" in det_list.table.colnames
+        assert det_list.table["x_size"][0] == 61.44
+
+    def test_initialised_with_table(self):
+        x, y, width, height, angle, gain, pixel_size = 0, 0, 10, 10, 0, 1, 0.1
+        tbl = Table(data=[[0], [x], [y], [width], [height],
+                          [angle], [gain], [pixel_size]],
+                    names=["id", "x_cen", "y_cen", "x_size", "y_size",
+                           "angle", "gain", "pixel_size"])
+        det_list = DetectorList(table=tbl)
+        hdr = det_list.detector_headers()[0]
+        assert hdr["NAXIS1"] == 100
+
+    def test_with_old_column_names(self):
+        x, y, width, height, angle, gain, pixel_size = 0, 0, 5, 5, 0, 1, 0.1
+        tbl = Table(data=[[0], [x], [y], [width], [height],
+                          [angle], [gain], [pixel_size]],
+                    names=["id", "x_cen", "y_cen", "xhw", "yhw",
+                           "angle", "gain", "pixsize"])
+        det_list = DetectorList(table=tbl)
+        hdr = det_list.detector_headers()[0]
+        assert hdr["NAXIS1"] == 100
 
 
 class TestImagePlaneHeader:
@@ -68,10 +91,17 @@ class TestDetectorWindowInit:
     def test_initialises_with_correct_parameters(self):
         det_window = DetectorWindow(pixel_size=0.1, x=0, y=0, width=10)
         assert det_window.data["x_cen"][0] == 0
-        assert det_window.data["yhw"][0] == 5
-        assert det_window.data["pixsize"][0] == 0.1
+        assert det_window.data["y_size"][0] == 10
+        assert det_window.data["pixel_size"][0] == 0.1
 
     def test_recognised_as_detector_list(self):
         det_window = DetectorWindow(pixel_size=0.1, x=0, y=0, width=10)
         assert isinstance(det_window, DetectorWindow)
         assert isinstance(det_window, DetectorList)
+
+    def test_initialises_with_correct_new_col_name_x_size(self):
+        det_window = DetectorWindow(pixel_size=0.1, x=0, y=0, width=10)
+        assert "xhw" not in det_window.data.colnames
+        assert len(det_window.detector_headers()) == 1
+        assert det_window.data["x_size"][0] == 10
+
