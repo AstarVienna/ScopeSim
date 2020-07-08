@@ -1,5 +1,5 @@
-Turning Effect objects on or off
-================================
+Control: Turning Effect objects on or off
+=========================================
 
 .. jupyter-execute::
     :hide-code:

@@ -1,5 +1,5 @@
-Basic Source from Astropy Tables
-================================
+Source: From Astropy Tables
+===========================
 
 TL;DR
 -----

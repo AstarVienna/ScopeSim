@@ -1,5 +1,5 @@
-Basic Source from ImageHDUs
-===========================
+Source: From ImageHDUs
+======================
 
 TL;DR
 -----

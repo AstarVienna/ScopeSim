@@ -1,5 +1,6 @@
-Observing a star cluster from scopesim_templates with the LFOA telescope
-========================================================================
+Observing: A star cluster from a template
+=========================================
+Using the star cluster function from ``scopesim_templates`` with the LFOA telescope
 
 .. jupyter-execute::
     :hide-code:

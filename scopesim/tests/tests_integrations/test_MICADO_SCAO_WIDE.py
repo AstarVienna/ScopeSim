@@ -64,8 +64,8 @@ class Test_MICADO_MVP_YAML:
         assert isinstance(opt.optics_manager, OpticsManager)
         assert isinstance(opt.optics_manager.get_all(efs.FieldVaryingPSF)[0],
                           efs.FieldVaryingPSF)
-        assert isinstance(opt.image_plane, ImagePlane)
-        assert opt.image_plane.hdu.header["NAXIS1"] >= 4096
+        assert isinstance(opt.image_planes[0], ImagePlane)
+        assert opt.image_planes[0].hdu.header["NAXIS1"] >= 4096
         assert isinstance(opt.fov_manager, FOVManager)
         assert len(opt.fov_manager.fovs) == 64
 

@@ -11,6 +11,7 @@
 # pixsize_unit : mm
 # angle_unit : deg
 # gain_unit : electron/adu
+# image_plane_id : 0
 #
 # changes:
 # - 2017-08-12 (OC) id changed to conform with spectroscopy report

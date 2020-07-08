@@ -1,5 +1,5 @@
-Using bang "!" strings to control ScopeSim
-==========================================
+Control: Using bang "!" strings in ScopeSim
+===========================================
 
 .. jupyter-execute::
     :hide-code:
