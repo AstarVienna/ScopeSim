@@ -3,7 +3,5 @@ Source (target) interface
 
 ``Source`` object has two major attributes
 
-* ``.fields``
-* ``.spectra``
-
-``.fields`` can accept ASCII table files or
+* ``.fields``: ASCII table files or ``astropy.fits.ImageHDU`` objects
+* ``.spectra``: ``synphot.SourceSpectrum`` object

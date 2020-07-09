@@ -20,10 +20,11 @@ ScopeSim_ is on pip::
 
 
     use_examples/index
-    use_examples/jupyter_notebooks
+    effects/index
+    faqs/index
     interfaces/index
     architecture/index
-    effects/index
+
 
 
 Getting started

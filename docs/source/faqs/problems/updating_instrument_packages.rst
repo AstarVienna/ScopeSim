@@ -1,5 +1,5 @@
-Updating instrument packages
-============================
+Problem: Updating instrument packages
+=====================================
 
 Problem
 -------
