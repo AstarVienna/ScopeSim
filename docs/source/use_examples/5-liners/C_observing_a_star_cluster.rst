@@ -7,7 +7,7 @@ Using the star cluster function from ``scopesim_templates`` with the LFOA telesc
     :raises:
 
     import scopesim
-    scopesim.rc.__config__["!SIM.file.local_packages_path"] = "./temp/"
+    scopesim.rc.__config__["!SIM.file.local_packages_path"] = "../temp/"
 
 TL;DR
 -----
@@ -18,7 +18,9 @@ TL;DR
     import scopesim
     import scopesim_templates as sim_tp
 
-    my_cluster = sim_tp.basic.stars.cluster(mass=10000, distance=2000, core_radius=1)
+    my_cluster = sim_tp.basic.stars.cluster(mass=10000,
+                                            distance=2000,
+                                            core_radius=1)
 
     scopesim.server.download_package("telescopes/LFOA")
     lfoa = scopesim.OpticalTrain("LFOA")

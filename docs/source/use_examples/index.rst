@@ -1,15 +1,14 @@
-5-liner use-case examples
-=========================
+Use-case examples
+=================
 
-A series of quick examples illustrating ScopeSim functionality
+A series of short and long examples illustrating ScopeSim functionality.
 
-Users or ScopeSim are encouraged to add to this collection by either opening an
+Users of ScopeSim are encouraged to add to this collection by either opening an
 issue or submitting a pull request of GitHub.
 
-Each use-case should ideally be a maximum of
-**5 lines of ScopeSim specific code**. Obviously this not a hard and fast rule,
-but simply a guideline to avoid introducing too much at once.
-Import statements, setup code, etc **does not** count towards the 5 lines.
+
+5-liner examples
+----------------
 
 .. toctree::
     :maxdepth: 1
@@ -19,8 +18,26 @@ Import statements, setup code, etc **does not** count towards the 5 lines.
     5-liners/[!0]*
 
 
+Longer tutorials
+----------------
+
+.. toctree::
+    :maxdepth: 1
+    :caption: Contents:
+    :glob:
+
+    tutorials/[!0]*
+
+
+
 Want to add a 5-liner?
 ----------------------
+
+Each use-case should ideally be a maximum of
+**5 lines of ScopeSim specific code**. Obviously this not a hard and fast rule,
+but simply a guideline to avoid introducing too much at once.
+Import statements, setup code, etc **do not** count towards the 5 lines.
+
 To add a 5-liner, add your code to a Sphinx-friendly `ReStructuredText (``.rst``)
 file <https://docutils.sourceforge.io/docs/user/rst/quickref.html>`_.
 The full code goes in a ``TL;DR`` "overview" section. If needed, please explain

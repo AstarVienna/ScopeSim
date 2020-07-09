@@ -6,7 +6,7 @@ Control: Turning Effect objects on or off
     :raises:
 
     import scopesim
-    scopesim.rc.__config__["!SIM.file.local_packages_path"] = "./temp/"
+    scopesim.rc.__config__["!SIM.file.local_packages_path"] = "../temp/"
 
 TL;DR
 -----

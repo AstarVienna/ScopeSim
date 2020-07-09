@@ -10,9 +10,10 @@ Setup for the docs
     scopesim.rc.__config__["!SIM.file.local_packages_path"] = "./temp/"
     scopesim.rc.__config__["!SIM.file.use_cached_downloads"] = False
 
-    pkg_names = ["locations/Paranal",
-                 "telescopes/VLT",
-                 "instruments/HAWKI",
-                 "telescopes/LFOA"]
 
-    scopesim.server.download_package(pkg_names)
+    pkgs = ["telescopes/LFOA"] + \
+           ["locations/Paranal", "telescopes/VLT", "instruments/HAWKI"] + \
+           ["locations/Armazones", "telescopes/ELT", "instruments/MAORY",
+            "instruments/MICADO"]
+
+    scopesim.server.download_package(pkgs)
