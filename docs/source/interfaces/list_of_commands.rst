@@ -1,3 +1,0 @@
-List of available commands
-==========================
-
