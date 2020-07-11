@@ -12,7 +12,7 @@ import numpy as np
 from astropy import units as u
 from astropy.io import fits
 from astropy.io import ascii as ioascii
-from astropy.table import Column
+from astropy.table import Column, Table
 
 from . import rc
 
@@ -854,11 +854,24 @@ def from_currsys(item):
     """
     Returns the current value of a bang-string from rc.__currsys__
     """
+    if isinstance(item, Table):
+        tbl_dict = {col: item[col].data for col in item.colnames}
+        tbl_dict = from_currsys(tbl_dict)
+        item = Table(data=[tbl_dict[key] for key in tbl_dict],
+                     names=tbl_dict.keys(),
+                     meta=item.meta)
+
+    if isinstance(item, np.ndarray) and not isinstance(item, u.Quantity):
+        item = np.array([from_currsys(x) for x in item])
+
+    if isinstance(item, list):
+        item = [from_currsys(x) for x in item]
+
     if isinstance(item, dict):
         for key in item:
             item[key] = from_currsys(item[key])
 
-    if isinstance(item, str) and item[0] == "!":
+    if isinstance(item, str) and len(item) and item[0] == "!":
         if item in rc.__currsys__:
             item = rc.__currsys__[item]
         else:

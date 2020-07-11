@@ -4,11 +4,13 @@ import pytest
 import numpy as np
 from astropy import wcs
 from astropy.io import ascii as ioascii, fits
+from astropy.table import Table
 
 from scopesim.utils import parallactic_angle, deriv_polynomial2d
 from scopesim.utils import find_file, has_needed_keywords
 from scopesim.utils import airmass2zendist, zendist2airmass
 from scopesim.utils import convert_table_comments_to_dict
+from scopesim.utils import from_currsys
 
 from scopesim import rc
 
@@ -162,3 +164,21 @@ class TestHasWcsKeys:
         hdr["NAXIS1"] = 100
         assert has_needed_keywords(hdr, "D")
 
+
+class TestFromCurrSys:
+    def test_converts_string(self):
+        assert from_currsys("!SIM.random.seed") is None
+
+    def test_converts_list(self):
+        assert from_currsys(["!SIM.random.seed"]*3)[2] is None
+
+    def test_converts_numpy_array(self):
+        assert from_currsys(np.array(["!SIM.random.seed"]*2))[1] is None
+
+    def test_converts_dict(self):
+        assert from_currsys({"seed": "!SIM.random.seed"})["seed"] is None
+
+    def test_converts_astropy_table(self):
+        tbl = Table(data=[["!SIM.random.seed"]*2, ["!SIM.random.seed"]*2],
+                    names=["seeds", "seeds2"])
+        assert from_currsys(tbl["seeds2"][1]) is None
