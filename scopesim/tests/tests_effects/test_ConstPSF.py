@@ -56,6 +56,12 @@ class TestInit:
         constpsf = FieldConstantPSF(filename="test_ConstPSF.fits")
         assert isinstance(constpsf, FieldConstantPSF)
 
+    def test_initialised_when_passed_fits_filename_with_waveleng(self):
+        constpsf = FieldConstantPSF(filename="test_ConstPSF_WAVELENG.fits",
+                                    wave_key="WAVELENG")
+        assert isinstance(constpsf, FieldConstantPSF)
+        assert len(constpsf._waveset) == 2
+
 
 class TestGetKernel:
     @pytest.mark.parametrize("waves, max_pixel",

@@ -24,7 +24,8 @@ class PSF(Effect):
         params = {"flux_accuracy": "!SIM.computing.flux_accuracy",
                   "sub_pixel_flag": "!SIM.sub_pixel.flag",
                   "z_order": [40, 640],
-                  "convolve_mode": "full"}       # "full", "same"
+                  "convolve_mode": "full",      # "full", "same"
+                  "wave_key": "WAVE0"}
         self.meta.update(params)
         self.meta.update(kwargs)
         self.meta = utils.from_currsys(self.meta)
@@ -298,7 +299,8 @@ class FieldConstantPSF(DiscretePSF):
         utils.check_keys(self.meta, self.required_keys, action="error")
 
         self.meta["z_order"] = [262, 662]
-        self._waveset, self.kernel_indexes = get_psf_wave_exts(self._file)
+        self._waveset, self.kernel_indexes = get_psf_wave_exts(self._file,
+                                                               self.meta["wave_key"])
         self.current_layer_id = None
         self.current_ext = None
         self.current_data = None
@@ -548,7 +550,7 @@ def nearest_index(x, x_array):
     return np.argmin(abs(x_array - x))
 
 
-def get_psf_wave_exts(hdu_list):
+def get_psf_wave_exts(hdu_list, wave_key="WAVE0"):
     """
     Returns a dict of {extension : wavelength}
 
@@ -567,9 +569,9 @@ def get_psf_wave_exts(hdu_list):
                          "".format(type(hdu_list)))
 
     wave_ext = [ii for ii in range(len(hdu_list))
-                if "WAVE0" in hdu_list[ii].header]
-    wave_set = [hdu.header["WAVE0"] for hdu in hdu_list
-                if "WAVE0" in hdu.header]
+                if wave_key in hdu_list[ii].header]
+    wave_set = [hdu.header[wave_key] for hdu in hdu_list
+                if wave_key in hdu.header]
 
     # ..todo:: implement a way of getting the units from WAVEUNIT
     # until then assume everything is in um

@@ -240,7 +240,7 @@ class Source(SourceBase):
                 hdu_or_table = tbl
 
             elif isinstance(field, fits.ImageHDU):
-                if field.header["SPEC_REF"] is not "":
+                if field.header["SPEC_REF"] != "":
                     ref = [field.header["SPEC_REF"]]
                     flux = self.photons_in_range(wave_min, wave_max, area, ref)
                     # [ph s-1] or [ph s-1 m-2] come out of photons_in_range
@@ -402,7 +402,7 @@ class Source(SourceBase):
             elif isinstance(self.fields[ii], fits.ImageHDU):
                 im_size = self.fields[ii].data.shape
                 num_spec = "-"
-                if self.fields[ii].header["SPEC_REF"] is not "":
+                if self.fields[ii].header["SPEC_REF"] != "":
                     num_spec = self.fields[ii].header["SPEC_REF"]
                 msg += "[{}]: ImageHDU with size {}, referencing spectrum {}" \
                        "\n".format(ii, im_size, num_spec)
