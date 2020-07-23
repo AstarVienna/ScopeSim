@@ -3,12 +3,14 @@ from astropy import units as u
 from astropy.table import Table
 from os import path as pth
 
+from astropy.io import fits
 from synphot import SourceSpectrum
 
 from .effects import Effect
 from ..optics.surface import SpectralSurface
 from ..utils import from_currsys, quantify, check_keys
 from .ter_curves_utils import download_svo_filter
+
 
 
 class TERCurve(Effect):
@@ -120,7 +122,6 @@ class SkycalcTERCurve(AtmosphericTERCurve):
                 outer : 1
                 outer_unit : "m"
 
-
         """
         import skycalc_ipy
 
@@ -150,8 +151,14 @@ class SkycalcTERCurve(AtmosphericTERCurve):
 
         local_path = from_currsys("!SIM.file.local_packages_path")
         filename = pth.join(local_path, "skycalc_temp.fits")
-        tbl = self.skycalc_conn.get_sky_spectrum(return_type="table",
-                                                 filename=filename)
+        try:
+            tbl = self.skycalc_conn.get_sky_spectrum(return_type="table",
+                                                     filename=filename)
+        except:
+            if pth.exists(filename):
+                pass
+            raise NotImplementedError
+
         for i, colname in enumerate(["wavelength", "transmission", "emission"]):
             tbl.columns[i].name = colname
         tbl.meta["wavelength_unit"] = tbl.columns[0].unit

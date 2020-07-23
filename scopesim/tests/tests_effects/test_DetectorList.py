@@ -18,6 +18,7 @@ class TestDetectorListInit:
     def test_initialises_with_filename(self):
         det_list = DetectorList(filename="FPA_array_layout.dat",
                                 image_plane_id=0)
+        hdr = det_list.detector_headers()[0]
         assert isinstance(det_list, DetectorList)
         assert "x_size" in det_list.table.colnames
         assert det_list.table["x_size"][0] == 61.44
@@ -28,7 +29,9 @@ class TestDetectorListInit:
                           [angle], [gain], [pixel_size]],
                     names=["id", "x_cen", "y_cen", "x_size", "y_size",
                            "angle", "gain", "pixel_size"])
-        det_list = DetectorList(table=tbl)
+        params = {"x_cen_unit": "mm", "y_cen_unit": "mm",
+                  "x_size_unit": "mm", "y_size_unit": "mm"}
+        det_list = DetectorList(table=tbl, **params)
         hdr = det_list.detector_headers()[0]
         assert hdr["NAXIS1"] == 100
 
@@ -38,7 +41,9 @@ class TestDetectorListInit:
                           [angle], [gain], [pixel_size]],
                     names=["id", "x_cen", "y_cen", "xhw", "yhw",
                            "angle", "gain", "pixsize"])
-        det_list = DetectorList(table=tbl)
+        params = {"x_cen_unit": "mm", "y_cen_unit": "mm",
+                  "x_size_unit": "mm", "y_size_unit": "mm"}
+        det_list = DetectorList(table=tbl, **params)
         hdr = det_list.detector_headers()[0]
         assert hdr["NAXIS1"] == 100
 
@@ -105,3 +110,17 @@ class TestDetectorWindowInit:
         assert len(det_window.detector_headers()) == 1
         assert det_window.data["x_size"][0] == 10
 
+    def test_can_use_bang_strings_to_define_size(self):
+        rc.__currsys__["!DET.width"] = 4.2
+        rc.__currsys__["!DET.pixel_size"] = 0.1
+        det = DetectorWindow(pixel_size="!DET.pixel_size", x=0, y=0, width="!DET.width")
+        assert det.detector_headers()[0]["NAXIS1"] == 42.
+
+        rc.__currsys__["!DET.width"] = 900.1
+        assert det.image_plane_header["NAXIS1"] == 9001
+
+    def test_can_define_everything_in_pixels(self):
+        rc.__currsys__["!DET.width"] = 42
+        det = DetectorWindow(pixel_size=0.1, x=0, y=0, width="!DET.width", units="pixel")
+        assert det.image_plane_header["NAXIS1"] == 42
+        assert det.detector_headers()[0]["NAXIS1"] == 42
