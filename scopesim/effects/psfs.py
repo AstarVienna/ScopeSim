@@ -25,7 +25,8 @@ class PSF(Effect):
                   "sub_pixel_flag": "!SIM.sub_pixel.flag",
                   "z_order": [40, 640],
                   "convolve_mode": "full",      # "full", "same"
-                  "wave_key": "WAVE0"}
+                  "wave_key": "WAVE0",
+                  "normalise_kernel": True}
         self.meta.update(params)
         self.meta.update(kwargs)
         self.meta = utils.from_currsys(self.meta)
@@ -42,6 +43,8 @@ class PSF(Effect):
 
                 mode = self.meta["convolve_mode"]
                 kernel = self.get_kernel(obj).astype(float)
+                if self.meta["normalise_kernel"] is True:
+                    kernel /= np.sum(kernel)
                 image = obj.hdu.data.astype(float)
                 new_image = convolve(image, kernel, mode=mode)
                 new_shape = new_image.shape
