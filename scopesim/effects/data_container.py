@@ -206,17 +206,6 @@ class DataContainer:
 
         return plot_fname + "." + plot_fformat
 
-    @property
-    def plot_caption(self):
-        return self.meta["report"]["plot_caption"]
-
-    @property
-    def table_caption(self):
-        return self.meta["report"]["table_caption"]
-
-    @property
-    def content_description(self):
-        return self.meta["description"]
 
     @property
     def table_string(self):
@@ -285,7 +274,7 @@ class DataContainer:
 {self.__repr__()}
 {rst_title_chars[0] * len(self.__repr__())}
 
-File Description: {self.content_description}
+File Description: {self.meta["description"]}
 
 Class Description: {self.class_description}
 
@@ -303,12 +292,12 @@ Data
             rst_text += f"""
 .. figure:: {self.plot_filename}
 
-    {self.plot_caption}
+    {self.meta["report"]["plot_caption"]}
 """
 
         if self.meta["report"]["table_include"]:
             rst_text += f"""
-{self.table_caption}
+{self.meta["report"]["table_caption"]}
 
 {self.table_string}
 """
