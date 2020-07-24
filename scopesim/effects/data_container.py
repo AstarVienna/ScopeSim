@@ -69,7 +69,10 @@ class DataContainer:
                      "report": {"plot_filename": None,
                                 "plot_file_format": "png",
                                 "plot_caption": "",
-                                "table_caption": ""}
+                                "plot_include": False,
+                                "table_caption": "",
+                                "table_include": False,
+                                }
                      }
         self.meta.update(kwargs)
 
@@ -254,42 +257,72 @@ class DataContainer:
 
         return changes_str
 
-    def report(self, filename=None):
-        self.plot().savefig(fname=self.plot_filename,
-                            format=self.meta["report"]["plot_file_format"])
+    def report(self, filename=None, rst_title_chars="*+"):
+        """
+        For Effect objects, generates a report based on the data and meta-data
 
-        rst_template = f"""
+        This is to aid in the automation of the documentation process of the
+        instrument packages in the IRDB.
+
+        .. note:: If the Effect cna generate a plot, this will be saved to disc
+
+
+        Parameters
+        ----------
+        filename : str, optional
+            Where to save the RST file
+        rst_title_chars : 2-str, optional
+            Twi unique characters used to denote rst subsection headings.
+            Options: = - ` : ' " ~ ^ _ * + # < >
+
+        Returns
+        -------
+        rst_text : str
+            The full reStructureText string
+
+        """
+        rst_text = f"""
 {self.__repr__()}
-{"-" * len(self.__repr__())}
+{rst_title_chars[0] * len(self.__repr__())}
 
 File Description: {self.content_description}
 
-Class Desription: {self.class_description}
+Class Description: {self.class_description}
 
 Changes:
 {self.changes_str}
 
 Data
-++++
+{rst_title_chars[1] * 4}
+"""
 
+        if self.meta["report"]["plot_include"]:
+            fig = self.plot()
+            fig.savefig(fname=self.plot_filename,
+                        format=self.meta["report"]["plot_file_format"])
+            rst_text += f"""
 .. figure:: {self.plot_filename}
 
     {self.plot_caption}
+"""
 
+        if self.meta["report"]["table_include"]:
+            rst_text += f"""
 {self.table_caption}
 
 {self.table_string}
+"""
 
+        rst_text += f"""
 Meta-data
-+++++++++
+{rst_title_chars[1] * 9}
 ::
 
 {self.meta_string}
-
 """
 
         if filename is not None:
             with open(filename, "w") as f:
-                f.write(rst_template)
+                f.write(rst_text)
 
-        return rst_template
+        return rst_text
