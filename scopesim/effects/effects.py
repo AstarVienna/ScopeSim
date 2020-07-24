@@ -111,3 +111,6 @@ class Effect(DataContainer):
             name = self.meta["filename"]
 
         return '{}: "{}"'.format(type(self).__name__, name)
+
+
+

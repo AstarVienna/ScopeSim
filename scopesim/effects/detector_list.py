@@ -12,6 +12,7 @@ __all__ = ["DetectorList", "DetectorWindow"]
 
 class DetectorList(Effect):
     """
+    A description of detector positions and properties
 
     Examples
     --------
@@ -144,15 +145,19 @@ class DetectorList(Effect):
     def plot(self):
         import matplotlib.pyplot as plt
 
+        fig = plt.gcf()
+
         for hdr in self.detector_headers():
             x_mm, y_mm = calc_footprint(hdr, "D")
             x_cen, y_cen = np.average(x_mm), np.average(y_mm)
             x_mm = list(x_mm) + [x_mm[0]]
             y_mm = list(y_mm) + [y_mm[0]]
-            plt.plot(x_mm, y_mm)
-            plt.text(x_cen, y_cen, hdr["ID"])
+            plt.gca().plot(x_mm, y_mm)
+            plt.gca().text(x_cen, y_cen, hdr["ID"])
 
         plt.gca().set_aspect("equal")
+
+        return fig
 
 
 class DetectorWindow(DetectorList):
@@ -201,8 +206,3 @@ class DetectorWindow(DetectorList):
         tbl.meta.update(params)
 
         super(DetectorWindow, self).__init__(table=tbl, **params)
-
-
-
-def pixel_to_physical(params, pixel_scale):
-    pass

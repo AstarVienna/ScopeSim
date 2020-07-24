@@ -56,7 +56,6 @@ class DataContainer:
         to the data open FITS file.
 
     """
-
     def __init__(self, filename=None, table=None, array_dict=None, **kwargs):
 
         if filename is None and "file_name" in kwargs:
@@ -64,8 +63,14 @@ class DataContainer:
 
         filename = utils.find_file(filename)
         self.meta = {"filename": filename,
+                     "description": "",
                      "history": [],
-                     "name": "<empty>"}
+                     "name": "<empty>",
+                     "report": {"plot_filename": None,
+                                "plot_file_format": "png",
+                                "plot_caption": "",
+                                "table_caption": ""}
+                     }
         self.meta.update(kwargs)
 
         self.headers = []
@@ -189,4 +194,102 @@ class DataContainer:
         etype_colname = utils.real_colname("ETYPE", self.meta.colnames)
         return self.meta[etype_colname] == etype
 
+    @property
+    def plot_filename(self):
+        plot_fname = self.meta["report"]["plot_filename"]
+        if plot_fname is None:
+            plot_fname = self.meta["name"].lower().replace(" ", "_")
+        plot_fformat = self.meta["report"]["plot_file_format"]
 
+        return plot_fname + "." + plot_fformat
+
+    @property
+    def plot_caption(self):
+        return self.meta["report"]["plot_caption"]
+
+    @property
+    def table_caption(self):
+        return self.meta["report"]["table_caption"]
+
+    @property
+    def content_description(self):
+        return self.meta["description"]
+
+    @property
+    def table_string(self):
+        if isinstance(self.table, Table):
+            tbl_str = str(self.table).replace("-", "=")
+            hdr = tbl_str.split("\n")[1]
+            tbl_str = hdr + "\n" + tbl_str + "\n" + hdr
+        else:
+            tbl_str = ""
+
+        return tbl_str
+
+    @property
+    def meta_string(self):
+        meta_str = ""
+        max_key_len = max([len(key) for key in self.meta.keys()])
+        for key in self.meta:
+            if key not in ["comments", "changes", "description", "history", "report"]:
+                meta_str += f"    {key.rjust(max_key_len)} : {self.meta[key]}\n"
+
+        return meta_str
+
+    @property
+    def class_description(self):
+        cls_str = ""
+        if hasattr(str, "__doc__"):
+            cls_str = self.__doc__.split("\n")[0]
+
+        return cls_str
+
+    @property
+    def changes_str(self):
+        changes_str = ""
+        if "comments" in self.meta:
+            if "changes" in self.meta["comments"]:
+                for line in self.meta["comments"]["changes"]:
+                    changes_str += line
+
+        return changes_str
+
+    def report(self, filename=None):
+        self.plot().savefig(fname=self.plot_filename,
+                            format=self.meta["report"]["plot_file_format"])
+
+        rst_template = f"""
+{self.__repr__()}
+{"-" * len(self.__repr__())}
+
+File Description: {self.content_description}
+
+Class Desription: {self.class_description}
+
+Changes:
+{self.changes_str}
+
+Data
+++++
+
+.. figure:: {self.plot_filename}
+
+    {self.plot_caption}
+
+{self.table_caption}
+
+{self.table_string}
+
+Meta-data
++++++++++
+::
+
+{self.meta_string}
+
+"""
+
+        if filename is not None:
+            with open(filename, "w") as f:
+                f.write(rst_template)
+
+        return rst_template
