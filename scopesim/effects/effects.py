@@ -1,3 +1,5 @@
+from astropy.table import Table
+
 from ..effects.data_container import DataContainer
 from ..base_classes import SourceBase, FieldOfViewBase, ImagePlaneBase, \
     DetectorBase
@@ -105,12 +107,169 @@ class Effect(DataContainer):
     def include(self, item):
         self.meta["include"] = item
 
-    def __repr__(self):
-        name = self.meta["name"]
-        if name == "<empty>":
-            name = self.meta["filename"]
+    @property
+    def table_string(self):
+        if isinstance(self.table, Table):
+            tbl_str = str(self.table).replace("-", "=")
+            hdr = tbl_str.split("\n")[1]
+            tbl_str = hdr + "\n" + tbl_str + "\n" + hdr
+        else:
+            tbl_str = ""
+    
+        return tbl_str
+    
+    
+    @property
+    def meta_string(self):
+        meta_str = ""
+        max_key_len = max([len(key) for key in self.meta.keys()])
+        for key in self.meta:
+            if key not in ["comments", "changes", "description", "history",
+                           "report"]:
+                meta_str += f"    {key.rjust(max_key_len)} : {self.meta[key]}\n"
+    
+        return meta_str
 
+    def report(self, filename=None, rst_title_chars="*+", **kwargs):
+        """
+        For Effect objects, generates a report based on the data and meta-data
+    
+        This is to aid in the automation of the documentation process of the
+        instrument packages in the IRDB.
+    
+        .. note:: If the Effect can generate a plot, this will be saved to disc
+    
+        Parameters
+        ----------
+        filename : str, optional
+            Where to save the RST file
+        rst_title_chars : 2-str, optional
+            Two unique characters used to denote rst subsection headings.
+            Options: = - ` : ' " ~ ^ _ * + # < >
+
+        Additional parameters
+        ---------------------
+        Either from the ``self.meta["report"]`` dictionary or via ``**kwargs``
+
+        "report_plot_caption": ""
+        "report_plot_include": False
+        "report_table_caption": ""
+        "report_table_include": False
+        "report_plot_file_formats": ["png"]
+            Multiple formats can be saved. The last entry is used for the RST.
+        "report_plot_filename": None
+            If None, uses self.meta["name"] as the filename
+
+        Returns
+        -------
+        rst_str : str
+            The full reStructureText string
+    
+        Notes
+        -----
+    
+        The format of the RST output is as follows::
+    
+            <ClassType>: <effect name>
+            **************************
+            File Description: <description for file meta data>
+            Class Description: <description from class docstring>
+            Changes: <list of changes from file meta data> 
+    
+            Data
+            ++++
+            Figure 
+                If the <Effect> object contains a ``.plot()`` function, add plot
+            Figure caption
+    
+            Table caption
+            Table
+                If the <Effect> object contains a ``.table()`` function, add table
+    
+            Meta-data
+            +++++++++
+            ::
+                A code block print out of the ``.meta`` dictionary
+    
+    
+        """
+        changes_str = "- " + "\n- ".join(self.meta.get("changes", []))
+        cls_doc = self.__doc__ if hasattr(self, "__doc__") else "<No Docstring>"
+        cls_descr = cls_doc.lstrip().splitlines()[0]
+
+        params = {"report_plot_filename": None,
+                  "report_plot_file_formats": ["png"],
+                  "report_plot_caption": "",
+                  "report_plot_include": False,
+                  "report_table_caption": "",
+                  "report_table_include": False,
+                  "file_description": self.meta.get("description", ""),
+                  "class_description": cls_descr,
+                  "changes_str": changes_str}
+        params.update(self.meta)
+        params.update(kwargs)
+
+        rst_str = """
+{}
+{}
+
+File Description: {}
+
+Class Description: {}
+
+Changes:
+{}
+
+Data
+{}
+""".format(str(self),
+           rst_title_chars[0] * len(str(self)),
+           params["file_description"],
+           params["class_description"],
+           params["changes_str"],
+           rst_title_chars[1] * 4)
+
+        if params["report_plot_include"] and hasattr(self, "plot"):
+            fig = self.plot()
+
+            for fmt in params["report_plot_file_formats"]:
+                plot_fname = params["report_plot_filename"]
+                if plot_fname is None:
+                    plot_fname = self.meta["name"].lower().replace(" ", "_")
+                    plot_fname += "." + fmt
+                fig.savefig(fname=plot_fname, format=fmt)
+
+            rst_str += """
+.. figure:: {}
+
+    {}
+""".format(plot_fname, params["report_plot_caption"])
+    
+        if params["report_table_include"]:
+            rst_str += """
+{}
+
+{}
+""".format(params["report_table_caption"], self.table_string)
+
+        rst_str += """
+Meta-data
+{}
+::
+
+{}
+""".format(rst_title_chars[1] * 9,
+           self.meta_string)
+    
+        if filename is not None:
+            with open(filename, "w") as f:
+                f.write(rst_str)
+    
+        return rst_str
+
+    def __repr__(self):
+        name = self.meta.get("name", self.meta.get("filename", "<empty>"))
         return '{}: "{}"'.format(type(self).__name__, name)
 
-
-
+    def __str__(self):
+        return self.__repr__()

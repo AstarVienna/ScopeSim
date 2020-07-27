@@ -1,4 +1,5 @@
 # name : MICADO H4RG-15 FPA
+# description : Single H4RG-15 detector chip at the centre of the MICADO FPA
 # author : Oliver Czoske
 # sources: E-MCD-FPA-572089EB.uda, ELT-TRE-MCD-56300-0011
 # date_created  : 2017-06-28

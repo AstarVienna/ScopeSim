@@ -27,9 +27,12 @@ class DetectorList(Effect):
 
     def __init__(self, **kwargs):
         super(DetectorList, self).__init__(**kwargs)
-        self.meta["z_order"] = [90, 290, 390, 490]
-        self.meta["pixel_scale"] = "!INST.pixel_scale"      # arcsec
-        self.meta["active_detectors"] = "all"
+        params = {"z_order": [90, 290, 390, 490],
+                  "pixel_scale": "!INST.pixel_scale",      # arcsec
+                  "active_detectors": "all",
+                  "report_plot_include": True,
+                  "report_table_include": True}
+        self.meta.update(params)
         self.meta.update(kwargs)
 
         # for backwards compatibility
