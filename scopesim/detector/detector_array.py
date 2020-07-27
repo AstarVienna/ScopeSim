@@ -50,7 +50,7 @@ class DetectorArray:
         # - add ImageHDUs
         # - add ASCIITableHDU with Effects meta data in final table extension
 
-        self.effects += effects
+        self.effects = effects
         self.meta.update(kwargs)
 
         # 0. Get the image plane that corresponds to this detector array
