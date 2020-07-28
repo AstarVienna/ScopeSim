@@ -2,7 +2,7 @@ import warnings
 from inspect import isclass
 
 from astropy import units as u
-from astropy.table import Table
+from astropy.table import Table, vstack
 
 from .optical_element import OpticalElement
 from .. import effects as efs
@@ -219,23 +219,8 @@ class OpticsManager:
         return self._surfaces_table
 
     def list_effects(self):
-        elements = []
-        names = []
-        classes = []
-        included = []
-        z_orders = []
-
-        for opt_el in self.optical_elements:
-            for eff in opt_el.effects:
-                elements += [opt_el.meta["name"]]
-                names += [eff.meta["name"]]
-                classes += [eff.__class__.__name__]
-                included += [eff.meta["include"]]
-                z_orders += [eff.meta["z_order"]]
-
-        colnames = ["element", "name", "class", "included", "z_orders"]
-        data =     [ elements,  names,  classes, included,   z_orders]
-        tbl = Table(names=colnames, data=data, copy=False)
+        tbls = [opt_el.list_effects() for opt_el in self.optical_elements]
+        tbl = vstack(tbls)
 
         return tbl
 

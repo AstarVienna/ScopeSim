@@ -13,6 +13,7 @@ from astropy import units as u
 from astropy.io import fits
 from astropy.io import ascii as ioascii
 from astropy.table import Column, Table
+from astropy.table.pprint import TableFormatter
 
 from . import rc
 
@@ -559,6 +560,15 @@ def convert_table_comments_to_dict(tbl):
         warnings.warn("No comments in table")
 
     return comments_dict
+
+
+def table_to_rst(tbl):
+    tbl_fmtr = TableFormatter()
+    lines, outs = tbl_fmtr._pformat_table(tbl, max_width=-1, max_lines=-1)
+    lines[1] = lines[1].replace("-", "=")
+    lines = [lines[1]] + lines + [lines[1]]
+
+    return "\n".join(lines)
 
 
 def change_table_entry(tbl, col_name, new_val, old_val=None, position=None):

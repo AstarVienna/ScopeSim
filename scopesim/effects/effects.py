@@ -117,8 +117,7 @@ class Effect(DataContainer):
             tbl_str = ""
     
         return tbl_str
-    
-    
+
     @property
     def meta_string(self):
         meta_str = ""
@@ -126,7 +125,8 @@ class Effect(DataContainer):
         for key in self.meta:
             if key not in ["comments", "changes", "description", "history",
                            "report"]:
-                meta_str += f"    {key.rjust(max_key_len)} : {self.meta[key]}\n"
+                meta_str += "    {} : {}\n".format(key.rjust(max_key_len),
+                                                   self.meta[key])
     
         return meta_str
 
@@ -194,7 +194,7 @@ class Effect(DataContainer):
     
         """
         changes_str = "- " + "\n- ".join(self.meta.get("changes", []))
-        cls_doc = self.__doc__ if hasattr(self, "__doc__") else "<No Docstring>"
+        cls_doc = self.__doc__ if self.__doc__ is not None else "<no docstring>"
         cls_descr = cls_doc.lstrip().splitlines()[0]
 
         params = {"report_plot_filename": None,
@@ -203,7 +203,8 @@ class Effect(DataContainer):
                   "report_plot_include": False,
                   "report_table_caption": "",
                   "report_table_include": False,
-                  "file_description": self.meta.get("description", ""),
+                  "file_description": self.meta.get("description",
+                                                    "<no description>"),
                   "class_description": cls_descr,
                   "changes_str": changes_str}
         params.update(self.meta)
@@ -212,18 +213,20 @@ class Effect(DataContainer):
         rst_str = """
 {}
 {}
+**Included by default**: ``{}``
 
-File Description: {}
+**File Description**: {}
 
-Class Description: {}
+**Class Description**: {}
 
-Changes:
+**Changes**:
 {}
 
 Data
 {}
 """.format(str(self),
            rst_title_chars[0] * len(str(self)),
+           params["include"],
            params["file_description"],
            params["class_description"],
            params["changes_str"],

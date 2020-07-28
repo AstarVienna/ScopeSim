@@ -1,8 +1,11 @@
 import warnings
 from inspect import isclass
 
+from astropy.table import Table
+
 from .. import effects as efs
 from ..effects.effects_utils import make_effect, get_all_effects
+from ..utils import table_to_rst
 from .. import rc
 
 
@@ -118,6 +121,19 @@ class OpticalElement:
                       isinstance(effect, (efs.ApertureList, efs.ApertureMask))]
         return _mask_list
 
+    def list_effects(self):
+        elements = [self.meta["name"]] * len(self.effects)
+        names = [eff.meta["name"] for eff in self.effects]
+        classes = [eff.__class__.__name__ for eff in self.effects]
+        included = [eff.meta["include"] for eff in self.effects]
+        z_orders = [eff.meta["z_order"] for eff in self.effects]
+
+        colnames = ["element", "name", "class", "included", "z_orders"]
+        data = [elements, names, classes, included, z_orders]
+        tbl = Table(names=colnames, data=data, copy=False)
+
+        return tbl
+
     def __add__(self, other):
         self.add_effect(other)
 
@@ -139,3 +155,65 @@ class OpticalElement:
         eff_str = "\n".join(["[{}] {}".format(i, eff.__repr__())
                              for i, eff in enumerate(self.effects)])
         return msg + eff_str
+
+    def __str__(self):
+        name = self.meta.get("name", self.meta.get("filename", "<empty>"))
+        return '{}: "{}"'.format(type(self).__name__, name)
+
+    @property
+    def properties_str(self):
+        prop_str = ""
+        max_key_len = max([len(key) for key in self.properties.keys()])
+        for key in self.properties:
+            if key not in ["comments", "changes", "description", "history",
+                           "report"]:
+                prop_str += "    {} : {}\n".format(key.rjust(max_key_len),
+                                                   self.properties[key])
+
+        return prop_str
+
+    def report(self, filename=None, rst_title_chars="^#*+", **kwargs):
+
+        rst_str = """
+{}
+{}
+
+**Element**: {}
+
+**Alias**: {}
+        
+**Description**: {}
+
+Global properties
+{}
+::
+
+{}
+
+Effects
+{}
+
+Summary of Effects included in this optical element:
+
+{}
+ 
+""".format(str(self),
+           rst_title_chars[0] * len(str(self)),
+           self.meta.get("object", "<unknown optical element>"),
+           self.meta.get("alias", "<unknown alias>"),
+           self.meta.get("description", "<no description>"),
+           rst_title_chars[1] * 17,
+           self.properties_str,
+           rst_title_chars[1] * 7,
+           table_to_rst(self.list_effects()))
+
+        reports = [eff.report(rst_title_chars=rst_title_chars[-2:], **kwargs)
+                   for eff in self.effects]
+        rst_str += "\n\n" + "\n\n".join(reports)
+
+        if filename is not None:
+            with open(filename, "w") as f:
+                f.write(rst_str)
+
+        return rst_str
+
