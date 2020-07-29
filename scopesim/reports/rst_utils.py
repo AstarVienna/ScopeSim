@@ -1,9 +1,12 @@
-from docutils.core import publish_doctree
+import os
+from docutils.core import publish_doctree, publish_parts
 from docutils.nodes import comment, literal_block
 import yaml
 
+from .. import rc
 
-def walk(node, context_code=""):
+
+def walk(node, context_code=None):
     """
     Recursively walk through a docutils doctree and run/plot code blocks
 
@@ -19,6 +22,13 @@ def walk(node, context_code=""):
         Code to be inherited by subsequent code/comment nodes
 
     """
+
+    if context_code is None:
+        context_code = """
+import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib.colors import LogNorm
+"""
 
     if isinstance(node, (comment, literal_block)):
         if isinstance(node, comment):
@@ -114,7 +124,6 @@ def process_code(context_code, code, options):
             :name: my_fug
             :class: reset, clear-figure, plot, format-png
 
-            import matplotlib.pyplot as plt
             plt.plot([0,1], [1,1])
 
         .. figure:: my_fug.png
@@ -127,7 +136,6 @@ def process_code(context_code, code, options):
             format: [jpg, svg]
             action: [reset, clear-figure, plot]
             ---
-            import matplotlib.pyplot as plt
             plt.plot([0,1], [1,0])
 
         .. figure:: my_fug2.jpg
@@ -147,55 +155,40 @@ def process_code(context_code, code, options):
         formats = options.get("format", ["png"])
         formats = [formats] if isinstance(formats, str) else formats
         for fmt in formats:
+            img_path = rc.__config__["!SIM.reports.image_path"]
             fname = options.get("name", "untitled").split(".")[0]
-            context_code += '\nplt.savefig("{}")'.format(".".join([fname, fmt]))
+            fname = ".".join([fname, fmt])
+            fname = os.path.join(img_path, fname)
+            context_code += '\nplt.savefig("{}")'.format(fname)
 
     return context_code
 
 
-def run_code_comments(rst_text):
+def plotify_rst_text(rst_text):
     doctree = publish_doctree(rst_text)
     walk(doctree)
 
 
-rst_text = """
-.. 
-    import matplotlib.pyplot as plt
+def latexify_rst_text(rst_text, filename=None, path=None):
+    if path is None:
+        path = rc.__config__["!SIM.reports.latex_path"]
 
-..
-    action: plot
-    format: [pdf, png]
-    name: my_fug
-    ---
-    plt.plot([0,1], [0,1])
+    if filename is None:
+        filename = rst_text.split("===")[0].strip().replace(" ", "_") + ".tex"
 
-.. figure:: my_fug.png
-    :name: fig:my_fug
+    text = "Title\n<<<<<\nSubtitle\n>>>>>>>>\n\n"
+    parts = publish_parts(text + rst_text, writer_name="latex")
 
-    This is an included figure caption
+    with open(os.path.join(path, filename), "w") as f:
+        f.write(parts["body"])
 
-..
-    action: [reset, clear-figure, plot]
-    format: [jpg, svg]
-    name: my_fug2
-    ---
-    import matplotlib.pyplot as plt
-    plt.plot([0,1], [1,0])
 
-.. figure:: my_fug2.png
-    :name: fig:my_fug2
+def rstify_rst_text(rst_text, filename=None, path=None):
+    if path is None:
+        path = rc.__config__["!SIM.reports.rst_path"]
 
-.. code::
-    :name: my_fug3
-    :class: reset, clear-figure, plot, format-pdf, format-png
+    if filename is None:
+        filename = rst_text.split("===")[0].strip().replace(" ", "_") + ".rst"
 
-    import matplotlib.pyplot as plt
-    plt.plot([0,1], [1,1])
-
-.. figure:: my_fug2.png
-    :name: fig:my_fug2
-
-"""
-
-run_code_comments(rst_text)
-
+    with open(os.path.join(path, filename), "w") as f:
+        f.write(rst_text)

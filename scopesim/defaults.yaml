@@ -40,8 +40,12 @@ properties :
     verbose : False
     # for our own statistics, we track exclusively your institute's ip address
     # WE DO NOT TRACK OR SAVE ANY PERSONAL INFORMATION
-    # however you can become completely anonymous by setting this flag to True
+    # however you can become completely anonymous by setting this flag to False
     ip_tracking : True
+    rst_path: "./reports/rst/"
+    latex_path: "./reports/latex/"
+    image_path: "./reports/images/"
+    image_format: "png"
 
   tests :
     # overridden in tests/__init__.py
