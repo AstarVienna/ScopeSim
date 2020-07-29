@@ -5,7 +5,7 @@ from astropy.table import Table
 
 from .. import effects as efs
 from ..effects.effects_utils import make_effect, get_all_effects
-from ..utils import table_to_rst
+from ..utils import table_to_rst, write_report
 from .. import rc
 
 
@@ -172,7 +172,8 @@ class OpticalElement:
 
         return prop_str
 
-    def report(self, filename=None, rst_title_chars="^#*+", **kwargs):
+    def report(self, filename=None, output="rst", rst_title_chars="^#*+",
+               **kwargs):
 
         rst_str = """
 {}
@@ -195,6 +196,9 @@ Effects
 
 Summary of Effects included in this optical element:
 
+.. table::
+    :name: {}
+   
 {}
  
 """.format(str(self),
@@ -205,15 +209,14 @@ Summary of Effects included in this optical element:
            rst_title_chars[1] * 17,
            self.properties_str,
            rst_title_chars[1] * 7,
-           table_to_rst(self.list_effects()))
+           "tbl:" + self.meta.get("name", "<unknown OpticalElement>"),
+           table_to_rst(self.list_effects(), indent=4))
 
         reports = [eff.report(rst_title_chars=rst_title_chars[-2:], **kwargs)
                    for eff in self.effects]
         rst_str += "\n\n" + "\n\n".join(reports)
 
-        if filename is not None:
-            with open(filename, "w") as f:
-                f.write(rst_str)
+        write_report(rst_str, filename, output)
 
         return rst_str
 

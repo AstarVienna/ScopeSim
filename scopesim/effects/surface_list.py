@@ -1,5 +1,7 @@
 
 import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib.colors import LogNorm
 
 from astropy import units as u
 
@@ -39,10 +41,12 @@ class SurfaceList(Effect):
     """
     def __init__(self, **kwargs):
         super(SurfaceList, self).__init__(**kwargs)
-        self.meta["z_order"] = [20, 120]
-        self.meta["minimum_throughput"] = "!SIM.spectral.minimum_throughput"
-        self.meta["wave_min"] = "!SIM.spectral.wave_min"
-        self.meta["wave_max"] = "!SIM.spectral.wave_max"
+        params = {"z_order": [20, 120],
+                  "minimum_throughput": "!SIM.spectral.minimum_throughput",
+                  "wave_min": "!SIM.spectral.wave_min",
+                  "wave_max": "!SIM.spectral.wave_max",
+                  "report_table_include": True}
+        self.meta.update(params)
         self.meta.update(kwargs)
 
         self.radiometry_table = RadiometryTable()
@@ -194,3 +198,6 @@ class SurfaceList(Effect):
     @property
     def is_empty(self):
         return len(self.radiometry_table.table) == 0
+
+    def plot(self):
+        fig = plt.gcf()

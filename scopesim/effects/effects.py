@@ -3,7 +3,7 @@ from astropy.table import Table
 from ..effects.data_container import DataContainer
 from ..base_classes import SourceBase, FieldOfViewBase, ImagePlaneBase, \
     DetectorBase
-from ..utils import from_currsys
+from ..utils import from_currsys, table_to_rst, write_report
 from .. import rc
 
 
@@ -108,29 +108,19 @@ class Effect(DataContainer):
         self.meta["include"] = item
 
     @property
-    def table_string(self):
-        if isinstance(self.table, Table):
-            tbl_str = str(self.table).replace("-", "=")
-            hdr = tbl_str.split("\n")[1]
-            tbl_str = hdr + "\n" + tbl_str + "\n" + hdr
-        else:
-            tbl_str = ""
-    
-        return tbl_str
-
-    @property
     def meta_string(self):
         meta_str = ""
         max_key_len = max([len(key) for key in self.meta.keys()])
         for key in self.meta:
             if key not in ["comments", "changes", "description", "history",
-                           "report"]:
+                           "report_table_caption", "report_plot_caption"]:
                 meta_str += "    {} : {}\n".format(key.rjust(max_key_len),
                                                    self.meta[key])
     
         return meta_str
 
-    def report(self, filename=None, rst_title_chars="*+", **kwargs):
+    def report(self, filename=None, output="rst", rst_title_chars="*+",
+               **kwargs):
         """
         For Effect objects, generates a report based on the data and meta-data
     
@@ -143,6 +133,8 @@ class Effect(DataContainer):
         ----------
         filename : str, optional
             Where to save the RST file
+        output : str, optional
+            ["rst", "latex"] Output file format
         rst_title_chars : 2-str, optional
             Two unique characters used to denote rst subsection headings.
             Options: = - ` : ' " ~ ^ _ * + # < >
@@ -159,6 +151,12 @@ class Effect(DataContainer):
             Multiple formats can be saved. The last entry is used for the RST.
         "report_plot_filename": None
             If None, uses self.meta["name"] as the filename
+        "file_description": str
+            Taken from the header of a file, if available
+        "class_description": str
+            Taken from the docstring of the subclass
+        "changes_str": list of str
+            Take from the header of a file, if available
 
         Returns
         -------
@@ -178,13 +176,15 @@ class Effect(DataContainer):
     
             Data
             ++++
-            Figure 
-                If the <Effect> object contains a ``.plot()`` function, add plot
+            .. figure:: <Figure_name>.png
+                If the <Effect> object contains a ``.plot()`` function, add
+                plot and write it to disc
             Figure caption
     
             Table caption
             Table
-                If the <Effect> object contains a ``.table()`` function, add table
+                If the <Effect> object contains a ``.table()`` function, add
+                a pprint version of the table
     
             Meta-data
             +++++++++
@@ -193,7 +193,8 @@ class Effect(DataContainer):
     
     
         """
-        changes_str = "- " + "\n- ".join(self.meta.get("changes", []))
+        changes = self.meta.get("changes", [])
+        changes_str = "- " + "\n- ".join([str(entry) for entry in changes])
         cls_doc = self.__doc__ if self.__doc__ is not None else "<no docstring>"
         cls_descr = cls_doc.lstrip().splitlines()[0]
 
@@ -220,6 +221,7 @@ class Effect(DataContainer):
 **Class Description**: {}
 
 **Changes**:
+
 {}
 
 Data
@@ -235,6 +237,7 @@ Data
         if params["report_plot_include"] and hasattr(self, "plot"):
             fig = self.plot()
 
+            plot_fname = ""
             for fmt in params["report_plot_file_formats"]:
                 plot_fname = params["report_plot_filename"]
                 if plot_fname is None:
@@ -244,16 +247,24 @@ Data
 
             rst_str += """
 .. figure:: {}
+    :name: {}
 
     {}
-""".format(plot_fname, params["report_plot_caption"])
+""".format(plot_fname,
+           "fig:" + params.get("name", "<unknown Effect>"),
+           params["report_plot_caption"])
     
         if params["report_table_include"]:
             rst_str += """
+.. table::
+    :name: {}
+
 {}
 
 {}
-""".format(params["report_table_caption"], self.table_string)
+""".format("tbl:" + params.get("name"),
+           table_to_rst(self.table, indent=4),
+           params["report_table_caption"])
 
         rst_str += """
 Meta-data
@@ -264,10 +275,8 @@ Meta-data
 """.format(rst_title_chars[1] * 9,
            self.meta_string)
     
-        if filename is not None:
-            with open(filename, "w") as f:
-                f.write(rst_str)
-    
+        write_report(rst_str, filename, output)
+
         return rst_str
 
     def __repr__(self):

@@ -222,3 +222,21 @@ class OpticalTrain:
     def __setitem__(self, key, value):
         self.optics_manager[key] = value
 
+    def report(self):
+        pass
+        # user commands report
+        #   package dependencies
+        #   modes names
+        #   default modes
+        #   yaml hierarchy
+        #
+        # optics_manager
+        #   derived properties
+        #   system transmission curve
+        #   list of effects
+        #
+        # etc
+        #   limiting magnitudes
+        #
+
+

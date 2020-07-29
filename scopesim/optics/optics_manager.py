@@ -8,6 +8,7 @@ from .optical_element import OpticalElement
 from .. import effects as efs
 from ..effects.effects_utils import is_spectroscope
 from ..effects.effects_utils import combine_surface_effects
+from ..utils import table_to_rst, write_report
 from .. import rc
 
 
@@ -219,10 +220,55 @@ class OpticsManager:
         return self._surfaces_table
 
     def list_effects(self):
-        tbls = [opt_el.list_effects() for opt_el in self.optical_elements]
-        tbl = vstack(tbls)
+        # unfortunately this does not work because of the astropy internal
+        # conversion to np.arrays if all column entries are a list with the
+        # same number of entries
+        #tbls = [opt_el.list_effects() for opt_el in self.optical_elements]
+        #tbl = vstack(tbls)
+
+        # Hence we need to reconstruct the full effects list
+
+        # flat_list = [item for sublist in l for item in sublist]
+        all_effs = [eff for opt_eff in self.optical_elements for eff in opt_eff]
+
+        elements = [opt_el.meta["name"] for opt_el in self.optical_elements
+                    for eff in opt_el.effects]
+        names = [eff.meta["name"] for eff in all_effs]
+        classes = [eff.__class__.__name__ for eff in all_effs]
+        included = [eff.meta["include"] for eff in all_effs]
+        z_orders = [eff.meta["z_order"] for eff in all_effs]
+
+        colnames = ["element", "name", "class", "included", "z_orders"]
+        data = [elements, names, classes, included, z_orders]
+        tbl = Table(names=colnames, data=data, copy=False)
 
         return tbl
+
+    def report(self, filename=None, output="rst", rst_title_chars="_^#*+",
+               **kwargs):
+
+        rst_str = """
+List of Optical Elements
+{}
+
+Summary of Effects in Optical Elements:
+{}
+
+.. table::
+    :name: tbl:effects_summary
+
+{}
+""".format(rst_title_chars[0] * 24,
+           rst_title_chars[1] * 39,
+           table_to_rst(self.list_effects(), indent=4))
+
+        reports = [opt_el.report(rst_title_chars=rst_title_chars[-4:], **kwargs)
+                   for opt_el in self.optical_elements]
+        rst_str += "\n\n" + "\n\n".join(reports)
+
+        write_report(rst_str, filename, output)
+
+        return rst_str
 
     def __add__(self, other):
         self.add_effect(other)
@@ -260,3 +306,9 @@ class OpticsManager:
                    ''.format(ii, opt_el.meta["name"], len(opt_el.effects))
 
         return msg
+
+    def __str__(self):
+        name = self.meta.get("name", self.meta.get("filename", "<empty>"))
+        return '{}: "{}"'.format(type(self).__name__, name)
+
+
