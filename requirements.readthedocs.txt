@@ -3,6 +3,7 @@ scipy
 matplotlib
 astropy
 
+docutils
 requests
 beautifulsoup4
 pyyaml

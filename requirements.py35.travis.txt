@@ -6,6 +6,7 @@ matplotlib==1.5
 ipykernel<4.9.0
 jupyter
 
+docutils
 requests==2.20
 beautifulsoup4==4.4
 pyyaml==5.1

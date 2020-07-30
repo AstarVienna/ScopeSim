@@ -62,3 +62,12 @@ class TestRstifyRstText:
         ru.rstify_rst_text(ro.big_rst_text)
         assert os.path.exists(os.path.join(RST_PATH,
                                            "This_parrot_goes_vrooom.rst"))
+
+
+class TestEffectReport:
+    def test_all_parts_are_created_in_rc_folders(self):
+        from scopesim.tests.mocks.py_objects import effects_objects as eo
+        det_list = eo._detector_list()
+        rst_text = det_list.report()
+        ru.rstify_rst_text(rst_text, title_char="*", filename=det_list.meta["name"])
+        ru.latexify_rst_text(rst_text, title_char="*", filename=det_list.meta["name"])

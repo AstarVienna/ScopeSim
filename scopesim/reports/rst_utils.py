@@ -4,6 +4,7 @@ from docutils.nodes import comment, literal_block
 import yaml
 
 from .. import rc
+from ..utils import from_currsys
 
 
 def walk(node, context_code=None):
@@ -169,26 +170,30 @@ def plotify_rst_text(rst_text):
     walk(doctree)
 
 
-def latexify_rst_text(rst_text, filename=None, path=None):
+def latexify_rst_text(rst_text, filename=None, path=None, title_char="="):
     if path is None:
-        path = rc.__config__["!SIM.reports.latex_path"]
+        path = from_currsys(rc.__config__["!SIM.reports.latex_path"])
 
     if filename is None:
-        filename = rst_text.split("===")[0].strip().replace(" ", "_") + ".tex"
+        filename = rst_text.split(title_char)[0].strip().replace(" ", "_")
 
     text = "Title\n<<<<<\nSubtitle\n>>>>>>>>\n\n"
     parts = publish_parts(text + rst_text, writer_name="latex")
 
-    with open(os.path.join(path, filename), "w") as f:
+    filename = filename.split(".")[0] + ".tex"
+    file_path = os.path.join(path, filename)
+    with open(file_path, "w") as f:
         f.write(parts["body"])
 
 
-def rstify_rst_text(rst_text, filename=None, path=None):
+def rstify_rst_text(rst_text, filename=None, path=None, title_char="="):
     if path is None:
-        path = rc.__config__["!SIM.reports.rst_path"]
+        path = from_currsys(rc.__config__["!SIM.reports.rst_path"])
 
     if filename is None:
-        filename = rst_text.split("===")[0].strip().replace(" ", "_") + ".rst"
+        filename = rst_text.split(title_char)[0].strip().replace(" ", "_")
 
-    with open(os.path.join(path, filename), "w") as f:
+    filename = filename.split(".")[0] + ".rst"
+    file_path = os.path.join(path, filename)
+    with open(file_path, "w") as f:
         f.write(rst_text)

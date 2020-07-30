@@ -48,6 +48,7 @@ def setup_package():
                             "scipy>=1.0.0",
                             "astropy>=2.0",
                             "matplotlib>=1.5",
+                            "docutils",
                             "pyyaml>5.1",
                             "requests>=2.20",
                             "beautifulsoup4>=4.4",

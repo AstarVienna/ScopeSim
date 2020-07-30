@@ -1,3 +1,4 @@
+import os
 from astropy.table import Table
 
 from ..effects.data_container import DataContainer
@@ -204,12 +205,16 @@ class Effect(DataContainer):
                   "report_plot_include": False,
                   "report_table_caption": "",
                   "report_table_include": False,
+                  "report_image_path": "!SIM.reports.image_path",
+                  "report_rst_path": "!SIM.reports.rst_path",
+                  "report_latex_path": "!SIM.reports.latex_path",
                   "file_description": self.meta.get("description",
                                                     "<no description>"),
                   "class_description": cls_descr,
                   "changes_str": changes_str}
         params.update(self.meta)
         params.update(kwargs)
+        params = from_currsys(params)
 
         rst_str = """
 {}
@@ -237,20 +242,28 @@ Data
         if params["report_plot_include"] and hasattr(self, "plot"):
             fig = self.plot()
 
-            plot_fname = ""
+            path = params["report_image_path"]
+
+            fname = params["report_plot_filename"]
+            if fname is None:
+                fname = self.meta["name"].lower().replace(" ", "_")
+
             for fmt in params["report_plot_file_formats"]:
-                plot_fname = params["report_plot_filename"]
-                if plot_fname is None:
-                    plot_fname = self.meta["name"].lower().replace(" ", "_")
-                    plot_fname += "." + fmt
-                fig.savefig(fname=plot_fname, format=fmt)
+                fname = ".".join((fname.split(".")[0], fmt))
+                file_path = os.path.join(path, fname)
+
+                fig.savefig(fname=file_path)
+
+            # rel_path = os.path.relpath(params["report_image_path"],
+            #                            params["report_rst_path"])
+            # rel_file_path = os.path.join(rel_path, fname)
 
             rst_str += """
 .. figure:: {}
     :name: {}
 
     {}
-""".format(plot_fname,
+""".format(fname,
            "fig:" + params.get("name", "<unknown Effect>"),
            params["report_plot_caption"])
     
