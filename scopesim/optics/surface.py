@@ -22,7 +22,7 @@ class SpectralSurface:
     Initialised by a file containing one or more of the following columns:
     transmission, emissivity, reflection. The column wavelength must be given.
     Alternatively kwargs for the above mentioned quantities can be passed as
-    arrays. If they aren't Quantities, then a unit should also be passed with
+    arrays. If they are not Quantities, then a unit should also be passed with
     the <array_name>_unit syntax (i.e. emission_unit or wavelength_unit)
 
     """

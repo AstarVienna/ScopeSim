@@ -183,15 +183,15 @@ class OpticsManager:
     @property
     def image_plane_effects(self):
         effects = self.get_z_order_effects(700)
-        if not self.is_spectroscope:
-            effects += [self.surfaces_table]   # Background Emission if Imager
+        # if not self.is_spectroscope:
+        #     effects += [self.surfaces_table]   # Background Emission if Imager
         return effects
 
     @property
     def fov_effects(self):
         effects = self.get_z_order_effects(600)
-        if self.is_spectroscope:
-            effects += [self.surfaces_table]   # Background Emission if Spectroscope
+        # if self.is_spectroscope:
+        effects += [self.surfaces_table]   # Background Emission if Spectroscope
         return effects
 
     @property

@@ -11,8 +11,10 @@ from scopesim import rc
 
 FILES_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),
                                           "../files/"))
+MICADO_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),
+                                           "../MICADO_SCAO_WIDE/"))
 if FILES_PATH not in rc.__search_path__:
-    rc.__search_path__ += [FILES_PATH]
+    rc.__search_path__ += [FILES_PATH, MICADO_PATH]
 
 
 def _surf_list():

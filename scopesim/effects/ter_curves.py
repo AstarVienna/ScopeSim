@@ -1,16 +1,16 @@
 import numpy as np
 from astropy import units as u
-from astropy.table import Table
 from os import path as pth
 
 from astropy.io import fits
-from synphot import SourceSpectrum
 
+from .ter_curves_utils import combine_two_spectra, add_edge_zeros, download_svo_filter
 from .effects import Effect
 from ..optics.surface import SpectralSurface
+from ..source.source_utils import make_imagehdu_from_table
+from ..source.source import Source
+from ..base_classes import SourceBase
 from ..utils import from_currsys, quantify, check_keys
-from .ter_curves_utils import download_svo_filter
-
 
 
 class TERCurve(Effect):
@@ -59,9 +59,13 @@ class TERCurve(Effect):
         super(TERCurve, self).__init__(**kwargs)
         self.meta["z_order"] = [10, 110]
         self.meta["ignore_wings"] = False
+        self.meta["wave_min"] = "!SIM.spectral.wave_min"
+        self.meta["wave_max"] = "!SIM.spectral.wave_max"
         self.meta.update(kwargs)
+
         self.surface = SpectralSurface()
         self.surface.meta.update(self.meta)
+
         data = self.get_data()
         if self.meta["ignore_wings"]:
             data = add_edge_zeros(data, "wavelength")
@@ -69,18 +73,38 @@ class TERCurve(Effect):
             self.surface.table = data
             self.surface.table.meta.update(self.meta)
 
+    ######## added in new branch
+    def apply_to(self, obj):
+        if isinstance(obj, SourceBase):
+            self.meta = from_currsys(self.meta)
+            for ii in range(len(obj.spectra)):
+                wave_min = quantify(self.meta["wave_min"], u.um).to(u.AA)
+                wave_max = quantify(self.meta["wave_max"], u.um).to(u.AA)
+                spec = obj.spectra[ii]
+                trans = self.surface.transmission
+                obj.spectra[ii] = combine_two_spectra(spec, trans, "multiply",
+                                                      wave_min, wave_max)
 
-def add_edge_zeros(tbl, wave_colname):
-    if isinstance(tbl, Table):
-        vals = np.zeros(len(tbl.colnames))
-        col_i = np.where(col == wave_colname for col in tbl.colnames)[0][0]
-        sgn = np.sign(np.diff(tbl[wave_colname][:2]))
-        vals[col_i] = tbl[wave_colname][0] * (1 - 1e-7 * sgn)
-        tbl.insert_row(0, vals)
-        vals[col_i] = tbl[wave_colname][-1] * (1 + 1e-7 * sgn)
-        tbl.insert_row(len(tbl), vals)
+            flux = self.surface.emission
+            for field in obj.fields:
+                n_bg_srcs = 0
+                if isinstance(field, fits.ImageHDU) and \
+                        field.header.get("BG_SRC", False):
+                    ref = int(field.header["SPEC_REF"])
+                    spec = obj.spectra[ref]
+                    obj.spectra[ref] = combine_two_spectra(spec, flux, "add",
+                                                           wave_min, wave_max)
+                    n_bg_srcs += 1
 
-    return tbl
+                if n_bg_srcs == 0:
+                    bg_hdu = make_imagehdu_from_table([0], [0], [1])
+                    bg_hdu.header["BG_SRC"] = True
+                    bg_src = Source(image_hdu=bg_hdu, spectra=flux)
+
+                    obj.append(bg_src)
+
+        return obj
+    ########
 
 
 class AtmosphericTERCurve(TERCurve):
@@ -177,8 +201,8 @@ class QuantumEfficiencyCurve(TERCurve):
 
 class FilterCurve(TERCurve):
     """
-    kwargs
-    ------
+    Other Parameters
+    ----------------
     position : int
     filter_name : str
         ``Ks`` - corresponding to the filter name in the filename pattern
@@ -268,3 +292,6 @@ class SpanishVOFilterCurve(FilterCurve):
         tbl = download_svo_filter(filt_str, return_style="table")
         super(SpanishVOFilterCurve, self).__init__(table=tbl, **kwargs)
 
+
+class FilterWheel(TERCurve):
+    pass
