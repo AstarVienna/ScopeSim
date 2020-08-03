@@ -57,6 +57,7 @@ class TestLatexifyRstText:
         assert os.path.exists(os.path.join(LATEX_PATH,
                                            "This_parrot_goes_vrooom.tex"))
 
+
 class TestRstifyRstText:
     def test_stuff(self):
         ru.rstify_rst_text(ro.big_rst_text)
