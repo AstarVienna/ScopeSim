@@ -5,8 +5,7 @@ import pytest
 from astropy.table import Table
 
 from scopesim import rc
-from scopesim.effects import Effect
-from scopesim.effects import SurfaceList
+from scopesim.effects import Effect, SurfaceList
 
 MOCK_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),
                                          "../mocks/MICADO_SCAO_WIDE/"))

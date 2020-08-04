@@ -127,13 +127,13 @@ class TestRadiometryTableGetThroughput:
 class TestRadiometryTableGetEmission:
     def test_return_spectral_element_from_get_throughput(self, input_tables):
         rt = opt_rad.RadiometryTable(input_tables)
-        etendue = 996*u.m**2 * (0.004*u.arcsec)**2
+        etendue = (996*u.m**2) * (0.004*u.arcsec)**2
         emiss = rt.get_emission(etendue=etendue)
         assert isinstance(emiss, SourceSpectrum)
 
     def test_return_spectral_element_for_only_2_rows(self, input_tables):
         rt = opt_rad.RadiometryTable(input_tables)
-        etendue = 996 * u.m ** 2 * (0.004 * u.arcsec) ** 2
+        etendue = (996*u.m ** 2) * (0.004 * u.arcsec) ** 2
         emiss = rt.get_emission(etendue=etendue, start=1, end=3)
         assert isinstance(emiss, SourceSpectrum)
 

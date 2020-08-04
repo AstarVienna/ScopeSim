@@ -70,6 +70,10 @@ class SpectralSurface:
         return self._get_array("wavelength")
 
     @property
+    def throughput(self):
+        return self._get_ter_property(self.meta.get("action", "transmission"))
+
+    @property
     def transmission(self):
         return self._get_ter_property("transmission")
 

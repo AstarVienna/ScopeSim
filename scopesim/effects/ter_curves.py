@@ -110,7 +110,7 @@ class TERCurve(Effect):
         return obj
     ########
 
-    def plot(self, which="t", wavelength=None, ax=None, **kwargs):
+    def plot(self, which="", wavelength=None, ax=None, **kwargs):
         import matplotlib.pyplot as plt
 
         self.meta.update(kwargs)
@@ -136,6 +136,8 @@ class TERCurve(Effect):
                 plt.plot(wave, surf.emission(wave))
             elif "r" in ter:
                 plt.plot(wave, surf.reflection(wave))
+            else:
+                plt.plot(wave, surf.throughput(wave))
 
 
 class AtmosphericTERCurve(TERCurve):
@@ -366,7 +368,20 @@ class FilterWheel(Effect):
     def current_filter(self):
         return self.filters[self.meta["current_filter"]]
 
-    def plot(self, which="ter", wavelength=None, **kwargs):
+    def plot(self, which="", wavelength=None, **kwargs):
+        """
+
+        Parameters
+        ----------
+        which : str
+            "" plots throughput. "t","e","r" plot trans/emission/refl
+        wavelength
+        kwargs
+
+        Returns
+        -------
+
+        """
         import matplotlib.pyplot as plt
 
         for ii, ter in enumerate(which):
@@ -376,6 +391,3 @@ class FilterWheel(Effect):
                                         ax=ax, **kwargs)
 
 
-class SurfaceList(Effect):
-    def __init__(self, **kwargs):
-        super(SurfaceList, self).__init__(**kwargs)

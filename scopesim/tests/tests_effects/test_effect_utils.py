@@ -2,8 +2,8 @@ import os
 import pytest
 
 from scopesim import rc
-from scopesim.effects import effects_utils as e_utils, GaussianDiffractionPSF
-from scopesim.effects import SurfaceList
+from scopesim.effects import effects_utils as e_utils, GaussianDiffractionPSF, \
+    SurfaceList
 from scopesim.tests.mocks.py_objects.effects_objects import _surf_list, \
     _surf_list_empty, _filter_surface
 from scopesim.tests.mocks.py_objects.yaml_objects import _atmo_yaml_dict

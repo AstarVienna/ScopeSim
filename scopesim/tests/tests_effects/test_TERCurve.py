@@ -1,7 +1,6 @@
 
 import os
 import pytest
-from pytest import approx
 
 import numpy as np
 from matplotlib import pyplot as plt
@@ -108,6 +107,5 @@ class TestFilterWheelInit:
         if PLOTS:
             wheel.plot()
             plt.show()
-
 
 
