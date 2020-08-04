@@ -35,13 +35,14 @@ def _surf_list_empty():
     return efs.SurfaceList(**kwargs)
 
 
-def _filter_surface():
-    kwargs = {"filename": "TC_filter_Ks.dat",
+def _filter_surface(**kwargs):
+    params = {"filename": "TC_filter_Ks.dat",
               "name": "filter",
               "action": "transmission",
               "outer": 0.1,
               "temperature": 0}
-    return efs.TERCurve(**kwargs)
+    params.update(kwargs)
+    return efs.TERCurve(**params)
 
 
 def _mvs_effects_list():

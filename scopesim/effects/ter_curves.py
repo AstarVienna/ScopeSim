@@ -57,10 +57,13 @@ class TERCurve(Effect):
     """
     def __init__(self, **kwargs):
         super(TERCurve, self).__init__(**kwargs)
-        self.meta["z_order"] = [10, 110]
-        self.meta["ignore_wings"] = False
-        self.meta["wave_min"] = "!SIM.spectral.wave_min"
-        self.meta["wave_max"] = "!SIM.spectral.wave_max"
+        params = {"z_order": [10, 110, 510],
+                  "ignore_wings": False,
+                  "wave_min": "!SIM.spectral.wave_min",
+                  "wave_max": "!SIM.spectral.wave_max",
+                  "wave_unit": "!SIM.spectral.wave_unit",
+                  "wave_bin": "!SIM.spectral.spectral_resolution"}
+        self.meta.update(params)
         self.meta.update(kwargs)
 
         self.surface = SpectralSurface()
@@ -86,8 +89,8 @@ class TERCurve(Effect):
                                                       wave_min, wave_max)
 
             flux = self.surface.emission
+            n_bg_srcs = 0
             for field in obj.fields:
-                n_bg_srcs = 0
                 if isinstance(field, fits.ImageHDU) and \
                         field.header.get("BG_SRC", False):
                     ref = int(field.header["SPEC_REF"])
@@ -96,21 +99,49 @@ class TERCurve(Effect):
                                                            wave_min, wave_max)
                     n_bg_srcs += 1
 
-                if n_bg_srcs == 0:
-                    bg_hdu = make_imagehdu_from_table([0], [0], [1])
-                    bg_hdu.header["BG_SRC"] = True
-                    bg_src = Source(image_hdu=bg_hdu, spectra=flux)
+            if n_bg_srcs == 0:
+                bg_hdu = make_imagehdu_from_table(x=[0], y=[0], flux=[1],
+                                                  pix_scale=1*u.deg)
+                bg_hdu.header["BG_SRC"] = True
+                bg_src = Source(image_hdu=bg_hdu, spectra=flux)
 
-                    obj.append(bg_src)
+                obj.append(bg_src)
 
         return obj
     ########
+
+    def plot(self, which="t", wavelength=None, ax=None, **kwargs):
+        import matplotlib.pyplot as plt
+
+        self.meta.update(kwargs)
+        params = from_currsys(self.meta)
+
+        for ii, ter in enumerate(which):
+            if ax is None:
+                plt.subplot(len(which), 1, ii+1)
+
+            if wavelength is None:
+                wunit = params["wave_unit"]
+                wave = np.arange(quantify(params["wave_min"], wunit).value,
+                                 quantify(params["wave_max"], wunit).value,
+                                 quantify(params["wave_bin"], wunit).value)
+                wave *= u.Unit(wunit)
+            else:
+                wave = wavelength
+
+            surf = self.surface
+            if "t" in ter:
+                plt.plot(wave, surf.transmission(wave))
+            elif "e" in ter:
+                plt.plot(wave, surf.emission(wave))
+            elif "r" in ter:
+                plt.plot(wave, surf.reflection(wave))
 
 
 class AtmosphericTERCurve(TERCurve):
     def __init__(self, **kwargs):
         super(AtmosphericTERCurve, self).__init__(**kwargs)
-        self.meta["z_order"] = [111]
+        self.meta["z_order"] = [111, 511]
         self.meta["action"] = "transmission"
         self.meta["area"] = "!TEL.area"
         self.meta["area_unit"] = "m2"
@@ -150,7 +181,7 @@ class SkycalcTERCurve(AtmosphericTERCurve):
         import skycalc_ipy
 
         super(SkycalcTERCurve, self).__init__(**kwargs)
-        self.meta["z_order"] = [112]
+        self.meta["z_order"] = [112, 512]
         self.meta.update(kwargs)
 
         self.skycalc_conn = skycalc_ipy.SkyCalc()
@@ -195,7 +226,7 @@ class QuantumEfficiencyCurve(TERCurve):
     def __init__(self, **kwargs):
         super(QuantumEfficiencyCurve, self).__init__(**kwargs)
         self.meta["action"] = "transmission"
-        self.meta["z_order"] = [113]
+        self.meta["z_order"] = [113, 513]
         self.meta["position"] = -1          # position in surface table
 
 
@@ -239,7 +270,7 @@ class FilterCurve(TERCurve):
                   "position": -1,               # position in surface table
                   "wing_flux_level": None}
         self.meta.update(params)
-        self.meta["z_order"] = [114, 214]
+        self.meta["z_order"] = [114, 214, 514]
         self.meta.update(kwargs)
 
         min_thru = from_currsys(self.meta["minimum_throughput"])
@@ -293,5 +324,58 @@ class SpanishVOFilterCurve(FilterCurve):
         super(SpanishVOFilterCurve, self).__init__(table=tbl, **kwargs)
 
 
-class FilterWheel(TERCurve):
-    pass
+class FilterWheel(Effect):
+    """
+
+    Examples
+    --------
+    ::
+
+        name: filter_wheel
+        class: FilterWheel
+        kwargs:
+            filter_names: []
+            filename_format: "filters/{}.
+            current_filter: "Ks"
+
+    """
+
+    def __init__(self, **kwargs):
+        required_keys = ["filter_names", "filename_format", "current_filter"]
+        check_keys(kwargs, required_keys, action="error")
+
+        super(FilterWheel, self).__init__(**kwargs)
+
+        params = {"z_order": [124, 224, 524],
+                  "path": ""}
+        self.meta.update(params)
+        self.meta.update(kwargs)
+
+        path = pth.join(self.meta["path"], self.meta["filename_format"])
+        self.filters = {name: FilterCurve(filename=path.format(name),
+                                          name=name, **kwargs)
+                        for name in self.meta["filter_names"]}
+
+    def apply_to(self, obj):
+        return self.current_filter.apply_to(obj)
+
+    def fov_grid(self, which="waveset", **kwargs):
+        return self.current_filter(which=which, **kwargs)
+
+    @property
+    def current_filter(self):
+        return self.filters[self.meta["current_filter"]]
+
+    def plot(self, which="ter", wavelength=None, **kwargs):
+        import matplotlib.pyplot as plt
+
+        for ii, ter in enumerate(which):
+            ax = plt.subplot(len(which), 1, ii+1)
+            for name in self.filters:
+                self.filters[name].plot(which=ter, wavelength=wavelength,
+                                        ax=ax, **kwargs)
+
+
+class SurfaceList(Effect):
+    def __init__(self, **kwargs):
+        super(SurfaceList, self).__init__(**kwargs)
