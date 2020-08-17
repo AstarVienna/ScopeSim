@@ -107,5 +107,3 @@ class TestFilterWheelInit:
         if PLOTS:
             wheel.plot()
             plt.show()
-
-

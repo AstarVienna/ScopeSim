@@ -52,6 +52,7 @@ def combine_emissions(tbl, surfaces, row_indexes, etendue, use_area=False):
                     emission = deepcopy(surf_emission)
                 else:
                     emission = emission + surf_emission
+
             else:
                 warnings.warn('Ignoring emission from surface: "{}". Area came '
                               'back as "None"'.format(surf.meta["name"]))
@@ -116,23 +117,30 @@ def string_to_table(tbl):
 
 
 def add_surface_to_table(tbl, surf, name, position, silent=True):
-    tbl.insert_row(position)
-    for colname in tbl.colnames:
+    if position < 0:
+        position += len(tbl) + 1
+
+    # here is why we need a deepcopy of the first table
+    # no idea why the False works, but it does. Don't screw with working code!
+    new_tbl = tbl.copy(False)
+    new_tbl.insert_row(position)
+    for colname in new_tbl.colnames:
         surf_col = real_colname(colname, surf.meta)
         if surf_col is not None:
             surf_val = surf.meta[surf_col]
             if isinstance(surf_val, u.Quantity):
                 surf_val = surf_val.value
-            tbl = change_table_entry(tbl, colname, surf_val, position=position)
+            new_tbl = change_table_entry(new_tbl, colname, surf_val,
+                                         position=position)
         else:
             if not silent:
                 warnings.warn("{} was not found in the meta dictionary of {}. "
                               "This could cause problems".format(colname, name))
 
-    colname = real_colname("name", tbl.colnames)
-    tbl = change_table_entry(tbl, colname, name, position=position)
+    colname = real_colname("name", new_tbl.colnames)
+    new_tbl = change_table_entry(new_tbl, colname, name, position=position)
 
-    return tbl
+    return new_tbl
 
 
 def add_surface_to_dict(dic, surf, name, position=0):

@@ -8,21 +8,39 @@ import matplotlib.pyplot as plt
 
 from synphot import SourceSpectrum, SpectralElement
 
-import scopesim.effects
 from scopesim.effects import surface_list as sl
 from scopesim.optics import SpectralSurface
+
+from scopesim.tests.mocks.py_objects import source_objects as so
+from scopesim.tests.mocks.py_objects import effects_objects as eo
 from scopesim import rc
+
 
 MOCK_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),
                                          "../mocks/MICADO_SCAO_WIDE/"))
 if MOCK_PATH not in rc.__search_path__:
     rc.__search_path__ += [MOCK_PATH]
 
-PLOTS = True
+PLOTS = False
 
 
 def micado_surf_list():
     return sl.SurfaceList(filename="LIST_mirrors_MICADO_Wide.tbl")
+
+
+def surf_list_kwargs(n=11):
+    kwargs = {"array_dict": {"name": ["M{}".format(i) for i in range(n)],
+                             "area": [1.0] * n,
+                             "angle": [0] * n,
+                             "temperature": [0] * n,
+                             "action": ["reflection"] * n,
+                             "filename": ["TER_mirror_gold.dat"] * n},
+              "outer_unit": "m",
+              "inner_unit": "m",
+              "angle_unit": "deg",
+              "temperature_unit": "deg_C",
+              "etendue": (1 * u.m * u.arcsec) ** 2}
+    return kwargs
 
 
 class TestInit:
@@ -37,21 +55,12 @@ class TestInit:
             assert isinstance(surf_list.surfaces[key], SpectralSurface)
 
     def test_initialises_from_array_dict(self):
-        kwargs = {"array_dict": {"name": ["I01_Fold1"],
-                                 "outer": [0.5],
-                                 "inner": [0.0],
-                                 "angle": [45],
-                                 "temperature": [-190],
-                                 "action": ["reflection"],
-                                 "filename": ["TER_mirror_gold.dat"]},
-                  "outer_unit": "m",
-                  "inner_unit": "m",
-                  "angle_unit": "deg",
-                  "temperature_unit": "deg_C"}
+        n = 5
+        kwargs = surf_list_kwargs(n)
         surf_list = sl.SurfaceList(**kwargs)
-        assert len(surf_list.data) == 1
+        assert len(surf_list.data) == n
         assert isinstance(surf_list, sl.SurfaceList)
-        assert surf_list.surfaces["I01_Fold1"].area == (0.25 * u.m)**2 * np.pi
+        assert surf_list.surfaces["M1"].area == 1 * u.m**2
 
 
 class TestGetEmission:
@@ -66,27 +75,20 @@ class TestGetEmission:
             plt.show()
 
     def test_combines_emission_correctly(self):
-        n = 2
-        kwargs = {"array_dict": {"name": ["M{}".format(i) for i in range(n)],
-                                 "outer": [1.0]*n,
-                                 "inner": [0.0]*n,
-                                 "angle": [0]*n,
-                                 "temperature": [0]*n,
-                                 "action": ["reflection"]*2,
-                                 "filename": ["TER_mirror_gold.dat"]*2},
-                  "outer_unit": "m",
-                  "inner_unit": "m",
-                  "angle_unit": "deg",
-                  "temperature_unit": "deg_C",
-                  "etendue": (1*u.m*u.arcsec)**2}
+        n = 5
+        kwargs = surf_list_kwargs(n)
         surf_list = sl.SurfaceList(**kwargs)
-        m1_value = surf_list.surfaces["M0"].emission(2 * u.um).value
-        m2_value = surf_list.surfaces["M1"].emission(2 * u.um).value
-        comb_value = surf_list.emission(2 * u.um).value
-        print(m1_value + m2_value, comb_value)
-        raise ValueError("m1+m2 < comb!!!")
 
-        if not PLOTS:
+        wave = np.arange(0.8, 2.5, 0.01) * u.um
+        sum_values = np.sum([surf_list.surfaces[key].emission(wave).value
+                             for key in surf_list.surfaces], axis=0)
+        comb_value = surf_list.emission(wave).value
+        sollwert = np.sum([0.985 ** n for n in range(n)]) / n
+
+        assert np.average(comb_value / sum_values) == approx(sollwert, rel=1e-5)
+
+        # print(sum_values, comb_value, comb_value / sum_values, sollwert)
+        if PLOTS:
             wave = np.linspace(0.8, 2.5, 100) * u.um
             for key, surf in surf_list.surfaces.items():
                 plt.semilogy(wave, surf.emission(wave))
@@ -108,3 +110,33 @@ class TestGetThroughput:
             plt.plot(wave, surf_list.throughput(wave))
             plt.show()
 
+
+class TestApplyTo:
+    def test_adds_bg_to_source_if_source_has_no_bg(self):
+        n = 11
+        kwargs = surf_list_kwargs(n)
+        surf_list = sl.SurfaceList(**kwargs)
+        src = so._vega_source()
+
+        wave = np.linspace(1, 2.5, 1000) * u.um
+        flux_before = src.spectra[0](wave).value
+        src = surf_list.apply_to(src)
+        flux_after = src.spectra[0](wave).value
+
+        assert np.average(flux_after / flux_before) == approx(0.985**n)
+        assert src.fields[-1].header["BG_SRC"] is True
+        assert src.fields[-1].header["SPEC_REF"] == 1
+
+        if PLOTS:
+            plt.semilogy(wave, flux_before)
+            plt.semilogy(wave, flux_after)
+            plt.show()
+
+
+class TestPlot:
+    def test_plotting(self):
+        if PLOTS:
+            surf_list = micado_surf_list()
+            surf_list = sl.SurfaceList(**surf_list_kwargs(2))
+            surf_list.plot("xe")
+            plt.show()

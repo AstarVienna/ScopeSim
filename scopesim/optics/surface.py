@@ -17,6 +17,14 @@ from .surface_utils import make_emission_from_emissivity,\
     make_emission_from_array
 
 
+class PoorMansSurface:
+    """ Solely used by SurfaceList """
+    def __init__(self, emission, throughput, meta):
+        self.emission = emission
+        self.throughput = throughput
+        self.meta = meta
+
+
 class SpectralSurface:
     """
     Initialised by a file containing one or more of the following columns:

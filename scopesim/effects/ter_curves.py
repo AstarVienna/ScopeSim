@@ -76,19 +76,21 @@ class TERCurve(Effect):
             self.surface.table = data
             self.surface.table.meta.update(self.meta)
 
-    ######## added in new branch
+    # ####### added in new branch
+
     def apply_to(self, obj):
         if isinstance(obj, SourceBase):
             self.meta = from_currsys(self.meta)
+            wave_min = quantify(self.meta["wave_min"], u.um).to(u.AA)
+            wave_max = quantify(self.meta["wave_max"], u.um).to(u.AA)
+
             for ii in range(len(obj.spectra)):
-                wave_min = quantify(self.meta["wave_min"], u.um).to(u.AA)
-                wave_max = quantify(self.meta["wave_max"], u.um).to(u.AA)
                 spec = obj.spectra[ii]
-                trans = self.surface.transmission
-                obj.spectra[ii] = combine_two_spectra(spec, trans, "multiply",
+                thru = self.throughput
+                obj.spectra[ii] = combine_two_spectra(spec, thru, "multiply",
                                                       wave_min, wave_max)
 
-            flux = self.surface.emission
+            flux = self.emission
             n_bg_srcs = 0
             for field in obj.fields:
                 if isinstance(field, fits.ImageHDU) and \
@@ -100,17 +102,39 @@ class TERCurve(Effect):
                     n_bg_srcs += 1
 
             if n_bg_srcs == 0:
-                bg_hdu = make_imagehdu_from_table(x=[0], y=[0], flux=[1],
-                                                  pix_scale=1*u.deg)
+                bg_hdu = make_imagehdu_from_table([0], [0], [1])
                 bg_hdu.header["BG_SRC"] = True
                 bg_src = Source(image_hdu=bg_hdu, spectra=flux)
 
                 obj.append(bg_src)
 
         return obj
-    ########
 
-    def plot(self, which="", wavelength=None, ax=None, **kwargs):
+    @property
+    def emission(self):
+        return self.surface.emission
+
+    @property
+    def throughput(self):
+        return self.surface.throughput
+
+    # #######
+
+    def plot(self, which="x", wavelength=None, ax=None, **kwargs):
+        """
+
+        Parameters
+        ----------
+        which : str
+            "x" plots throughput. "t","e","r" plot trans/emission/refl
+        wavelength : list, np.ndarray
+        ax : matplotlib.Axis
+        kwargs
+
+        Returns
+        -------
+
+        """
         import matplotlib.pyplot as plt
 
         self.meta.update(kwargs)
@@ -129,15 +153,16 @@ class TERCurve(Effect):
             else:
                 wave = wavelength
 
+            plot_kwargs = self.meta.get("plot_kwargs", {})
             surf = self.surface
             if "t" in ter:
-                plt.plot(wave, surf.transmission(wave))
+                plt.plot(wave, surf.transmission(wave), **plot_kwargs)
             elif "e" in ter:
-                plt.plot(wave, surf.emission(wave))
+                plt.plot(wave, surf.emission(wave), **plot_kwargs)
             elif "r" in ter:
-                plt.plot(wave, surf.reflection(wave))
+                plt.plot(wave, surf.reflection(wave), **plot_kwargs)
             else:
-                plt.plot(wave, surf.throughput(wave))
+                plt.plot(wave, surf.throughput(wave), **plot_kwargs)
 
 
 class AtmosphericTERCurve(TERCurve):
@@ -368,13 +393,13 @@ class FilterWheel(Effect):
     def current_filter(self):
         return self.filters[self.meta["current_filter"]]
 
-    def plot(self, which="", wavelength=None, **kwargs):
+    def plot(self, which="x", wavelength=None, **kwargs):
         """
 
         Parameters
         ----------
         which : str
-            "" plots throughput. "t","e","r" plot trans/emission/refl
+            "x" plots throughput. "t","e","r" plot trans/emission/refl
         wavelength
         kwargs
 

@@ -47,7 +47,7 @@ def im_src():
 
 @pytest.mark.usefixtures("cmds", "im_src", "tbl_src")
 class TestObserve:
-    # The CMD_unity_cmds.config sets the background emission to 0
+    # The CMD_unity_cmds.yaml sets the background emission to 0
     def test_flux_is_conserved_for_no_bg_emission(self, cmds, tbl_src):
         opt = OpticalTrain(cmds)
         opt.observe(tbl_src)

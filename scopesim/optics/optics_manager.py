@@ -183,20 +183,16 @@ class OpticsManager:
     @property
     def image_plane_effects(self):
         effects = self.get_z_order_effects(700)
-        # if not self.is_spectroscope:
-        #     effects += [self.surfaces_table]   # Background Emission if Imager
         return effects
 
     @property
     def fov_effects(self):
         effects = self.get_z_order_effects(600)
-        # if self.is_spectroscope:
-        effects += [self.surfaces_table]   # Background Emission if Spectroscope
         return effects
 
     @property
     def source_effects(self):
-        return self.get_z_order_effects(500) + [self.surfaces_table]    # Transmission
+        return self.get_z_order_effects(500)   # Transmission
 
     @property
     def detector_setup_effects(self):
@@ -209,7 +205,7 @@ class OpticsManager:
 
     @property
     def fov_setup_effects(self):
-        return self.get_z_order_effects(200) + [self.surfaces_table]    # Working out where to set wave_min, wave_max
+        return self.get_z_order_effects(200)   # Working out where to set wave_min, wave_max
 
     @property
     def surfaces_table(self):
