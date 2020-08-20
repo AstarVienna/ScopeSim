@@ -6,6 +6,10 @@ Using the star cluster function from ``scopesim_templates`` with the LFOA telesc
     :hide-code:
     :raises:
 
+    import matplotlib.pyplot as plt
+    from matplotlib.colors import LogNorm
+    %matplotlib inline
+
     import scopesim
     scopesim.rc.__config__["!SIM.file.local_packages_path"] = "../temp/"
 

@@ -34,6 +34,7 @@ class UserCommands:
         cmds["!SIM.file.local_packages_path]
 
     .. note::
+
        To use this format for accessing hierarchically-stored values, the bang
        string must always begin with a "!"
 
@@ -43,8 +44,8 @@ class UserCommands:
         cmds["SIM"]["file"]["local_packages_path"]
 
 
-    Parameters / kwargs
-    -------------------
+    Parameters
+    ----------
     use_instrument : str, optional
         The name of the main instrument to use
 

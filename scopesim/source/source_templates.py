@@ -55,12 +55,12 @@ def star_field(n, mmin, mmax, width, height=None, photometric_system="vega",
     -------
     stars : scopesim.Source object
         A Source object with a field of stars that can be fed into the method:
-        ``<OpticalTrain>.observe()``
+        OpticalTrain.observe()
 
     See Also
     --------
-    ``<OpticalTrain>.observe``
-    ``<OpticalTrain>.readout``
+    OpticalTrain.observe
+    OpticalTrain.readout
 
     """
     if height is None:

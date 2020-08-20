@@ -21,7 +21,7 @@ class OpticsManager:
         The nested dicts describing the Effects from the relevant YAML files,
         which include ``effects`` and ``properties`` sub-dictionaries
 
-    kwargs : **dict
+    kwargs : expanded dict
         Any extra information not directly related to the optical elements
 
     """
@@ -56,8 +56,8 @@ class OpticsManager:
         """
         Generate an OpticalElement for each section of the Optical System
 
-        Make an OpticalElement for each YAML document in the system. For example
-        there should be a YAML document for each of the following:
+        Make an ``OpticalElement`` for each YAML document in the system.
+        For example there should be a YAML document for each of the following:
 
         - Atmosphere
         - Telescope
@@ -65,14 +65,15 @@ class OpticsManager:
         - Instrument
         - Detector
 
-        The YAML files can each be separate .yaml files, or be contained in a
-        single .yaml file separated by a yaml-document-separator: ``\n --- \n``
+        The YAML files can each be separate ``.yaml`` files, or be contained in
+        a single ``.yaml`` file separated by a yaml-document-separator:
+        ``\n --- \n``
 
         Parameters
         ----------
         yaml_dicts : list of dicts
             Each YAML dict should contain the descriptions of the Effects needed
-            by each OpticalElement
+            by each ``OpticalElement``
 
         """
 
@@ -92,7 +93,7 @@ class OpticsManager:
 
         ext : int
             Index number of the desired OpticalElement, contained in the list
-            self.optical_elements
+            ``self.optical_elements``
 
         """
         if isinstance(effect, efs.Effect):
@@ -104,7 +105,7 @@ class OpticsManager:
 
         Parameters
         ----------
-        obs_dict : **dict
+        obs_dict : expanded dict
             Keyword-Value pairs to be added to self.meta
 
         """

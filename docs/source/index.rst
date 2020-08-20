@@ -24,7 +24,7 @@ ScopeSim_ is on pip::
     faqs/index
     interfaces/index
     architecture/index
-
+    Reference API <reference/modules>
 
 
 Getting started

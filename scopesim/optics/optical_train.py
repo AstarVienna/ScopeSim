@@ -105,7 +105,7 @@ class OpticalTrain:
 
         Parameters
         ----------
-        kwargs : **dict
+        kwargs : expanded dict
             Any keyword-value pairs from a config file
 
         """
@@ -127,20 +127,21 @@ class OpticalTrain:
         orig_source : Source
         update : bool
             Reload optical system
-        kwargs : **dict
+        kwargs : expanded dict
             Any keyword-value pairs from a config file
 
         Notes
         -----
         How the list of Effects is split between the 5 main tasks:
 
-        .. todo:: List is out of date - update
         - Make a FOV list - z_order = 0..99
         - Make a image plane - z_order = 100..199
         - Apply Source altering effects - z_order = 200..299
         - Apply FOV specific (3D) effects - z_order = 300..399
         - Apply FOV-independent (2D) effects - z_order = 400..499
         - [Apply detector plane (0D, 2D) effects - z_order = 500..599]
+
+        .. todo:: List is out of date - update
 
         """
         if update:

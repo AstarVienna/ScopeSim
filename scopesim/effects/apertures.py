@@ -66,10 +66,6 @@ class ApertureMask(Effect):
     id : int
         An integer to identify the ``ApertureMask`` in a list of apertures
 
-    See Also
-    --------
-    ``effects.DataContainer``
-
     """
     def __init__(self, **kwargs):
         if not np.any([key in kwargs for key in ["filename", "table",
@@ -190,6 +186,7 @@ class ApertureList(Effect):
     inside the edges of the row.
 
     .. note:: ``shape`` values ``"rect"`` and ``4`` do not produce equal results
+
        Both use 4 equidistant points around an ellipse constrained by
        [``left``, ..., etc]. However ``"rect"`` aims to fill the contraining
        area, while ``4`` simply uses 4 points on the ellipse.

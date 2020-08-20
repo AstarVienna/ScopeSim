@@ -28,9 +28,9 @@ class DataContainer:
     Notes
     -----
     If a table is to be generated from an ``array_dict`` parameter, column units
-    can be passed as keyword arguments (kwargs) using the following format:
+    can be passed as keyword arguments (kwargs) using the following format::
 
-        ``Datacontainer(... , <column name>_unit = "<unit string>")
+        Datacontainer(... , <column name>_unit="<unit string>")
 
     where unit string is a string recognised by ``astropy.units``.
     Any additional table meta-data can also be passed using this format.
@@ -50,7 +50,7 @@ class DataContainer:
         If the file has a table format (ASCII of FITS) it is read in
         immediately and stored in ``.table``
 
-    ._file : HDUList pointer
+    _file : HDUList pointer
         If the file is a FITS image or cube, the data is only read in when
         needed in order to save on memory usage. ``._file`` contains a pointer
         to the data open FITS file.
@@ -128,9 +128,10 @@ class DataContainer:
 
     def get_data(self, ext=0, layer=None):
         """
-        Returns either a
+        Returns either a table or a ImageHDU object
 
         .. note:: Use this call for reading in individual FITS extensions.
+
            The ``.data'' handle will read in **all** extensions and return an
            HDUList object
 
