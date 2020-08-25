@@ -1,6 +1,6 @@
 numpy>=1.16
 scipy
-matplotlib
+matplotlib==3.0.3
 astropy
 
 requests
@@ -15,3 +15,6 @@ scopesim_templates
 jupyter_sphinx==0.2.3
 numpydoc
 sphinxcontrib-apidoc
+sphinx==2.4
+
+# See https://github.com/sphinx-doc/sphinx/issues/7659 for why sphinx==2.4

@@ -1,6 +1,7 @@
 import numpy as np
 from astropy import units as u
 from os import path as pth
+import warnings
 
 from astropy.io import fits
 
@@ -11,7 +12,6 @@ from ..source.source_utils import make_imagehdu_from_table
 from ..source.source import Source
 from ..base_classes import SourceBase
 from ..utils import from_currsys, quantify, check_keys
-
 
 class TERCurve(Effect):
     """
@@ -213,7 +213,6 @@ class SkycalcTERCurve(AtmosphericTERCurve):
 
         self.skycalc_conn = skycalc_ipy.SkyCalc()
         self.query_server()
-
         if "name" not in self.meta:
             self.meta["name"] = self.skycalc_conn["observatory"]
 
@@ -237,9 +236,11 @@ class SkycalcTERCurve(AtmosphericTERCurve):
             tbl = self.skycalc_conn.get_sky_spectrum(return_type="table",
                                                      filename=filename)
         except:
+            warnings.warn("Could not connect to skycalc server")
             if pth.exists(filename):
                 pass
-            raise NotImplementedError
+            else:
+                raise ValueError("No local copy exists: {}".format(filename))
 
         for i, colname in enumerate(["wavelength", "transmission", "emission"]):
             tbl.columns[i].name = colname

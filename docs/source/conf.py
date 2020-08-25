@@ -51,15 +51,18 @@ extensions = [
     'sphinx.ext.coverage',
     'sphinx.ext.mathjax',
     'sphinx.ext.viewcode',
-    # 'pyquickhelper.sphinxext.sphinxext_runpython_extension',
-    # 'sphinx_autorun',
-    # 'pyexec',
-    # 'sphinx_execute_code',
     'jupyter_sphinx.execute',
     'numpydoc',
     'sphinxcontrib.apidoc',
     'matplotlib.sphinxext.plot_directive',
 ]
+
+# apidoc settings
+numpydoc_show_class_members = False
+apidoc_module_dir = os.path.abspath('../../scopesim/')
+apidoc_output_dir = 'reference'
+apidoc_separate_modules = True
+apidoc_excluded_paths = ["tests/", "docs/"]
 
 # Matplotlib plot directive config parameters
 plot_html_show_source_link = False

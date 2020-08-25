@@ -398,8 +398,7 @@ def overlay_image(small_im, big_im, coords, mask=None, sub_pixel=False):
     ``small_im`` will be centred at ``coords``
 
     Adapted from:
-    ``https://stackoverflow.com/questions/14063070/
-        overlay-a-smaller-image-on-a-larger-image-python-opencv``
+    ``https://stackoverflow.com/questions/14063070/overlay-a-smaller-image-on-a-larger-image-python-opencv``
 
     """
 

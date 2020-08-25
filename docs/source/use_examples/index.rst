@@ -38,7 +38,7 @@ Each use-case should ideally be a maximum of
 but simply a guideline to avoid introducing too much at once.
 Import statements, setup code, etc **do not** count towards the 5 lines.
 
-To add a 5-liner, add your code to a Sphinx-friendly `ReStructuredText (``.rst``)
+To add a 5-liner, add your code to a Sphinx-friendly `ReStructuredText (.rst)
 file <https://docutils.sourceforge.io/docs/user/rst/quickref.html>`_.
 The full code goes in a ``TL;DR`` "overview" section. If needed, please explain
 what the code does in the ``Explanation`` section::

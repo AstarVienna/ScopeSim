@@ -78,19 +78,19 @@ class Source(SourceBase):
 
     .. hint:: Initialisation parameter combinations include:
 
-       New ScopeSim-style input
-       - ``table=<astropy.Table>, spectra=<list of synphot.SourceSpectrum>``
-       - ``table=<astropy.Table>, lam=<array>, spectra=<list of array>
-       - ``image_hdu=<fits.ImageHDU>, spectra=<list of synphot.SourceSpectrum>``
-       - ``image_hdu=<fits.ImageHDU>, lam=<array>, spectra=<list of array>
+        New ScopeSim-style input
+        - ``table=<astropy.Table>, spectra=<list of synphot.SourceSpectrum>``
+        - ``table=<astropy.Table>, lam=<array>, spectra=<list of array>
+        - ``image_hdu=<fits.ImageHDU>, spectra=<list of synphot.SourceSpectrum>``
+        - ``image_hdu=<fits.ImageHDU>, lam=<array>, spectra=<list of array>
 
-       Old SimCADO-style input
-       - ``x=<array>, y=<array>, ref=<array>, spectra=<list of synphot.SourceSpectrum>``
-       - ``x=<array>, y=<array>, ref=<array>, spectra=<list of array>, lam=<array>``
-       - ``x=<array>, y=<array>, ref=<array>, weight=<array>, spectra=<list of array>, lam=<array>``
+        Old SimCADO-style input
+        - ``x=<array>, y=<array>, ref=<array>, spectra=<list of synphot.SourceSpectrum>``
+        - ``x=<array>, y=<array>, ref=<array>, spectra=<list of array>, lam=<array>``
+        - ``x=<array>, y=<array>, ref=<array>, weight=<array>, spectra=<list of array>, lam=<array>``
 
-       More details on the content of these combinations can be found in the
-       use-case documentation.
+        More details on the content of these combinations can be found in the
+        use-case documentation.
 
     Parameters
     ----------
@@ -124,7 +124,7 @@ class Source(SourceBase):
 
     See Also
     --------
-    ``synphot`` - https://synphot.readthedocs.io/en/latest/
+    synphot - https://synphot.readthedocs.io/en/latest/
 
     """
 
@@ -329,11 +329,11 @@ class Source(SourceBase):
 
         for ii in layers:
             if isinstance(self.fields[ii], Table):
-                x = utils.quantity_from_table("x", u.arcsec)
+                x = utils.quantity_from_table("x", self.fields[ii], u.arcsec)
                 x += utils.quantify(dx, u.arcsec)
                 self.fields[ii]["x"] = x
 
-                y = utils.quantity_from_table("y", u.arcsec)
+                y = utils.quantity_from_table("y", self.fields[ii], u.arcsec)
                 y += utils.quantify(dy, u.arcsec)
                 self.fields[ii]["y"] = y
             elif isinstance(self.fields[ii], fits.ImageHDU):

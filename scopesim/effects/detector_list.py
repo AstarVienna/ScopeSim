@@ -16,6 +16,7 @@ class DetectorList(Effect):
     Examples
     --------
     ::
+
         - name : full_detector
           class : DetectorList
           kwargs :

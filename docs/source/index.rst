@@ -2,7 +2,7 @@ Welcome to ScopeSim's documentation!
 ====================================
 
 An attempt at creating a common pythonic framework for telescope instrument
-data  simulators.
+data simulators.
 
 ScopeSim_ is on pip::
 
@@ -18,27 +18,27 @@ ScopeSim_ is on pip::
     :maxdepth: 2
     :caption: Contents:
 
-
     use_examples/index
+    sources/index
     effects/index
     faqs/index
     interfaces/index
     architecture/index
-
+    Reference API <reference/modules>
 
 
 Getting started
 ---------------
-A basic simulation of VLT/HAWKI image would look something like this::
+A basic simulation of ELT/MICADO image would look something like this::
 
     import scopesim_templates
     from scopesim.server.database import download_package
     import scopesim
 
-    scopesim.download_package(["locations/Paranal",
-                               "telescopes/VLT",
-                               "instruments/HAWKI"])
-    cmd = scopesim.UserCommands(use_instrument="HAWKI",
+    scopesim.download_package(["locations/Armazones",
+                               "telescopes/ELT",
+                               "instruments/MICADO"])
+    cmd = scopesim.UserCommands(use_instrument="MICADO",
                                 properties={"!OBS.dit": 60, "!OBS.ndit": 10,
                                             "!INST.filter_name": "Ks"})
     opt = scopesim.OpticalTrain(cmd)
@@ -64,9 +64,9 @@ which return the ``Source`` objects accepted during a ``scopesim`` observation.
 Secondly we have the data describing the optical system, which are kept in
 "instrument packages" held on a server. Hence the first time we want to
 simulate anything, we need to use ``download_package`` to get the relevant
-instrument packages from the server. In this case we want to use HAWKI at the
-VLT, hence we need not only the main HAWKI package, but also the two support
-packages for ``HAWKI``: the ``VLT`` and ``Paranal``.
+instrument packages from the server. In this case we want to use MICADO at the
+ELT, hence we need not only the main MICADO package, but also the two support
+packages for ``MICADO``: the ``ELT`` and ``Armazones``.
 
 Finally we ``import scopesim``, the package which generates simulated
 observation data sets from the two sets of input.
@@ -75,7 +75,7 @@ Once we have downloaded the packages we want to use, we need to create a
 ``UserCommands`` object. This contains all the information needed to
 describe the model of the optical train and the how we want to observe::
 
-    scopesim.UserCommands(use_instrument="HAWKI",
+    scopesim.UserCommands(use_instrument="MICADO",
                           properties={"!OBS.dit": 60, "!OBS.ndit": 10,
                                       "!INST.filter_name": "Ks"})
 
@@ -85,6 +85,34 @@ containing the settings we would like to change
 
 Bang-strings shorten the syntax for accessing hierarchical dictionaries.
 e.g. ``cmd["!OBS.ndit"]`` is the equivalent of ``cmd["OBS"]["ndit"]``
+
+
+Currently available instrument packages
+---------------------------------------
+Below is a list of packages that are currently being maintained on our
+`instrument reference database <https://github.com/astronomyk/irdb>`_.
+
+=================== =========================== ====================================
+Main Package        Support Packages            Notes
+=================== =========================== ====================================
+MICADO              Armazones, ELT, MAORY       Spectroscopy in Beta stage
+METIS               Armazones, ELT              Only Imaging
+HAWKI               Paranal, VLT
+WFC3                HST                         Only NIR mode
+LFOA                                            Leopold-Figl 1.5m telescope
+=================== =========================== ====================================
+
+.. warning:: We have not fully tested all packages on the latest ScopeSim
+
+    If ScopeSim will not create an optical train with your chosen package,
+    please let us know by creating a
+    `Github Issue here <https://github.com/astronomyk/irdb/issues>`_.
+
+.. note:: Community contributions welcome!
+
+    If you think ScopeSim could be useful for your telescope/instrument,
+    please don't hesitate to contact us (via email or Github) about adding a
+    package to our database.
 
 
 The ScopeSim python ecosystem
@@ -110,11 +138,3 @@ There are several packages in the ScopeSim_ ecosystem to be aware of:
 
 
 .. note:: Much more information on these packages will be coming very soon!
-
-
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
