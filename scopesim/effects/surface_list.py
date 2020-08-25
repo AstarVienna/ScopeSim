@@ -13,8 +13,7 @@ class SurfaceList(TERCurve):
         super(SurfaceList, self).__init__(**kwargs)
         params = {"z_order": [20, 120, 520],
                   "minimum_throughput": "!SIM.spectral.minimum_throughput",
-                  "etendue": "!TEL.etendue",
-                  "area": "!TEL.area"}
+                  "etendue": "!TEL.etendue"}
         self.meta.update(params)
         self.meta.update(kwargs)
 
