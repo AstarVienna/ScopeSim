@@ -56,7 +56,8 @@ def _mvs_effects_list():
 
 
 def _detector_list():
-    kwargs = {"filename": "LIST_detector_layout.dat", "image_plane_id": 0}
+    kwargs = {"filename": "LIST_detector_layout.dat", "image_plane_id": 0,
+              "report": {}}
     return efs.DetectorList(**kwargs)
 
 

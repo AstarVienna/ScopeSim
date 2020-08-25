@@ -6,6 +6,8 @@ import os
 import sys
 import warnings
 from collections import OrderedDict
+from docutils.core import publish_string
+from copy import deepcopy
 
 import yaml
 import numpy as np
@@ -13,6 +15,7 @@ from astropy import units as u
 from astropy.io import fits
 from astropy.io import ascii as ioascii
 from astropy.table import Column, Table
+from astropy.table.pprint import TableFormatter
 
 from . import rc
 
@@ -561,6 +564,18 @@ def convert_table_comments_to_dict(tbl):
     return comments_dict
 
 
+def table_to_rst(tbl, indent=0):
+    tbl_fmtr = TableFormatter()
+    lines, outs = tbl_fmtr._pformat_table(tbl, max_width=-1, max_lines=-1)
+    lines[1] = lines[1].replace("-", "=")
+    lines = [lines[1]] + lines + [lines[1]]
+
+    indent = " " * indent
+    rst_str = indent + ("\n" + indent).join(lines)
+
+    return rst_str
+
+
 def change_table_entry(tbl, col_name, new_val, old_val=None, position=None):
 
     offending_col = list(tbl[col_name].data)
@@ -920,3 +935,20 @@ def interp2(x_new, x_orig, y_orig):
         y_new = np.interp(x_new, x_orig[::-1], y_orig[::-1])
 
     return y_new
+
+
+def write_report(text, filename=None, output=["rst"]):
+    """ Writes a report string to file in latex or rst format"""
+    if isinstance(output, str):
+        output = [output]
+
+    if filename is not None:
+        for fmt in output:
+            out_text = deepcopy(text)
+            if fmt.lower() == "latex":
+                out_text = publish_string(out_text, writer_name="latex")
+                out_text = out_text.decode("utf-8")
+
+            suffix = {"rst": ".rst", "latex": ".tex"}[fmt]
+            with open(filename.split(".")[0] + suffix, "w") as f:
+                f.write(out_text)

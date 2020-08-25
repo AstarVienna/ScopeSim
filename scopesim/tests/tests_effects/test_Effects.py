@@ -7,6 +7,9 @@ from astropy.table import Table
 from scopesim import rc
 from scopesim.effects import Effect, SurfaceList
 
+from scopesim.tests.mocks.py_objects import effects_objects as eo
+
+
 MOCK_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),
                                          "../mocks/MICADO_SCAO_WIDE/"))
 if MOCK_PATH not in rc.__search_path__:
@@ -36,6 +39,18 @@ class TestEffectInit:
         assert hasattr(Effect(), "fov_grid")
 
 
+class TestEffectReport:
+    def test_report_returns_full_rst_text(self):
+        det_list = eo._detector_list()
+        det_list.meta.update(
+            {"report_plot_include": False,
+             "report_table_caption": "The dimensions of the MICADO central detector"})
+        rst_str = det_list.report()
+        assert "MICADO H4RG-15 FPA" in rst_str
+        assert "E-MCD-FPA-572089EB.uda" in rst_str
+        assert "The dimensions of the MICADO central detector" in rst_str
+
+
 @pytest.mark.usefixtures("surf_list_file")
 class TestSurfaceListInit:
     def test_initialises_with_nothing(self):
@@ -45,3 +60,5 @@ class TestSurfaceListInit:
         surf_list = SurfaceList(filename=surf_list_file)
         assert isinstance(surf_list, SurfaceList)
         assert isinstance(surf_list.data, Table)
+
+

@@ -3,6 +3,7 @@ scipy
 matplotlib==3.0.3
 astropy
 
+docutils
 requests
 beautifulsoup4
 pyyaml

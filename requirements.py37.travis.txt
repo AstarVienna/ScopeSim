@@ -4,6 +4,7 @@ astropy
 matplotlib
 jupyter
 
+docutils
 requests
 beautifulsoup4
 pyyaml
