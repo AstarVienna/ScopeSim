@@ -2,6 +2,7 @@ import numpy as np
 from astropy import units as u
 from astropy.table import Table
 from os import path as pth
+import warnings
 
 from astropy.io import fits
 from synphot import SourceSpectrum
@@ -10,7 +11,6 @@ from .effects import Effect
 from ..optics.surface import SpectralSurface
 from ..utils import from_currsys, quantify, check_keys
 from .ter_curves_utils import download_svo_filter
-
 
 
 class TERCurve(Effect):
@@ -131,7 +131,6 @@ class SkycalcTERCurve(AtmosphericTERCurve):
 
         self.skycalc_conn = skycalc_ipy.SkyCalc()
         self.query_server()
-
         if "name" not in self.meta:
             self.meta["name"] = self.skycalc_conn["observatory"]
 
@@ -155,9 +154,11 @@ class SkycalcTERCurve(AtmosphericTERCurve):
             tbl = self.skycalc_conn.get_sky_spectrum(return_type="table",
                                                      filename=filename)
         except:
+            warnings.warn("Could not connect to skycalc server")
             if pth.exists(filename):
                 pass
-            raise NotImplementedError
+            else:
+                raise ValueError("No local copy exists: {}".format(filename))
 
         for i, colname in enumerate(["wavelength", "transmission", "emission"]):
             tbl.columns[i].name = colname
