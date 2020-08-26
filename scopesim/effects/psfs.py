@@ -1,17 +1,17 @@
+from copy import deepcopy
 import numpy as np
 from scipy.signal import convolve
-from scipy.ndimage import zoom
-from scipy.interpolate import griddata
 
 from astropy import units as u
 from astropy.io import fits
 from astropy.convolution import Gaussian2DKernel
+import anisocado as aniso
 
 from .effects import Effect
-from ..optics import image_plane_utils as imp_utils
+from . import ter_curves_utils as tu
+from . import psf_utils as pu 
 from ..base_classes import ImagePlaneBase, FieldOfViewBase
 from .. import utils
-from .. import rc
 
 
 class PSF(Effect):
@@ -142,8 +142,8 @@ class NonCommonPathAberration(AnalyticalPSF):
             self.meta.update(kwargs)
             self.meta = utils.from_currsys(self.meta)
 
-            min_sr = wfe2strehl(self.total_wfe, self.meta["wave_min"])
-            max_sr = wfe2strehl(self.total_wfe, self.meta["wave_max"])
+            min_sr = pu.wfe2strehl(self.total_wfe, self.meta["wave_min"])
+            max_sr = pu.wfe2strehl(self.total_wfe, self.meta["wave_max"])
 
             srs = np.arange(min_sr, max_sr, self.meta["strehl_drift"])
             waves = 6.2831853 * self.total_wfe * (-np.log(srs))**-0.5
@@ -160,12 +160,12 @@ class NonCommonPathAberration(AnalyticalPSF):
         old_waves = self.valid_waverange
         wave_mid_old = 0.5 * (old_waves[0] + old_waves[1])
         wave_mid_new = 0.5 * (waves[0] + waves[1])
-        strehl_old = wfe2strehl(wfe=self.total_wfe, wave=wave_mid_old)
-        strehl_new = wfe2strehl(wfe=self.total_wfe, wave=wave_mid_new)
+        strehl_old = pu.wfe2strehl(wfe=self.total_wfe, wave=wave_mid_old)
+        strehl_new = pu.wfe2strehl(wfe=self.total_wfe, wave=wave_mid_new)
 
         if np.abs(1 - strehl_old / strehl_new) > self.meta["strehl_drift"]:
             self.valid_waverange = waves
-            self.kernel = wfe2gauss(wfe=self.total_wfe, wave=wave_mid_new,
+            self.kernel = pu.wfe2gauss(wfe=self.total_wfe, wave=wave_mid_new,
                                     width=self.meta["kernel_width"])
         return self.kernel
 
@@ -173,7 +173,7 @@ class NonCommonPathAberration(AnalyticalPSF):
     def total_wfe(self):
         if self._total_wfe is None:
             if self.table is not None:
-                self._total_wfe = get_total_wfe_from_table(self.table)
+                self._total_wfe = pu.get_total_wfe_from_table(self.table)
             else:
                 self._total_wfe = 0
         return self._total_wfe
@@ -262,7 +262,7 @@ class GaussianDiffractionPSF(AnalyticalPSF):
 
 
 ################################################################################
-# Semi-analytical PSFs - Poppy PSFs
+# Semi-analytical PSFs - AnisoCADO PSFs
 
 
 class SemiAnalyticalPSF(PSF):
@@ -271,16 +271,109 @@ class SemiAnalyticalPSF(PSF):
         self.meta["z_order"] = [42]
 
 
-class PoppyFieldVaryingPSF(SemiAnalyticalPSF):
-    def __init__(self, **kwargs):
-        super(PoppyFieldVaryingPSF, self).__init__(**kwargs)
-        self.meta["z_order"] = [251, 651]
+class AnisocadoConstPSF(SemiAnalyticalPSF):
+    """
+    Makes a SCAO on-axis PSF with a desired strehl ratio at a given wavelength
+
+    Parameters
+    ----------
+    filename : str
+        Path to Strehl map with axes (x, y) = (wavelength, wavefront error)
+    strehl : float
+        Desired strehl. Either percentage [1, 100] or fractional [1e-3, 1]
+    wavelength : float
+        [um] The given strehl is valid for this wavelength
+    psf_side_length : int
+        [pixel] Default is 512. Side length of the kernel images
+    offset : tuple
+        [arcsec] SCAO guide star offset from centre (dx, dy)
+    rounded_edges : bool
+        Default is True. Sets all halo values below a threshold to zero.
+        The threshold is determined from the max values of the edge rows of the
+        kernel image
+
+    Examples
+    --------
 
 
-class PoppyFieldConstantPSF(SemiAnalyticalPSF):
+    """
     def __init__(self, **kwargs):
-        super(PoppyFieldConstantPSF, self).__init__(**kwargs)
-        self.meta["z_order"] = [252, 652]
+        super(AnisocadoConstPSF, self).__init__(**kwargs)
+        params = {"z_order": [42],
+                  "psf_side_length": 512,
+                  "offset": (0, 0),
+                  "rounded_edges": True}
+        self.meta.update(params)
+        self.meta.update(kwargs)
+
+        self.required_keys = ["filename", "strehl", "wavelength"]
+        utils.check_keys(self.meta, self.required_keys, action="error")
+        self.nmRms      # check to see if it throws an error
+
+        self._psf_object = None
+        self._kernel = None
+
+    def get_kernel(self, fov):
+        # called by .apply_to() from the base PSF class
+
+        if self._kernel is None:
+            if isinstance(fov, FieldOfViewBase):
+                pixel_scale = fov.header["CDELT1"] * u.deg.to(u.arcsec)
+            elif isinstance(fov, float):
+                pixel_scale = fov
+
+            n = self.meta["psf_side_length"]
+
+            wave = deepcopy(self.meta["wavelength"])
+            if isinstance(wave, str) and wave in tu.FILTER_DEFAULTS:
+                wave = tu.get_filter_effective_wavelength(wave)
+            wave = utils.quantify(wave, u.um).value
+
+            self._psf_object = aniso.AnalyticalScaoPsf(pixelSize=pixel_scale,
+                                                       N=n, wavelength=wave,
+                                                       nmRms=self.nmRms)
+            if np.any(self.meta["offset"]):
+                self._psf_object.shift_off_axis(self.meta["offset"][0],
+                                                self.meta["offset"][1])
+
+            self._kernel = self._psf_object.psf_latest
+            if self.meta["rounded_edges"]:
+                self._kernel = pu.round_kernel_edges(self._kernel)
+
+        return self._kernel
+
+    def remake_kernel(self, x):
+        """
+        Remake the kernel based on either a pixel_scale of FieldOfView
+
+        Parameters
+        ----------
+        x: float, FieldOfView
+            [um] if float
+
+        """
+        self._kernel = None
+        return self.get_kernel(x)
+
+    @property
+    def strehl_ratio(self):
+        strehl = None
+        if self._psf_object is not None:
+            strehl = self._psf_object.strehl_ratio
+
+        return strehl
+
+    @property
+    def nmRms(self):
+        wave = deepcopy(self.meta["wavelength"])
+        if isinstance(wave, str) and wave in tu.FILTER_DEFAULTS:
+            wave = tu.get_filter_effective_wavelength(wave)
+        wave = utils.quantify(wave, u.um).value
+        strehl = self.meta["strehl"]
+        hdu = self._file[0]
+        nm_rms = pu.nmrms_from_strehl_and_wavelength(strehl, wave, hdu)
+
+        return nm_rms
 
 
 ################################################################################
@@ -302,8 +395,8 @@ class FieldConstantPSF(DiscretePSF):
         utils.check_keys(self.meta, self.required_keys, action="error")
 
         self.meta["z_order"] = [262, 662]
-        self._waveset, self.kernel_indexes = get_psf_wave_exts(self._file,
-                                                               self.meta["wave_key"])
+        self._waveset, self.kernel_indexes = pu.get_psf_wave_exts(self._file,
+                                                                  self.meta["wave_key"])
         self.current_layer_id = None
         self.current_ext = None
         self.current_data = None
@@ -317,7 +410,7 @@ class FieldConstantPSF(DiscretePSF):
 
     def get_kernel(self, fov):
         # find nearest wavelength and pull kernel from file
-        ii = nearest_index(fov.wavelength, self._waveset)
+        ii = pu.nearest_index(fov.wavelength, self._waveset)
         ext = self.kernel_indexes[ii]
         if ext != self.current_layer_id:
             self.kernel = self._file[ext].data
@@ -336,11 +429,11 @@ class FieldConstantPSF(DiscretePSF):
             # rescaling kept inside loop to avoid rescaling for every fov
             pix_ratio = kernel_pixel_scale / fov_pixel_scale
             if abs(pix_ratio - 1) > self.meta["flux_accuracy"]:
-                self.kernel = rescale_kernel(self.kernel, pix_ratio)
+                self.kernel = pu.rescale_kernel(self.kernel, pix_ratio)
 
             if fov.header["NAXIS1"] < hdr["NAXIS1"] or \
                     fov.header["NAXIS2"] < hdr["NAXIS2"]:
-                self.kernel = cutout_kernel(self.kernel, fov.header)
+                self.kernel = pu.cutout_kernel(self.kernel, fov.header)
 
         return self.kernel
 
@@ -361,7 +454,8 @@ class FieldVaryingPSF(DiscretePSF):
         utils.check_keys(self.meta, self.required_keys, action="error")
 
         self.meta["z_order"] = [261, 661]
-        self._waveset, self.kernel_indexes = get_psf_wave_exts(self._file)
+        self._waveset, self.kernel_indexes = pu.get_psf_wave_exts(self._file,
+                                                               self.meta["wave_key"])
         self.current_ext = None
         self.current_data = None
         self._strehl_imagehdu = None
@@ -430,7 +524,7 @@ class FieldVaryingPSF(DiscretePSF):
 
         # find which file extension to use - keep a pointer in self.current_data
         fov_wave = 0.5 * (fov.meta["wave_min"] + fov.meta["wave_max"])
-        jj = nearest_index(fov_wave, self._waveset)
+        jj = pu.nearest_index(fov_wave, self._waveset)
         ext = self.kernel_indexes[jj]
         if ext != self.current_ext:
             self.current_ext = ext
@@ -442,7 +536,7 @@ class FieldVaryingPSF(DiscretePSF):
 
         # get the spatial map of the kernel cube layers
         strl_hdu = self.strehl_imagehdu
-        strl_cutout = get_strehl_cutout(fov.hdu.header, strl_hdu)
+        strl_cutout = pu.get_strehl_cutout(fov.hdu.header, strl_hdu)
 
         # get the kernels and mask that fit inside the fov boundaries
         layer_ids = np.round(np.unique(strl_cutout.data)).astype(int)
@@ -461,7 +555,7 @@ class FieldVaryingPSF(DiscretePSF):
         pix_ratio = fov_pixel_scale / kernel_pixel_scale
         if abs(pix_ratio - 1) > self.meta["flux_accuracy"]:
             for ii in range(len(self.kernel)):
-                self.kernel[ii][0] = rescale_kernel(self.kernel[ii][0], pix_ratio)
+                self.kernel[ii][0] = pu.rescale_kernel(self.kernel[ii][0], pix_ratio)
 
         return self.kernel
 
@@ -476,153 +570,7 @@ class FieldVaryingPSF(DiscretePSF):
             # ..todo: impliment this case
             elif isinstance(self._file[ecat], fits.BinTableHDU):
                 cat = self._file[ecat]
-                self._strehl_imagehdu = make_strehl_map_from_table(cat)
+                self._strehl_imagehdu = pu.make_strehl_map_from_table(cat)
 
         return self._strehl_imagehdu
 
-
-################################################################################
-# Helper functions
-
-def make_strehl_map_from_table(tbl, pixel_scale=1*u.arcsec):
-
-
-    # pixel_scale = utils.quantify(pixel_scale, u.um).to(u.deg)
-    # coords = np.array([tbl["x"], tbl["y"]]).T
-    #
-    # xmin, xmax = np.min(tbl["x"]), np.max(tbl["x"])
-    # ymin, ymax = np.min(tbl["y"]), np.max(tbl["y"])
-    # mesh = np.array(np.meshgrid(np.arange(xmin, xmax, pixel_scale),
-    #                             np.arange(np.min(tbl["y"]), np.max(tbl["y"]))))
-    # map = griddata(coords, tbl["layer"], mesh, method="nearest")
-    #
-
-    map = griddata(np.array([tbl.data["x"], tbl.data["y"]]).T,
-                   tbl.data["layer"],
-                   np.array(np.meshgrid(np.arange(-25, 26),
-                                        np.arange(-25, 26))).T,
-                   method="nearest")
-
-    hdr = imp_utils.header_from_list_of_xy(np.array([-25, 25]) / 3600.,
-                                           np.array([-25, 25]) / 3600.,
-                                           pixel_scale=1/3600)
-
-    map_hdu = fits.ImageHDU(header=hdr, data=map)
-
-    return map_hdu
-
-
-def rescale_kernel(image, scale_factor, order=None):
-    if order is None:
-        order = rc.__currsys__["!SIM.computing.spline_order"]
-    sum_image = np.sum(image)
-    image = zoom(image, scale_factor, order=order)
-    image = np.nan_to_num(image, copy=False)        # numpy version >=1.13
-    sum_new_image = np.sum(image)
-    image *= sum_image / sum_new_image
-
-    return image
-
-
-def cutout_kernel(image, fov_header):
-    h, w = image.shape
-    xcen, ycen = 0.5 * w, 0.5 * h 
-    dx = 0.5 * fov_header["NAXIS1"]
-    dy = 0.5 * fov_header["NAXIS2"]
-    x0, x1 = max(0, int(xcen-dx)), min(w, int(xcen+dx)) 
-    y0, y1 = max(0, int(ycen-dy)), min(w, int(ycen+dy))
-    image_cutout = image[y0:y1, x0:x1]
-
-    return image_cutout
-
-
-def get_strehl_cutout(fov_header, strehl_imagehdu):
-
-    image = np.zeros((fov_header["NAXIS2"], fov_header["NAXIS1"]))
-    canvas_hdu = fits.ImageHDU(header=fov_header, data=image)
-    canvas_hdu = imp_utils.add_imagehdu_to_imagehdu(strehl_imagehdu,
-                                                    canvas_hdu, order=0,
-                                                    conserve_flux=False)
-    canvas_hdu.data = canvas_hdu.data.astype(int)
-
-    return canvas_hdu
-
-
-def nearest_index(x, x_array):
-    # return int(round(np.interp(x, x_array, np.arange(len(x_array)))))
-    return np.argmin(abs(x_array - x))
-
-
-def get_psf_wave_exts(hdu_list, wave_key="WAVE0"):
-    """
-    Returns a dict of {extension : wavelength}
-
-    Parameters
-    ----------
-    hdu_list
-
-    Returns
-    -------
-    wave_set, wave_ext
-
-    """
-
-    if not isinstance(hdu_list, fits.HDUList):
-        raise ValueError("psf_effect must be a PSF object: {}"
-                         "".format(type(hdu_list)))
-
-    wave_ext = [ii for ii in range(len(hdu_list))
-                if wave_key in hdu_list[ii].header]
-    wave_set = [hdu.header[wave_key] for hdu in hdu_list
-                if wave_key in hdu.header]
-
-    # ..todo:: implement a way of getting the units from WAVEUNIT
-    # until then assume everything is in um
-    wave_set = utils.quantify(wave_set, u.um)
-
-    return wave_set, wave_ext
-
-
-def get_total_wfe_from_table(tbl):
-    wfes = utils.quantity_from_table("wfe_rms", tbl, "um")
-    n_surfs = tbl["n_surfaces"]
-    total_wfe = np.sum(n_surfs * wfes**2)**0.5
-
-    return total_wfe
-
-
-def wfe2gauss(wfe, wave, width=None):
-    strehl = wfe2strehl(wfe, wave)
-    sigma = strehl2sigma(strehl)
-    if width is None:
-        width = int(np.ceil(8 * sigma))
-        width += (width + 1) % 2
-    gauss = sigma2gauss(sigma, x_size=width, y_size=width)
-
-    return gauss
-
-
-def wfe2strehl(wfe, wave):
-    wave = utils.quantify(wave, u.um)
-    wfe = utils.quantify(wfe, u.um)
-    x = 2 * 3.1415926526 * wfe / wave
-    strehl = np.exp(-x**2)
-    return strehl
-
-
-def strehl2sigma(strehl):
-    amplitudes = [0.00465, 0.00480, 0.00506, 0.00553, 0.00637, 0.00793, 0.01092,
-                  0.01669, 0.02736, 0.04584, 0.07656, 0.12639, 0.20474, 0.32156,
-                  0.48097, 0.66895, 0.84376, 0.95514, 0.99437, 0.99982, 0.99999]
-    sigmas = [19.9526, 15.3108, 11.7489, 9.01571, 6.91830, 5.30884, 4.07380,
-              3.12607, 2.39883, 1.84077, 1.41253, 1.08392, 0.83176, 0.63826,
-              0.48977, 0.37583, 0.28840, 0.22130, 0.16982, 0.13031, 0.1]
-    sigma = np.interp(strehl, amplitudes, sigmas)
-    return sigma
-
-
-def sigma2gauss(sigma, x_size=15, y_size=15):
-    kernel = Gaussian2DKernel(sigma, x_size=x_size, y_size=y_size,
-                              mode="oversample").array
-    kernel /= np.sum(kernel)
-    return kernel
