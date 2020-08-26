@@ -1,0 +1,224 @@
+import numpy as np
+from scipy.interpolate import RectBivariateSpline, griddata
+from scipy.ndimage import zoom
+from astropy import units as u
+from astropy.convolution import Gaussian2DKernel
+from astropy.io import fits
+import matplotlib.pyplot as plt
+from matplotlib.colors import LogNorm
+
+from .. import rc, utils
+from ..optics import image_plane_utils as imp_utils
+
+
+def round_kernel_edges(kernel):
+    y, x = np.array(kernel.shape).astype(int) // 2
+    threshold = np.min([kernel[y, 0], kernel[y, -1],
+                        kernel[0, x], kernel[-1, x]])
+    kernel[kernel < threshold] = 0.
+
+    return kernel
+
+
+def nmrms_from_strehl_and_wavelength(strehl, wavelength, strehl_hdu,
+                                     plot=False):
+    """
+    Returns the wavefront error needed to make a PSF with a desired strehl ratio
+
+    Parameters
+    ----------
+    strehl : float
+        [0.001, 1] Desired strehl ratio. Values 1<sr<100 will be scale to <1
+    wavelength : float
+        [um]
+    strehl_hdu : np.ndarray
+        2D map of strehl ratio as a function of wavelength [um] and residual
+        wavefront error [nm RMS]
+    plot : bool
+
+    Returns
+    -------
+    nm : float
+        [nm] residual wavefront error for generating an on-axis AnisoCADO PSF
+        with the desired strehl ratio at a given wavelength
+
+    """
+
+    if 1. < strehl < 100.:
+        strehl *= 0.01
+
+    nm0 = strehl_hdu.header["CRVAL1"]
+    dnm = strehl_hdu.header["CDELT1"]
+    nm1 = strehl_hdu.header["NAXIS1"] * dnm + nm0
+    nms = np.arange(nm0, nm1, dnm)
+
+    w0 = strehl_hdu.header["CRVAL2"]
+    dw = strehl_hdu.header["CDELT2"]
+    w1 = strehl_hdu.header["NAXIS2"] * dw + w0
+    ws = np.arange(w0, w1, dw)
+
+    strehl_map = strehl_hdu.data
+
+    nms_spline = RectBivariateSpline(ws, nms, strehl_map, kx=1, ky=1)
+    strehls = nms_spline(wavelength, nms)[0]
+
+    if strehl > np.max(strehls):
+        raise ValueError("Strehl ratio ({}) is impossible at this wavelength "
+                         "({}). Maximum Strehl possible is {}."
+                         "".format(strehl, wavelength, np.max(strehls)))
+
+    if strehls[0] < strehls[-1]:
+        nm = np.interp(strehl, strehls, nms)
+    else:
+        nm = np.interp(strehl, strehls[::-1], nms[::-1])
+
+    if plot:
+        plt.plot(nms, strehls)
+        plt.plot(nm, strehl, "ro")
+        plt.show()
+
+    return nm
+
+
+def make_strehl_map_from_table(tbl, pixel_scale=1*u.arcsec):
+
+
+    # pixel_scale = utils.quantify(pixel_scale, u.um).to(u.deg)
+    # coords = np.array([tbl["x"], tbl["y"]]).T
+    #
+    # xmin, xmax = np.min(tbl["x"]), np.max(tbl["x"])
+    # ymin, ymax = np.min(tbl["y"]), np.max(tbl["y"])
+    # mesh = np.array(np.meshgrid(np.arange(xmin, xmax, pixel_scale),
+    #                             np.arange(np.min(tbl["y"]), np.max(tbl["y"]))))
+    # map = griddata(coords, tbl["layer"], mesh, method="nearest")
+    #
+
+    map = griddata(np.array([tbl.data["x"], tbl.data["y"]]).T,
+                   tbl.data["layer"],
+                   np.array(np.meshgrid(np.arange(-25, 26),
+                                        np.arange(-25, 26))).T,
+                   method="nearest")
+
+    hdr = imp_utils.header_from_list_of_xy(np.array([-25, 25]) / 3600.,
+                                           np.array([-25, 25]) / 3600.,
+                                           pixel_scale=1/3600)
+
+    map_hdu = fits.ImageHDU(header=hdr, data=map)
+
+    return map_hdu
+
+
+def rescale_kernel(image, scale_factor, order=None):
+    if order is None:
+        order = rc.__currsys__["!SIM.computing.spline_order"]
+    sum_image = np.sum(image)
+    image = zoom(image, scale_factor, order=order)
+    image = np.nan_to_num(image, copy=False)        # numpy version >=1.13
+    sum_new_image = np.sum(image)
+    image *= sum_image / sum_new_image
+
+    return image
+
+
+def cutout_kernel(image, fov_header):
+    h, w = image.shape
+    xcen, ycen = 0.5 * w, 0.5 * h
+    dx = 0.5 * fov_header["NAXIS1"]
+    dy = 0.5 * fov_header["NAXIS2"]
+    x0, x1 = max(0, int(xcen-dx)), min(w, int(xcen+dx))
+    y0, y1 = max(0, int(ycen-dy)), min(w, int(ycen+dy))
+    image_cutout = image[y0:y1, x0:x1]
+
+    return image_cutout
+
+
+def get_strehl_cutout(fov_header, strehl_imagehdu):
+
+    image = np.zeros((fov_header["NAXIS2"], fov_header["NAXIS1"]))
+    canvas_hdu = fits.ImageHDU(header=fov_header, data=image)
+    canvas_hdu = imp_utils.add_imagehdu_to_imagehdu(strehl_imagehdu,
+                                                    canvas_hdu, order=0,
+                                                    conserve_flux=False)
+    canvas_hdu.data = canvas_hdu.data.astype(int)
+
+    return canvas_hdu
+
+
+def nearest_index(x, x_array):
+    # return int(round(np.interp(x, x_array, np.arange(len(x_array)))))
+    return np.argmin(abs(x_array - x))
+
+
+def get_psf_wave_exts(hdu_list, wave_key="WAVE0"):
+    """
+    Returns a dict of {extension : wavelength}
+
+    Parameters
+    ----------
+    hdu_list
+
+    Returns
+    -------
+    wave_set, wave_ext
+
+    """
+
+    if not isinstance(hdu_list, fits.HDUList):
+        raise ValueError("psf_effect must be a PSF object: {}"
+                         "".format(type(hdu_list)))
+
+    wave_ext = [ii for ii in range(len(hdu_list))
+                if wave_key in hdu_list[ii].header]
+    wave_set = [hdu.header[wave_key] for hdu in hdu_list
+                if wave_key in hdu.header]
+
+    # ..todo:: implement a way of getting the units from WAVEUNIT
+    # until then assume everything is in um
+    wave_set = utils.quantify(wave_set, u.um)
+
+    return wave_set, wave_ext
+
+
+def get_total_wfe_from_table(tbl):
+    wfes = utils.quantity_from_table("wfe_rms", tbl, "um")
+    n_surfs = tbl["n_surfaces"]
+    total_wfe = np.sum(n_surfs * wfes**2)**0.5
+
+    return total_wfe
+
+
+def wfe2gauss(wfe, wave, width=None):
+    strehl = wfe2strehl(wfe, wave)
+    sigma = strehl2sigma(strehl)
+    if width is None:
+        width = int(np.ceil(8 * sigma))
+        width += (width + 1) % 2
+    gauss = sigma2gauss(sigma, x_size=width, y_size=width)
+
+    return gauss
+
+
+def wfe2strehl(wfe, wave):
+    wave = utils.quantify(wave, u.um)
+    wfe = utils.quantify(wfe, u.um)
+    x = 2 * 3.1415926526 * wfe / wave
+    strehl = np.exp(-x**2)
+    return strehl
+
+
+def strehl2sigma(strehl):
+    amplitudes = [0.00465, 0.00480, 0.00506, 0.00553, 0.00637, 0.00793, 0.01092,
+                  0.01669, 0.02736, 0.04584, 0.07656, 0.12639, 0.20474, 0.32156,
+                  0.48097, 0.66895, 0.84376, 0.95514, 0.99437, 0.99982, 0.99999]
+    sigmas = [19.9526, 15.3108, 11.7489, 9.01571, 6.91830, 5.30884, 4.07380,
+              3.12607, 2.39883, 1.84077, 1.41253, 1.08392, 0.83176, 0.63826,
+              0.48977, 0.37583, 0.28840, 0.22130, 0.16982, 0.13031, 0.1]
+    sigma = np.interp(strehl, amplitudes, sigmas)
+    return sigma
+
+
+def sigma2gauss(sigma, x_size=15, y_size=15):
+    kernel = Gaussian2DKernel(sigma, x_size=x_size, y_size=y_size,
+                              mode="oversample").array
+    kernel /= np.sum(kernel)
+    return kernel

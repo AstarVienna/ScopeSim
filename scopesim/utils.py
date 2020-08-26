@@ -666,7 +666,8 @@ def quantify(item, unit):
     quant : Quantity
 
     """
-
+    if isinstance(item, str) and item[0] == "!":
+        item = from_currsys(item)
     if isinstance(item, u.Quantity):
         quant = item.to(u.Unit(unit))
     else:

@@ -66,3 +66,13 @@ class TestScaleSpectrum:
             plt.show()
 
 
+class TestGetFilterEffectiveWavelength:
+    def test_Ks_is_around_2_2um(self):
+        wave_eff = ter_utils.get_filter_effective_wavelength("Ks")
+        print(wave_eff)
+        assert wave_eff.value == approx(2.19, rel=1e-3)
+
+    def test_rprime_is_around_0_626um(self):
+        wave_eff = ter_utils.get_filter_effective_wavelength("r'")
+        print(wave_eff)
+        assert wave_eff.value == approx(0.626, rel=1e-3)

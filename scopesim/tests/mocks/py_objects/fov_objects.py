@@ -13,3 +13,16 @@ def _centre_fov(n=55, waverange=(1.0, 2.0)):
     fov = FieldOfView(imp_hdr, waverange=waverange*u.um, area=1*u.m**2)
 
     return fov
+
+
+def _centre_micado_fov(n=128, waverange=(1.9, 2.4)):
+    """ n [arcsec] """
+    xsky = np.array([-n, n]) * u.arcsec.to(u.deg)
+    ysky = np.array([-n, n]) * u.arcsec.to(u.deg)
+    pixscale = 0.004/3600.
+    sky_hdr = imp_utils.header_from_list_of_xy(xsky, ysky, pixscale)
+    imp_hdr = imp_utils.header_from_list_of_xy([-n, n], [-n, n], pixscale, "D")
+    imp_hdr.update(sky_hdr)
+    fov = FieldOfView(imp_hdr, waverange=waverange*u.um, area=1*u.m**2)
+
+    return fov

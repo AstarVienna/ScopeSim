@@ -1,3 +1,4 @@
+import numpy as np
 from astropy import units as u
 from astropy.table import Table
 from astropy.utils.data import download_file
@@ -7,7 +8,7 @@ from synphot.units import PHOTLAM
 
 from ..source.source_templates import vega_spectrum, st_spectrum, \
     ab_spectrum
-from ..utils import find_file, quantity_from_table
+from ..utils import find_file, quantity_from_table, from_currsys
 
 FILTER_DEFAULTS = {"U": "Generic/Bessell.U",
                    "B": "Generic/Bessell.B",
@@ -35,6 +36,19 @@ FILTER_DEFAULTS = {"U": "Generic/Bessell.U",
                    "PaBeta": "Gemini/NIRI.PaBeta-G0221",
                    "BrGamma": "Gemini/NIRI.BrG-G0218",
                    }
+
+
+def get_filter_effective_wavelength(filter_name):
+    if isinstance(filter_name, str):
+        filter_name = from_currsys(filter_name)
+        wave, trans = download_svo_filter(FILTER_DEFAULTS[filter_name],
+                                          return_style="quantity")
+        eff_wave = np.sum(wave * trans) / np.sum(trans)      # convert from Angstrom
+        eff_wave = eff_wave.to(u.um)
+    else:
+        eff_wave = filter_name
+
+    return eff_wave
 
 
 def download_svo_filter(filter_name, return_style="synphot"):
