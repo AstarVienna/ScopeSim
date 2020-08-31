@@ -207,7 +207,7 @@ class SeeingPSF(AnalyticalPSF):
         pixel_scale = utils.quantify(pixel_scale, u.arcsec)
         wave = fov.wavelength
 
-        ### add in the conversion to fwhm from seeing and wavelength here
+        # add in the conversion to fwhm from seeing and wavelength here
         fwhm = self.meta["fwhm"] * u.arcsec / pixel_scale
 
         sigma = fwhm.value / 2.35
@@ -273,14 +273,17 @@ class SemiAnalyticalPSF(PSF):
 
 class AnisocadoConstPSF(SemiAnalyticalPSF):
     """
-    Makes a SCAO on-axis PSF with a desired strehl ratio at a given wavelength
+    Makes a SCAO on-axis PSF with a desired Strehl ratio at a given wavelength
+
+    To make the PSFs a map connecting Strehl, Wavelength, and residual wavefront
+    error is required
 
     Parameters
     ----------
     filename : str
         Path to Strehl map with axes (x, y) = (wavelength, wavefront error)
     strehl : float
-        Desired strehl. Either percentage [1, 100] or fractional [1e-3, 1]
+        Desired Strehl ratio. Either percentage [1, 100] or fractional [1e-3, 1]
     wavelength : float
         [um] The given strehl is valid for this wavelength
     psf_side_length : int
@@ -292,9 +295,34 @@ class AnisocadoConstPSF(SemiAnalyticalPSF):
         The threshold is determined from the max values of the edge rows of the
         kernel image
 
+    Other Parameters
+    ----------------
+    convolve_mode : str
+        ["same", "full"] convolution keywords from scipy.signal.convolve
+
     Examples
     --------
+    Add an AnisocadoConstPSF with code::
 
+        from scopesim.effects import AnisocadoConstPSF
+        psf = AnisocadoConstPSF(filename="test_AnisoCADO_rms_map.fits",
+                                strehl=0.5,
+                                wavelength=2.15,
+                                convolve_mode="same",
+                                psf_side_length=512)
+
+    Add an AnisocadoConstPSF to a yaml file::
+
+        effects:
+        -   name: Ks_Stehl_40_PSF
+            description: A 40% Strehl PSF over the field of view
+            class: AnisocadoConstPSF
+            kwargs:
+                filename: "test_AnisoCADO_rms_map.fits"
+                strehl: 0.5
+                wavelength: 2.15
+                convolve_mode: full
+                psf_side_length: 512
 
     """
     def __init__(self, **kwargs):
@@ -365,11 +393,11 @@ class AnisocadoConstPSF(SemiAnalyticalPSF):
 
     @property
     def nmRms(self):
-        wave = deepcopy(self.meta["wavelength"])
+        wave = deepcopy(utils.from_currsys(self.meta["wavelength"]))
         if isinstance(wave, str) and wave in tu.FILTER_DEFAULTS:
             wave = tu.get_filter_effective_wavelength(wave)
         wave = utils.quantify(wave, u.um).value
-        strehl = self.meta["strehl"]
+        strehl = utils.from_currsys(self.meta["strehl"])
         hdu = self._file[0]
         nm_rms = pu.nmrms_from_strehl_and_wavelength(strehl, wave, hdu)
 
@@ -454,8 +482,9 @@ class FieldVaryingPSF(DiscretePSF):
         utils.check_keys(self.meta, self.required_keys, action="error")
 
         self.meta["z_order"] = [261, 661]
-        self._waveset, self.kernel_indexes = pu.get_psf_wave_exts(self._file,
-                                                               self.meta["wave_key"])
+
+        ws, ki = pu.get_psf_wave_exts(self._file, self.meta["wave_key"])
+        self._waveset, self.kernel_indexes = ws, ki
         self.current_ext = None
         self.current_data = None
         self._strehl_imagehdu = None

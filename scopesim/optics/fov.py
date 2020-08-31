@@ -84,10 +84,10 @@ class FieldOfView(FieldOfViewBase):
         tbl_fields_mask = np.array([isinstance(field, Table)
                                     for field in src.fields])
         img_fields_mask = np.array([isinstance(field, fits.ImageHDU)
-                                    for field in src.fields
-                                    if not field.header.get("BG_SRC", "False")])
+                                    for field in src.fields])
+                                    # if not field.header.get("BG_SRC", "False")
 
-        raise ValueError("Add a bg_flux parameter and add it to the FOV image")
+        # raise ValueError("Add a bg_flux parameter and add it to the FOV image")
 
         # combine all Table fields
         if sum(tbl_fields_mask * fields_mask) > 0:
