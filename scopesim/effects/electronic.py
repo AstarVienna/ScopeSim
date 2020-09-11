@@ -57,6 +57,11 @@ class PoorMansHxRGReadoutNoise(Effect):
 
         return det
 
+    def plot(self, det):
+        import matplotlib.pyplot as plt
+        dtcr = self.apply_to(det)
+        plt.imshow(dtcr.data)
+
 
 class BasicReadoutNoise(Effect):
     def __init__(self, **kwargs):
@@ -79,6 +84,11 @@ class BasicReadoutNoise(Effect):
                                               size=det._hdu.data.shape)
 
         return det
+
+    def plot(self, det):
+        import matplotlib.pyplot as plt
+        dtcr = self.apply_to(det)
+        plt.imshow(dtcr.data)
 
 
 class ShotNoise(Effect):
@@ -110,6 +120,11 @@ class ShotNoise(Effect):
 
         return det
 
+    def plot(self, det):
+        import matplotlib.pyplot as plt
+        dtcr = self.apply_to(det)
+        plt.imshow(dtcr.data)
+
 
 class DarkCurrent(Effect):
     """
@@ -139,6 +154,11 @@ class DarkCurrent(Effect):
             obj._hdu.data += dark * dit * ndit
 
         return obj
+
+    def plot(self, det):
+        import matplotlib.pyplot as plt
+        dtcr = self.apply_to(det)
+        plt.imshow(dtcr.data)
 
 
 class LinearityCurve(Effect):
