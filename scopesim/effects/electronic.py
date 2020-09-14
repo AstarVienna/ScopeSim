@@ -57,10 +57,16 @@ class PoorMansHxRGReadoutNoise(Effect):
 
         return det
 
-    def plot(self, det):
+    def plot(self, det, **kwargs):
         import matplotlib.pyplot as plt
         dtcr = self.apply_to(det)
-        plt.imshow(dtcr.data)
+        plt.imshow(dtcr.data, origin="lower")
+
+
+    def plot_hist(self, det, **kwargs):
+        import matplotlib.pyplot as plt
+        dtcr = self.apply_to(det)
+        plt.hist(dtcr.data.flatten())
 
 
 class BasicReadoutNoise(Effect):
@@ -89,6 +95,11 @@ class BasicReadoutNoise(Effect):
         import matplotlib.pyplot as plt
         dtcr = self.apply_to(det)
         plt.imshow(dtcr.data)
+
+    def plot_hist(self, det, **kwargs):
+        import matplotlib.pyplot as plt
+        dtcr = self.apply_to(det)
+        plt.hist(dtcr.data.flatten())
 
 
 class ShotNoise(Effect):
@@ -125,6 +136,11 @@ class ShotNoise(Effect):
         dtcr = self.apply_to(det)
         plt.imshow(dtcr.data)
 
+    def plot_hist(self, det, **kwargs):
+        import matplotlib.pyplot as plt
+        dtcr = self.apply_to(det)
+        plt.hist(dtcr.data.flatten())
+
 
 class DarkCurrent(Effect):
     """
@@ -155,10 +171,19 @@ class DarkCurrent(Effect):
 
         return obj
 
-    def plot(self, det):
+    def plot(self, det, **kwargs):
         import matplotlib.pyplot as plt
+        dit = from_currsys(self.meta["dit"])
+        ndit = from_currsys(self.meta["ndit"])
+        total_time = dit * ndit
+        times = np.linspace(0, 2*total_time, 10)
         dtcr = self.apply_to(det)
-        plt.imshow(dtcr.data)
+        dark_level = dtcr.data[0, 0] / total_time  # just read one pixel
+        levels = dark_level * times
+        plt.plot(times, levels, **kwargs)
+        plt.xlabel("time")
+        plt.ylabel("dark level")
+
 
 
 class LinearityCurve(Effect):
@@ -184,6 +209,16 @@ class LinearityCurve(Effect):
             det._hdu.data = new_image
 
         return det
+
+    def plot(self, det, **kwargs):
+        import matplotlib.pyplot as plt
+        ndit = from_currsys(self.meta["ndit"])
+        incident = self.table["incident"] * ndit
+        measured = self.table["measured"] * ndit
+
+        plt.plot(incident, measured, **kwargs)
+        plt.xlabel("time")
+        plt.ylabel("dark level")
 
 
 class ReferencePixelBorder(Effect):

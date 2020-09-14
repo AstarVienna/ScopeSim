@@ -21,7 +21,7 @@ from scopesim.tests.mocks.py_objects import source_objects as srcobj
 import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm
 
-PLOTS = False  # if FALSE all tests will pass regardless
+PLOTS = True  # if FALSE all tests will pass regardless
 
 FILES_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),
                                           "../mocks/files/"))
@@ -121,12 +121,15 @@ class TestDetectorEffectsPlots:
                                                   n_channels=1, ndit=1)
         dtcr = Detector(hdr)
 
-      #  dtcr = eff.apply_to(dtcr)
         if PLOTS:
+            fig = plt.figure(figsize=(6, 3))
+            plt.subplot(121)
             eff.plot(dtcr)
+            plt.subplot(122)
+            eff.plot_hist(dtcr)
             plt.show()
 
-    def BasicReadoutNoise_plot(self):
+    def test_BasicReadoutNoise_plot(self):
         from scopesim.detector import Detector
         level, dit, hw = 0.5, 10, 16
         from scopesim.optics.image_plane_utils import header_from_list_of_xy
@@ -135,9 +138,13 @@ class TestDetectorEffectsPlots:
                                               n_channels=1, ndit=1)
         dtcr = Detector(hdr)
 
-    #  dtcr = eff.apply_to(dtcr)
         if PLOTS:
+
+            fig = plt.figure(figsize=(6, 3))
+            plt.subplot(121)
             eff.plot(dtcr)
+            plt.subplot(122)
+            eff.plot_hist(dtcr)
             plt.show()
 
     def test_ShotNoise_plot(self):
@@ -145,13 +152,15 @@ class TestDetectorEffectsPlots:
         level, dit, hw = 0.5, 10, 16
         from scopesim.optics.image_plane_utils import header_from_list_of_xy
         hdr = header_from_list_of_xy([-hw, hw], [-hw, hw], 1, "D")
-        eff = electronic.ShotNoise(noise_std=1,
-                                                  n_channels=1, ndit=1)
+        eff = electronic.ShotNoise()  # Does it do something?
         dtcr = Detector(hdr)
 
-      #  dtcr = eff.apply_to(dtcr)
         if PLOTS:
+            fig = plt.figure(figsize=(6, 3))
+            plt.subplot(121)
             eff.plot(dtcr)
+            plt.subplot(122)
+            eff.plot_hist(dtcr)
             plt.show()
 
     def test_DarkCurrent_plot(self):
@@ -159,10 +168,21 @@ class TestDetectorEffectsPlots:
         level, dit, hw = 0.5, 10, 16
         from scopesim.optics.image_plane_utils import header_from_list_of_xy
         hdr = header_from_list_of_xy([-hw, hw], [-hw, hw], 1, "D")
-        eff = electronic.DarkCurrent(value=1, dit=1, ndit=1)
+        eff = electronic.DarkCurrent(value=0.1, dit=10, ndit=20) # raise error for ints!
         dtcr = Detector(hdr)
 
-      #  dtcr = eff.apply_to(dtcr)
+        if PLOTS:
+            eff.plot(dtcr)
+            plt.show()
+
+    def test_LinearityCurve_plot(self):
+        from scopesim.detector import Detector
+        level, dit, hw = 0.5, 10, 16
+        from scopesim.optics.image_plane_utils import header_from_list_of_xy
+        hdr = header_from_list_of_xy([-hw, hw], [-hw, hw], 1, "D")
+        eff = electronic.LinearityCurve(ndit=20)  # raise error for ints!
+        dtcr = Detector(hdr)
+
         if PLOTS:
             eff.plot(dtcr)
             plt.show()
