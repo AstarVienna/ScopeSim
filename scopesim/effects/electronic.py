@@ -185,7 +185,6 @@ class DarkCurrent(Effect):
         plt.ylabel("dark level")
 
 
-
 class LinearityCurve(Effect):
     def __init__(self, **kwargs):
         super(LinearityCurve, self).__init__(**kwargs)
@@ -210,15 +209,14 @@ class LinearityCurve(Effect):
 
         return det
 
-    def plot(self, det, **kwargs):
+    def plot(self, **kwargs):
         import matplotlib.pyplot as plt
         ndit = from_currsys(self.meta["ndit"])
+
         incident = self.table["incident"] * ndit
         measured = self.table["measured"] * ndit
 
         plt.plot(incident, measured, **kwargs)
-        plt.xlabel("time")
-        plt.ylabel("dark level")
 
 
 class ReferencePixelBorder(Effect):
@@ -244,6 +242,13 @@ class ReferencePixelBorder(Effect):
                 implane.hdu.data[:self.meta["left"], :] = 0
 
         return implane
+
+    def plot(self, implane, **kwargs):
+        import matplotlib.pyplot as plt
+
+        implane = self.apply_to(implane)
+        plt.imshow(implane.data, origin="bottom", **kwargs)
+        plt.show()
 
 
 class BinnedImage(Effect):
