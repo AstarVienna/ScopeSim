@@ -57,6 +57,17 @@ class PoorMansHxRGReadoutNoise(Effect):
 
         return det
 
+    def plot(self, det, **kwargs):
+        import matplotlib.pyplot as plt
+        dtcr = self.apply_to(det)
+        plt.imshow(dtcr.data, origin="lower")
+
+
+    def plot_hist(self, det, **kwargs):
+        import matplotlib.pyplot as plt
+        dtcr = self.apply_to(det)
+        plt.hist(dtcr.data.flatten())
+
 
 class BasicReadoutNoise(Effect):
     def __init__(self, **kwargs):
@@ -79,6 +90,16 @@ class BasicReadoutNoise(Effect):
                                               size=det._hdu.data.shape)
 
         return det
+
+    def plot(self, det):
+        import matplotlib.pyplot as plt
+        dtcr = self.apply_to(det)
+        plt.imshow(dtcr.data)
+
+    def plot_hist(self, det, **kwargs):
+        import matplotlib.pyplot as plt
+        dtcr = self.apply_to(det)
+        plt.hist(dtcr.data.flatten())
 
 
 class ShotNoise(Effect):
@@ -110,6 +131,16 @@ class ShotNoise(Effect):
 
         return det
 
+    def plot(self, det):
+        import matplotlib.pyplot as plt
+        dtcr = self.apply_to(det)
+        plt.imshow(dtcr.data)
+
+    def plot_hist(self, det, **kwargs):
+        import matplotlib.pyplot as plt
+        dtcr = self.apply_to(det)
+        plt.hist(dtcr.data.flatten())
+
 
 class DarkCurrent(Effect):
     """
@@ -140,6 +171,19 @@ class DarkCurrent(Effect):
 
         return obj
 
+    def plot(self, det, **kwargs):
+        import matplotlib.pyplot as plt
+        dit = from_currsys(self.meta["dit"])
+        ndit = from_currsys(self.meta["ndit"])
+        total_time = dit * ndit
+        times = np.linspace(0, 2*total_time, 10)
+        dtcr = self.apply_to(det)
+        dark_level = dtcr.data[0, 0] / total_time  # just read one pixel
+        levels = dark_level * times
+        plt.plot(times, levels, **kwargs)
+        plt.xlabel("time")
+        plt.ylabel("dark level")
+
 
 class LinearityCurve(Effect):
     def __init__(self, **kwargs):
@@ -165,6 +209,15 @@ class LinearityCurve(Effect):
 
         return det
 
+    def plot(self, **kwargs):
+        import matplotlib.pyplot as plt
+        ndit = from_currsys(self.meta["ndit"])
+
+        incident = self.table["incident"] * ndit
+        measured = self.table["measured"] * ndit
+
+        plt.plot(incident, measured, **kwargs)
+
 
 class ReferencePixelBorder(Effect):
     def __init__(self, **kwargs):
@@ -189,6 +242,13 @@ class ReferencePixelBorder(Effect):
                 implane.hdu.data[:self.meta["left"], :] = 0
 
         return implane
+
+    def plot(self, implane, **kwargs):
+        import matplotlib.pyplot as plt
+
+        implane = self.apply_to(implane)
+        plt.imshow(implane.data, origin="bottom", **kwargs)
+        plt.show()
 
 
 class BinnedImage(Effect):

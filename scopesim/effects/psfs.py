@@ -78,6 +78,12 @@ class PSF(Effect):
         self.kernel = np.ones((1, 1))
         return self.kernel
 
+    def plot(self, obj, **kwargs):
+        import matplotlib.pyplot as plt
+        from matplotlib.colors import LogNorm
+
+        kernel = self.get_kernel(obj)
+        plt.imshow(kernel, norm=LogNorm(), origin='lower', **kwargs)
 
 ################################################################################
 # Analytical PSFs - Vibration, Seeing, NCPAs
@@ -603,3 +609,12 @@ class FieldVaryingPSF(DiscretePSF):
 
         return self._strehl_imagehdu
 
+    def plot(self, fov, **kwargs):
+
+        import matplotlib.pyplot as plt
+        from matplotlib.colors import LogNorm
+
+        kernel = self.get_kernel(fov)
+        fov_back = self.apply_to(fov)
+        #for k in kernel:
+        plt.imshow(fov_back.hdu.data, origin='lower', **kwargs)

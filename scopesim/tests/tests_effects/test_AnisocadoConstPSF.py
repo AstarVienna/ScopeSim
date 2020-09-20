@@ -14,7 +14,7 @@ from scopesim.tests.mocks.py_objects import source_objects as srcobj
 import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm
 
-PLOTS = False
+PLOTS = True
 
 FILES_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),
                                           "../mocks/files/"))
