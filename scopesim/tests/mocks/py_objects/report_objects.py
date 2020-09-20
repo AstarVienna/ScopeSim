@@ -28,34 +28,38 @@ This parrot goes vrooom
 
 ..
     action: plot
-    format: [pdf, png]
-    name: my_fug
+    format: [pdf]
+    name: my_fug_A
     ---
     plt.plot([0,1], [0,1])
 
-.. figure:: my_fug.png
-    :name: fig:my_fug
+.. figure:: my_fug_A.png
+    :name: fig:my_fug_A
 
     This is an included figure caption  
 
 ..
     action: [reset, clear-figure, plot]
     format: [jpg, svg]
-    name: my_fug2
+    name: my_fug_B
+    path: "./images_temp/"
     ---
+    import matplotlib.pyplot as plt
     plt.plot([0,1], [1,0])
 
-.. figure:: my_fug2.png
-    :name: fig:my_fug2
+.. figure:: my_fug_B.png
+    :name: fig:my_fug_B
 
 .. code::
-    :name: my_fug3
-    :class: reset, clear-figure, plot, format-pdf, format-png
-
+    :name: my_fug_C
+    :class: reset, clear-figure, plot, format-png
+    
+    import matplotlib.pyplot as plt
     plt.plot([0,1], [1,1])
 
-.. figure:: my_fug3.png
-    :name: fig:my_fug3
+.. figure:: my_fug_C.png
+    :name: fig:my_fug_C
     
     Caption to fug3
+
 """

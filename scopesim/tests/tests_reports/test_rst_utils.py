@@ -65,6 +65,15 @@ class TestRstifyRstText:
                                            "This_parrot_goes_vrooom.rst"))
 
 
+class TestPlotifyRstText:
+    def test_stuff(self):
+        print(IMG_PATH)
+        ru.plotify_rst_text(ro.big_rst_text)
+        fnames = ["my_fug_A.pdf", "my_fug_B.jpg", "my_fug_B.svg", "my_fug_C.png"]
+        for fname in fnames:
+            assert os.path.exists(os.path.join(IMG_PATH, fname))
+
+
 class TestEffectReport:
     def test_all_parts_are_created_in_rc_folders(self):
         from scopesim.tests.mocks.py_objects import effects_objects as eo

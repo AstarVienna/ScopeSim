@@ -1,3 +1,7 @@
+
+
+
+
 import os
 from docutils.core import publish_doctree, publish_parts
 from docutils.nodes import comment, literal_block
@@ -49,8 +53,8 @@ from matplotlib.colors import LogNorm
 def process_comment_code(node, context_code):
     """Add code from a ``comment`` node to the context_code string"""
     result = node.rawsource.split("---")
-    new_code = result[-1]
     options = yaml.load(result[0]) if len(result) > 1 else {}
+    new_code = result[-1]
     context_code = process_code(context_code, new_code, options)
 
     return context_code
@@ -62,9 +66,11 @@ def process_literal_code(node, context_code):
     attribs = node.attributes["classes"]
     action = [att for att in attribs if "format-" not in att]
     format = [att.replace("format-", "") for att in attribs if "format-" in att]
+    format = format if len(format) > 0 else ["png"]
     options = {"action": action,
-               "format": format,
-               "name": node.attributes["names"][0]}
+               "format": format}
+    if len(node.attributes["names"]) > 0:
+        options["name"] = node.attributes["names"][0]
     context_code = process_code(context_code, new_code, options)
 
     return context_code
@@ -94,7 +100,7 @@ def process_code(context_code, code, options):
         - ``clear-figure`` adds ``plt.clf()`` to the context string before the
           current code block is added
         - ``plot`` adds ``plt.savefig({name}.{format}) to the context string.
-          If more than one formats are given, these will be iterated over.
+          If multiple formats are given, these will be iterated over.
 
     For ``comment`` blocks, options should be given in a yaml style header,
     separated form the code block by exactly three (3) hyphens ('---')
@@ -148,15 +154,19 @@ def process_code(context_code, code, options):
         context_code = ""
 
     if "clear-figure" in options.get("action", []):
-        context_code += "\nplt.clf()\n"
+        context_code += "\nimport matplotlib.pyplot as plt\nplt.clf()\n"
+
+    if "execute" in options.get("action", []):
+        context_code += code
 
     if "plot" in options.get("action", []):
         context_code += code
 
+        img_path = options.get("path", rc.__config__["!SIM.reports.image_path"])
         formats = options.get("format", ["png"])
         formats = [formats] if isinstance(formats, str) else formats
         for fmt in formats:
-            img_path = rc.__config__["!SIM.reports.image_path"]
+
             fname = options.get("name", "untitled").split(".")[0]
             fname = ".".join([fname, fmt])
             fname = os.path.join(img_path, fname)
@@ -166,11 +176,116 @@ def process_code(context_code, code, options):
 
 
 def plotify_rst_text(rst_text):
-    doctree = publish_doctree(rst_text)
-    walk(doctree)
+    """
+    Generates and saves plots from code blocks in an RST string
+
+    The save directory for the plots defaults to
+    ``scopesim.rc.__config__["!SIM.reports.image_path"]``.
+    This can be overridden ONLY inside a COMMENT block using the path keyword.
+
+    Parameters
+    ----------
+    rst_text : str
+        Any RST text string
+
+    Examples
+    --------
+    The following rst text will generate a plot and save it in three formats::
+
+        A basic plot
+        ============
+        Let's make a basic plot using the comment style
+
+        ..
+            action: plot
+            format: [pdf, png]
+            name: my_fug
+            path: "./images/"
+            ---
+            plt.plot([0,1], [0,1])
+
+        And now a plot using the code block style
+
+        .. code::
+            :name: my_fug3
+            :class: reset, plot, format-jpg, format-svg
+
+            import matplotlib.pyplot as plt
+            plt.plot([0,1], [1,1])
+
+    The plot are created be calling::
+
+        plotify_rst_text(rst_text)
+
+    where ``rst_text`` is a string holding the full RST text from above.
+
+    Notes
+    -----
+    * Possible actions are: [reset, clear-figure, plot]
+    * Code is retained between code blocks in the same string, so we do not need
+      to re-write large sections of code
+    * By default ``import numpy as np`` and ``import matplotlib.pyplot as plt``
+      are loaded automatically, so these do not need to be explicitly specified
+      in each code block.
+    * THE EXCEPTION is when the action ``reset`` is specified. This clears the
+      code_context variable.
+
+    """
+
+    walk(publish_doctree(rst_text))
 
 
 def latexify_rst_text(rst_text, filename=None, path=None, title_char="="):
+    """
+    Converts an RST string (block of text) into a LaTeX string
+
+    NOTE: plots will NOT be generated with this command. For that we must invoke
+    the ``plotfiy`` command.
+
+    Parameters
+    ----------
+    rst_text : str
+    filename : str, optional
+        What to name the latex file. If None, the filename is derived from the
+        text title
+    path : str, optional
+        Where to save the latex file
+    title_char : str, optional
+        The character used to underline the rst text title. Usually "=".
+
+    Returns
+    -------
+    tex_str : str
+        The same string or block of text in LaTeX format
+
+    Examples
+    --------
+    ::
+        rst_text = '''
+        Meaning of life
+        ===============
+
+        Apparently it's 42. Lets plot
+
+        ..
+            action: plot
+            name: my_plot
+            path: ./images/
+            ---
+            plt.plot([0,1], [0,1])
+
+        .. figure:: images/my_plot.png
+            :name: label-my-plot
+
+            This is an included figure caption
+
+        '''
+
+        plotify_rst_text(rst_text)
+        latexify_rst_text(rst_text, filename="my_latex_file", path="./")
+
+    """
+
     if path is None:
         path = from_currsys(rc.__config__["!SIM.reports.latex_path"])
 
@@ -185,8 +300,13 @@ def latexify_rst_text(rst_text, filename=None, path=None, title_char="="):
     with open(file_path, "w") as f:
         f.write(parts["body"])
 
+    tex_str = parts["body"]
+
+    return tex_str
+
 
 def rstify_rst_text(rst_text, filename=None, path=None, title_char="="):
+    """ The same as ``latexify_rst_text```, but the output is in RST format """
     if path is None:
         path = from_currsys(rc.__config__["!SIM.reports.rst_path"])
 
@@ -197,3 +317,5 @@ def rstify_rst_text(rst_text, filename=None, path=None, title_char="="):
     file_path = os.path.join(path, filename)
     with open(file_path, "w") as f:
         f.write(rst_text)
+
+    return rst_text
