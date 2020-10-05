@@ -248,7 +248,7 @@ def scale_spectrum(spectrum, filter_name, amplitude):
 
 def combine_two_spectra(spec_a, spec_b, action, wave_min, wave_max):
     """
-    Combines spec_b and/or emission spectrum with a common waverange
+    Combines transmission and/or emission spectrum with a common waverange
 
     Spec_A is the source spectrum
     Spec_B is either the transmission or emission that should be applied
@@ -278,6 +278,8 @@ def combine_two_spectra(spec_a, spec_b, action, wave_min, wave_max):
         spec_c = spec_a(wave) + spec_b(wave)
 
     new_source = SourceSpectrum(Empirical1D, points=wave, lookup_table=spec_c)
+    new_source.meta.update(spec_b.meta)
+    new_source.meta.update(spec_a.meta)
 
     return new_source
 

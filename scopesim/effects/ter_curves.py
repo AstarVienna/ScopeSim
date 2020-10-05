@@ -4,6 +4,7 @@ from os import path as pth
 import warnings
 
 from astropy.io import fits
+from synphot import SourceSpectrum
 
 from .ter_curves_utils import combine_two_spectra, add_edge_zeros, download_svo_filter
 from .effects import Effect
@@ -12,6 +13,7 @@ from ..source.source_utils import make_imagehdu_from_table
 from ..source.source import Source
 from ..base_classes import SourceBase
 from ..utils import from_currsys, quantify, check_keys
+
 
 class TERCurve(Effect):
     """
@@ -68,6 +70,7 @@ class TERCurve(Effect):
 
         self.surface = SpectralSurface()
         self.surface.meta.update(self.meta)
+        self._background_source = None
 
         data = self.get_data()
         if self.meta["ignore_wings"]:
@@ -84,29 +87,16 @@ class TERCurve(Effect):
             wave_min = quantify(self.meta["wave_min"], u.um).to(u.AA)
             wave_max = quantify(self.meta["wave_max"], u.um).to(u.AA)
 
+            # apply transmission to source spectra
             for ii in range(len(obj.spectra)):
                 spec = obj.spectra[ii]
                 thru = self.throughput
                 obj.spectra[ii] = combine_two_spectra(spec, thru, "multiply",
                                                       wave_min, wave_max)
 
-            flux = self.emission
-            n_bg_srcs = 0
-            for field in obj.fields:
-                if isinstance(field, fits.ImageHDU) and \
-                        field.header.get("BG_SRC", False):
-                    ref = int(field.header["SPEC_REF"])
-                    spec = obj.spectra[ref]
-                    obj.spectra[ref] = combine_two_spectra(spec, flux, "add",
-                                                           wave_min, wave_max)
-                    n_bg_srcs += 1
-
-            if n_bg_srcs == 0:
-                bg_hdu = make_imagehdu_from_table([0], [0], [1])
-                bg_hdu.header["BG_SRC"] = True
-                bg_src = Source(image_hdu=bg_hdu, spectra=flux)
-
-                obj.append(bg_src)
+            # add the effect background to the source background field
+            if self.background_source is not None:
+                obj.append(self.background_source)
 
         return obj
 
@@ -117,6 +107,19 @@ class TERCurve(Effect):
     @property
     def throughput(self):
         return self.surface.throughput
+
+    @property
+    def background_source(self):
+        if self._background_source is None:
+            # add a single pixel ImageHDU for the extended background with a
+            # size of 1 degree
+            flux = self.emission
+            bg_hdu = make_imagehdu_from_table([0], [0], [1], 1 * u.deg)
+            bg_hdu.header["BG_SRC"] = True
+            bg_hdu.header["BG_SURF"] = self.meta.get("name", "<untitled>")
+            self._background_source = Source(image_hdu=bg_hdu, spectra=flux)
+
+        return self._background_source
 
     # #######
 
@@ -170,10 +173,9 @@ class AtmosphericTERCurve(TERCurve):
         super(AtmosphericTERCurve, self).__init__(**kwargs)
         self.meta["z_order"] = [111, 511]
         self.meta["action"] = "transmission"
-        self.meta["area"] = "!TEL.area"
-        self.meta["area_unit"] = "m2"
         self.meta["position"] = 0       # position in surface table
         self.meta.update(kwargs)
+        self.surface.meta.update(self.meta)
 
 
 class SkycalcTERCurve(AtmosphericTERCurve):

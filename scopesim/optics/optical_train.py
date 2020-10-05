@@ -159,6 +159,8 @@ class OpticalTrain:
         fovs = self.fov_manager.fovs
         for fov_i, fov in enumerate(fovs):
             # print("FOV", fov_i+1, "of", n_fovs, flush=True)
+            # .. todo: possible bug with bg flux not using plate_scale
+            #          see fov_utils.combine_imagehdu_fields
             fov.extract_from(source)
             fov.view()
 

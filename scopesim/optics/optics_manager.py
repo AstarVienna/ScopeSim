@@ -1,8 +1,9 @@
 import warnings
 from inspect import isclass
 
+import numpy as np
 from astropy import units as u
-from astropy.table import Table, vstack
+from astropy.table import Table
 
 from .optical_element import OpticalElement
 from .. import effects as efs
@@ -44,8 +45,8 @@ class OpticsManager:
             raise ValueError("!INST.pixel_scale is missing from the current"
                              "system. Please add this to the instrument (INST)"
                              "properties dict for the system.")
-        area = self.surfaces_table.area
         pixel_scale = rc.__currsys__["!INST.pixel_scale"] * u.arcsec
+        area = self.area
         etendue = area * pixel_scale**2
         rc.__currsys__["!TEL.etendue"] = etendue
         rc.__currsys__["!TEL.area"] = area
@@ -148,7 +149,7 @@ class OpticsManager:
 
         Parameters
         ----------
-        z_level : int
+        z_level : int, tuple
             [0, 100, 200, 300, 400, 500]
 
         Returns
@@ -207,7 +208,8 @@ class OpticsManager:
 
     @property
     def fov_setup_effects(self):
-        return self.get_z_order_effects(200)   # Working out where to set wave_min, wave_max
+        # Working out where to set wave_min, wave_max
+        return self.get_z_order_effects(200)
 
     @property
     def surfaces_table(self):
@@ -216,12 +218,20 @@ class OpticsManager:
             self._surfaces_table = combine_surface_effects(surface_like_effects)
         return self._surfaces_table
 
+    @property
+    def area(self):
+        surf_lists = self.get_all(efs.SurfaceList)
+        areas = [0] + [surf_list.area.value for surf_list in surf_lists]
+        _area = np.max(areas) * u.m**2
+
+        return _area
+
     def list_effects(self):
         # unfortunately this does not work because of the astropy internal
         # conversion to np.arrays if all column entries are a list with the
         # same number of entries
-        #tbls = [opt_el.list_effects() for opt_el in self.optical_elements]
-        #tbl = vstack(tbls)
+        # tbls = [opt_el.list_effects() for opt_el in self.optical_elements]
+        # tbl = vstack(tbls)
 
         # Hence we need to reconstruct the full effects list
 

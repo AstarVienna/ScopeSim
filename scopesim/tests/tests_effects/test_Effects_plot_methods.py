@@ -33,7 +33,6 @@ for NEW_PATH in [YAMLS_PATH, FILES_PATH]:
 
 
 class TestPsfEffects:
-
     def test_VibrationPsf_plot(self):
         psf = psfs.Vibration(fwhm=0.03, pixel_scale=0.005)
         fov = fovobj._centre_micado_fov()
@@ -43,7 +42,7 @@ class TestPsfEffects:
 
         assert True
 
-    def test_NonCommonPathAberrationPsf_plot():
+    def test_NonCommonPathAberrationPsf_plot(self):
         psf = psfs.NonCommonPathAberration(pixel_scale=0.05)
         fov = fovobj._centre_micado_fov()
 
@@ -111,7 +110,6 @@ class TestPsfEffects:
 
 
 class TestDetectorEffectsPlots:
-
     def test_PoorMansHxRGReadoutNoise_plot(self):
         from scopesim.detector import Detector
         level, dit, hw = 0.5, 10, 16
@@ -208,8 +206,9 @@ class TestDetectorEffectsPlots:
         dtcr = Detector(hdr)
         eff = electronic.BinnedImage(bin_size=4)
         dtcr = eff.apply_to(dtcr)
-        plt.imshow(dtcr.data)
-        plt.show()
+        if PLOTS:
+            plt.imshow(dtcr.data)
+            plt.show()
 
 
 class TestADC:
