@@ -72,6 +72,7 @@ class OpticalTrain:
         self.image_planes = []
         self.detector_arrays = []
         self.yaml_dicts = None
+        self._last_source = None
 
         if cmds is not None:
             self.load(cmds)
@@ -174,6 +175,8 @@ class OpticalTrain:
         for effect in self.optics_manager.image_plane_effects:
             for ii in range(len(self.image_planes)):
                 self.image_planes[ii] = effect.apply_to(self.image_planes[ii])
+
+        self._last_source = source
 
     def readout(self, filename=None, **kwargs):
         """

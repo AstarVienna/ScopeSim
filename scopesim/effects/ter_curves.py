@@ -333,6 +333,28 @@ class FilterCurve(TERCurve):
 
         return wave_edges
 
+    @property
+    def fwhm(self):
+        wave = self.surface.wavelength
+        thru = self.surface._get_ter_property("transmission", fmt="array")
+        mask = thru >= 0.5
+        dwave = wave[mask][-1] - wave[mask][0]
+
+        return dwave
+
+    @property
+    def centre(self):
+        wave = self.surface.wavelength
+        thru = self.surface._get_ter_property("transmission", fmt="array")
+        num = np.trapz(thru * wave**2, x=wave)
+        den = np.trapz(thru * wave, x=wave)
+
+        return num / den
+
+    def center(self):
+        return self.centre
+
+
 
 class DownloadableFilterCurve(FilterCurve):
     def __init__(self, **kwargs):
@@ -394,7 +416,7 @@ class FilterWheel(Effect):
 
     @property
     def current_filter(self):
-        return self.filters[self.meta["current_filter"]]
+        return self.filters[from_currsys(self.meta["current_filter"])]
 
     def plot(self, which="x", wavelength=None, **kwargs):
         """

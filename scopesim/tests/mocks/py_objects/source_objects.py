@@ -99,8 +99,7 @@ def _combined_source(im_angle=0, dx=[0, 0, 0], dy=[0, 0, 0], weight=[1, 1, 1]):
     return src
 
 
-def _single_table_source(weight=1):
-    n = 3
+def _single_table_source(weight=1, n=3):
     unit = u.Unit("ph s-1 m-2 um-1")
     wave = np.linspace(0.5, 2.5, n) * u.um
     specs = [SourceSpectrum(Empirical1D, points=wave,
