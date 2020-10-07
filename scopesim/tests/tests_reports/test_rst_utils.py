@@ -9,7 +9,7 @@ rc.__config__["!SIM.reports.image_path"] = "./images_temp/"
 rc.__config__["!SIM.reports.latex_path"] = "./latex_temp/"
 rc.__config__["!SIM.reports.rst_path"] = "./rst_temp/"
 
-CLEAN_UP = False
+CLEAN_UP = True
 PLOTS = False
 
 IMG_PATH = rc.__config__["!SIM.reports.image_path"]

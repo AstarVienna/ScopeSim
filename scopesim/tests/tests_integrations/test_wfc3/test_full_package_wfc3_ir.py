@@ -147,7 +147,7 @@ class TestObserveOpticalTrain:
         # ..todo:: Don't know what the real HST background is
         opt.observe(src)
         print("HELLO", np.average(opt.image_planes[0].data))
-        assert np.average(opt.image_planes[0].data) == approx(0.22, rel=0.2)
+        assert np.average(opt.image_planes[0].data) == approx(0.11, rel=0.2)
 
     def test_actually_produces_stars(self):
         cmd = scopesim.UserCommands(use_instrument="WFC3",
