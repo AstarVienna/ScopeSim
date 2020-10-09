@@ -52,11 +52,8 @@ def teardown_module():
 class TestShiftSource:
     def test_shift_lfao(self):
         # core_radius = 0.6 to ensure it fits the image after shifting
-        src = sim_tp.basic.stars.cluster(
-            mass=10000,
-            distance=2000,
-            core_radius=0.6,
-        )
+        src = sim_tp.basic.stars.cluster(mass=10000, distance=2000,
+                                         core_radius=0.6,)
 
         lfoa = scopesim.OpticalTrain("LFOA")
         lfoa.observe(src)

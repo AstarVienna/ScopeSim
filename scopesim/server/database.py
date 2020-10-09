@@ -181,7 +181,6 @@ def download_package(pkg_path, save_dir=None, url=None, from_cache=None):
         try:
             if from_cache is None:
                 from_cache = rc.__config__["!SIM.file.use_cached_downloads"]
-            print("FROM CACHE:", from_cache)
             cache_path = download_file(url + pkg_path, cache=from_cache)
             save_path = os.path.join(save_dir, os.path.basename(pkg_path))
             file_path = shutil.copy2(cache_path, save_path)

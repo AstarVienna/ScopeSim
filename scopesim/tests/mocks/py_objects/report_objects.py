@@ -10,7 +10,7 @@ comment_plot_snippet = """
 literal_plot_snippet = """
 .. code::
     :name: my_fug3
-    :class: reset, plot, format-jpg, format-svg
+    :class: reset, plot, format-png, format-svg
 
     import matplotlib.pyplot as plt
     plt.plot([0,1], [1,1])"""
@@ -40,7 +40,7 @@ This parrot goes vrooom
 
 ..
     action: [reset, clear-figure, plot]
-    format: [jpg, svg]
+    format: [svg]
     name: my_fug_B
     path: "./images_temp/"
     ---

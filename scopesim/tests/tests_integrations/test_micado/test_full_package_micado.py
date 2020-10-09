@@ -15,15 +15,15 @@ from matplotlib import pyplot as plt
 from matplotlib.colors import LogNorm
 
 
-# if rc.__config__["!SIM.tests.run_integration_tests"] is False:
-#     pytestmark = pytest.mark.skip("Ignoring MICADO integration tests")
+if rc.__config__["!SIM.tests.run_integration_tests"] is False:
+    pytestmark = pytest.mark.skip("Ignoring MICADO integration tests")
 
 PKGS = {"Armazones": "locations/Armazones.zip",
         "ELT": "telescopes/ELT.zip",
         "MAORY": "instruments/MAORY.zip",
         "MICADO": "instruments/MICADO.zip"}
 
-CLEAN_UP = False
+CLEAN_UP = True
 PLOTS = False
 
 

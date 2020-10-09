@@ -22,7 +22,7 @@ if rc.__config__["!SIM.tests.run_integration_tests"] is False:
 
 PKGS = {"LFOA": "telescopes/LFOA.zip"}
 
-CLEAN_UP = False
+CLEAN_UP = True
 PLOTS = False
 
 
