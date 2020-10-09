@@ -52,8 +52,14 @@ class PoorMansHxRGReadoutNoise(Effect):
             ron_kwargs = {key: self.meta[key] for key in ron_keys}
             ron_kwargs["image_shape"] = det._hdu.data.shape
 
-            for _ in range(self.meta["ndit"]):
-                det._hdu.data += make_ron_frame(**ron_kwargs)
+            ron_frame = make_ron_frame(**ron_kwargs)
+            stacked_ron_frame = np.zeros(np.shape(ron_frame))
+            for i in range(self.meta["ndit"]):
+                dx = np.random.randint(0, ron_frame.shape[1])
+                dy = np.random.randint(0, ron_frame.shape[0])
+                stacked_ron_frame += np.roll(ron_frame, (dy, dx), axis=(0, 1))
+
+            det._hdu.data += stacked_ron_frame
 
         return det
 

@@ -15,11 +15,8 @@ from matplotlib import pyplot as plt
 from matplotlib.colors import LogNorm
 
 
-if rc.__config__["!SIM.tests.run_integration_tests"] is False:
-    pytestmark = pytest.mark.skip("Ignoring MICADO integration tests")
-
-rc.__config__["!SIM.file.local_packages_path"] = "./micado_temp/"
-
+# if rc.__config__["!SIM.tests.run_integration_tests"] is False:
+#     pytestmark = pytest.mark.skip("Ignoring MICADO integration tests")
 
 PKGS = {"Armazones": "locations/Armazones.zip",
         "ELT": "telescopes/ELT.zip",
@@ -31,7 +28,8 @@ PLOTS = False
 
 
 def setup_module():
-    rc_local_path = rc.__config__["!SIM.file.local_packages_path"]
+    rc_local_path = "./TEMP_MICADO/"
+    rc.__config__["!SIM.file.local_packages_path"] = rc_local_path
     if not os.path.exists(rc_local_path):
         os.mkdir(rc_local_path)
         rc.__config__["!SIM.file.local_packages_path"] = os.path.abspath(
@@ -128,13 +126,14 @@ class TestMakeOpticalTrain:
 
 
 class TestSkyBackgroundIsRealistic:
+    # previous mag_diff: K=2.05, H=0.25, J=0.75
     @pytest.mark.parametrize("mode_names, filt_name, etc_flux_values, mag_diff",
-                             [(["SCAO", "IMG_4mas"], "Ks", 147, 2.05),  # ph/s/pix
-                              (["SCAO", "IMG_1.5mas"], "Ks", 147, 2.05),
-                              (["SCAO", "IMG_4mas"], "H", 108, 0.25),
-                              (["SCAO", "IMG_1.5mas"], "H", 108, 0.25),
-                              (["SCAO", "IMG_4mas"], "J", 27, 0.75),
-                              (["SCAO", "IMG_1.5mas"], "J", 27, 0.75)])
+                             [(["SCAO", "IMG_4mas"], "Ks", 147, 0.5),  # ph/s/pix
+                              (["SCAO", "IMG_1.5mas"], "Ks", 147, 0.5),
+                              (["SCAO", "IMG_4mas"], "H", 108, -1),
+                              (["SCAO", "IMG_1.5mas"], "H", 108, -1),
+                              (["SCAO", "IMG_4mas"], "J", 27, -0.5),
+                              (["SCAO", "IMG_1.5mas"], "J", 27, -0.5)])
     def test_background_is_within_2x_of_eso_etc(self, mode_names, filt_name,
                                                 etc_flux_values, mag_diff):
         """
@@ -144,8 +143,8 @@ class TestSkyBackgroundIsRealistic:
         -----
         - mag_diff the discrepancy between the ETC and the skycalc BG mags
         - The ETC uses 1100m2 area and 5mas pixel size
-        - ETC sky BG mags can be found on the ETC website, skycalc BG mags can
-          be given when getting a spectrum on the skycalc website
+        - ETC sky BG mags can be found on the ETC website, skycalc BG mags are
+          given when getting a spectrum on the skycalc website
         """
 
         cmd = scopesim.UserCommands(use_instrument="MICADO",
@@ -206,22 +205,25 @@ class TestDetector:
 
 class TestLimitingMagnitudes:
     def test_get_lim_mags_for_micado(self):
-        dit, ndit = 3.6, 5000
-        filter_name = "Ks"
-        bg_mag = 13.6
+        dit, ndit = 60, 60*5
+        filter_name = "J"
+        bg_mag = 16.5
 
         from scopesim.source.source_templates import star_field
-        src = star_field(8*8, 26, 33, 3, use_grid=True)
+        src = star_field(10**2, 20, 30, 1.8, use_grid=True)
         cmd = scopesim.UserCommands(use_instrument="MICADO",
                                     properties={"!OBS.filter_name": filter_name,
                                                 "!OBS.dit": dit,
-                                                "!OBS.ndit": ndit})
+                                                "!OBS.ndit": ndit,
+                                                "!ATMO.background.magnitude": bg_mag,
+                                                "!ATMO.background.filter_name": filter_name})
         opt = scopesim.OpticalTrain(cmd)
-        opt["armazones_atmo_dispersion"].include = False
-        opt["micado_adc_3D_shift"].include = False
-        opt["detector_linearity"].include = False
-        opt["detector_window"].include = True
-        opt["full_detector_array"].include = False
+        for eff in ["armazones_atmo_dispersion", "micado_adc_3D_shift",
+                    "detector_linearity", "full_detector_array"]:
+            opt[eff].include = False
+        for eff in ["detector_window"]:
+            opt[eff].include = True
+        opt.update()
 
         new_kwargs = {"rescale_emission": {"filter_name": filter_name,
                                            "filename_format": "filters/TC_filter_{}.dat",
@@ -231,23 +233,22 @@ class TestLimitingMagnitudes:
 
         opt.observe(src)
         hdus = opt.readout()
-        # hdus = opt.readout(filename=f"test_{dit}s.fits")
+        # hdus[0][1].data = hdus[0][1].data[256:-256, 256:-256]
+        # hdus[0].writeto(f"TEST_{filter_name}.fits", overwrite=True)
 
-        print(opt.effects)
-
-        image = hdus[0][1].data
+        image = hdus[0][1].data  #[350:700, 300:700]
         pixel_scale = opt.cmds["!INST.pixel_scale"]
         xs = src.fields[0]["x"] / pixel_scale + image.shape[1] / 2
         ys = src.fields[0]["y"] / pixel_scale + image.shape[1] / 2
 
         if PLOTS:
-            plt.imshow(image, norm=LogNorm())
-            # plt.plot(xs, ys, "r.")
+            plt.imshow(image, #norm=LogNorm(),
+                       vmin=0.9999*np.median(image), vmax=1.01*np.median(image))
             plt.show()
 
-            snr = get_snr(xs=xs, ys=ys, image=hdus[0][1].data, inner=5, outer=10)
-            plt.plot(src.fields[0]["weight"], snr)
-            plt.show()
+            # snr = get_snr(xs=xs, ys=ys, image=hdus[0][1].data, inner=3, outer=9)
+            # plt.loglog(src.fields[0]["weight"], snr)
+            # plt.show()
 
 
 def get_snr(xs, ys, image, inner, outer):

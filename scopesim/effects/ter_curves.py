@@ -295,6 +295,10 @@ class FilterCurve(TERCurve):
                                  "{}".format(kwargs))
 
         super(FilterCurve, self).__init__(**kwargs)
+        if self.table is None:
+            raise ValueError("Could not initialise filter. Either filename not "
+                             "found, or array are not compatible")
+
         params = {"minimum_throughput": "!SIM.spectral.minimum_throughput",
                   "action": "transmission",
                   "position": -1,               # position in surface table
@@ -403,16 +407,17 @@ class FilterWheel(Effect):
         self.meta.update(params)
         self.meta.update(kwargs)
 
-        path = pth.join(self.meta["path"], self.meta["filename_format"])
-        self.filters = {name: FilterCurve(filename=path.format(name),
-                                          name=name, **kwargs)
-                        for name in self.meta["filter_names"]}
+        path = pth.join(self.meta["path"], from_currsys(self.meta["filename_format"]))
+        self.filters = {}
+        for name in self.meta["filter_names"]:
+            kwargs["name"] = name
+            self.filters[name] = FilterCurve(filename=path.format(name), **kwargs)
 
     def apply_to(self, obj):
         return self.current_filter.apply_to(obj)
 
     def fov_grid(self, which="waveset", **kwargs):
-        return self.current_filter(which=which, **kwargs)
+        return self.current_filter.fov_grid(which=which, **kwargs)
 
     @property
     def current_filter(self):

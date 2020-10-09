@@ -21,7 +21,9 @@ def setup_module():
     for path in [IMG_PATH, LATEX_PATH, RST_PATH]:
         if not os.path.exists(path):
             os.mkdir(path)
-            rc.__config__["!SIM.reports.image_path"] = path
+    rc.__config__["!SIM.reports.image_path"] = IMG_PATH
+    rc.__config__["!SIM.reports.latex_path"] = LATEX_PATH
+    rc.__config__["!SIM.reports.rst_path"] = RST_PATH
 
 
 def teardown_module():

@@ -171,7 +171,7 @@ class DetectorWindow(DetectorList):
     Parameters
     ----------
     pixel_size : float
-        [mm / pix] Physical pixel size
+        [mm pixel-1] Physical pixel size
     x, y : float
         [mm] Position of window centre relative to optical axis
     width, height=None : float

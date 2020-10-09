@@ -20,7 +20,6 @@ from matplotlib.colors import LogNorm
 if rc.__config__["!SIM.tests.run_integration_tests"] is False:
     pytestmark = pytest.mark.skip("Ignoring HAWKI integration tests")
 
-rc.__config__["!SIM.file.local_packages_path"] = "./hawki_temp/"
 
 PKGS = {"Paranal": "locations/Paranal.zip",
         "VLT": "telescopes/VLT.zip",
@@ -32,7 +31,8 @@ PLOTS = False
 
 def setup_module():
     rc.__config__["!SIM.file.use_cached_downloads"] = False
-    rc_local_path = rc.__config__["!SIM.file.local_packages_path"]
+    rc_local_path = "./TEMP_HAWKI/"
+    rc.__config__["!SIM.file.local_packages_path"] = rc_local_path
 
     if not os.path.exists(rc_local_path):
         os.mkdir(rc_local_path)

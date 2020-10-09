@@ -152,7 +152,6 @@ __all__ = ["PSF", "PSFCube",
 # UserPSFCube       filename,           pix_res=0.004, size=f(filename), fits_ext=0
 
 
-
 class PSF(object):
     """Point spread function (single layer) base class
 
