@@ -235,7 +235,8 @@ def plotify_rst_text(rst_text):
     walk(publish_doctree(rst_text))
 
 
-def latexify_rst_text(rst_text, filename=None, path=None, title_char="="):
+def latexify_rst_text(rst_text, filename=None, path=None, title_char="=",
+                      float_figures=True, use_code_box=True):
     """
     Converts an RST string (block of text) into a LaTeX string
 
@@ -252,6 +253,11 @@ def latexify_rst_text(rst_text, filename=None, path=None, title_char="="):
         Where to save the latex file
     title_char : str, optional
         The character used to underline the rst text title. Usually "=".
+    float_figures : bool, optional
+        Set to False if figures should not be placed by LaTeX.
+        Replaces all ``\begin{figure}`` with ``\begin{figure}[H]``
+    use_code_box : bool, optional
+        Adds a box around quote blocks
 
     Returns
     -------
@@ -294,6 +300,16 @@ def latexify_rst_text(rst_text, filename=None, path=None, title_char="="):
 
     text = "Title\n<<<<<\nSubtitle\n>>>>>>>>\n\n"
     parts = publish_parts(text + rst_text, writer_name="latex")
+
+    if not float_figures:
+        parts["body"] = parts["body"].replace('begin{figure}',
+                                              'begin{figure}[H]')
+
+    if use_code_box:
+        parts["body"] = parts["body"].replace('begin{alltt}',
+                                              'begin{alltt}\n\\begin{lstlisting}[frame=single]')
+        parts["body"] = parts["body"].replace('end{alltt}',
+                                              'end{lstlisting}\n\\end{alltt}')
 
     filename = filename.split(".")[0] + ".tex"
     file_path = os.path.join(path, filename)
