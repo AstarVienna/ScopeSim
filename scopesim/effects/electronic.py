@@ -10,7 +10,7 @@ from ..utils import real_colname, from_currsys, check_keys, interp2
 
 class SummedExposure(Effect):
     """
-    Simualtes a summed stack of ``ndit`` exposures
+    Simulates a summed stack of ``ndit`` exposures
 
     """
     def __init__(self, **kwargs):
