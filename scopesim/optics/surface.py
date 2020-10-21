@@ -17,12 +17,20 @@ from .surface_utils import make_emission_from_emissivity,\
     make_emission_from_array
 
 
+class PoorMansSurface:
+    """ Solely used by SurfaceList """
+    def __init__(self, emission, throughput, meta):
+        self.emission = emission
+        self.throughput = throughput
+        self.meta = meta
+
+
 class SpectralSurface:
     """
     Initialised by a file containing one or more of the following columns:
     transmission, emissivity, reflection. The column wavelength must be given.
     Alternatively kwargs for the above mentioned quantities can be passed as
-    arrays. If they aren't Quantities, then a unit should also be passed with
+    arrays. If they are not Quantities, then a unit should also be passed with
     the <array_name>_unit syntax (i.e. emission_unit or wavelength_unit)
 
     """
@@ -68,6 +76,10 @@ class SpectralSurface:
     @property
     def wavelength(self):
         return self._get_array("wavelength")
+
+    @property
+    def throughput(self):
+        return self._get_ter_property(self.meta.get("action", "transmission"))
 
     @property
     def transmission(self):
@@ -145,7 +157,7 @@ class SpectralSurface:
 
         return meta_quantity
 
-    def _get_ter_property(self, ter_property):
+    def _get_ter_property(self, ter_property, fmt="synphot"):
         """
         Looks for arrays for transmission, emissivity, or reflection
 
@@ -169,9 +181,11 @@ class SpectralSurface:
         if value_arr is None:
             value_arr = self._compliment_array(*compliment_names)
 
-        if value_arr is not None and wave is not None:
+        if value_arr is not None and wave is not None and fmt == "synphot":
             response_curve = SpectralElement(Empirical1D, points=wave,
                                              lookup_table=value_arr)
+        elif fmt == "array":
+            response_curve = value_arr
         else:
             response_curve = None
             warnings.warn("Both wavelength and {} must be set"

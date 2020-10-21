@@ -72,6 +72,7 @@ class OpticalTrain:
         self.image_planes = []
         self.detector_arrays = []
         self.yaml_dicts = None
+        self._last_source = None
 
         if cmds is not None:
             self.load(cmds)
@@ -159,6 +160,8 @@ class OpticalTrain:
         fovs = self.fov_manager.fovs
         for fov_i, fov in enumerate(fovs):
             # print("FOV", fov_i+1, "of", n_fovs, flush=True)
+            # .. todo: possible bug with bg flux not using plate_scale
+            #          see fov_utils.combine_imagehdu_fields
             fov.extract_from(source)
             fov.view()
 
@@ -172,6 +175,8 @@ class OpticalTrain:
         for effect in self.optics_manager.image_plane_effects:
             for ii in range(len(self.image_planes)):
                 self.image_planes[ii] = effect.apply_to(self.image_planes[ii])
+
+        self._last_source = source
 
     def readout(self, filename=None, **kwargs):
         """
@@ -222,4 +227,22 @@ class OpticalTrain:
 
     def __setitem__(self, key, value):
         self.optics_manager[key] = value
+
+    def report(self):
+        pass
+        # user commands report
+        #   package dependencies
+        #   modes names
+        #   default modes
+        #   yaml hierarchy
+        #
+        # optics_manager
+        #   derived properties
+        #   system transmission curve
+        #   list of effects
+        #
+        # etc
+        #   limiting magnitudes
+        #
+
 

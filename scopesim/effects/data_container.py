@@ -56,7 +56,6 @@ class DataContainer:
         to the data open FITS file.
 
     """
-
     def __init__(self, filename=None, table=None, array_dict=None, **kwargs):
 
         if filename is None and "file_name" in kwargs:
@@ -64,6 +63,7 @@ class DataContainer:
 
         filename = utils.find_file(filename)
         self.meta = {"filename": filename,
+                     "description": "",
                      "history": [],
                      "name": "<empty>"}
         self.meta.update(kwargs)
@@ -189,5 +189,3 @@ class DataContainer:
     def validate(self, etype):
         etype_colname = utils.real_colname("ETYPE", self.meta.colnames)
         return self.meta[etype_colname] == etype
-
-

@@ -2,8 +2,8 @@ import os
 import pytest
 
 from scopesim import rc
-from scopesim.effects import effects_utils as e_utils, GaussianDiffractionPSF
-from scopesim.effects import SurfaceList
+from scopesim.effects import effects_utils as eu, GaussianDiffractionPSF, \
+    SurfaceList
 from scopesim.tests.mocks.py_objects.effects_objects import _surf_list, \
     _surf_list_empty, _filter_surface
 from scopesim.tests.mocks.py_objects.yaml_objects import _atmo_yaml_dict
@@ -39,39 +39,32 @@ class TestMakeEffect:
     def test_it_creates_an_effects_object(self, atmo_yaml_dict):
         effdic = atmo_yaml_dict["effects"][0]
         properties = atmo_yaml_dict["properties"]
-        effect = e_utils.make_effect(effdic, **properties)
+        effect = eu.make_effect(effdic, **properties)
 
         assert isinstance(effect, GaussianDiffractionPSF)
         assert effect.meta["diameter"] == 39
 
 
 @pytest.mark.usefixtures("surf_list", "filter_surface")
-class TestMakeRadiometryTable:
+class TestCombineSurfaceEffects:
     def test_load_just_one_surface(self, filter_surface):
-        rad_table = e_utils.combine_surface_effects([filter_surface])
-        assert isinstance(rad_table, SurfaceList)
+        surf_list = eu.combine_surface_effects([filter_surface])
+        assert isinstance(surf_list, SurfaceList)
+        assert len(surf_list.table) == 1
 
     def test_load_two_surfaces(self, filter_surface):
-        rad_table = e_utils.combine_surface_effects([filter_surface] * 3)
-        assert len(rad_table.radiometry_table.table) == 3
+        surf_list = eu.combine_surface_effects([filter_surface] * 3)
+        assert len(surf_list.table) == 3
 
     def test_load_just_one_surface_list(self, surf_list):
-        rad_table = e_utils.combine_surface_effects([surf_list])
-        len1 = len(surf_list.table)
-        len2 = len(rad_table.radiometry_table.table)
-        assert len2 == len1
+        new_surf_list = eu.combine_surface_effects([surf_list])
+        assert len(new_surf_list.table) == len(surf_list.table)
 
     def test_load_two_surface_lists(self, surf_list):
-        rad_table = e_utils.combine_surface_effects([surf_list, surf_list])
-        len1 = len(surf_list.radiometry_table.table)
-        len2 = len(rad_table.radiometry_table.table)
-        assert len2 == 2 * len1
+        new_surf_list = eu.combine_surface_effects([surf_list] * 3)
+        assert len(new_surf_list.table) == 3 * len(surf_list.table)
 
     def test_load_one_surface_and_one_surface_list(self, surf_list,
                                                    filter_surface):
-        rad_table = e_utils.combine_surface_effects([surf_list,
-                                                     filter_surface])
-        len1 = len(surf_list.table)
-        len2 = len(rad_table.table)
-        assert len2 == len1 + 1
-
+        new_surf_list = eu.combine_surface_effects([filter_surface, surf_list])
+        assert len(new_surf_list.table) == len(surf_list.table) + 1

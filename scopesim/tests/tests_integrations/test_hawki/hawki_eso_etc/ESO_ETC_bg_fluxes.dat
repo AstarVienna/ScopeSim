@@ -1,0 +1,9 @@
+# note: all for airmass=1 and pwv=2.5
+# bg_flux_unit: ph s-1 pixel-1
+filter_name bg_flux
+Y           170
+J           453
+H           3249
+K           5109
+BrGamma     390
+CH4         1364

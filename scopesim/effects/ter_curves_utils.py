@@ -3,7 +3,7 @@ from astropy import units as u
 from astropy.table import Table
 from astropy.utils.data import download_file
 from astropy.io import ascii as ioascii
-from synphot import SpectralElement, Empirical1D, Observation
+from synphot import SpectralElement, SourceSpectrum, Empirical1D, Observation
 from synphot.units import PHOTLAM
 
 from ..source.source_templates import vega_spectrum, st_spectrum, \
@@ -245,3 +245,53 @@ def scale_spectrum(spectrum, filter_name, amplitude):
 
     return spectrum
 
+
+def combine_two_spectra(spec_a, spec_b, action, wave_min, wave_max):
+    """
+    Combines transmission and/or emission spectrum with a common waverange
+
+    Spec_A is the source spectrum
+    Spec_B is either the transmission or emission that should be applied
+
+    Parameters
+    ----------
+    spec_a : synphot.SourceSpectrum
+    spec_b : synphot.SpectralElement, synphot.SourceSpectrum
+    action: str
+        ["multiply", "add"]
+    wave_min, wave_max : quantity
+        [Angstrom]
+
+    Returns
+    -------
+    new_source : synphot.SourceSpectrum
+
+    """
+
+    wave_val = spec_a.waveset.value
+    mask = (wave_val > wave_min.value) * (wave_val < wave_max.value)
+
+    wave = ([wave_min.value] + list(wave_val[mask]) + [wave_max.value]) * u.AA
+    if "mult" in action.lower():
+        spec_c = spec_a(wave) * spec_b(wave)
+    elif "add" in action.lower():
+        spec_c = spec_a(wave) + spec_b(wave)
+
+    new_source = SourceSpectrum(Empirical1D, points=wave, lookup_table=spec_c)
+    new_source.meta.update(spec_b.meta)
+    new_source.meta.update(spec_a.meta)
+
+    return new_source
+
+
+def add_edge_zeros(tbl, wave_colname):
+    if isinstance(tbl, Table):
+        vals = np.zeros(len(tbl.colnames))
+        col_i = np.where(col == wave_colname for col in tbl.colnames)[0][0]
+        sgn = np.sign(np.diff(tbl[wave_colname][:2]))
+        vals[col_i] = tbl[wave_colname][0] * (1 - 1e-7 * sgn)
+        tbl.insert_row(0, vals)
+        vals[col_i] = tbl[wave_colname][-1] * (1 + 1e-7 * sgn)
+        tbl.insert_row(len(tbl), vals)
+
+    return tbl

@@ -66,7 +66,7 @@ TERCurves
 SurfaceLists
 
 * 120 SurfaceList
-* 121 MasterSurfaceList     !!! Write
+* 124 FilterWheel
 
 
 200..299 Make FOVs (3D)
@@ -75,11 +75,12 @@ SurfaceLists
 
 TERCurves
 
-* 214 FilterCurve
+* 220 SurfaceList
+* 224 FilterCurve
 
 SurfaceLists
 
-* 221 MasterSurfaceList     !!! Write
+* 221 FilterWheel
 
 Shift3Ds
 
@@ -136,7 +137,18 @@ Detectors
 -------------------------
 ``<OpticsManager>.source_effects``
 
-* 521 MasterSurfaceList     !!! Write   (system throughput)
+TERCurves
+
+* 510 TERCurve              !!! Add scaling for mags
+* 511 AtmosphericTERCurve
+* 512 SkycalcTERCurve
+* 513 QuantumEfficiencyCurve
+* 514 FilterCurve
+
+SurfaceLists
+
+* 520 SurfaceList
+* 524 FilterWheel
 
 
 600..699 apply-to(FieldOfView)

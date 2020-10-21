@@ -5,6 +5,10 @@ class SourceBase:
     pass
 
 
+class FOVSetupBase:
+    pass
+
+
 class ImagePlaneBase:
     pass
 

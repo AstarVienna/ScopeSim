@@ -189,6 +189,13 @@ class AtmosphericDispersionCorrection(Shift3D):
         else:
             return None
 
+    def plot(self, fov):
+        import matplotlib.pyplot as plt
+
+        plt.imshow(fov)
+
+
+
 
 def atmospheric_refraction(lam, z0=60, temp=0, rel_hum=60, pres=750,
                            lat=-24.5, h=3064):

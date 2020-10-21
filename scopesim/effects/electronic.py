@@ -9,6 +9,10 @@ from ..utils import real_colname, from_currsys, check_keys, interp2
 
 
 class SummedExposure(Effect):
+    """
+    Simulates a summed stack of ``ndit`` exposures
+
+    """
     def __init__(self, **kwargs):
         super(SummedExposure, self).__init__(**kwargs)
         self.meta["z_order"] = [860]
@@ -52,10 +56,27 @@ class PoorMansHxRGReadoutNoise(Effect):
             ron_kwargs = {key: self.meta[key] for key in ron_keys}
             ron_kwargs["image_shape"] = det._hdu.data.shape
 
-            for _ in range(self.meta["ndit"]):
-                det._hdu.data += make_ron_frame(**ron_kwargs)
+            ron_frame = make_ron_frame(**ron_kwargs)
+            stacked_ron_frame = np.zeros_like(ron_frame)
+            for i in range(self.meta["ndit"]):
+                dx = np.random.randint(0, ron_frame.shape[1])
+                dy = np.random.randint(0, ron_frame.shape[0])
+                stacked_ron_frame += np.roll(ron_frame, (dy, dx), axis=(0, 1))
+
+            det._hdu.data += stacked_ron_frame
 
         return det
+
+    def plot(self, det, **kwargs):
+        import matplotlib.pyplot as plt
+        dtcr = self.apply_to(det)
+        plt.imshow(dtcr.data, origin="lower")
+
+
+    def plot_hist(self, det, **kwargs):
+        import matplotlib.pyplot as plt
+        dtcr = self.apply_to(det)
+        plt.hist(dtcr.data.flatten())
 
 
 class BasicReadoutNoise(Effect):
@@ -79,6 +100,16 @@ class BasicReadoutNoise(Effect):
                                               size=det._hdu.data.shape)
 
         return det
+
+    def plot(self, det):
+        import matplotlib.pyplot as plt
+        dtcr = self.apply_to(det)
+        plt.imshow(dtcr.data)
+
+    def plot_hist(self, det, **kwargs):
+        import matplotlib.pyplot as plt
+        dtcr = self.apply_to(det)
+        plt.hist(dtcr.data.flatten())
 
 
 class ShotNoise(Effect):
@@ -110,6 +141,16 @@ class ShotNoise(Effect):
 
         return det
 
+    def plot(self, det):
+        import matplotlib.pyplot as plt
+        dtcr = self.apply_to(det)
+        plt.imshow(dtcr.data)
+
+    def plot_hist(self, det, **kwargs):
+        import matplotlib.pyplot as plt
+        dtcr = self.apply_to(det)
+        plt.hist(dtcr.data.flatten())
+
 
 class DarkCurrent(Effect):
     """
@@ -140,6 +181,19 @@ class DarkCurrent(Effect):
 
         return obj
 
+    def plot(self, det, **kwargs):
+        import matplotlib.pyplot as plt
+        dit = from_currsys(self.meta["dit"])
+        ndit = from_currsys(self.meta["ndit"])
+        total_time = dit * ndit
+        times = np.linspace(0, 2*total_time, 10)
+        dtcr = self.apply_to(det)
+        dark_level = dtcr.data[0, 0] / total_time  # just read one pixel
+        levels = dark_level * times
+        plt.plot(times, levels, **kwargs)
+        plt.xlabel("time")
+        plt.ylabel("dark level")
+
 
 class LinearityCurve(Effect):
     def __init__(self, **kwargs):
@@ -165,6 +219,15 @@ class LinearityCurve(Effect):
 
         return det
 
+    def plot(self, **kwargs):
+        import matplotlib.pyplot as plt
+        ndit = from_currsys(self.meta["ndit"])
+
+        incident = self.table["incident"] * ndit
+        measured = self.table["measured"] * ndit
+
+        plt.plot(incident, measured, **kwargs)
+
 
 class ReferencePixelBorder(Effect):
     def __init__(self, **kwargs):
@@ -189,6 +252,13 @@ class ReferencePixelBorder(Effect):
                 implane.hdu.data[:self.meta["left"], :] = 0
 
         return implane
+
+    def plot(self, implane, **kwargs):
+        import matplotlib.pyplot as plt
+
+        implane = self.apply_to(implane)
+        plt.imshow(implane.data, origin="bottom", **kwargs)
+        plt.show()
 
 
 class BinnedImage(Effect):

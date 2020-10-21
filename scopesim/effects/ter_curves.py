@@ -1,16 +1,18 @@
 import numpy as np
 from astropy import units as u
-from astropy.table import Table
 from os import path as pth
 import warnings
 
 from astropy.io import fits
 from synphot import SourceSpectrum
 
+from .ter_curves_utils import combine_two_spectra, add_edge_zeros, download_svo_filter
 from .effects import Effect
 from ..optics.surface import SpectralSurface
+from ..source.source_utils import make_imagehdu_from_table
+from ..source.source import Source
+from ..base_classes import SourceBase
 from ..utils import from_currsys, quantify, check_keys
-from .ter_curves_utils import download_svo_filter
 
 
 class TERCurve(Effect):
@@ -57,11 +59,19 @@ class TERCurve(Effect):
     """
     def __init__(self, **kwargs):
         super(TERCurve, self).__init__(**kwargs)
-        self.meta["z_order"] = [10, 110]
-        self.meta["ignore_wings"] = False
+        params = {"z_order": [10, 110, 510],
+                  "ignore_wings": False,
+                  "wave_min": "!SIM.spectral.wave_min",
+                  "wave_max": "!SIM.spectral.wave_max",
+                  "wave_unit": "!SIM.spectral.wave_unit",
+                  "wave_bin": "!SIM.spectral.spectral_resolution"}
+        self.meta.update(params)
         self.meta.update(kwargs)
+
         self.surface = SpectralSurface()
         self.surface.meta.update(self.meta)
+        self._background_source = None
+
         data = self.get_data()
         if self.meta["ignore_wings"]:
             data = add_edge_zeros(data, "wavelength")
@@ -69,29 +79,102 @@ class TERCurve(Effect):
             self.surface.table = data
             self.surface.table.meta.update(self.meta)
 
+    # ####### added in new branch
 
-def add_edge_zeros(tbl, wave_colname):
-    if isinstance(tbl, Table):
-        vals = np.zeros(len(tbl.colnames))
-        col_i = np.where(col == wave_colname for col in tbl.colnames)[0][0]
-        sgn = np.sign(np.diff(tbl[wave_colname][:2]))
-        vals[col_i] = tbl[wave_colname][0] * (1 - 1e-7 * sgn)
-        tbl.insert_row(0, vals)
-        vals[col_i] = tbl[wave_colname][-1] * (1 + 1e-7 * sgn)
-        tbl.insert_row(len(tbl), vals)
+    def apply_to(self, obj):
+        if isinstance(obj, SourceBase):
+            self.meta = from_currsys(self.meta)
+            wave_min = quantify(self.meta["wave_min"], u.um).to(u.AA)
+            wave_max = quantify(self.meta["wave_max"], u.um).to(u.AA)
 
-    return tbl
+            # apply transmission to source spectra
+            for ii, spec in enumerate(obj.spectra):
+                thru = self.throughput
+                obj.spectra[ii] = combine_two_spectra(spec, thru, "multiply",
+                                                      wave_min, wave_max)
+
+            # add the effect background to the source background field
+            if self.background_source is not None:
+                obj.append(self.background_source)
+
+        return obj
+
+    @property
+    def emission(self):
+        return self.surface.emission
+
+    @property
+    def throughput(self):
+        return self.surface.throughput
+
+    @property
+    def background_source(self):
+        if self._background_source is None:
+            # add a single pixel ImageHDU for the extended background with a
+            # size of 1 degree
+            flux = self.emission
+            bg_hdu = make_imagehdu_from_table([0], [0], [1], 1 * u.deg)
+            bg_hdu.header["BG_SRC"] = True
+            bg_hdu.header["BG_SURF"] = self.meta.get("name", "<untitled>")
+            self._background_source = Source(image_hdu=bg_hdu, spectra=flux)
+
+        return self._background_source
+
+    # #######
+
+    def plot(self, which="x", wavelength=None, ax=None, **kwargs):
+        """
+
+        Parameters
+        ----------
+        which : str
+            "x" plots throughput. "t","e","r" plot trans/emission/refl
+        wavelength : list, np.ndarray
+        ax : matplotlib.Axis
+        kwargs
+
+        Returns
+        -------
+
+        """
+        import matplotlib.pyplot as plt
+
+        self.meta.update(kwargs)
+        params = from_currsys(self.meta)
+
+        for ii, ter in enumerate(which):
+            if ax is None:
+                plt.subplot(len(which), 1, ii+1)
+
+            if wavelength is None:
+                wunit = params["wave_unit"]
+                wave = np.arange(quantify(params["wave_min"], wunit).value,
+                                 quantify(params["wave_max"], wunit).value,
+                                 quantify(params["wave_bin"], wunit).value)
+                wave *= u.Unit(wunit)
+            else:
+                wave = wavelength
+
+            plot_kwargs = self.meta.get("plot_kwargs", {})
+            surf = self.surface
+            if "t" in ter:
+                plt.plot(wave, surf.transmission(wave), **plot_kwargs)
+            elif "e" in ter:
+                plt.plot(wave, surf.emission(wave), **plot_kwargs)
+            elif "r" in ter:
+                plt.plot(wave, surf.reflection(wave), **plot_kwargs)
+            else:
+                plt.plot(wave, surf.throughput(wave), **plot_kwargs)
 
 
 class AtmosphericTERCurve(TERCurve):
     def __init__(self, **kwargs):
         super(AtmosphericTERCurve, self).__init__(**kwargs)
-        self.meta["z_order"] = [111]
+        self.meta["z_order"] = [111, 511]
         self.meta["action"] = "transmission"
-        self.meta["area"] = "!TEL.area"
-        self.meta["area_unit"] = "m2"
         self.meta["position"] = 0       # position in surface table
         self.meta.update(kwargs)
+        self.surface.meta.update(self.meta)
 
 
 class SkycalcTERCurve(AtmosphericTERCurve):
@@ -126,7 +209,7 @@ class SkycalcTERCurve(AtmosphericTERCurve):
         import skycalc_ipy
 
         super(SkycalcTERCurve, self).__init__(**kwargs)
-        self.meta["z_order"] = [112]
+        self.meta["z_order"] = [112, 512]
         self.meta.update(kwargs)
 
         self.skycalc_conn = skycalc_ipy.SkyCalc()
@@ -172,14 +255,14 @@ class QuantumEfficiencyCurve(TERCurve):
     def __init__(self, **kwargs):
         super(QuantumEfficiencyCurve, self).__init__(**kwargs)
         self.meta["action"] = "transmission"
-        self.meta["z_order"] = [113]
+        self.meta["z_order"] = [113, 513]
         self.meta["position"] = -1          # position in surface table
 
 
 class FilterCurve(TERCurve):
     """
-    kwargs
-    ------
+    Other Parameters
+    ----------------
     position : int
     filter_name : str
         ``Ks`` - corresponding to the filter name in the filename pattern
@@ -211,12 +294,16 @@ class FilterCurve(TERCurve):
                                  "{}".format(kwargs))
 
         super(FilterCurve, self).__init__(**kwargs)
+        if self.table is None:
+            raise ValueError("Could not initialise filter. Either filename not "
+                             "found, or array are not compatible")
+
         params = {"minimum_throughput": "!SIM.spectral.minimum_throughput",
                   "action": "transmission",
                   "position": -1,               # position in surface table
                   "wing_flux_level": None}
         self.meta.update(params)
-        self.meta["z_order"] = [114, 214]
+        self.meta["z_order"] = [114, 214, 514]
         self.meta.update(kwargs)
 
         min_thru = from_currsys(self.meta["minimum_throughput"])
@@ -249,6 +336,28 @@ class FilterCurve(TERCurve):
 
         return wave_edges
 
+    @property
+    def fwhm(self):
+        wave = self.surface.wavelength
+        thru = self.surface._get_ter_property("transmission", fmt="array")
+        mask = thru >= 0.5
+        dwave = wave[mask][-1] - wave[mask][0]
+
+        return dwave
+
+    @property
+    def centre(self):
+        wave = self.surface.wavelength
+        thru = self.surface._get_ter_property("transmission", fmt="array")
+        num = np.trapz(thru * wave**2, x=wave)
+        den = np.trapz(thru * wave, x=wave)
+
+        return num / den
+
+    def center(self):
+        return self.centre
+
+
 
 class DownloadableFilterCurve(FilterCurve):
     def __init__(self, **kwargs):
@@ -268,4 +377,70 @@ class SpanishVOFilterCurve(FilterCurve):
                                      kwargs["filter_name"])
         tbl = download_svo_filter(filt_str, return_style="table")
         super(SpanishVOFilterCurve, self).__init__(table=tbl, **kwargs)
+
+
+class FilterWheel(Effect):
+    """
+
+    Examples
+    --------
+    ::
+
+        name: filter_wheel
+        class: FilterWheel
+        kwargs:
+            filter_names: []
+            filename_format: "filters/{}.
+            current_filter: "Ks"
+
+    """
+
+    def __init__(self, **kwargs):
+        required_keys = ["filter_names", "filename_format", "current_filter"]
+        check_keys(kwargs, required_keys, action="error")
+
+        super(FilterWheel, self).__init__(**kwargs)
+
+        params = {"z_order": [124, 224, 524],
+                  "path": ""}
+        self.meta.update(params)
+        self.meta.update(kwargs)
+
+        path = pth.join(self.meta["path"], from_currsys(self.meta["filename_format"]))
+        self.filters = {}
+        for name in self.meta["filter_names"]:
+            kwargs["name"] = name
+            self.filters[name] = FilterCurve(filename=path.format(name), **kwargs)
+
+    def apply_to(self, obj):
+        return self.current_filter.apply_to(obj)
+
+    def fov_grid(self, which="waveset", **kwargs):
+        return self.current_filter.fov_grid(which=which, **kwargs)
+
+    @property
+    def current_filter(self):
+        return self.filters[from_currsys(self.meta["current_filter"])]
+
+    def plot(self, which="x", wavelength=None, **kwargs):
+        """
+
+        Parameters
+        ----------
+        which : str
+            "x" plots throughput. "t","e","r" plot trans/emission/refl
+        wavelength
+        kwargs
+
+        Returns
+        -------
+
+        """
+        import matplotlib.pyplot as plt
+
+        for ii, ter in enumerate(which):
+            ax = plt.subplot(len(which), 1, ii+1)
+            for name in self.filters:
+                self.filters[name].plot(which=ter, wavelength=wavelength,
+                                        ax=ax, **kwargs)
 

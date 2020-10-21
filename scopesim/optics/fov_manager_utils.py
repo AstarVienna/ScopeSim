@@ -95,7 +95,7 @@ def get_imaging_waveset(effects_list, **kwargs):
     check_keys(kwargs, required_keys, action="error")
 
     # get the filter wavelengths first to set (wave_min, wave_max)
-    filters = get_all_effects(effects_list, efs.FilterCurve)
+    filters = get_all_effects(effects_list, (efs.FilterCurve, efs.FilterWheel))
 
     wave_bin_edges = [filt.fov_grid(which="waveset", **kwargs)
                       for filt in filters]

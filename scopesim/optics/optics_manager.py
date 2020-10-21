@@ -1,6 +1,7 @@
 import warnings
 from inspect import isclass
 
+import numpy as np
 from astropy import units as u
 from astropy.table import Table
 
@@ -8,6 +9,7 @@ from .optical_element import OpticalElement
 from .. import effects as efs
 from ..effects.effects_utils import is_spectroscope
 from ..effects.effects_utils import combine_surface_effects
+from ..utils import table_to_rst, write_report
 from .. import rc
 
 
@@ -43,8 +45,8 @@ class OpticsManager:
             raise ValueError("!INST.pixel_scale is missing from the current"
                              "system. Please add this to the instrument (INST)"
                              "properties dict for the system.")
-        area = self.surfaces_table.area
         pixel_scale = rc.__currsys__["!INST.pixel_scale"] * u.arcsec
+        area = self.area
         etendue = area * pixel_scale**2
         rc.__currsys__["!TEL.etendue"] = etendue
         rc.__currsys__["!TEL.area"] = area
@@ -147,7 +149,7 @@ class OpticsManager:
 
         Parameters
         ----------
-        z_level : int
+        z_level : int, tuple
             [0, 100, 200, 300, 400, 500]
 
         Returns
@@ -184,20 +186,16 @@ class OpticsManager:
     @property
     def image_plane_effects(self):
         effects = self.get_z_order_effects(700)
-        if not self.is_spectroscope:
-            effects += [self.surfaces_table]   # Background Emission if Imager
         return effects
 
     @property
     def fov_effects(self):
         effects = self.get_z_order_effects(600)
-        if self.is_spectroscope:
-            effects += [self.surfaces_table]   # Background Emission if Spectroscope
         return effects
 
     @property
     def source_effects(self):
-        return self.get_z_order_effects(500) + [self.surfaces_table]    # Transmission
+        return self.get_z_order_effects(500)   # Transmission
 
     @property
     def detector_setup_effects(self):
@@ -210,7 +208,8 @@ class OpticsManager:
 
     @property
     def fov_setup_effects(self):
-        return self.get_z_order_effects(200) + [self.surfaces_table]    # Working out where to set wave_min, wave_max
+        # Working out where to set wave_min, wave_max
+        return self.get_z_order_effects(200)
 
     @property
     def surfaces_table(self):
@@ -219,26 +218,64 @@ class OpticsManager:
             self._surfaces_table = combine_surface_effects(surface_like_effects)
         return self._surfaces_table
 
-    def list_effects(self):
-        elements = []
-        names = []
-        classes = []
-        included = []
-        z_orders = []
+    @property
+    def area(self):
+        surf_lists = self.get_all(efs.SurfaceList)
+        areas = [0] + [surf_list.area.value for surf_list in surf_lists]
+        _area = np.max(areas) * u.m**2
 
-        for opt_el in self.optical_elements:
-            for eff in opt_el.effects:
-                elements += [opt_el.meta["name"]]
-                names += [eff.meta["name"]]
-                classes += [eff.__class__.__name__]
-                included += [eff.meta["include"]]
-                z_orders += [eff.meta["z_order"]]
+        return _area
+
+    def list_effects(self):
+        # unfortunately this does not work because of the astropy internal
+        # conversion to np.arrays if all column entries are a list with the
+        # same number of entries
+        # tbls = [opt_el.list_effects() for opt_el in self.optical_elements]
+        # tbl = vstack(tbls)
+
+        # Hence we need to reconstruct the full effects list
+
+        # flat_list = [item for sublist in l for item in sublist]
+        all_effs = [eff for opt_eff in self.optical_elements for eff in opt_eff]
+
+        elements = [opt_el.meta["name"] for opt_el in self.optical_elements
+                    for eff in opt_el.effects]
+        names = [eff.meta["name"] for eff in all_effs]
+        classes = [eff.__class__.__name__ for eff in all_effs]
+        included = [eff.meta["include"] for eff in all_effs]
+        z_orders = [eff.meta["z_order"] for eff in all_effs]
 
         colnames = ["element", "name", "class", "included", "z_orders"]
-        data =     [ elements,  names,  classes, included,   z_orders]
+        data = [elements, names, classes, included, z_orders]
         tbl = Table(names=colnames, data=data, copy=False)
 
         return tbl
+
+    def report(self, filename=None, output="rst", rst_title_chars="_^#*+",
+               **kwargs):
+
+        rst_str = """
+List of Optical Elements
+{}
+
+Summary of Effects in Optical Elements:
+{}
+
+.. table::
+    :name: tbl:effects_summary
+
+{}
+""".format(rst_title_chars[0] * 24,
+           rst_title_chars[1] * 39,
+           table_to_rst(self.list_effects(), indent=4))
+
+        reports = [opt_el.report(rst_title_chars=rst_title_chars[-4:], **kwargs)
+                   for opt_el in self.optical_elements]
+        rst_str += "\n\n" + "\n\n".join(reports)
+
+        write_report(rst_str, filename, output)
+
+        return rst_str
 
     def __add__(self, other):
         self.add_effect(other)
@@ -276,3 +313,9 @@ class OpticsManager:
                    ''.format(ii, opt_el.meta["name"], len(opt_el.effects))
 
         return msg
+
+    def __str__(self):
+        name = self.meta.get("name", self.meta.get("filename", "<empty>"))
+        return '{}: "{}"'.format(type(self).__name__, name)
+
+

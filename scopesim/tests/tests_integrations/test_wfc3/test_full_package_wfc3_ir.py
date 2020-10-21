@@ -18,7 +18,7 @@ from matplotlib.colors import LogNorm
 if rc.__config__["!SIM.tests.run_integration_tests"] is False:
     pytestmark = pytest.mark.skip("Ignoring WFC3 integration tests")
 
-rc.__config__["!SIM.file.local_packages_path"] = "./wfc3_temp/"
+
 
 PKGS = {"HST": "telescopes/HST.zip",
         "WFC3": "instruments/WFC3.zip"}
@@ -29,7 +29,8 @@ PLOTS = False
 
 def setup_module():
     rc.__config__["!SIM.file.use_cached_downloads"] = False
-    rc_local_path = rc.__config__["!SIM.file.local_packages_path"]
+    rc_local_path = "./TEMP_WFC3/"
+    rc.__config__["!SIM.file.local_packages_path"] = rc_local_path
 
     if not os.path.exists(rc_local_path):
         os.mkdir(rc_local_path)
@@ -147,7 +148,7 @@ class TestObserveOpticalTrain:
         # ..todo:: Don't know what the real HST background is
         opt.observe(src)
         print("HELLO", np.average(opt.image_planes[0].data))
-        assert np.average(opt.image_planes[0].data) == approx(0.22, rel=0.2)
+        assert np.average(opt.image_planes[0].data) == approx(0.11, rel=0.2)
 
     def test_actually_produces_stars(self):
         cmd = scopesim.UserCommands(use_instrument="WFC3",

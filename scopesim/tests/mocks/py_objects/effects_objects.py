@@ -11,8 +11,10 @@ from scopesim import rc
 
 FILES_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),
                                           "../files/"))
+MICADO_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),
+                                           "../MICADO_SCAO_WIDE/"))
 if FILES_PATH not in rc.__search_path__:
-    rc.__search_path__ += [FILES_PATH]
+    rc.__search_path__ += [FILES_PATH, MICADO_PATH]
 
 
 def _surf_list():
@@ -33,13 +35,14 @@ def _surf_list_empty():
     return efs.SurfaceList(**kwargs)
 
 
-def _filter_surface():
-    kwargs = {"filename": "TC_filter_Ks.dat",
+def _filter_surface(**kwargs):
+    params = {"filename": "TC_filter_Ks.dat",
               "name": "filter",
               "action": "transmission",
               "outer": 0.1,
               "temperature": 0}
-    return efs.TERCurve(**kwargs)
+    params.update(kwargs)
+    return efs.TERCurve(**params)
 
 
 def _mvs_effects_list():
@@ -53,7 +56,8 @@ def _mvs_effects_list():
 
 
 def _detector_list():
-    kwargs = {"filename": "LIST_detector_layout.dat", "image_plane_id": 0}
+    kwargs = {"filename": "LIST_detector_layout.dat", "image_plane_id": 0,
+              "report": {}}
     return efs.DetectorList(**kwargs)
 
 

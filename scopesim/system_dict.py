@@ -81,23 +81,24 @@ class SystemDict(object):
 
 
 def recursive_update(old_dict, new_dict):
-    for key in new_dict:
-        if key in old_dict:
-            if isinstance(old_dict[key], dict):
-                if isinstance(new_dict[key], dict):
-                    old_dict[key] = recursive_update(old_dict[key],
-                                                     new_dict[key])
+    if new_dict is not None:
+        for key in new_dict:
+            if old_dict is not None and key in old_dict:
+                if isinstance(old_dict[key], dict):
+                    if isinstance(new_dict[key], dict):
+                        old_dict[key] = recursive_update(old_dict[key],
+                                                         new_dict[key])
+                    else:
+                        warnings.warn("Overwriting dict: {} with non-dict: {}"
+                                      "".format(old_dict[key], new_dict[key]))
+                        old_dict[key] = new_dict[key]
                 else:
-                    warnings.warn("Overwriting dict: {} with non-dict: {}"
-                                  "".format(old_dict[key], new_dict[key]))
+                    if isinstance(new_dict[key], dict):
+                        warnings.warn("Overwriting non-dict: {} with dict: {}"
+                                      "".format(old_dict[key], new_dict[key]))
                     old_dict[key] = new_dict[key]
             else:
-                if isinstance(new_dict[key], dict):
-                    warnings.warn("Overwriting non-dict: {} with dict: {}"
-                                  "".format(old_dict[key], new_dict[key]))
                 old_dict[key] = new_dict[key]
-        else:
-            old_dict[key] = new_dict[key]
 
     return old_dict
 

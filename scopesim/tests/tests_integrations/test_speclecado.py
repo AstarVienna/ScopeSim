@@ -12,6 +12,7 @@ MOCK_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__),
                                         "../mocks/MICADO_SPEC/"))
 rc.__search_path__.insert(0, MOCK_DIR)
 
+
 PLOTS = False
 
 
@@ -24,11 +25,12 @@ class TestMicadoSpec:
         src3.fields[0]["x"][0] -= 1
         src = src1 + src2 + src3
 
-        cmd = UserCommands(yamls=["MICADO_SPEC.yaml"])
+        cmd = UserCommands(yamls=["mock_MICADO_SPEC.yaml"])
+        cmd["!SIM.file.local_packages_path"] = "./"
         opt = OpticalTrain(cmd)
         assert isinstance(opt, OpticalTrain)
 
-        opt.observe(src)
+        #opt.observe(src)
         # opt.readout(filename="temp_speclecado.fits")
         # opt.image_planes[0].hdu.writeto("temp_implane.fits", overwrite=True)
 

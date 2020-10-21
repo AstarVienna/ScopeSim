@@ -134,17 +134,28 @@ def combine_imagehdu_fields(fov_header, src, fields_indexes, wave_min, wave_max,
     image = np.zeros((fov_header["NAXIS2"], fov_header["NAXIS1"]))
     canvas_hdu = fits.ImageHDU(header=fov_header, data=image)
     order = int(rc.__config__["!SIM.computing.spline_order"])
+    pixel_area = fov_header["CDELT1"] * fov_header["CDELT2"] * \
+                 u.Unit(fov_header["CUNIT1"]).to(u.arcsec) ** 2
 
     for ii in fields_indexes:
-        if isinstance(src.fields[ii], fits.ImageHDU):
-            ref = src.fields[ii].header["SPEC_REF"]
+        field = src.fields[ii]
+        if isinstance(field, fits.ImageHDU):
+            ref = field.header["SPEC_REF"]
             flux = src.photons_in_range(wave_min, wave_max, area, indexes=[ref])
             image = np.zeros((fov_header["NAXIS2"], fov_header["NAXIS1"]))
             temp_hdu = fits.ImageHDU(header=fov_header, data=image)
-            temp_hdu = imp_utils.add_imagehdu_to_imagehdu(src.fields[ii],
-                                                          temp_hdu, order=order,
-                                                          wcs_suffix=wcs_suffix)
-            canvas_hdu.data += temp_hdu.data * flux[0].value
+
+            if field.header.get("BG_SRC", False) and \
+                    field.header["NAXIS1"] <= 1 and \
+                    field.header["NAXIS2"] <= 1:
+                # .. todo: check if we need to take pixel_scale into account
+                temp_hdu.data += flux[0].value * pixel_area
+            else:
+                temp_hdu = imp_utils.add_imagehdu_to_imagehdu(field, temp_hdu,
+                                                              order, wcs_suffix)
+                temp_hdu.data *= flux[0].value
+
+            canvas_hdu.data += temp_hdu.data
 
     return canvas_hdu
 
