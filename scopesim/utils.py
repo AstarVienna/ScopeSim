@@ -950,5 +950,6 @@ def write_report(text, filename=None, output=["rst"]):
                 out_text = out_text.decode("utf-8")
 
             suffix = {"rst": ".rst", "latex": ".tex"}[fmt]
-            with open(filename.split(".")[0] + suffix, "w") as f:
+            from pathlib import Path
+            with open(Path(filename).stem + suffix, "w") as f:
                 f.write(out_text)
