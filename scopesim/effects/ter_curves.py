@@ -88,8 +88,7 @@ class TERCurve(Effect):
             wave_max = quantify(self.meta["wave_max"], u.um).to(u.AA)
 
             # apply transmission to source spectra
-            for ii in range(len(obj.spectra)):
-                spec = obj.spectra[ii]
+            for ii, spec in enumerate(obj.spectra):
                 thru = self.throughput
                 obj.spectra[ii] = combine_two_spectra(spec, thru, "multiply",
                                                       wave_min, wave_max)
@@ -444,5 +443,4 @@ class FilterWheel(Effect):
             for name in self.filters:
                 self.filters[name].plot(which=ter, wavelength=wavelength,
                                         ax=ax, **kwargs)
-
 
