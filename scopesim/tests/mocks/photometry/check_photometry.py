@@ -80,6 +80,6 @@ def convert_skycalc_fits_to_ascii(filename):
 
 # convert_skycalc_fits_to_ascii("eso_skycalc_r_6000_wave_0.3_15nm_airmass_1_pwv_2.5.fits")
 
-skycalc_plus_eso_filter_gives_similar_photons_flux_to_ohio()
+# skycalc_plus_eso_filter_gives_similar_photons_flux_to_ohio()
 
 
