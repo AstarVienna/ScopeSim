@@ -23,9 +23,54 @@ class SpectralTraceList(Effect):
 
     ..todo:: Add documentation describing the format of the fits objects
 
-    The ``fits.HDUList`` objects can be loaded use one of the two keywords:
+    The ``fits.HDUList`` objects can be loaded using one of these two keywords:
+
     - ``filename``: for on disk FITS files, or
     - ``hdulist``: for in-memory ``fits.HDUList`` objects
+
+    The format and contents of the extensions in the HDUList (FITS file) object
+    is listed below
+
+    Input Data Format
+    -----------------
+    A trace list FITS file needs the following extensions:
+
+    - 0 : PrimaryHDU [header]
+    - 1 : BinTableHDU [header, data] : Overview table of all traces
+    - 2..N : BinTableHDU [header, data] : Trace tables. One per spectral trace
+
+    EXT 0 : PrimaryHDU
+    ++++++++++++++++++
+    Required Header Keywords:
+
+    - ECAT : int : Extension number of overview table. Normally 1
+    - EDATA : int : Extension number of first Trace table. Normally 2
+
+    No data is required in this extension
+
+    EXT 1 : BinTableHDU : Overview of traces
+    ++++++++++++++++++++++++++++++++++++++++
+    No special header keywords are required in this extension
+
+    Required Table columns:
+
+    - description : str : description of each each trace
+    - extension_id : int : which extension is each trace in
+    - aperture_id : int : which aperture matches this trace (e.g. MOS / IFU)
+    - image_plane_id : int : on which image plane is this trace projected
+
+    EXT 2 : BinTableHDU : Individual traces
+    +++++++++++++++++++++++++++++++++++++++
+    No special header keywords are required in this extension
+
+    Required Table columns:
+
+    - wavelength : float : [um] : wavelength of monochromatic aperture image
+    - s0 .. s0 : float : [mm] : position along aperture perpendicular to trace
+    - x0 .. xN : float : [mm] : x position of aperture image on focal plane
+    - y0 .. yN : float : [arcsec] : y position of aperture image on focal plane
+
+
 
     """
     def __init__(self, **kwargs):

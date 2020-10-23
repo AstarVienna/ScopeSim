@@ -1,5 +1,7 @@
-Welcome to ScopeSim's documentation!
-====================================
+.. image:: _static/logos/banner_red_transparent.png
+    :width: 600 px
+    :alt: Welcome to the ScopeSim Documentation!
+    :align: center
 
 An attempt at creating a common pythonic framework for telescope instrument
 data simulators.
