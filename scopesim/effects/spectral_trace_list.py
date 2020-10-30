@@ -21,8 +21,6 @@ class SpectralTraceList(Effect):
     single trace. The 1st extension should be a ``BinTableHDU`` connecting the
     traces to the correct ``Aperture`` and ``ImagePlane`` objects.
 
-    ..todo:: Add documentation describing the format of the fits objects
-
     The ``fits.HDUList`` objects can be loaded using one of these two keywords:
 
     - ``filename``: for on disk FITS files, or
@@ -69,8 +67,6 @@ class SpectralTraceList(Effect):
     - s0 .. s0 : float : [mm] : position along aperture perpendicular to trace
     - x0 .. xN : float : [mm] : x position of aperture image on focal plane
     - y0 .. yN : float : [arcsec] : y position of aperture image on focal plane
-
-
 
     """
     def __init__(self, **kwargs):

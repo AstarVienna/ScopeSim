@@ -100,8 +100,12 @@ def get_imaging_waveset(effects_list, **kwargs):
     wave_bin_edges = [filt.fov_grid(which="waveset", **kwargs)
                       for filt in filters]
     if len(wave_bin_edges) > 0:
-        kwargs["wave_min"] = np.min(wave_bin_edges)
-        kwargs["wave_max"] = np.max(wave_bin_edges)
+        kwargs["wave_min"] = np.max([w[0] for w in wave_bin_edges])
+        kwargs["wave_max"] = np.min([w[1] for w in wave_bin_edges])
+
+    if kwargs["wave_min"] > kwargs["wave_max"]:
+        raise ValueError("Filter wavelength ranges do not overlap: {}"
+                         "".format(wave_bin_edges))
 
     # ..todo: add in Atmospheric dispersion and ADC here
     for effect_class in [efs.PSF]:
