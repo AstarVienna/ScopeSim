@@ -33,7 +33,7 @@ properties :
   file :
     local_packages_path : "./"
     server_base_url : "https://www.univie.ac.at/simcado/InstPkgSvr/"
-    use_cached_downloads : True
+    use_cached_downloads : "update"
     search_path : ["./"]
 
   reports :
