@@ -9,7 +9,8 @@ from .optical_element import OpticalElement
 from .. import effects as efs
 from ..effects.effects_utils import is_spectroscope
 from ..effects.effects_utils import combine_surface_effects
-from ..utils import table_to_rst, write_report
+from ..utils import write_report
+from ..reports.rst_utils import table_to_rst
 from .. import rc
 
 

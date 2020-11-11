@@ -5,7 +5,8 @@ from astropy.table import Table
 
 from .. import effects as efs
 from ..effects.effects_utils import make_effect, get_all_effects
-from ..utils import table_to_rst, write_report
+from ..utils import write_report
+from ..reports.rst_utils import table_to_rst
 from .. import rc
 
 
@@ -112,7 +113,8 @@ class OpticalElement:
     @property
     def surfaces_list(self):
         _ter_list = [effect for effect in self.effects
-                     if isinstance(effect, (efs.SurfaceList, efs.TERCurve))]
+                     if isinstance(effect, (efs.SurfaceList, efs.FilterWheel,
+                                            efs.TERCurve))]
         return _ter_list
 
     @property

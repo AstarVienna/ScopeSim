@@ -333,7 +333,7 @@ class AnisocadoConstPSF(SemiAnalyticalPSF):
     """
     def __init__(self, **kwargs):
         super(AnisocadoConstPSF, self).__init__(**kwargs)
-        params = {"z_order": [42],
+        params = {"z_order": [42, 652],
                   "psf_side_length": 512,
                   "offset": (0, 0),
                   "rounded_edges": True}
@@ -357,12 +357,7 @@ class AnisocadoConstPSF(SemiAnalyticalPSF):
                 pixel_scale = fov
 
             n = self.meta["psf_side_length"]
-
-            wave = deepcopy(self.meta["wavelength"])
-            if isinstance(wave, str) and wave in tu.FILTER_DEFAULTS:
-                wave = tu.get_filter_effective_wavelength(wave)
-            wave = utils.quantify(wave, u.um).value
-
+            wave = self.wavelength
             self._psf_object = aniso.AnalyticalScaoPsf(pixelSize=pixel_scale,
                                                        N=n, wavelength=wave,
                                                        nmRms=self.nmRms)
@@ -390,6 +385,15 @@ class AnisocadoConstPSF(SemiAnalyticalPSF):
         return self.get_kernel(x)
 
     @property
+    def wavelength(self):
+        wave = utils.from_currsys(self.meta["wavelength"])
+        if isinstance(wave, str) and wave in tu.FILTER_DEFAULTS:
+            wave = tu.get_filter_effective_wavelength(wave)
+        wave = utils.quantify(wave, u.um).value
+
+        return wave
+
+    @property
     def strehl_ratio(self):
         strehl = None
         if self._psf_object is not None:
@@ -399,11 +403,8 @@ class AnisocadoConstPSF(SemiAnalyticalPSF):
 
     @property
     def nmRms(self):
-        wave = deepcopy(utils.from_currsys(self.meta["wavelength"]))
-        if isinstance(wave, str) and wave in tu.FILTER_DEFAULTS:
-            wave = tu.get_filter_effective_wavelength(wave)
-        wave = utils.quantify(wave, u.um).value
         strehl = utils.from_currsys(self.meta["strehl"])
+        wave = self.wavelength
         hdu = self._file[0]
         nm_rms = pu.nmrms_from_strehl_and_wavelength(strehl, wave, hdu)
 

@@ -1,8 +1,6 @@
-
-
-
-
 import os
+
+from astropy.table import TableFormatter
 from docutils.core import publish_doctree, publish_parts
 from docutils.nodes import comment, literal_block
 import yaml
@@ -335,3 +333,15 @@ def rstify_rst_text(rst_text, filename=None, path=None, title_char="="):
         f.write(rst_text)
 
     return rst_text
+
+
+def table_to_rst(tbl, indent=0):
+    tbl_fmtr = TableFormatter()
+    lines, outs = tbl_fmtr._pformat_table(tbl, max_width=-1, max_lines=-1)
+    lines[1] = lines[1].replace("-", "=")
+    lines = [lines[1]] + lines + [lines[1]]
+
+    indent = " " * indent
+    rst_str = indent + ("\n" + indent).join(lines)
+
+    return rst_str
