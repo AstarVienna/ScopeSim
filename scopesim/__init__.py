@@ -3,7 +3,6 @@
 ################################################################################
 #                            TURN OFF WARNINGS                                 #
 ################################################################################
-
 import warnings
 import yaml
 from astropy.utils.exceptions import AstropyWarning

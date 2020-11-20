@@ -4,7 +4,8 @@ from astropy.table import Table
 from ..effects.data_container import DataContainer
 from ..base_classes import SourceBase, FieldOfViewBase, ImagePlaneBase, \
     DetectorBase
-from ..utils import from_currsys, table_to_rst, write_report
+from ..utils import from_currsys, write_report
+from ..reports.rst_utils import table_to_rst
 from .. import rc
 
 

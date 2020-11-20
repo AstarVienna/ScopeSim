@@ -4,12 +4,14 @@ from inspect import isclass
 import numpy as np
 from astropy import units as u
 from astropy.table import Table
+from synphot import SpectralElement, Empirical1D
 
 from .optical_element import OpticalElement
 from .. import effects as efs
 from ..effects.effects_utils import is_spectroscope
 from ..effects.effects_utils import combine_surface_effects
-from ..utils import table_to_rst, write_report
+from ..utils import write_report
+from ..reports.rst_utils import table_to_rst
 from .. import rc
 
 
@@ -33,6 +35,7 @@ class OpticsManager:
         self.meta = {}
         self.meta.update(kwargs)
         self._surfaces_table = None
+        self._surface_like_effects = None
 
         if yaml_dicts is not None:
             self.load_effects(yaml_dicts, **self.meta)
@@ -217,6 +220,23 @@ class OpticsManager:
             surface_like_effects = self.get_z_order_effects(100)
             self._surfaces_table = combine_surface_effects(surface_like_effects)
         return self._surfaces_table
+
+    @property
+    def system_transmission(self):
+
+        wave_unit = u.Unit(rc.__currsys__["!SIM.spectral.wave_unit"])
+        dwave = rc.__currsys__["!SIM.spectral.spectral_resolution"]
+        wave_min = rc.__currsys__["!SIM.spectral.wave_min"]
+        wave_max = rc.__currsys__["!SIM.spectral.wave_max"]
+        wave = np.arange(wave_min, wave_max, dwave)
+        trans = np.ones_like(wave)
+        sys_trans = SpectralElement(Empirical1D, points=wave*u.Unit(wave_unit),
+                                    lookup_table=trans)
+
+        for effect in self.get_z_order_effects(100):
+            sys_trans *= effect.throughput
+
+        return sys_trans
 
     @property
     def area(self):

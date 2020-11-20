@@ -63,7 +63,8 @@ class PoorMansHxRGReadoutNoise(Effect):
                 dy = np.random.randint(0, ron_frame.shape[0])
                 stacked_ron_frame += np.roll(ron_frame, (dy, dx), axis=(0, 1))
 
-            det._hdu.data += stacked_ron_frame
+            # .. todo: this .T is ugly. Work out where things are getting switched and remove it!
+            det._hdu.data += stacked_ron_frame.T
 
         return det
 
@@ -313,6 +314,7 @@ def pseudo_random_field(scale=1, size=(1024, 1024)):
     for y in range(0, size[1], n):
         for x in range(0, size[0], n):
             i, j = np.random.randint(n, size=2)
-            image[x:x+n, y:y+n] = batch[i:i+n, j:j+n]
+            dx, dy = min(size[0]-x, n), min(size[1]-y, n)
+            image[x:x+dx, y:y+dy] = batch[i:i+dx, j:j+dy]
 
     return image
