@@ -5,7 +5,7 @@ from astropy.table import Table
 
 from .effects import Effect
 from ..optics.spectral_trace import SpectralTrace
-from ..utils import from_currsys, check_keys
+from ..utils import from_currsys, check_keys, interp2
 from ..optics.image_plane_utils import header_from_list_of_xy
 
 
@@ -78,12 +78,14 @@ class SpectralTraceList(Effect):
         self.meta.update({"pixel_scale": "!INST.pixel_scale",  # [arcsec / pix]}
                           "plate_scale": "!INST.plate_scale",  # [arcsec / mm]
                           "wave_min": "!SIM.spectral.wave_min",  # [um]
+                          "wave_mid": "!SIM.spectral.wave_mid",  # [um]
                           "wave_max": "!SIM.spectral.wave_max",  # [um]
                           "x_colname": "x",
                           "y_colname": "y",
                           "s_colname": "s",
                           "wave_colname": "wavelength",
                           "col_number_start": 0,
+                          "center_on_wave_mid": False,
                           "dwave": 0.002,  # [um] for finding the best fit dispersion
                           "invalid_value": None  # for dodgy trace file values
                           })
@@ -102,6 +104,19 @@ class SpectralTraceList(Effect):
             params = {col: row[col] for col in row.colnames}
             params.update(self.meta)
             hdu = self._file[row["extension_id"]]
+
+            if self.meta["center_on_wave_mid"]:
+                wave_mid = from_currsys(self.meta["wave_mid"])
+                waves = hdu.data[self.meta["wave_colname"]]
+                i_mid = int(interp2(wave_mid, waves, np.arange(len(waves))))
+                row = np.array(hdu.data[i_mid])
+                for colname in ["s_colname", "x_colname", "y_colname"]:
+                    mask = [self.meta[colname] in name for name in hdu.columns.names]
+                    av = np.average(row[mask])
+                    for cn in np.array(hdu.columns.names)[mask]:
+                        hdu.data[cn] -= av
+
+            # ..todo: add in re-centre on wave_mid here
             spec_traces += [SpectralTrace(hdu, **params)]
 
         return spec_traces

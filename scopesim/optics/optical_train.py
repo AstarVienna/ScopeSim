@@ -119,7 +119,7 @@ class OpticalTrain:
         self.detector_arrays = [DetectorArray(det_list, **kwargs)
                                 for det_list in opt_man.detector_setup_effects]
 
-    def observe(self, orig_source, update=False, **kwargs):
+    def observe(self, orig_source, update=True, **kwargs):
         """
         Main controlling method for observing ``Source`` objects
 

@@ -422,6 +422,9 @@ class FilterWheel(Effect):
     def current_filter(self):
         return self.filters[from_currsys(self.meta["current_filter"])]
 
+    def __getattr__(self, item):
+        return getattr(self.current_filter, item)
+
     def plot(self, which="x", wavelength=None, **kwargs):
         """
 

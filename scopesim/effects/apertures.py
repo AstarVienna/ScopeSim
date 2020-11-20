@@ -3,6 +3,7 @@ import numpy as np
 from matplotlib.path import Path
 from astropy.io import fits
 from astropy import units as u
+from astropy.table import Table
 
 from .effects import Effect
 from ..optics import image_plane_utils as imp_utils
@@ -157,6 +158,32 @@ class ApertureMask(Effect):
         y = list(self.table["y"].data)
         plt.plot(x + [x[0]], y + [y[0]])
         plt.gca().set_aspect("equal")
+
+
+class RectangularApertureMask(ApertureMask):
+    def __init__(self, **kwargs):
+        super(RectangularApertureMask, self).__init__(**kwargs)
+        params = {"x_unit" : "arcsec",
+                  "y_unit" : "arcsec"}
+        self.meta.update(params)
+        self.meta.update(kwargs)
+        check_keys(self.meta, ["x", "y", "width", "height"])
+
+    def fov_grid(self, which="edges", **kwargs):
+        """ Returns a header with the sky coordinates """
+        if which == "edges":
+            self.meta.update(kwargs)
+            x = from_currsys(self.meta["x"])
+            y = from_currsys(self.meta["y"])
+            dx = 0.5 * from_currsys(self.meta["width"])
+            dy = 0.5 * from_currsys(self.meta["height"])
+            xs = [x - dy, x + dx, x + dx, x - dx]
+            ys = [y - dy, y - dy, y + dy, y + dy]
+            self.table = Table(names=["x", "y"], data=[xs, ys], meta=self.meta)
+            return self.header
+        elif which == "masks":
+            self.meta.update(kwargs)
+            return self.mask
 
 
 class ApertureList(Effect):

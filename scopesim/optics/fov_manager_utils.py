@@ -277,7 +277,9 @@ def get_spectroscopy_headers(effects, **kwargs):
                      "wave_min", "wave_max"]
     check_keys(kwargs, required_keys, action="error")
 
-    surface_list_effects = get_all_effects(effects, efs.SurfaceList)
+    surface_list_effects = get_all_effects(effects, (efs.SurfaceList,
+                                                     efs.FilterWheel,
+                                                     efs.FilterCurve))
     detector_list_effects = get_all_effects(effects, efs.DetectorList)
     spec_trace_effects = get_all_effects(effects, efs.SpectralTraceList)
     aperture_effects = get_all_effects(effects, (efs.ApertureList,
