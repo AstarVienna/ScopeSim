@@ -148,8 +148,7 @@ class DetectorList(Effect):
 
     def plot(self):
         import matplotlib.pyplot as plt
-
-        fig = plt.gcf()
+        plt.gcf().clf()
 
         for hdr in self.detector_headers():
             x_mm, y_mm = calc_footprint(hdr, "D")
@@ -160,8 +159,9 @@ class DetectorList(Effect):
             plt.gca().text(x_cen, y_cen, hdr["ID"])
 
         plt.gca().set_aspect("equal")
+        plt.ylabel("Size [mm]")
 
-        return fig
+        return plt.gcf()
 
 
 class DetectorWindow(DetectorList):

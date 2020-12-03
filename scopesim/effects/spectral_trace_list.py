@@ -75,22 +75,25 @@ class SpectralTraceList(Effect):
         if "hdulist" in kwargs and isinstance(kwargs["hdulist"], fits.HDUList):
             self._file = kwargs["hdulist"]
 
-        self.meta.update({"pixel_scale": "!INST.pixel_scale",  # [arcsec / pix]}
-                          "plate_scale": "!INST.plate_scale",  # [arcsec / mm]
-                          "wave_min": "!SIM.spectral.wave_min",  # [um]
-                          "wave_mid": "!SIM.spectral.wave_mid",  # [um]
-                          "wave_max": "!SIM.spectral.wave_max",  # [um]
-                          "x_colname": "x",
-                          "y_colname": "y",
-                          "s_colname": "s",
-                          "wave_colname": "wavelength",
-                          "col_number_start": 0,
-                          "center_on_wave_mid": False,
-                          "dwave": 0.002,  # [um] for finding the best fit dispersion
-                          "invalid_value": None  # for dodgy trace file values
-                          })
+        params = {"z_order": [70, 270],
+                  "pixel_scale": "!INST.pixel_scale",  # [arcsec / pix]}
+                  "plate_scale": "!INST.plate_scale",  # [arcsec / mm]
+                  "wave_min": "!SIM.spectral.wave_min",  # [um]
+                  "wave_mid": "!SIM.spectral.wave_mid",  # [um]
+                  "wave_max": "!SIM.spectral.wave_max",  # [um]
+                  "x_colname": "x",
+                  "y_colname": "y",
+                  "s_colname": "s",
+                  "wave_colname": "wavelength",
+                  "col_number_start": 0,
+                  "center_on_wave_mid": False,
+                  "dwave": 0.002,  # [um] for finding the best fit dispersion
+                  "invalid_value": None,  # for dodgy trace file values
+                  "report_plot_include": True,
+                  "report_table_include": False,
+                  }
+        self.meta.update(params)
         self.meta.update(kwargs)
-        self.meta["z_order"] = [70, 270]
 
         if self._file is not None:
             self.ext_data = self._file[0].header["EDATA"]
@@ -177,10 +180,25 @@ class SpectralTraceList(Effect):
         return hdr
 
     def plot(self, wave_min=None, wave_max=None, **kwargs):
+        if wave_min is None:
+            wave_min = from_currsys("!SIM.spectral.wave_min")
+        if wave_max is None:
+            wave_max = from_currsys("!SIM.spectral.wave_max")
+
+        from matplotlib import pyplot as plt
+        plt.figure(figsize=(12, 12))
+
         if self.spectral_traces is not None:
             clrs = "rgbcymk" * (1 + len(self.spectral_traces) // 7)
             for spt, c in zip(self.spectral_traces, clrs):
                 spt.plot(wave_min, wave_max, c=c)
 
+        return plt.gcf()
+
     def __repr__(self):
         return "\n".join([spt.__repr__() for spt in self.spectral_traces])
+
+    def __str__(self):
+        msg = '<SpectralTraceList> "{}" : {} traces' \
+              ''.format(self.meta.get("name"), len(self.spectral_traces))
+        return msg
