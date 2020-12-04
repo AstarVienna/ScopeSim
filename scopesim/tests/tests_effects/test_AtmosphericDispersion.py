@@ -22,7 +22,7 @@ def atmo_yaml_dict():
     atmo_dict["properties"].update({"pupil_angle": 0, "airmass": 1.14,
                                     "altitude": 2400, "temperature": 7,
                                     "pressure": 0.755,
-                                    "pixel_scale": "!INST.pixel_scale"})
+                                    "pixel_scale": 0.004})      # "!INST.pixel_scale"
 
     return atmo_dict
 

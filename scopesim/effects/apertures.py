@@ -181,7 +181,7 @@ class RectangularApertureMask(ApertureMask):
     def fov_grid(self, which="edges", **kwargs):
         """ Returns a header with the sky coordinates """
         if which == "edges":
-            sefl.table = get_table(**kwargs)
+            self.table = self.get_table(**kwargs)
             return self.header      # from base class ApertureMask
 
         elif which == "masks":
