@@ -342,7 +342,8 @@ def table_to_rst(tbl, indent=0, rounding=None):
                 col.info.format = '.{}f'.format(rounding)
     
     tbl_fmtr = TableFormatter()
-    lines, outs = tbl_fmtr._pformat_table(tbl, max_width=-1, max_lines=-1)
+    lines, outs = tbl_fmtr._pformat_table(tbl, max_width=-1, max_lines=-1,
+                                          show_unit=False)
     i = outs["n_header"] - 1
     lines[i] = lines[i].replace("-", "=")
     lines = [lines[i]] + lines + [lines[i]]
