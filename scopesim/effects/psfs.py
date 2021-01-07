@@ -24,7 +24,8 @@ class PSF(Effect):
         params = {"flux_accuracy": "!SIM.computing.flux_accuracy",
                   "sub_pixel_flag": "!SIM.sub_pixel.flag",
                   "z_order": [40, 640],
-                  "convolve_mode": "full",      # "full", "same"
+                  "convolve_mode": "same",      # "full", "same"
+                  "bkg_width": -1,
                   "wave_key": "WAVE0",
                   "normalise_kernel": True}
         self.meta.update(params)
@@ -33,53 +34,41 @@ class PSF(Effect):
         self.apply_to_classes = (FieldOfViewBase, ImagePlaneBase)
 
     def apply_to(self, obj):
-        print("TMP applying PSF to ", obj)
         if isinstance(obj, self.apply_to_classes):
             if (hasattr(obj, "fields") and len(obj.fields) > 0) or \
                     obj.hdu.data is not None:
 
                 if obj.hdu.data is None:
                     obj.view(self.meta["sub_pixel_flag"])
-                old_shape = obj.hdu.data.shape
 
                 mode = self.meta["convolve_mode"]
-                print("TMP mode: ", mode)
                 kernel = self.get_kernel(obj).astype(float)
                 if self.meta["normalise_kernel"] is True:
                     kernel /= np.sum(kernel)
 
-                kern_ysize, kern_xsize = kernel.shape
-                y0 = np.ceil(kern_ysize / 2).astype(np.int)
-                x0 = np.ceil(kern_xsize / 2).astype(np.int)
                 image = obj.hdu.data.astype(float)
-                old_shape = image.shape
-                print("TMP old shape: ", old_shape)
-                tmp_image = (np.median(image)
-                             * np.ones((old_shape[0] + kern_ysize,
-                                        old_shape[1] + kern_xsize)))
-                tmp_image[y0:(y0 + old_shape[0]),
-                          x0:(x0 + old_shape[1])] = image
-                from matplotlib import pyplot as plt
-                plt.imshow(tmp_image); plt.show()
-                tmp_image = convolve(tmp_image, kernel, mode='same')
-                tmp_shape = tmp_image.shape
-                print("TMP tmp shape: ", tmp_shape)
-                plt.imshow(tmp_image); plt.show()
-                new_image = tmp_image[y0:(y0 + old_shape[0]),
-                                      x0:(x0 + old_shape[1])]
-                new_shape = new_image.shape
+                ny_old, nx_old = image.shape
 
-                print("TMP new shape: ", new_shape)
-                print("TMP kernel shape: ", kernel.shape)
-                print("TMP ------------------------------")
-                plt.imshow(new_image); plt.show()
-                obj.hdu.data = new_image
+                bkg_width = self.meta["bkg_width"]
+                if bkg_width < 0:
+                    bkg_level = np.median(image)
+                elif bkg_width == 0:
+                    bkg_level = 0
+                else:
+                    mask = np.ones((ny_old, nx_old), dtype=np.bool)
+                    mask[bkg_width:(ny_old - bkg_width),
+                         bkg_width:(nx_old - bkg_width)] = 0
+                    bkg_level = np.median(image[mask])
+
+                new_image = convolve(image - bkg_level, kernel, mode=mode)
+                ny_new, nx_new = new_image.shape
+                obj.hdu.data = new_image + bkg_level
 
                 # ..todo: careful with which dimensions mean what
                 for s in ["", "D"]:
                     if "CRPIX1"+s in obj.hdu.header:
-                        obj.hdu.header["CRPIX1"+s] += (new_shape[1] - old_shape[1]) / 2
-                        obj.hdu.header["CRPIX2"+s] += (new_shape[0] - old_shape[0]) / 2
+                        obj.hdu.header["CRPIX1"+s] += (nx_new - nx_old) / 2
+                        obj.hdu.header["CRPIX2"+s] += (ny_new - ny_old) / 2
 
         return obj
 
