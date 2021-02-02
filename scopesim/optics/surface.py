@@ -110,8 +110,9 @@ class SpectralSurface:
         elif "temperature" in self.meta:
             emiss = self.emissivity                     # SpectralElement [0..1]
             temp = quantify(from_currsys(self.meta["temperature"]), u.deg_C)
-            temp = temp.value + 273.
+            temp = temp.to(u.Kelvin, equivalencies=u.temperature())
             flux = make_emission_from_emissivity(temp, emiss)
+            flux.meta["temperature"] = temp
         else:
             flux = None
 
