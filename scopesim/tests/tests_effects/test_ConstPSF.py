@@ -113,5 +113,22 @@ class TestApplyTo:
 
         assert np.max(fov_returned.hdu.data) == approx(max_pixel)
 
+    def test_convolution_leaves_constant_background_intact(self):
+        centre_fov = _centre_fov(n=10, waverange=[1.1, 1.3])
+        nax1, nax2 = centre_fov.header["NAXIS1"], centre_fov.header["NAXIS2"]
 
+        const_background = np.ones((nax2, nax1), dtype=np.float64)
+        centre_fov.hdu.data = np.zeros((nax2, nax1))
 
+        constpsf = FieldConstantPSF(filename="test_ConstPSF.fits")
+        fov_returned = constpsf.apply_to(centre_fov)
+
+        if PLOTS:
+            fig, (ax1, ax2) = plt.subplots(1, 2)
+            ax1.imshow(const_background)
+            ax1.set_title("before convolution")
+            ax2.imshow(fov_returned.hdu.data)
+            ax2.set_title("after convolution")
+            plt.show()
+
+            assert np.all(np.equal(fov_returned.hdu.data, const_background))
