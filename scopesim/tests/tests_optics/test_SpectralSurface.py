@@ -15,6 +15,7 @@ from astropy.io import ascii as ioascii
 
 from synphot import SpectralElement, SourceSpectrum
 from synphot.models import BlackBody1D
+from synphot.models import Empirical1D
 from synphot.units import PHOTLAM
 
 from scopesim.optics import surface as opt_surf
@@ -271,6 +272,21 @@ class TestMakeEmissionFromEmissivity:
         assert out.model.temperature_0 == 273
 
 
+    @pytest.mark.parametrize("temp", [283, 283*u.deg_C, 283*u.Kelvin])
+    def test_blackbody_maximum_agrees_with_wien(self, temp):
+        '''Check the maximum of emission against Wien's law for photon rate'''
+        emissivity = SpectralElement(Empirical1D, points=[1, 20],
+                                     lookup_table=[1., 1.])
+        flux = surf_utils.make_emission_from_emissivity(temp, emissivity)
+        dlam = 0.1
+        wave = np.arange(3, 20, dlam) * u.um
+        wavemax = wave[np.argmax(flux(wave))]
+        if isinstance(temp, u.Quantity):
+            temp = temp.to(u.Kelvin, equivalencies=u.temperature()).value
+        wienmax = 3669.7 * u.um / temp
+        assert np.abs(wavemax - wienmax.to(u.um)) < dlam * u.um
+
+
 class TestNormaliseBinnedFlux:
     # .. todo:: write this test class
     def test_returns_correct_normalisation(self):
@@ -358,6 +374,3 @@ class TestGetMetaQuantity:
     def test_raise_error_when_key_not_in_dict(self):
         with pytest.raises(KeyError):
             utils.get_meta_quantity({}, "area", u.um ** 2)
-
-
-
