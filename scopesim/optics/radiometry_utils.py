@@ -22,7 +22,7 @@ def combine_emissions(tbl, surfaces, row_indexes, etendue, use_area=False):
     r_action = real_colname("action", tbl.colnames)
 
     emission = None
-    for ii, row_num in enumerate(row_indexes):
+    for row_num in row_indexes:
         row = tbl[row_num]
         surf = surfaces[row[r_name]]
         action_attr = row[r_action]
@@ -48,7 +48,7 @@ def combine_emissions(tbl, surfaces, row_indexes, etendue, use_area=False):
                 surf_emission.meta["solid_angle"] = None
                 surf_emission.meta["history"] += [msg]
 
-                if ii == 0:
+                if emission is None:
                     emission = deepcopy(surf_emission)
                 else:
                     emission = emission + surf_emission
@@ -166,4 +166,3 @@ def make_surface_from_row(row, **kwargs):
     surface = SpectralSurface(**kwargs)
 
     return surface
-
