@@ -459,8 +459,8 @@ def rescale_imagehdu(imagehdu, pixel_scale, wcs_suffix="", conserve_flux=True,
     cdelt1 = imagehdu.header["CDELT1"+s0]
     cdelt2 = imagehdu.header["CDELT2"+s0]
 
-    zoom1 = cdelt1 / pixel_scale
-    zoom2 = cdelt2 / pixel_scale
+    zoom1 = np.abs(cdelt1 / pixel_scale)
+    zoom2 = np.abs(cdelt2 / pixel_scale)  # making sure that zoom1,zoom2 are positive
 
     if zoom1 != 1 or zoom2 != 1:
         sum_orig = np.sum(imagehdu.data)
