@@ -3,6 +3,7 @@ Helper functions for ScopeSim
 """
 import math
 import os
+from pathlib import Path
 import sys
 import warnings
 from collections import OrderedDict
@@ -937,6 +938,7 @@ def write_report(text, filename=None, output=["rst"]):
                 out_text = out_text.decode("utf-8")
 
             suffix = {"rst": ".rst", "latex": ".tex"}[fmt]
-            from pathlib import Path
-            with open(Path(filename).stem + suffix, "w") as f:
+            fname = Path(filename)
+            fname = os.path.join(*fname.parts[:-1], fname.stem + suffix)
+            with open(fname, "w") as f:
                 f.write(out_text)

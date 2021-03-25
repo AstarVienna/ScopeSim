@@ -1,5 +1,6 @@
 import numpy as np
 from astropy import units as u
+from astropy.table import Table
 
 from .effects import Effect
 from ..utils import airmass2zendist, from_currsys, check_keys, quantify
@@ -9,21 +10,48 @@ from ..base_classes import FieldOfViewBase
 class Shift3D(Effect):
     def __init__(self, **kwargs):
         super(Shift3D, self).__init__(**kwargs)
-        self.meta["z_order"] = [30, 230]
+        params = {"z_order": [30, 230],
+                  "report_plot_include": True,
+                  "report_table_include": False,}
+        self.meta.update(params)
+        self.meta.update(kwargs)
 
     def apply_to(self, obj):
         return obj
 
     def fov_grid(self, which="shifts", **kwargs):
         if which == "shifts":
-            if self.table is not None:
-                col_names = ["wavelength", "dx", "dy"]
-                waves, dx, dy = [self.table[col] for col in col_names]
-            else:
-                waves, dx, dy = [], [], []
+            col_names = ["wavelength", "dx", "dy"]
+            waves, dx, dy = [self.get_table(**kwargs)[col] for col in col_names]
             return waves, dx, dy
         else:
             return None
+
+    def get_table(self, **kwargs):
+        if self.table is None:
+            names = ["wavelength", "dx", "dy"]
+            waves = from_currsys(["!SIM.spectral.wave_" + key
+                                  for key in ("min", "mid", "max")])
+            tbl = Table(names=names, data=[waves, [0] * 3, [0] * 3])
+        else:
+            tbl = self.table
+
+        return tbl
+
+    def plot(self):
+        import matplotlib.pyplot as plt
+        plt.gcf().clf()
+
+        tbl = self.get_table()
+        plt.scatter(x=tbl["dx"], y=tbl["dy"], c=tbl["wavelength"])
+        plt.colorbar()
+        plt.xlabel("dx [{}]".format(quantify(tbl["dx"], u.arcsec).unit))
+        plt.ylabel("dy [{}]".format(quantify(tbl["dy"], u.arcsec).unit))
+        plt.axvline(0, ls=":")
+        plt.axhline(0, ls=":")
+        # plt.gca().set_aspect("equal")
+
+        return plt.gcf()
 
 
 class AtmosphericDispersion(Shift3D):
@@ -67,51 +95,57 @@ class AtmosphericDispersion(Shift3D):
     """
     def __init__(self, **kwargs):
         super(AtmosphericDispersion, self).__init__(**kwargs)
-        self.meta["z_order"] = [231]
-        self.meta["wave_min"] = "!SIM.spectral.wave_min"
-        self.meta["wave_mid"] = "!SIM.spectral.wave_mid"
-        self.meta["wave_max"] = "!SIM.spectral.wave_max"
-        self.meta["sub_pixel_fraction"] = "!SIM.sub_pixel.fraction"
-        self.meta["num_steps"] = 1000
+        params = {"z_order": [231],
+                  "wave_min": "!SIM.spectral.wave_min",
+                  "wave_mid": "!SIM.spectral.wave_mid",
+                  "wave_max": "!SIM.spectral.wave_max",
+                  "sub_pixel_fraction": "!SIM.sub_pixel.fraction",
+                  "num_steps": 1000,}
+        self.meta.update(params)
         self.meta.update(kwargs)
 
         required_keys = ["airmass", "temperature", "humidity", "pressure",
                          "latitude", "altitude", "pupil_angle", "pixel_scale"]
         check_keys(self.meta, required_keys, action="error")
 
-    def fov_grid(self, which="shifts", **kwargs):
+    def get_table(self, **kwargs):
         """
+        Called by the fov_grid method of Shift3D
+
         Returns
         -------
-        waves :
-            [um]
-        dx, dy :
-            [arcsec]
+        tbl : astropy.Table
+            A table with the columns
+            - waves : [um]
+            - dx, dy : [arcsec]
 
         Notes
         -----
         Success! Returns the same values as:
         http://gtc-phase2.gtc.iac.es/science/astroweb/atmosRefraction.php
         """
-        if which == "shifts":
-            if len(kwargs) > 0:
-                self.meta.update(kwargs)
-            self.meta = from_currsys(self.meta)
-            atmo_params = {"z0"     : airmass2zendist(self.meta["airmass"]),
-                           "temp"   : self.meta["temperature"],        # in degC
-                           "rel_hum": self.meta["humidity"] * 100,     # in %
-                           "pres"   : self.meta["pressure"] * 1000,    # in mbar
-                           "lat"    : self.meta["latitude"],           # in deg
-                           "h"      : self.meta["altitude"]}           # in m
-            self.meta.update(atmo_params)
 
-            waves, shifts = get_pixel_border_waves_from_atmo_disp(**self.meta)
-            dx = shifts * np.sin(np.deg2rad(self.meta["pupil_angle"]))
-            dy = shifts * np.cos(np.deg2rad(self.meta["pupil_angle"]))
+        if len(kwargs) > 0:
+            self.meta.update(kwargs)
 
-            return waves, dx, dy
-        else:
-            return None
+        airmass = from_currsys(self.meta["airmass"])
+        atmo_params = {"z0": airmass2zendist(airmass),
+                       "temp": self.meta["temperature"],  # in degC
+                       "rel_hum": self.meta["humidity"] * 100,  # in %
+                       "pres": self.meta["pressure"] * 1000,  # in mbar
+                       "lat": self.meta["latitude"],  # in deg
+                       "h": self.meta["altitude"]}  # in m
+        self.meta.update(atmo_params)
+        params = from_currsys(self.meta)
+
+        waves, shifts = get_pixel_border_waves_from_atmo_disp(**params)
+        dx = shifts * np.sin(np.deg2rad(params["pupil_angle"]))
+        dy = shifts * np.cos(np.deg2rad(params["pupil_angle"]))
+
+        names = ["wavelength", "dx", "dy"]
+        tbl = Table(names=names, data=[waves, dx, dy])
+
+        return tbl
 
 
 class AtmosphericDispersionCorrection(Shift3D):
@@ -140,6 +174,9 @@ class AtmosphericDispersionCorrection(Shift3D):
                          "latitude", "altitude", "pupil_angle", "pixel_scale",
                          "wave_mid"]
         check_keys(self.meta, required_keys, action="error")
+
+        if self.table is None:
+            self.table = self.get_table()
 
     def apply_to(self, fov):
         # .. todo:: Currently applying shift with pixel_scale to CRPIX-D
@@ -189,12 +226,8 @@ class AtmosphericDispersionCorrection(Shift3D):
         else:
             return None
 
-    def plot(self, fov):
-        import matplotlib.pyplot as plt
-
-        plt.imshow(fov)
-
-
+    def plot(self):
+        return None
 
 
 def atmospheric_refraction(lam, z0=60, temp=0, rel_hum=60, pres=750,

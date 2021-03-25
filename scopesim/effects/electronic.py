@@ -15,7 +15,9 @@ class SummedExposure(Effect):
     """
     def __init__(self, **kwargs):
         super(SummedExposure, self).__init__(**kwargs)
-        self.meta["z_order"] = [860]
+        params = {"z_order": [860]}
+        self.meta.update(params)
+        self.meta.update(kwargs)
 
         required_keys = ["dit", "ndit"]
         check_keys(self.meta, required_keys, action="error")
@@ -33,12 +35,15 @@ class SummedExposure(Effect):
 class PoorMansHxRGReadoutNoise(Effect):
     def __init__(self, **kwargs):
         super(PoorMansHxRGReadoutNoise, self).__init__(**kwargs)
-        self.meta["z_order"] = [811]
-        self.meta["pedestal_fraction"] = 0.3
-        self.meta["read_fraction"] = 0.4
-        self.meta["line_fraction"] = 0.25
-        self.meta["channel_fraction"] = 0.05
-        self.meta["random_seed"] = "!SIM.random.seed"
+        params = {"z_order": [811],
+                  "pedestal_fraction": 0.3,
+                  "read_fraction": 0.4,
+                  "line_fraction": 0.25,
+                  "channel_fraction": 0.05,
+                  "random_seed": "!SIM.random.seed",
+                  "report_plot_include": False,
+                  "report_table_include": False}
+        self.meta.update(params)
         self.meta.update(kwargs)
 
         self.required_keys = ["noise_std", "n_channels", "ndit"]
@@ -68,11 +73,10 @@ class PoorMansHxRGReadoutNoise(Effect):
 
         return det
 
-    def plot(self, det, **kwargs):
+    def plot(self, det, new_figure=False, **kwargs):
         import matplotlib.pyplot as plt
         dtcr = self.apply_to(det)
         plt.imshow(dtcr.data, origin="lower")
-
 
     def plot_hist(self, det, **kwargs):
         import matplotlib.pyplot as plt
@@ -199,7 +203,11 @@ class DarkCurrent(Effect):
 class LinearityCurve(Effect):
     def __init__(self, **kwargs):
         super(LinearityCurve, self).__init__(**kwargs)
-        self.meta["z_order"] = [840]
+        params = {"z_order": [840],
+                  "report_plot_include": True,
+                  "report_table_include": False}
+        self.meta.update(params)
+        self.meta.update(kwargs)
 
         self.required_keys = ["ndit"]
         check_keys(self.meta, self.required_keys, action="error")
@@ -222,12 +230,17 @@ class LinearityCurve(Effect):
 
     def plot(self, **kwargs):
         import matplotlib.pyplot as plt
-        ndit = from_currsys(self.meta["ndit"])
+        plt.gcf().clf()
 
+        ndit = from_currsys(self.meta["ndit"])
         incident = self.table["incident"] * ndit
         measured = self.table["measured"] * ndit
 
-        plt.plot(incident, measured, **kwargs)
+        plt.loglog(incident, measured, **kwargs)
+        plt.xlabel("Incident [ph s$^-1$]")
+        plt.ylabel("Measured [e- s$^-1$]")
+
+        return plt.gcf()
 
 
 class ReferencePixelBorder(Effect):

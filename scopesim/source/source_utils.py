@@ -136,7 +136,7 @@ def make_imagehdu_from_table(x, y, flux, pix_scale=1*u.arcsec):
     yvalmin = (ypixmin * pix_scale).value
 
     the_wcs = wcs.WCS(naxis=2)
-    the_wcs.wcs.crpix = [0., 0.]
+    the_wcs.wcs.crpix = [0.25, 0.25]
     the_wcs.wcs.cdelt = [pix_scale.value, pix_scale.value]
     the_wcs.wcs.crval = [xvalmin, yvalmin]
     the_wcs.wcs.cunit = [unit, unit]

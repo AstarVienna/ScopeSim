@@ -199,13 +199,16 @@ class OpticalTrain:
         """
 
         hdus = []
-        for detector_array in self.detector_arrays:
+        for i, detector_array in enumerate(self.detector_arrays):
             dtcr_effects = self.optics_manager.detector_effects
             hdu = detector_array.readout(self.image_planes, dtcr_effects,
                                          **kwargs)
 
             if filename is not None and isinstance(filename, str):
-                hdu.writeto(filename, overwrite=True)
+                fname = filename
+                if len(self.detector_arrays) > 1:
+                    fname = str(i) + "_" + filename
+                hdu.writeto(fname, overwrite=True)
 
             hdus += [hdu]
 

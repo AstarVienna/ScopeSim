@@ -83,7 +83,10 @@ class ApertureMask(Effect):
                   "angle": 0,
                   "shape": "rect",
                   "conserve_image": True,
-                  "id": 0}
+                  "id": 0,
+                  "report_plot_include": False,
+                  "report_table_include": True,
+                  "report_table_rounding": 4}
 
         self.meta["z_order"] = [80, 280, 380]
         self.meta.update(params)
@@ -151,13 +154,17 @@ class ApertureMask(Effect):
 
         return mask
 
-    def plot(self):
+    def plot(self, new_figure=True):
         import matplotlib.pyplot as plt
+        if new_figure:
+            plt.gcf().clf()
 
         x = list(self.table["x"].data)
         y = list(self.table["y"].data)
         plt.plot(x + [x[0]], y + [y[0]])
         plt.gca().set_aspect("equal")
+
+        return plt.gcf()
 
 
 class RectangularApertureMask(ApertureMask):
@@ -169,21 +176,29 @@ class RectangularApertureMask(ApertureMask):
         self.meta.update(kwargs)
         check_keys(self.meta, ["x", "y", "width", "height"])
 
+        self.table = self.get_table(**kwargs)
+
     def fov_grid(self, which="edges", **kwargs):
         """ Returns a header with the sky coordinates """
         if which == "edges":
-            self.meta.update(kwargs)
-            x = from_currsys(self.meta["x"])
-            y = from_currsys(self.meta["y"])
-            dx = 0.5 * from_currsys(self.meta["width"])
-            dy = 0.5 * from_currsys(self.meta["height"])
-            xs = [x - dy, x + dx, x + dx, x - dx]
-            ys = [y - dy, y - dy, y + dy, y + dy]
-            self.table = Table(names=["x", "y"], data=[xs, ys], meta=self.meta)
-            return self.header
+            self.table = self.get_table(**kwargs)
+            return self.header      # from base class ApertureMask
+
         elif which == "masks":
             self.meta.update(kwargs)
             return self.mask
+
+    def get_table(self, **kwargs):
+        self.meta.update(kwargs)
+        x = from_currsys(self.meta["x"])
+        y = from_currsys(self.meta["y"])
+        dx = 0.5 * from_currsys(self.meta["width"])
+        dy = 0.5 * from_currsys(self.meta["height"])
+        xs = [x - dx, x + dx, x + dx, x - dx]
+        ys = [y - dy, y - dy, y + dy, y + dy]
+        tbl = Table(names=["x", "y"], data=[xs, ys], meta=self.meta)
+
+        return tbl
 
 
 class ApertureList(Effect):
@@ -225,7 +240,10 @@ class ApertureList(Effect):
         super(ApertureList, self).__init__(**kwargs)
         params = {"pixel_scale": "!INST.pixel_scale",
                   "n_round_corners": 32,        # number of corners use to estimate ellipse
-                  "no_mask": False}             # .. todo:: is this necessary when we have conserve_image?
+                  "no_mask": False,             # .. todo:: is this necessary when we have conserve_image?
+                  "report_plot_include": True,
+                  "report_table_include": True,
+                  "report_table_rounding": 4}
         self.meta["z_order"] = [81, 281]
         self.meta.update(params)
         self.meta.update(kwargs)
@@ -271,8 +289,13 @@ class ApertureList(Effect):
         return apertures_list
 
     def plot(self):
+        import matplotlib.pyplot as plt
+        plt.gcf().clf()
+
         for ap in self.apertures:
-            ap.plot()
+            ap.plot(new_figure=False)
+
+        return plt.gcf()
 
     def plot_masks(self):
         import matplotlib.pyplot as plt

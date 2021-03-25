@@ -33,7 +33,7 @@ class TestApplyTo:
         dtcr = ron.apply_to(dtcr)
         noise_real = np.std(dtcr._hdu.data)
 
-        assert noise_real == approx(noise_std * ndit**0.5, rel=0.05)
+        assert noise_real == approx(noise_std * ndit**0.5, rel=0.1)
 
 
 class TestMakeRonFrame:

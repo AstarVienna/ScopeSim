@@ -115,7 +115,8 @@ class Effect(DataContainer):
         max_key_len = max([len(key) for key in self.meta.keys()])
         for key in self.meta:
             if key not in ["comments", "changes", "description", "history",
-                           "report_table_caption", "report_plot_caption"]:
+                           "report_table_caption", "report_plot_caption",
+                           "table"]:
                 meta_str += "    {} : {}\n".format(key.rjust(max_key_len),
                                                    self.meta[key])
     
@@ -145,10 +146,10 @@ class Effect(DataContainer):
         ---------------------
         Either from the ``self.meta["report"]`` dictionary or via ``**kwargs``
 
+        "report_table_include": False
+        "report_table_caption": ""
         "report_plot_caption": ""
         "report_plot_include": False
-        "report_table_caption": ""
-        "report_table_include": False
         "report_plot_file_formats": ["png"]
             Multiple formats can be saved. The last entry is used for the RST.
         "report_plot_filename": None
@@ -204,8 +205,9 @@ class Effect(DataContainer):
                   "report_plot_file_formats": ["png"],
                   "report_plot_caption": "",
                   "report_plot_include": False,
-                  "report_table_caption": "",
                   "report_table_include": False,
+                  "report_table_caption": "",
+                  "report_table_rounding": None,
                   "report_image_path": "!SIM.reports.image_path",
                   "report_rst_path": "!SIM.reports.rst_path",
                   "report_latex_path": "!SIM.reports.latex_path",
@@ -243,23 +245,23 @@ Data
         if params["report_plot_include"] and hasattr(self, "plot"):
             fig = self.plot()
 
-            path = params["report_image_path"]
+            if fig is not None:
+                path = params["report_image_path"]
+                fname = params["report_plot_filename"]
+                if fname is None:
+                    fname = self.meta["name"].lower().replace(" ", "_")
 
-            fname = params["report_plot_filename"]
-            if fname is None:
-                fname = self.meta["name"].lower().replace(" ", "_")
+                for fmt in params["report_plot_file_formats"]:
+                    fname = ".".join((fname.split(".")[0], fmt))
+                    file_path = os.path.join(path, fname)
 
-            for fmt in params["report_plot_file_formats"]:
-                fname = ".".join((fname.split(".")[0], fmt))
-                file_path = os.path.join(path, fname)
+                    fig.savefig(fname=file_path)
 
-                fig.savefig(fname=file_path)
+                # rel_path = os.path.relpath(params["report_image_path"],
+                #                            params["report_rst_path"])
+                # rel_file_path = os.path.join(rel_path, fname)
 
-            # rel_path = os.path.relpath(params["report_image_path"],
-            #                            params["report_rst_path"])
-            # rel_file_path = os.path.join(rel_path, fname)
-
-            rst_str += """
+                rst_str += """
 .. figure:: {}
     :name: {}
 
@@ -277,7 +279,8 @@ Data
 
 {}
 """.format("tbl:" + params.get("name"),
-           table_to_rst(self.table, indent=4),
+           table_to_rst(self.table, indent=4,
+                        rounding=params["report_table_rounding"]),
            params["report_table_caption"])
 
         rst_str += """
