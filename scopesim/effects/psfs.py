@@ -76,6 +76,9 @@ class PSF(Effect):
                          bkg_width:(nx_old - bkg_width)] = 0
                     bkg_level = np.median(image[mask])
 
+                # y = min(image.shape[0], kernel.shape[0])
+                # x = min(image.shape[1], kernel.shape[1])
+                # new_image = convolve(image[:y, :x] - bkg_level, kernel[:y, :x], mode=mode)
                 new_image = convolve(image - bkg_level, kernel, mode=mode)
                 ny_new, nx_new = new_image.shape
                 obj.hdu.data = new_image + bkg_level
