@@ -22,7 +22,7 @@ TL;DR
     import scopesim as sim
     import scopesim_templates as sim_tp
 
-    sim.server.database.download_package(["locations/Amrazones.zip",
+    sim.server.database.download_package(["locations/Armazones.zip",
                                           "telescopes/ELT.zip",
                                           "instruments/MAORY.zip",
                                           "instruments/MICADO.zip"])

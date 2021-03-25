@@ -668,8 +668,7 @@ class FieldVaryingPSF(DiscretePSF):
         layer_ids = np.round(np.unique(strl_cutout.data)).astype(int)
         if len(layer_ids) > 1:
             kernels = [self.current_data[ii] for ii in layer_ids]
-            # .. todo:: investigate. There's a .T in here that I don't like
-            masks = [strl_cutout.data.T == ii for ii in layer_ids]
+            masks = [strl_cutout.data == ii for ii in layer_ids]
             self.kernel = [[krnl, msk] for krnl, msk in zip(kernels, masks)]
         else:
             self.kernel = [[self.current_data[layer_ids[0]], None]]
