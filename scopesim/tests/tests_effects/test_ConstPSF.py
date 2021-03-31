@@ -114,21 +114,29 @@ class TestApplyTo:
         assert np.max(fov_returned.hdu.data) == approx(max_pixel)
 
     def test_convolution_leaves_constant_background_intact(self):
+        """FOV object with constant data must be unchanged by PSF convolution
+
+        1. Set up initial FOV object with constant data array
+        2. Convolve with PSF
+        3. Assert that convolved array is identical to initial array.
+        """
         centre_fov = _centre_fov(n=10, waverange=[1.1, 1.3])
         nax1, nax2 = centre_fov.header["NAXIS1"], centre_fov.header["NAXIS2"]
 
-        const_background = np.ones((nax2, nax1), dtype=np.float64)
-        centre_fov.hdu.data = np.zeros((nax2, nax1))
+        centre_fov.hdu.data = np.ones((nax2, nax1), dtype=np.float32)
 
         constpsf = FieldConstantPSF(filename="test_ConstPSF.fits")
         fov_returned = constpsf.apply_to(centre_fov)
 
         if PLOTS:
-            fig, (ax1, ax2) = plt.subplots(1, 2)
-            ax1.imshow(const_background)
+            fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(7,3))
+            plot_A = ax1.imshow(centre_fov.hdu.data)
             ax1.set_title("before convolution")
-            ax2.imshow(fov_returned.hdu.data)
+            fig.colorbar(plot_A, ax=ax1)
+            plot_B = ax2.imshow(fov_returned.hdu.data)
             ax2.set_title("after convolution")
+            fig.colorbar(plot_B, ax=ax2)
             plt.show()
 
-            assert np.all(np.equal(fov_returned.hdu.data, const_background))
+        assert np.all(np.equal(fov_returned.hdu.data,
+                               centre_fov.hdu.data))
