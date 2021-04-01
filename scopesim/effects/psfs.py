@@ -127,6 +127,7 @@ class AnalyticalPSF(PSF):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.meta["z_order"] = [41, 641]
+        self.apply_to_classes = FieldOfViewBase
 
 
 class Vibration(AnalyticalPSF):
@@ -167,7 +168,6 @@ class NonCommonPathAberration(AnalyticalPSF):
         self.meta["strehl_drift"] = 0.02
         self.meta["wave_min"] = "!SIM.spectral.wave_min"
         self.meta["wave_max"] = "!SIM.spectral.wave_max"
-        self.apply_to_classes = FieldOfViewBase
 
         self._total_wfe = None
 
@@ -331,6 +331,8 @@ class SemiAnalyticalPSF(PSF):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.meta["z_order"] = [42]
+        self.apply_to_classes = FieldOfViewBase
+        # self.apply_to_classes = ImagePlaneBase
 
 
 class AnisocadoConstPSF(SemiAnalyticalPSF):
@@ -522,6 +524,8 @@ class DiscretePSF(PSF):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.meta["z_order"] = [43]
+        self.apply_to_classes = FieldOfViewBase
+        # self.apply_to_classes = ImagePlaneBase
 
 
 class FieldConstantPSF(DiscretePSF):
