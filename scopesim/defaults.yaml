@@ -21,7 +21,7 @@ properties :
 
   random :
     seed :
-
+c
   computing :
     chunk_size : 2048
     max_segment_size : 16777217
