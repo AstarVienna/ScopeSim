@@ -286,7 +286,7 @@ class Source(SourceBase):
                 isinstance(field, fits.ImageHDU) and field.header["NAXIS"] == 3]
         return fields
 
-def image_in_range(self, wave_min, wave_max, pixel_scale=1*u.arcsec,
+    def image_in_range(self, wave_min, wave_max, pixel_scale=1*u.arcsec,
                        layers=None, area=None, order=1, sub_pixel=False):
         if layers is None:
             layers = range(len(self.fields))
