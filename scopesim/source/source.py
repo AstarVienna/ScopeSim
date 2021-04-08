@@ -256,8 +256,8 @@ class Source(SourceBase):
             print("'BUNIT' keyword is malformed", e)
             raise
 
-        if header["CTYPE3"].lower() not in ["freq", 'wave', "awav"]:
-            raise ValueError("Only ['FREQ','WAVE','AWAV'] are supported")
+        if header["CTYPE3"].lower() not in ["freq", 'wave', "awav", 'wavelength']:
+            raise ValueError("Only ['FREQ','WAVE','AWAV', 'WAVELENGTH'] are supported")
 
         target_cube = data
         target_hdr = header.copy()

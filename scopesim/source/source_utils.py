@@ -37,9 +37,12 @@ def validate_source_input(**kwargs):
 
     if "cube" in kwargs and kwargs["cube"] is not None:
         cube = kwargs["cube"]
-        if utils.find_file(filename) is None and \
-                isinstance(cube, (fits.PrimaryHDU, fits.ImageHDU, fits.HDUList)) is False:
-            raise ValueError("cube must be a fits.HDU object or a fits file".format(cube))
+        if isinstance(cube, (fits.PrimaryHDU, fits.ImageHDU, fits.HDUList)) is False:
+            try:
+                utils.find_file(cube)
+            except (AttributeError, ValueError, FileNotFoundError):
+                print("cube must be a fits.HDU object or a fits file".format(cube))
+                raise ValueError
 
     return True
 
