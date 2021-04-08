@@ -241,7 +241,7 @@ class Source(SourceBase):
         if isinstance(cube, fits.HDUList):
             data = cube[ext].data
             header = cube[ext].header
-        elif isinstance(cube, fits.PrimaryHDU):
+        elif isinstance(cube, (fits.PrimaryHDU, fits.ImageHDU)):
             data = cube.data
             header = cube.header
         else:
@@ -266,11 +266,27 @@ class Source(SourceBase):
         target_hdr = header.copy()
         target_hdr["BUNIT"] = bunit
 
-        cube_hdu = fits.PrimaryHDU(data=target_cube, header=target_hdr)
+        cube_hdu = fits.ImageHDU(data=target_cube, header=target_hdr)
 
         self.fields += [cube_hdu]
 
-    def image_in_range(self, wave_min, wave_max, pixel_scale=1*u.arcsec,
+    @property
+    def table_fields(self):
+        return [field for field in self.fields if isinstance(field, Table)]
+
+    @property
+    def image_fields(self):
+         fields = [field for field in self.fields if
+                isinstance(field, fits.ImageHDU) and field.header["NAXIS"] == 2]
+         return fields
+
+    @property
+    def cube_fields(self):
+        fields = [field for field in self.fields if
+                isinstance(field, fits.ImageHDU) and field.header["NAXIS"] == 3]
+        return fields
+
+def image_in_range(self, wave_min, wave_max, pixel_scale=1*u.arcsec,
                        layers=None, area=None, order=1, sub_pixel=False):
         if layers is None:
             layers = range(len(self.fields))

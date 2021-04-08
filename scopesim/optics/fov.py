@@ -52,6 +52,7 @@ class FieldOfView(FieldOfViewBase):
             raise ValueError("header must contain a valid image-plane WCS: {}"
                              "".format(dict(header)))
 
+        # do we actually need this distinction?
         if isinstance(header, PoorMansHeader):
             self.hdu = fits.ImageHDU()
             self.hdu.header.update(header)
@@ -85,6 +86,7 @@ class FieldOfView(FieldOfViewBase):
                                     for field in src.fields])
         img_fields_mask = np.array([isinstance(field, fits.ImageHDU)
                                     for field in src.fields])
+        # cube_fields_mask
 
         # combine all Table fields
         if sum(tbl_fields_mask * fields_mask) > 0:
