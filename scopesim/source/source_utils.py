@@ -35,6 +35,12 @@ def validate_source_input(**kwargs):
             raise ValueError("table must contain at least column names: "
                              "'x, y, ref': {}".format(tbl.colnames))
 
+    if "cube" in kwargs and kwargs["cube"] is not None:
+        cube = kwargs["cube"]
+        if utils.find_file(filename) is None and \
+                isinstance(cube, (fits.PrimaryHDU, fits.ImageHDU, fits.HDUList)) is False:
+            raise ValueError("cube must be a fits.HDU object or a fits file".format(cube))
+
     return True
 
 

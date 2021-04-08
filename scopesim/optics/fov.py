@@ -63,13 +63,24 @@ class FieldOfView(FieldOfViewBase):
         self.hdu.header["NAXIS2"] = header["NAXIS2"]
 
         self.fields = []
+        self.spectra = []
         self.image_plane_id = 0
 
         self._wavelength = None
 
     def extract_from(self, src):
-        """ ..assumption: Bandpass has been applied"""
-        
+        """ ..assumption: Bandpass has been applied
+        point sources
+        - extracts relevant entries from all tables and adds to a new table
+        - extracts relevant spectra and updates table entries
+        extended sources
+        - extracts relevant spatial region from source._file .
+        """
+
+
+
+
+
         if not isinstance(src, SourceBase):
             raise ValueError("source must be a Source object: {}"
                              "".format(type(src)))

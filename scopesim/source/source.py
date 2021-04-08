@@ -143,7 +143,7 @@ class Source(SourceBase):
         self.bandpass = None
 
         valid = validate_source_input(lam=lam, x=x, y=y, ref=ref, weight=weight,
-                                      spectra=spectra, table=table,
+                                      spectra=spectra, table=table, cube=cube, ext=ext,
                                       image_hdu=image_hdu, filename=filename)
 
         spectra = convert_to_list_of_spectra(spectra, lam)
@@ -235,9 +235,6 @@ class Source(SourceBase):
             the extension where the cube is located if applicable.
 
         """
-        from astropy.wcs import WCS
-        from astropy.wcs.utils import proj_plane_pixel_scales
-
         if isinstance(cube, fits.HDUList):
             data = cube[ext].data
             header = cube[ext].header
@@ -259,8 +256,8 @@ class Source(SourceBase):
             print("'BUNIT' keyword is malformed", e)
             raise
 
-        if header["CTYPE3"].lower() not in ["freq", 'wave']:
-            raise ValueError("Only 'FREQ' and 'WAVE' are supported")
+        if header["CTYPE3"].lower() not in ["freq", 'wave', "awav"]:
+            raise ValueError("Only ['FREQ','WAVE','AWAV'] are supported")
 
         target_cube = data
         target_hdr = header.copy()
@@ -272,18 +269,19 @@ class Source(SourceBase):
 
     @property
     def table_fields(self):
-        return [field for field in self.fields if isinstance(field, Table)]
+        fields = [field for field in self.fields if isinstance(field, Table)]
+        return fields
 
     @property
     def image_fields(self):
-         fields = [field for field in self.fields if
-                isinstance(field, fits.ImageHDU) and field.header["NAXIS"] == 2]
-         return fields
+        fields = [field for field in self.fields if
+                  isinstance(field, fits.ImageHDU) and field.header["NAXIS"] == 2]
+        return fields
 
     @property
     def cube_fields(self):
         fields = [field for field in self.fields if
-                isinstance(field, fits.ImageHDU) and field.header["NAXIS"] == 3]
+                  isinstance(field, fits.ImageHDU) and field.header["NAXIS"] == 3]
         return fields
 
     def image_in_range(self, wave_min, wave_max, pixel_scale=1*u.arcsec,
