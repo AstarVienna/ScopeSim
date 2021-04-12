@@ -1,4 +1,5 @@
 '''Effects related to field masks, including spectroscopic slits'''
+from os import path as pth
 from copy import deepcopy
 import numpy as np
 from matplotlib.path import Path
@@ -372,6 +373,7 @@ class SlitWheel(Effect):
 
 
     def apply_to(self, obj):
+        '''Use apply_to of current_slit'''
         return self.current_slit.apply_to(obj)
 
 
@@ -380,14 +382,17 @@ class SlitWheel(Effect):
 
 
     @property
-    def current_filter(self):
+    def current_slit(self):
+        '''Return the currently used slit'''
         return self.slits[from_currsys(self.meta["current_slit"])]
 
     def __getattr__(self, item):
         return getattr(self.current_slit, item)
 
     ### def get_plot()
-    ### def get_table(self):
+    def get_table(self):
+        '''TODO make useful'''
+        return "something"
 
 ################################################################################
 
