@@ -1,3 +1,4 @@
+'''Effects related to field masks, including spectroscopic slits'''
 from copy import deepcopy
 import numpy as np
 from matplotlib.path import Path
@@ -323,6 +324,70 @@ class ApertureList(Effect):
     def __getitem__(self, item):
         return self.get_apertures(item)[0]
 
+
+
+class SlitWheel(Effect):
+    """
+    This wheel holds a selection of predefined spectroscopic filters
+    and possibly other field masks.
+
+    It should contain an open position.
+    A user can define a non-standard slit by directly using the Aperture
+    effect.
+
+    Examples
+    --------
+    ::
+        name: slit_wheel
+        class: SlitWheel
+        kwargs:
+            slit_names: []
+            filename_format: "MASK_slit_{}.dat
+            current_slit: "C"
+    """
+
+    def __init__(self, **kwargs):
+        required_keys = ["slit_names", "filename_format", "current_slit"]
+        check_keys(kwargs, required_keys, action="error")
+
+        super(SlitWheel, self).__init__(**kwargs)
+
+        params = {"z_order": [82, 282, 582],   # .todo check
+                  "path": "",
+                  "report_plot_include": True,
+                  "report_table_include": True,
+                  "report_table_rounding": 4}  # .todo not sure what any of this means...
+        self.meta.update(params)
+        self.meta.update(kwargs)
+
+        path = pth.join(self.meta["path"],
+                        from_currsys(self.meta["filename_format"]))
+        self.slits = {}
+        for name in self.meta["slit_names"]:
+            kwargs["name"] = name
+            self.slits[name] = ApertureMask(filename=path.format(name),
+                                            **kwargs)
+
+        self.table = self.get_table()
+
+
+    def apply_to(self, obj):
+        return self.current_slit.apply_to(obj)
+
+
+    def fov_grid(self, which="edges", **kwargs):
+        return self.current_slit.fov_grid(which=which, **kwargs)
+
+
+    @property
+    def current_filter(self):
+        return self.slits[from_currsys(self.meta["current_slit"])]
+
+    def __getattr__(self, item):
+        return getattr(self.current_slit, item)
+
+    ### def get_plot()
+    ### def get_table(self):
 
 ################################################################################
 
