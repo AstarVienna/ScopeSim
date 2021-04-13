@@ -10,7 +10,7 @@ from astropy.table import Table
 from .effects import Effect
 from ..optics import image_plane_utils as imp_utils
 
-from ..utils import quantity_from_table, from_currsys, check_keys
+from ..utils import quantify, quantity_from_table, from_currsys, check_keys
 
 
 class ApertureMask(Effect):
@@ -389,10 +389,34 @@ class SlitWheel(Effect):
     def __getattr__(self, item):
         return getattr(self.current_slit, item)
 
-    ### def get_plot()
     def get_table(self):
-        '''TODO make useful'''
-        return "something"
+        '''Create a table of slits with centre position, width and length
+
+        Width is defined as the extension in the y-direction, length in the
+        x-direction. All values are in milliarcsec.'''
+        names = list(self.slits.keys())
+        slits = self.slits.values()
+        xmax = np.array([slit.data['x'].max() * u.Unit(slit.meta['x_unit'])
+                         .to(u.mas) for slit in slits])
+        xmin = np.array([slit.data['x'].min() * u.Unit(slit.meta['x_unit'])
+                         .to(u.mas) for slit in slits])
+        ymax = np.array([slit.data['y'].max() * u.Unit(slit.meta['x_unit'])
+                         .to(u.mas) for slit in slits])
+        ymin = np.array([slit.data['y'].min() * u.Unit(slit.meta['x_unit'])
+                         .to(u.mas) for slit in slits])
+        xmax = quantify(xmax, u.mas)
+        xmin = quantify(xmin, u.mas)
+        ymax = quantify(ymax, u.mas)
+        ymin = quantify(ymin, u.mas)
+
+        lengths = xmax - xmin
+        widths = ymax - ymin
+        x_centres = (xmax + xmin) / 2
+        y_centres = (ymax + ymin) / 2
+        tbl = Table(names=["name", "x_centre", "y_centre", "length", "width"],
+                    data=[names, x_centres, y_centres, lengths, widths])
+        return tbl
+
 
 ################################################################################
 
