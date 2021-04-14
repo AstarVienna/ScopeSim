@@ -353,7 +353,7 @@ class SlitWheel(Effect):
 
         super(SlitWheel, self).__init__(**kwargs)
 
-        params = {"z_order": [82, 282, 582],   # .todo check
+        params = {"z_order": [80, 280, 580],   # .todo check
                   "path": "",
                   "report_plot_include": True,
                   "report_table_include": True,
