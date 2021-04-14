@@ -283,6 +283,7 @@ def get_spectroscopy_headers(effects, **kwargs):
     detector_list_effects = get_all_effects(effects, efs.DetectorList)
     spec_trace_effects = get_all_effects(effects, efs.SpectralTraceList)
     aperture_effects = get_all_effects(effects, (efs.ApertureList,
+                                                 efs.SlitWheel,
                                                  efs.ApertureMask))
 
     if len(surface_list_effects) > 0:
