@@ -162,6 +162,7 @@ def get_imaging_headers(effects, **kwargs):
 
     # look for apertures
     aperture_effects = get_all_effects(effects, (efs.ApertureMask,
+                                                 efs.SlitWheel,
                                                  efs.ApertureList))
     if len(aperture_effects) == 0:
         detector_arrays = get_all_effects(effects, efs.DetectorList)
