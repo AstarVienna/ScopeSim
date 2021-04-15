@@ -353,11 +353,11 @@ class SlitWheel(Effect):
 
         super(SlitWheel, self).__init__(**kwargs)
 
-        params = {"z_order": [80, 280, 580],   # .todo check
+        params = {"z_order": [80, 280, 580],
                   "path": "",
-                  "report_plot_include": True,
+                  "report_plot_include": False,
                   "report_table_include": True,
-                  "report_table_rounding": 4}  # .todo not sure what any of this means...
+                  "report_table_rounding": 4}
         self.meta.update(params)
         self.meta.update(kwargs)
 
@@ -380,6 +380,12 @@ class SlitWheel(Effect):
     def fov_grid(self, which="edges", **kwargs):
         return self.current_slit.fov_grid(which=which, **kwargs)
 
+    def change_slit(self, slitname=None):
+        '''Change the current slit'''
+        if slitname in self.slits.keys():
+            self.meta['current_slit'] = slitname
+        else:
+            raise ValueError("Unknown slit requested: " + slitname)
 
     @property
     def current_slit(self):

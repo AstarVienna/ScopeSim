@@ -31,3 +31,11 @@ class TestSlitWheel:
 
     def test_current_slit_has_fov_grid_method(self, swheel):
         assert hasattr(swheel.current_slit, "fov_grid")
+
+    def test_change_to_known_slit(self, swheel):
+        swheel.change_slit('A')
+        assert swheel.current_slit.meta['name'] == 'A'
+
+    def test_change_to_unknown_slit(self, swheel):
+        with pytest.raises(ValueError):
+            swheel.change_slit('X')
