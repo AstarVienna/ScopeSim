@@ -1,3 +1,5 @@
+'''Effects related to field masks, including spectroscopic slits'''
+from os import path as pth
 from copy import deepcopy
 import numpy as np
 from matplotlib.path import Path
@@ -8,7 +10,7 @@ from astropy.table import Table
 from .effects import Effect
 from ..optics import image_plane_utils as imp_utils
 
-from ..utils import quantity_from_table, from_currsys, check_keys
+from ..utils import quantify, quantity_from_table, from_currsys, check_keys
 
 
 class ApertureMask(Effect):
@@ -322,6 +324,104 @@ class ApertureList(Effect):
 
     def __getitem__(self, item):
         return self.get_apertures(item)[0]
+
+
+
+class SlitWheel(Effect):
+    """
+    This wheel holds a selection of predefined spectroscopic filters
+    and possibly other field masks.
+
+    It should contain an open position.
+    A user can define a non-standard slit by directly using the Aperture
+    effect.
+
+    Examples
+    --------
+    ::
+        name: slit_wheel
+        class: SlitWheel
+        kwargs:
+            slit_names: []
+            filename_format: "MASK_slit_{}.dat
+            current_slit: "C"
+    """
+
+    def __init__(self, **kwargs):
+        required_keys = ["slit_names", "filename_format", "current_slit"]
+        check_keys(kwargs, required_keys, action="error")
+
+        super(SlitWheel, self).__init__(**kwargs)
+
+        params = {"z_order": [80, 280, 580],
+                  "path": "",
+                  "report_plot_include": False,
+                  "report_table_include": True,
+                  "report_table_rounding": 4}
+        self.meta.update(params)
+        self.meta.update(kwargs)
+
+        path = pth.join(self.meta["path"],
+                        from_currsys(self.meta["filename_format"]))
+        self.slits = {}
+        for name in self.meta["slit_names"]:
+            kwargs["name"] = name
+            self.slits[name] = ApertureMask(filename=path.format(name),
+                                            **kwargs)
+
+        self.table = self.get_table()
+
+
+    def apply_to(self, obj):
+        '''Use apply_to of current_slit'''
+        return self.current_slit.apply_to(obj)
+
+
+    def fov_grid(self, which="edges", **kwargs):
+        return self.current_slit.fov_grid(which=which, **kwargs)
+
+    def change_slit(self, slitname=None):
+        '''Change the current slit'''
+        if slitname in self.slits.keys():
+            self.meta['current_slit'] = slitname
+        else:
+            raise ValueError("Unknown slit requested: " + slitname)
+
+    @property
+    def current_slit(self):
+        '''Return the currently used slit'''
+        return self.slits[from_currsys(self.meta["current_slit"])]
+
+    def __getattr__(self, item):
+        return getattr(self.current_slit, item)
+
+    def get_table(self):
+        '''Create a table of slits with centre position, width and length
+
+        Width is defined as the extension in the y-direction, length in the
+        x-direction. All values are in milliarcsec.'''
+        names = list(self.slits.keys())
+        slits = self.slits.values()
+        xmax = np.array([slit.data['x'].max() * u.Unit(slit.meta['x_unit'])
+                         .to(u.mas) for slit in slits])
+        xmin = np.array([slit.data['x'].min() * u.Unit(slit.meta['x_unit'])
+                         .to(u.mas) for slit in slits])
+        ymax = np.array([slit.data['y'].max() * u.Unit(slit.meta['x_unit'])
+                         .to(u.mas) for slit in slits])
+        ymin = np.array([slit.data['y'].min() * u.Unit(slit.meta['x_unit'])
+                         .to(u.mas) for slit in slits])
+        xmax = quantify(xmax, u.mas)
+        xmin = quantify(xmin, u.mas)
+        ymax = quantify(ymax, u.mas)
+        ymin = quantify(ymin, u.mas)
+
+        lengths = xmax - xmin
+        widths = ymax - ymin
+        x_centres = (xmax + xmin) / 2
+        y_centres = (ymax + ymin) / 2
+        tbl = Table(names=["name", "x_centre", "y_centre", "length", "width"],
+                    data=[names, x_centres, y_centres, lengths, widths])
+        return tbl
 
 
 ################################################################################
