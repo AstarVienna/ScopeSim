@@ -1,0 +1,16 @@
+# description : Slit mask for slit A 8000 x 19.0 mas
+# author : Oliver Czoske
+# source : Polarion METIS-1438
+# date_created : 2021-03-31
+# date_modified : 2021-03-31
+# status : system requirement approved 2020-10-13
+# type : aperture:slit_geometry
+# x_unit : mas
+# y_unit : mas
+# changes :
+#
+    x     y
+-4000  -9.5
+ 4000  -9.5
+ 4000   9.5
+-4000   9.5

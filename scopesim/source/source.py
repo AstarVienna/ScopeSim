@@ -94,8 +94,6 @@ class Source(SourceBase):
 
     Parameters
     ----------
-    image_hdu : fits.ImageHDU
-
     filename : str
 
     lam : np.array
@@ -110,6 +108,10 @@ class Source(SourceBase):
         ``flux(x[i], y[i]) = spectra[ref[i]] * weight[i]``
     weight : np.array
         A weighting to scale the relevant spectrum for each position
+
+    table : astropy.Table
+
+    image_hdu : fits.ImageHDU
 
 
     Attributes

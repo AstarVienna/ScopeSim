@@ -4,6 +4,7 @@ from os import path as pth
 import warnings
 
 from astropy.io import fits
+from astropy.table import Table
 from synphot import SourceSpectrum
 
 from .ter_curves_utils import combine_two_spectra, add_edge_zeros, download_svo_filter
@@ -64,7 +65,9 @@ class TERCurve(Effect):
                   "wave_min": "!SIM.spectral.wave_min",
                   "wave_max": "!SIM.spectral.wave_max",
                   "wave_unit": "!SIM.spectral.wave_unit",
-                  "wave_bin": "!SIM.spectral.spectral_resolution"}
+                  "wave_bin": "!SIM.spectral.spectral_resolution",
+                  "report_plot_include": True,
+                  "report_table_include": False}
         self.meta.update(params)
         self.meta.update(kwargs)
 
@@ -122,7 +125,8 @@ class TERCurve(Effect):
 
     # #######
 
-    def plot(self, which="x", wavelength=None, ax=None, **kwargs):
+    def plot(self, which="x", wavelength=None, ax=None, new_figure=True,
+             label=None, **kwargs):
         """
 
         Parameters
@@ -138,6 +142,10 @@ class TERCurve(Effect):
 
         """
         import matplotlib.pyplot as plt
+        if new_figure:
+            # from matplotlib import rcParams
+            # rcParams["axes.formatter.useoffset"] = False
+            plt.figure(figsize=(10, 5))
 
         self.meta.update(kwargs)
         params = from_currsys(self.meta)
@@ -157,14 +165,25 @@ class TERCurve(Effect):
 
             plot_kwargs = self.meta.get("plot_kwargs", {})
             surf = self.surface
+
             if "t" in ter:
-                plt.plot(wave, surf.transmission(wave), **plot_kwargs)
+                y = surf.transmission(wave)
             elif "e" in ter:
-                plt.plot(wave, surf.emission(wave), **plot_kwargs)
+                y = surf.emission(wave)
             elif "r" in ter:
-                plt.plot(wave, surf.reflection(wave), **plot_kwargs)
+                y = surf.reflection(wave)
             else:
-                plt.plot(wave, surf.throughput(wave), **plot_kwargs)
+                y = surf.throughput(wave)
+
+            plt.plot(wave, y, **plot_kwargs)
+
+            wave_unit = self.meta.get("wavelength_unit")
+            plt.xlabel("Wavelength [{}]".format(wave_unit))
+            y_str = {"t": "Transmission", "e": "Emission",
+                     "r": "Reflectivity", "x": "Throughput"}
+            plt.ylabel("{} [{}]".format(y_str[ter], y.unit))
+
+        return plt.gcf()
 
 
 class AtmosphericTERCurve(TERCurve):
@@ -341,7 +360,10 @@ class FilterCurve(TERCurve):
         wave = self.surface.wavelength
         thru = self.surface._get_ter_property("transmission", fmt="array")
         mask = thru >= 0.5
-        dwave = wave[mask][-1] - wave[mask][0]
+        if any(mask):
+            dwave = wave[mask][-1] - wave[mask][0]
+        else:
+            dwave = 0 * wave.unit
 
         return dwave
 
@@ -354,9 +376,9 @@ class FilterCurve(TERCurve):
 
         return num / den
 
+    @property
     def center(self):
         return self.centre
-
 
 
 class DownloadableFilterCurve(FilterCurve):
@@ -381,6 +403,7 @@ class SpanishVOFilterCurve(FilterCurve):
 
 class FilterWheel(Effect):
     """
+    This wheel holds a selection of predefined filters.
 
     Examples
     --------
@@ -402,21 +425,36 @@ class FilterWheel(Effect):
         super(FilterWheel, self).__init__(**kwargs)
 
         params = {"z_order": [124, 224, 524],
-                  "path": ""}
+                  "path": "",
+                  "report_plot_include": True,
+                  "report_table_include": True,
+                  "report_table_rounding": 4}
         self.meta.update(params)
         self.meta.update(kwargs)
 
-        path = pth.join(self.meta["path"], from_currsys(self.meta["filename_format"]))
+        path = pth.join(self.meta["path"],
+                        from_currsys(self.meta["filename_format"]))
         self.filters = {}
         for name in self.meta["filter_names"]:
             kwargs["name"] = name
             self.filters[name] = FilterCurve(filename=path.format(name), **kwargs)
 
+        self.table = self.get_table()
+
+
     def apply_to(self, obj):
+        '''Use apply_to of current filter'''
         return self.current_filter.apply_to(obj)
 
     def fov_grid(self, which="waveset", **kwargs):
         return self.current_filter.fov_grid(which=which, **kwargs)
+
+    def change_filter(self, filtername=None):
+        '''Change the current filter'''
+        if filtername in self.filters.keys():
+            self.meta['current_filter'] = filtername
+        else:
+            raise ValueError("Unknown filter requested: " + filtername)
 
     @property
     def current_filter(self):
@@ -440,10 +478,29 @@ class FilterWheel(Effect):
 
         """
         import matplotlib.pyplot as plt
+        plt.figure(figsize=(10, 5))
 
         for ii, ter in enumerate(which):
             ax = plt.subplot(len(which), 1, ii+1)
             for name in self.filters:
                 self.filters[name].plot(which=ter, wavelength=wavelength,
-                                        ax=ax, **kwargs)
+                                        ax=ax, new_figure=False,
+                                        plot_kwargs={"label": name}, **kwargs)
 
+        # plt.semilogy()
+        plt.legend()
+
+        return plt.gcf()
+
+    def get_table(self):
+        names = list(self.filters.keys())
+        ters = self.filters.values()
+        centres = u.Quantity([ter.centre for ter in ters])
+        widths = u.Quantity([ter.fwhm for ter in ters])
+        blue = centres - 0.5 * widths
+        red = centres + 0.5 * widths
+
+        tbl = Table(names=["name", "centre", "width", "blue cutoff", "red cutoff"],
+                    data=[names, centres, widths, blue, red])
+
+        return tbl

@@ -45,7 +45,7 @@ A basic simulation of ELT/MICADO image would look something like this::
                                             "!INST.filter_name": "Ks"})
     opt = scopesim.OpticalTrain(cmd)
 
-    src = scopesim_templates.stars.open_cluster()
+    src = scopesim_templates.basic.stars.cluster()
     opt.observe(src)
     opt.readout().writeto("my_image.fits")
 
@@ -98,6 +98,7 @@ Below is a list of packages that are currently being maintained on our
 Main Package        Support Packages            Notes
 =================== =========================== ====================================
 MICADO              Armazones, ELT, MAORY       Spectroscopy in Beta stage
+MICADO_Sci          As above
 METIS               Armazones, ELT              Only Imaging
 HAWKI               Paranal, VLT
 WFC3                HST                         Only NIR mode

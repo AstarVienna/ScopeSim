@@ -19,15 +19,22 @@ jobs:
       dist: xenial
       python: 3.7
       install:
-        - pip install -r requirements.py37.travis.txt
+        - pip install -r requirements.travis.txt
         - pip install .
 
     - name: python 3.8
       dist: bionic
       python: 3.8
       install:
-        - pip install -r requirements.py38.travis.txt
+        - pip install -r requirements.travis.txt
         - pip install .
+
+    - name: python 3.9
+        dist: bionic
+        python: 3.9
+        install:
+          - pip install -r requirements.travis.txt
+          - pip install .
 
 script: 
   - pytest

@@ -13,7 +13,9 @@ class SurfaceList(TERCurve):
         super(SurfaceList, self).__init__(**kwargs)
         params = {"z_order": [20, 120, 520],
                   "minimum_throughput": "!SIM.spectral.minimum_throughput",
-                  "etendue": "!TEL.etendue"}
+                  "etendue": "!TEL.etendue",
+                  "report_plot_include": True,
+                  "report_table_include": True}
         self.meta.update(params)
         self.meta.update(kwargs)
 
@@ -135,14 +137,40 @@ class SurfaceList(TERCurve):
                                                   self.table, prepend)
 
     def plot(self, which="x", wavelength=None, ax=None, **kwargs):
-        # Plot the individual surfaces
-        for key in self.surfaces:
-            ter = TERCurve(**self.surfaces[key].meta)
-            ter.surface = self.surfaces[key]
-            ter.plot(which=which, wavelength=None, ax=None, label=key, **kwargs)
+        """
 
-        # Plot the system surface
-        ter = TERCurve(**self.meta)
-        ter.surface = self.surface
-        ter.plot(which=which, wavelength=None, ax=None,
-                 plot_kwargs={"ls": "-.", "label": key}, **kwargs)
+        Parameters
+        ----------
+        which : str
+            "x" plots throughput. "t","e","r" plot trans/emission/refl
+        wavelength
+        kwargs
+
+        Returns
+        -------
+
+        """
+        import matplotlib.pyplot as plt
+        plt.gcf().clf()
+
+        for ii, which_part in enumerate(which):
+            ax = plt.subplot(len(which), 1, ii+1)
+
+            # Plot the individual surfaces
+            for key in self.surfaces:
+                ter = TERCurve(**self.surfaces[key].meta)
+                ter.surface = self.surfaces[key]
+                ter.plot(which=which_part, wavelength=None, ax=None,
+                         new_figure=False,
+                         plot_kwargs={"ls": "-", "label": key}, **kwargs)
+
+            # Plot the system surface
+            ter = TERCurve(**self.meta)
+            ter.surface = self.surface
+            ter.plot(which=which_part, wavelength=None, ax=ax, new_figure=False,
+                     plot_kwargs={"ls": "-.", "label": "System Throughput"},
+                     **kwargs)
+
+        plt.legend()
+
+        return plt.gcf()

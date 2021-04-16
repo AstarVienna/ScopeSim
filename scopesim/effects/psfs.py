@@ -14,12 +14,25 @@ from ..base_classes import ImagePlaneBase, FieldOfViewBase
 from .. import utils
 
 
+class PoorMansFOV:
+    def __init__(self, recursion_call=False):
+        pixel_scale = utils.from_currsys("!INST.pixel_scale")
+        self.header = {"CDELT1": pixel_scale / 3600.,
+                       "CDELT2": pixel_scale / 3600.,
+                       "NAXIS1": 128,
+                       "NAXIS2": 128,}
+        self.meta = utils.from_currsys("!SIM.spectral")
+        self.wavelength = self.meta["wave_mid"] * u.um
+        if not recursion_call:
+            self.hdu = PoorMansFOV(recursion_call=True)
+
+
 class PSF(Effect):
     def __init__(self, **kwargs):
         self.kernel = None
         self.valid_waverange = None
         self._waveset = None
-        super(PSF, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
         params = {"flux_accuracy": "!SIM.computing.flux_accuracy",
                   "sub_pixel_flag": "!SIM.sub_pixel.flag",
@@ -27,7 +40,10 @@ class PSF(Effect):
                   "convolve_mode": "same",      # "full", "same"
                   "bkg_width": -1,
                   "wave_key": "WAVE0",
-                  "normalise_kernel": True}
+                  "normalise_kernel": True,
+                  "report_plot_include": True,
+                  "report_table_include": False
+                  }
         self.meta.update(params)
         self.meta.update(kwargs)
         self.meta = utils.from_currsys(self.meta)
@@ -60,6 +76,9 @@ class PSF(Effect):
                          bkg_width:(nx_old - bkg_width)] = 0
                     bkg_level = np.median(image[mask])
 
+                # y = min(image.shape[0], kernel.shape[0])
+                # x = min(image.shape[1], kernel.shape[1])
+                # new_image = convolve(image[:y, :x] - bkg_level, kernel[:y, :x], mode=mode)
                 new_image = convolve(image - bkg_level, kernel, mode=mode)
                 ny_new, nx_new = new_image.shape
                 obj.hdu.data = new_image + bkg_level
@@ -91,21 +110,24 @@ class PSF(Effect):
         self.kernel = np.ones((1, 1))
         return self.kernel
 
-    def plot(self, obj, **kwargs):
+    def plot(self, obj=None, **kwargs):
         import matplotlib.pyplot as plt
         from matplotlib.colors import LogNorm
+        plt.gcf().clf()
 
         kernel = self.get_kernel(obj)
         plt.imshow(kernel, norm=LogNorm(), origin='lower', **kwargs)
 
+        return plt.gcf()
+
 ################################################################################
 # Analytical PSFs - Vibration, Seeing, NCPAs
 
-
 class AnalyticalPSF(PSF):
     def __init__(self, **kwargs):
-        super(AnalyticalPSF, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         self.meta["z_order"] = [41, 641]
+        self.apply_to_classes = FieldOfViewBase
 
 
 class Vibration(AnalyticalPSF):
@@ -113,7 +135,7 @@ class Vibration(AnalyticalPSF):
     Creates a wavelength independent kernel image
     """
     def __init__(self, **kwargs):
-        super(Vibration, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         self.meta["z_order"] = [244, 744]
         self.meta["width_n_fwhms"] = 4
         self.apply_to_classes = ImagePlaneBase
@@ -122,12 +144,12 @@ class Vibration(AnalyticalPSF):
         utils.check_keys(self.meta, self.required_keys, action="error")
         self.kernel = None
 
-    def get_kernel(self, implane):
+    def get_kernel(self, obj):
         if self.kernel is None:
             utils.from_currsys(self.meta)
             fwhm_pix = self.meta["fwhm"] / self.meta["pixel_scale"]
             sigma = fwhm_pix / 2.35
-            width = int(fwhm_pix * self.meta["width_n_fwhms"])
+            width = max(1, int(fwhm_pix * self.meta["width_n_fwhms"]))
             self.kernel = Gaussian2DKernel(sigma, x_size=width, y_size=width,
                                            mode="center").array
 
@@ -140,13 +162,12 @@ class NonCommonPathAberration(AnalyticalPSF):
     Accepted: kernel_width, strehl_drift
     """
     def __init__(self, **kwargs):
-        super(NonCommonPathAberration, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         self.meta["z_order"] = [241, 641]
         self.meta["kernel_width"] = None
         self.meta["strehl_drift"] = 0.02
         self.meta["wave_min"] = "!SIM.spectral.wave_min"
         self.meta["wave_max"] = "!SIM.spectral.wave_max"
-        self.apply_to_classes = FieldOfViewBase
 
         self._total_wfe = None
 
@@ -185,7 +206,7 @@ class NonCommonPathAberration(AnalyticalPSF):
         if np.abs(1 - strehl_old / strehl_new) > self.meta["strehl_drift"]:
             self.valid_waverange = waves
             self.kernel = pu.wfe2gauss(wfe=self.total_wfe, wave=wave_mid_new,
-                                    width=self.meta["kernel_width"])
+                                       width=self.meta["kernel_width"])
         return self.kernel
 
     @property
@@ -197,13 +218,29 @@ class NonCommonPathAberration(AnalyticalPSF):
                 self._total_wfe = 0
         return self._total_wfe
 
+    def plot(self):
+        import matplotlib.pyplot as plt
+        plt.gcf().clf()
+
+        wave_min, wave_max = utils.from_currsys([self.meta["wave_min"],
+                                                 self.meta["wave_max"]])
+        waves = np.linspace(wave_min, wave_max, 1001) * u.um
+        wfe = self.total_wfe
+        strehl = pu.wfe2strehl(wfe=wfe, wave=waves)
+
+        plt.plot(waves, strehl)
+        plt.xlabel("Wavelength [{}]".format(waves.unit))
+        plt.ylabel("Strehl Ratio \n[Total WFE = {}]".format(wfe))
+
+        return plt.gcf()
+
 
 class SeeingPSF(AnalyticalPSF):
     """
     Currently only returns gaussian kernel with a ``fwhm`` [arcsec]
     """
     def __init__(self, fwhm=1.5, **kwargs):
-        super(SeeingPSF, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         self.meta["fwhm"] = fwhm
         self.meta["z_order"] = [242, 642]
 
@@ -234,10 +271,13 @@ class SeeingPSF(AnalyticalPSF):
 
         return kernel
 
+    def plot(self):
+        return super().plot(PoorMansFOV())
+
 
 class GaussianDiffractionPSF(AnalyticalPSF):
     def __init__(self, diameter, **kwargs):
-        super(GaussianDiffractionPSF, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         self.meta["diameter"] = diameter
         self.meta["z_order"] = [242, 642]
 
@@ -279,6 +319,9 @@ class GaussianDiffractionPSF(AnalyticalPSF):
 
         return kernel
 
+    def plot(self):
+        return super().plot(PoorMansFOV())
+
 
 ################################################################################
 # Semi-analytical PSFs - AnisoCADO PSFs
@@ -286,8 +329,10 @@ class GaussianDiffractionPSF(AnalyticalPSF):
 
 class SemiAnalyticalPSF(PSF):
     def __init__(self, **kwargs):
-        super(SemiAnalyticalPSF, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         self.meta["z_order"] = [42]
+        self.apply_to_classes = FieldOfViewBase
+        # self.apply_to_classes = ImagePlaneBase
 
 
 class AnisocadoConstPSF(SemiAnalyticalPSF):
@@ -423,6 +468,53 @@ class AnisocadoConstPSF(SemiAnalyticalPSF):
 
         return nm_rms
 
+    def plot(self, obj=None, **kwargs):
+        import matplotlib.pyplot as plt
+        from matplotlib.colors import LogNorm
+        plt.figure(figsize=(10, 10))
+
+        pixel_scale = utils.from_currsys("!INST.pixel_scale")
+
+        kernel = self.get_kernel(pixel_scale)
+        # subplot2grid((n_vert, n_horiz), (from_top, from_left), colspan=1, rowspan=1)
+        plt.subplot2grid((2, 2), (0, 0))
+        im = kernel
+        r_sky = pixel_scale * im.shape[0]
+        plt.imshow(im, norm=LogNorm(), origin='lower',
+                   extent= [-r_sky, r_sky, -r_sky, r_sky], **kwargs)
+        plt.ylabel("[arcsec]")
+
+        plt.subplot2grid((2, 2), (0, 1))
+        x = kernel.shape[1] // 2
+        y = kernel.shape[0] // 2
+        r = 16
+        im = kernel[y-r:y+r, x-r:x+r]
+        r_sky = pixel_scale * im.shape[0]
+        plt.imshow(im, norm=LogNorm(), origin='lower',
+                   extent= [-r_sky, r_sky, -r_sky, r_sky], **kwargs)
+        plt.ylabel("[arcsec]")
+        plt.gca().yaxis.set_label_position('right')
+
+        plt.subplot2grid((2, 2), (1, 0), colspan=2)
+        hdr = self._file[0].header
+        data = self._file[0].data
+
+        hdr = self._file[0].header
+        data = self._file[0].data
+
+        wfes = np.arange(hdr["NAXIS1"]) * hdr["CDELT1"] + hdr["CRVAL1"]
+        waves = np.arange(hdr["NAXIS2"]) * hdr["CDELT2"] + hdr["CRVAL2"]
+        for i in np.arange(len(waves))[::-1]:
+            plt.plot(wfes, data[i, :],
+                     label="{} $\mu m$".format(round(waves[i], 3)))
+
+        plt.xlabel("RMS Wavefront Error [um]")
+        plt.ylabel("Strehl Ratio")
+        plt.legend()
+
+        return plt.gcf()
+
+
 
 ################################################################################
 # Discreet PSFs - MAORY and co PSFs
@@ -430,14 +522,16 @@ class AnisocadoConstPSF(SemiAnalyticalPSF):
 
 class DiscretePSF(PSF):
     def __init__(self, **kwargs):
-        super(DiscretePSF, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         self.meta["z_order"] = [43]
+        self.apply_to_classes = FieldOfViewBase
+        # self.apply_to_classes = ImagePlaneBase
 
 
 class FieldConstantPSF(DiscretePSF):
     def __init__(self, **kwargs):
         # sub_pixel_flag and flux_accuracy are taken care of in PSF base class
-        super(FieldConstantPSF, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
         self.required_keys = ["filename"]
         utils.check_keys(self.meta, self.required_keys, action="error")
@@ -484,6 +578,9 @@ class FieldConstantPSF(DiscretePSF):
                 self.kernel = pu.cutout_kernel(self.kernel, fov.header)
 
         return self.kernel
+
+    def plot(self):
+        return super().plot(PoorMansFOV())
 
 
 class FieldVaryingPSF(DiscretePSF):
@@ -591,8 +688,7 @@ class FieldVaryingPSF(DiscretePSF):
         layer_ids = np.round(np.unique(strl_cutout.data)).astype(int)
         if len(layer_ids) > 1:
             kernels = [self.current_data[ii] for ii in layer_ids]
-            # .. todo:: investigate. There's a .T in here that I don't like
-            masks = [strl_cutout.data.T == ii for ii in layer_ids]
+            masks = [strl_cutout.data == ii for ii in layer_ids]
             self.kernel = [[krnl, msk] for krnl, msk in zip(kernels, masks)]
         else:
             self.kernel = [[self.current_data[layer_ids[0]], None]]
@@ -623,12 +719,5 @@ class FieldVaryingPSF(DiscretePSF):
 
         return self._strehl_imagehdu
 
-    def plot(self, fov, **kwargs):
-
-        import matplotlib.pyplot as plt
-        from matplotlib.colors import LogNorm
-
-        kernel = self.get_kernel(fov)
-        fov_back = self.apply_to(fov)
-        #for k in kernel:
-        plt.imshow(fov_back.hdu.data, origin='lower', **kwargs)
+    def plot(self):
+        return super().plot(PoorMansFOV())

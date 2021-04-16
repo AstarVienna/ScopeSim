@@ -192,7 +192,16 @@ Global properties
 ::
 
 {}
+""".format(str(self),
+           rst_title_chars[0] * len(str(self)),
+           self.meta.get("object", "<unknown optical element>"),
+           self.meta.get("alias", "<unknown alias>"),
+           self.meta.get("description", "<no description>"),
+           rst_title_chars[1] * 17,
+           self.properties_str)
 
+        if len(self.list_effects()) > 0:
+            rst_str += """        
 Effects
 {}
 
@@ -203,14 +212,7 @@ Summary of Effects included in this optical element:
    
 {}
  
-""".format(str(self),
-           rst_title_chars[0] * len(str(self)),
-           self.meta.get("object", "<unknown optical element>"),
-           self.meta.get("alias", "<unknown alias>"),
-           self.meta.get("description", "<no description>"),
-           rst_title_chars[1] * 17,
-           self.properties_str,
-           rst_title_chars[1] * 7,
+""".format(rst_title_chars[1] * 7,
            "tbl:" + self.meta.get("name", "<unknown OpticalElement>"),
            table_to_rst(self.list_effects(), indent=4))
 
@@ -221,4 +223,3 @@ Summary of Effects included in this optical element:
         write_report(rst_str, filename, output)
 
         return rst_str
-
