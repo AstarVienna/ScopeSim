@@ -403,6 +403,7 @@ class SpanishVOFilterCurve(FilterCurve):
 
 class FilterWheel(Effect):
     """
+    This wheel holds a selection of predefined filters.
 
     Examples
     --------
@@ -431,7 +432,8 @@ class FilterWheel(Effect):
         self.meta.update(params)
         self.meta.update(kwargs)
 
-        path = pth.join(self.meta["path"], from_currsys(self.meta["filename_format"]))
+        path = pth.join(self.meta["path"],
+                        from_currsys(self.meta["filename_format"]))
         self.filters = {}
         for name in self.meta["filter_names"]:
             kwargs["name"] = name
@@ -441,10 +443,18 @@ class FilterWheel(Effect):
 
 
     def apply_to(self, obj):
+        '''Use apply_to of current filter'''
         return self.current_filter.apply_to(obj)
 
     def fov_grid(self, which="waveset", **kwargs):
         return self.current_filter.fov_grid(which=which, **kwargs)
+
+    def change_filter(self, filtername=None):
+        '''Change the current filter'''
+        if filtername in self.filters.keys():
+            self.meta['current_filter'] = filtername
+        else:
+            raise ValueError("Unknown filter requested: " + filtername)
 
     @property
     def current_filter(self):
