@@ -1,12 +1,17 @@
+'''Tests for SpectralSurface'''
+# pylint: disable=no-self-use,missing-class-docstring
+# pylint: disable=missing-function-docstring
+
 # 1 read in a table
 # 2 compliment the table based on columns in file
 # 3 have @property methods for: transmission, ermission, reflection
 
-import pytest
 import inspect
 import os
 import sys
 import warnings
+
+import pytest
 
 import numpy as np
 from astropy.table import Table, Column
@@ -33,21 +38,21 @@ def mock_dir():
 MOCK_DIR = mock_dir()
 
 
-@pytest.fixture(scope="class")
-def ter_table():
+@pytest.fixture(name="ter_table", scope="class")
+def fixture_ter_table():
     return ioascii.read(os.path.join(MOCK_DIR, "TER_dichroic.dat"))
 
 
-@pytest.fixture(scope="module")
-def input_tables():
+@pytest.fixture(name="input_tables", scope="module")
+def fixture_input_tables():
     filenames = ["TER_dichroic.dat", "TC_filter_Ks.dat"]
     abs_paths = [os.path.join(MOCK_DIR, fname) for fname in filenames]
 
     return abs_paths
 
 
-@pytest.fixture(scope="module")
-def unity_flux():
+@pytest.fixture(name="unity_flux", scope="module")
+def fixture_unity_flux():
     flux = np.ones(100)
     wave = np.logspace(-1, 1, 100) * u.um
 
@@ -147,8 +152,8 @@ class TestSpectralSurfaceEmissionProperty:
                                        temperature=0*u.deg_C)
         emission_raw = SourceSpectrum(BlackBody1D, temperature=273)
         assert isinstance(srf.emission, SourceSpectrum)
-        assert np.all(np.isclose(emission_raw(wave) / srf.emission(wave),
-                                 np.array([sr2arcsec]*n)))
+        assert np.allclose(emission_raw(wave) / srf.emission(wave),
+                           np.array([sr2arcsec] * n))
 
 
 class TestSpectralSurfaceComplimentArray:
