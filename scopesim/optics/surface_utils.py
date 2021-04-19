@@ -14,7 +14,7 @@ def make_emission_from_emissivity(temp, emiss_src_spec):
     Parameters
     ----------
     temp : float, Quantity
-        [deg_C] If float, then must be in Kelvin
+        [Kelvin] If float, then must be in Kelvin
     emiss_src_spec : synphot.SpectralElement
         An emissivity response curve in the range [0..1]
 
