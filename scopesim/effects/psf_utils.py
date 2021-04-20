@@ -167,10 +167,11 @@ def get_psf_wave_exts(hdu_list, wave_key="WAVE0"):
         raise ValueError("psf_effect must be a PSF object: {}"
                          "".format(type(hdu_list)))
 
-    wave_ext = [ii for ii in range(len(hdu_list))
-                if wave_key in hdu_list[ii].header]
-    wave_set = [hdu.header[wave_key] for hdu in hdu_list
-                if wave_key in hdu.header]
+    tmp = np.array(
+        [[ii, hdu.header[wave_key]] for ii, hdu in enumerate(hdu_list)
+         if wave_key in hdu.header and hdu.data is not None])
+    wave_ext = tmp[:, 0].astype(int)
+    wave_set = tmp[:, 1]
 
     # ..todo:: implement a way of getting the units from WAVEUNIT
     # until then assume everything is in um
