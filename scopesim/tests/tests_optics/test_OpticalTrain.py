@@ -74,6 +74,11 @@ def simplecado_opt():
     cmd = sim.UserCommands(yamls=[simplecado_yaml])
     return sim.OpticalTrain(cmd)
 
+#@pytest.fixture(scope="class")
+#def micado_opt():
+#    micado_yaml = os.path.join(YAMLS_PATH, "test_scope.yaml")
+#    cmd = sim.UserCommands(yamls=[micado_yaml])
+#    return sim.OpticalTrain(cmd)
 
 @pytest.mark.usefixtures("cmds")
 class TestInit:
@@ -265,3 +270,18 @@ class TestListEffects:
         assert bool(simplecado_opt.effects["included"][2]) is True
 
         print("\n", simplecado_opt.effects)
+
+
+@pytest.mark.usefixtures("simplecado_opt")
+class TestShutdown:
+    # THIS TEST IS CURRENTLY USELESS AS SIMPLECADO HAS NO FITS FILE
+    def test_files_closed_on_shutdown(self, simplecado_opt):
+        simplecado_opt.shutdown()
+        flags = []
+        for effect_name in simplecado_opt.effects['name']:
+            try:
+                flags.append(simplecado_opt[effect_name]._file._file.closed)
+            except AttributeError:
+                pass
+
+        assert all(flags)
