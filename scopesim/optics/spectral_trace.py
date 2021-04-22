@@ -10,6 +10,19 @@ from ..utils import interp2, check_keys, from_currsys, quantify
 
 
 class SpectralTrace:
+    '''Definition of one spectral trace
+
+    A SpectralTrace describes the mapping of spectral slit coordinates
+    to the focal plane. The class reads an order layout and fits several
+    functions to describe the geometry of the trace.
+
+    Slit coordinates are:
+    - xi : spatial position along the slit [arcsec]
+    - lam : Wavelength [um]
+    Focal plane coordinates are:
+    - x, y : [mm]
+    '''
+
     def __init__(self, trace_tbl, **kwargs):
         self.meta = {"x_colname": "x",
                      "y_colname": "y",
@@ -43,7 +56,9 @@ class SpectralTrace:
                                       y_colname=self.meta["y_colname"],
                                       spline_order=self.meta["spline_order"],
                                       ext_id=self.meta["extension_id"])
+        # ..todo: Should that be made np.unique?
         self.waves = self.table[self.meta["wave_colname"]]
+        #..todo: this turns out as 1 in simplified layout. Remove?
         self.n_traces = len([col for col in self.table.colnames
                              if self.meta["y_colname"] in col])
         k, n = self.meta["col_number_start"], self.n_traces
@@ -59,6 +74,10 @@ class SpectralTrace:
         self._wave_bin_edges = None
         self._wave_bin_centers = None
         self._curves = None
+
+        self.xy2xi, self.xy2lam = spt_utils.xy2xilam_fit(self.table, self.meta)
+        self.xilam2x, self.xilam2y = spt_utils.xilam2xy_fit(self.table, self.meta)
+        self._xiy2x, self._xiy2lam = spt_utils._xiy2xlam_fit(self.table, self.meta)
 
     def get_max_dispersion(self, **kwargs):
         params = {}
