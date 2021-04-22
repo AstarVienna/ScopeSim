@@ -102,6 +102,7 @@ class SpectralTraceList(Effect):
             self.spectral_traces = self.make_spectral_traces()
 
     def make_spectral_traces(self):
+        '''Returns a list of spectral traces read in from a file'''
         spec_traces = []
         for row in self.catalog:
             params = {col: row[col] for col in row.colnames}
