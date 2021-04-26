@@ -75,9 +75,12 @@ class SpectralTrace:
         self._wave_bin_centers = None
         self._curves = None
 
-        self.xy2xi, self.xy2lam = spt_utils.xy2xilam_fit(self.table, self.meta)
-        self.xilam2x, self.xilam2y = spt_utils.xilam2xy_fit(self.table, self.meta)
-        self._xiy2x, self._xiy2lam = spt_utils._xiy2xlam_fit(self.table, self.meta)
+        self.xy2xi, self.xy2lam = spt_utils.xy2xilam_fit(self.table,
+                                                         self.meta)
+        self.xilam2x, self.xilam2y = spt_utils.xilam2xy_fit(self.table,
+                                                            self.meta)
+        self._xiy2x, self._xiy2lam = spt_utils._xiy2xlam_fit(self.table,
+                                                             self.meta)
 
     def get_max_dispersion(self, **kwargs):
         params = {}
@@ -249,24 +252,31 @@ class SpectralTrace:
 
         return fov_hdrs
 
-    def plot(self, wave_min, wave_max, c="r"):
+    def plot(self, wave_min=None, wave_max=None, c="r"):
+        '''Plot control points of the SpectralTrace'''
         from matplotlib import pyplot as plt
 
         waves = self.table[self.meta["wave_colname"]]
+        if wave_min is None:
+            wave_min = waves.min()
+        if wave_max is None:
+            wave_max = waves.max()
+
         mask = (waves >= wave_min) * (waves <= wave_max)
         if sum(mask) > 2:
             w = waves[mask]
 
-            k = self.meta["col_number_start"]
-            n = self.n_traces
-            for i in range(k, n+k):
-                x = self.table[self.meta["x_colname"] + str(i)][mask]
-                y = self.table[self.meta["y_colname"] + str(i)][mask]
-                plt.plot(x, y, c=c)
+            x = self.table[self.meta["x_colname"]][mask]
+            y = self.table[self.meta["y_colname"]][mask]
+            plt.plot(x, y, 'o', c=c)
 
-                if i == k:
-                    for ii in [0, len(w)//2, -1]:
-                        plt.text(x[ii], y[ii], str(w[ii])[:5])
+            for wave in np.unique(waves):
+                xx = x[waves==wave]
+                xx.sort()
+                dx = xx[-1] - xx[-2]
+                plt.text(x[waves==wave].max() + 0.5 * dx,
+                         y[waves==wave].mean(),
+                         str(wave), va='center', ha='left')
 
             plt.gca().set_aspect("equal")
 
