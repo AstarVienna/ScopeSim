@@ -62,6 +62,7 @@ class FieldOfView(FieldOfViewBase):
         self.hdu.header["NAXIS2"] = header["NAXIS2"]
 
         self.fields = []
+        self.spectra = []
         self.image_plane_id = 0
 
         self._wavelength = None
@@ -105,6 +106,9 @@ class FieldOfView(FieldOfViewBase):
                                                          area)
             self.fields += [imagehdu]
 
+    def make_cube(self):
+        return None
+
     def view(self, sub_pixel=None):
         if sub_pixel is None:
             sub_pixel = self.meta["sub_pixel"]
@@ -140,6 +144,10 @@ class FieldOfView(FieldOfViewBase):
     @property
     def image(self):
         return self.data
+
+    @property
+    def cube(self):
+        return self.make_cube()
 
     @property
     def corners(self):
