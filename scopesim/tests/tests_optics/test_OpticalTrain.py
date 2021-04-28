@@ -74,6 +74,11 @@ def simplecado_opt():
     cmd = sim.UserCommands(yamls=[simplecado_yaml])
     return sim.OpticalTrain(cmd)
 
+#@pytest.fixture(scope="class")
+#def micado_opt():
+#    micado_yaml = os.path.join(YAMLS_PATH, "test_scope.yaml")
+#    cmd = sim.UserCommands(yamls=[micado_yaml])
+#    return sim.OpticalTrain(cmd)
 
 @pytest.mark.usefixtures("cmds")
 class TestInit:
@@ -265,3 +270,36 @@ class TestListEffects:
         assert bool(simplecado_opt.effects["included"][2]) is True
 
         print("\n", simplecado_opt.effects)
+
+
+@pytest.mark.usefixtures("simplecado_opt")
+class TestShutdown:
+    '''Test that fits files are closed on shutdown of OpticalTrain'''
+
+    def test_files_closed_on_shutdown(self, simplecado_opt):
+        '''Test for closed files in two ways:
+        - `closed` flag is set to True
+        - data access fails
+        '''
+        # Add an effect with a psf
+        psf = sim.effects.FieldConstantPSF(filename="test_ConstPSF.fits",
+                                           name="testpsf")
+        simplecado_opt.optics_manager.add_effect(psf)
+        # This is just to make sure that we have an open file
+        assert(simplecado_opt['testpsf']._file._file.closed is False)
+
+        simplecado_opt.shutdown()
+
+        # 1. Check the `closed` flags where available
+        flags = []
+        for effect_name in simplecado_opt.effects['name']:
+            try:
+                flags.append(simplecado_opt[effect_name]._file._file.closed)
+            except AttributeError:
+                pass
+
+        assert all(flags)
+
+        # 2. Check that data access fails
+        with pytest.raises(ValueError):
+            print(simplecado_opt['testpsf']._file[2].data)
