@@ -3,6 +3,8 @@ from astropy.table import Table
 from astropy.io import fits
 from astropy import units as u
 
+from matplotlib import pyplot as plt
+
 from ..optics import spectral_trace_utils as spt_utils
 from ..optics import image_plane_utils as imp_utils
 from ..optics.monochromatic_trace_curve import MonochromeTraceCurve
@@ -126,11 +128,12 @@ class SpectralTrace:
 
     @property
     def footprint(self):
-        x = [self.table[col] for col in self.x_colnames]
-        y = [self.table[col] for col in self.y_colnames]
-        xs = [np.min(x), np.max(x), np.max(x), np.min(x)]
-        ys = [np.min(y), np.min(y), np.max(y), np.max(y)]
-        return xs, ys
+        '''Return corners of rectangle enclosing spectral trace'''
+        xval = self.table[self.meta['x_colname']]
+        yval = self.table[self.meta['y_colname']]
+        xlim = [np.min(xval), np.max(xval), np.max(xval), np.min(xval)]
+        ylim = [np.min(yval), np.min(yval), np.max(yval), np.max(yval)]
+        return xlim, ylim
 
     def get_trace_curves(self, pixel_size, wave_min=None, wave_max=None,
                          xy_edges=None):
@@ -254,8 +257,14 @@ class SpectralTrace:
 
     def plot(self, wave_min=None, wave_max=None, c="r"):
         '''Plot control points of the SpectralTrace'''
-        from matplotlib import pyplot as plt
 
+        # Footprint (rectangle enclosing the trace)
+        xlim, ylim  = self.footprint
+        xlim.append(xlim[0])
+        ylim.append(ylim[0])
+        plt.plot(xlim, ylim)
+
+        # Control points
         waves = self.table[self.meta["wave_colname"]]
         if wave_min is None:
             wave_min = waves.min()
@@ -277,6 +286,7 @@ class SpectralTrace:
                 plt.text(x[waves==wave].max() + 0.5 * dx,
                          y[waves==wave].mean(),
                          str(wave), va='center', ha='left')
+
 
             plt.gca().set_aspect("equal")
 
