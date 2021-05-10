@@ -15,7 +15,7 @@ MOCK_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__),
                                         "../mocks/files/"))
 sim.rc.__search_path__.insert(0, MOCK_DIR)
 
-PLOTS = True
+PLOTS = False
 
 
 class TestSourceInitWithCube:
@@ -66,10 +66,9 @@ class TestSourceInitWithCube:
                                 bunit="erg / (s angstrom cm2 arcsec2)")
 
         filename = os.path.join(MOCK_DIR, "cube.fits")
-    #    cube.writeto(filename, overwrite=True)
-       # filename = "/home/mverdugo/ScopeSim/TESTS/notebooks/m1931subcube.fits"
-        filename = "/home/mverdugo/ScopeSim/TESTS/notebooks/IC0307.COMB.rscube.fits"
-        src_cube = Source(cube=filename, ext=0)
+        cube.writeto(filename, overwrite=True)
+
+        src_cube = Source(cube=filename, ext=1)
 
         if PLOTS:
             src_cube.plot()
