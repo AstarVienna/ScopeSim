@@ -41,7 +41,19 @@ class TestCube:
 
         assert isinstance(cube, Cube)
 
-    def test_typical_conversion(self):
+    def test_waves_input_output_waves(self):
+        wave_unit = u.AA
+        dummy_cube = _make_dummy_cube(scale=0.2, wave_unit=wave_unit, ref_wave=1000 * u.AA,
+                                      wave_step=1, wave_type="WAVE", bunit="erg / (s cm2 Angstrom)")
+        cube = Cube(hdu=dummy_cube)
+        in_waves = cube._in_waves.to(u.um)
+        out_waves = cube.waves
+
+        assert cube._in_waves.unit == wave_unit
+        assert cube.waves.unit == u.Unit('um')
+        assert in_waves.value.all() == out_waves.value.all()
+
+    def test_easy_flux_conversion(self):
         ref_wave = 1000 * u.AA
         bunit = "erg / (s cm2 Angstrom)"
         wave_step = 1*u.AA
@@ -56,10 +68,10 @@ class TestCube:
         flux = np.ones(lam.shape) * u.Unit(bunit)
 
         sp = synphot.SourceSpectrum(synphot.Empirical1D, points=lam, lookup_table=flux )
-        nphot2 = photons_in_range([sp], 1000, 1100) * 400
+        nphot2 = photons_in_range([sp], 0.1000, 0.1100) * cube.data.shape[1] * cube.data.shape[2]
 
         nphot2 = nphot2.value
-        print(nphot1, nphot2)
+        print(nphot1, nphot2[0])
         assert np.isclose(nphot1, nphot2[0], rtol=0.1)
 
     def test_conversion(self):

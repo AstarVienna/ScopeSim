@@ -88,8 +88,8 @@ class Cube:
         """
         specwcs = self._in_wcs.spectral
         zpix = np.arange(specwcs.spectral.array_shape[0])
-
-        waves = specwcs.all_pix2world(zpix, 0)[0] * specwcs.wcs.cunit[0]
+        wave_unit = u.Unit(self._in_header["CUNIT3"])
+        waves = specwcs.pixel_to_world(zpix).to(wave_unit)
 
         return waves
 
@@ -100,7 +100,7 @@ class Cube:
         """
         specwcs = self.wcs.spectral
         zpix = np.arange(specwcs.spectral.array_shape[0])
-        waves = specwcs.all_pix2world(zpix).to(u.um)
+        waves = specwcs.pixel_to_world(zpix).to(u.um)
 
         return waves
 
@@ -133,24 +133,26 @@ class Cube:
         """
 
         specwcs = self._in_wcs.spectral
-        temp_flux = np.ones(self._in_waves.shape[0]) * u.Unit(self.bunit)
+        temp_flux = np.ones(self._in_waves.shape[0]) * u.Unit(self._in_header["BUNIT"])
         conversion_factor = convert_flux_units(temp_flux, self._in_waves)
         conversion_factor = conversion_factor.value.reshape(self._in_waves.shape[0], 1, 1)
 
         self.header = self._in_header.copy()
         self.bunit = "ph / (m2 um s)"
-        self.header.update({"BUNIT": self.bunit})
+        cdelt = specwcs.wcs.cdelt[0] * specwcs.wcs.cunit[0]
+        cdelt = cdelt.to(u.um, equivalencies=u.spectral()).value
+        cunit = specwcs.wcs.cunit
+        crval = specwcs.wcs.crval * cunit
+
+        self.header.update(dict(BUNIT=self.bunit,
+                                CUNIT3="um",
+                                CRVAL3=crval[0].to(u.um).value))
+
         #waves = self._in_waves.to(u.um, equivalencies=u.spectral()).value
         if 'CDELT3' in self.header:
-            cdelt = specwcs.wcs.cdelt[0] * specwcs.wcs.cunit[0]
-            cdelt = cdelt.to(u.um, equivalencies=u.spectral()).value
-            self.header.update({"CUNIT3": "um",
-                                "CDELT3": cdelt})
+            self.header.update(dict(CDELT3=cdelt))
         if 'CD3_3' in self.header:
-            cdelt = specwcs.wcw.cd[0][0] * specwcs.wcs.cunit[0]
-            cdelt = cdelt.to(u.um, equivalencies=u.spectral()).value
-            self.header.update({"CUNIT3": "um",
-                                "CD3_3": cdelt})
+            self.header.update(dict(CD3_3=cdelt))
 
         return conversion_factor
 
@@ -158,24 +160,22 @@ class Cube:
         specwcs = self._in_wcs.spectral
         temp_flux = np.ones(self._in_waves.shape[0]) * self.bunit
         conversion_factor = convert_flux_units(temp_flux, self._in_waves)
-        self.bunit = "ph / (m2 um s)"
-        self.header.update({"BUNIT": self.bunit})
 
         freq_0 = self._in_waves[0].value
         c = const.c.to(u.um / u.s).value
-        if 'CDELT3' in self.header:
-            self.header.update(dict(CTYPE3='WAVE-F2W',
-                                    CRVAL3=c / specwcs.wcs.crval[0],  # um
-                                    CRPIX3=specwcs.wcs.crpix[0],
-                                    CUNIT3='um',
-                                    CDELT3=specwcs.wcs.cdelt[0] * -c / freq_0**2))
+        cdelt = specwcs.wcs.cdelt[0] * -c / freq_0**2
 
+        self.bunit = "ph / (m2 um s)"
+        self.header.update(dict(CTYPE3='WAVE-F2W',
+                                CRVAL3=c / specwcs.wcs.crval[0],  # um
+                                CRPIX3=specwcs.wcs.crpix[0],
+                                CUNIT3='um',
+                                BUNIT=self.bunit))
+
+        if 'CDELT3' in self.header:
+            self.header.update(dict(CDELT3=cdelt))
         if 'CD3_3' in self.header:
-            self.header.update(dict(CTYPE3='WAVE-F2W',
-                                    CRVAL3=c / specwcs.wcs.crval[0],  # um
-                                    CRPIX3=specwcs.wcs.crpix[0],
-                                    CUNIT3='um',
-                                    CD3_3=specwcs.wcs.cdelt[0] * -c / freq_0 ** 2))
+            self.header.update(dict(CD3_3=cdelt))
 
         return conversion_factor.value.reshape(self._in_waves.shape[0], 1, 1)
 
@@ -218,8 +218,9 @@ class Cube:
             end = specwcs.pixel_shape[0]
 
         flux = np.sum(self.data[start:end], axis=(1, 2))
-        zpix = np.arange(start, end)
-        waves = specwcs.pixel_to_world(zpix)
+
+        waves = self.waves[start:end]
+        print(waves)
         nphot = np.trapz(flux, waves.value)
 
         return nphot
