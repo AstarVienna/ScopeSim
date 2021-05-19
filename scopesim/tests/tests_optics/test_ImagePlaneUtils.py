@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 
 from scopesim.optics import image_plane_utils as imp_utils
 
-PLOTS = False
+PLOTS = True
 
 
 class TestSplitHeader:
@@ -33,27 +33,103 @@ class TestSplitHeader:
 
 
 class TestAddImageHDUtoImageHDU:
-    def test_add_one_image_to_another_in_the_right_position(self):
-
-        big = imp_utils.header_from_list_of_xy(x=np.array([-20, -20, 20, 20]),
-                                               y=np.array([10, -10, -10, 10]),
-                                               pixel_scale=0.1)
-        im = np.zeros([big["NAXIS2"], big["NAXIS1"]])
+    def big_small_hdus(self, big_wh=(20, 10), big_offsets=(0, 0),
+                       small_wh=(6, 3), small_offsets=(0, 0), pixel_scale=0.1):
+        w, h = np.array(big_wh) // 2
+        x = np.array([-w, -w, w, w]) + big_offsets[0]
+        y = np.array([h, -h, -h, h]) + big_offsets[1]
+        big = imp_utils.header_from_list_of_xy(x, y, pixel_scale)
+        im = np.ones([big["NAXIS2"], big["NAXIS1"]])
         big = fits.ImageHDU(header=big, data=im)
 
-        small = imp_utils.header_from_list_of_xy(x=np.array([-3, -3, 3, 3])+10,
-                                                 y=np.array([1, -1, -1, 1])-5,
-                                                 pixel_scale=0.1)
+        w, h = np.array(small_wh) // 2
+        x = np.array([-w, -w, w, w]) + small_offsets[0]
+        y = np.array([h, -h, -h, h]) + small_offsets[1]
+        small = imp_utils.header_from_list_of_xy(x, y, pixel_scale)
         im = np.ones([small["NAXIS2"], small["NAXIS1"]])
         small = fits.ImageHDU(header=small, data=im)
 
-        big = imp_utils.add_imagehdu_to_imagehdu(small, big)
-        ycen, xcen = np.array(big.data.shape) // 2
-        assert np.sum(big.data[:ycen, xcen:]) == np.sum(small.data)
+        return big, small
+
+    def test_smaller_hdu_is_fully_in_larger_hdu(self):
+        """yellow box in box"""
+        big, small = self.big_small_hdus()
+        big_sum, small_sum =  np.sum(big.data), np.sum(small.data)
+
+        new = imp_utils.add_imagehdu_to_imagehdu(small, big)
 
         if PLOTS:
-            plt.imshow(big.data, origin="lower")
+            plt.imshow(new.data, origin="lower")
             plt.show()
+
+        assert np.sum(new.data) == big_sum + small_sum
+
+    def test_larger_hdu_is_partially_in_smaller_hdu(self):
+        """monochrome box"""
+        big, small = self.big_small_hdus()
+        big_sum, small_sum =  np.sum(big.data), np.sum(small.data)
+
+        new = imp_utils.add_imagehdu_to_imagehdu(big, small)
+
+        if PLOTS:
+            plt.imshow(new.data, origin="lower")
+            plt.show()
+
+        assert np.sum(new.data) == 2 * small_sum
+
+    def test_smaller_hdu_is_partially_in_larger_hdu(self):
+        """yellow quarter top-right"""
+        big, small = self.big_small_hdus(small_wh=(20, 10), small_offsets=(10, 5))
+        big_sum, small_sum =  np.sum(big.data), np.sum(small.data)
+
+        new = imp_utils.add_imagehdu_to_imagehdu(small, big)
+
+        if PLOTS:
+            plt.imshow(new.data, origin="lower")
+            plt.show()
+
+        assert np.sum(new.data) == 1.25 * big_sum
+
+    def test_larger_hdu_is_partially_in_smaller_hdu(self):
+        """yellow quarter bottom-left"""
+        big, small = self.big_small_hdus(small_wh=(20, 10), small_offsets=(10, 5))
+        big_sum, small_sum =  np.sum(big.data), np.sum(small.data)
+
+        new = imp_utils.add_imagehdu_to_imagehdu(big, small)
+
+        if PLOTS:
+
+            plt.imshow(new.data, origin="lower")
+            plt.show()
+
+        assert np.sum(new.data) == 1.25 * big_sum
+
+    def test_larger_hdu_is_fully_outside_smaller_hdu(self):
+        """monochrome box"""
+        big, small = self.big_small_hdus(small_offsets=(15, 0))
+        big_sum, small_sum = np.sum(big.data), np.sum(small.data)
+
+        new = imp_utils.add_imagehdu_to_imagehdu(big, small)
+
+        if PLOTS:
+            plt.imshow(new.data, origin="lower")
+            plt.show()
+
+        assert np.sum(new.data) == small_sum
+
+    def test_larger_hdu_is_fully_outside_smaller_hdu(self):
+        """monochrome box"""
+        big, small = self.big_small_hdus(small_offsets=(15, 0))
+        big_sum, small_sum = np.sum(big.data), np.sum(small.data)
+
+        new = imp_utils.add_imagehdu_to_imagehdu(big, small)
+
+        if PLOTS:
+            plt.imshow(new.data, origin="lower")
+            plt.show()
+
+        assert np.sum(new.data) == small_sum
+
 
     def test_python_image_coords(self):
         # numpy uses a system of im[y, x]

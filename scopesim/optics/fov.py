@@ -66,20 +66,22 @@ class FieldOfView(FieldOfViewBase):
         self.image_plane_id = 0
 
         self._wavelength = None
+        self._waverange = None
+        self._volume = None
 
     def extract_from(self, src):
         """ ..assumption: Bandpass has been applied"""
-        
+
         if not isinstance(src, SourceBase):
             raise ValueError("source must be a Source object: {}"
                              "".format(type(src)))
 
-        wave_min = utils.quantify(self.meta["wave_min"], u.um).value
-        wave_max = utils.quantify(self.meta["wave_max"], u.um).value
         area = self.meta["area"]
 
-        fields = [field for field in src.fields
+        fields = [fov_utils.extract_common_field(field, self.volume())
+                  for field in src.fields
                   if fov_utils.is_field_in_fov(self.hdu.header, field)]
+
         spec_refs = []
         for field in fields:
             if isinstance(field, Table):
@@ -95,8 +97,8 @@ class FieldOfView(FieldOfViewBase):
 
 
         ################### OLD ################################################
-
-        # determine which fields are inside the field of view
+        #
+        # # determine which fields are inside the field of view
         # fields_mask = [fov_utils.is_field_in_fov(self.hdu.header, field)
         #                for field in src.fields]
         # fields_indexes = np.where(fields_mask)[0]
@@ -126,29 +128,47 @@ class FieldOfView(FieldOfViewBase):
 
         ################### OLD ################################################
 
+    def make_spectrum(self):
+        return None
+
+    def make_image(self):
+        return None
+
     def make_cube(self):
         return None
 
     def view(self, sub_pixel=None):
-        if sub_pixel is None:
-            sub_pixel = self.meta["sub_pixel"]
+        return None
 
-        self.hdu.data = np.zeros((self.hdu.header["NAXIS2"],
-                                  self.hdu.header["NAXIS1"]))
-        if len(self.fields) > 0:
-            for field in self.fields:
-                if isinstance(field, Table):
-                    self.hdu = imp_utils.add_table_to_imagehdu(field, self.hdu,
-                                                               sub_pixel)
-                elif isinstance(field, fits.ImageHDU):
-                    self.hdu.data += field.data
+    # sum the cube layers within the wavelength range
 
-        if self.meta["conserve_image"] is False and self.mask is not None:
-            flux = np.sum(self.hdu.data) / np.sum(self.mask)
-            self.hdu.data = np.zeros(self.hdu.data.shape)
-            self.hdu.data[self.mask] = flux
+    # combine images
+    # add point sources to a canvas
 
-        return self.hdu.data
+
+    ################### OLD ################################################
+    # if sub_pixel is None:
+    #     sub_pixel = self.meta["sub_pixel"]
+    #
+    # self.hdu.data = np.zeros((self.hdu.header["NAXIS2"],
+    #                           self.hdu.header["NAXIS1"]))
+    # if len(self.fields) > 0:
+    #     for field in self.fields:
+    #         if isinstance(field, Table):
+    #             self.hdu = imp_utils.add_table_to_imagehdu(field, self.hdu,
+    #                                                        sub_pixel)
+    #         elif isinstance(field, fits.ImageHDU):
+    #             self.hdu.data += field.data
+    #
+    # if self.meta["conserve_image"] is False and self.mask is not None:
+    #     flux = np.sum(self.hdu.data) / np.sum(self.mask)
+    #     self.hdu.data = np.zeros(self.hdu.data.shape)
+    #     self.hdu.data[self.mask] = flux
+    #
+    # return self.hdu.data
+    #
+    # ################### OLD ################################################
+
 
     @property
     def header(self):
@@ -175,11 +195,30 @@ class FieldOfView(FieldOfViewBase):
         imp_corners = imp_utils.calc_footprint(self.header, "D")
         return sky_corners, imp_corners
 
+    def volume(self, wcs_prefix=""):
+        xs, ys = imp_utils.calc_footprint(self.header)
+        wave_corners = self.waverange
+        self._volume = {"xs": [min(xs), max(xs)],
+                        "ys": [min(ys), max(ys)],
+                        "waves": self.waverange,
+                        "xy_unit": "mm" if wcs_prefix == "D" else "deg",
+                        "wave_unit": "um"}
+        return self._volume
+
+    @property
+    def waverange(self):
+        """Returns wavelength range in um [wave_min, wave_max]"""
+        if self._waverange is None:
+            wave_min = utils.quantify(self.meta["wave_min"], u.um).value
+            wave_max = utils.quantify(self.meta["wave_max"], u.um).value
+            self._waverange = [wave_min, wave_max]
+        return self._waverange
+
     @property
     def wavelength(self):
+        """Returns central wavelength in um"""
         if self._wavelength is None:
-            self._wavelength = 0.5 * (self.meta["wave_min"] +
-                                      self.meta["wave_max"])
+            self._wavelength = np.average(self.waverange)
         return self._wavelength
 
     def __repr__(self):

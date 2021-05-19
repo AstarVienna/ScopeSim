@@ -255,6 +255,7 @@ class ReferencePixelBorder(Effect):
         self.meta.update(kwargs)
 
     def apply_to(self, implane):
+        # .. todo: should this be ImagePlaneBase here?
         if isinstance(implane, ImagePlaneBase):
             if self.meta["top"] > 0:
                 implane.hdu.data[:, -self.meta["top"]:] = 0

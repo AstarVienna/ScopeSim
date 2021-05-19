@@ -1,4 +1,5 @@
 import warnings
+from copy import deepcopy
 
 import numpy as np
 from astropy import units as u
@@ -199,3 +200,21 @@ def sky2fp(header, xsky, ysky):
     xdet, ydet = imp_utils.pix2val(header, xpix, ypix, "D")
 
     return xdet, ydet
+
+
+def extract_common_field(field, fov_volume):
+    if isinstance(field, Table):
+        mask = (field["x"] >= fov_volume["x"][0]) * \
+               (field["x"] < fov_volume["x"][1]) * \
+               (field["y"] >= fov_volume["y"][0]) * \
+               (field["y"] < fov_volume["y"][1])
+        field_new = field_orig[mask]
+    elif isinstance(field, fits.ImageHDU) and field.header.get("NAXIS") == 2:
+        pass
+    elif isinstance(field, fits.ImageHDU) and field.header.get("NAXIS") == 3:
+        pass
+    else:
+        raise ValueError("field must be either Table or ImageHDU: {}"
+                         "".format(type(field)))
+
+    return field_new
