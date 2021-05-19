@@ -78,33 +78,53 @@ class FieldOfView(FieldOfViewBase):
         wave_max = utils.quantify(self.meta["wave_max"], u.um).value
         area = self.meta["area"]
 
+        fields = [field for field in src.fields
+                  if fov_utils.is_field_in_fov(self.hdu.header, field)]
+        spec_refs = []
+        for field in fields:
+            if isinstance(field, Table):
+                spec_refs += list(field["ref"])
+            elif isinstance(field, fits.ImageHDU):
+                ref = field.header.get("SPEC_REF")
+                if ref is not None:
+                    spec_refs += [ref]
+        spectra = {ref: src.spectra[ref] for ref in spec_refs}
+
+        self.fields = fields
+        self.spectra = spectra
+
+
+        ################### OLD ################################################
+
         # determine which fields are inside the field of view
-        fields_mask = [fov_utils.is_field_in_fov(self.hdu.header, field)
-                       for field in src.fields]
-        fields_indexes = np.where(fields_mask)[0]
-        tbl_fields_mask = np.array([isinstance(field, Table)
-                                    for field in src.fields])
-        img_fields_mask = np.array([isinstance(field, fits.ImageHDU)
-                                    for field in src.fields])
+        # fields_mask = [fov_utils.is_field_in_fov(self.hdu.header, field)
+        #                for field in src.fields]
+        # fields_indexes = np.where(fields_mask)[0]
+        # tbl_fields_mask = np.array([isinstance(field, Table)
+        #                             for field in src.fields])
+        # img_fields_mask = np.array([isinstance(field, fits.ImageHDU)
+        #                             for field in src.fields])
+        #
+        # # combine all Table fields
+        # if sum(tbl_fields_mask * fields_mask) > 0:
+        #     combined_table = fov_utils.combine_table_fields(self.hdu.header,
+        #                                                     src, fields_indexes)
+        #     tbl = fov_utils.make_flux_table(combined_table, src,
+        #                                     wave_min, wave_max, area)
+        #     xd, yd = fov_utils.sky2fp(self.hdu.header, tbl["x"], tbl["y"])
+        #     tbl.add_columns([Column(name="x_mm", data=xd, unit=u.mm),
+        #                      Column(name="y_mm", data=yd, unit=u.mm)])
+        #     self.fields += [tbl]
+        #
+        # # combine all ImageHDU fields
+        # if sum(img_fields_mask * fields_mask) > 0:
+        #     imagehdu = fov_utils.combine_imagehdu_fields(self.hdu.header, src,
+        #                                                  fields_indexes,
+        #                                                  wave_min, wave_max,
+        #                                                  area)
+        #     self.fields += [imagehdu]
 
-        # combine all Table fields
-        if sum(tbl_fields_mask * fields_mask) > 0:
-            combined_table = fov_utils.combine_table_fields(self.hdu.header,
-                                                            src, fields_indexes)
-            tbl = fov_utils.make_flux_table(combined_table, src,
-                                            wave_min, wave_max, area)
-            xd, yd = fov_utils.sky2fp(self.hdu.header, tbl["x"], tbl["y"])
-            tbl.add_columns([Column(name="x_mm", data=xd, unit=u.mm),
-                             Column(name="y_mm", data=yd, unit=u.mm)])
-            self.fields += [tbl]
-
-        # combine all ImageHDU fields
-        if sum(img_fields_mask * fields_mask) > 0:
-            imagehdu = fov_utils.combine_imagehdu_fields(self.hdu.header, src,
-                                                         fields_indexes,
-                                                         wave_min, wave_max,
-                                                         area)
-            self.fields += [imagehdu]
+        ################### OLD ################################################
 
     def make_cube(self):
         return None

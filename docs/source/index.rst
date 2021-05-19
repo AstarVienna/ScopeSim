@@ -29,6 +29,8 @@ ScopeSim_ is on pip::
     Reference API <reference/modules>
 
 
+
+
 Getting started
 ---------------
 A basic simulation of ELT/MICADO image would look something like this::

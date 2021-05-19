@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm
 
 from scopesim.tests.mocks.py_objects.source_objects import _table_source, \
-    _image_source, _combined_source
+    _image_source, _combined_source, _cube_source
 from scopesim.tests.mocks.py_objects.header_objects import _basic_fov_header
 
 
@@ -28,6 +28,10 @@ def table_source():
 @pytest.fixture(scope="function")
 def image_source():
     return _image_source()
+
+@pytest.fixture(scope="function")
+def cube_source():
+    return _cube_source()
 
 
 @pytest.fixture(scope="function")
@@ -56,33 +60,32 @@ class TestFieldOfViewInit:
             fov.FieldOfView(fits.Header(), (1, 2) * u.um, area=1*u.m**2)
 
 
-@pytest.mark.usefixtures("basic_fov_header", "table_source", "image_source")
+
+@pytest.mark.usefixtures("basic_fov_header", "table_source", "image_source",
+                         "cube_source")
 class TestFieldOfViewExtractFrom:
-    def test_creates_single_combined_from_multiple_tables(self, table_source,
-                                                          basic_fov_header):
-        src = table_source + table_source
+    # Note: Deleted tests for combining fields - why combine Source fields if you don't need to
+    def test_contains_all_fields_inside_fov(self, basic_fov_header, cube_source,
+                                            image_source, table_source):
+        src = image_source + cube_source + table_source
         the_fov = fov.FieldOfView(basic_fov_header, (1, 2)*u.um, area=1*u.m**2)
         the_fov.extract_from(src)
-        assert len(the_fov.fields) == 1
-        assert isinstance(the_fov.fields[0], Table)
-
-    def test_creates_single_combined_from_multiple_images(self, image_source,
-                                                          basic_fov_header):
-        src = image_source + image_source
-        the_fov = fov.FieldOfView(basic_fov_header, (1, 2)*u.um, area=1*u.m**2)
-        the_fov.extract_from(src)
-        assert len(the_fov.fields) == 1
+        assert len(the_fov.fields) == 3
         assert isinstance(the_fov.fields[0], fits.ImageHDU)
-
-    def test_creates_two_fields_for_tables_and_images(self, basic_fov_header,
-                                                      image_source,
-                                                      table_source):
-        src = image_source + table_source
-        the_fov = fov.FieldOfView(basic_fov_header, (1, 2)*u.um, area=1*u.m**2)
-        the_fov.extract_from(src)
-        assert len(the_fov.fields) == 2
-        assert isinstance(the_fov.fields[0], Table)
         assert isinstance(the_fov.fields[1], fits.ImageHDU)
+        assert  the_fov.fields[1].header["NAXIS"] == 3
+        assert isinstance(the_fov.fields[2], Table)
+
+    def test_all_spectra_are_referenced_correctly(self, basic_fov_header,
+                                                  image_source, table_source,
+                                                  cube_source):
+        src = image_source + cube_source + table_source
+        the_fov = fov.FieldOfView(basic_fov_header, (1, 2) * u.um,
+                                  area=1 * u.m ** 2)
+        the_fov.extract_from(src)
+        # check the same spectrum object is referenced by both lists
+        assert all([the_fov.spectra[i] == src.spectra[i]
+                    for i in the_fov.spectra])
 
     def test_ignores_fields_outside_fov_boundary(self, basic_fov_header):
 
@@ -93,6 +96,16 @@ class TestFieldOfViewExtractFrom:
         the_fov.extract_from(src)
 
         assert len(the_fov.fields) == 0
+
+    def test_contains_cube_when_passed_a_cube_source(self, basic_fov_header,
+                                                     cube_source):
+        src = cube_source
+        the_fov = fov.FieldOfView(basic_fov_header, (1, 2)*u.um, area=1*u.m**2)
+        the_fov.extract_from(src)
+
+        assert len(the_fov.fields) == 1
+        assert len(the_fov.spectra) == 0
+        assert len(the_fov.fields[0].data.shape) == 3
 
 
 @pytest.mark.usefixtures("basic_fov_header")
@@ -220,3 +233,10 @@ class TestCombineTableFields:
 class TestCombineImageHDUFields:
     def test_flux_in_equals_flux_out(self):
         pass
+
+
+@pytest.mark.usefixtures("cube_source")
+class TestCubeSourceInput:
+    def test_source_cube_exists(self, cube_source):
+        assert len(cube_source.fields[0].data.shape) == 3
+

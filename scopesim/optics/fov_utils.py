@@ -10,6 +10,23 @@ from scopesim.optics import image_plane_utils as imp_utils
 
 
 def is_field_in_fov(fov_header, table_or_imagehdu, wcs_suffix=""):
+    """
+    Returns True if Source.field footprint is inside the FieldOfView footprint
+
+    Parameters
+    ----------
+    fov_header : fits.Header
+        Header from a FieldOfView object
+    table_or_imagehdu : [astropy.Table, astropy.ImageHDU]
+        Field object from a Source object
+    wcs_suffix : str
+        ["S", "D"] Coordinate system: Sky or Detector
+
+    Returns
+    -------
+    is_inside_fov : bool
+
+    """
 
     s = wcs_suffix
     pixel_scale = utils.quantify(fov_header["CDELT1"+s], u.deg)
