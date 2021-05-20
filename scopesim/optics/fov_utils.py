@@ -220,11 +220,11 @@ def extract_common_field(field, fov_volume):
 
     """
     if isinstance(field, Table):
-        mask = (field["x"] >= fov_volume["x"][0]) * \
-               (field["x"] < fov_volume["x"][1]) * \
-               (field["y"] >= fov_volume["y"][0]) * \
-               (field["y"] < fov_volume["y"][1])
-        field_new = field_orig[mask]
+        mask = (field["x"] >= fov_volume["xs"][0]) * \
+               (field["x"] < fov_volume["xs"][1]) * \
+               (field["y"] >= fov_volume["ys"][0]) * \
+               (field["y"] < fov_volume["ys"][1])
+        field_new = field[mask]
     elif isinstance(field, fits.ImageHDU):
         field_new = extract_area_from_imagehdu(field, fov_volume)
     else:
@@ -278,7 +278,9 @@ def extract_area_from_imagehdu(imagehdu, fov_volume):
         wp = (np.array([w0s, w1s]) - wval) / wdel + wpix
         (w0p, w1p) = np.round(wp).astype(int)
 
-        new_hdr.update({"CRVAL3": w0s,
+        new_hdr.update({"NAXIS": 3,
+                        "NAXIS3": w1p - w0p,
+                        "CRVAL3": w0s,
                         "CRPIX3": 0,
                         "CDELT3": hdr["CDELT3"],
                         "CUNIT3": hdr["CUNIT3"],
@@ -286,7 +288,7 @@ def extract_area_from_imagehdu(imagehdu, fov_volume):
 
         data = imagehdu.data[w0p:w1p, y0p:y1p, x0p:x1p]
     else:
-        data = imagehdu.data[y0p:y1p, x0o:x1p]
+        data = imagehdu.data[y0p:y1p, x0p:x1p]
 
     new_imagehdu = fits.ImageHDU(data=data)
     new_imagehdu.header.update(new_hdr)

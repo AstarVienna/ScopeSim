@@ -7,6 +7,7 @@ from astropy import units as u
 from astropy.table import Table
 
 from scopesim.optics.fov import FieldOfView
+from scopesim.optics import fov_utils
 
 import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm
@@ -191,33 +192,33 @@ class TestFieldOfViewView:
 class TestIsFieldInFOV:
     def test_returns_true_for_table_inside(self, basic_fov_header,
                                            table_source):
-        assert scopesim.optics.fov_utils.is_field_in_fov(basic_fov_header, table_source.fields[0])
+        assert fov_utils.is_field_in_fov(basic_fov_header, table_source.fields[0])
 
     def test_returns_false_for_table_outside(self, basic_fov_header,
                                              table_source):
         table_source.fields[0]["x"] += 200
-        assert not scopesim.optics.fov_utils.is_field_in_fov(basic_fov_header, table_source.fields[0])
+        assert not fov_utils.is_field_in_fov(basic_fov_header, table_source.fields[0])
 
     def test_returns_true_for_table_corner_inside(self, basic_fov_header,
                                                   table_source):
         table_source.fields[0]["x"] += 9
         table_source.fields[0]["y"] += 14
-        assert scopesim.optics.fov_utils.is_field_in_fov(basic_fov_header, table_source.fields[0])
+        assert fov_utils.is_field_in_fov(basic_fov_header, table_source.fields[0])
 
     def test_returns_true_for_image_inside(self, basic_fov_header,
                                            image_source):
-        assert scopesim.optics.fov_utils.is_field_in_fov(basic_fov_header, image_source.fields[0])
+        assert fov_utils.is_field_in_fov(basic_fov_header, image_source.fields[0])
 
     def test_returns_false_for_image_outside(self, basic_fov_header,
                                              image_source):
         image_source.fields[0].header["CRVAL1"] += 200*u.arcsec.to(u.deg)
-        assert not scopesim.optics.fov_utils.is_field_in_fov(basic_fov_header, image_source.fields[0])
+        assert not fov_utils.is_field_in_fov(basic_fov_header, image_source.fields[0])
 
     def test_returns_true_for_image_in_corner(self, basic_fov_header,
                                               image_source):
         image_source.fields[0].header["CRVAL1"] += 10*u.arcsec.to(u.deg)
         image_source.fields[0].header["CRVAL2"] -= 10*u.arcsec.to(u.deg)
-        assert scopesim.optics.fov_utils.is_field_in_fov(basic_fov_header, image_source.fields[0])
+        assert fov_utils.is_field_in_fov(basic_fov_header, image_source.fields[0])
 
 
 class TestMakeFluxTable:
