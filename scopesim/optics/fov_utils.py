@@ -203,18 +203,93 @@ def sky2fp(header, xsky, ysky):
 
 
 def extract_common_field(field, fov_volume):
+    """
+    Extracts the overlapping parts of a field within a FOV volume
+
+    Parameters
+    ----------
+    field : Table or ImageHDU
+    fov_volume : dict
+        Contains {"xs": [xmin, xmax], "ys": [ymin, ymax],
+                  "waves": [wave_min, wave_max],
+                  "xy_unit": "deg" or "mm", "wave_unit": "um"}
+
+    Returns
+    -------
+    field_new : Table or ImageHDU
+
+    """
     if isinstance(field, Table):
         mask = (field["x"] >= fov_volume["x"][0]) * \
                (field["x"] < fov_volume["x"][1]) * \
                (field["y"] >= fov_volume["y"][0]) * \
                (field["y"] < fov_volume["y"][1])
         field_new = field_orig[mask]
-    elif isinstance(field, fits.ImageHDU) and field.header.get("NAXIS") == 2:
-        pass
-    elif isinstance(field, fits.ImageHDU) and field.header.get("NAXIS") == 3:
-        pass
+    elif isinstance(field, fits.ImageHDU):
+        field_new = extract_area_from_imagehdu(field, fov_volume)
     else:
         raise ValueError("field must be either Table or ImageHDU: {}"
                          "".format(type(field)))
 
     return field_new
+
+
+def extract_area_from_imagehdu(imagehdu, fov_volume):
+    """
+    Extracts the part of a ImageHDU that fits inside the fov_volume
+
+    Parameters
+    ----------
+    imagehdu : fits.ImageHDU
+        The field ImageHDU, either an image of a wavelength [um] cube
+    fov_volume : dict
+        Contains {"xs": [xmin, xmax], "ys": [ymin, ymax],
+                  "waves": [wave_min, wave_max],
+                  "xy_unit": "deg" or "mm", "wave_unit": "um"}
+
+    Returns
+    -------
+    new_imagehdu : fits.ImageHDU
+
+    """
+    hdr = imagehdu.header
+    new_hdr = {}
+
+    x_hdu, y_hdu = imp_utils.calc_footprint(imagehdu)  # field edges in "deg"
+    x_fov, y_fov = fov_volume["xs"], fov_volume["ys"]
+
+    x0s, x1s = max(min(x_hdu), min(x_fov)), min(max(x_hdu), max(x_fov))
+    y0s, y1s = max(min(y_hdu), min(y_fov)), min(max(y_hdu), max(y_fov))
+
+    xp, yp = imp_utils.val2pix(hdr, np.array([x0s, x1s]), np.array([y0s, y1s]))
+    (x0p, x1p), (y0p, y1p) = np.round(xp).astype(int), np.round(yp).astype(int)
+
+    new_hdr = imp_utils.header_from_list_of_xy([x0s, x1s], [y0s, y1s],
+                                               pixel_scale=hdr["CDELT1"])
+
+    if hdr["NAXIS"] == 3:
+        wval, wdel, wpix, wlen = [hdr[kw] for kw in ["CRVAL3", "CDELT3",
+                                                     "CRPIX3", "NAXIS3"]]
+        # ASSUMPTION - cube wavelength is in regularly spaced units of um
+        w_hdu = [wval - wdel * wpix, wval + wdel * (wlen - wpix)]
+        w_fov = fov_volume["waves"]
+
+        w0s, w1s = max(min(w_hdu), min(w_fov)), min(max(w_hdu), max(w_fov))
+        wp = (np.array([w0s, w1s]) - wval) / wdel + wpix
+        (w0p, w1p) = np.round(wp).astype(int)
+
+        new_hdr.update({"CRVAL3": w0s,
+                        "CRPIX3": 0,
+                        "CDELT3": hdr["CDELT3"],
+                        "CUNIT3": hdr["CUNIT3"],
+                        "CTYPE3": hdr["CTYPE3"]})
+
+        data = imagehdu.data[w0p:w1p, y0p:y1p, x0p:x1p]
+    else:
+        data = imagehdu.data[y0p:y1p, x0o:x1p]
+
+    new_imagehdu = fits.ImageHDU(data=data)
+    new_imagehdu.header.update(new_hdr)
+
+    return new_imagehdu
+

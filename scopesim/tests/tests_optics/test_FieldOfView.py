@@ -6,8 +6,7 @@ from astropy.io import fits
 from astropy import units as u
 from astropy.table import Table
 
-import scopesim.optics.fov_utils
-from scopesim.optics import fov
+from scopesim.optics.fov import FieldOfView
 
 import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm
@@ -29,6 +28,7 @@ def table_source():
 def image_source():
     return _image_source()
 
+
 @pytest.fixture(scope="function")
 def cube_source():
     return _cube_source()
@@ -48,16 +48,16 @@ def basic_fov_header():
 class TestFieldOfViewInit:
     def test_initialises_with_nothing_raise_error(self):
         with pytest.raises(TypeError):
-            fov.FieldOfView()
+            FieldOfView()
 
     def test_initialises_with_header_and_waverange(self, basic_fov_header):
         print(dict(basic_fov_header))
-        the_fov = fov.FieldOfView(basic_fov_header, (1, 2)*u.um, area=1*u.m**2)
-        assert isinstance(the_fov, fov.FieldOfView)
+        the_fov = FieldOfView(basic_fov_header, (1, 2)*u.um, area=1*u.m**2)
+        assert isinstance(the_fov, FieldOfView)
 
     def test_throws_error_if_no_wcs_in_header(self):
         with pytest.raises(ValueError):
-            fov.FieldOfView(fits.Header(), (1, 2) * u.um, area=1*u.m**2)
+            FieldOfView(fits.Header(), (1, 2) * u.um, area=1*u.m**2)
 
 
 
@@ -68,7 +68,7 @@ class TestFieldOfViewExtractFrom:
     def test_contains_all_fields_inside_fov(self, basic_fov_header, cube_source,
                                             image_source, table_source):
         src = image_source + cube_source + table_source
-        the_fov = fov.FieldOfView(basic_fov_header, (1, 2)*u.um, area=1*u.m**2)
+        the_fov = FieldOfView(basic_fov_header, (1, 2)*u.um, area=1*u.m**2)
         the_fov.extract_from(src)
         assert len(the_fov.fields) == 3
         assert isinstance(the_fov.fields[0], fits.ImageHDU)
@@ -80,7 +80,7 @@ class TestFieldOfViewExtractFrom:
                                                   image_source, table_source,
                                                   cube_source):
         src = image_source + cube_source + table_source
-        the_fov = fov.FieldOfView(basic_fov_header, (1, 2) * u.um,
+        the_fov = FieldOfView(basic_fov_header, (1, 2) * u.um,
                                   area=1 * u.m ** 2)
         the_fov.extract_from(src)
         # check the same spectrum object is referenced by both lists
@@ -92,7 +92,7 @@ class TestFieldOfViewExtractFrom:
         src = _combined_source(dx=[200, 200, 200])
         src.fields[0]["x"] += 200
 
-        the_fov = fov.FieldOfView(basic_fov_header, (1, 2)*u.um, area=1*u.m**2)
+        the_fov = FieldOfView(basic_fov_header, (1, 2)*u.um, area=1*u.m**2)
         the_fov.extract_from(src)
 
         assert len(the_fov.fields) == 0
@@ -100,7 +100,7 @@ class TestFieldOfViewExtractFrom:
     def test_contains_cube_when_passed_a_cube_source(self, basic_fov_header,
                                                      cube_source):
         src = cube_source
-        the_fov = fov.FieldOfView(basic_fov_header, (1, 2)*u.um, area=1*u.m**2)
+        the_fov = FieldOfView(basic_fov_header, (1, 2)*u.um, area=1*u.m**2)
         the_fov.extract_from(src)
 
         assert len(the_fov.fields) == 1
@@ -115,7 +115,7 @@ class TestFieldOfViewView:
         flux = src.photons_in_range(1*u.um, 2*u.um).value
         orig_sum = np.sum(src.fields[0].data * flux)
 
-        the_fov = fov.FieldOfView(basic_fov_header, (1, 2)*u.um, area=1*u.m**2)
+        the_fov = FieldOfView(basic_fov_header, (1, 2)*u.um, area=1*u.m**2)
         the_fov.extract_from(src)
         the_fov.view()
 
@@ -135,7 +135,7 @@ class TestFieldOfViewView:
         flux = src.photons_in_range(1*u.um, 2*u.um).value
         orig_sum = np.sum(src.fields[0].data) * flux
 
-        the_fov = fov.FieldOfView(basic_fov_header, (1, 2)*u.um, area=1*u.m**2)
+        the_fov = FieldOfView(basic_fov_header, (1, 2)*u.um, area=1*u.m**2)
         the_fov.extract_from(src)
         view = the_fov.view()
 
@@ -155,7 +155,7 @@ class TestFieldOfViewView:
         fluxes = src.photons_in_range(1*u.um, 2*u.um)
         phs = fluxes[src.fields[0]["ref"]] * src.fields[0]["weight"]
 
-        the_fov = fov.FieldOfView(basic_fov_header, (1, 2) * u.um, area=1*u.m**2)
+        the_fov = FieldOfView(basic_fov_header, (1, 2) * u.um, area=1*u.m**2)
         the_fov.extract_from(src)
         view = the_fov.view()
 
@@ -173,7 +173,7 @@ class TestFieldOfViewView:
         flux = src.photons_in_range(1*u.um, 2*u.um, indexes=[ii]).value
         orig_sum = np.sum(src.fields[3].data) * flux
 
-        the_fov = fov.FieldOfView(basic_fov_header, (1, 2)*u.um, area=1*u.m**2)
+        the_fov = FieldOfView(basic_fov_header, (1, 2)*u.um, area=1*u.m**2)
         the_fov.extract_from(src)
         view = the_fov.view()
 
@@ -239,4 +239,5 @@ class TestCombineImageHDUFields:
 class TestCubeSourceInput:
     def test_source_cube_exists(self, cube_source):
         assert len(cube_source.fields[0].data.shape) == 3
+
 

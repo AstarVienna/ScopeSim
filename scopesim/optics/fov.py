@@ -196,7 +196,7 @@ class FieldOfView(FieldOfViewBase):
         return sky_corners, imp_corners
 
     def volume(self, wcs_prefix=""):
-        xs, ys = imp_utils.calc_footprint(self.header)
+        xs, ys = imp_utils.calc_footprint(self.header, wcs_suffix=wcs_prefix)
         wave_corners = self.waverange
         self._volume = {"xs": [min(xs), max(xs)],
                         "ys": [min(ys), max(ys)],

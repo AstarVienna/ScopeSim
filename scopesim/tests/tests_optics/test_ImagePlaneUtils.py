@@ -160,7 +160,7 @@ class TestAddImageHDUtoImageHDU:
 
 
 class TestOverlayImage:
-    def test_overlay_images_works_as_expected(self):
+    def test_overlay_images_works_as_expected_for_2d_images(self):
         big = np.zeros((100, 100))
         small = np.ones((10, 10))
         im = imp_utils.overlay_image(small, big, (20, 80))
@@ -169,3 +169,16 @@ class TestOverlayImage:
         if PLOTS:
             plt.imshow(im, origin="lower")
             plt.show()
+
+    def test_overlay_images_works_for_3d_cubes(self):
+        big = np.zeros((100, 100, 10))
+        small = np.ones((10, 10, 6))
+        im = imp_utils.overlay_image(small, big, (20, 80))
+        assert np.sum(im[50:, :50]) == np.sum(small)
+
+        if PLOTS:
+            plt.imshow(im, origin="lower")
+            plt.show()
+
+
+
