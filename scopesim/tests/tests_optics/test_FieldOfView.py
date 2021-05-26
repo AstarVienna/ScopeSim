@@ -240,5 +240,3 @@ class TestCombineImageHDUFields:
 class TestCubeSourceInput:
     def test_source_cube_exists(self, cube_source):
         assert len(cube_source.fields[0].data.shape) == 3
-
-

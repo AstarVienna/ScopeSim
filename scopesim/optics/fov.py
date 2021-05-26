@@ -182,12 +182,22 @@ class FieldOfView(FieldOfViewBase):
         return self.hdu.data
 
     @property
+    def spectrum(self):
+
+
+
+
+
+
+        return new_spectrum
+
+    @property
     def image(self):
-        return self.data
+        return new_image
 
     @property
     def cube(self):
-        return self.make_cube()
+        return new_cube
 
     @property
     def corners(self):
