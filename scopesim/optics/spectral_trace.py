@@ -63,10 +63,6 @@ class SpectralTrace:
         #..todo: this turns out as 1 in simplified layout. Remove?
         self.n_traces = len([col for col in self.table.colnames
                              if self.meta["y_colname"] in col])
-        k, n = self.meta["col_number_start"], self.n_traces
-        self.s_colnames = [self.meta["s_colname"]+str(i) for i in range(k, n+k)]
-        self.x_colnames = [self.meta["x_colname"]+str(i) for i in range(k, n+k)]
-        self.y_colnames = [self.meta["y_colname"]+str(i) for i in range(k, n+k)]
 
         self.wave_min = quantify(np.min(self.waves), u.um).value
         self.wave_max = quantify(np.max(self.waves), u.um).value

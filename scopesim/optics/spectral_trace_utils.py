@@ -73,6 +73,7 @@ def get_max_dispersion(trace_tbls, wave_min, wave_max, dwave,
 
         n = len([col for col in tbl.colnames if params["y_colname"] in col])
         k = params["col_number_start"]
+        # .. todo: Can't use x1, etc. anymore, we have only one column x
         colnames = ["y"+str(ii) for ii in range(k, n+k)] + \
                    ["x"+str(ii) for ii in range(k, n+k)]
         for xcol in colnames:
