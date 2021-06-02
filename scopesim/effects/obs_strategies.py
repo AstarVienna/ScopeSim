@@ -10,23 +10,35 @@ class ChopNodCombiner(Effect):
     """
     Creates and combines 4 images for each of the chop/nod positions
 
-    - AA : original position (dx, dy) = (0, 0)
-    - AB : chop position (dx, dy) = chop_offsets
-    - BA : nod position (dx, dy) = nod_offsets
-    - BA : chop-nod position (dx, dy) = nod_offsets + chop_offsets
+    - AA : original position ``(dx, dy) = (0, 0)``
+    - AB : chop position ``(dx, dy) = chop_offsets``
+    - BA : nod position ``(dx, dy) = nod_offsets``
+    - BA : chop-nod position ``(dx, dy) = nod_offsets + chop_offsets``
 
     Images are combined using::
 
         im_combined = (AA - AB) - (BA - BB)
 
-    If no
+    If no ``nod_offset`` is given, it is set to the inverse of ``chop_offset``.
 
-    kwargs
-    ------
+    Keyword arguments
+    -----------------
     chop_offsets : tuple, optinal
         [arcsec] (dx, dy) offset of chop poisition relative to AA
     nod_offsets : tuple, optinal
         [arcsec] (dx, dy) offset of nod poisition relative to AA
+
+    Example yaml entry
+    ------------------
+    ::
+        name: perpendicular_chop_nod_slanted_pattern
+        description: chop throw to (+5, 0) and nod throw to (-7, +10) arcsec
+        class: ChopNodCombiner
+        include: True
+        kwargs:
+            pixel_scale : "!INST.pixel_scale"
+            chop_offsets : (5, 0)
+            nod_offsets : (-7, 10)
 
     """
 
