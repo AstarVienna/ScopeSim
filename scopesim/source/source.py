@@ -126,7 +126,7 @@ class Source(SourceBase):
 
     See Also
     --------
-    synphot - https://synphot.readthedocs.io/en/latest/
+    synphot : ``https://synphot.readthedocs.io/en/latest/``
 
     """
 

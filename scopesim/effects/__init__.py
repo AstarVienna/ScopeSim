@@ -11,5 +11,6 @@ from . import ter_curves_utils
 
 from .detector_list import *
 from .electronic import *
+from .obs_strategies import *
 
 # from . import effects_utils
