@@ -1,8 +1,11 @@
-import numpy as np
-from matplotlib import pyplot as plt
+"""Effects describing observing strategies
 
-from scopesim.base_classes import ImagePlaneBase
-from scopesim.effects import Effect
+- ChopNodCombiner: simulate chop-nod cycle
+"""
+import numpy as np
+
+from scopesim.base_classes import DetectorBase
+from scopesim.effects.effects import Effect
 from scopesim.utils import from_currsys, check_keys
 
 
@@ -21,12 +24,15 @@ class ChopNodCombiner(Effect):
 
     If no ``nod_offset`` is given, it is set to the inverse of ``chop_offset``.
 
+    ``ChopNodCombiner`` is a detector effect and should be placed last in the
+     detector yaml (after the noise effects).
+
     Keyword arguments
     -----------------
-    chop_offsets : tuple, optinal
-        [arcsec] (dx, dy) offset of chop poisition relative to AA
-    nod_offsets : tuple, optinal
-        [arcsec] (dx, dy) offset of nod poisition relative to AA
+    chop_offsets : tuple, optional
+        [arcsec] (dx, dy) offset of chop position relative to AA
+    nod_offsets : tuple, optional
+        [arcsec] (dx, dy) offset of nod position relative to AA
 
     Example yaml entry
     ------------------
@@ -45,17 +51,17 @@ class ChopNodCombiner(Effect):
     def __init__(self, **kwargs):
         check_keys(kwargs, ["chop_offsets", "pixel_scale"])
 
-        super(Effect, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         params = {"chop_offsets": None,
                   "nod_offsets": None,
                   "pixel_scale": None,
                   "include": True,
-                  "z_order": []}
+                  "z_order": [863]}
         self.meta.update(params)
         self.meta.update(kwargs)
 
     def apply_to(self, obj):
-        if isinstance(obj, ImagePlaneBase):
+        if isinstance(obj, DetectorBase):
             chop_offsets = from_currsys(self.meta["chop_offsets"])
             nod_offsets = from_currsys(self.meta["nod_offsets"])
             if nod_offsets is None:
@@ -63,6 +69,7 @@ class ChopNodCombiner(Effect):
 
             # these offsets are in pixels, not in arcsec or mm
             pixel_scale = float(from_currsys(self.meta["pixel_scale"]))
+            print(pixel_scale, chop_offsets)
             chop_offsets_pixel = np.array(chop_offsets) / pixel_scale
             nod_offsets_pixel = np.array(nod_offsets) / pixel_scale
 
@@ -74,11 +81,12 @@ class ChopNodCombiner(Effect):
         return obj
 
 
-def chop_nod_image(im, chop_offsets, nod_offsets=None):
+def chop_nod_image(img, chop_offsets, nod_offsets=None):
+    """Create four copies and combine in chop-nod pattern"""
     if nod_offsets is None:
         nod_offsets = tuple(-np.array(chop_offsets))
 
-    im_AA = np.copy(im)
+    im_AA = np.copy(img)
     im_AB = np.roll(im_AA, chop_offsets, (1, 0))
     im_BA = np.roll(im_AA, nod_offsets, (1, 0))
     im_BB = np.roll(im_BA, chop_offsets, (1, 0))
