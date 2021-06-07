@@ -69,7 +69,6 @@ class ChopNodCombiner(Effect):
 
             # these offsets are in pixels, not in arcsec or mm
             pixel_scale = float(from_currsys(self.meta["pixel_scale"]))
-            print(pixel_scale, chop_offsets)
             chop_offsets_pixel = np.array(chop_offsets) / pixel_scale
             nod_offsets_pixel = np.array(nod_offsets) / pixel_scale
 
