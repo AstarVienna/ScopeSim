@@ -162,6 +162,7 @@ def get_imaging_headers(effects, **kwargs):
 
     # look for apertures
     aperture_effects = get_all_effects(effects, (efs.ApertureMask,
+                                                 efs.SlitWheel,
                                                  efs.ApertureList))
     if len(aperture_effects) == 0:
         detector_arrays = get_all_effects(effects, efs.DetectorList)
@@ -283,6 +284,7 @@ def get_spectroscopy_headers(effects, **kwargs):
     detector_list_effects = get_all_effects(effects, efs.DetectorList)
     spec_trace_effects = get_all_effects(effects, efs.SpectralTraceList)
     aperture_effects = get_all_effects(effects, (efs.ApertureList,
+                                                 efs.SlitWheel,
                                                  efs.ApertureMask))
 
     if len(surface_list_effects) > 0:
