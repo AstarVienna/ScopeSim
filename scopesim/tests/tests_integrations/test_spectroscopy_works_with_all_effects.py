@@ -17,11 +17,6 @@ rc.__search_path__.insert(0, MOCK_DIR)
 PLOTS = False
 
 
-run_test = rc.__config__["!SIM.tests.run_integration_tests"]
-print(run_test)
-pytestmark = pytest.mark.skipif(run_test is False,
-                                reason="Ignoring MICADO integration tests")
-
 ################################################################################
 # Everything needed to test the FOVManager in Spectroscopy mode
 
