@@ -3,9 +3,10 @@
 - ChopNodCombiner: simulate chop-nod cycle
 """
 import numpy as np
+from matplotlib import pyplot as plt
 
-from scopesim.base_classes import DetectorBase
-from scopesim.effects.effects import Effect
+from scopesim.base_classes import ImagePlaneBase
+from scopesim.effects import Effect
 from scopesim.utils import from_currsys, check_keys
 
 
@@ -16,7 +17,7 @@ class ChopNodCombiner(Effect):
     - AA : original position ``(dx, dy) = (0, 0)``
     - AB : chop position ``(dx, dy) = chop_offsets``
     - BA : nod position ``(dx, dy) = nod_offsets``
-    - BA : chop-nod position ``(dx, dy) = nod_offsets + chop_offsets``
+    - BB : chop-nod position ``(dx, dy) = nod_offsets + chop_offsets``
 
     Images are combined using::
 
