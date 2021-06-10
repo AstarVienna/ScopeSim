@@ -4,6 +4,7 @@ from .apertures import *
 from .psfs import *
 from .shifts import *
 
+from .obs_strategies import *
 from .spectral_trace_list import *
 from .surface_list import *
 from .ter_curves import *

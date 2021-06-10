@@ -1,7 +1,7 @@
 import numpy as np
 from matplotlib import pyplot as plt
 
-from scopesim.base_classes import ImagePlaneBase
+from scopesim.base_classes import ImagePlaneBase, DetectorBase
 from scopesim.effects import Effect
 from scopesim.utils import from_currsys, check_keys
 
@@ -13,7 +13,7 @@ class ChopNodCombiner(Effect):
     - AA : original position ``(dx, dy) = (0, 0)``
     - AB : chop position ``(dx, dy) = chop_offsets``
     - BA : nod position ``(dx, dy) = nod_offsets``
-    - BA : chop-nod position ``(dx, dy) = nod_offsets + chop_offsets``
+    - BB : chop-nod position ``(dx, dy) = nod_offsets + chop_offsets``
 
     Images are combined using::
 
@@ -50,12 +50,12 @@ class ChopNodCombiner(Effect):
                   "nod_offsets": None,
                   "pixel_scale": None,
                   "include": True,
-                  "z_order": []}
+                  "z_order": [863]}
         self.meta.update(params)
         self.meta.update(kwargs)
 
     def apply_to(self, obj):
-        if isinstance(obj, ImagePlaneBase):
+        if isinstance(obj, DetectorBase):
             chop_offsets = from_currsys(self.meta["chop_offsets"])
             nod_offsets = from_currsys(self.meta["nod_offsets"])
             if nod_offsets is None:
