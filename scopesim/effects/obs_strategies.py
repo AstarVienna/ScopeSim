@@ -5,7 +5,7 @@
 import numpy as np
 from matplotlib import pyplot as plt
 
-from scopesim.base_classes import ImagePlaneBase
+from scopesim.base_classes import DetectorBase
 from scopesim.effects import Effect
 from scopesim.utils import from_currsys, check_keys
 
