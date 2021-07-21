@@ -10,7 +10,7 @@ from scopesim.optics import ImagePlane
 from scopesim.tests.mocks.py_objects.header_objects import _implane_header
 
 
-PLOTS = True
+PLOTS = False
 
 
 def basic_image_plane():
