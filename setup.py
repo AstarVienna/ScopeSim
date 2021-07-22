@@ -3,6 +3,8 @@
 ScopeSim: A python package to simulate telescope observations
 =============================================================
 
+    $ pip install wheel twine
+
 How to compile and put these on pip::
 
     $ python setup.py sdist bdist_wheel

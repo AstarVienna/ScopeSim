@@ -77,16 +77,10 @@ class TestInit:
         print(cmd.list_modes())
 
     def test_throws_error_for_wrong_mode_name(self):
-        yamls = [{"alias": "OBS", "properties": {"modes": ["mode1"],
-                                                 "life": 9001}}]
-        mode_yamls = [{"name": "mode1",
-                       "yamls": [{"alias": "OBS",
-                                  "properties": {"life": 42}}]}]
         with pytest.raises(ValueError):
-            UserCommands(yamls=yamls, mode_yamls=mode_yamls, set_modes=["mode2"])
+            UserCommands(use_instrument="test_package", set_modes=["bogus"])
 
-
-def test_mode_yamls_read_from_file(self):
+    def test_mode_yamls_read_from_file(self):
         cmd = UserCommands(use_instrument="test_package")
         assert cmd["!TEL.temperature"] < 9000
         assert cmd["!OBS.airmass"] == 2
