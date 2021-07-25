@@ -1,9 +1,11 @@
+"""Utility functions for use with spectral traces"""
 import warnings
 
+import re
 import numpy as np
-from astropy.io import fits
 from astropy.table import Table
-from astropy.modeling import models, fitting
+from astropy.modeling import fitting
+from astropy.modeling.models import Polynomial2D
 from scipy.interpolate import InterpolatedUnivariateSpline
 
 
@@ -20,8 +22,25 @@ def fill_zeros(x):
             x[i] = x[i-1]
     return x
 
+def get_max_dispersion(spt, wave_min, wave_max, dwave, **kwargs):
+    """
+    Finds the maximum distance [mm] per wavelength unit [um] along a trace
 
-def get_max_dispersion(trace_tbls, wave_min, wave_max, dwave,
+    The function looks for the minimum gradient of `spt.xy2lam` and returns
+    the inverse and the corresponding wavelength.
+    """
+    gradient = deriv_polynomial2d(spt.xy2lam)
+    dx_dwave = gradient[0](spt.table['x'], spt.table['y'])
+    dy_dwave = gradient[1](spt.table['x'], spt.table['y'])
+    absgrad2 = np.sqrt(dx_dwave**2 + dy_dwave**2)
+
+    max_disp = 1. / np.min(absgrad2)
+    wave_max = spt.table['wavelength'][np.argmin(absgrad2)]
+
+    # ..todo: not sure why these have to be arrays?
+    return np.array([max_disp]), np.array([wave_max])
+
+def get_max_dispersion_old(trace_tbls, wave_min, wave_max, dwave,
                        **kwargs):
     """
     Finds the maximum distance [mm] per wavelength unit [um] along a trace
@@ -223,10 +242,11 @@ def sanitize_table(tbl, invalid_value, wave_colname, x_colname, y_colname,
 
 # ..todo: should the next three functions be combined and return a dictionary of fits?
 def xilam2xy_fit(layout, params):
-    '''Determine polynomial fits of FPA position
+    """
+    Determine polynomial fits of FPA position
 
     Fits are of degree 4 as a function of slit position and wavelength.
-    '''
+    """
     xi_arr = layout[params['s_colname']]
     lam_arr = layout[params['wave_colname']]
     x_arr = layout[params['x_colname']]
@@ -241,8 +261,8 @@ def xilam2xy_fit(layout, params):
     #y = y[good]
 
     # compute the fits
-    pinit_x = models.Polynomial2D(degree=4)
-    pinit_y = models.Polynomial2D(degree=4)
+    pinit_x = Polynomial2D(degree=4)
+    pinit_y = Polynomial2D(degree=4)
     fitter = fitting.LinearLSQFitter()
     xilam2x = fitter(pinit_x, xi_arr, lam_arr, x_arr)
     #xilam2x.name = 'xilam2x'
@@ -251,9 +271,11 @@ def xilam2xy_fit(layout, params):
     return xilam2x, xilam2y
 
 def xy2xilam_fit(layout, params):
-    '''Determine polynomial fits of wavelength/slit position
+    """
+    Determine polynomial fits of wavelength/slit position
 
-    Fits are of degree 4 as a function of focal plane position'''
+    Fits are of degree 4 as a function of focal plane position
+    """
 
     xi_arr = layout[params['s_colname']]
     lam_arr = layout[params['wave_colname']]
@@ -268,8 +290,8 @@ def xy2xilam_fit(layout, params):
     # x = x[good]
     # y = y[good]
 
-    pinit_xi = models.Polynomial2D(degree=4)
-    pinit_lam = models.Polynomial2D(degree=4)
+    pinit_xi = Polynomial2D(degree=4)
+    pinit_lam = Polynomial2D(degree=4)
     fitter = fitting.LinearLSQFitter()
     xy2xi = fitter(pinit_xi, x_arr, y_arr, xi_arr)
     #xy2xi.name = 'xy2xi'
@@ -279,9 +301,10 @@ def xy2xilam_fit(layout, params):
 
 
 def _xiy2xlam_fit(layout, params):
-    '''Determine polynomial fits of wavelength/slit position
+    """Determine polynomial fits of wavelength/slit position
 
-    Fits are of degree 4 as a function of focal plane position'''
+    Fits are of degree 4 as a function of focal plane position
+    """
 
     # These are helper functions to allow fitting of left/right edges
     # for the purpose of checking whether a trace is on a chip or not.
@@ -299,11 +322,40 @@ def _xiy2xlam_fit(layout, params):
     # x = x[good]
     # y = y[good]
 
-    pinit_x = models.Polynomial2D(degree=4)
-    pinit_lam = models.Polynomial2D(degree=4)
+    pinit_x = Polynomial2D(degree=4)
+    pinit_lam = Polynomial2D(degree=4)
     fitter = fitting.LinearLSQFitter()
     xiy2x = fitter(pinit_x, xi_arr, y_arr, x_arr)
     #xy2xi.name = 'xy2xi'
     xiy2lam = fitter(pinit_lam, xi_arr, y_arr, lam_arr)
     #xy2lam.name = 'xy2lam'
     return xiy2x, xiy2lam
+
+
+def deriv_polynomial2d(poly):
+    '''Derivatives (gradient) of a Polynomial2D model
+
+    Parameters
+    ----------
+    poly : astropy.modeling.models.Polynomial2D
+
+    Output
+    ------
+    gradient : tuple of Polynomial2d
+    '''
+    degree = poly.degree
+    dpoly_dx = Polynomial2D(degree=degree - 1)
+    dpoly_dy = Polynomial2D(degree=degree - 1)
+    regexp = re.compile(r'c(\d+)_(\d+)')
+    for pname in poly.param_names:
+        # analyse the name
+        match = regexp.match(pname)
+        i = int(match.group(1))
+        j = int(match.group(2))
+        cij = getattr(poly, pname)
+        pname_x = "c%d_%d" % (i-1, j)
+        pname_y = "c%d_%d" % (i, j-1)
+        setattr(dpoly_dx, pname_x, i * cij)
+        setattr(dpoly_dy, pname_y, j * cij)
+
+    return dpoly_dx, dpoly_dy

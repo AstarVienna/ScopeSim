@@ -50,7 +50,7 @@ class TestGetMaxDispersion:
         spt = SpectralTrace(basic_trace)
         disp, wave = spt.get_max_dispersion()
         # dispersion is calculated by distance [mm] / wavelength coverage [um]
-        dy = np.diff(basic_trace["y2"])
+        dy = np.diff(basic_trace["y"])
         dw = np.diff(basic_trace["wavelength"])
         assert np.average(disp) == approx(np.average(dy / dw), rel=1e-5)
         assert len(disp) == len(wave)
@@ -60,7 +60,7 @@ class TestGetMaxDispersion:
     def test_dispersion_for_horizontally_aligned_trace(self, horizontal_trace):
         spt = SpectralTrace(horizontal_trace)
         disp, wave = spt.get_max_dispersion()
-        dx = np.abs(np.diff(horizontal_trace["x2"]))
+        dx = np.abs(np.diff(horizontal_trace["x"]))
         dw = np.abs(np.diff(horizontal_trace["wavelength"]))
 
         assert np.average(disp) == approx(np.average(dx / dw), rel=1e-5)
