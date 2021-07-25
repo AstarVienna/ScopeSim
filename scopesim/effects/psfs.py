@@ -41,8 +41,9 @@ class PSF(Effect):
                   "bkg_width": -1,
                   "wave_key": "WAVE0",
                   "normalise_kernel": True,
+                  "rotational_blur_angle": 0,
                   "report_plot_include": True,
-                  "report_table_include": False
+                  "report_table_include": False,
                   }
         self.meta.update(params)
         self.meta.update(kwargs)
@@ -57,8 +58,12 @@ class PSF(Effect):
                 if obj.hdu.data is None:
                     obj.view(self.meta["sub_pixel_flag"])
 
-                mode = self.meta["convolve_mode"]
                 kernel = self.get_kernel(obj).astype(float)
+
+                rot_blur_angle = self.meta["rotational_blur_angle"]
+                if abs(rot_blur_angle) > 0:
+                    kernel = pu.rotational_blur(kernel, rot_blur_angle)         # makes a copy of kernel
+
                 if self.meta["normalise_kernel"] is True:
                     kernel /= np.sum(kernel)
 
@@ -79,6 +84,7 @@ class PSF(Effect):
                 # y = min(image.shape[0], kernel.shape[0])
                 # x = min(image.shape[1], kernel.shape[1])
                 # new_image = convolve(image[:y, :x] - bkg_level, kernel[:y, :x], mode=mode)
+                mode = self.meta["convolve_mode"]
                 new_image = convolve(image - bkg_level, kernel, mode=mode)
                 ny_new, nx_new = new_image.shape
                 obj.hdu.data = new_image + bkg_level
@@ -107,7 +113,8 @@ class PSF(Effect):
 
     def get_kernel(self, obj):
         self.valid_waverange = None
-        self.kernel = np.ones((1, 1))
+        if self.kernel is None:
+            self.kernel = np.ones((1, 1))
         return self.kernel
 
     def plot(self, obj=None, **kwargs):
@@ -127,6 +134,7 @@ class AnalyticalPSF(PSF):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.meta["z_order"] = [41, 641]
+        self.apply_to_classes = FieldOfViewBase
 
 
 class Vibration(AnalyticalPSF):
@@ -167,7 +175,6 @@ class NonCommonPathAberration(AnalyticalPSF):
         self.meta["strehl_drift"] = 0.02
         self.meta["wave_min"] = "!SIM.spectral.wave_min"
         self.meta["wave_max"] = "!SIM.spectral.wave_max"
-        self.apply_to_classes = FieldOfViewBase
 
         self._total_wfe = None
 
@@ -331,6 +338,8 @@ class SemiAnalyticalPSF(PSF):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.meta["z_order"] = [42]
+        self.apply_to_classes = FieldOfViewBase
+        # self.apply_to_classes = ImagePlaneBase
 
 
 class AnisocadoConstPSF(SemiAnalyticalPSF):
@@ -522,6 +531,8 @@ class DiscretePSF(PSF):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.meta["z_order"] = [43]
+        self.apply_to_classes = FieldOfViewBase
+        # self.apply_to_classes = ImagePlaneBase
 
 
 class FieldConstantPSF(DiscretePSF):

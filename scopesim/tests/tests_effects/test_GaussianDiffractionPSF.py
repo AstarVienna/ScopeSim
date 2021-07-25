@@ -46,8 +46,8 @@ class TestInit:
 
 @pytest.mark.usefixtures("basic_fov")
 class TestApplyTo:
-    def test_size_of_fov_increases_when_convolved(self, basic_fov):
-        effect = efs.GaussianDiffractionPSF(1)
+    def test_size_of_fov_increases_when_convolved_if_convolve_mode_set_to_full(self, basic_fov):
+        effect = efs.GaussianDiffractionPSF(1, convolve_mode="full")
         basic_fov = effect.apply_to(basic_fov)
 
         orig_size = np.prod(basic_fov.fields[0].data.shape)

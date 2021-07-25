@@ -16,6 +16,7 @@ rc.__search_path__.insert(0, MOCK_DIR)
 
 PLOTS = False
 
+
 ################################################################################
 # Everything needed to test the FOVManager in Spectroscopy mode
 

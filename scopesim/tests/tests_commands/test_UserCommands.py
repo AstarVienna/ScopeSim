@@ -76,6 +76,10 @@ class TestInit:
 
         print(cmd.list_modes())
 
+    def test_throws_error_for_wrong_mode_name(self):
+        with pytest.raises(ValueError):
+            UserCommands(use_instrument="test_package", set_modes=["bogus"])
+
     def test_mode_yamls_read_from_file(self):
         cmd = UserCommands(use_instrument="test_package")
         assert cmd["!TEL.temperature"] < 9000

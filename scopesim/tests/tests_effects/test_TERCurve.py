@@ -18,13 +18,8 @@ if MOCK_PATH not in rc.__search_path__:
 
 PLOTS = False
 
-
-def _filter_wheel():
-    wheel = tc.FilterWheel(**{"filter_names": ["Ks", "Br-gamma"],
-                              "filename_format": "TC_filter_{}.dat",
-                              "current_filter": "Br-gamma"})
-    return wheel
-
+# pylint: disable=no-self-use, missing-class-docstring
+# pylint: disable=missing-function-docstring
 
 class TestTERCurveApplyTo:
     def test_adds_bg_to_source_if_source_has_no_bg(self):
@@ -90,20 +85,35 @@ class TestSpanishVOFilterCurveInit:
         assert isinstance(filt, tc.FilterCurve)
 
 
+@pytest.fixture(name="fwheel", scope="class")
+def _filter_wheel():
+    '''Instantiate a FilterWheel'''
+    return tc.FilterWheel(**{"filter_names": ["Ks", "Br-gamma"],
+                             "filename_format": "TC_filter_{}.dat",
+                             "current_filter": "Br-gamma"})
+
 class TestFilterWheelInit:
-    def test_loads_all_filters(self):
-        wheel = _filter_wheel()
-        assert len(wheel.filters) == 2
+    def test_initialises_correctly(self, fwheel):
+        assert isinstance(fwheel, tc.FilterWheel)
 
-    def test_current_filter_can_be_changed(self):
-        wheel = _filter_wheel()
-        assert wheel.current_filter.meta["name"] == "Br-gamma"
+    def test_loads_all_filters(self, fwheel):
+        assert len(fwheel.filters) == 2
 
-        wheel.meta["current_filter"] = "Ks"
-        assert wheel.current_filter.meta["name"] == "Ks"
+    def test_current_filter_is_filter(self, fwheel):
+        assert isinstance(fwheel.current_filter, tc.FilterCurve)
 
-    def test_plots_all_filters(self):
-        wheel = _filter_wheel()
+    def test_current_filter_has_fov_grid_method(self, fwheel):
+        assert hasattr(fwheel.current_filter, "fov_grid")
+
+    def test_change_to_known_filter(self, fwheel):
+        fwheel.change_filter('Ks')
+        assert fwheel.current_filter.meta["name"] == "Ks"
+
+    def test_change_to_unknown_filter(self, fwheel):
+        with pytest.raises(ValueError):
+            fwheel.change_filter('X')
+
+    def test_plots_all_filters(self, fwheel):
         if PLOTS:
-            wheel.plot()
+            fwheel.plot()
             plt.show()

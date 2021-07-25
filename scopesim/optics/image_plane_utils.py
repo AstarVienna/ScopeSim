@@ -159,19 +159,20 @@ def header_from_list_of_xy(x, y, pixel_scale, wcs_suffix=""):
     if wcs_suffix != "D":
         x = np.array(x)
         x[x > 270] -= 360
-        x[x < -90] += 360
+        x[x <= -90] += 360
         x = list(x)
 
     hdr = fits.Header()
 
-    crval1 = divmod(min(x), pixel_scale)[0] * pixel_scale
-    crval2 = divmod(min(y), pixel_scale)[0] * pixel_scale
+    # .. todo: find out how this plays with chunks
+    # crval1 = divmod(min(x), pixel_scale)[0] * pixel_scale
+    # crval2 = divmod(min(y), pixel_scale)[0] * pixel_scale
 
     # naxis1 = int((max(x) - crval1) // pixel_scale) # + 2
     # naxis2 = int((max(y) - crval2) // pixel_scale) # + 2
 
-    # crval1 = min(x)
-    # crval2 = min(y)
+    crval1 = min(x)
+    crval2 = min(y)
 
     # ..todo:: give the 9 a variable in !SIM.computing
     dx = (max(x) - min(x)) / pixel_scale
@@ -201,8 +202,6 @@ def header_from_list_of_xy(x, y, pixel_scale, wcs_suffix=""):
     hdr["CRPIX2"+s] = ypcen
 
     return hdr
-
-
 
 
 ###############################################################################
@@ -686,12 +685,13 @@ def val2pix(header, a, b, wcs_suffix=""):
 
 def calc_footprint(header, wcs_suffix=""):
     """
-    Returns the on sky-positions [deg] of the corners of a header WCS
+    Returns the sky/detector positions [deg/mm] of the corners of a header WCS
 
-    The on-sky positions returned correspond to the corners of the header's
+    The positions returned correspond to the corners of the header's
     image array, in this order::
 
         (ra, dec) = (0,0), (w, 0), (w, h), (0, h)
+        (x, y) = (0,0), (w, 0), (w, h), (0, h)
 
     where ``w``, ``h`` are equal to NAXIS1 and NAXIS2 from the header.
 
@@ -704,9 +704,9 @@ def calc_footprint(header, wcs_suffix=""):
 
     Returns
     -------
-    xsky, ysky : arrays of floats
-        [deg] xsky are the coordinates for pixels [0, w, w, 0]
-        [deg] ysky are the coordinates for pixels [0, 0, h, h]
+    x, y : arrays of floats
+        [deg or mm] x are the coordinates for pixels [0, w, w, 0]
+        [deg or mm] y are the coordinates for pixels [0, 0, h, h]
 
     """
 
@@ -714,12 +714,12 @@ def calc_footprint(header, wcs_suffix=""):
         header = header.header
 
     w, h = header["NAXIS1"], header["NAXIS2"]
-    x = np.array([0, w, w, 0])
-    y = np.array([0, 0, h, h])
+    x0 = np.array([0, w, w, 0])
+    y0 = np.array([0, 0, h, h])
 
-    xsky, ysky = pix2val(header, x, y, wcs_suffix)
+    x1, y1 = pix2val(header, x0, y0, wcs_suffix)
 
-    return xsky, ysky
+    return x1, y1
 
 
 def split_header(hdr, chunk_size, wcs_suffix=""):

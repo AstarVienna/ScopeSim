@@ -1,4 +1,5 @@
 import numpy as np
+from scipy import ndimage as spi
 from scipy.interpolate import RectBivariateSpline, griddata
 from scipy.ndimage import zoom
 from astropy import units as u
@@ -223,3 +224,33 @@ def sigma2gauss(sigma, x_size=15, y_size=15):
                               mode="oversample").array
     kernel /= np.sum(kernel)
     return kernel
+
+
+def rotational_blur(image, angle):
+    """
+    Rotates and coadds an image over a given angle to imitate a blur
+
+    Parameters
+    ----------
+    image : array
+        Image to blur
+    angle : float
+        [deg] Angle over which the image should be rotationally blurred
+
+    Returns
+    -------
+    image_rot : array
+        Blurred image
+
+    """
+    image_rot = np.copy(image)
+
+    n_angles = 0
+    rad_to_deg = 57.29578
+    edge_pixel_unit_angle = np.arctan2(1, (image.shape[0] // 2)) * rad_to_deg
+    while abs(angle) > edge_pixel_unit_angle and n_angles < 25:
+        angle /= 2.
+        image_rot += spi.rotate(image_rot, angle, reshape=False, order=1)
+        n_angles += 1
+
+    return image_rot / n_angles

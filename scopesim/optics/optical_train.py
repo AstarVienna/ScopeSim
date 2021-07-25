@@ -66,6 +66,7 @@ class OpticalTrain:
 
     def __init__(self, cmds=None):
 
+        self._description = self.__repr__()
         self.cmds = cmds
         self.optics_manager = None
         self.fov_manager = None
@@ -73,6 +74,7 @@ class OpticalTrain:
         self.detector_arrays = []
         self.yaml_dicts = None
         self._last_source = None
+
 
         if cmds is not None:
             self.load(cmds)
@@ -163,7 +165,9 @@ class OpticalTrain:
             # .. todo: possible bug with bg flux not using plate_scale
             #          see fov_utils.combine_imagehdu_fields
             fov.extract_from(source)
-            fov.view()
+
+            # Does this need to be here?
+            # fov.view()
 
             for effect in self.optics_manager.fov_effects:
                 fov = effect.apply_to(fov)
@@ -221,9 +225,28 @@ class OpticalTrain:
             self.cmds.update(packages=self.default_yamls[0]["packages"])
         rc.__currsys__ = self.cmds
 
+
+    def shutdown(self):
+        '''Shut down the instrument.
+
+        This method closes all open file handles and should be called when the optical train
+        is no longer needed.
+        '''
+        for effect_name in self.effects['name']:
+            try:
+                self[effect_name]._file.close()
+            except AttributeError:
+                pass
+
+        self._description = "The instrument has been shut down."
+
+
     @property
     def effects(self):
         return self.optics_manager.list_effects()
+
+    def __str__(self):
+        return self._description
 
     def __getitem__(self, item):
         return self.optics_manager[item]
@@ -247,5 +270,3 @@ class OpticalTrain:
         # etc
         #   limiting magnitudes
         #
-
-

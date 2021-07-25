@@ -61,70 +61,121 @@ class FieldOfView(FieldOfViewBase):
         self.hdu.header["NAXIS1"] = header["NAXIS1"]
         self.hdu.header["NAXIS2"] = header["NAXIS2"]
 
-        self.fields = []
         self.image_plane_id = 0
+        self.fields = []
+        self.spectra = []
 
+        self._cube = None       # IFU, long-lit, Slicer-MOS
+        self._image = None      # Imagers
+        self._spectrum = None   # Fibre-fed MOS
+
+        self._waverange = None
         self._wavelength = None
+        self._volume = None
 
     def extract_from(self, src):
         """ ..assumption: Bandpass has been applied"""
-        
+
         if not isinstance(src, SourceBase):
             raise ValueError("source must be a Source object: {}"
                              "".format(type(src)))
 
-        wave_min = utils.quantify(self.meta["wave_min"], u.um).value
-        wave_max = utils.quantify(self.meta["wave_max"], u.um).value
         area = self.meta["area"]
 
-        # determine which fields are inside the field of view
-        fields_mask = [fov_utils.is_field_in_fov(self.hdu.header, field)
-                       for field in src.fields]
-        fields_indexes = np.where(fields_mask)[0]
-        tbl_fields_mask = np.array([isinstance(field, Table)
-                                    for field in src.fields])
-        img_fields_mask = np.array([isinstance(field, fits.ImageHDU)
-                                    for field in src.fields])
+        fields = [fov_utils.extract_common_field(field, self.volume())
+                  for field in src.fields
+                  if fov_utils.is_field_in_fov(self.hdu.header, field)]
 
-        # combine all Table fields
-        if sum(tbl_fields_mask * fields_mask) > 0:
-            combined_table = fov_utils.combine_table_fields(self.hdu.header,
-                                                            src, fields_indexes)
-            tbl = fov_utils.make_flux_table(combined_table, src,
-                                            wave_min, wave_max, area)
-            xd, yd = fov_utils.sky2fp(self.hdu.header, tbl["x"], tbl["y"])
-            tbl.add_columns([Column(name="x_mm", data=xd, unit=u.mm),
-                             Column(name="y_mm", data=yd, unit=u.mm)])
-            self.fields += [tbl]
+        spec_refs = []
+        for field in fields:
+            if isinstance(field, Table):
+                spec_refs += list(field["ref"])
+            elif isinstance(field, fits.ImageHDU):
+                ref = field.header.get("SPEC_REF")
+                if ref is not None:
+                    spec_refs += [ref]
+        spectra = {ref: src.spectra[ref] for ref in spec_refs}
 
-        # combine all ImageHDU fields
-        if sum(img_fields_mask * fields_mask) > 0:
-            imagehdu = fov_utils.combine_imagehdu_fields(self.hdu.header, src,
-                                                         fields_indexes,
-                                                         wave_min, wave_max,
-                                                         area)
-            self.fields += [imagehdu]
+        self.fields = fields
+        self.spectra = spectra
+
+
+        ################### OLD ################################################
+        #
+        # # determine which fields are inside the field of view
+        # fields_mask = [fov_utils.is_field_in_fov(self.hdu.header, field)
+        #                for field in src.fields]
+        # fields_indexes = np.where(fields_mask)[0]
+        # tbl_fields_mask = np.array([isinstance(field, Table)
+        #                             for field in src.fields])
+        # img_fields_mask = np.array([isinstance(field, fits.ImageHDU)
+        #                             for field in src.fields])
+        #
+        # # combine all Table fields
+        # if sum(tbl_fields_mask * fields_mask) > 0:
+        #     combined_table = fov_utils.combine_table_fields(self.hdu.header,
+        #                                                     src, fields_indexes)
+        #     tbl = fov_utils.make_flux_table(combined_table, src,
+        #                                     wave_min, wave_max, area)
+        #     xd, yd = fov_utils.sky2fp(self.hdu.header, tbl["x"], tbl["y"])
+        #     tbl.add_columns([Column(name="x_mm", data=xd, unit=u.mm),
+        #                      Column(name="y_mm", data=yd, unit=u.mm)])
+        #     self.fields += [tbl]
+        #
+        # # combine all ImageHDU fields
+        # if sum(img_fields_mask * fields_mask) > 0:
+        #     imagehdu = fov_utils.combine_imagehdu_fields(self.hdu.header, src,
+        #                                                  fields_indexes,
+        #                                                  wave_min, wave_max,
+        #                                                  area)
+        #     self.fields += [imagehdu]
+
+        ################### OLD ################################################
 
     def view(self, sub_pixel=None):
-        if sub_pixel is None:
-            sub_pixel = self.meta["sub_pixel"]
+        return None
 
-        self.hdu.data = np.zeros((self.hdu.header["NAXIS2"],
-                                  self.hdu.header["NAXIS1"]))
-        if len(self.fields) > 0:
-            for field in self.fields:
-                if isinstance(field, Table):
-                    self.hdu = imp_utils.add_table_to_imagehdu(field, self.hdu,
-                                                               sub_pixel)
-                elif isinstance(field, fits.ImageHDU):
-                    self.hdu.data += field.data
+        # sum the cube layers within the wavelength range
 
-        if self.meta["conserve_image"] is False and self.mask is not None:
-            flux = np.sum(self.hdu.data) / np.sum(self.mask)
-            self.hdu.data = np.zeros(self.hdu.data.shape)
-            self.hdu.data[self.mask] = flux
+        # combine images
+        # add point sources to a canvas
 
-        return self.hdu.data
+
+        ################### OLD ################################################
+        # if sub_pixel is None:
+        #     sub_pixel = self.meta["sub_pixel"]
+        #
+        # self.hdu.data = np.zeros((self.hdu.header["NAXIS2"],
+        #                           self.hdu.header["NAXIS1"]))
+        # if len(self.fields) > 0:
+        #     for field in self.fields:
+        #         if isinstance(field, Table):
+        #             self.hdu = imp_utils.add_table_to_imagehdu(field, self.hdu,
+        #                                                        sub_pixel)
+        #         elif isinstance(field, fits.ImageHDU):
+        #             self.hdu.data += field.data
+        #
+        # if self.meta["conserve_image"] is False and self.mask is not None:
+        #     flux = np.sum(self.hdu.data) / np.sum(self.mask)
+        #     self.hdu.data = np.zeros(self.hdu.data.shape)
+        #     self.hdu.data[self.mask] = flux
+        #
+        # return self.hdu.data
+        #
+        # ################### OLD ################################################
+
+    def make_spectrum(self):
+        # This is needed for when we do incoherent MOS instruments.
+        # Each fibre doesn't care about the spatial information.
+        return None
+
+    def make_image(self):
+        # Used for imaging
+        return None
+
+    def make_cube(self):
+        # Used for IFUs, slit spectrographs, and coherent MOSs (e.g.KMOS)
+        return None
 
     @property
     def header(self):
@@ -134,12 +185,25 @@ class FieldOfView(FieldOfViewBase):
     def data(self):
         if self.hdu.data is None:
             self.view(self.meta["sub_pixel"])
-
         return self.hdu.data
 
     @property
+    def spectrum(self):
+        if self._spectrum is None:
+            self._spectrum = self.make_spectrum()
+        return self._spectrum
+
+    @property
     def image(self):
-        return self.data
+        if self._image is None:
+            self._image = self.make_image()
+        return self._image
+
+    @property
+    def cube(self):
+        if self._cube is None:
+            self._cube = self.make_cube()
+        return self._cube
 
     @property
     def corners(self):
@@ -147,11 +211,30 @@ class FieldOfView(FieldOfViewBase):
         imp_corners = imp_utils.calc_footprint(self.header, "D")
         return sky_corners, imp_corners
 
+    def volume(self, wcs_prefix=""):
+        xs, ys = imp_utils.calc_footprint(self.header, wcs_suffix=wcs_prefix)
+        wave_corners = self.waverange
+        self._volume = {"xs": [min(xs), max(xs)],
+                        "ys": [min(ys), max(ys)],
+                        "waves": self.waverange,
+                        "xy_unit": "mm" if wcs_prefix == "D" else "deg",
+                        "wave_unit": "um"}
+        return self._volume
+
+    @property
+    def waverange(self):
+        """Returns wavelength range in um [wave_min, wave_max]"""
+        if self._waverange is None:
+            wave_min = utils.quantify(self.meta["wave_min"], u.um).value
+            wave_max = utils.quantify(self.meta["wave_max"], u.um).value
+            self._waverange = [wave_min, wave_max]
+        return self._waverange
+
     @property
     def wavelength(self):
+        """Returns central wavelength in um"""
         if self._wavelength is None:
-            self._wavelength = 0.5 * (self.meta["wave_min"] +
-                                      self.meta["wave_max"])
+            self._wavelength = np.average(self.waverange)
         return self._wavelength
 
     def __repr__(self):

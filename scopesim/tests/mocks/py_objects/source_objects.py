@@ -79,6 +79,24 @@ def _image_source(dx=0, dy=0, angle=0, weight=1):
     return im_source
 
 
+def _cube_source(**kwargs):
+    n = 101
+    im_src = _image_source(**kwargs)
+    data = im_src.fields[0].data
+
+        # Broadcast the array onto a 3rd dimension and scale along the new axis
+    im_src.fields[0].data = data[None, :, :] * np.linspace(0, 4, n)[:, None, None]
+    im_src.spectra = []
+
+    cube_hdr_dict = {"CUNIT3": "um", "CTYPE3": "WAVE", "CDELT3": 0.02,
+                     "CRVAL3": 1.5, "CRPIX3": 50, "SPEC_REF": None}
+
+    im_src.fields[0].header.update(cube_hdr_dict)
+
+    return im_src
+
+
+
 def _combined_source(im_angle=0, dx=[0, 0, 0], dy=[0, 0, 0], weight=[1, 1, 1]):
     tblsrc1 = _table_source()
 

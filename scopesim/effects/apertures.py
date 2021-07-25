@@ -329,7 +329,7 @@ class ApertureList(Effect):
 
 class SlitWheel(Effect):
     """
-    This wheel holds a selection of predefined spectroscopic filters
+    This wheel holds a selection of predefined spectroscopic slits
     and possibly other field masks.
 
     It should contain an open position.
