@@ -102,6 +102,7 @@ class TestGetPixelEdges:
         assert dist_between_mtc == approx(pixel_size, rel=1e-5)
 
 
+@pytest.mark.skip(reason="MonochromaticTraceCurves not needed for SpecCADO")
 class TestGetTraceCurves:
     @pytest.mark.usefixtures("basic_trace")
     def test_mtc_are_one_pixel_removed_from_each_other(self, basic_trace):
@@ -156,6 +157,7 @@ class TestGetTraceCurves:
             plt.show()
 
 
+@pytest.mark.skip(reason="MonochromaticTraceCurves not needed for SpecCADO")
 class TestGetCurveHeaders:
     @pytest.mark.usefixtures("basic_trace")
     def test_vertical_headers_are_all_one_pixel_apart(self, basic_trace):
@@ -259,6 +261,7 @@ class TestGetAffineParameters:
             plt.ylim(-5, 5)
             plt.show()
 
+    @pytest.mark.skip(reason="no way of currently testing this")
     @pytest.mark.usefixtures("curved_trace")
     def test_no_same_angles_for_curved_trace(self, curved_trace):
         spt = SpectralTrace(curved_trace)
