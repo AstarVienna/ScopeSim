@@ -81,14 +81,18 @@ class SpectralTrace:
                                                              self.meta)
 
     def get_max_dispersion(self, **kwargs):
+        '''Get the maximum dispersion in a spectral trace
+
+        This is a wrapper for the function in `spectral_trace_utils`.
+        '''
         params = {}
         params.update(self.meta)
         params["wave_min"] = self.wave_min
         params["wave_max"] = self.wave_max
         params.update(kwargs)
 
-        disp, waverange = spt_utils.get_max_dispersion(trace_tbls=[self.table],
-                                                       **params)  # dwave is passed from kwargs
+        disp, waverange = spt_utils.get_max_dispersion(
+            self, **params)  # dwave is passed from kwargs
         self._disp = disp
         self._waverange = waverange
 
