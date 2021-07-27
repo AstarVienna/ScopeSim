@@ -174,8 +174,18 @@ class FieldOfView(FieldOfViewBase):
         return None
 
     def make_cube(self):
+        """
+        Create a single cube out of all Source objects
+
+        THE CURRENT IMPLEMENTATION IS TEMPORARY AND WORKS FOR A SINGLE
+        CUBE SOURCE ONLY.
+        """
         # Used for IFUs, slit spectrographs, and coherent MOSs (e.g.KMOS)
-        return None
+
+        ## The following is temporary [OC, 2021-07-27]
+        ## Straight copy of fields[0], so that a cube is available.
+        ## Works only when a single cube source is specified
+        return self.fields[0]
 
     @property
     def header(self):
