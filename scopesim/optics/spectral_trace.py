@@ -43,6 +43,10 @@ class SpectralTrace:
 
         if isinstance(trace_tbl, (fits.BinTableHDU, fits.TableHDU)):
             self.table = Table(trace_tbl.data)
+            try:
+                self.meta["description"] = trace_tbl.header['EXTNAME']
+            except KeyError:
+                pass
         elif isinstance(trace_tbl, Table):
             self.table = trace_tbl
         else:
