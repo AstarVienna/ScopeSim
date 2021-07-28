@@ -1,3 +1,10 @@
+'''
+Effect for mapping spectral cubes to the detector plane
+
+The Effect is called SpectralTraceList, it applies a list of
+optics.spectral_trace_SpectralTrace objects to a FieldOfView.
+'''
+
 import numpy as np
 
 from astropy.io import fits
@@ -18,7 +25,7 @@ class SpectralTraceList(Effect):
 
     Spectral trace patterns are to be kept in a ``fits.HDUList`` with one or
     more ``fits.BinTableHDU`` extensions, each one describing the geometry of a
-    single trace. The 1st extension should be a ``BinTableHDU`` connecting the
+    single trace. The first extension should be a ``BinTableHDU`` connecting the
     traces to the correct ``Aperture`` and ``ImagePlane`` objects.
 
     The ``fits.HDUList`` objects can be loaded using one of these two keywords:
@@ -64,9 +71,9 @@ class SpectralTraceList(Effect):
     Required Table columns:
 
     - wavelength : float : [um] : wavelength of monochromatic aperture image
-    - s0 .. s0 : float : [mm] : position along aperture perpendicular to trace
-    - x0 .. xN : float : [mm] : x position of aperture image on focal plane
-    - y0 .. yN : float : [arcsec] : y position of aperture image on focal plane
+    - s : float : [arcsec] : position along aperture perpendicular to trace
+    - x : float : [mm] : x position of aperture image on focal plane
+    - y : float : [mm] : y position of aperture image on focal plane
 
     """
     def __init__(self, **kwargs):
