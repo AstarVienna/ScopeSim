@@ -111,10 +111,10 @@ class SpectralTrace:
             return None, xmin, xmax, ymin, ymax
 
         # Only work on parts within the FoV
-        xmin = min(xmin, 0)
-        xmax = max(xmax, naxis1)
-        ymin = min(ymin, 0)
-        ymax = max(ymax, naxis2)
+        xmin = max(xmin, 0)
+        xmax = min(xmax, naxis1)
+        ymin = max(ymin, 0)
+        ymax = min(ymax, naxis2)
 
         # Temporary: fill subimage with ones
         image = np.ones((ymax - ymin, xmax - xmin), dtype=np.float32)
