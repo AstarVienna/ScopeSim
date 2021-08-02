@@ -2,6 +2,7 @@ import numpy as np
 from astropy.table import Table
 from astropy.io import fits
 from astropy import units as u
+from astropy.wcs import WCS
 
 from matplotlib import pyplot as plt
 
@@ -83,6 +84,41 @@ class SpectralTrace:
                                                             self.meta)
         self._xiy2x, self._xiy2lam = spt_utils._xiy2xlam_fit(self.table,
                                                              self.meta)
+
+    def map_spectra_to_focal_plane(self, fov):
+        """
+        Apply the spectral trace mapping to a spectral cube
+
+        The cube is contained in a FieldOfView object, which also has
+        world coordinate systems for the Source (sky coordinates and
+        wavelengths) and for the focal plane.
+        The method returns a section of the fov image along with info on
+        where this image lies in the focal plane.
+        """
+        # Initialise the image based on the footprint of the spectral
+        # trace and the focal plane WCS
+        xlim, ylim = self.footprint
+        wcsd = WCS(fov.header, key='D')
+        naxis1, naxis2 = fov.header['NAXIS1'], fov.header['NAXIS2']
+        xpix, ypix = wcsd.all_world2pix(xlim, ylim, 0) ## oder 1?
+        xmin = np.floor(xpix.min()).astype(int)
+        xmax = np.ceil(xpix.max()).astype(int)
+        ymin = np.floor(ypix.min()).astype(int)
+        ymax = np.ceil(ypix.max()).astype(int)
+
+        # Check if spectral trace footprint is outside FoV
+        if xmax < 0 or xmin > naxis1 or ymax < 0 or ymin > naxis2:
+            return None, xmin, xmax, ymin, ymax
+
+        # Only work on parts within the FoV
+        xmin = min(xmin, 0)
+        xmax = max(xmax, naxis1)
+        ymin = min(ymin, 0)
+        ymax = max(ymax, naxis2)
+
+        # Temporary: fill subimage with ones
+        image = np.ones((ymax - ymin, xmax - xmin), dtype=np.float32)
+        return image, xmin, xmax, ymin, ymax
 
     def get_max_dispersion(self, **kwargs):
         '''Get the maximum dispersion in a spectral trace

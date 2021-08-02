@@ -132,6 +132,18 @@ class SpectralTraceList(Effect):
 
         return spec_traces
 
+    def apply_to(self, fov):
+        '''Apply the effect to the FieldOfView'''
+        image = np.zeros((fov.header['NAXIS2'], fov.header['NAXIS1']),
+                         dtype=np.float32)
+        for spt in self.spectral_traces:
+            subimg, xmin, xmax, ymin, ymax = spt.map_spectra_to_focal_plane(fov)
+            if subimg is not None:
+                image[ymin:ymax, xmin:xmax] = subimg
+
+        fov._image = image
+        return fov
+
     def fov_grid(self, which="waveset", **kwargs):
         self.meta.update(kwargs)
         self.meta = from_currsys(self.meta)
@@ -163,8 +175,6 @@ class SpectralTraceList(Effect):
 
         return fov_headers
 
-    def apply_to(self, fov):
-        return fov
 
     @property
     def footprint(self):
