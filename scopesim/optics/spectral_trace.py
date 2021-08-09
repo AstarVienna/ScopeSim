@@ -1,3 +1,7 @@
+"""
+This module contains the definition of the `SpectralTrace` class.
+"""
+
 import numpy as np
 from astropy.table import Table
 from astropy.io import fits
@@ -56,13 +60,14 @@ class SpectralTrace:
                              "".format(type(trace_tbl)))
 
         if self.meta["invalid_value"] is not None:
-            self.table = spt_utils.sanitize_table(self.table,
-                                      invalid_value=self.meta["invalid_value"],
-                                      wave_colname=self.meta["wave_colname"],
-                                      x_colname=self.meta["x_colname"],
-                                      y_colname=self.meta["y_colname"],
-                                      spline_order=self.meta["spline_order"],
-                                      ext_id=self.meta["extension_id"])
+            self.table = spt_utils.sanitize_table(
+                self.table,
+                invalid_value=self.meta["invalid_value"],
+                wave_colname=self.meta["wave_colname"],
+                x_colname=self.meta["x_colname"],
+                y_colname=self.meta["y_colname"],
+                spline_order=self.meta["spline_order"],
+                ext_id=self.meta["extension_id"])
         # ..todo: Should that be made np.unique?
         self.waves = self.table[self.meta["wave_colname"]]
         #..todo: this turns out as 1 in simplified layout. Remove?
@@ -72,12 +77,14 @@ class SpectralTrace:
         self.wave_min = quantify(np.min(self.waves), u.um).value
         self.wave_max = quantify(np.max(self.waves), u.um).value
 
+        # ..todo: This bunch of variables can probably go.
         self._disp = None           # [mm/um] spectral dispersion distance
         self._waverange = None
         self._wave_bin_edges = None
         self._wave_bin_centers = None
         self._curves = None
 
+        # Interpolation functions
         self.xy2xi, self.xy2lam = spt_utils.xy2xilam_fit(self.table,
                                                          self.meta)
         self.xilam2x, self.xilam2y = spt_utils.xilam2xy_fit(self.table,
