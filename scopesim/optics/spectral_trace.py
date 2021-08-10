@@ -47,7 +47,7 @@ class SpectralTrace:
         self.meta.update(kwargs)
 
         if isinstance(trace_tbl, (fits.BinTableHDU, fits.TableHDU)):
-            self.table = Table(trace_tbl.data)
+            self.table = Table.read(trace_tbl)
             try:
                 self.meta["description"] = trace_tbl.header['EXTNAME']
             except KeyError:
@@ -104,7 +104,7 @@ class SpectralTrace:
         """
         # Initialise the image based on the footprint of the spectral
         # trace and the focal plane WCS
-        xlim, ylim = self.footprint
+        xlim, ylim = self.footprint()  # ..todo: wavelength limits
         wcsd = WCS(fov.header, key='D')
         naxis1, naxis2 = fov.header['NAXIS1'], fov.header['NAXIS2']
         xpix, ypix = wcsd.all_world2pix(xlim, ylim, 0) ## oder 1?
@@ -173,13 +173,70 @@ class SpectralTrace:
             self.get_pixel_wavelength_edges(pixel_size)
         return self._wave_bin_centers
 
-    @property
-    def footprint(self):
-        '''Return corners of rectangle enclosing spectral trace'''
+    def footprint(self, wave_min=None, wave_max=None, xi_min=None, xi_max=None):
+        '''
+        Return corners of rectangle enclosing spectral trace
+
+        Parameters
+        ----------
+        wave_min, wave_max : float [um], Quantity
+            Minimum and maximum wavelength to compute the footprint on.
+            If `None`, use the full range that the spectral trace is defined on.
+            Float values are interpreted as microns.
+        xi_min, xi_max : float [arcsec], Quantity
+            Minimum and maximum slit position on the sky.
+            If `None`, use the full range that the spectral trace is defined on.
+            Float values are interpreted as arcsec.
+        '''
+        wval = self.table[self.meta['wave_colname']]
+        xival = self.table[self.meta['s_colname']]
         xval = self.table[self.meta['x_colname']]
         yval = self.table[self.meta['y_colname']]
-        xlim = [np.min(xval), np.max(xval), np.max(xval), np.min(xval)]
-        ylim = [np.min(yval), np.min(yval), np.max(yval), np.max(yval)]
+
+        try:
+            wunit = self.table[self.meta['wave_colname']].unit
+        except KeyError:
+            wunit = u.um
+
+        if wave_min is None:
+            wave_min = quantify(np.min(wval), wunit)
+        if wave_max is None:
+            wave_max = quantify(np.max(wval), wunit)
+
+        wave_min = quantify(wave_min, u.um).value
+        wave_max = quantify(wave_max, u.um).value
+
+        try:
+            xiunit = self.table[self.meta['s_colname']].unit
+        except KeyError:
+            xiunit = u.arcsec
+
+        if xi_min is None:
+            xi_min = quantify(np.min(xival), xiunit)
+        if xi_max is None:
+            xi_max = quantify(np.max(xival), xiunit)
+
+        xi_min = quantify(xi_min, u.arcsec).value
+        xi_max = quantify(xi_max, u.arcsec).value
+
+        ngrid = 512
+        wgrid = np.concatenate((np.linspace(wave_min, wave_max, ngrid),
+                                [wave_max] * ngrid,
+                                np.linspace(wave_min, wave_max, ngrid),
+                                [wave_min] * ngrid))
+        xigrid = np.concatenate(([xi_min] * ngrid,
+                                 np.linspace(xi_min, xi_max, ngrid),
+                                 [xi_max] * ngrid,
+                                 np.linspace(xi_min, xi_max, ngrid)))
+
+        xval = self.xilam2x(xigrid, wgrid)
+        yval = self.xilam2y(xigrid, wgrid)
+
+        xlim = [np.min(xval), np.max(xval),
+                np.max(xval), np.min(xval)]
+        ylim = [np.min(yval), np.min(yval),
+                np.max(yval), np.max(yval)]
+
         return xlim, ylim
 
     def get_trace_curves(self, pixel_size, wave_min=None, wave_max=None,
@@ -306,7 +363,7 @@ class SpectralTrace:
         '''Plot control points of the SpectralTrace'''
 
         # Footprint (rectangle enclosing the trace)
-        xlim, ylim  = self.footprint
+        xlim, ylim  = self.footprint(wave_min=wave_min, wave_max=wave_max)
         xlim.append(xlim[0])
         ylim.append(ylim[0])
         plt.plot(xlim, ylim)
