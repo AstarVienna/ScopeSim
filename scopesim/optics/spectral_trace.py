@@ -188,56 +188,51 @@ class SpectralTrace:
             If `None`, use the full range that the spectral trace is defined on.
             Float values are interpreted as arcsec.
         '''
-        wval = self.table[self.meta['wave_colname']]
-        xival = self.table[self.meta['s_colname']]
-        xval = self.table[self.meta['x_colname']]
-        yval = self.table[self.meta['y_colname']]
+        wave_val = self.table[self.meta['wave_colname']]
+        xi_val = self.table[self.meta['s_colname']]
 
         try:
-            wunit = self.table[self.meta['wave_colname']].unit
+            wave_unit = self.table[self.meta['wave_colname']].unit
         except KeyError:
-            wunit = u.um
+            wave_unit = u.um
 
         if wave_min is None:
-            wave_min = quantify(np.min(wval), wunit)
+            wave_min = quantify(np.min(wave_val), wave_unit)
         if wave_max is None:
-            wave_max = quantify(np.max(wval), wunit)
+            wave_max = quantify(np.max(wave_val), wave_unit)
 
         wave_min = quantify(wave_min, u.um).value
         wave_max = quantify(wave_max, u.um).value
 
         try:
-            xiunit = self.table[self.meta['s_colname']].unit
+            xi_unit = self.table[self.meta['s_colname']].unit
         except KeyError:
-            xiunit = u.arcsec
+            xi_unit = u.arcsec
 
         if xi_min is None:
-            xi_min = quantify(np.min(xival), xiunit)
+            xi_min = quantify(np.min(xi_val), xi_unit)
         if xi_max is None:
-            xi_max = quantify(np.max(xival), xiunit)
+            xi_max = quantify(np.max(xi_val), xi_unit)
 
         xi_min = quantify(xi_min, u.arcsec).value
         xi_max = quantify(xi_max, u.arcsec).value
 
-        ngrid = 512
-        wgrid = np.concatenate((np.linspace(wave_min, wave_max, ngrid),
-                                [wave_max] * ngrid,
-                                np.linspace(wave_min, wave_max, ngrid),
-                                [wave_min] * ngrid))
-        xigrid = np.concatenate(([xi_min] * ngrid,
-                                 np.linspace(xi_min, xi_max, ngrid),
-                                 [xi_max] * ngrid,
-                                 np.linspace(xi_min, xi_max, ngrid)))
+        # Map the edges of xi/lam to the focal plance
+        n_edge = 512
+        wave_edge = np.concatenate((np.linspace(wave_min, wave_max, n_edge),
+                                    [wave_max] * n_edge,
+                                    np.linspace(wave_min, wave_max, n_edge),
+                                    [wave_min] * n_edge))
+        xi_edge = np.concatenate(([xi_min] * n_edge,
+                                  np.linspace(xi_min, xi_max, n_edge),
+                                  [xi_max] * n_edge,
+                                  np.linspace(xi_min, xi_max, n_edge)))
 
-        xval = self.xilam2x(xigrid, wgrid)
-        yval = self.xilam2y(xigrid, wgrid)
+        x_edge = self.xilam2x(xi_edge, wave_edge)
+        y_edge = self.xilam2y(xi_edge, wave_edge)
 
-        xlim = [np.min(xval), np.max(xval),
-                np.max(xval), np.min(xval)]
-        ylim = [np.min(yval), np.min(yval),
-                np.max(yval), np.max(yval)]
-
-        return xlim, ylim
+        return ([np.min(x_edge), np.max(x_edge), np.max(x_edge), np.min(x_edge)],
+                [np.min(y_edge), np.min(y_edge), np.max(y_edge), np.max(y_edge)])
 
     def get_trace_curves(self, pixel_size, wave_min=None, wave_max=None,
                          xy_edges=None):
