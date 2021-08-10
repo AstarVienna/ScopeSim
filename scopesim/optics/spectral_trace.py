@@ -188,34 +188,61 @@ class SpectralTrace:
             If `None`, use the full range that the spectral trace is defined on.
             Float values are interpreted as arcsec.
         '''
-        wave_val = self.table[self.meta['wave_colname']]
-        xi_val = self.table[self.meta['s_colname']]
-
+        ## Define the wavelength range of the footprint. This is a compromise
+        ## between the requested range (by method args) and the definition
+        ## range of the spectral trace
         try:
             wave_unit = self.table[self.meta['wave_colname']].unit
         except KeyError:
             wave_unit = u.um
 
+        wave_val = quantify(self.table[self.meta['wave_colname']].data,
+                            wave_unit)
+
         if wave_min is None:
-            wave_min = quantify(np.min(wave_val), wave_unit)
+            wave_min = np.min(wave_val)
         if wave_max is None:
-            wave_max = quantify(np.max(wave_val), wave_unit)
+            wave_max = np.max(wave_val)
 
-        wave_min = quantify(wave_min, u.um).value
-        wave_max = quantify(wave_max, u.um).value
+        wave_min = quantify(wave_min, u.um)
+        wave_max = quantify(wave_max, u.um)
 
+        # Requested wavelenth range is entirely outside definition range:
+        # no footprint
+        if wave_min > np.max(wave_val) or wave_max < np.min(wave_val):
+            return None, None
+
+        # Restrict to overlap of requested range and definition range
+        wave_min = max(wave_min, np.min(wave_val)).value
+        wave_max = min(wave_max, np.max(wave_val)).value
+
+        ## Define the slit range of the footprint. This is a compromise
+        ## between the requested range (by method args) and the definition
+        ## range of the spectral trace
         try:
             xi_unit = self.table[self.meta['s_colname']].unit
         except KeyError:
             xi_unit = u.arcsec
 
-        if xi_min is None:
-            xi_min = quantify(np.min(xi_val), xi_unit)
-        if xi_max is None:
-            xi_max = quantify(np.max(xi_val), xi_unit)
+        xi_val = quantify(self.table[self.meta['s_colname']].data,
+                          xi_unit)
 
-        xi_min = quantify(xi_min, u.arcsec).value
-        xi_max = quantify(xi_max, u.arcsec).value
+        if xi_min is None:
+            xi_min = np.min(xi_val)
+        if xi_max is None:
+            xi_max = np.max(xi_val)
+
+        xi_min = quantify(xi_min, u.arcsec)
+        xi_max = quantify(xi_max, u.arcsec)
+
+        # Requested slit range is entirely outside definition range:
+        # no footprint
+        if xi_min > np.max(xi_val) or xi_max < np.min(xi_val):
+            return None, None
+
+        # Restrict to overlap of requested range and definition range
+        xi_min = max(xi_min, np.min(xi_val)).value
+        xi_max = min(xi_max, np.max(xi_val)).value
 
         # Map the edges of xi/lam to the focal plance
         n_edge = 512
