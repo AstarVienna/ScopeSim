@@ -679,6 +679,7 @@ def quantify(item, unit):
     return quant
 
 
+
 def extract_type_from_unit(unit, unit_type):
     """
     Extract ``astropy`` physical type from a compound unit
