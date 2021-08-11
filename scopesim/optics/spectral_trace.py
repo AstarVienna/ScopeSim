@@ -104,7 +104,16 @@ class SpectralTrace:
         """
         # Initialise the image based on the footprint of the spectral
         # trace and the focal plane WCS
-        xlim, ylim = self.footprint()  # ..todo: wavelength limits
+        wave_min = fov.meta['wave_min']
+        wave_max = fov.meta['wave_max']
+        xi_min = fov.meta['xi_min']
+        xi_max = fov.meta['xi_max']
+        xlim, ylim = self.footprint(wave_min=wave_min, wave_max=wave_max,
+                                    xi_min=xi_min, xi_max=xi_max)
+
+        if xlim is None:
+            return None
+
         wcsd = WCS(fov.header, key='D')
         naxis1, naxis2 = fov.header['NAXIS1'], fov.header['NAXIS2']
         xpix, ypix = wcsd.all_world2pix(xlim, ylim, 0) ## oder 1?
