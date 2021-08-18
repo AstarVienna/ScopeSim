@@ -203,6 +203,7 @@ class RectangularApertureMask(ApertureMask):
         return tbl
 
 
+
 class ApertureList(Effect):
     """
     A list of apertures, useful for IFU or MOS instruments
