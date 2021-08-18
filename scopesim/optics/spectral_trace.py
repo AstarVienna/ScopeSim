@@ -1,14 +1,17 @@
 """
 This module contains the definition of the `SpectralTrace` class.
 """
+from copy import deepcopy
 
 import numpy as np
+
+from scipy.interpolate import RectBivariateSpline
+from matplotlib import pyplot as plt
+
 from astropy.table import Table
 from astropy.io import fits
 from astropy import units as u
 from astropy.wcs import WCS
-
-from matplotlib import pyplot as plt
 
 from ..optics import spectral_trace_utils as spt_utils
 from ..optics import image_plane_utils as imp_utils
@@ -114,6 +117,7 @@ class SpectralTrace:
         if xlim is None:
             return None
 
+        # WCSD from the FieldOfView
         wcsd = WCS(fov.header, key='D')
         naxis1, naxis2 = fov.header['NAXIS1'], fov.header['NAXIS2']
         xpix, ypix = wcsd.all_world2pix(xlim, ylim, 0) ## oder 1?
@@ -132,9 +136,57 @@ class SpectralTrace:
         ymin = max(ymin, 0)
         ymax = min(ymax, naxis2)
 
-        # Temporary: fill subimage with ones
-        image = np.ones((ymax - ymin, xmax - xmin), dtype=np.float32)
-        return image, xmin, xmax, ymin, ymax
+        # Update header for the subimage
+        fov.header['CRPIX1'] -= xmin
+        fov.header['CRPIX2'] -= ymin
+        fov.header['CRPIX1D'] -= xmin
+        fov.header['CRPIX2D'] -= ymin
+        fov.header['NAXIS1'] = xmax - xmin
+        fov.header['NAXIS2'] = ymax - ymin
+
+        # initialise the subimage
+        image = np.zeros((fov.header['NAXIS2'], fov.header['NAXIS1']), dtype=np.float32)
+
+        # WCSD from the FieldOfView - this is now for the subimage
+        wcsd = WCS(fov.header, key='D')
+
+        xmin_um, ymin_um = wcsd.all_pix2world(xmin, ymin, 0)
+        # xmax_um, ymax_um = wcsd.all_pix2world(xmax, ymax, 0)
+        pixsize = fov.header['CDELT1D']
+        pix_edges_x = xmin_um + np.arange(0, fov.header['NAXIS1'] + 1) * pixsize
+        pix_edges_y = ymin_um + np.arange(0, fov.header['NAXIS2'] + 1) * pixsize
+
+        # Step 512 lines at a time ..todo: necessary? Do full image first
+        # ..todo: this appears to be the old version with dispersion in the y direction
+        im_j1 = 0
+        im_j2 = fov.header['NAXIS2']
+
+        ymin = pix_edges_y[im_j1]
+        ymax = pix_edges_y[im_j2]
+
+        # wavelength range for the image slice wave_min, wave_max
+        # ..todo: in speccado loop over 512 rows, wavelength limits for each slice
+        xcen = self.xilam2x((xi_min + xi_max) / 2, (wave_min + wave_max) / 2)
+
+        # wavelength step per detector pixel at centre of slice
+        # ..todo: I try the average here, but is that correct? The pixel
+        # edges may not correspond precisely to wave limits
+        dlam_per_pix = (wave_max - wave_min) / fov.header['NAXIS2']
+        try:
+            xilam = XiLamImage(fov, dlam_per_pix)
+        except ValueError:
+            print(" ---> " + self.description + "gave ValueError")
+
+        npix_xi, npix_lam = xilam.npix_xi, xilam.npix_lam
+
+        lam = xilam.lam
+        xi = xilam.xi
+
+        image_interp = xilam.interp
+        ## ..todo: continue simulation.py l.208
+
+
+        fov._image = image
 
     def get_max_dispersion(self, **kwargs):
         '''Get the maximum dispersion in a spectral trace
@@ -433,3 +485,85 @@ class SpectralTrace:
                         self.meta["extension_id"], self.meta["aperture_id"],
                         self.meta["image_plane_id"])
         return msg
+
+
+
+class XiLamImage():
+    """
+    Class to compute a rectified 2D spectrum
+
+    The class produces and holds an image of xi (relative position along
+    the spatial slit direction) and wavelength lambda.
+    """
+
+    def __init__(self, fov, dlam_per_pix):
+
+        # Slit dimensions: oversample with respect to detector pixel scale
+
+        # Compute size of xi-lambda image: npix_xi, npix_lam
+
+
+        # ..todo: we assume that we always have a cube. We use SpecCADO's
+        #         add_cube_layer method
+
+        cube_wcs = WCS(fov.cube.header, key=' ')
+        wcs_lam = cube_wcs.sub([3])
+
+        d_xi = fov.cube.header['CDELT1']
+        d_xi *= u.Unit(fov.cube.header['CUNIT1']).to(u.arcsec)
+        d_eta = fov.cube.header['CDELT2']
+        d_eta *= u.Unit(fov.cube.header['CUNIT2']).to(u.arcsec)
+        d_lam = fov.cube.header['CDELT3']
+        d_lam *= u.Unit(fov.cube.header['CUNIT3']).to(u.um)
+
+        # This is based on the cube shape and assumes that the cube's spatial
+        # dimensions are set by the slit aperture
+        (n_lam, n_eta, n_xi) = fov.cube.data.shape
+
+        # arrays of cube coordinates
+        cube_xi = d_xi * np.arange(n_xi) + fov.meta['xi_min'].value
+        cube_eta = d_eta * (np.arange(n_eta) - (n_eta - 1) / 2)
+        cube_lam = wcs_lam.all_pix2world(np.arange(n_lam), 0)[0]
+        cube_lam *= u.Unit(wcs_lam.wcs.cunit[0]).to(u.um)
+
+        # Initialise the array to hold the xi-lambda image
+        self.image = np.zeros((n_xi, n_lam), dtype=np.float32)
+        self.lam = cube_lam
+
+        for i, eta in enumerate(cube_eta):
+            #if abs(eta) > fov.slit_width / 2:   # ..todo: needed?
+            #    continue
+
+            lam0 = self.lam + dlam_per_pix * eta / d_eta
+            # lam0 is the target wavelength. We need to check that this
+            # overlaps with the wavelength range covered by the cube
+            if lam0.min() < cube_lam.max() and lam0.max() > cube_lam.min():
+                plane = fov.cube.data[:, i, :].T
+                plane_interp = RectBivariateSpline(cube_xi, cube_lam, plane)
+                self.image += plane_interp(cube_xi, lam0)
+
+        # WCS for the xi-lambda image, i.e. the rectified 2D spectrum
+        # Default WCS with xi in arcsec
+        self.wcs = WCS(naxis=2)
+        self.wcs.wcs.crpix = [1, 1]
+        self.wcs.wcs.crval = [self.lam[0], fov.meta['xi_min'].value]
+        self.wcs.wcs.pc = [[1, 0], [0, 1]]
+        self.wcs.wcs.cdelt = [d_lam, d_xi]
+        self.wcs.wcs.ctype = ['LINEAR', 'LINEAR']
+        self.wcs.wcs.cname = ['WAVELEN', 'SLITPOS']
+        self.wcs.wcs.cunit = ['um', 'arcsec']
+
+        # Alternative: xi = [0, 1], dimensionless
+        self.wcsa = WCS(naxis=2)
+        self.wcsa.wcs.crpix = [1, 1]
+        self.wcsa.wcs.crval = [self.lam[0], 0]
+        self.wcsa.wcs.pc = [[1, 0], [0, 1]]
+        self.wcsa.wcs.cdelt = [d_lam, 1./n_xi]
+        self.wcsa.wcs.ctype = ['LINEAR', 'LINEAR']
+        self.wcsa.wcs.cname = ['WAVELEN', 'SLITPOS']
+        self.wcs.wcs.cunit = ['um', '']
+
+        self.xi = self.wcs.all_pix2world(self.lam[0], np.arange(n_xi), 0)[1]
+        self.npix_xi = n_xi
+        self.npix_lam = n_lam
+        self.interp = RectBivariateSpline(self.xi, self.lam, self.image)
