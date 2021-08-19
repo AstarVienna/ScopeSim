@@ -107,12 +107,12 @@ class SpectralTrace:
         """
         # Initialise the image based on the footprint of the spectral
         # trace and the focal plane WCS
-        wave_min = fov.meta['wave_min']
-        wave_max = fov.meta['wave_max']
-        xi_min = fov.meta['xi_min']
-        xi_max = fov.meta['xi_max']
-        xlim, ylim = self.footprint(wave_min=wave_min, wave_max=wave_max,
-                                    xi_min=xi_min, xi_max=xi_max)
+        wave_min = fov.meta['wave_min'].value
+        wave_max = fov.meta['wave_max'].value
+        xi_min = fov.meta['xi_min'].value
+        xi_max = fov.meta['xi_max'].value
+        xlim_um, ylim_um = self.footprint(wave_min=wave_min, wave_max=wave_max,
+                                          xi_min=xi_min, xi_max=xi_max)
 
         if xlim is None:
             return None
@@ -120,11 +120,12 @@ class SpectralTrace:
         # WCSD from the FieldOfView
         wcsd = WCS(fov.header, key='D')
         naxis1, naxis2 = fov.header['NAXIS1'], fov.header['NAXIS2']
-        xpix, ypix = wcsd.all_world2pix(xlim, ylim, 0) ## oder 1?
-        xmin = np.floor(xpix.min()).astype(int)
-        xmax = np.ceil(xpix.max()).astype(int)
-        ymin = np.floor(ypix.min()).astype(int)
-        ymax = np.ceil(ypix.max()).astype(int)
+
+        xlim_px, ylim_px = wcsd.all_world2pix(xlim_um, ylim_um, 0)
+        xmin = np.floor(xlim_px.min()).astype(int)
+        xmax = np.ceil(xlim_px.max()).astype(int)
+        ymin = np.floor(ylim_px.min()).astype(int)
+        ymax = np.ceil(ylim_px.max()).astype(int)
 
         # Check if spectral trace footprint is outside FoV
         if xmax < 0 or xmin > naxis1 or ymax < 0 or ymin > naxis2:
@@ -150,8 +151,9 @@ class SpectralTrace:
         # WCSD from the FieldOfView - this is now for the subimage
         wcsd = WCS(fov.header, key='D')
 
+        # Limits of the subimage in microns in the focal plane
         xmin_um, ymin_um = wcsd.all_pix2world(xmin, ymin, 0)
-        # xmax_um, ymax_um = wcsd.all_pix2world(xmax, ymax, 0)
+        xmax_um, ymax_um = wcsd.all_pix2world(xmax, ymax, 0)
         pixsize = fov.header['CDELT1D']
         pix_edges_x = xmin_um + np.arange(0, fov.header['NAXIS1'] + 1) * pixsize
         pix_edges_y = ymin_um + np.arange(0, fov.header['NAXIS2'] + 1) * pixsize
@@ -161,7 +163,7 @@ class SpectralTrace:
         im_j1 = 0
         im_j2 = fov.header['NAXIS2']
 
-        ymin = pix_edges_y[im_j1]
+        ymin = pix_edges_y[im_j1]   # ..todo: these are actually ymin_um and ymax_um
         ymax = pix_edges_y[im_j2]
 
         # wavelength range for the image slice wave_min, wave_max
@@ -178,13 +180,115 @@ class SpectralTrace:
             print(" ---> " + self.description + "gave ValueError")
 
         npix_xi, npix_lam = xilam.npix_xi, xilam.npix_lam
+        xilam_wcs = xilam.wcs
 
+        # ..todo: The following takes the extent of the trace and compares it
+        # to the extent of the image. This seems to be redoing what footprint
+        # already did. Remove?
         lam = xilam.lam
         xi = xilam.xi
 
         image_interp = xilam.interp
-        ## ..todo: continue simulation.py l.208
 
+        # These are needed to determine xmin, xmax, ymin, ymax
+        xlims = self.xilam2x(xi[[0, -1, -1, 0]], lam[[0, 0, -1, -1]])
+        if xlims.max() < xmin_um or xlims.min() > xmax_um:
+            continue
+        else:
+            xmax = min(xlims.max(), xmax_um)
+            xmin = max(xlims.min(), xmin_um)
+
+        # ..todo: if the image is interpolated at once (no loop), then these are
+        # fov.header['NAXISi']
+        n_x = int((xmax - xmin) / pixsize)
+        n_y = int((ymax - ymin) / pixsize)
+
+        # This is where the spectrum fits into the image (..todo: necessary? seems
+        # superfluous without a loop)
+        imax = (xmax - pix_edges_x[0]) / pixsize
+        imin = (xmin - pix_edges_x[0]) / pixsize
+        jmax = (ymax - pix_edges_y[0]) / pixsize
+        jmin = (ymin - pix_edges_y[0]) / pixsize
+
+        # number of fractional images covered - need to pad to integer
+        n_i = min(np.ceil(imax - imin).astype(int),
+                  fov.header['NAXIS1'])
+        n_j = fov.header['NAXIS2']
+
+        # Range in pixels : i
+        istart = max(0, np.floor(imin).astype(int))
+        iend = istart + n_i
+        if iend > fov.header['NAXIS1']:
+            iend = fov.header['NAXIS1']
+            istart = max(iend - n_i, 0)
+
+        # Range in pixels: j
+        jstart = max(0, np.floor(jmin).astype(int))
+        jend = jstart + n_j
+        if jend > fov.header['NAXIS2']:
+            jend = fov.header['NAXIS2']
+            jstart = jend - n_j
+
+        xstart = pix_edges_x[istart] + 0.5 * pixsize
+        xend = pix_edges_x[iend] - 0.5 * pixsize
+        ystart = ymin
+        yend = ymax
+        XIMG_fpa, YIMG_fpa = np.meshgrid(np.linspace(xstart, xend, n_i,
+                                                     dtype=np.float32),
+                                         np.linspace(ystart, yend, n_j,
+                                                     dtype=np.float32))
+        buffer = 5e6
+        nbufferlines = np.ceil(buffer / XIMG_fpa.shape[0]).astype(int)
+        nlines = XIMG_fpa.shape[0]
+        lower = 0
+        upper = np.min([nbufferlines, nlines])
+        while upper <= nlines:
+            # Image mapping (xi, lambda) on the focal plane
+            XI_fpa = (self.xy2xi(XIMG_fpa[lower:upper, :],
+                                 YIMG_fpa[lower:upper, :]).
+                      astype(np.float32))
+            LAM_fpa = (self.xy2lam(XIMG_fpa[lower:upper, :],
+                                   YIMG_fpa[lower:upper, :]).
+                       astype(np.float32))
+
+            # mask everything outside the slit
+            mask = (XI_fpa >= xi_min) & (XI_fpa <= xi_max)
+            XI_fpa *= mask
+            LAM_fpa *= mask
+
+            # We're using XIMG_fpa as output, reset part already used
+            # ..todo: This can be image directly
+            XIMG_fpa[lower:upper, :] = 0
+
+            # Convert to pixel images
+            # These are the pixel coordinates in the image corresponding to
+            # xi, lambda
+            # It is much quicker to do the linear transformation by hand
+            # than to use the astropy.wcs functions for conversion.
+            I_IMG = ((LAM_fpa - xilam_wcs.wcs.crval[0])
+                     / xilam_wcs.wcs.cdelt[0]).astype(int)
+            J_IMG = ((XI_fpa - xilam_wcs.wcs.crval[1])
+                     / xilam_wcs.wcs.cdelt[1]).astype(int)
+
+            # truncate images to remove pixel coordinates outside the image
+            ijmask = ((I_IMG >= 0) * (I_IMG < npix_lam)
+                      * (J_IMG >= 0) * (J_IMG < npix_xi))
+
+            # do the actual interpolation
+            XIMG_fpa[lower:upper, :] = (image_interp(XI_fpa, LAM_fpa,
+                                                     grid=False)
+                                        * ijmask
+                                        * pixscale * dlam_per_pix)
+
+            if upper == nlines:
+                break
+            lower = upper
+            upper = np.min([upper + nbufferlines, nlines])
+
+
+        # reshape dates back to when oversampling was used, ..todo: remove
+        image[jstart:jend, istart:iend] += \
+            XIMG_fpa.reshape(n_j, n_i)
 
         fov._image = image
 
