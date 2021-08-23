@@ -114,7 +114,7 @@ class SpectralTrace:
         xlim_um, ylim_um = self.footprint(wave_min=wave_min, wave_max=wave_max,
                                           xi_min=xi_min, xi_max=xi_max)
 
-        if xlim is None:
+        if xlim_um is None:
             return None
 
         # WCSD from the FieldOfView
@@ -193,7 +193,7 @@ class SpectralTrace:
         # These are needed to determine xmin, xmax, ymin, ymax
         xlims = self.xilam2x(xi[[0, -1, -1, 0]], lam[[0, 0, -1, -1]])
         if xlims.max() < xmin_um or xlims.min() > xmax_um:
-            continue
+            return None, xmin, xmax, ymin, ymax  # Change
         else:
             xmax = min(xlims.max(), xmax_um)
             xmin = max(xlims.min(), xmin_um)
@@ -425,85 +425,6 @@ class SpectralTrace:
 
         return ([np.min(x_edge), np.max(x_edge), np.max(x_edge), np.min(x_edge)],
                 [np.min(y_edge), np.min(y_edge), np.max(y_edge), np.max(y_edge)])
-
-    def get_trace_curves(self, pixel_size, wave_min=None, wave_max=None,
-                         xy_edges=None):
-        """Returns a list of MonochromeTraceCurves for projecting apertures
-
-        Parameters
-        ----------
-        pixel_size : float
-            [mm]
-        wave_min, wave_max : float
-            [um]
-        xy_edges : list of floats
-            [mm] Borders of the usable region. Ignore trace curves outside
-        """
-        wave_min = self.wave_min if wave_min is None else wave_min
-        wave_max = self.wave_max if wave_max is None else wave_max
-        if self._wave_bin_edges is None:
-            self.get_pixel_wavelength_edges(pixel_size)
-
-        mask = (self._wave_bin_edges >= wave_min) * \
-               (self._wave_bin_edges <= wave_max)
-
-        if sum(mask) == 0:
-            self._curves = []
-            return self._curves
-
-        wave_edges = self._wave_bin_edges[mask]
-        wave_cens = 0.5 * (wave_edges[:-1] + wave_edges[1:])
-
-        # If we want to add polynomial descriptions of the trace curves,
-        # here is where it will go
-        #
-        # We need another construct other than self.table plus another function
-        # which creates the x,y,s coordinates for each MonochromeTraceCurve
-
-        n = self.n_traces
-        k = self.meta["col_number_start"]
-        coords = {z: None for z in "xys"}
-        for z in "xys":
-            cols = [self.meta[z+"_colname"] + str(ii) for ii in range(k, n+k)]
-            coords[z] = np.array([interp2(wave_cens, self.waves,
-                                          self.table[col]) for col in cols])
-
-        if xy_edges is not None:
-            # ..todo:: not perfect. Ignores traces where two points are ouside,
-            #          but the line between them crosses into the xy_region.
-            mask = np.any((coords["x"] >= xy_edges["x_min"]) *
-                          (coords["x"] <= xy_edges["x_max"]) *
-                          (coords["y"] >= xy_edges["y_min"]) *
-                          (coords["y"] <= xy_edges["y_max"]), axis=0)
-        else:
-            mask = [True] * len(wave_cens)
-
-        # ..todo: Don't like this - fix it!
-        if sum(mask) == 0:
-            self._curves = []
-            return self._curves
-
-        rotation, shear = spt_utils.get_affine_parameters(coords)
-        self._curves = [MonochromeTraceCurve(x=coords["x"][:, ii],
-                                             y=coords["y"][:, ii],
-                                             s=coords["s"][:, ii],
-                                             wave_min=wave_edges[ii],
-                                             wave_max=wave_edges[ii+1],
-                                             pixel_size=pixel_size,
-                                             rotation=rotation[ii],
-                                             shear=shear[ii])
-                        for ii in range(len(wave_cens)) if mask[ii]]
-
-        return self._curves
-
-    def get_curve_headers(self, pixel_size, wave_min=None, wave_max=None,
-                          detector_edges=None):
-        """Collect all the headers from the list of MonochromaticTraceCurves"""
-        if self._curves is None:
-            self.get_trace_curves(pixel_size, wave_min, wave_max,
-                                  xy_edges=detector_edges)
-        headers = [curve.get_header(pixel_size) for curve in self._curves]
-        return headers
 
     def fov_headers(self, sky_header, **kwargs):
         check_keys(kwargs, ["wave_min", "wave_max",
