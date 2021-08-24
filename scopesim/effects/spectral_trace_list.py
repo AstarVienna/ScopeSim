@@ -137,11 +137,10 @@ class SpectralTraceList(Effect):
         image = np.zeros((fov.header['NAXIS2'], fov.header['NAXIS1']),
                          dtype=np.float32)
         for spt in self.spectral_traces:
-            subimg, xmin, xmax, ymin, ymax = spt.map_spectra_to_focal_plane(fov)
-            if subimg is not None:
-                image[ymin:ymax, xmin:xmax] = subimg
+            # ..todo: Need to make sure that there is exactly one spt for each fov,
+            # otherwise this will overwrite
+            fov._image = spt.map_spectra_to_focal_plane(fov)
 
-        fov._image = image
         return fov
 
     #    def fov_grid(self, which="waveset", **kwargs):

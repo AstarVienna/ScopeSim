@@ -111,23 +111,23 @@ class SpectralTrace:
         wave_max = fov.meta['wave_max'].value
         xi_min = fov.meta['xi_min'].value
         xi_max = fov.meta['xi_max'].value
-        xlim_um, ylim_um = self.footprint(wave_min=wave_min, wave_max=wave_max,
+        xlim_mm, ylim_mm = self.footprint(wave_min=wave_min, wave_max=wave_max,
                                           xi_min=xi_min, xi_max=xi_max)
 
-        if xlim_um is None:
+        if xlim_mm is None:
             return None
 
-        # WCSD from the FieldOfView
+        # WCSD from the FieldOfView - initially the full detector
         wcsd = WCS(fov.header, key='D')
         naxis1, naxis2 = fov.header['NAXIS1'], fov.header['NAXIS2']
 
-        xlim_px, ylim_px = wcsd.all_world2pix(xlim_um, ylim_um, 0)
+        xlim_px, ylim_px = wcsd.all_world2pix(xlim_mm, ylim_mm, 0)
         xmin = np.floor(xlim_px.min()).astype(int)
         xmax = np.ceil(xlim_px.max()).astype(int)
         ymin = np.floor(ylim_px.min()).astype(int)
         ymax = np.ceil(ylim_px.max()).astype(int)
 
-        # Check if spectral trace footprint is outside FoV
+        ## Check if spectral trace footprint is outside FoV
         if xmax < 0 or xmin > naxis1 or ymax < 0 or ymin > naxis2:
             return None, xmin, xmax, ymin, ymax
 
@@ -137,34 +137,39 @@ class SpectralTrace:
         ymin = max(ymin, 0)
         ymax = min(ymax, naxis2)
 
-        # Update header for the subimage
-        fov.header['CRPIX1'] -= xmin
-        fov.header['CRPIX2'] -= ymin
-        fov.header['CRPIX1D'] -= xmin
-        fov.header['CRPIX2D'] -= ymin
-        fov.header['NAXIS1'] = xmax - xmin
-        fov.header['NAXIS2'] = ymax - ymin
+        # Create header for the subimage - I think this only needs the DET one,
+        # but we'll do both
+        sub_wcs = WCS(fov.header, key=" ")
+        sub_wcs.wcs.crpix -= np.array([xmin, ymin])
+        det_wcs = WCS(fov.header, key="D")
+        det_wcs.wcs.crpix -= np.array([xmin, ymin])
+
+        img_header = sub_wcs.to_header()
+        img_header.extend(det_wcs.to_header())
+
+        sub_naxis1 = xmax - xmin
+        sub_naxis2 = ymax - ymin
 
         # initialise the subimage
-        image = np.zeros((fov.header['NAXIS2'], fov.header['NAXIS1']), dtype=np.float32)
+        image = np.zeros((sub_naxis2, sub_naxis1), dtype=np.float32)
 
-        # WCSD from the FieldOfView - this is now for the subimage
-        wcsd = WCS(fov.header, key='D')
-
-        # Limits of the subimage in microns in the focal plane
-        xmin_um, ymin_um = wcsd.all_pix2world(xmin, ymin, 0)
-        xmax_um, ymax_um = wcsd.all_pix2world(xmax, ymax, 0)
+        # Limits of the subimage in millimeters in the focal plane
+        # ..todo: this does not make sense. <If anything, this would have to go before
+        # the update of fov.header to take into account the floor/ceil changes to xmin, etc.
+        #xmin_mm, ymin_mm = wcsd.all_pix2world(xmin, ymin, 0)
+        #xmax_mm, ymax_mm = wcsd.all_pix2world(xmax, ymax, 0)
+        xmin_mm, xmax_mm = min(xlim_mm), max(xlim_mm)
+        ymin_mm, ymax_mm = min(ylim_mm), max(ylim_mm)
         pixsize = fov.header['CDELT1D']
-        pix_edges_x = xmin_um + np.arange(0, fov.header['NAXIS1'] + 1) * pixsize
-        pix_edges_y = ymin_um + np.arange(0, fov.header['NAXIS2'] + 1) * pixsize
+        pix_edges_x = xmin_mm + np.arange(0, sub_naxis1 + 1) * pixsize
+        pix_edges_y = ymin_mm + np.arange(0, sub_naxis2 + 1) * pixsize
 
-        # Step 512 lines at a time ..todo: necessary? Do full image first
         # ..todo: this appears to be the old version with dispersion in the y direction
         im_j1 = 0
-        im_j2 = fov.header['NAXIS2']
+        im_j2 = sub_naxis2
 
-        ymin = pix_edges_y[im_j1]   # ..todo: these are actually ymin_um and ymax_um
-        ymax = pix_edges_y[im_j2]
+        #ymin = pix_edges_y[im_j1]   # ..todo: these are actually ymin_um and ymax_um
+        #ymax = pix_edges_y[im_j2]
 
         # wavelength range for the image slice wave_min, wave_max
         # ..todo: in speccado loop over 512 rows, wavelength limits for each slice
@@ -173,7 +178,7 @@ class SpectralTrace:
         # wavelength step per detector pixel at centre of slice
         # ..todo: I try the average here, but is that correct? The pixel
         # edges may not correspond precisely to wave limits
-        dlam_per_pix = (wave_max - wave_min) / fov.header['NAXIS2']
+        dlam_per_pix = (wave_max - wave_min) / sub_naxis2
         try:
             xilam = XiLamImage(fov, dlam_per_pix)
         except ValueError:
@@ -192,11 +197,18 @@ class SpectralTrace:
 
         # These are needed to determine xmin, xmax, ymin, ymax
         xlims = self.xilam2x(xi[[0, -1, -1, 0]], lam[[0, 0, -1, -1]])
-        if xlims.max() < xmin_um or xlims.min() > xmax_um:
+        if xlims.max() < xmin_mm or xlims.min() > xmax_mm:
             return None, xmin, xmax, ymin, ymax  # Change
         else:
-            xmax = min(xlims.max(), xmax_um)
-            xmin = max(xlims.min(), xmin_um)
+            xmax = min(xlims.max(), xmax_mm)
+            xmin = max(xlims.min(), xmin_mm)
+
+        ylims = self.xilam2y(xi[[0, -1, -1, 0]], lam[[0, 0, -1, -1]])
+        if ylims.max() < ymin_mm or ylims.min() > ymax_mm:
+            return None, xmin, xmax, ymin, ymax  # Change
+        else:
+            ymax = min(ylims.max(), ymax_mm)
+            ymin = max(ylims.min(), ymin_mm)
 
         # ..todo: if the image is interpolated at once (no loop), then these are
         # fov.header['NAXISi']
@@ -212,21 +224,21 @@ class SpectralTrace:
 
         # number of fractional images covered - need to pad to integer
         n_i = min(np.ceil(imax - imin).astype(int),
-                  fov.header['NAXIS1'])
-        n_j = fov.header['NAXIS2']
+                  sub_naxis1)
+        n_j = sub_naxis2
 
         # Range in pixels : i
         istart = max(0, np.floor(imin).astype(int))
         iend = istart + n_i
-        if iend > fov.header['NAXIS1']:
-            iend = fov.header['NAXIS1']
+        if iend > sub_naxis1:
+            iend = sub_naxis1
             istart = max(iend - n_i, 0)
 
         # Range in pixels: j
         jstart = max(0, np.floor(jmin).astype(int))
         jend = jstart + n_j
-        if jend > fov.header['NAXIS2']:
-            jend = fov.header['NAXIS2']
+        if jend > sub_naxis2:
+            jend = sub_naxis2
             jstart = jend - n_j
 
         xstart = pix_edges_x[istart] + 0.5 * pixsize
@@ -278,7 +290,7 @@ class SpectralTrace:
             XIMG_fpa[lower:upper, :] = (image_interp(XI_fpa, LAM_fpa,
                                                      grid=False)
                                         * ijmask
-                                        * pixscale * dlam_per_pix)
+                                        * fov.header['CDELT1'] * dlam_per_pix)
 
             if upper == nlines:
                 break
@@ -287,10 +299,12 @@ class SpectralTrace:
 
 
         # reshape dates back to when oversampling was used, ..todo: remove
-        image[jstart:jend, istart:iend] += \
-            XIMG_fpa.reshape(n_j, n_i)
+        #image[jstart:jend, istart:iend] += \
+        #    XIMG_fpa.reshape(n_j, n_i)
 
-        fov._image = image
+        # ..todo: Check that xmin, etc. are limits in the detector image
+        #    --> they are not!
+        return fits.ImageHDU(header=img_header, data=XIMG_fpa)
 
     def get_max_dispersion(self, **kwargs):
         '''Get the maximum dispersion in a spectral trace
