@@ -65,9 +65,9 @@ class FieldOfView(FieldOfViewBase):
         self.fields = []
         self.spectra = []
 
-        self._cube = None       # IFU, long-lit, Slicer-MOS
-        self._image = None      # Imagers
-        self._spectrum = None   # Fibre-fed MOS
+        self.cube = None        # IFU, long-lit, Slicer-MOS
+        self.image = None       # Imagers
+        self.spectrum = None    # Fibre-fed MOS
 
         self._waverange = None
         self._wavelength = None
@@ -186,24 +186,6 @@ class FieldOfView(FieldOfViewBase):
         if self.hdu.data is None:
             self.view(self.meta["sub_pixel"])
         return self.hdu.data
-
-    @property
-    def spectrum(self):
-        if self._spectrum is None:
-            self._spectrum = self.make_spectrum()
-        return self._spectrum
-
-    @property
-    def image(self):
-        if self._image is None:
-            self._image = self.make_image()
-        return self._image
-
-    @property
-    def cube(self):
-        if self._cube is None:
-            self._cube = self.make_cube()
-        return self._cube
 
     @property
     def corners(self):
