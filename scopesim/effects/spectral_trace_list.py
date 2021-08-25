@@ -109,8 +109,8 @@ class SpectralTraceList(Effect):
             self.spectral_traces = self.make_spectral_traces()
 
     def make_spectral_traces(self):
-        '''Returns a list of spectral traces read in from a file'''
-        spec_traces = []
+        '''Returns a dictionary of spectral traces read in from a file'''
+        spec_traces = {}
         for row in self.catalog:
             params = {col: row[col] for col in row.colnames}
             params.update(self.meta)
@@ -128,18 +128,15 @@ class SpectralTraceList(Effect):
                         hdu.data[cn] -= av
 
             # ..todo: add in re-centre on wave_mid here
-            spec_traces += [SpectralTrace(hdu, **params)]
+            spec_traces[row["description"]] = SpectralTrace(hdu, **params)
 
         return spec_traces
 
     def apply_to(self, fov):
         '''Apply the effect to the FieldOfView'''
-        image = np.zeros((fov.header['NAXIS2'], fov.header['NAXIS1']),
-                         dtype=np.float32)
-        for spt in self.spectral_traces:
-            # ..todo: Need to make sure that there is exactly one spt for each fov,
-            # otherwise this will overwrite
-            fov._image = spt.map_spectra_to_focal_plane(fov)
+        trace_id = fov.meta['trace_id']
+        spt = self.spectral_traces[trace_id]
+        fov._image = spt.map_spectra_to_focal_plane(fov)
 
         return fov
 
