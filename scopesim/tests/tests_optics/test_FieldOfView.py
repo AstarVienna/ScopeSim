@@ -107,6 +107,8 @@ class TestFieldOfViewExtractFrom:
         assert len(the_fov.fields) == 1
         assert len(the_fov.spectra) == 0
         assert len(the_fov.fields[0].data.shape) == 3
+        # ..todo: currently tests temporary implementation of make_cube()
+        assert len(the_fov.cube.data.shape) == 3
 
 
 @pytest.mark.usefixtures("basic_fov_header")

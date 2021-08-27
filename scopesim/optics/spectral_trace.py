@@ -3,6 +3,8 @@ from astropy.table import Table
 from astropy.io import fits
 from astropy import units as u
 
+from matplotlib import pyplot as plt
+
 from ..optics import spectral_trace_utils as spt_utils
 from ..optics import image_plane_utils as imp_utils
 from ..optics.monochromatic_trace_curve import MonochromeTraceCurve
@@ -10,6 +12,19 @@ from ..utils import interp2, check_keys, from_currsys, quantify
 
 
 class SpectralTrace:
+    '''Definition of one spectral trace
+
+    A SpectralTrace describes the mapping of spectral slit coordinates
+    to the focal plane. The class reads an order layout and fits several
+    functions to describe the geometry of the trace.
+
+    Slit coordinates are:
+    - xi : spatial position along the slit [arcsec]
+    - lam : Wavelength [um]
+    Focal plane coordinates are:
+    - x, y : [mm]
+    '''
+
     def __init__(self, trace_tbl, **kwargs):
         self.meta = {"x_colname": "x",
                      "y_colname": "y",
@@ -43,13 +58,11 @@ class SpectralTrace:
                                       y_colname=self.meta["y_colname"],
                                       spline_order=self.meta["spline_order"],
                                       ext_id=self.meta["extension_id"])
+        # ..todo: Should that be made np.unique?
         self.waves = self.table[self.meta["wave_colname"]]
+        #..todo: this turns out as 1 in simplified layout. Remove?
         self.n_traces = len([col for col in self.table.colnames
                              if self.meta["y_colname"] in col])
-        k, n = self.meta["col_number_start"], self.n_traces
-        self.s_colnames = [self.meta["s_colname"]+str(i) for i in range(k, n+k)]
-        self.x_colnames = [self.meta["x_colname"]+str(i) for i in range(k, n+k)]
-        self.y_colnames = [self.meta["y_colname"]+str(i) for i in range(k, n+k)]
 
         self.wave_min = quantify(np.min(self.waves), u.um).value
         self.wave_max = quantify(np.max(self.waves), u.um).value
@@ -60,15 +73,26 @@ class SpectralTrace:
         self._wave_bin_centers = None
         self._curves = None
 
+        self.xy2xi, self.xy2lam = spt_utils.xy2xilam_fit(self.table,
+                                                         self.meta)
+        self.xilam2x, self.xilam2y = spt_utils.xilam2xy_fit(self.table,
+                                                            self.meta)
+        self._xiy2x, self._xiy2lam = spt_utils._xiy2xlam_fit(self.table,
+                                                             self.meta)
+
     def get_max_dispersion(self, **kwargs):
+        '''Get the maximum dispersion in a spectral trace
+
+        This is a wrapper for the function in `spectral_trace_utils`.
+        '''
         params = {}
         params.update(self.meta)
         params["wave_min"] = self.wave_min
         params["wave_max"] = self.wave_max
         params.update(kwargs)
 
-        disp, waverange = spt_utils.get_max_dispersion(trace_tbls=[self.table],
-                                                       **params)  # dwave is passed from kwargs
+        disp, waverange = spt_utils.get_max_dispersion(
+            self, **params)  # dwave is passed from kwargs
         self._disp = disp
         self._waverange = waverange
 
@@ -104,11 +128,12 @@ class SpectralTrace:
 
     @property
     def footprint(self):
-        x = [self.table[col] for col in self.x_colnames]
-        y = [self.table[col] for col in self.y_colnames]
-        xs = [np.min(x), np.max(x), np.max(x), np.min(x)]
-        ys = [np.min(y), np.min(y), np.max(y), np.max(y)]
-        return xs, ys
+        '''Return corners of rectangle enclosing spectral trace'''
+        xval = self.table[self.meta['x_colname']]
+        yval = self.table[self.meta['y_colname']]
+        xlim = [np.min(xval), np.max(xval), np.max(xval), np.min(xval)]
+        ylim = [np.min(yval), np.min(yval), np.max(yval), np.max(yval)]
+        return xlim, ylim
 
     def get_trace_curves(self, pixel_size, wave_min=None, wave_max=None,
                          xy_edges=None):
@@ -230,24 +255,38 @@ class SpectralTrace:
 
         return fov_hdrs
 
-    def plot(self, wave_min, wave_max, c="r"):
-        from matplotlib import pyplot as plt
+    def plot(self, wave_min=None, wave_max=None, c="r"):
+        '''Plot control points of the SpectralTrace'''
 
+        # Footprint (rectangle enclosing the trace)
+        xlim, ylim  = self.footprint
+        xlim.append(xlim[0])
+        ylim.append(ylim[0])
+        plt.plot(xlim, ylim)
+
+        # Control points
         waves = self.table[self.meta["wave_colname"]]
+        if wave_min is None:
+            wave_min = waves.min()
+        if wave_max is None:
+            wave_max = waves.max()
+
         mask = (waves >= wave_min) * (waves <= wave_max)
         if sum(mask) > 2:
             w = waves[mask]
 
-            k = self.meta["col_number_start"]
-            n = self.n_traces
-            for i in range(k, n+k):
-                x = self.table[self.meta["x_colname"] + str(i)][mask]
-                y = self.table[self.meta["y_colname"] + str(i)][mask]
-                plt.plot(x, y, c=c)
+            x = self.table[self.meta["x_colname"]][mask]
+            y = self.table[self.meta["y_colname"]][mask]
+            plt.plot(x, y, 'o', c=c)
 
-                if i == k:
-                    for ii in [0, len(w)//2, -1]:
-                        plt.text(x[ii], y[ii], str(w[ii])[:5])
+            for wave in np.unique(waves):
+                xx = x[waves==wave]
+                xx.sort()
+                dx = xx[-1] - xx[-2]
+                plt.text(x[waves==wave].max() + 0.5 * dx,
+                         y[waves==wave].mean(),
+                         str(wave), va='center', ha='left')
+
 
             plt.gca().set_aspect("equal")
 
