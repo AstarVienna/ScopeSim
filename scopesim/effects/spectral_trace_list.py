@@ -1,10 +1,17 @@
+'''
+Effect for mapping spectral cubes to the detector plane
+
+The Effect is called SpectralTraceList, it applies a list of
+optics.spectral_trace_SpectralTrace objects to a FieldOfView.
+'''
+
 import numpy as np
 
 from astropy.io import fits
 from astropy.table import Table
 
 from .effects import Effect
-from ..optics.spectral_trace import SpectralTrace
+from .spectral_trace_list_utils import SpectralTrace
 from ..utils import from_currsys, check_keys, interp2
 from ..optics.image_plane_utils import header_from_list_of_xy
 
@@ -18,7 +25,7 @@ class SpectralTraceList(Effect):
 
     Spectral trace patterns are to be kept in a ``fits.HDUList`` with one or
     more ``fits.BinTableHDU`` extensions, each one describing the geometry of a
-    single trace. The 1st extension should be a ``BinTableHDU`` connecting the
+    single trace. The first extension should be a ``BinTableHDU`` connecting the
     traces to the correct ``Aperture`` and ``ImagePlane`` objects.
 
     The ``fits.HDUList`` objects can be loaded using one of these two keywords:
@@ -64,9 +71,9 @@ class SpectralTraceList(Effect):
     Required Table columns:
 
     - wavelength : float : [um] : wavelength of monochromatic aperture image
-    - s0 .. s0 : float : [mm] : position along aperture perpendicular to trace
-    - x0 .. xN : float : [mm] : x position of aperture image on focal plane
-    - y0 .. yN : float : [arcsec] : y position of aperture image on focal plane
+    - s : float : [arcsec] : position along aperture perpendicular to trace
+    - x : float : [mm] : x position of aperture image on focal plane
+    - y : float : [mm] : y position of aperture image on focal plane
 
     """
     def __init__(self, **kwargs):
@@ -102,8 +109,8 @@ class SpectralTraceList(Effect):
             self.spectral_traces = self.make_spectral_traces()
 
     def make_spectral_traces(self):
-        '''Returns a list of spectral traces read in from a file'''
-        spec_traces = []
+        '''Returns a dictionary of spectral traces read in from a file'''
+        spec_traces = {}
         for row in self.catalog:
             params = {col: row[col] for col in row.colnames}
             params.update(self.meta)
@@ -121,24 +128,32 @@ class SpectralTraceList(Effect):
                         hdu.data[cn] -= av
 
             # ..todo: add in re-centre on wave_mid here
-            spec_traces += [SpectralTrace(hdu, **params)]
+            spec_traces[row["description"]] = SpectralTrace(hdu, **params)
 
         return spec_traces
 
-    def fov_grid(self, which="waveset", **kwargs):
-        self.meta.update(kwargs)
-        self.meta = from_currsys(self.meta)
+    def apply_to(self, fov):
+        '''Apply the effect to the FieldOfView'''
+        trace_id = fov.meta['trace_id']
+        spt = self.spectral_traces[trace_id]
+        fov._image = spt.map_spectra_to_focal_plane(fov)
 
-        if which == "waveset":
-            if "pixel_size" not in kwargs:
-                kwargs["pixel_size"] = None
-            return self.get_waveset(kwargs["pixel_size"])
+        return fov
 
-        elif which == "edges":
-            check_keys(kwargs, ["sky_header", "det_header",
-                                "wave_min", "wave_max",
-                                "pixel_scale", "plate_scale"], "error")
-            return self.get_fov_headers(**kwargs)
+    #    def fov_grid(self, which="waveset", **kwargs):
+    #        self.meta.update(kwargs)
+    #        self.meta = from_currsys(self.meta)
+    #
+    #        if which == "waveset":
+    #            if "pixel_size" not in kwargs:
+    #                kwargs["pixel_size"] = None
+    #            return self.get_waveset(kwargs["pixel_size"])
+    #
+    #        elif which == "edges":
+    #            check_keys(kwargs, ["sky_header", "det_header",
+    #                                "wave_min", "wave_max",
+    #                                "pixel_scale", "plate_scale"], "error")
+    #            return self.get_fov_headers(**kwargs)
 
     def get_waveset(self, pixel_size=None):
         if pixel_size is None:
@@ -156,8 +171,6 @@ class SpectralTraceList(Effect):
 
         return fov_headers
 
-    def apply_to(self, fov):
-        return fov
 
     @property
     def footprint(self):

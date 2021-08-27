@@ -47,8 +47,8 @@ class TestInit:
         assert spt.get_data(2, fits.BinTableHDU)
 
     def test_initialises_with_filename(self):
-        spt = SpectralTraceList(filename="TRACE_15arcsec.fits",
-                                wave_colname="lam", s_colname="xi")
+        spt = SpectralTraceList(filename="TRACE_MICADO.fits",
+                                wave_colname="wavelength", s_colname="xi")
         assert isinstance(spt, SpectralTraceList)
 
 
@@ -151,5 +151,3 @@ def test_set_pc_matrix(rotation_ang=0, shear_ang=10):
         plt.plot(xd, yd, "o-")
         plt.plot(xs, ys, "o-")
         plt.show()
-
-
