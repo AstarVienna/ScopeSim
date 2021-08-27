@@ -83,3 +83,7 @@ class TestExtractAreaFromImageHDU:
         assert new_field.header["NAXIS1"] == 26
         assert new_field.header["NAXIS2"] == 26
         assert new_field.header["NAXIS3"] == 51
+
+
+class TestExtractRangeFromSpectrum:
+    def test_extracts_the_wave_range_needed(self):

@@ -5,6 +5,7 @@ import numpy as np
 from astropy import units as u
 from astropy.io import fits
 from astropy.table import Table, Column
+from synphot import SourceSpectrum, Empirical1D
 
 from scopesim import utils, rc
 from scopesim.optics import image_plane_utils as imp_utils
@@ -220,16 +221,39 @@ def extract_common_field(field, fov_volume):
 
     """
     if isinstance(field, Table):
-        mask = (field["x"] >= fov_volume["xs"][0]) * \
-               (field["x"] < fov_volume["xs"][1]) * \
-               (field["y"] >= fov_volume["ys"][0]) * \
-               (field["y"] < fov_volume["ys"][1])
-        field_new = field[mask]
+        field_new = extract_area_from_table(field, fov_volume)
     elif isinstance(field, fits.ImageHDU):
         field_new = extract_area_from_imagehdu(field, fov_volume)
     else:
         raise ValueError("field must be either Table or ImageHDU: {}"
                          "".format(type(field)))
+
+    return field_new
+
+
+def extract_area_from_table(table, fov_volume):
+    """
+    Extracts the entries of a Table that fits inside the fov_volume
+
+    Parameters
+    ----------
+    table : fits.ImageHDU
+        The field ImageHDU, either an image of a wavelength [um] cube
+    fov_volume : dict
+        Contains {"xs": [xmin, xmax], "ys": [ymin, ymax],
+                  "waves": [wave_min, wave_max],
+                  "xy_unit": "deg" or "mm", "wave_unit": "um"}
+
+    Returns
+    -------
+    new_imagehdu : fits.ImageHDU
+
+    """
+    mask = (table["x"] >= fov_volume["xs"][0]) * \
+           (table["x"] < fov_volume["xs"][1]) * \
+           (table["y"] >= fov_volume["ys"][0]) * \
+           (table["y"] < fov_volume["ys"][1])
+    table_new = field[mask]
 
     return field_new
 
@@ -295,3 +319,19 @@ def extract_area_from_imagehdu(imagehdu, fov_volume):
 
     return new_imagehdu
 
+
+def extract_range_from_spectrum(spectrum, waverange):
+    if not isinstance(spectrum, SourceSpectrum):
+        raise ValueError(f"spectrum must be of type synphot.SourceSpectrum: "
+                         f"{type(spectrum)}")
+
+    mask = min(waverange) < spectrum.waveset.value < max(waverange)
+    waveset = spectrum.waveset.value[mask]
+
+    wave = np.r_[waverange[0], waveset, waverange[1]]
+    flux = spectrum(wave)
+
+    new_spectrum = SourceSpectrum(Empirical1D, points=wave, lookup_table=flux)
+    new_spectrum.meta.update(spectrum.meta)
+
+    return new_spectrum
