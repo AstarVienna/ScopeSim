@@ -11,7 +11,7 @@ from astropy.io import fits
 from astropy.table import Table
 
 from .effects import Effect
-from ..optics.spectral_trace import SpectralTrace
+from .spectral_trace_list_utils import SpectralTrace
 from ..utils import from_currsys, check_keys, interp2
 from ..optics.image_plane_utils import header_from_list_of_xy
 

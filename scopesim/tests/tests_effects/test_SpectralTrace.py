@@ -4,8 +4,8 @@ from _pytest.python_api import approx
 from astropy.wcs import WCS
 from matplotlib import pyplot as plt
 
-from scopesim.optics.spectral_trace import SpectralTrace
-from scopesim.optics.spectral_trace_utils import get_affine_parameters
+from scopesim.effects.spectral_trace_list_utils import SpectralTrace
+from scopesim.effects.spectral_trace_list_utils import get_affine_parameters
 from scopesim.tests.mocks.py_objects import trace_list_objects as tlo
 from scopesim.tests.tests_effects.test_SpectralTraceList import PLOTS
 
