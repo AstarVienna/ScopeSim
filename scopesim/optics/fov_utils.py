@@ -338,8 +338,8 @@ def extract_area_from_imagehdu(imagehdu, fov_volume):
         # fov_waves : the fov edge wavelengths
         # f0, f1 : the scaling factors for the red and blue edge cube slices
         #
-        w0, w1 = hdu_waves[i0p], hdu_waves[i1p]
-        print(f"\nw0: {w0}, f0: {f0}, {fov_waves}, f1: {f1}, w1: {w1}")
+        # w0, w1 = hdu_waves[i0p], hdu_waves[i1p]
+        # print(f"\nw0: {w0}, f0: {f0}, {fov_waves}, f1: {f1}, w1: {w1}")
 
         new_hdr.update({"NAXIS": 3,
                         "NAXIS3": data.shape[0],
@@ -382,3 +382,52 @@ def extract_range_from_spectrum(spectrum, waverange):
     new_spectrum.meta.update(spectrum.meta)
 
     return new_spectrum
+
+
+def make_cube_from_table(table, spectra, waveset, fov_header, sub_pixel=False):
+    """
+
+    Parameters
+    ----------
+    table: astropy.Table
+    spectra: dict
+    waveset: np.ndarray
+    fov_header: fits.Header
+    sub_pixel: bool, optional
+
+    Returns
+    -------
+    cube: fits.ImageHDU
+        Units of ph/s/m2/bin --> should this be ph/s/m2/um?
+
+    """
+    cube = np.zeros((fov_header["NAXIS2"], fov_header["NAXIS1"], len(waveset)))
+    dwave = 0.5 * (np.r_[np.diff(waveset), 0] + np.r_[0, np.diff(waveset)])
+    # ..todo: dwave is questionable here. What should the FOV cube units be?
+
+    spec_dict = {i: spec(waveset) * dwave for i, spec in spectra.items()}
+
+    cdelt1, cdelt2 = fov_header["CDELT1"], fov_header["CDELT2"]
+    crval1, crval2 = fov_header["CRVAL1"], fov_header["CRVAL2"]
+    crpix1, crpix2 = fov_header["CRPIX1"], fov_header["CRPIX2"]
+    cunit1, cunit2 = fov_header["CUNIT1"], fov_header["CUNIT2"]
+
+    xps = (table["x"].to(cunit1).value - crval1) / cdelt1 + crpix1
+    yps = (table["y"].to(cunit2).value - crval2) / cdelt2 + crpix2
+    refs, weights = table["ref"], table["weight"]
+
+    for xp, yp, ref, weight in zip(xps, yps, refs, weights):
+        cube[int(round(yp)), int(round(xp)), :] += weight * spec_dict[ref].value
+
+    cube = np.rollaxis(cube, 2)
+
+    cdelt3 = np.diff(waveset[:2]).to(u.um)[0]
+    hdu = fits.ImageHDU(data=cube)
+    hdu.header.update(fov_header)
+    hdu.header.update({"CRVAL3": waveset[0].value,
+                       "CRPIX3": 0,
+                       "CDELT3": cdelt3.value,
+                       "CUNIT3": str(cdelt3.unit),
+                       "CTYPE3": "WAVE"})
+
+    return hdu

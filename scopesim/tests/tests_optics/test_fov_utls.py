@@ -6,24 +6,25 @@ import numpy as np
 from synphot import Empirical1D, SourceSpectrum
 from synphot.units import PHOTLAM
 from astropy import units as u
+from astropy.io import fits
 
 from scopesim.optics import FieldOfView, fov_utils
 from scopesim.optics import image_plane_utils as imp_utils
 
-from scopesim.tests.mocks.py_objects.header_objects import _basic_fov_header
-from scopesim.tests.mocks.py_objects.source_objects import _cube_source
+from scopesim.tests.mocks.py_objects import header_objects as ho
+from scopesim.tests.mocks.py_objects import source_objects as so
 
 PLOTS = False
 
 
 @pytest.fixture(scope="function")
 def cube_source():
-    return _cube_source()
+    return so._cube_source()
 
 
 @pytest.fixture(scope="function")
 def basic_fov_header():
-    return _basic_fov_header()
+    return ho._basic_fov_header()
 
 
 @pytest.mark.usefixtures("cube_source", "basic_fov_header")
@@ -122,3 +123,22 @@ class TestExtractRangeFromSpectrum:
         with pytest.raises(ValueError):
             waverange = [1.98, 2.12] * u.um
             new_spec = fov_utils.extract_range_from_spectrum(spec, waverange)
+
+
+class TestMakeCubeFromTable():
+    def test_returns_an_imagehdu(self):
+        src_table = so._table_source()
+        src_table.fields[0]["x"] = [-15,-5,0,0] * u.arcsec
+        src_table.fields[0]["y"] = [0,0,5,15] * u.arcsec
+
+        hdr = ho._fov_header()  # 20x20" @ 0.2" --> [-10, 10]"
+        wav = [1.9, 2.1] * u.um
+        fov = FieldOfView(hdr, wav)
+
+        fov.extract_from(src_table)
+
+        waveset = np.linspace(wav[0], wav[1], 51)
+        hdu = fov_utils.make_cube_from_table(fov.fields[0], fov.spectra,
+                                             waveset, fov.header)
+
+        assert isinstance(hdu, fits.ImageHDU)

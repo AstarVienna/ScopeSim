@@ -35,6 +35,8 @@ class FieldOfView(FieldOfViewBase):
         self.meta = {"id": None,
                      "wave_min": utils.quantify(waverange[0], u.um),
                      "wave_max": utils.quantify(waverange[1], u.um),
+                     "wave_bin_n": 1,
+                     "wave_bin_type": "linear",
                      "area": 0 * u.m**2,
                      "sub_pixel": "!SIM.sub_pixel.flag",
                      "distortion": {"scale": [1, 1],
