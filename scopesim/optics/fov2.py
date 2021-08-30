@@ -4,7 +4,7 @@ from astropy import units as u
 from astropy.io import fits
 from astropy.table import Table, Column
 
-from . import fov_utils
+from . import fov_utils as fu
 from . import image_plane_utils as imp_utils
 
 from ..base_classes import SourceBase, FieldOfViewBase, PoorMansHeader
@@ -84,22 +84,30 @@ class FieldOfView(FieldOfViewBase):
                              "".format(type(src)))
 
         fields_in_fov = [field for field in src.fields
-                         if fov_utils.is_field_in_fov(self.hdu.header, field)]
+                         if fu.is_field_in_fov(self.hdu.header, field)]
 
-        spectra = {}
+        spec_refs = []
         volume = self.volume()
-        for field in fields:
-            if isinstance(field, Table):
-                tbl = fov_utils.extract_area_from_table(field, volume)
-                for ref in np.unique(tbl["ref"]):
-                    spectra[ref] = src.spectra[ref]
+        for i in range(len(fields_in_fov)):
+            fld = fields_in_fov[i]
+            if isinstance(fld, Table):
+                fields_in_fov[i] = fu.extract_area_from_table(fld, volume)
+                spec_refs += list(np.unique(fields_in_fov[i] ["ref"]))
 
-            elif isinstance(field, fits.ImageHDU):
-                ref = field.header.get("SPEC_REF")
+            elif isinstance(fld, fits.ImageHDU) and fld.header["NAXIS"] == 2:
+                fields_in_fov[i] = fu.extract_area_from_imagehdu(fld, volume)
+                ref = fld.header.get("SPEC_REF")
                 if ref is not None:
                     spec_refs += [ref]
 
-        self.fields = fields
+            elif isinstance(fld, fits.ImageHDU) and fld.header["NAXIS"] == 3:
+                fields_in_fov[i] = fu.extract_area_from_imagehdu(fld, volume)
+
+        waves = volume["waves"] * u.Unit(volume["wave_unit"])
+        spectra = {ref: fu.extract_range_from_spectrum(src.spectra[ref], waves)
+                   for ref in np.unique(spec_refs)}
+
+        self.fields = fields_in_fov
         self.spectra = spectra
 
     def view(self, sub_pixel=None):

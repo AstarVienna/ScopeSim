@@ -249,13 +249,17 @@ def extract_area_from_table(table, fov_volume):
     new_imagehdu : fits.ImageHDU
 
     """
-    mask = (table["x"] >= fov_volume["xs"][0]) * \
-           (table["x"] < fov_volume["xs"][1]) * \
-           (table["y"] >= fov_volume["ys"][0]) * \
-           (table["y"] < fov_volume["ys"][1])
-    table_new = field[mask]
+    fov_unit = u.Unit(fov_volume["xy_unit"])
+    fov_xs = (fov_volume["xs"] * fov_unit).to(table["x"].unit)
+    fov_ys = (fov_volume["ys"] * fov_unit).to(table["y"].unit)
 
-    return field_new
+    mask = (table["x"].data >= fov_xs[0].value) * \
+           (table["x"].data <  fov_xs[1].value) * \
+           (table["y"].data >= fov_ys[0].value) * \
+           (table["y"].data <  fov_ys[1].value)
+    table_new = table[mask]
+
+    return table_new
 
 
 def extract_area_from_imagehdu(imagehdu, fov_volume):
@@ -292,27 +296,62 @@ def extract_area_from_imagehdu(imagehdu, fov_volume):
                                                pixel_scale=hdr["CDELT1"])
 
     if hdr["NAXIS"] == 3:
-        wval, wdel, wpix, wlen = [hdr[kw] for kw in ["CRVAL3", "CDELT3",
-                                                     "CRPIX3", "NAXIS3"]]
+        wval, wdel, wpix, wlen, = [hdr[kw] for kw in ["CRVAL3", "CDELT3",
+                                                      "CRPIX3", "NAXIS3"]]
         # ASSUMPTION - cube wavelength is in regularly spaced units of um
-        w_hdu = [wval - wdel * wpix, wval + wdel * (wlen - wpix)]
-        w_fov = fov_volume["waves"]
+        wmin = wval - wdel * wpix
+        wmax = wmin + wdel * (wlen - 1)
+        wunit = u.Unit(hdr.get("CUNIT3", "AA"))
+        if "LOG" in hdr.get("CTYPE3", ""):
+            hdu_waves = np.logspace(wmin, wmax, wlen)
+        else:
+            hdu_waves = np.linspace(wmin, wmax, wlen)
 
-        w0s, w1s = max(min(w_hdu), min(w_fov)), min(max(w_hdu), max(w_fov))
-        wp = (np.array([w0s, w1s]) - wval) / wdel + wpix
-        (w0p, w1p) = np.round(wp).astype(int)
+        # Look 0.5*wdel past the fov edges in each direction to catch any
+        # slices where the middle wavelength value doesn't fall inside the
+        # fov waverange, but up to 50% of the slice is actually inside the
+        # fov waverange:
+        # E.g. FOV: [1.92, 2.095], HDU bin centres: [1.9, 2.0, 2.1]
+        # CDELT3 = 0.1, and HDU bin edges: [1.85, 1.95, 2.05, 2.15]
+        # So 1.9 slice needs to be multiplied by 0.3, and 2.1 slice should be
+        # multipled by 0.45 to reach the scaled contribution of the edge slices
+        # This scaling factor is:
+        # f = ((hdu_bin_centre - fov_edge [+/-] 0.5 * cdelt3) % cdelt3) / cdelt3
+
+        fov_waves = utils.quantify(fov_volume["waves"], u.um).to(wunit).value
+        mask = (hdu_waves > fov_waves[0] - 0.5 * wdel) * \
+               (hdu_waves <= fov_waves[1] + 0.5 * wdel)                         # need to go [+/-] half a bin
+
+        if min(hdu_waves) > min(fov_waves) or max(hdu_waves) < max(fov_waves):
+            raise ValueError(f"FOV waveset is not a subset of cube waveset: "
+                             f"{fov_waves} --> {hdu_waves}")
+
+        i0p, i1p = np.where(mask)[0][0], np.where(mask)[0][-1]
+        f0 = (abs(hdu_waves[i0p] - fov_waves[0] + 0.5 * wdel) % wdel) / wdel    # blue edge
+        f1 = (abs(hdu_waves[i1p] - fov_waves[1] - 0.5 * wdel) % wdel) / wdel    # red edge
+        data = imagehdu.data[i0p:i1p+1, y0p:y1p, x0p:x1p]
+        data[0, :, :] *= f0
+        if i1p > i0p:
+            data[-1, :, :] *= f1
+
+        # w0, w1 : the closest cube wavelengths outside the fov edge wavelengths
+        # fov_waves : the fov edge wavelengths
+        # f0, f1 : the scaling factors for the red and blue edge cube slices
+        #
+        w0, w1 = hdu_waves[i0p], hdu_waves[i1p]
+        print(f"\nw0: {w0}, f0: {f0}, {fov_waves}, f1: {f1}, w1: {w1}")
 
         new_hdr.update({"NAXIS": 3,
-                        "NAXIS3": w1p - w0p,
-                        "CRVAL3": w0s,
+                        "NAXIS3": data.shape[0],
+                        "CRVAL3": hdu_waves[i0p],
                         "CRPIX3": 0,
                         "CDELT3": hdr["CDELT3"],
                         "CUNIT3": hdr["CUNIT3"],
                         "CTYPE3": hdr["CTYPE3"]})
 
-        data = imagehdu.data[w0p:w1p, y0p:y1p, x0p:x1p]
     else:
         data = imagehdu.data[y0p:y1p, x0p:x1p]
+        new_hdr["SPEC_REF"] = hdr.get("SPEC_REF")
 
     new_imagehdu = fits.ImageHDU(data=data)
     new_imagehdu.header.update(new_hdr)
@@ -325,10 +364,18 @@ def extract_range_from_spectrum(spectrum, waverange):
         raise ValueError(f"spectrum must be of type synphot.SourceSpectrum: "
                          f"{type(spectrum)}")
 
-    mask = min(waverange) < spectrum.waveset.value < max(waverange)
-    waveset = spectrum.waveset.value[mask]
+    wave_min, wave_max = utils.quantify(waverange, u.um).to(u.AA).value
+    spec_waveset = spectrum.waveset.to(u.AA).value
+    mask = (spec_waveset > wave_min) * (spec_waveset < wave_max)
 
-    wave = np.r_[waverange[0], waveset, waverange[1]]
+    if sum(mask) == 0:
+        raise ValueError(f"Waverange does not overlap with Spectrum waveset:"
+                         f"{waverange} <> {spectrum.waveset}")
+    if wave_min < min(spec_waveset) or wave_max > max(spec_waveset):
+        raise ValueError(f"Waverange partially overlaps with Spectrum waveset:"
+                         f"{waverange} <> {spectrum.waveset}")
+
+    wave = np.r_[wave_min, spec_waveset[mask], wave_max]
     flux = spectrum(wave)
 
     new_spectrum = SourceSpectrum(Empirical1D, points=wave, lookup_table=flux)

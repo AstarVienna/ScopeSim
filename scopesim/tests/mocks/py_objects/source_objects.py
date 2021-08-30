@@ -9,7 +9,7 @@ from scopesim.source.source_templates import vega_spectrum
 
 
 def _table_source():
-    n = 100
+    n = 101
     unit = u.Unit("ph s-1 m-2 um-1")
     wave = np.linspace(0.5, 2.5, n) * u.um
     specs = [SourceSpectrum(Empirical1D, points=wave,
@@ -44,7 +44,7 @@ def _image_source(dx=0, dy=0, angle=0, weight=1):
     -------
 
     """
-    n = 50
+    n = 101
     unit = u.Unit("ph s-1 m-2 um-1")
     wave = np.linspace(0.5, 2.5, n) * u.um
     specs = [SourceSpectrum(Empirical1D, points=wave,

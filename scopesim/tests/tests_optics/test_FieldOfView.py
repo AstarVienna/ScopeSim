@@ -124,7 +124,7 @@ class TestFieldOfViewView:
 
         assert np.isclose(np.sum(the_fov.hdu.data), orig_sum)
 
-        if PLOTS:
+        if not PLOTS:
             plt.imshow(src.fields[0].data, origin="lower", norm=LogNorm())
             plt.colorbar()
             plt.show()
