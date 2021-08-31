@@ -22,7 +22,8 @@ from astropy.wcs import WCS
 from astropy.modeling.models import Polynomial2D
 
 from ..optics import image_plane_utils as imp_utils
-from ..utils import interp2, check_keys, from_currsys, quantify
+from ..utils import deriv_polynomial2d, interp2, check_keys, \
+    from_currsys, quantify
 
 
 class SpectralTrace:
@@ -124,6 +125,10 @@ class SpectralTrace:
         # WCSD from the FieldOfView - this is the full detector plane
         fpa_wcsd = WCS(fov.header, key='D')
         naxis1, naxis2 = fov.header['NAXIS1'], fov.header['NAXIS2']
+        pixsize = fov.header['CDELT1D'] * u.Unit(fov.header['CUNIT1D'])
+        pixsize = pixsize.to(u.mm).value
+        pixscale = fov.header['CDELT1'] * u.Unit(fov.header['CUNIT1'])
+        pixscale = pixscale.to(u.arcsec).value
 
         xlim_px, ylim_px = fpa_wcsd.all_world2pix(xlim_mm, ylim_mm, 0)
         xmin = np.floor(xlim_px.min()).astype(int)
@@ -171,9 +176,9 @@ class SpectralTrace:
         # wavelength step per detector pixel at centre of slice
         # ..todo: I try the average here, but is that correct? The pixel
         #         edges may not correspond precisely to wave limits
-        dlam_per_pix = (wave_max - wave_min) / sub_naxis2
+        avg_dlam_per_pix = (wave_max - wave_min) / sub_naxis2
         try:
-            xilam = XiLamImage(fov, dlam_per_pix)
+            xilam = XiLamImage(fov, avg_dlam_per_pix)
         except ValueError:
             print(" ---> " + self.description + "gave ValueError")
 
@@ -214,8 +219,13 @@ class SpectralTrace:
 
         # do the actual interpolation
         image = (xilam.interp(xi_fpa, lam_fpa, grid=False)
-                 * ijmask
-                 * fov.header['CDELT1'] * dlam_per_pix)
+                 * ijmask)
+
+        # Scale to ph / s / pixel
+        dlam_by_dx, dlam_by_dy = deriv_polynomial2d(self.xy2lam)
+        dlam_per_pix = pixsize * np.sqrt(dlam_by_dx(ximg_fpa, yimg_fpa)**2
+                                         + dlam_by_dy(ximg_fpa, yimg_fpa)**2)
+        image *= pixscale * dlam_per_pix
 
         return fits.ImageHDU(header=img_header, data=image)
 
