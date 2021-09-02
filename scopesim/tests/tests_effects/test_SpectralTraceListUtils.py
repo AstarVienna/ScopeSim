@@ -1,4 +1,8 @@
 """Unit tests for spectral_trace_list_utils.py"""
+
+# pylint: disable=no-self-use
+# pylint: disable=missing-function-docstring
+
 import pytest
 
 import numpy as np
@@ -20,12 +24,19 @@ class TestPowerVec:
             power_vector(np.pi, np.pi)
 
 
+@pytest.fixture(name="tf2d", scope="class")
+def fixture_tf2d():
+    """Instantiate a Transform2D"""
+    matrix = np.array([[1, 1], [0, 1]])
+    return Transform2D(matrix)
+
 class TestTransform2D:
-    def test_initialises_with_matrix(self):
-        matrix = np.array([[1, 1], [1, 1]])
-        assert isinstance(Transform2D(matrix), Transform2D)
+    """Tests for Transform2D()"""
+    def test_initialises_with_matrix(self, tf2d):
+        assert isinstance(tf2d, Transform2D)
 
     def test_call_gives_correct_result(self):
+        # pylint: disable=invalid-name
         x = np.random.randn()
         y = np.random.randn()
 
@@ -40,4 +51,17 @@ class TestTransform2D:
 
         assert td2d(x, y) == z_a
 
-# ..todo: test grid=True and grid=False
+    def test_grid_true_gives_correct_shape(self, tf2d):
+        n_x, n_y = 12, 3
+        res = tf2d(np.ones(n_x), np.ones(n_y), grid=True)
+        assert res.shape == (n_y, n_x)
+
+    def test_grid_false_give_correct_shape(self, tf2d):
+        npts = 12
+        res = tf2d(np.ones(npts), np.ones(npts), grid=False)
+        assert res.shape == (npts,)
+
+    def test_grid_false_fails_with_unequal_lengths(self, tf2d):
+        n_x, n_y = 12, 3
+        with pytest.raises(ValueError):
+            tf2d(np.ones(n_x), np.ones(n_y), grid=False)
