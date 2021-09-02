@@ -65,3 +65,8 @@ class TestTransform2D:
         n_x, n_y = 12, 3
         with pytest.raises(ValueError):
             tf2d(np.ones(n_x), np.ones(n_y), grid=False)
+
+# ..todo: test for gradient
+
+# ..todo: Transform2D.fit, in conjunction with fit2matrix(). Is the sequence of
+#         i, j correct?

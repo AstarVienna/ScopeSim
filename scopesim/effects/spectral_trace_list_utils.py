@@ -583,6 +583,18 @@ class Transform2D():
 
         return result
 
+    @classmethod
+    def fit(cls, xin, yin, xout, yout, params):
+        """
+        Determine polynomial fits
+        """
+        pinit_x = Polynomial2D(degree=4)
+        pinit_y = Polynomial2D(degree=4)
+        fitter = fitting.LinearLSQFitter()
+        fit_x = fitter(pinit_x, xin, yin, xout)
+        fit_y = fitter(pinit_y, xin, yin, yout)
+        return Transform2D(fit2matrix(fit_x)), Transform2D(fit2matrix(fit_y))
+
     def gradient(self):
         """Compute the gradient of a 2d polynomial transformation"""
 
@@ -592,6 +604,25 @@ class Transform2D():
         dmat_y = (mat.T * np.arange(self.ny)).T[1:, :]
 
         return Transform2D(dmat_x), Transform2D(dmat_y)
+
+
+def fit2matrix(fit):
+    """
+    Return coefficients from a polynomial fit as a matrix
+
+    The Polynomial2D fits of degree n have coefficients for all i, j with i + j <= n.
+    How would one rearrange those?
+    """
+    coeffs = dict(zip(fit.param_names, fit.parameters))
+    deg = fit.degree
+    mat = np.zeros((deg, deg), dtype=np.float32)
+    for i in range(deg + 1):
+        for j in range(deg + 1):
+            try:
+                mat[j, i] = d['c{}_{}'.format(i, j)]
+            except KeyError:
+                pass
+    return mat
 
 
 def power_vector(val, degree):
