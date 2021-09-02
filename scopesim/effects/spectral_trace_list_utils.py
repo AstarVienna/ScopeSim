@@ -521,6 +521,87 @@ class XiLamImage():
         self.interp = RectBivariateSpline(self.xi, self.lam, self.image)
 
 
+class Transform2D():
+    """
+    2-dimensional polynomial transform
+
+    The class is instantiated from a m x n matrix A that contains the
+    coefficients of the polynomial. Along rows, the power of x increases;
+    along columns, the power of y increases, such that A[j, i] is
+    the coefficient of x^i y^j.
+
+    Parameters
+    ----------
+    matrix : np.array
+        matrix of polynomial coefficients
+
+    ..todo: alternatively, the matrix can be created from a fit to data
+    """
+
+    def __init__(self, matrix):
+        self.matrix = matrix
+        self.ny, self.nx = matrix.shape
+
+    def __call__(self, x, y, grid=True):
+        """
+        Apply the polynomial transform
+
+        The transformation is a polynomial based on the simple
+        monomials x^i y^j. When grid=True, the transform is applied to the grid
+        formed by the tensor product of the vectors x and y. When grid=False,
+        the vectors of x and y define the components of a number of points (in
+        this case, x and y must be of the same length).
+
+        Parameters
+        ----------
+        x, y : np.array
+            x and y values to transform
+        grid : boolean
+            If true, return result for all pairs of components in x and y.
+
+        Return
+        ------
+        When grid=True, a matrix with results for all pairings of components
+        in x and y. When grid=False, a vector. In this case, x and y must
+        have the same length.
+        """
+        if not grid and x.shape != y.shape:
+            raise ValueError("x and y must have the same length when grid is False")
+
+        xvec = power_vector(x, self.nx - 1)
+        yvec = power_vector(y, self.ny - 1)
+
+        temp = self.matrix @ xvec
+
+        if grid:
+            result = yvec.T @ temp
+        else:
+            # Compute the scalar product of each column in yvec with the
+            # corresponding column in temp. This gives the diagonal of the
+            # expression in the "grid" branch.
+            result = (yvec * temp).sum(axis=0)
+
+        return result
+
+    def gradient(self):
+        """Compute the gradient of a 2d polynomial transformation"""
+
+        mat = self.matrix
+
+        dmat_x = (mat * np.arange(self.nx))[:, 1:]
+        dmat_y = (mat.T * np.arange(self.ny)).T[1:, :]
+
+        return Transform2D(dmat_x), Transform2D(dmat_y)
+
+
+def power_vector(val, degree):
+    """Return the vector of powers of val up to a degree"""
+    if degree < 0 or not isinstance(degree, int):
+        raise ValueError("degree must be a positive integer")
+
+    return np.array([val**exp for exp in range(degree + 1)])
+
+
 # ..todo: should the next three functions be combined and return a dictionary of fits?
 def xilam2xy_fit(layout, params):
     """
