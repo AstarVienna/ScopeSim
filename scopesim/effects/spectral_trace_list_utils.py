@@ -93,10 +93,24 @@ class SpectralTrace:
         self._wave_bin_centers = None
         self._curves = None
 
-        # Interpolation functions
-        self.xy2xi, self.xy2lam = xy2xilam_fit(self.table, self.meta)
-        self.xilam2x, self.xilam2y = xilam2xy_fit(self.table, self.meta)
-        self._xiy2x, self._xiy2lam = _xiy2xlam_fit(self.table, self.meta)
+        # Interpolation functions   ..todo: equivalent for LMS
+        self.compute_interpolation_functions()
+
+    def compute_interpolation_functions(self):
+        """
+        Compute various interpolation functions between slit and focal plane
+        """
+        x_arr = self.table[self.meta['x_colname']]
+        y_arr = self.table[self.meta['y_colname']]
+        xi_arr = self.table[self.meta['s_colname']]
+        lam_arr = self.table[self.meta['wave_colname']]
+
+        self.xy2xi = Transform2D.fit(x_arr, y_arr, xi_arr)
+        self.xy2lam = Transform2D.fit(x_arr, y_arr, lam_arr)
+        self.xilam2x = Transform2D.fit(xi_arr, lam_arr, x_arr)
+        self.xilam2y = Transform2D.fit(xi_arr, lam_arr, y_arr)
+        self._xiy2x = Transform2D.fit(xi_arr, y_arr, x_arr)
+        self._xiy2lam = Transform2D.fit(xi_arr, y_arr, lam_arr)
 
     def map_spectra_to_focal_plane(self, fov):
         """
@@ -151,7 +165,7 @@ class SpectralTrace:
         det_wcs.wcs.crpix -= np.array([xmin, ymin])
 
         img_header = sub_wcs.to_header()
-        img_header.extend(det_wcs.to_header())
+        img_header.update(det_wcs.to_header())
         img_header["XMIN"] = xmin
         img_header["XMAX"] = xmax
         img_header["YMIN"] = ymin
@@ -542,7 +556,7 @@ class Transform2D():
         self.matrix = matrix
         self.ny, self.nx = matrix.shape
 
-    def __call__(self, x, y, grid=True):
+    def __call__(self, x, y, grid=False):
         """
         Apply the polynomial transform
 
@@ -565,11 +579,16 @@ class Transform2D():
         in x and y. When grid=False, a vector. In this case, x and y must
         have the same length.
         """
+        x = np.array(x)
+        y = np.array(y)
+        orig_shape = x.shape
+
         if not grid and x.shape != y.shape:
             raise ValueError("x and y must have the same length when grid is False")
 
-        xvec = power_vector(x, self.nx - 1)
-        yvec = power_vector(y, self.ny - 1)
+
+        xvec = power_vector(x.flatten(), self.nx - 1)
+        yvec = power_vector(y.flatten(), self.ny - 1)
 
         temp = self.matrix @ xvec
 
@@ -580,6 +599,10 @@ class Transform2D():
             # corresponding column in temp. This gives the diagonal of the
             # expression in the "grid" branch.
             result = (yvec * temp).sum(axis=0)
+            if orig_shape == () or orig_shape is None:
+                result = np.float32(result)
+            else:
+                result = result.reshape(orig_shape)
 
         return result
 

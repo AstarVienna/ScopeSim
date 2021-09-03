@@ -101,3 +101,8 @@ class TestTransform2D:
         tf2d = Transform2D.fit(xx, yy, zz, degree=1)
 
         assert tf2d.matrix == pytest.approx(matrix)
+
+    def test_grid_false_shape_is_preserved(self, tf2d):
+        n_x, n_y = 4, 2
+        res = tf2d(np.ones((n_y, n_x)), np.ones((n_y, n_x)), grid=False)
+        assert res.shape == (n_y, n_x)
