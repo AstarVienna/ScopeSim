@@ -2,12 +2,13 @@
 
 # pylint: disable=no-self-use
 # pylint: disable=missing-function-docstring
+# pylint: disable=invalid-name
 
 import pytest
 
 import numpy as np
 
-from scopesim.effects.spectral_trace_list_utils import *
+from scopesim.effects.spectral_trace_list_utils import Transform2D, power_vector
 
 class TestPowerVec:
     """Test function power_vector()"""
@@ -30,26 +31,52 @@ def fixture_tf2d():
     matrix = np.array([[1, 1], [0, 1]])
     return Transform2D(matrix)
 
+@pytest.fixture(name="quadratic", scope="class")
+def fixture_quadratic():
+    """Quadratic model, analytic and matrix
+    """
+    matrix = np.array([[1, 2, 3], [-1, -0.5, 0.3], [0.5, -0.3, 1]])
+
+    def quadfunc(x, y):
+        z_a = (1 + 2 * x + 3 * x**2
+               + y * (-1 - 0.5 * x + 0.3 * x**2)
+               + y**2 * (0.5 - 0.3 * x + x**2))
+        return z_a
+
+    def dquad_dx(x, y):
+        return (2 + 6 * x + y * (-0.5 + 0.6 * x)
+                + y**2 * (-0.3 + 2 * x))
+
+    def dquad_dy(x, y):
+        return (-1 - 0.5 * x + 0.3 * x**2
+                + 2 * y * (0.5 - 0.3 * x + x**2))
+
+    return {'matrix': matrix,
+            'function': quadfunc,
+            'gradient': (dquad_dx, dquad_dy)}
+
 class TestTransform2D:
     """Tests for Transform2D()"""
     def test_initialises_with_matrix(self, tf2d):
         assert isinstance(tf2d, Transform2D)
 
-    def test_call_gives_correct_result(self):
-        # pylint: disable=invalid-name
+    def test_call_gives_correct_result(self, quadratic):
         x = np.random.randn()
         y = np.random.randn()
 
-        # analytic expression
-        z_a = (1 + 2 * x + 3 * x**2
-               + y * (-1 - 0.5 * x + 0.3 * x**2)
-               + y**2 * (0.5 - 0.3 * x + x**2))
+        # matrix and explicit function
+        td2d = Transform2D(quadratic['matrix'])
+        assert td2d(x, y) == quadratic['function'](x, y)
 
-        # matrix / Transform2D expression
-        matrix = np.array([[1, 2, 3], [-1, -0.5, 0.3], [0.5, -0.3, 1]])
-        td2d = Transform2D(matrix)
+    def test_gradient_gives_correct_result(self, quadratic):
+        x = np.random.randn()
+        y = np.random.randn()
 
-        assert td2d(x, y) == z_a
+        tf2d = Transform2D(quadratic['matrix'])
+        tf2d_grad = tf2d.gradient()
+
+        assert tf2d_grad[0](x, y) == quadratic['gradient'][0](x, y)
+        assert tf2d_grad[1](x, y) == quadratic['gradient'][1](x, y)
 
     def test_grid_true_gives_correct_shape(self, tf2d):
         n_x, n_y = 12, 3
@@ -66,7 +93,11 @@ class TestTransform2D:
         with pytest.raises(ValueError):
             tf2d(np.ones(n_x), np.ones(n_y), grid=False)
 
-# ..todo: test for gradient
+    def test_fit_gives_correct_matrix(self):
+        xx, yy = np.meshgrid(np.arange(5), np.arange(5))
+        zz = 1. + xx - yy
 
-# ..todo: Transform2D.fit, in conjunction with fit2matrix(). Is the sequence of
-#         i, j correct?
+        matrix = np.array([[1, 1], [-1, 0]])
+        tf2d = Transform2D.fit(xx, yy, zz, degree=1)
+
+        assert tf2d.matrix == pytest.approx(matrix)

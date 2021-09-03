@@ -584,16 +584,14 @@ class Transform2D():
         return result
 
     @classmethod
-    def fit(cls, xin, yin, xout, yout, params):
+    def fit(cls, xin, yin, xout, degree=4):
         """
         Determine polynomial fits
         """
-        pinit_x = Polynomial2D(degree=4)
-        pinit_y = Polynomial2D(degree=4)
+        pinit = Polynomial2D(degree=degree)
         fitter = fitting.LinearLSQFitter()
-        fit_x = fitter(pinit_x, xin, yin, xout)
-        fit_y = fitter(pinit_y, xin, yin, yout)
-        return Transform2D(fit2matrix(fit_x)), Transform2D(fit2matrix(fit_y))
+        fit = fitter(pinit, xin, yin, xout)
+        return Transform2D(fit2matrix(fit))
 
     def gradient(self):
         """Compute the gradient of a 2d polynomial transformation"""
@@ -615,11 +613,11 @@ def fit2matrix(fit):
     """
     coeffs = dict(zip(fit.param_names, fit.parameters))
     deg = fit.degree
-    mat = np.zeros((deg, deg), dtype=np.float32)
+    mat = np.zeros((deg + 1 , deg + 1), dtype=np.float32)
     for i in range(deg + 1):
         for j in range(deg + 1):
             try:
-                mat[j, i] = d['c{}_{}'.format(i, j)]
+                mat[j, i] = coeffs['c{}_{}'.format(i, j)]
             except KeyError:
                 pass
     return mat
