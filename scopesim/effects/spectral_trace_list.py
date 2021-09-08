@@ -106,7 +106,7 @@ class SpectralTraceList(Effect):
             self.ext_data = self._file[0].header["EDATA"]
             self.ext_cat = self._file[0].header["ECAT"]
             self.catalog = Table(self._file[self.ext_cat].data)
-            self.spectral_traces = self.make_spectral_traces()
+            self.make_spectral_traces()
 
     def make_spectral_traces(self):
         '''Returns a dictionary of spectral traces read in from a file'''
@@ -130,7 +130,7 @@ class SpectralTraceList(Effect):
             # ..todo: add in re-centre on wave_mid here
             spec_traces[row["description"]] = SpectralTrace(hdu, **params)
 
-        return spec_traces
+        self.spectral_traces = spec_traces
 
     def apply_to(self, fov):
         '''Apply the effect to the FieldOfView'''
