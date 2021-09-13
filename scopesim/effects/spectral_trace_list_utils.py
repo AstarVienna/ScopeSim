@@ -39,9 +39,7 @@ class SpectralTrace:
     Focal plane coordinates are:
     - x, y : [mm]
     '''
-
-    def __init__(self, trace_tbl, **kwargs):
-        self.meta = {"x_colname": "x",
+    _class_params = {"x_colname": "x",
                      "y_colname": "y",
                      "s_colname": "s",
                      "wave_colname": "wavelength",
@@ -54,6 +52,13 @@ class SpectralTrace:
                      "spline_order": 4,
                      "pixel_size": None,
                      "description": "<no description>"}
+
+    def __init__(self, trace_tbl, **kwargs):
+        # Within scopesim, the actual parameter values are
+        # passed as kwargs from the SpectralTraceList.
+        # The values need to be here for stand-alone use.
+        self.meta = {}
+        self.meta.update(self._class_params)
         self.meta.update(kwargs)
 
         if isinstance(trace_tbl, (fits.BinTableHDU, fits.TableHDU)):
@@ -71,6 +76,7 @@ class SpectralTrace:
 
         # Interpolation functions   ..todo: equivalent for LMS
         self.compute_interpolation_functions()
+
 
     def compute_interpolation_functions(self):
         """

@@ -76,8 +76,18 @@ class SpectralTraceList(Effect):
     - y : float : [mm] : y position of aperture image on focal plane
 
     """
+    _class_params = {"x_colname": "x",
+                     "y_colname": "y",
+                     "s_colname": "s",
+                     "wave_colname": "wavelength",
+                     "col_number_start": 0,
+                     "center_on_wave_mid": False,
+                     "dwave": 0.002,  # [um] for finding the best fit dispersion
+                     "invalid_value": None,  # for dodgy trace file values
+                     }
+
     def __init__(self, **kwargs):
-        super(SpectralTraceList, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
         if "hdulist" in kwargs and isinstance(kwargs["hdulist"], fits.HDUList):
             self._file = kwargs["hdulist"]
@@ -94,24 +104,12 @@ class SpectralTraceList(Effect):
         self.meta.update(params)
 
         # Parameters that are specific to the subclass
-        self._class_params()
+        self.meta.update(self._class_params)
         self.meta.update(kwargs)
 
         if self._file is not None:
             self.make_spectral_traces()
 
-    def _class_params(self):
-        """Parameters that are specific to the subclass"""
-        params = {"x_colname": "x",
-                  "y_colname": "y",
-                  "s_colname": "s",
-                  "wave_colname": "wavelength",
-                  "col_number_start": 0,
-                  "center_on_wave_mid": False,
-                  "dwave": 0.002,  # [um] for finding the best fit dispersion
-                  "invalid_value": None,  # for dodgy trace file values
-                 }
-        self.meta.update(params)
 
     def make_spectral_traces(self):
         '''Returns a dictionary of spectral traces read in from a file'''

@@ -7,53 +7,37 @@ from astropy.table import Table
 
 from .spectral_trace_list import SpectralTraceList
 from .spectral_trace_list_utils import SpectralTrace
+from .spectral_trace_list_utils import Transform2D
 
 class MetisLMSSpectralTraceList(SpectralTraceList):
     """
     SpectralTraceList for the METIS LM spectrograph
     """
+    _class_params = {
+        "naxis1": 122,
+        "nslice": 28,
+        "slicewidth": 0.0207,  # arcsec
+        "pixscale": 0.0082,    # arcsec
+        "grat_spacing": 18.2,
+        "plate_scale": 0.303,
+    }
 
     def __init__(self, **kwargs):
-        # Set class parameters before initialisation
-        # Call __init__ not with kwargs but with class parameters?
-        pars = {
-            "wavelen": kwargs['wavelen'],   # ..todo: move to yaml
-            "naxis1": 122,
-            "nslice": 28,
-            "slicewidth": 0.0207,  # arcsec
-            "pixscale": 0.0082,    # arcsec
-            "grat_spacing": 18.2,
-            "plate_scale": 0.303,
-            }
-        pars.update(kwargs)
-        super().__init__(**pars)
+        super().__init__(**kwargs)
+
+        # ..todo: Update parameter values from file header
 
         self.wavelen = kwargs['wavelen'] # ..todo: move to yaml
-        self.nslice = 28
-        # Parameters for METIS LMS layout
-        # ..todo: Get this from layout file
-        # ..todo: Update values
-        self.naxis1 = 122
-        self.nslice = 28
-        self.slicewidth = 0.0207   # arcsec
-        self.pixscale = 0.0082     # arcsec
-        self.grat_spacing = 18.2
-        self.plate_scale = 0.303
 
         # field of view of the instrument
         # ..todo: get this from aperture list
-        self.view = np.array([self.naxis1 * self.pixscale,
-                              self.nslice * self.slicewidth])
+        self.view = np.array([self.meta['naxis1'] * self.meta['pixscale'],
+                              self.meta['nslice'] * self.meta['slicewidth']])
 
 
         # ..todo: fill with life
-        #if self._file is not None:
-        #    self.make_spectral_traces()
-
-    def _class_params(self):
-        """Parameters that are specific to the subclass"""
-        params = {}
-        self.meta.update(params)
+        if self._file is not None:
+            self.make_spectral_traces()
 
     def make_spectral_traces(self):
         """
@@ -62,17 +46,15 @@ class MetisLMSSpectralTraceList(SpectralTraceList):
         #nslice = len(self._file['Aperture List'].data)
         # determine echelle order and angle from specified wavelength
         tempres = self.angle_from_lambda()
-        self.order = tempres['Ord']
-        self.angle = tempres['Angle']
+        self.meta['order'] = tempres['Ord']
+        self.meta['angle'] = tempres['Angle']
 
         spec_traces = dict()
         for sli in np.arange(self.meta['nslice']):
             slicename = "Slice " + str(sli + 1)
             spec_traces[slicename] = MetisLMSSpectralTrace(
                 self._file["Polynomial Coefficients"],
-                slice=sli, order=self.order, angle=self.angle,
-                wavelen=self.meta['wavelen'])
-            # ..todo: maybe pass self.meta rather than individual params?
+                spslice=sli, params=self.meta)
 
         self.spectral_traces = spec_traces
 
@@ -120,18 +102,33 @@ class MetisLMSSpectralTrace(SpectralTrace):
     """
     SpectralTrace for the METIS LM spectrograph
     """
+    _class_params = {
+        "naxis1": 122,
+        "nslice": 28,
+        "slicewidth": 0.0207,  # arcsec
+        "pixscale": 0.0082,    # arcsec
+        "grat_spacing": 18.2,
+        "plate_scale": 0.303,
+    }
 
     # ..todo:
     # In SpectralTrace, move all action to a method make_trace
     # Here, implement make_trace as well
 
-    def __init__(self, polyhdu, **kwargs):
-        super().__init__(polyhdu, **kwargs)
-        self.meta['description'] = "Slice " + str(self.meta['slice'] + 1)
+    def __init__(self, polyhdu, spslice, params, **kwargs):
+        params.update(kwargs)
+        params['aperture_id'] = spslice
+        params['slice'] = spslice
+        super().__init__(polyhdu, **params)
+        self.meta['description'] = "Slice " + str(spslice + 1)
 
 
     def compute_interpolation_functions(self):
-        self.matrices = self.get_matrices()
+        matrices = self.get_matrices()
+        self.xilam2x = Transform2D(matrices['A'].T)  # transpose to align argument sequence
+        self.xilam2y = Transform2D(matrices['B'].T)  # with the name of the functions
+        self.xy2lam = Transform2D(matrices['AI'])
+        self.xy2xi = Transform2D(matrices['BI'])
 
 
     def get_matrices(self):
@@ -167,6 +164,19 @@ class MetisLMSSpectralTrace(SpectralTrace):
                       (poly['Mat'] == matid))
             if not np.any(select):
                 raise KeyError("Combination of Order, Slice not found")
+
+            subpoly = poly[select]
+            thematrix = np.zeros((4, 4))
+            for i in range(4):
+                for j in range(4):
+                    sel_ij = (subpoly['Row'] == i) * (subpoly['Col'] == j)
+                    thematrix[i, j] = (subpoly['A11'][sel_ij] * angle**3 +
+                                       subpoly['A12'][sel_ij] * angle**2 +
+                                       subpoly['A21'][sel_ij] * angle +
+                                       subpoly['A22'][sel_ij])
+            matrices[matnames[matid]] = thematrix
+
+        return matrices
 
     # ..todo: use filename and instantiate the effect from the fits file
     #         Can Effect/DataContainer deal with multi-extension files?
