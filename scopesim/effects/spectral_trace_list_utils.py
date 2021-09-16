@@ -461,19 +461,54 @@ class Transform2D():
     along columns, the power of y increases, such that A[j, i] is
     the coefficient of x^i y^j.
 
+    The functions `pretransform_x` and `pretransform_y` can be used to
+    transform the input variables before the matrix is applied. The function
+    `posttransform` can be applied to the output after application of the
+    matrix.
+
+    In Scopesim, a usecase for the pre- and post-transform functions is the
+    METIS LMS, where the matrices are applied to phases while Scopesim
+    operates on wavelengths. The functions to pass are `lam2phase` and
+    `phase2lam`.
+
     Parameters
     ----------
     matrix : np.array
         matrix of polynomial coefficients
+    pretransform_x : function, tuple
+    pretransform_y : function, tuple
+        If not None, the function is applied to the input
+        variable `x` or `y` before the actual 2D transform is computed
+    posttransform : function, tuple
+        If not None, the function is applied to the output variable
+        after the 2D transform is computed
 
-    ..todo: alternatively, the matrix can be created from a fit to data
+    When passed as a tuple, the first element is the function itself,
+    the second element is a dictionary of arguments to the function.
+    Example:
+    ```
+    def rescale(x, scale=1.):
+        return x * scale
+    pretransform_x = (rescale, {"scale": 0.5})
+    ```
     """
 
-    def __init__(self, matrix):
-        self.matrix = matrix
-        self.ny, self.nx = matrix.shape
+    def __init__(self, matrix, pretransform_x=None,
+                 pretransform_y=None, posttransform=None):
+        self.matrix = np.asarray(matrix)
+        self.ny, self.nx = self.matrix.shape
+        self.pretransform_x = self._repackage(pretransform_x)
+        self.pretransform_y = self._repackage(pretransform_y)
+        self.posttransform = self._repackage(posttransform)
 
-    def __call__(self, x, y, grid=False):
+    def _repackage(self, trafo):
+        """Make sure `trafo` is a tuple"""
+        if trafo is not None and not isinstance(trafo, tuple):
+            trafo = (trafo, {})
+        return trafo
+
+
+    def __call__(self, x, y, grid=False, **kwargs):
         """
         Apply the polynomial transform
 
@@ -482,6 +517,9 @@ class Transform2D():
         formed by the tensor product of the vectors x and y. When grid=False,
         the vectors of x and y define the components of a number of points (in
         this case, x and y must be of the same length).
+
+        Functions `pretransform_x`, `pretransform_y` and `posttransform`
+        can be supplied to override the instance values.
 
         Parameters
         ----------
@@ -496,6 +534,13 @@ class Transform2D():
         in x and y. When grid=False, a vector. In this case, x and y must
         have the same length.
         """
+        if "pretransform_x" in kwargs:
+            self.pretransform_x = self._repackage(kwargs["pretransform_x"])
+        if "pretransform_y" in kwargs:
+            self.pretransform_y = self._repackage(kwargs["pretransform_y"])
+        if "posttransform" in kwargs:
+            self.posttransform = self._repackage(kwargs["posttransform"])
+
         x = np.array(x)
         y = np.array(y)
         orig_shape = x.shape
@@ -503,6 +548,11 @@ class Transform2D():
         if not grid and x.shape != y.shape:
             raise ValueError("x and y must have the same length when grid is False")
 
+        # Apply pre transforms
+        if self.pretransform_x is not None:
+            x = self.pretransform_x[0](x, **self.pretransform_x[1])
+        if self.pretransform_y is not None:
+            y = self.pretransform_y[0](y, **self.pretranform_y[1])
 
         xvec = power_vector(x.flatten(), self.nx - 1)
         yvec = power_vector(y.flatten(), self.ny - 1)
@@ -520,6 +570,10 @@ class Transform2D():
                 result = np.float32(result)
             else:
                 result = result.reshape(orig_shape)
+
+        # Apply posttransform
+        if self.posttransform is not None:
+            result = self.posttransform[0](result, **self.posttransform[1])
 
         return result
 

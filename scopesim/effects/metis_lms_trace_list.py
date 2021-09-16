@@ -124,11 +124,25 @@ class MetisLMSSpectralTrace(SpectralTrace):
 
 
     def compute_interpolation_functions(self):
+        """
+        Define the transforms between (xi, lam) and (x, y).
+        The LMS transforms actually operate on phase rather than
+        wavelength, hence the necessity of defining pre- and
+        posttransforms on the lam variable.
+        """
         matrices = self.get_matrices()
-        self.xilam2x = Transform2D(matrices['A'].T)  # transpose to align argument sequence
-        self.xilam2y = Transform2D(matrices['B'].T)  # with the name of the functions
-        self.xy2lam = Transform2D(matrices['AI'])
-        self.xy2xi = Transform2D(matrices['BI'])
+        # matrices are transposed to align argument sequence
+        # with the name of the functions
+        self.xilam2x = Transform2D(matrices['A'].T,
+                                   pretransform_x=self.sky2fp,
+                                   pretransform_y=self.lam2phase)
+        self.xilam2y = Transform2D(matrices['B'].T,
+                                   pretransform_x=self.sky2fp,
+                                   pretransform_y=self.lam2phase)
+        self.xy2lam = Transform2D(matrices['AI'],
+                                  posttransform=self.phase2lam)
+        self.xy2xi = Transform2D(matrices['BI'],
+                                 posttransform=self.fp2sky)
 
 
     def get_matrices(self):
@@ -180,6 +194,53 @@ class MetisLMSSpectralTrace(SpectralTrace):
 
     # ..todo: use filename and instantiate the effect from the fits file
     #         Can Effect/DataContainer deal with multi-extension files?
+
+    def lam2phase(self, lam):
+        """
+        Convert wavelength to phase
+
+        Phase is lam * order / (2 * grat_spacing).
+
+        Parameters
+        ----------
+        lam : ndarray (float)
+            wavelength (um)
+
+        Returns
+        -------
+        Phase : ndarray
+        """
+        return self.meta['order'] * lam / (2 * self.meta['grat_spacing'])
+
+    def phase2lam(self, phase):
+        """
+        Convert phase to wavelength
+
+        Wavelength is phase * 2 * grat_spacing / order
+
+        Parameters
+        ----------
+        phase : ndarray (float)
+            phase (dimensionless)
+
+        Returns
+        -------
+        wavelength : ndarray (um)
+        """
+        return 2 * self.meta['grat_spacing'] * phase / self.meta['order']
+
+    def sky2fp(self, xi):
+        """
+        Convert position in arcsec to position in FP2
+        """
+        return xi / self.meta['plate_scale']
+
+    def fp2sky(self, fp_x):
+        """
+        Convert position in FP2 to position on sky
+        """
+        return fp_x * self.meta['plate_scale']
+
 
     def __repr__(self):
         msg = '<MetisLMSSpectralTrace> "{}" : {} um : Order {} : Angle {}'\
