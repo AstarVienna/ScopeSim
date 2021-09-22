@@ -255,58 +255,58 @@ class SpectralTrace:
         ## Define the wavelength range of the footprint. This is a compromise
         ## between the requested range (by method args) and the definition
         ## range of the spectral trace
-        try:
+        ## This is only relevant if the trace is given by a table of reference
+        ## points. Otherwise (METIS LMS!) we assume that the range is valid.
+        if 'wave_colname' in self.meta:
+            # Here, the parameters are obtained from a table of reference points
             wave_unit = self.table[self.meta['wave_colname']].unit
-        except KeyError:
-            wave_unit = u.um
+            wave_val = quantify(self.table[self.meta['wave_colname']].data,
+                                wave_unit)
 
-        wave_val = quantify(self.table[self.meta['wave_colname']].data,
-                            wave_unit)
+            if wave_min is None:
+                wave_min = np.min(wave_val)
+            if wave_max is None:
+                wave_max = np.max(wave_val)
 
-        if wave_min is None:
-            wave_min = np.min(wave_val)
-        if wave_max is None:
-            wave_max = np.max(wave_val)
+            wave_min = quantify(wave_min, u.um)
+            wave_max = quantify(wave_max, u.um)
 
-        wave_min = quantify(wave_min, u.um)
-        wave_max = quantify(wave_max, u.um)
+            # Requested wavelenth range is entirely outside definition range:
+            # no footprint
+            if wave_min > np.max(wave_val) or wave_max < np.min(wave_val):
+                return None, None
 
-        # Requested wavelenth range is entirely outside definition range:
-        # no footprint
-        if wave_min > np.max(wave_val) or wave_max < np.min(wave_val):
-            return None, None
+            # Restrict to overlap of requested range and definition range
+            wave_min = max(wave_min, np.min(wave_val)).value
+            wave_max = min(wave_max, np.max(wave_val)).value
 
-        # Restrict to overlap of requested range and definition range
-        wave_min = max(wave_min, np.min(wave_val)).value
-        wave_max = min(wave_max, np.max(wave_val)).value
+            ## Define the slit range of the footprint. This is a compromise
+            ## between the requested range (by method args) and the definition
+            ## range of the spectral trace
+            try:
+                xi_unit = self.table[self.meta['s_colname']].unit
+            except KeyError:
+                xi_unit = u.arcsec
 
-        ## Define the slit range of the footprint. This is a compromise
-        ## between the requested range (by method args) and the definition
-        ## range of the spectral trace
-        try:
-            xi_unit = self.table[self.meta['s_colname']].unit
-        except KeyError:
-            xi_unit = u.arcsec
+            xi_val = quantify(self.table[self.meta['s_colname']].data,
+                              xi_unit)
 
-        xi_val = quantify(self.table[self.meta['s_colname']].data,
-                          xi_unit)
+            if xi_min is None:
+                xi_min = np.min(xi_val)
+            if xi_max is None:
+                xi_max = np.max(xi_val)
 
-        if xi_min is None:
-            xi_min = np.min(xi_val)
-        if xi_max is None:
-            xi_max = np.max(xi_val)
+            xi_min = quantify(xi_min, u.arcsec)
+            xi_max = quantify(xi_max, u.arcsec)
 
-        xi_min = quantify(xi_min, u.arcsec)
-        xi_max = quantify(xi_max, u.arcsec)
+            # Requested slit range is entirely outside definition range:
+            # no footprint
+            if xi_min > np.max(xi_val) or xi_max < np.min(xi_val):
+                return None, None
 
-        # Requested slit range is entirely outside definition range:
-        # no footprint
-        if xi_min > np.max(xi_val) or xi_max < np.min(xi_val):
-            return None, None
-
-        # Restrict to overlap of requested range and definition range
-        xi_min = max(xi_min, np.min(xi_val)).value
-        xi_max = min(xi_max, np.max(xi_val)).value
+            # Restrict to overlap of requested range and definition range
+            xi_min = max(xi_min, np.min(xi_val)).value
+            xi_max = min(xi_max, np.max(xi_val)).value
 
         # Map the edges of xi/lam to the focal plance
         n_edge = 512
@@ -552,7 +552,7 @@ class Transform2D():
         if self.pretransform_x is not None:
             x = self.pretransform_x[0](x, **self.pretransform_x[1])
         if self.pretransform_y is not None:
-            y = self.pretransform_y[0](y, **self.pretranform_y[1])
+            y = self.pretransform_y[0](y, **self.pretransform_y[1])
 
         xvec = power_vector(x.flatten(), self.nx - 1)
         yvec = power_vector(y.flatten(), self.ny - 1)
