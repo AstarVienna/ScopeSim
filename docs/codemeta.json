@@ -8,7 +8,7 @@
     "dateModified": "2021-06-10",
     "downloadUrl": "https://pypi.org/project/ScopeSim/",
     "issueTracker": "https://github.com/AstarVienna/ScopeSim/issues",
-    "name": "Kieran Leschinski",
+    "name": "ScopeSim",
     "version": "0.1.1",
     "identifier": "10.1117/12.2559784",
     "description": "An attempt at creating a common pythonic framework for visual and infrared telescope instrument data simulators.",
