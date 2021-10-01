@@ -1,11 +1,15 @@
 import pytest
+from pytest import approx
+from copy import deepcopy
 import numpy as np
 from astropy.io import fits
 import matplotlib.pyplot as plt
 
 from scopesim.optics import image_plane_utils as imp_utils
+from scopesim.tests.mocks.py_objects import imagehdu_objects as imo
 
-PLOTS = True
+
+PLOTS = False
 
 
 class TestSplitHeader:
@@ -64,7 +68,23 @@ class TestAddImageHDUtoImageHDU:
 
         assert np.sum(new.data) == big_sum + small_sum
 
-    def test_larger_hdu_is_partially_in_smaller_hdu(self):
+    def test_smaller_cube_is_fully_inside_larger_cube(self):
+        """yellow box in box"""
+        big, small = self.big_small_hdus()
+        big.data = big.data[None, :, :] * np.ones(3)[:, None, None]
+        small.data = small.data[None, :, :] * np.ones(3)[:, None, None]
+
+        big_sum, small_sum =  np.sum(big.data), np.sum(small.data)
+
+        new = imp_utils.add_imagehdu_to_imagehdu(small, big)
+
+        if PLOTS:
+            plt.imshow(new.data[1, :, :], origin="lower")
+            plt.show()
+
+        assert np.sum(new.data) == big_sum + small_sum
+
+    def test_larger_hdu_encompases_smaller_hdu(self):
         """monochrome box"""
         big, small = self.big_small_hdus()
         big_sum, small_sum =  np.sum(big.data), np.sum(small.data)
@@ -104,18 +124,21 @@ class TestAddImageHDUtoImageHDU:
 
         assert np.sum(new.data) == 1.25 * big_sum
 
-    def test_larger_hdu_is_fully_outside_smaller_hdu(self):
-        """monochrome box"""
-        big, small = self.big_small_hdus(small_offsets=(15, 0))
-        big_sum, small_sum = np.sum(big.data), np.sum(small.data)
+    def test_larger_cube_is_partially_in_smaller_cube(self):
+        """yellow quarter bottom-left"""
+        big, small = self.big_small_hdus(small_wh=(20, 10), small_offsets=(10, 5))
+        big.data = big.data[None, :, :] * np.ones(3)[:, None, None]
+        small.data = small.data[None, :, :] * np.ones(3)[:, None, None]
 
+        big_sum, small_sum =  np.sum(big.data), np.sum(small.data)
         new = imp_utils.add_imagehdu_to_imagehdu(big, small)
 
         if PLOTS:
-            plt.imshow(new.data, origin="lower")
+
+            plt.imshow(new.data[1, :, :], origin="lower")
             plt.show()
 
-        assert np.sum(new.data) == small_sum
+        assert np.sum(new.data) == 1.25 * big_sum
 
     def test_larger_hdu_is_fully_outside_smaller_hdu(self):
         """monochrome box"""
@@ -171,14 +194,128 @@ class TestOverlayImage:
             plt.show()
 
     def test_overlay_images_works_for_3d_cubes(self):
-        big = np.zeros((100, 100, 10))
-        small = np.ones((10, 10, 6))
+        big = np.zeros((10, 100, 100))
+        small = np.ones((10, 10, 10))
         im = imp_utils.overlay_image(small, big, (20, 80))
-        assert np.sum(im[50:, :50]) == np.sum(small)
+        assert np.sum(im) == np.sum(small)
+
+        if PLOTS:
+            plt.imshow(im[5, :, :], origin="lower")
+            plt.show()
+
+    def test_overlay_images_works_for_2d_images_at_border(self):
+        big = np.zeros((100, 100))
+        small = np.ones((10, 10))
+        im = imp_utils.overlay_image(small, big, (0, 0))
+        assert np.sum(im) == 0.25 * np.sum(small)
 
         if PLOTS:
             plt.imshow(im, origin="lower")
             plt.show()
 
+    def test_overlay_images_works_for_3d_cubes_at_border(self):
+        big = np.zeros((10, 100, 100))
+        small = np.ones((10, 10, 10))
+        im = imp_utils.overlay_image(small, big, (0, 0))
+        assert np.sum(im) == 0.25 * np.sum(small)
 
+        if PLOTS:
+            plt.subplot(131)
+            plt.imshow(im[:, :, 0], origin="lower")
+            plt.subplot(132)
+            plt.imshow(im[:, 0, :], origin="lower")
+            plt.subplot(133)
+            plt.imshow(im[0, :, :], origin="lower")
+            plt.show()
+
+
+class TestRescaleImageHDU:
+    @pytest.mark.parametrize("scale_factor", [0.3, 0.5, 1, 2, 3])
+    def test_rescales_a_2D_imagehdu(self, scale_factor):
+        hdu0 = imo._image_hdu_rect()
+        hdu1 = imp_utils.rescale_imagehdu(deepcopy(hdu0), scale_factor/3600)
+
+        hdr0 = hdu0.header
+        hdr1 = hdu1.header
+
+        assert hdr1["NAXIS1"] == np.ceil(hdr0["NAXIS1"] / scale_factor)
+        assert hdr1["NAXIS2"] == np.ceil(hdr0["NAXIS2"] / scale_factor)
+
+    @pytest.mark.parametrize("scale_factor", [0.3, 0.5, 1, 2, 3])
+    def test_rescales_a_3D_imagehdu(self, scale_factor):
+        hdu0 = imo._image_hdu_rect()
+        hdu0.data = hdu0.data[None, :, :] * np.ones(5)[:, None, None]
+        hdu1 = imp_utils.rescale_imagehdu(deepcopy(hdu0), scale_factor/3600)
+
+        hdr0 = hdu0.header
+        hdr1 = hdu1.header
+
+        assert np.sum(hdu0.data) == approx(np.sum(hdu1.data))
+        assert hdr1["NAXIS1"] == np.ceil(hdr0["NAXIS1"] / scale_factor)
+        assert hdr1["NAXIS2"] == np.ceil(hdr0["NAXIS2"] / scale_factor)
+        assert hdr1["NAXIS3"] == hdr0["NAXIS3"]
+
+
+class TestReorientImageHDU:
+    @pytest.mark.parametrize("angle", [0, 30, -45])
+    def test_reorients_a_2D_imagehdu(self, angle):
+        hdu0 = imo._image_hdu_rect()
+        angle *= np.pi / 180
+        pc_matrix = {"PC1_1": np.cos(angle),
+                     "PC1_2": np.sin(angle),
+                     "PC2_1": -np.sin(angle),
+                     "PC2_2": np.cos(angle)}
+
+        hdu0.header.update(pc_matrix)
+        hdu1 = imp_utils.reorient_imagehdu(deepcopy(hdu0))
+
+        hdr0 = hdu0.header
+        hdr1 = hdu1.header
+
+        new_x = hdr0["NAXIS1"] * np.cos(abs(angle)) + \
+                hdr0["NAXIS2"] * np.sin(abs(angle))
+        new_y = hdr0["NAXIS1"] * np.sin(abs(angle)) + \
+                hdr0["NAXIS2"] * np.cos(abs(angle))
+
+        if PLOTS:
+            plt.subplot(121)
+            plt.imshow(hdu0.data, origin="lower")
+            plt.subplot(122)
+            plt.imshow(hdu1.data, origin="lower")
+            plt.show()
+
+        assert hdr1["NAXIS1"] == np.ceil(new_x)
+        assert hdr1["NAXIS2"] == np.ceil(new_y)
+
+    @pytest.mark.parametrize("angle", [0, 30, -45])
+    def test_reorients_a_3D_imagehdu(self, angle):
+        hdu0 = imo._image_hdu_rect()
+        hdu0.data = hdu0.data[None, :, :] * np.ones(5)[:, None, None]
+
+        angle *= np.pi / 180
+        pc_matrix = {"PC1_1": np.cos(angle),
+                     "PC1_2": np.sin(angle),
+                     "PC2_1": -np.sin(angle),
+                     "PC2_2": np.cos(angle)}
+
+        hdu0.header.update(pc_matrix)
+        hdu1 = imp_utils.reorient_imagehdu(deepcopy(hdu0))
+
+        hdr0 = hdu0.header
+        hdr1 = hdu1.header
+
+        new_x = hdr0["NAXIS1"] * np.cos(abs(angle)) + \
+                hdr0["NAXIS2"] * np.sin(abs(angle))
+        new_y = hdr0["NAXIS1"] * np.sin(abs(angle)) + \
+                hdr0["NAXIS2"] * np.cos(abs(angle))
+
+        if PLOTS:
+            plt.subplot(121)
+            plt.imshow(hdu0.data[2,:,:], origin="lower")
+            plt.subplot(122)
+            plt.imshow(hdu1.data[2,:,:], origin="lower")
+            plt.show()
+
+        assert hdr1["NAXIS1"] == np.ceil(new_x)
+        assert hdr1["NAXIS2"] == np.ceil(new_y)
 

@@ -79,7 +79,12 @@ class FieldOfView(FieldOfViewBase):
         self._volume = None
 
     def extract_from(self, src):
-        """ ..assumption: Bandpass has been applied"""
+        """ ..assumption: Bandpass has been applied
+
+        .. note:: Spectra are cut and copied from the original Source object
+            They are in original units. ph/s/pix comes in the make_**** methods
+
+        """
 
         if not isinstance(src, SourceBase):
             raise ValueError("source must be a Source object: {}"
@@ -125,8 +130,56 @@ class FieldOfView(FieldOfViewBase):
         return None
 
     def make_cube(self):
-        # Used for IFUs, slit spectrographs, and coherent MOSs (e.g.KMOS)
-        return None
+        """
+        Used for IFUs, slit spectrographs, and coherent MOSs (e.g.KMOS)
+
+        PHOTLAM = ph/s/m2/um
+        original source fields are in units of:
+        - tables: PHOTLAM (spectra)
+        - images: PHOTLAM (spectra)
+        - cubes: PHOTLAM * bin_width
+
+        .. warning:: Images and Cubes need to be in units of pixel-1, not arcsec-2
+
+        """
+        waveset = self.waveset              # u.um
+        bin_widths = np.diff(waveset)
+        bin_widths = 0.5 * (np.r_[0, bin_widths] + np.r_[bin_widths, 0])
+        area = self.params["area"]          # u.m2
+
+        # PHOTLAM : ph/s/m2/um * um * m2 --> ph/s/bin
+        specs = {ref: self.spectra[ref](waveset) * bin_widths * area
+                 for ref, spec in spectra.items()}
+
+        naxis1, naxis2 = self.hdu.header["NAXIS1"], self.hdu.header["NAXIS2"]
+        naxis3 = len(waveset)
+        cdelt1, cdelt2 = self.hdu.header["CDELT1"], self.hdu.header["CDELT2"]
+
+        canvas_hdu = fits.ImageHDU(data=np.zeros((naxis2, naxis1)),
+                                   header=self.hdu.header)
+        cube_hdu = fits.ImageHDU(data=np.zeros((naxis3, naxis2, naxis1)),
+                                 header=self.hdu.header)
+
+        for field in self.fields:
+            if isinstance(field, Table):
+                for x, y, ref, weight in field:    # field is a Table and the iterable is the row vector
+                    cube_hdu.data[:, y, x] += specs[ref] * weight
+
+            if isinstance(field, fits.ImageHDU):
+                if field.header["NAXIS"] == 2:
+                    canvas_hdu = imp_utils.add_imagehdu_to_imagehdu(field,
+                                                                    canvas_hdu)
+                    spec = specs[field.header["SPEC_REF"]]
+                    cube_hdu.data += canvas_hdu[None, :, :] * \
+                                     spec[:, None, None]    # 2D * 1D -> 3D
+
+                elif field.header["NAXIS"] == 3:
+                    # Need to interpolate cube to fit waveset and adjust for units
+                    1 / 0
+                    cube_hdu = imp_utils.add_imagehdu_to_imagehdu(field,
+                                                                  cube_hdu)
+
+        return cube_hdu
 
     def volume(self, wcs_prefix=""):
         xs, ys = imp_utils.calc_footprint(self.header, wcs_suffix=wcs_prefix)
@@ -169,6 +222,17 @@ class FieldOfView(FieldOfViewBase):
         if self._wavelength is None:
             self._wavelength = np.average(self.waverange)
         return self._wavelength
+
+    @property
+    def waveset(self):
+        """Returns a wavelength vector in um"""
+        wave_bin_type = self.meta["wave_bin_type"]
+        func = np.logspace if "log" in wave_bin_type else np.linspace
+        _waveset = func(self.meta["wave_min"],
+                        self.meta["wave_max"],
+                        self.meta["wave_bin_n"] + 1)
+
+        return _waveset
 
     def __repr__(self):
         msg = "FOV id: {}, with dimensions ({}, {})\n" \

@@ -147,8 +147,7 @@ class FieldOfView(FieldOfViewBase):
         # if sub_pixel is None:
         #     sub_pixel = self.meta["sub_pixel"]
         #
-        # self.hdu.data = np.zeros((self.hdu.header["NAXIS2"],
-        #                           self.hdu.header["NAXIS1"]))
+        # self.hdu.data = np.zeros((  ))
         # if len(self.fields) > 0:
         #     for field in self.fields:
         #         if isinstance(field, Table):

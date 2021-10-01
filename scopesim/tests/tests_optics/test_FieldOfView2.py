@@ -9,6 +9,7 @@ from scopesim.optics.fov2 import FieldOfView
 
 
 def _fov_190_210_um():
+    """ A FOV compatible with 11 slices of so._cube_source()"""
     hdr = ho._fov_header()  # 20x20" @ 0.2" --> [-10, 10]"
     wav = [1.9, 2.1] * u.um
     fov = FieldOfView(hdr, wav)
@@ -16,6 +17,7 @@ def _fov_190_210_um():
 
 
 def _fov_197_202():
+    """ A FOV compatible with 3 slices of so._cube_source()"""
     hdr = ho._fov_header()  # 20x20" @ 0.2" --> [-10, 10]"
     wav = [1.97000000001, 2.02] * u.um  # Needs [1.98, 2.00, 2.02] µm --> 3 slices
     fov = FieldOfView(hdr, wav)
@@ -35,7 +37,7 @@ class TestExtractFrom:
         assert fov.spectra[0].waveset[0].value == approx(19000)
 
     def test_extract_2d_image_from_hduimage(self):
-        src = so._image_source(dx=10)       # 10x10" @ 0.2"/pix
+        src = so._image_source(dx=10)       # 10x10" @ 0.2"/pix, offset by 10"
         fov = _fov_190_210_um()
         fov.extract_from(src)
 
@@ -60,7 +62,6 @@ class TestExtractFrom:
         fov.extract_from(src)
 
         assert fov.fields[0].shape == (3, 51, 25)
-
 
     def test_extract_one_of_each_type_from_source_object(self):
         src_table = so._table_source()              # 4 sources, put two outside of FOV
@@ -92,4 +93,10 @@ class TestMakeCube:
         pass
 
     def test_makes_cube_from_other_cube_imagehdu(self):
+        pass
+
+    def test_makes_cube_from_several_other_cube_imagehdus(self):
+        pass
+
+    def test_makes_cube_from_all_types_of_source_object(self):
         pass
