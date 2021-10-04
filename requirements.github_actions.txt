@@ -1,4 +1,5 @@
-   
+pytest
+
 numpy>=1.16
 scipy
 astropy
