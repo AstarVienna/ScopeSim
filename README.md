@@ -1,15 +1,12 @@
 # ScopeSim 
 ## A telescope observation simulator for Python
 
-[![Build Status](https://travis-ci.org/astronomyk/ScopeSim.svg?branch=master)](https://travis-ci.org/astronomyk/ScopeSim)
+[![Build Status](https://github.com/AstarVienna/ScopeSim/actions/workflows/tests.yml/badge.svg)](https://github.com/AstarVienna/ScopeSim/actions/workflows/tests.yml/badge.svg)
 [![Documentation Status](https://readthedocs.org/projects/scopesim/badge/?version=latest)](https://scopesim.readthedocs.io/en/latest/?badge=latest)
 
-#### Supported python versions
-[![Python 2.7](https://img.shields.io/badge/Python-2.7-red.svg)]()
-[![Python 3.5](https://img.shields.io/badge/Python-3.5-yellow.svg)]()
-[![Python 3.6](https://img.shields.io/badge/Python-3.6-brightgreen.svg)]()
-[![Python 3.7](https://img.shields.io/badge/Python-3.7-brightgreen.svg)]()
-[![Python 3.8](https://img.shields.io/badge/Python-3.8-brightgreen.svg)]()
+[![Build Status](http://github-actions.40ants.com/AstarVienna/ScopeSim/matrix.svg)](https://github.com/AstarVienna/ScopeSim)
+
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
 ## Summary
 

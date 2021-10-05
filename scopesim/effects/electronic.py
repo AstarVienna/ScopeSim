@@ -218,13 +218,7 @@ class LinearityCurve(Effect):
             incident = self.table["incident"] * ndit
             measured = self.table["measured"] * ndit
 
-            image = det._hdu.data
-            shape = image.shape
-            flat_image = image.flatten()
-            new_flat_image = np.interp(flat_image, incident, measured)
-            new_image = new_flat_image.reshape(shape)
-
-            det._hdu.data = new_image
+            det._hdu.data = np.interp(det._hdu.data, incident, measured)
 
         return det
 
