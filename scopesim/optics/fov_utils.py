@@ -296,16 +296,6 @@ def extract_area_from_imagehdu(imagehdu, fov_volume):
                                                pixel_scale=hdr["CDELT1"])
 
     if hdr["NAXIS"] == 3:
-        wval, wdel, wpix, wlen, = [hdr[kw] for kw in ["CRVAL3", "CDELT3",
-                                                      "CRPIX3", "NAXIS3"]]
-        # ASSUMPTION - cube wavelength is in regularly spaced units of um
-        wmin = wval - wdel * wpix
-        wmax = wmin + wdel * (wlen - 1)
-        wunit = u.Unit(hdr.get("CUNIT3", "AA"))
-        if "LOG" in hdr.get("CTYPE3", ""):
-            hdu_waves = np.logspace(wmin, wmax, wlen)
-        else:
-            hdu_waves = np.linspace(wmin, wmax, wlen)
 
         # Look 0.5*wdel past the fov edges in each direction to catch any
         # slices where the middle wavelength value doesn't fall inside the
@@ -318,6 +308,9 @@ def extract_area_from_imagehdu(imagehdu, fov_volume):
         # This scaling factor is:
         # f = ((hdu_bin_centre - fov_edge [+/-] 0.5 * cdelt3) % cdelt3) / cdelt3
 
+        hdu_waves = get_cube_waveset(hdr)
+        wdel = hdr["CDELT3"]
+        wunit = u.Unit(hdr.get("CUNIT3", "AA"))
         fov_waves = utils.quantify(fov_volume["waves"], u.um).to(wunit).value
         mask = (hdu_waves > fov_waves[0] - 0.5 * wdel) * \
                (hdu_waves <= fov_waves[1] + 0.5 * wdel)                         # need to go [+/-] half a bin
@@ -336,7 +329,7 @@ def extract_area_from_imagehdu(imagehdu, fov_volume):
 
         # w0, w1 : the closest cube wavelengths outside the fov edge wavelengths
         # fov_waves : the fov edge wavelengths
-        # f0, f1 : the scaling factors for the red and blue edge cube slices
+        # f0, f1 : the scaling factors for the blue and red edge cube slices
         #
         # w0, w1 = hdu_waves[i0p], hdu_waves[i1p]
         # print(f"\nw0: {w0}, f0: {f0}, {fov_waves}, f1: {f1}, w1: {w1}")
@@ -357,6 +350,26 @@ def extract_area_from_imagehdu(imagehdu, fov_volume):
     new_imagehdu.header.update(new_hdr)
 
     return new_imagehdu
+
+
+def get_cube_waveset(hdr, return_quantity=False):
+    wval, wdel, wpix, wlen, = [hdr[kw] for kw in ["CRVAL3", "CDELT3",
+                                                  "CRPIX3", "NAXIS3"]]
+    # ASSUMPTION - cube wavelength is in regularly spaced units of um
+    wmin = wval - wdel * wpix
+    wmax = wmin + wdel * (wlen - 1)
+    wunit = u.Unit(hdr.get("CUNIT3", "AA"))
+
+    if "LOG" in hdr.get("CTYPE3", ""):
+        hdu_waves = np.logspace(wmin, wmax, wlen)
+    else:
+        hdu_waves = np.linspace(wmin, wmax, wlen)
+
+    if return_quantity:
+        hdu_waves = hdu_waves << wunit
+        hdu_waves.to(u.um)
+
+    return hdu_waves
 
 
 def extract_range_from_spectrum(spectrum, waverange):

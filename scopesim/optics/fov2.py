@@ -1,4 +1,5 @@
 import numpy as np
+from scipy.interpolate import interp1d
 
 from astropy import units as u
 from astropy.io import fits
@@ -129,7 +130,7 @@ class FieldOfView(FieldOfViewBase):
         # Used for imaging
         return None
 
-    def make_cube(self):
+    def make_cube(self, wave_bin_centers=None):
         """
         Used for IFUs, slit spectrographs, and coherent MOSs (e.g.KMOS)
 
@@ -142,17 +143,17 @@ class FieldOfView(FieldOfViewBase):
         .. warning:: Images and Cubes need to be in units of pixel-1, not arcsec-2
 
         """
-        waveset = self.waveset              # u.um
-        bin_widths = np.diff(waveset)
+        fov_waveset = self.waveset              # u.um, Quantity
+        bin_widths = np.diff(fov_waveset)
         bin_widths = 0.5 * (np.r_[0, bin_widths] + np.r_[bin_widths, 0])
-        area = self.params["area"]          # u.m2
+        area = self.meta["area"]          # u.m2
 
         # PHOTLAM : ph/s/m2/um * um * m2 --> ph/s/bin
-        specs = {ref: self.spectra[ref](waveset) * bin_widths * area
-                 for ref, spec in spectra.items()}
+        specs = {ref: spec(fov_waveset) * bin_widths * area
+                 for ref, spec in self.spectra.items()}
 
         naxis1, naxis2 = self.hdu.header["NAXIS1"], self.hdu.header["NAXIS2"]
-        naxis3 = len(waveset)
+        naxis3 = len(fov_waveset)
         cdelt1, cdelt2 = self.hdu.header["CDELT1"], self.hdu.header["CDELT2"]
 
         canvas_hdu = fits.ImageHDU(data=np.zeros((naxis2, naxis1)),
@@ -175,8 +176,14 @@ class FieldOfView(FieldOfViewBase):
 
                 elif field.header["NAXIS"] == 3:
                     # Need to interpolate cube to fit waveset and adjust for units
-                    1 / 0
-                    cube_hdu = imp_utils.add_imagehdu_to_imagehdu(field,
+                    cube_waveset = fu.get_cube_waveset(field.header,
+                                                       return_quantity=True)
+                    field_interp = interp1d(cube_waveset, field.data,
+                                           axis=0, kind="linear")
+                    field_data = field_interp(cube_waveset)
+                    field_hdu = fits.ImageHDU(data=field_data,
+                                              header=field.header)
+                    cube_hdu = imp_utils.add_imagehdu_to_imagehdu(field_hdu,
                                                                   cube_hdu)
 
         return cube_hdu

@@ -430,11 +430,13 @@ def overlay_image(small_im, big_im, coords, mask=None, sub_pixel=False):
                          f"{big_im.ndim} : {small_im.ndim}")
 
     if mask is None:
-        big_im_3[:, y1:y2, x1:x2] += small_im_3[:, y1o:y2o, x1o:x2o]
+        big_im_3[:, y1:y2, x1:x2] = big_im_3[:, y1:y2, x1:x2] + \
+                                    small_im_3[:, y1o:y2o, x1o:x2o]
     else:
         mask = mask[None, y1o:y2o, x1o:x2o] * np.ones(small_im_3.shape[-3])
         mask = mask.astype(bool)
-        big_im_3[:, y1:y2, x1:x2][mask] += small_im_3[:, y1o:y2o, x1o:x2o][mask]
+        big_im_3[:, y1:y2, x1:x2][mask] = big_im_3[:, y1:y2, x1:x2][mask] + \
+                                          small_im_3[:, y1o:y2o, x1o:x2o][mask]
 
     return big_im
 

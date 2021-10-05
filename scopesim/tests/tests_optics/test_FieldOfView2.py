@@ -2,6 +2,8 @@ import pytest
 from pytest import approx
 import numpy as np
 from astropy import units as u
+from matplotlib import pyplot as plt
+from matplotlib.colors import LogNorm
 
 from scopesim.tests.mocks.py_objects import header_objects as ho
 from scopesim.tests.mocks.py_objects import source_objects as so
@@ -12,7 +14,7 @@ def _fov_190_210_um():
     """ A FOV compatible with 11 slices of so._cube_source()"""
     hdr = ho._fov_header()  # 20x20" @ 0.2" --> [-10, 10]"
     wav = [1.9, 2.1] * u.um
-    fov = FieldOfView(hdr, wav)
+    fov = FieldOfView(hdr, wav, area=1 * u.m ** 2)
     return fov
 
 
@@ -20,7 +22,7 @@ def _fov_197_202():
     """ A FOV compatible with 3 slices of so._cube_source()"""
     hdr = ho._fov_header()  # 20x20" @ 0.2" --> [-10, 10]"
     wav = [1.97000000001, 2.02] * u.um  # Needs [1.98, 2.00, 2.02] µm --> 3 slices
-    fov = FieldOfView(hdr, wav)
+    fov = FieldOfView(hdr, wav, area=1*u.m**2)
     return fov
 
 
@@ -93,7 +95,15 @@ class TestMakeCube:
         pass
 
     def test_makes_cube_from_other_cube_imagehdu(self):
-        pass
+        src_cube = so._cube_source()            # 10x10" @ 0.2"/pix, [0.5, 2.5]m @ 0.02µm
+        fov = _fov_197_202()
+        fov.extract_from(src_cube)
+
+        cube = fov.make_cube()
+        plt.imshow(cube.data[0, :, :])
+        plt.show()
+
+
 
     def test_makes_cube_from_several_other_cube_imagehdus(self):
         pass
