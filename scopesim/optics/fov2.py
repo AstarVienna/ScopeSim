@@ -177,24 +177,12 @@ class FieldOfView(FieldOfViewBase):
                        and field.header["NAXIS"] == 3]
 
         # 1. Make waveset and canvas cube
-        #     if at least one cube:
-        #         set waveset to equal largest cube waveset
-        #     else:
-        #         make waveset from longest spectrum
-        if len(field_cubes) > 0:
-            i = np.argmax([cube.header["NAXIS3"] for cube in field_cubes])
-            fov_waveset = fu.get_cube_waveset(field_cubes[i].header,
-                                              return_quantity=True)
-            fov_waveset = fov_waveset.to(u.um)
-        else:
-            i = np.argmax([len(spec.waveset) for spec in self.spectra.values()])
-            fov_waveset = self.spectra[i].waveset
-
-        # evaluate all spectra at the waveset
-        # PHOTLAM : ph/s/m2/um * um * m2 --> ph/s/bin
-        # bin_widths = np.diff(fov_waveset)
-        # bin_widths = 0.5 * (np.r_[0, bin_widths] + np.r_[bin_widths, 0])
-        # area = self.meta["area"]          # u.m2
+        #       evaluate all spectra at the waveset
+        #       PHOTLAM : ph/s/m2/um * um * m2 --> ph/s/bin
+        #       bin_widths = np.diff(fov_waveset)
+        #       bin_widths = 0.5 * (np.r_[0, bin_widths] + np.r_[bin_widths, 0])
+        #       area = self.meta["area"]          # u.m2
+        fov_waveset = self.waveset
         specs = {ref: spec(fov_waveset)     # * bin_widths * area
                  for ref, spec in self.spectra.items()}
 
@@ -300,11 +288,24 @@ class FieldOfView(FieldOfViewBase):
     @property
     def waveset(self):
         """Returns a wavelength vector in um"""
-        wave_bin_type = self.meta["wave_bin_type"]
-        func = np.logspace if "log" in wave_bin_type else np.linspace
-        _waveset = func(self.meta["wave_min"],
-                        self.meta["wave_max"],
-                        self.meta["wave_bin_n"] + 1)
+        field_cubes = [field for field in self.fields
+                       if isinstance(field, fits.ImageHDU)
+                       and field.header["NAXIS"] == 3]
+
+        if len(field_cubes) > 0:
+            i = np.argmax([cube.header["NAXIS3"] for cube in field_cubes])
+            _waveset = fu.get_cube_waveset(field_cubes[i].header,
+                                              return_quantity=True).to(u.um)
+        else:
+            i = np.argmax([len(spec.waveset) for spec in self.spectra.values()])
+            _waveset = self.spectra[i].waveset
+
+        #
+        # wave_bin_type = self.meta["wave_bin_type"]
+        # func = np.logspace if "log" in wave_bin_type else np.linspace
+        # _waveset = func(self.meta["wave_min"],
+        #                 self.meta["wave_max"],
+        #                 self.meta["wave_bin_n"] + 1)
 
         return _waveset
 
