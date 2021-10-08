@@ -127,12 +127,71 @@ class FieldOfView(FieldOfViewBase):
         return None
 
     def make_image(self):
-        # Used for imaging
+        """
+        Used for imaging
+
+        Image units are ph s-1 m-2
+
+        .. note:: ``self.make_image()`` does NOT store anything in ``self.image``
+
+            See make_cube for an explanation
+
+        1. Make waveset and canvas image
+            make canvas image from NAXIS1,2 from fov.header
+
+        2. Find Cube fields
+            collapse cube along wavelength axis
+            rescale and reorient image
+            add cube image to canvas image
+
+        3. Find Image fields
+            rescale and reorient images
+            sum spectra between wavelength edges
+            multiply image by summed spectrum
+            add image to canvas image
+
+        4. Find Table fields
+            sum spectra between wavelength edges
+            add summed flux at x,y position in canvas image
+
+        """
+
+        if self.cube is not None:
+            image = cube.sum(axis=0)
+            canvas_image_hdu = fits.ImageHDU(data=image,
+                                             header=self.hdu.header)
+            return canvas_image_hdu
+
+        # 1. Make waveset and canvas image
+        fov_waveset = self.waveset
+        naxis1, naxis2 = self.hdu.header["NAXIS1"], self.hdu.header["NAXIS2"]
+        canvas_image_hdu = fits.ImageHDU(data=np.zeros((naxis2, naxis1)),
+                                         header=self.hdu.header)
+
+        # 2. Find Cube fields
+        for field in self.cube_fields:
+            field.data.sum(axis=0)
+
+            1 / 0
+
         return None
 
-    def make_cube(self, wave_bin_centers=None):
+    def make_cube(self):
         """
         Used for IFUs, slit spectrographs, and coherent MOSs (e.g.KMOS)
+
+        Returned cube units are ph s-1 voxel-1
+
+        .. note:: ``self.make_cube()`` does NOT store anything in ``self.cube``
+
+            self.cube and self.make_cube() are deliberately keep seperately
+            so that self.cube will not be accidently overwritten by a rogue
+            call from an Effect object.
+
+            All Effect objects should specifically test whether
+            ``self.cube is None`` before assigning a new cube it
+
+        The cube is made with these steps:
 
         1. Make waveset and canvas cube
             if at least one cube:
@@ -156,7 +215,6 @@ class FieldOfView(FieldOfViewBase):
             evaluate spectra at waveset
             add spectrum at x,y position in canvas cube
 
-
         PHOTLAM = ph/s/m2/um
         original source fields are in units of:
         - tables: PHOTLAM (spectra)
@@ -166,22 +224,7 @@ class FieldOfView(FieldOfViewBase):
         .. warning:: Images and Cubes need to be in units of pixel-1 (or voxel-1), not arcsec-2
 
         """
-
-        field_tables = [field for field in self.fields
-                        if isinstance(field, Table)]
-        field_images = [field for field in self.fields
-                        if isinstance(field, fits.ImageHDU)
-                        and field.header["NAXIS"] == 2]
-        field_cubes = [field for field in self.fields
-                       if isinstance(field, fits.ImageHDU)
-                       and field.header["NAXIS"] == 3]
-
         # 1. Make waveset and canvas cube
-        #       evaluate all spectra at the waveset
-        #       PHOTLAM : ph/s/m2/um * um * m2 --> ph/s/bin
-        #       bin_widths = np.diff(fov_waveset)
-        #       bin_widths = 0.5 * (np.r_[0, bin_widths] + np.r_[bin_widths, 0])
-        #       area = self.meta["area"]          # u.m2
         fov_waveset = self.waveset
         specs = {ref: spec(fov_waveset)     # * bin_widths * area
                  for ref, spec in self.spectra.items()}
@@ -194,11 +237,7 @@ class FieldOfView(FieldOfViewBase):
         canvas_cube_hdu.header["BUNIT"] = "ph s-1 cm-2 AA-1"
 
         # 2. Add Cube fields
-        #     interp1d smaller cubes with waveset
-        #     rescale and reorient cubes
-        #     add cubes to cavas cube
-
-        for field in field_cubes:
+        for field in self.cube_fields:
             field_waveset = fu.get_cube_waveset(field.header,
                                                 return_quantity=True)
             field_interp = interp1d(field_waveset.to(u.um).value,
@@ -212,10 +251,7 @@ class FieldOfView(FieldOfViewBase):
                                                                  canvas_cube_hdu)
 
         # 3. Find Image fields
-        #     expand image by spectra to 3D form
-        #     rescale and reorient images
-        #     add image cubes to canvas cube
-        for field in field_images:
+        for field in self.image_fields:
             canvas_image_hdu = fits.ImageHDU(data=np.zeros((naxis2, naxis1)),
                                              header=self.hdu.header)
             canvas_image_hdu = imp_utils.add_imagehdu_to_imagehdu(field,
@@ -225,9 +261,7 @@ class FieldOfView(FieldOfViewBase):
             canvas_cube_hdu.data += field_cube.value
 
         # 4. Find Table fields
-        #     evaluate spectra at waveset
-        #     add spectrum at x,y position in canvas cube
-        for field in field_tables:
+        for field in self.table_fields:
             for xsky, ysky, ref, weight in field:  # field is a Table and the iterable is the row vector
                 # x, y are ALWAYS in arcsec - crval is in deg
                 xpix, ypix = imp_utils.val2pix(self.hdu.header, xsky / 3600, ysky / 3600)
@@ -240,6 +274,17 @@ class FieldOfView(FieldOfViewBase):
                     x, y = int(xpix), int(ypix)
                     flux_vector = specs[ref].value * weight
                     canvas_cube_hdu.data[:, y, x] += flux_vector
+
+        # 5. Convert from PHOTLAM to ph/s/voxel
+        #    PHOTLAM = ph/s/cm-2/AA
+        #    area = m2, fov_waveset = um
+
+        area = utils.from_currsys(self.meta["area"])    # u.m2
+        canvas_cube_hdu.data *= area.to(u.cm**2)
+
+        bin_widths = np.diff(fov_waveset)
+        bin_widths = 0.5 * (np.r_[0, bin_widths] + np.r_[bin_widths, 0])
+        canvas_cube_hdu.data *= bin_widths.to(u.AA)
 
         return canvas_cube_hdu
 
@@ -288,26 +333,32 @@ class FieldOfView(FieldOfViewBase):
     @property
     def waveset(self):
         """Returns a wavelength vector in um"""
-        field_cubes = [field for field in self.fields
-                       if isinstance(field, fits.ImageHDU)
-                       and field.header["NAXIS"] == 3]
-
-        if len(field_cubes) > 0:
+        if len(self.cube_fields) > 0:
             i = np.argmax([cube.header["NAXIS3"] for cube in field_cubes])
             _waveset = fu.get_cube_waveset(field_cubes[i].header,
-                                              return_quantity=True).to(u.um)
+                                              return_quantity=True)
         else:
             i = np.argmax([len(spec.waveset) for spec in self.spectra.values()])
             _waveset = self.spectra[i].waveset
 
-        #
-        # wave_bin_type = self.meta["wave_bin_type"]
-        # func = np.logspace if "log" in wave_bin_type else np.linspace
-        # _waveset = func(self.meta["wave_min"],
-        #                 self.meta["wave_max"],
-        #                 self.meta["wave_bin_n"] + 1)
+        return _waveset.to(u.um)
 
-        return _waveset
+    @property
+    def cube_fields(self):
+        return [field for field in self.fields
+                if isinstance(field, fits.ImageHDU)
+                and field.header["NAXIS"] == 3]
+
+    @property
+    def image_fields(self):
+        return [field for field in self.fields
+                if isinstance(field, fits.ImageHDU)
+                and field.header["NAXIS"] == 2]
+
+    @property
+    def table_fields(self):
+        return [field for field in self.fields
+                if isinstance(field, Table)]
 
     def __repr__(self):
         msg = "FOV id: {}, with dimensions ({}, {})\n" \
