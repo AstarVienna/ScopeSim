@@ -69,7 +69,7 @@ class FieldOfView(FieldOfViewBase):
 
         self.image_plane_id = 0
         self.fields = []
-        self.spectra = []
+        self.spectra = {}
 
         self.cube = None        # IFU, long-lit, Slicer-MOS
         self.image = None       # Imagers
@@ -134,59 +134,126 @@ class FieldOfView(FieldOfViewBase):
         """
         Used for IFUs, slit spectrographs, and coherent MOSs (e.g.KMOS)
 
+        1. Make waveset and canvas cube
+            if at least one cube:
+                set waveset to equal largest cube waveset
+            else:
+                make waveset from self.meta values
+            make canvas cube based on waveset of largest cube and NAXIS1,2 from fov.header
+
+        2. Find Cube fields
+            rescale and reorient cubes
+            interp1d smaller cubes with waveset
+            add cubes to cavas cube
+
+        3. Find Image fields
+            rescale and reorient images
+            evaluate spectra at waveset
+            expand image by spectra to 3D form
+            add image cubes to canvas cube
+
+        4. Find Table fields
+            evaluate spectra at waveset
+            add spectrum at x,y position in canvas cube
+
+
         PHOTLAM = ph/s/m2/um
         original source fields are in units of:
         - tables: PHOTLAM (spectra)
         - images: PHOTLAM (spectra)
         - cubes: PHOTLAM * bin_width
 
-        .. warning:: Images and Cubes need to be in units of pixel-1, not arcsec-2
+        .. warning:: Images and Cubes need to be in units of pixel-1 (or voxel-1), not arcsec-2
 
         """
-        fov_waveset = self.waveset              # u.um, Quantity
-        bin_widths = np.diff(fov_waveset)
-        bin_widths = 0.5 * (np.r_[0, bin_widths] + np.r_[bin_widths, 0])
-        area = self.meta["area"]          # u.m2
 
+        field_tables = [field for field in self.fields
+                        if isinstance(field, Table)]
+        field_images = [field for field in self.fields
+                        if isinstance(field, fits.ImageHDU)
+                        and field.header["NAXIS"] == 2]
+        field_cubes = [field for field in self.fields
+                       if isinstance(field, fits.ImageHDU)
+                       and field.header["NAXIS"] == 3]
+
+        # 1. Make waveset and canvas cube
+        #     if at least one cube:
+        #         set waveset to equal largest cube waveset
+        #     else:
+        #         make waveset from longest spectrum
+        if len(field_cubes) > 0:
+            i = np.argmax([cube.header["NAXIS3"] for cube in field_cubes])
+            fov_waveset = fu.get_cube_waveset(field_cubes[i].header,
+                                              return_quantity=True)
+            fov_waveset = fov_waveset.to(u.um)
+        else:
+            i = np.argmax([len(spec.waveset) for spec in self.spectra.values()])
+            fov_waveset = self.spectra[i].waveset
+
+        # evaluate all spectra at the waveset
         # PHOTLAM : ph/s/m2/um * um * m2 --> ph/s/bin
-        specs = {ref: spec(fov_waveset) * bin_widths * area
+        # bin_widths = np.diff(fov_waveset)
+        # bin_widths = 0.5 * (np.r_[0, bin_widths] + np.r_[bin_widths, 0])
+        # area = self.meta["area"]          # u.m2
+        specs = {ref: spec(fov_waveset)     # * bin_widths * area
                  for ref, spec in self.spectra.items()}
 
+        # make canvas cube based on waveset of largest cube and NAXIS1,2 from fov.header
         naxis1, naxis2 = self.hdu.header["NAXIS1"], self.hdu.header["NAXIS2"]
         naxis3 = len(fov_waveset)
-        cdelt1, cdelt2 = self.hdu.header["CDELT1"], self.hdu.header["CDELT2"]
+        canvas_cube_hdu = fits.ImageHDU(data=np.zeros((naxis3, naxis2, naxis1)),
+                                        header=self.hdu.header)
+        canvas_cube_hdu.header["BUNIT"] = "ph s-1 cm-2 AA-1"
 
-        canvas_hdu = fits.ImageHDU(data=np.zeros((naxis2, naxis1)),
-                                   header=self.hdu.header)
-        cube_hdu = fits.ImageHDU(data=np.zeros((naxis3, naxis2, naxis1)),
-                                 header=self.hdu.header)
+        # 2. Add Cube fields
+        #     interp1d smaller cubes with waveset
+        #     rescale and reorient cubes
+        #     add cubes to cavas cube
 
-        for field in self.fields:
-            if isinstance(field, Table):
-                for x, y, ref, weight in field:    # field is a Table and the iterable is the row vector
-                    cube_hdu.data[:, y, x] += specs[ref] * weight
+        for field in field_cubes:
+            field_waveset = fu.get_cube_waveset(field.header,
+                                                return_quantity=True)
+            field_interp = interp1d(field_waveset.to(u.um).value,
+                                    field.data, axis=0, kind="linear")
+            field_data = field_interp(fov_waveset.value)
+            field_unit = field.header.get("BUNIT", "ph s-1 cm-2 AA-1")
+            flux_scale_factor = u.Unit(field_unit).to("ph s-1 cm-2 AA-1")
+            field_hdu = fits.ImageHDU(data=field_data * flux_scale_factor,
+                                      header=field.header)
+            canvas_cube_hdu = imp_utils.add_imagehdu_to_imagehdu(field_hdu,
+                                                                 canvas_cube_hdu)
 
-            if isinstance(field, fits.ImageHDU):
-                if field.header["NAXIS"] == 2:
-                    canvas_hdu = imp_utils.add_imagehdu_to_imagehdu(field,
-                                                                    canvas_hdu)
-                    spec = specs[field.header["SPEC_REF"]]
-                    cube_hdu.data += canvas_hdu[None, :, :] * \
-                                     spec[:, None, None]    # 2D * 1D -> 3D
+        # 3. Find Image fields
+        #     expand image by spectra to 3D form
+        #     rescale and reorient images
+        #     add image cubes to canvas cube
+        for field in field_images:
+            canvas_image_hdu = fits.ImageHDU(data=np.zeros((naxis2, naxis1)),
+                                             header=self.hdu.header)
+            canvas_image_hdu = imp_utils.add_imagehdu_to_imagehdu(field,
+                                                               canvas_image_hdu)
+            spec = specs[field.header["SPEC_REF"]]
+            field_cube = canvas_image_hdu.data[None, :, :] * spec[:, None, None]  # 2D * 1D -> 3D
+            canvas_cube_hdu.data += field_cube.value
 
-                elif field.header["NAXIS"] == 3:
-                    # Need to interpolate cube to fit waveset and adjust for units
-                    cube_waveset = fu.get_cube_waveset(field.header,
-                                                       return_quantity=True)
-                    field_interp = interp1d(cube_waveset, field.data,
-                                           axis=0, kind="linear")
-                    field_data = field_interp(cube_waveset)
-                    field_hdu = fits.ImageHDU(data=field_data,
-                                              header=field.header)
-                    cube_hdu = imp_utils.add_imagehdu_to_imagehdu(field_hdu,
-                                                                  cube_hdu)
+        # 4. Find Table fields
+        #     evaluate spectra at waveset
+        #     add spectrum at x,y position in canvas cube
+        for field in field_tables:
+            for xsky, ysky, ref, weight in field:  # field is a Table and the iterable is the row vector
+                # x, y are ALWAYS in arcsec - crval is in deg
+                xpix, ypix = imp_utils.val2pix(self.hdu.header, xsky / 3600, ysky / 3600)
+                if utils.from_currsys(self.meta["sub_pixel"]):
+                    xs, ys, fracs = imp_utils.sub_pixel_fractions(xpix, ypix)
+                    for i, j, k in zip(xs, ys, fracs):
+                        wk = weight * k
+                        canvas_cube_hdu.data[:, j, i] += specs[ref].value * wk
+                else:
+                    x, y = int(xpix), int(ypix)
+                    flux_vector = specs[ref].value * weight
+                    canvas_cube_hdu.data[:, y, x] += flux_vector
 
-        return cube_hdu
+        return canvas_cube_hdu
 
     def volume(self, wcs_prefix=""):
         xs, ys = imp_utils.calc_footprint(self.header, wcs_suffix=wcs_prefix)

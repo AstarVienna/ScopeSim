@@ -319,3 +319,12 @@ class TestReorientImageHDU:
         assert hdr1["NAXIS1"] == np.ceil(new_x)
         assert hdr1["NAXIS2"] == np.ceil(new_y)
 
+
+class TestSubPixelFractions:
+    @pytest.mark.parametrize("x, y, frac", [(0.5, 0.5, 0.25),
+                                            (10.1, -9.1, 0.09)])
+    def test_returns_expected_origin_fraction(self, x, y, frac):
+        xs, ys, fracs = imp_utils.sub_pixel_fractions(x, y)
+        assert fracs[0] == approx(frac)
+        assert xs[0] == int(np.floor(x))
+        assert ys[0] == int(np.floor(y))

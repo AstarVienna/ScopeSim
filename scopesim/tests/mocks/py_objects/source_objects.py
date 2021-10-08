@@ -80,6 +80,22 @@ def _image_source(dx=0, dy=0, angle=0, weight=1):
 
 
 def _cube_source(**kwargs):
+    """
+    An image with 3 point sources on a random BG
+
+    Parameters
+    ----------
+    dx, dy : float
+        [arcsec] Offset from optical axis
+    angle : float
+        [deg]
+    weight : float
+
+    Returns
+    -------
+
+    """
+
     n = 101
     im_src = _image_source(**kwargs)
     data = im_src.fields[0].data
@@ -89,7 +105,8 @@ def _cube_source(**kwargs):
     im_src.spectra = []
 
     cube_hdr_dict = {"CUNIT3": "um", "CTYPE3": "WAVE", "CDELT3": 0.02,
-                     "CRVAL3": 1.5, "CRPIX3": 50, "SPEC_REF": None}
+                     "CRVAL3": 1.5, "CRPIX3": 50, "SPEC_REF": None,
+                     "BUNIT": "ph s-1 m-2 um-1"}
 
     im_src.fields[0].header.update(cube_hdr_dict)
 
