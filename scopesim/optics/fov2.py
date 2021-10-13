@@ -164,6 +164,8 @@ class FieldOfView(FieldOfViewBase):
 
         # 1. Make waveset and canvas image
         fov_waveset = self.waveset
+        fluxes = {ref: np.sum(spec(fov_waveset))     # * bin_widths * area
+                  for ref, spec in self.spectra.items()}
         naxis1, naxis2 = self.hdu.header["NAXIS1"], self.hdu.header["NAXIS2"]
         canvas_image_hdu = fits.ImageHDU(data=np.zeros((naxis2, naxis1)),
                                          header=self.hdu.header)
@@ -172,9 +174,27 @@ class FieldOfView(FieldOfViewBase):
         for field in self.cube_fields:
             field.data.sum(axis=0)
 
-            1 / 0
+        # 2. Find Image fields
+        for field in self.image_fields:
+            field.data.sum(axis=0)
 
-        return None
+        # 2. Find Table fields
+        for field in self.table_fields:
+            for xsky, ysky, ref, weight in field:
+                # x, y are ALWAYS in arcsec - crval is in deg
+                xpix, ypix = imp_utils.val2pix(self.hdu.header,
+                                               xsky / 3600, ysky / 3600)
+                if utils.from_currsys(self.meta["sub_pixel"]):
+                    xs, ys, fracs = imp_utils.sub_pixel_fractions(xpix, ypix)
+                    for i, j, k in zip(xs, ys, fracs):
+                        wk = weight * k
+                        canvas_image_hdu.data[j, i] += fluxes[ref].value * wk
+                else:
+                    x, y = int(xpix), int(ypix)
+                    flux_vector = fluxes[ref].value * weight
+                    canvas_image_hdu.data[y, x] += flux_vector
+
+        return canvas_image_hdu
 
     def make_cube(self):
         """
@@ -224,9 +244,9 @@ class FieldOfView(FieldOfViewBase):
         .. warning:: Images and Cubes need to be in units of pixel-1 (or voxel-1), not arcsec-2
 
         """
-        # 1. Make waveset and canvas cube
+        # 1. Make waveset and canvas cube (area, bin_width are applied at end)
         fov_waveset = self.waveset
-        specs = {ref: spec(fov_waveset)     # * bin_widths * area
+        specs = {ref: spec(fov_waveset)
                  for ref, spec in self.spectra.items()}
 
         # make canvas cube based on waveset of largest cube and NAXIS1,2 from fov.header

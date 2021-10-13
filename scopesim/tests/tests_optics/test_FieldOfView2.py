@@ -191,3 +191,24 @@ class TestMakeCube:
         if PLOTS:
             plt.imshow(cube.data[0, :, :], origin="lower", norm=LogNorm())
             plt.show()
+
+
+class TestMakeImage:
+    def test_makes_image_from_table(self):
+        src_table = so._table_source()            # 10x10" @ 0.2"/pix, [0.5, 2.5]m @ 0.02µm
+        fov = _fov_190_210_um()
+        fov.extract_from(src_table)
+
+        img = fov.make_image()
+
+        in_sum = 0
+        waveset = fov.spectra[0].waveset
+        for x, y, ref, weight in src_table.fields[0]:
+            flux = src_table.spectra[ref](waveset).value
+            in_sum += np.sum(flux) * weight
+        out_sum = np.sum(img.data)
+        assert out_sum == approx(in_sum)
+
+        if PLOTS:
+            plt.imshow(img.data, origin="lower")
+            plt.show()
