@@ -7,7 +7,7 @@ from astropy import units as u
 from synphot.units import PHOTLAM
 
 from scopesim.effects.ter_curves import TERCurve
-from scopesim.effects.pupil_mask import PupilTransmission
+from scopesim.effects.ter_curvesq import PupilTransmission
 
 # pylint: disable=no-self-use, missing-class-docstring
 # pylint: disable=missing-function-docstring
