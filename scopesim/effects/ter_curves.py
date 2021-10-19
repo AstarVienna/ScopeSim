@@ -520,6 +520,7 @@ class PupilTransmission(TERCurve):
     def __init__(self, throughput, **kwargs):
         wave_min = from_currsys("!SIM.spectral.wave_min") * u.um
         wave_max = from_currsys("!SIM.spectral.wave_max") *u.um
+        throughput = from_currsys(throughput)
         super().__init__(wavelength=[wave_min, wave_max],
                          transmission=[throughput, throughput],
                          emissivity=[0., 0.], **kwargs)
