@@ -1,6 +1,8 @@
 """Definitions of pupil masks (cold stops, etc.)"""
 
+from astropy import units as u
 from synphot.units import PHOTLAM
+from ..utils import from_currsys
 from .ter_curves import TERCurve
 
 class PupilTransmission(TERCurve):
@@ -9,9 +11,11 @@ class PupilTransmission(TERCurve):
 
     Use this class to describe a cold stop or pupil mask that is
     characterised by "grey" throughput.
-    The emission has been set to zero, assuming that the mask is cold.
+    The emissivity is set to zero, assuming that the mask is cold.
     """
     def __init__(self, throughput, **kwargs):
-        super().__init__(wavelength=[1., 2.],
+        wave_min = from_currsys("!SIM.spectral.wave_min") * u.um
+        wave_max = from_currsys("!SIM.spectral.wave_max") *u.um
+        super().__init__(wavelength=[wave_min, wave_max],
                          transmission=[throughput, throughput],
-                         emissivity=[0., 0.])
+                         emissivity=[0., 0.], **kwargs)
