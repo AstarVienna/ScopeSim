@@ -511,16 +511,16 @@ class FilterWheel(Effect):
 
 class PupilTransmission(TERCurve):
     """
-    Wavelength-independent throughput curve
+    Wavelength-independent transmission curve
 
     Use this class to describe a cold stop or pupil mask that is
-    characterised by "grey" throughput.
+    characterised by "grey" transmissivity.
     The emissivity is set to zero, assuming that the mask is cold.
     """
-    def __init__(self, throughput, **kwargs):
+    def __init__(self, transmission, **kwargs):
         wave_min = from_currsys("!SIM.spectral.wave_min") * u.um
         wave_max = from_currsys("!SIM.spectral.wave_max") *u.um
-        throughput = from_currsys(throughput)
+        transmission = from_currsys(transmission)
         super().__init__(wavelength=[wave_min, wave_max],
-                         transmission=[throughput, throughput],
+                         transmission=[transmission, transmission],
                          emissivity=[0., 0.], **kwargs)
