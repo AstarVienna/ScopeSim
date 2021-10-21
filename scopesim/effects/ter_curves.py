@@ -5,7 +5,10 @@ import warnings
 
 from astropy.io import fits
 from astropy.table import Table
+from astropy import units as u
+
 from synphot import SourceSpectrum
+from synphot.units import PHOTLAM
 
 from .ter_curves_utils import combine_two_spectra, add_edge_zeros, download_svo_filter
 from .effects import Effect
@@ -504,3 +507,20 @@ class FilterWheel(Effect):
                     data=[names, centres, widths, blue, red])
 
         return tbl
+
+
+class PupilTransmission(TERCurve):
+    """
+    Wavelength-independent transmission curve
+
+    Use this class to describe a cold stop or pupil mask that is
+    characterised by "grey" transmissivity.
+    The emissivity is set to zero, assuming that the mask is cold.
+    """
+    def __init__(self, transmission, **kwargs):
+        wave_min = from_currsys("!SIM.spectral.wave_min") * u.um
+        wave_max = from_currsys("!SIM.spectral.wave_max") *u.um
+        transmission = from_currsys(transmission)
+        super().__init__(wavelength=[wave_min, wave_max],
+                         transmission=[transmission, transmission],
+                         emissivity=[0., 0.], **kwargs)
