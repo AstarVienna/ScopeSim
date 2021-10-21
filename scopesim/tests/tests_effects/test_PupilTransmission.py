@@ -17,7 +17,7 @@ THROUGHPUT = 0.764      # random value
 @pytest.fixture(name="pupilmask", scope="class")
 def fixture_pupilmask():
     """Instantiate a PupilTransmission object"""
-    return PupilTransmission(throughput=THROUGHPUT)
+    return PupilTransmission(transmission=THROUGHPUT)
 
 class TestPupilTransmission:
     def test_initialises_correctly(self, pupilmask):
@@ -29,3 +29,8 @@ class TestPupilTransmission:
 
     def test_has_zero_emission(self, pupilmask):
         assert pupilmask.emission(3.5 * u.um) == 0 * PHOTLAM
+
+    def test_update_transmission_works(self, pupilmask):
+        assert pupilmask.throughput(3.5 * u.um) == THROUGHPUT
+        pupilmask.update_transmission(0.5)
+        assert pupilmask.throughput(3.5 * u.um) == 0.5

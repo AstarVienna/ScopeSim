@@ -390,7 +390,7 @@ class TransmissionCurve(object):
         else:
             cmts_list = meta["comments"]
             cmts_str  = "\n".join(cmts_list)
-            cmts_dict = yaml.load(cmts_str)
+            cmts_dict = yaml.full_load(cmts_str)
             if type(cmts_dict) is str:
                 cmts_dict={"comments":cmts_dict}
 

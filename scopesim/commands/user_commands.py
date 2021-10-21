@@ -325,7 +325,7 @@ def load_yaml_dicts(filename):
 
     yaml_dicts = []
     with open(filename) as f:
-        yaml_dicts += [dic for dic in yaml.load_all(f)]
+        yaml_dicts += [dic for dic in yaml.full_load_all(f)]
 
     return yaml_dicts
 

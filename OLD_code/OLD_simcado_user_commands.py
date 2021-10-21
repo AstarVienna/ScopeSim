@@ -786,10 +786,10 @@ class UserCommands(object):
     def yaml_docs(self):
         sys_descrip = self.cmds["SIM_SYSTEM_DESCRIPTION"]
         with open(find_file(sys_descrip)) as filename:
-            yaml_files = yaml.load(filename)
+            yaml_files = yaml.full_load(filename)
         for element in yaml_files:
             with open(find_file(yaml_files[element])) as filename:
-                yaml_files[element] = yaml.load(filename)
+                yaml_files[element] = yaml.full_load(filename)
 
         return yaml_files
 
