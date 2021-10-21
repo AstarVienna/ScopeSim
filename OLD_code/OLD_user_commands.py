@@ -72,7 +72,7 @@ class UserCommands:
                 _yaml_dicts += [yaml_obj]
             elif isinstance(yaml_obj, str):
                 with open(find_file(yaml_obj)) as f:
-                    _yaml_dicts += [dic for dic in yaml.load_all(f)]
+                    _yaml_dicts += [dic for dic in yaml.full_load_all(f)]
 
         self._yaml_dicts = _yaml_dicts
         return self._yaml_dicts
