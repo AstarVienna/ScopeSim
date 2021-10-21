@@ -6,7 +6,7 @@ from .system_dict import SystemDict
 __pkg_dir__ = os.path.dirname(__file__)
 
 with open(os.path.join(__pkg_dir__, "defaults.yaml")) as f:
-    dicts = [dic for dic in yaml.load_all(f)]
+    dicts = [dic for dic in yaml.load_all(f, Loader=yaml.FullLoader)]
 
 user_rc_path = os.path.expanduser("~/.scopesim_rc.yaml")
 if os.path.exists(user_rc_path):

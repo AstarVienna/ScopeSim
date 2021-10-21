@@ -1,3 +1,5 @@
+from copy import deepcopy
+
 import numpy as np
 from scipy.interpolate import interp1d
 
@@ -130,7 +132,7 @@ class FieldOfView(FieldOfViewBase):
         """
         Used for imaging
 
-        Image units are ph s-1 m-2
+        Output image units are ph s-1 pixel-1
 
         .. note:: ``self.make_image()`` does NOT store anything in ``self.image``
 
@@ -164,35 +166,59 @@ class FieldOfView(FieldOfViewBase):
 
         # 1. Make waveset and canvas image
         fov_waveset = self.waveset
-        fluxes = {ref: np.sum(spec(fov_waveset))     # * bin_widths * area
-                  for ref, spec in self.spectra.items()}
+        bin_widths = np.diff(fov_waveset)       # u.um
+        bin_widths = 0.5 * (np.r_[0, bin_widths] + np.r_[bin_widths, 0])
+        area = utils.from_currsys(self.meta["area"])    # u.m2
+
+        # PHOTLAM * u.um * u.m2 --> ph / s
+        specs = {ref: (spec(fov_waveset) * bin_widths * area).to(u.ph / u.s)
+                 for ref, spec in self.spectra.items()}
         naxis1, naxis2 = self.hdu.header["NAXIS1"], self.hdu.header["NAXIS2"]
         canvas_image_hdu = fits.ImageHDU(data=np.zeros((naxis2, naxis1)),
                                          header=self.hdu.header)
 
         # 2. Find Cube fields
         for field in self.cube_fields:
-            field.data.sum(axis=0)
+            field_waveset = fu.get_cube_waveset(field.header,
+                                                return_quantity=True)
+            f_bin_widths = np.diff(field_waveset)  # u.um
+            f_bin_widths = 0.5 * (np.r_[0, f_bin_widths] + np.r_[f_bin_widths, 0])
+            field_cube = (field.data * f_bin_widths[:, None, None])
+
+            field_unit = field.header.get("BUNIT", "ph s-1 cm-2 AA-1")
+            flux_scale_factor = u.Unit(field_unit).to("ph s-1 cm-2 AA-1")
+            field_image = field_cube.sum(axis=0) * flux_scale_factor * area
+
+            hdr = field.header
+            hdr["NAXIS"] = 2
+            field_hdu = fits.ImageHDU(data=field_image, header=hdr)
+
+            canvas_cube_hdu = imp_utils.add_imagehdu_to_imagehdu(field_hdu,
+                                                                 canvas_cube_hdu)
 
         # 2. Find Image fields
         for field in self.image_fields:
-            field.data.sum(axis=0)
+            spec = specs[field.header["SPEC_REF"]]  # ph / s
+            tmp_hdu = deepcopy(field)
+            tmp_hdu.data *= np.sum(spec).value
+            canvas_image_hdu = imp_utils.add_imagehdu_to_imagehdu(tmp_hdu,
+                                                               canvas_image_hdu)
 
         # 2. Find Table fields
         for field in self.table_fields:
             for xsky, ysky, ref, weight in field:
+                flux = np.sum(spec).value
+
                 # x, y are ALWAYS in arcsec - crval is in deg
                 xpix, ypix = imp_utils.val2pix(self.hdu.header,
                                                xsky / 3600, ysky / 3600)
                 if utils.from_currsys(self.meta["sub_pixel"]):
                     xs, ys, fracs = imp_utils.sub_pixel_fractions(xpix, ypix)
                     for i, j, k in zip(xs, ys, fracs):
-                        wk = weight * k
-                        canvas_image_hdu.data[j, i] += fluxes[ref].value * wk
+                        canvas_image_hdu.data[j, i] += flux * weight * k
                 else:
                     x, y = int(xpix), int(ypix)
-                    flux_vector = fluxes[ref].value * weight
-                    canvas_image_hdu.data[y, x] += flux_vector
+                    canvas_image_hdu.data[y, x] += flux * weight
 
         return canvas_image_hdu
 

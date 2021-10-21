@@ -212,3 +212,28 @@ class TestMakeImage:
         if PLOTS:
             plt.imshow(img.data, origin="lower")
             plt.show()
+
+    def test_makes_image_from_image(self):
+        src_image = so._image_source()  # 10x10" @ 0.2"/pix, [0.5, 2.5]m @ 0.02µm
+        fov = _fov_190_210_um()
+        fov.extract_from(src_image)
+
+        img = fov.make_image()
+
+        src_im_sum = np.sum(src_image.fields[0].data)
+        src_spec = src_image.spectra[0](fov.waveset).to(u.ph/u.s/u.m**2/u.um)
+        src_flux = 0.91 * np.sum(src_spec * 1 * u.m**2 * 0.02 * u.um).value
+        in_sum = src_im_sum * src_flux
+        out_sum = np.sum(img.data)
+
+        # 2% discrepancy is because the edge bins in FOV (not of equal value)
+        # are multiplied by 0.5 when summed. This test simply multiplies by 0.91
+        # to account for the last (11th) bin edge in the range 1.9 : 2.1 : 0.01
+
+        assert out_sum == approx(in_sum, rel=0.01)
+
+        if PLOTS:
+            plt.imshow(img.data, origin="lower")
+            plt.show()
+
+    def test_makes_image_from_cube(self):
