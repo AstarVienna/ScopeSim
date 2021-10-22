@@ -130,7 +130,7 @@ class TestGenerateFovsImagingMode:
         # .. todo: Fix this - find out why!!!
         # assert np.all(implane.image == 1)
 
-
+@pytest.mark.skip(reason="Ignoring old Spectroscopy integration tests")
 @pytest.mark.usefixtures("ap_list", "spt_list", "det_list",
                          "config_yaml", "spec_source")
 class TestGenerateFOVsSpectroscopyMode:

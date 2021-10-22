@@ -52,6 +52,7 @@ class TestInit:
         assert isinstance(spt, SpectralTraceList)
 
 
+@pytest.mark.skip(reason="Ignoring old Spectroscopy integration tests")
 class TestGetFOVHeaders:
     @pytest.mark.usefixtures("full_trace_list", "slit_header")
     def test_gets_the_headers(self, full_trace_list, slit_header):

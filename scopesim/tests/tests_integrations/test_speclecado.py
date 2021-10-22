@@ -1,3 +1,4 @@
+import pytest
 import os
 from astropy import units as u
 import matplotlib.pyplot as plt
@@ -15,7 +16,7 @@ rc.__search_path__.insert(0, MOCK_DIR)
 
 PLOTS = False
 
-
+@pytest.mark.skip(reason="Ignoring old Spectroscopy integration tests")
 class TestMicadoSpec:
     def test_full_run_through(self):
         src1 = so._vega_source(mag=20)
