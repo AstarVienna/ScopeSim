@@ -1,3 +1,5 @@
+import os
+
 import numpy as np
 from astropy import units as u, wcs
 from astropy.io import fits
@@ -6,6 +8,12 @@ from synphot import SourceSpectrum, Empirical1D
 
 from scopesim.source.source import Source
 from scopesim.source.source_templates import vega_spectrum
+from scopesim import rc
+
+FILES_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),
+                                          "../files/"))
+if FILES_PATH not in rc.__search_path__:
+    rc.__search_path__ += [FILES_PATH]
 
 
 def _table_source():
@@ -77,6 +85,19 @@ def _image_source(dx=0, dy=0, angle=0, weight=1):
     im_source.fields[0].header["PC2_2"] = np.cos(angle)
 
     return im_source
+
+
+def _fits_image_source():
+    n = 50
+    unit = u.Unit("ph s-1 m-2 um-1")
+    wave = np.linspace(0.5, 2.5, n) * u.um
+    specs = [SourceSpectrum(Empirical1D, points=wave,
+                            lookup_table=np.linspace(0, 4, n) * unit)]
+
+    hdulist = fits.open(os.path.join(FILES_PATH, "test_image.fits"))
+    fits_src = Source(image_hdu=hdulist[0], spectra=specs)
+
+    return fits_src
 
 
 def _combined_source(im_angle=0, dx=[0, 0, 0], dy=[0, 0, 0], weight=[1, 1, 1]):

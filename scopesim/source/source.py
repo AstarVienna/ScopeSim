@@ -354,14 +354,14 @@ class Source(SourceBase):
         self.bandpass = bandpass
 
     def append(self, source_to_add):
-        new_source = deepcopy(source_to_add)
+        new_source = source_to_add.make_copy()
         if isinstance(new_source, Source):
             for field in new_source.fields:
                 if isinstance(field, Table):
                     field["ref"] += len(self.spectra)
                     self.fields += [field]
 
-                elif isinstance(field, fits.ImageHDU):
+                elif isinstance(field, (fits.ImageHDU, fits.PrimaryHDU)):
                     if isinstance(field.header["SPEC_REF"], int):
                         field.header["SPEC_REF"] += len(self.spectra)
                     self.fields += [field]
@@ -385,8 +385,21 @@ class Source(SourceBase):
                 plt.plot(x, y, c)
         plt.gca().set_aspect("equal")
 
+    def make_copy(self):
+        new_source = Source()
+        new_source.meta = deepcopy(self.meta)
+        new_source.spectra = deepcopy(self.spectra)
+        for field in self.fields:
+            if isinstance(field, (fits.ImageHDU, fits.PrimaryHDU)) \
+                    and field._file is not None:  # and field._data_loaded is False:
+                new_source.fields += [field]
+            else:
+                new_source.fields += [deepcopy(field)]
+
+        return new_source
+
     def __add__(self, new_source):
-        self_copy = deepcopy(self)
+        self_copy = self.make_copy()
         self_copy.append(new_source)
         return self_copy
 
@@ -401,7 +414,7 @@ class Source(SourceBase):
                 num_spec = set(self.fields[ii]["ref"])
                 msg += "[{}]: Table with {} rows, referencing spectra {} \n" \
                        "".format(ii, tbl_len, num_spec)
-            elif isinstance(self.fields[ii], fits.ImageHDU):
+            elif isinstance(self.fields[ii], (fits.ImageHDU, fits.PrimaryHDU)):
                 im_size = self.fields[ii].data.shape
                 num_spec = "-"
                 if self.fields[ii].header["SPEC_REF"] != "":
