@@ -200,6 +200,18 @@ class TestObserve:
             plt.colorbar()
             plt.show()
 
+    def test_works_with_a_pointer_to_fits_imagehdu(self, cmds):
+        # Basically just checking to make sure observe doesn't throw an error
+        # when passed a Source object with a file pointer ImageHDU
+        fits_src = src_objs._fits_image_source()
+        array_src = src_objs._image_source()
+
+        src = fits_src + array_src
+        opt = OpticalTrain(cmds)
+        opt.observe(src)
+
+        assert np.sum(opt.image_planes[0].data) > 0
+
 
 @pytest.mark.usefixtures("unity_cmds", "unity_src")
 class TestReadout:
