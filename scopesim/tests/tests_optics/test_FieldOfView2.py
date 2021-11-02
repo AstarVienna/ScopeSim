@@ -10,7 +10,7 @@ from scopesim.tests.mocks.py_objects import source_objects as so
 from scopesim.optics.fov2 import FieldOfView
 
 
-PLOTS = True
+PLOTS = False
 
 
 def _fov_190_210_um():
@@ -101,10 +101,10 @@ class TestMakeCube:
         in_sum = 0
         waveset = fov.spectra[0].waveset
         for x, y, ref, weight in src_table.fields[0]:
-            flux = src_table.spectra[ref](waveset).value
-            in_sum += np.sum(flux) * weight
+            flux = src_table.spectra[ref](waveset).to(u.ph/u.s/u.m**2/u.um).value
+            in_sum += np.sum(flux) * weight * 0.02 * 0.91
         out_sum = np.sum(cube.data)
-        assert out_sum == approx(in_sum)
+        assert out_sum == approx(in_sum, rel=0.01)
 
         if PLOTS:
             plt.imshow(cube.data[0, :, :], origin="lower")
@@ -118,10 +118,10 @@ class TestMakeCube:
         cube = fov.make_cube()
 
         waveset = np.linspace(1.9, 2.1, np.shape(cube)[0]) * u.um
-        spec = fov.spectra[0](waveset).value
-        in_sum = np.sum(src_image.fields[0].data) * np.sum(spec)
+        spec = fov.spectra[0](waveset).to(u.ph/u.s/u.m**2/u.um).value
+        in_sum = np.sum(src_image.fields[0].data) * np.sum(spec) * 0.02 * 0.91
         out_sum = np.sum(cube.data)
-        assert out_sum == approx(in_sum)
+        assert out_sum == approx(in_sum, rel=0.01)
 
         if PLOTS:
             plt.imshow(cube.data[0, :, :], origin="lower")
@@ -134,8 +134,9 @@ class TestMakeCube:
 
         cube = fov.make_cube()
 
-        n = 74      # layer 74 to 77 are extracted by FOV
-        in_sum = np.sum(src_cube.fields[0].data[74:77, :, :])
+        # layer 74 to 77 are extracted by FOV
+        bin_widths = np.array([0.01, 0.02, 0.01])[:, None, None]
+        in_sum = np.sum(src_cube.fields[0].data[74:77, :, :] * bin_widths)
         out_sum = np.sum(cube.data)
 
         assert out_sum == approx(in_sum)
@@ -151,8 +152,9 @@ class TestMakeCube:
 
         cube = fov.make_cube()
 
-        n = 74      # layer 74 to 77 are extracted by FOV
-        in_sum = 2 * np.sum(src_cube.fields[0].data[74:77, :, :])
+        # layer 74 to 77 are extracted by FOV
+        bin_widths = np.array([0.01, 0.02, 0.01])[:, None, None]
+        in_sum = 2 * np.sum(src_cube.fields[0].data[74:77, :, :] * bin_widths)
         out_sum = np.sum(cube.data)
 
         assert out_sum == approx(in_sum)
@@ -162,34 +164,38 @@ class TestMakeCube:
             plt.show()
 
     def test_makes_cube_from_all_types_of_source_object(self):
-        src_all = so._cube_source(weight=1e-8, dx=4) + \
+        src_all = so._table_source() + \
                   so._image_source(dx=-4, dy=-4) + \
-                  so._table_source()
+                  so._cube_source(weight=1e-8, dx=4)
+
         fov = _fov_190_210_um()
         fov.extract_from(src_all)
 
         cube = fov.make_cube()
 
         # sum up the expected flux in the output cube
-        table_sum = 0
         waveset = fov.spectra[0].waveset
-        for x, y, ref, weight in src_all.fields[2]:
+        scale_factor = 0.02 * 0.91 * 1e8    # bin_width * half width edge bin * PHOTLAM -> SI
+
+        table_sum = 0
+        for x, y, ref, weight in src_all.fields[0]:
             flux = src_all.spectra[ref](waveset).value
-            table_sum += np.sum(flux) * weight
+            table_sum += np.sum(flux) * weight * scale_factor
 
         ref = src_all.fields[1].header["SPEC_REF"]
         spec = fov.spectra[ref](waveset).value
-        image_sum = np.sum(src_all.fields[1].data) * np.sum(spec)
+        image_sum = np.sum(src_all.fields[1].data) * np.sum(spec) * scale_factor
 
-        cube_sum = np.sum(src_all.fields[0].data[70:81, :, :])
+        cube_sum = np.sum(src_all.fields[2].data[70:81, :, :]) * 0.02 * 0.95
 
         in_sum = table_sum + image_sum + cube_sum
         out_sum = np.sum(cube.data)
 
-        assert out_sum == approx(in_sum)
+        assert out_sum == approx(in_sum, rel=0.01)
 
         if PLOTS:
-            plt.imshow(cube.data[0, :, :], origin="lower", norm=LogNorm())
+            im = cube.data[0, :, :]
+            plt.imshow(im, origin="lower", norm=LogNorm(), vmin=1e-8)
             plt.show()
 
 
@@ -204,14 +210,16 @@ class TestMakeImage:
         in_sum = 0
         waveset = fov.spectra[0].waveset
         for x, y, ref, weight in src_table.fields[0]:
-            flux = src_table.spectra[ref](waveset).value
-            in_sum += np.sum(flux) * weight
+            flux = src_table.spectra[ref](waveset).to(u.ph/u.s/u.m**2/u.um)
+            flux *= 1 * u.m**2 * 0.02 * u.um * 0.9      # 0.9 is to catch the half bins at either end
+            in_sum += np.sum(flux).value * weight
         out_sum = np.sum(img.data)
-        assert out_sum == approx(in_sum)
 
         if PLOTS:
             plt.imshow(img.data, origin="lower")
             plt.show()
+
+        assert out_sum == approx(in_sum, rel=0.02)
 
     def test_makes_image_from_image(self):
         src_image = so._image_source()  # 10x10" @ 0.2"/pix, [0.5, 2.5]m @ 0.02µm
@@ -237,3 +245,135 @@ class TestMakeImage:
             plt.show()
 
     def test_makes_image_from_cube(self):
+        src_cube = so._cube_source()  # 10x10" @ 0.2"/pix, [0.5, 2.5]m @ 0.02µm
+        fov = _fov_197_202_um()
+        fov.extract_from(src_cube)
+
+        image = fov.make_image()
+
+        # layer 74 to 77 are extracted by FOV
+        in_sum = np.sum(src_cube.fields[0].data[74:77, :, :])
+        out_sum = np.sum(image.data)
+
+        if PLOTS:
+            plt.imshow(image.data, origin="lower")
+            plt.show()
+
+        assert out_sum == approx(in_sum)
+
+    def test_makes_image_from_all_types_of_source_object(self):
+        src_all = so._table_source() + \
+                  so._image_source(dx=-4, dy=-4) + \
+                  so._cube_source(weight=1e-8, dx=4)
+
+        fov = _fov_190_210_um()
+        fov.extract_from(src_all)
+
+        image = fov.make_image()
+
+        # sum up the expected flux in the output cube
+        waveset = fov.spectra[0].waveset
+        scale_factor = 0.02 * 0.91 * 1e8  # bin_width * half width edge bin * PHOTLAM -> SI
+
+        table_sum = 0
+        for x, y, ref, weight in src_all.fields[0]:
+            flux = src_all.spectra[ref](waveset).value
+            table_sum += np.sum(flux) * weight * scale_factor
+
+        ref = src_all.fields[1].header["SPEC_REF"]
+        spec = fov.spectra[ref](waveset).value
+        image_sum = np.sum(src_all.fields[1].data) * np.sum(spec) * scale_factor
+
+        cube_sum = np.sum(src_all.fields[2].data[70:81, :, :]) * 0.02 * 0.95
+
+        in_sum = table_sum + image_sum + cube_sum
+        out_sum = np.sum(image.data)
+
+        assert out_sum == approx(in_sum, rel=0.01)
+
+        if PLOTS:
+            im = image.data
+            plt.imshow(im, origin="lower", norm=LogNorm(), vmin=1e-8)
+            plt.show()
+
+    def test_make_cube_and_make_image_return_the_same_fluxes(self):
+        src_all = so._table_source() + \
+                  so._image_source(dx=-4, dy=-4) + \
+                  so._cube_source(weight=1e-8, dx=4)
+
+        fov = _fov_190_210_um()
+        fov.extract_from(src_all)
+
+        cube = fov.make_cube()
+        image = fov.make_image()
+
+        assert np.sum(cube.data) == approx(np.sum(image.data), rel=0.001)
+
+class TestMakeSpectrum:
+    def test_make_spectrum_from_table(self):
+        src_table = so._table_source()            # 10x10" @ 0.2"/pix, [0.5, 2.5]m @ 0.02µm
+        fov = _fov_190_210_um()
+        fov.extract_from(src_table)
+
+        spec = fov.make_spectrum()
+
+        in_sum = np.sum([n * spec(fov.waveset).value
+                        for n, spec in zip([3, 1, 1], src_table.spectra)])      # sum of weights [3,1,1]
+        out_sum = np.sum(spec(fov.waveset).value)
+
+        assert in_sum == approx(out_sum)
+
+    def test_make_spectrum_from_image(self):
+        src_image = so._image_source()  # 10x10" @ 0.2"/pix, [0.5, 2.5]m @ 0.02µm
+        fov = _fov_190_210_um()
+        fov.extract_from(src_image)
+
+        spec = fov.make_spectrum()
+
+        in_sum = np.sum(src_image.fields[0].data) * \
+                 np.sum(src_image.spectra[0](fov.waveset).value)
+        out_sum = np.sum(spec(fov.waveset).value)
+
+        assert in_sum == approx(out_sum)
+
+    def test_make_spectrum_from_cube(self):
+        src_cube = so._cube_source()  # 10x10" @ 0.2"/pix, [0.5, 2.5]m @ 0.02µm
+        fov = _fov_197_202_um()
+        fov.extract_from(src_cube)
+
+        spec = fov.make_spectrum()
+
+        in_sum = np.sum(src_cube.fields[0].data[74:77, :, :]) * 1e-8
+        out_sum = np.sum(spec(fov.waveset).value)
+
+        assert in_sum == approx(out_sum)
+
+    def test_makes_spectrum_from_all_types_of_source_object(self):
+        src_table = so._table_source()
+        src_image = so._image_source(dx=-4, dy=-4)
+        src_cube = so._cube_source(weight=1e-8, dx=4)
+        src_all = src_table + src_image + src_cube
+
+        fov = _fov_190_210_um()
+        fov.extract_from(src_all)
+
+        spec = fov.make_spectrum()
+
+        table_sum = np.sum([n * spec(fov.waveset).value
+                            for n, spec in zip([3, 1, 1], src_table.spectra)])  # sum of weights [3,1,1]
+        image_sum = np.sum(src_image.fields[0].data) * \
+                    np.sum(src_image.spectra[0](fov.waveset).value)
+        cube_sum = np.sum(src_cube.fields[0].data[70:81, :, :]) * 1e-8
+
+        in_sum = table_sum + image_sum + cube_sum
+        out_sum = np.sum(spec(fov.waveset).value)
+
+        assert in_sum == approx(out_sum)
+
+        if PLOTS:
+            waves = fov.waveset
+            plt.plot(waves, spec(waves))
+            for spectrum in src_all.spectra:
+                plt.plot(waves, spectrum(waves))
+            plt.show()
+

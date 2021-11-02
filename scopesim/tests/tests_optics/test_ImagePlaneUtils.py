@@ -328,3 +328,10 @@ class TestSubPixelFractions:
         assert fracs[0] == approx(frac)
         assert xs[0] == int(np.floor(x))
         assert ys[0] == int(np.floor(y))
+
+    # def test_returns_expected_origin_fraction_for_list(self):
+    #     x, y = np.array([1.1, 2.9]), np.array([0.0, 0.5])
+    #     xs, ys, fracs = imp_utils.sub_pixel_fractions(x, y)
+    #     print(xs)
+
+

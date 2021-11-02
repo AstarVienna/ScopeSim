@@ -6,6 +6,8 @@ from scipy.interpolate import interp1d
 from astropy import units as u
 from astropy.io import fits
 from astropy.table import Table, Column
+from synphot import Empirical1D, SourceSpectrum
+from synphot.units import PHOTLAM
 
 from . import fov_utils as fu
 from . import image_plane_utils as imp_utils
@@ -121,12 +123,72 @@ class FieldOfView(FieldOfViewBase):
         self.spectra = spectra
 
     def view(self, sub_pixel=None):
-        return None
+        return self.make_image()
 
     def make_spectrum(self):
-        # This is needed for when we do incoherent MOS instruments.
-        # Each fibre doesn't care about the spatial information.
-        return None
+        """
+        This is needed for when we do incoherent MOS instruments.
+        Each fibre doesn't care about the spatial information.
+
+        1. Make waveset and zeros flux
+            make dict of spectra evaluated at waveset
+
+        2. Find Cube fields
+            collapse cube along spatial dimensions --> spectrum vector
+            convert vector to PHOTLAM
+            interpolate at waveset
+            add to zeros flux vector
+
+        3. Find Image fields
+            sum image over both dimensions
+            evaluate SPEC_REF spectum at waveset
+            multiply by sum
+            add to zeros flux vector
+
+        4. Find Table fields
+            evaluate all spectra at waveset
+            for each unique ref, sum the weights
+            add each spectra * sum of weights to zeros flux vector
+
+        Returns
+        -------
+        spec : SourceSpectrum
+            [PHOTLAM]
+
+        """
+        fov_waveset = self.waveset
+        canvas_flux = np.zeros(len(fov_waveset))
+
+        specs = {ref: spec(fov_waveset) for ref, spec in self.spectra.items()}
+
+        for field in self.cube_fields:
+            hdu_waveset = fu.get_cube_waveset(field.header, return_quantity=True)
+            fluxes = field.data.sum(axis=2).sum(axis=1)
+            fov_waveset_fluxes = np.interp(fov_waveset, hdu_waveset, fluxes)
+
+            field_unit = field.header.get("BUNIT", PHOTLAM)
+            flux_scale_factor = u.Unit(field_unit).to(PHOTLAM)
+
+            canvas_flux += fov_waveset_fluxes * flux_scale_factor
+
+        for field in self.image_fields:
+            ref = field.header["SPEC_REF"]
+            weight = np.sum(field.data)
+            canvas_flux += self.spectra[ref](fov_waveset).value * weight
+
+
+        for field in self.table_fields:
+            refs = np.array(field["ref"])
+            weights = np.array(field["weight"])
+            weight_sums = {ref: np.sum(weights[refs == ref])
+                           for ref in np.unique(refs)}
+            for ref, weight in weight_sums.items():
+                canvas_flux += self.spectra[ref](fov_waveset).value * weight
+
+        spectrum = SourceSpectrum(Empirical1D, points=fov_waveset,
+                                  lookup_table=canvas_flux)
+
+        return spectrum
 
     def make_image(self):
         """
@@ -173,52 +235,45 @@ class FieldOfView(FieldOfViewBase):
         # PHOTLAM * u.um * u.m2 --> ph / s
         specs = {ref: (spec(fov_waveset) * bin_widths * area).to(u.ph / u.s)
                  for ref, spec in self.spectra.items()}
+        fluxes = {ref: np.sum(spec).value for ref, spec in specs.items()}
         naxis1, naxis2 = self.hdu.header["NAXIS1"], self.hdu.header["NAXIS2"]
         canvas_image_hdu = fits.ImageHDU(data=np.zeros((naxis2, naxis1)),
                                          header=self.hdu.header)
 
         # 2. Find Cube fields
         for field in self.cube_fields:
-            field_waveset = fu.get_cube_waveset(field.header,
-                                                return_quantity=True)
-            f_bin_widths = np.diff(field_waveset)  # u.um
-            f_bin_widths = 0.5 * (np.r_[0, f_bin_widths] + np.r_[f_bin_widths, 0])
-            field_cube = (field.data * f_bin_widths[:, None, None])
-
-            field_unit = field.header.get("BUNIT", "ph s-1 cm-2 AA-1")
-            flux_scale_factor = u.Unit(field_unit).to("ph s-1 cm-2 AA-1")
-            field_image = field_cube.sum(axis=0) * flux_scale_factor * area
-
-            hdr = field.header
-            hdr["NAXIS"] = 2
-            field_hdu = fits.ImageHDU(data=field_image, header=hdr)
-
-            canvas_cube_hdu = imp_utils.add_imagehdu_to_imagehdu(field_hdu,
-                                                                 canvas_cube_hdu)
+            image = np.sum(field.data, axis=0)
+            tmp_hdu = fits.ImageHDU(data=image, header=field.header)
+            canvas_image_hdu = imp_utils.add_imagehdu_to_imagehdu(tmp_hdu,
+                                                               canvas_image_hdu)
 
         # 2. Find Image fields
         for field in self.image_fields:
-            spec = specs[field.header["SPEC_REF"]]  # ph / s
-            tmp_hdu = deepcopy(field)
-            tmp_hdu.data *= np.sum(spec).value
+            image = deepcopy(field.data)
+            tmp_hdu = fits.ImageHDU(data=image, header=field.header)
+            tmp_hdu.data *= fluxes[field.header["SPEC_REF"]]  # ph / s
             canvas_image_hdu = imp_utils.add_imagehdu_to_imagehdu(tmp_hdu,
                                                                canvas_image_hdu)
 
         # 2. Find Table fields
-        for field in self.table_fields:
-            for xsky, ysky, ref, weight in field:
-                flux = np.sum(spec).value
 
-                # x, y are ALWAYS in arcsec - crval is in deg
-                xpix, ypix = imp_utils.val2pix(self.hdu.header,
-                                               xsky / 3600, ysky / 3600)
-                if utils.from_currsys(self.meta["sub_pixel"]):
-                    xs, ys, fracs = imp_utils.sub_pixel_fractions(xpix, ypix)
-                    for i, j, k in zip(xs, ys, fracs):
-                        canvas_image_hdu.data[j, i] += flux * weight * k
-                else:
-                    x, y = int(xpix), int(ypix)
-                    canvas_image_hdu.data[y, x] += flux * weight
+        for field in self.table_fields:
+            # x, y are ALWAYS in arcsec - crval is in deg
+            xpix, ypix = imp_utils.val2pix(self.hdu.header,
+                                           field["x"] / 3600,
+                                           field["y"] / 3600)
+            if utils.from_currsys(self.meta["sub_pixel"]):
+                for i, row in enumerate(field):
+                    xs, ys, fracs = imp_utils.sub_pixel_fractions(xpix[i],
+                                                                  ypix[i])
+                    for x, y, f in zip(xs, ys, fracs):
+                        canvas_image_hdu.data[y, x] += fluxes[ref] * weight * f
+            else:
+                x = np.array(xpix + 0.5).astype(int)
+                y = np.array(ypix + 0.5).astype(int)     # quickest way to round
+                f = np.array([fluxes[ref] for ref in field["ref"]])
+                weight = np.array(field["weight"])
+                canvas_image_hdu.data[y, x] += f * weight
 
         return canvas_image_hdu
 
@@ -324,13 +379,12 @@ class FieldOfView(FieldOfViewBase):
         # 5. Convert from PHOTLAM to ph/s/voxel
         #    PHOTLAM = ph/s/cm-2/AA
         #    area = m2, fov_waveset = um
-
         area = utils.from_currsys(self.meta["area"])    # u.m2
-        canvas_cube_hdu.data *= area.to(u.cm**2)
+        canvas_cube_hdu.data *= area.to(u.cm**2).value
 
-        bin_widths = np.diff(fov_waveset)
+        bin_widths = np.diff(fov_waveset).to(u.AA).value
         bin_widths = 0.5 * (np.r_[0, bin_widths] + np.r_[bin_widths, 0])
-        canvas_cube_hdu.data *= bin_widths.to(u.AA)
+        canvas_cube_hdu.data *= bin_widths[:, None, None]
 
         return canvas_cube_hdu
 
@@ -379,7 +433,9 @@ class FieldOfView(FieldOfViewBase):
     @property
     def waveset(self):
         """Returns a wavelength vector in um"""
-        if len(self.cube_fields) > 0:
+
+        field_cubes = self.cube_fields
+        if len(field_cubes) > 0:
             i = np.argmax([cube.header["NAXIS3"] for cube in field_cubes])
             _waveset = fu.get_cube_waveset(field_cubes[i].header,
                                               return_quantity=True)

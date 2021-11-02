@@ -340,7 +340,8 @@ def extract_area_from_imagehdu(imagehdu, fov_volume):
                         "CRPIX3": 0,
                         "CDELT3": hdr["CDELT3"],
                         "CUNIT3": hdr["CUNIT3"],
-                        "CTYPE3": hdr["CTYPE3"]})
+                        "CTYPE3": hdr["CTYPE3"],
+                        "BUNIT":  hdr["BUNIT"]})
 
     else:
         data = imagehdu.data[y0p:y1p, x0p:x1p]
