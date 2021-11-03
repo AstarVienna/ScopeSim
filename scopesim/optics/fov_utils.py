@@ -8,7 +8,6 @@ from astropy.table import Table, Column
 from scopesim import utils, rc
 from scopesim.optics import image_plane_utils as imp_utils
 
-
 def is_field_in_fov(fov_header, table_or_imagehdu, wcs_suffix=""):
 
     s = wcs_suffix
@@ -133,7 +132,7 @@ def combine_imagehdu_fields(fov_header, src, fields_indexes, wave_min, wave_max,
 
     image = np.zeros((fov_header["NAXIS2"], fov_header["NAXIS1"]))
     canvas_hdu = fits.ImageHDU(header=fov_header, data=image)
-    order = int(rc.__config__["!SIM.computing.spline_order"])
+    order = utils.from_currsys("!SIM.computing.spline_order")
     pixel_area = fov_header["CDELT1"] * fov_header["CDELT2"] * \
                  u.Unit(fov_header["CUNIT1"]).to(u.arcsec) ** 2
 
