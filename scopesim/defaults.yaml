@@ -31,10 +31,10 @@ properties :
     preload_field_of_views : False
 
   file :
-    local_packages_path : "./"
+    local_packages_path : "./inst_pkgs/"
     server_base_url : "https://www.univie.ac.at/simcado/InstPkgSvr/"
     use_cached_downloads : "update"
-    search_path : ["./"]
+    search_path : ["./inst_pkgs/", "./"]
 
   reports :
     # for our own statistics, we track exclusively your institute's ip address
