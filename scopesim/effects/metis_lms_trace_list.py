@@ -1,13 +1,15 @@
 """SpectralTraceList and SpectralTrace for the METIS LM spectrograph"""
 import numpy as np
 
-from astropy.io import ascii as ioascii   # ..todo: remove
+from astropy.io import fits
 
 from astropy.table import Table
 
+from ..utils import from_currsys
 from .spectral_trace_list import SpectralTraceList
 from .spectral_trace_list_utils import SpectralTrace
 from .spectral_trace_list_utils import Transform2D
+
 
 class MetisLMSSpectralTraceList(SpectralTraceList):
     """
@@ -24,20 +26,19 @@ class MetisLMSSpectralTraceList(SpectralTraceList):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+        #self.params = {"wavelen": "!OBS.wavelen"}
+        #self.params.update(kwargs)
 
-        # ..todo: Update parameter values from file header
-
-        self.wavelen = kwargs['wavelen'] # ..todo: move to yaml
+        #self.wavelen = self.params['wavelen']
 
         # field of view of the instrument
         # ..todo: get this from aperture list
         self.view = np.array([self.meta['naxis1'] * self.meta['pixscale'],
                               self.meta['nslice'] * self.meta['slicewidth']])
 
-
-        # ..todo: fill with life
-        if self._file is not None:
-            self.make_spectral_traces()
+        #if self._file is not None:
+        #    print(self._file)
+        #    self.make_spectral_traces()
 
     def make_spectral_traces(self):
         """
@@ -76,13 +77,11 @@ class MetisLMSSpectralTraceList(SpectralTraceList):
         - `Angle`: grism angle
         - `Phase`: phase
         """
-        lam = self.meta['wavelen']
+        lam = from_currsys(self.meta['wavelen'])
         grat_spacing = self.meta['grat_spacing']
 
         # Read wcal extension of layout file
-        # ..todo: switch to extension of FITS file
-        wcal_file = "lms_dist_wcal.txt"
-        wcal = ioascii.read(wcal_file, comment="^#", format="csv")
+        wcal = self._file['WCAL'].data
 
         # Compute angles, determine which order gives angle closest to zero
         angles = wcal['c0'] * lam + wcal['c1']

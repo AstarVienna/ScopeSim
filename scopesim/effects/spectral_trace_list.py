@@ -99,8 +99,8 @@ class SpectralTraceList(Effect):
                  "wave_min": "!SIM.spectral.wave_min",  # [um]
                  "wave_mid": "!SIM.spectral.wave_mid",  # [um]
                  "wave_max": "!SIM.spectral.wave_max",  # [um]
-                  "report_plot_include": True,
-                  "report_table_include": False}
+                 "report_plot_include": True,
+                 "report_table_include": False}
         self.meta.update(params)
 
         # Parameters that are specific to the subclass
