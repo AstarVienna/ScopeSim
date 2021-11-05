@@ -2,12 +2,14 @@ import pytest
 from pytest import approx
 import numpy as np
 from astropy import units as u
+from astropy.io import fits
 from matplotlib import pyplot as plt
 from matplotlib.colors import LogNorm
 
 from scopesim.tests.mocks.py_objects import header_objects as ho
 from scopesim.tests.mocks.py_objects import source_objects as so
 from scopesim.optics.fov2 import FieldOfView
+from scopesim.optics.fov_utils import get_cube_waveset
 
 
 PLOTS = False
@@ -27,6 +29,22 @@ def _fov_197_202_um():
     wav = [1.97000000001, 2.02] * u.um  # Needs [1.98, 2.00, 2.02] µm --> 3 slices
     fov = FieldOfView(hdr, wav, area=1*u.m**2)
     return fov
+
+
+
+class TestInit:
+    def test_initialises_with_nothing_raise_error(self):
+        with pytest.raises(TypeError):
+            FieldOfView()
+
+    def test_throws_error_if_no_wcs_in_header(self):
+        with pytest.raises(ValueError):
+            FieldOfView(fits.Header(), (1, 2) * u.um, area=1*u.m**2)
+
+    def test_initialises_with_header_and_waverange(self):
+        hdr = _fov_190_210_um().header
+        the_fov = FieldOfView(hdr, (1, 2)*u.um, area=1*u.m**2)
+        assert isinstance(the_fov, FieldOfView)
 
 
 class TestExtractFrom:
@@ -88,6 +106,41 @@ class TestExtractFrom:
         for spec in fov.spectra.values():
             assert spec.waveset[0].value == approx(1.97e4)
             assert spec.waveset[-1].value == approx(2.02e4)     # Angstrom
+
+    # Below are tests from original FieldOfView object
+
+    def test_ignores_fields_outside_fov_boundary(self):
+        src = so._combined_source(dx=[200, 200, 200])
+        src.fields[0]["x"] += 200
+
+        fov = _fov_197_202_um()
+        fov.extract_from(src)
+
+        assert len(fov.fields) == 0
+
+    def test_all_spectra_are_referenced_correctly(self):
+        src = so._image_source() + so._cube_source() + so._table_source()
+        fov = _fov_190_210_um()
+        fov.extract_from(src)
+        # check the same spectrum object is referenced by both lists
+        assert fov.fields[0].header["SPEC_REF"] == \
+               src.fields[0].header["SPEC_REF"]
+        assert np.all([fov.fields[2][i]["ref"] == \
+                       src.fields[2][i]["ref"] for i in range(4)])
+
+        def test_contains_all_fields_inside_fov(self, basic_fov_header,
+                                                cube_source,
+                                                image_source, table_source):
+            src = image_source + cube_source + table_source
+            the_fov = FieldOfView(basic_fov_header, (1, 2) * u.um,
+                                  area=1 * u.m ** 2)
+            the_fov.extract_from(src)
+            assert len(the_fov.fields) == 3
+            assert isinstance(the_fov.fields[0], fits.ImageHDU)
+            assert isinstance(the_fov.fields[1], fits.ImageHDU)
+            assert the_fov.fields[1].header["NAXIS"] == 3
+            assert isinstance(the_fov.fields[2], Table)
+
 
 
 class TestMakeCube:
@@ -198,6 +251,21 @@ class TestMakeCube:
             plt.imshow(im, origin="lower", norm=LogNorm(), vmin=1e-8)
             plt.show()
 
+    @pytest.mark.parametrize("src", [so._table_source(),
+                                     so._image_source(),
+                                     so._cube_source()])
+    def test_cube_has_full_wcs(self, src):
+        fov = _fov_190_210_um()
+        fov.extract_from(src)
+
+        cube = fov.make_cube()
+
+        assert "CDELT3" in cube.header
+        assert "CRVAL3" in cube.header
+        assert "CRPIX3" in cube.header
+        assert "CUNIT3" in cube.header
+        assert "CTYPE3" in cube.header
+
 
 class TestMakeImage:
     def test_makes_image_from_table(self):
@@ -296,19 +364,6 @@ class TestMakeImage:
             plt.imshow(im, origin="lower", norm=LogNorm(), vmin=1e-8)
             plt.show()
 
-    def test_make_cube_and_make_image_return_the_same_fluxes(self):
-        src_all = so._table_source() + \
-                  so._image_source(dx=-4, dy=-4) + \
-                  so._cube_source(weight=1e-8, dx=4)
-
-        fov = _fov_190_210_um()
-        fov.extract_from(src_all)
-
-        cube = fov.make_cube()
-        image = fov.make_image()
-
-        assert np.sum(cube.data) == approx(np.sum(image.data), rel=0.001)
-
 class TestMakeSpectrum:
     def test_make_spectrum_from_table(self):
         src_table = so._table_source()            # 10x10" @ 0.2"/pix, [0.5, 2.5]m @ 0.02µm
@@ -377,3 +432,43 @@ class TestMakeSpectrum:
                 plt.plot(waves, spectrum(waves))
             plt.show()
 
+class TestMakeSpectrumImageCubeAllPlayNicely:
+    def test_make_cube_and_make_spectrum_return_the_same_fluxes(self):
+        src_all = so._table_source() + \
+                  so._image_source(dx=-4, dy=-4) + \
+                  so._cube_source(weight=1e-8, dx=4)
+
+        fov = _fov_190_210_um()
+        fov.extract_from(src_all)
+
+        # units of ph / s / voxel
+        cube = fov.make_cube()
+        cube_waves = get_cube_waveset(cube.header)
+        cube_spectrum = cube.data.sum(axis=2).sum(axis=1)
+
+        # units of ph / s / cm-2 / AA-1
+        waves = fov.waveset
+        spectrum = fov.make_spectrum()(waves).value
+        bin_width = 0.02        # um
+        photlam_to_si = 1e8     # cm-2 AA-1 --> m-2 um-1
+        spectrum *= bin_width * photlam_to_si
+
+        if PLOTS:
+            plt.plot(waves, spectrum, "k")
+            plt.plot(cube_waves, cube_spectrum, "r")
+            plt.show()
+
+        assert np.sum(cube.data) == approx(np.sum(spectrum) * 0.91, rel=0.001)
+
+    def test_make_cube_and_make_image_return_the_same_fluxes(self):
+        src_all = so._table_source() + \
+                  so._image_source(dx=-4, dy=-4) + \
+                  so._cube_source(weight=1e-8, dx=4)
+
+        fov = _fov_190_210_um()
+        fov.extract_from(src_all)
+
+        cube = fov.make_cube()
+        image = fov.make_image()
+
+        assert np.sum(cube.data) == approx(np.sum(image.data), rel=0.001)

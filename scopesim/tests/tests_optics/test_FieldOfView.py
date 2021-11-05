@@ -221,20 +221,6 @@ class TestIsFieldInFOV:
         assert fov_utils.is_field_in_fov(basic_fov_header, image_source.fields[0])
 
 
-class TestMakeFluxTable:
-    def test_flux_in_equals_flux_out(self):
-        pass
-
-
-class TestCombineTableFields:
-    def test_flux_in_equals_flux_out(self):
-        pass
-
-
-class TestCombineImageHDUFields:
-    def test_flux_in_equals_flux_out(self):
-        pass
-
 
 @pytest.mark.usefixtures("cube_source")
 class TestCubeSourceInput:

@@ -218,6 +218,11 @@ class FieldOfView(FieldOfViewBase):
             sum spectra between wavelength edges
             add summed flux at x,y position in canvas image
 
+        Returns
+        -------
+        image_hdu : fits.ImageHDU
+            [ph s-1 pixel-1]
+
         """
 
         if self.cube is not None:
@@ -275,7 +280,9 @@ class FieldOfView(FieldOfViewBase):
                 weight = np.array(field["weight"])
                 canvas_image_hdu.data[y, x] += f * weight
 
-        return canvas_image_hdu
+        image_hdu = canvas_image_hdu
+
+        return image_hdu
 
     def make_cube(self):
         """
@@ -323,6 +330,12 @@ class FieldOfView(FieldOfViewBase):
         - cubes: PHOTLAM * bin_width
 
         .. warning:: Images and Cubes need to be in units of pixel-1 (or voxel-1), not arcsec-2
+
+        Returns
+        -------
+        canvas_cube_hdu : fits.ImageHDU
+            [ph s-1 voxel-1]
+
 
         """
         # 1. Make waveset and canvas cube (area, bin_width are applied at end)
@@ -386,7 +399,16 @@ class FieldOfView(FieldOfViewBase):
         bin_widths = 0.5 * (np.r_[0, bin_widths] + np.r_[bin_widths, 0])
         canvas_cube_hdu.data *= bin_widths[:, None, None]
 
-        return canvas_cube_hdu
+        cdelt3 = np.diff(fov_waveset)[0]
+        canvas_cube_hdu.header.update({"CDELT3": cdelt3.to(u.um).value,
+                                       "CRVAL3": fov_waveset[0].value,
+                                       "CRPIX3": 0,
+                                       "CUNIT3": "um",
+                                       "CTYPE3": "WAV"})
+
+        cube_hdu = canvas_cube_hdu
+
+        return cube_hdu
 
     def volume(self, wcs_prefix=""):
         xs, ys = imp_utils.calc_footprint(self.header, wcs_suffix=wcs_prefix)
