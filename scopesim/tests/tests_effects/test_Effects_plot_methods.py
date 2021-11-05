@@ -230,8 +230,8 @@ class TestADC:
         waves = (0.7, 0.8)
         adc = shifts.AtmosphericDispersionCorrection(**atmo_params)
         fov = _centre_fov(n=10, waverange=waves)
-        fov.hdu.header["CDELT1"] = 1 / 3600 * pixel_scale
-        fov.hdu.header["CDELT2"] = 1 / 3600 * pixel_scale
+        fov.header["CDELT1"] = 1 / 3600 * pixel_scale
+        fov.header["CDELT2"] = 1 / 3600 * pixel_scale
         old_crpix_d = np.array([fov.header["CRPIX1D"], fov.header["CRPIX2D"]])
         adc.apply_to(fov)
         new_crpix_d = np.array([fov.header["CRPIX1D"], fov.header["CRPIX2D"]])

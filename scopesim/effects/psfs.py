@@ -573,7 +573,7 @@ class FieldConstantPSF(DiscretePSF):
                 unit_factor = 1
 
             kernel_pixel_scale = hdr["CDELT1"] * unit_factor
-            fov_pixel_scale = fov.hdu.header["CDELT1"]
+            fov_pixel_scale = fov.header["CDELT1"]
 
             # rescaling kept inside loop to avoid rescaling for every fov
             pix_ratio = kernel_pixel_scale / fov_pixel_scale
@@ -619,10 +619,10 @@ class FieldVaryingPSF(DiscretePSF):
 
         # check if there are any fov.fields to apply a psf to
         if len(fov.fields) > 0:
-            if fov.hdu.data is None:
-                fov.view(self.meta["sub_pixel_flag"])
+            if fov.image is None:
+                fov.image = fov.make_image()
 
-            old_shape = fov.hdu.data.shape
+            old_shape = fov.image.data.shape
 
             # get the kernels that cover this fov, and their respective masks
             # kernels and masks are returned by .get_kernel as a list of tuples
@@ -636,7 +636,7 @@ class FieldVaryingPSF(DiscretePSF):
                     kernel /= sum_kernel
 
                 # image convolution
-                image = fov.hdu.data.astype(float)
+                image = fov.image.data.astype(float)
                 kernel = kernel.astype(float)
                 new_image = convolve(image, kernel, mode="same")
                 if canvas is None:
@@ -651,16 +651,16 @@ class FieldVaryingPSF(DiscretePSF):
 
             # reset WCS header info
             new_shape = canvas.shape
-            fov.hdu.data = canvas
+            fov.image.data = canvas
 
             # ..todo: careful with which dimensions mean what
-            if "CRPIX1" in fov.hdu.header:
-                fov.hdu.header["CRPIX1"] += (new_shape[0] - old_shape[0]) / 2
-                fov.hdu.header["CRPIX2"] += (new_shape[1] - old_shape[1]) / 2
+            if "CRPIX1" in fov.header:
+                fov.header["CRPIX1"] += (new_shape[0] - old_shape[0]) / 2
+                fov.header["CRPIX2"] += (new_shape[1] - old_shape[1]) / 2
 
-            if "CRPIX1D" in fov.hdu.header:
-                fov.hdu.header["CRPIX1D"] += (new_shape[0] - old_shape[0]) / 2
-                fov.hdu.header["CRPIX2D"] += (new_shape[1] - old_shape[1]) / 2
+            if "CRPIX1D" in fov.header:
+                fov.header["CRPIX1D"] += (new_shape[0] - old_shape[0]) / 2
+                fov.header["CRPIX2D"] += (new_shape[1] - old_shape[1]) / 2
 
         return fov
 
@@ -685,11 +685,11 @@ class FieldVaryingPSF(DiscretePSF):
 
         # compare the fov and psf pixel scales
         kernel_pixel_scale = self._file[ext].header["CDELT1"]
-        fov_pixel_scale = fov.hdu.header["CDELT1"]
+        fov_pixel_scale = fov.header["CDELT1"]
 
         # get the spatial map of the kernel cube layers
         strl_hdu = self.strehl_imagehdu
-        strl_cutout = pu.get_strehl_cutout(fov.hdu.header, strl_hdu)
+        strl_cutout = pu.get_strehl_cutout(fov.header, strl_hdu)
 
         # get the kernels and mask that fit inside the fov boundaries
         layer_ids = np.round(np.unique(strl_cutout.data)).astype(int)

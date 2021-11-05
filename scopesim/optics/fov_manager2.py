@@ -1,31 +1,50 @@
-# 1. Find the Wavelength range
-# Build from edges of throughput curve
+"""
+Influences
+Spectral:
+    - Red and blue edges of full spectrum
+    - Chunks of a large spectral range
+Spatial:
+    - On-sky borders of Detector Array
+    - On-sky borders of Aperture Mask
+    - Chunks of large on-sky area
+    - Slit mask borders
+    - Multiple slits for IFU, mirror-MOS
+    - Multiple lenses for fibre-fed MOS
 
-# 2. Find the wavelength bins
-# If TraceList and Aperture list, then Spectroscopy
-# TraceList
-# for each trace dlam along the trace centre in increments
-#   of SIM_SUB_PIXEL_FRACTION
-# Must be accompanied by an ApertureList
+- each Effect should submit a list of volumes
 
-# If not, then imaging
-# PSF core increase (atmo, ncpas)
-# If from a files, what is the bin size?
-# If analytic, dlam between a FWHM or SIM_SUB_PIXEL_FRACTION
-# ADC + AD shifts
-# dlam between shift of SIM_SUB_PIXEL_FRACTION
+IFU spectroscopy depends on:
+    - the tracelist
+    - the list of apertures
+    - the detector array borders
+    - PSF wavelength granularity
+    - Atmospheric dispersion
 
-# 3. Find the spatial range
-# If Spectroscopy
-# ApertureList
-# For each Trace set the sky header to the aperture footprint
-#   plus any shifts from AtmosphericDispersion
-# Set the Image plane footprint centred on the image plane
-#   position
+MOS spectroscopy depends on:
+    - the tracelist
+    - the list of apertures
+    - Atmospheric dispersion
+    - PSF wavelength granularity
+    - the detector array borders
 
-# If Imaging
-# DetectorList, or ApertureMask, plus any shift from
-#   AtmosphericDispersion
+Long slit spectroscopy depends on:
+    - the tracelist ra, dec, lam vol --> x, y area
+    - the slit aperture
+    - the detector array borders
+    - PSF wavelength granularity
+    - Atmospheric dispersion
+
+Imaging dependent on:
+    - Detector array borders
+    - PSF wavelength granularity
+    - Atmospheric dispersion
+
+
+"""
+
+
+
+
 
 from astropy.table import Table
 from . import fov_manager_utils as fmu

@@ -82,8 +82,8 @@ class TestGetKernel:
     @pytest.mark.parametrize("factor", [0.2, 1, 3])
     def test_kernel_is_scale_properly_if_cdelts_differ(self, factor):
         fov = _centre_fov(n=10)
-        fov.hdu.header["CDELT1"] *= factor
-        fov.hdu.header["CDELT2"] *= factor
+        fov.header["CDELT1"] *= factor
+        fov.header["CDELT2"] *= factor
 
         fvpsf = FieldVaryingPSF(filename="test_FVPSF.fits")
         kernels = fvpsf.get_kernel(fov)
@@ -95,8 +95,8 @@ class TestGetKernel:
 
     def test_returns_four_arrays_when_fov_on_intersection(self):
         fov = _centre_fov(n=20)
-        fov.hdu.header["CRVAL1"] -= 15/3600.
-        fov.hdu.header["CRVAL2"] -= 15/3600.
+        fov.header["CRVAL1"] -= 15/3600.
+        fov.header["CRVAL2"] -= 15/3600.
 
         fvpsf = FieldVaryingPSF(filename="test_FVPSF.fits")
         kernels = fvpsf.get_kernel(fov)
@@ -171,10 +171,10 @@ class TestFunctionGetStrehlCutout:
     @pytest.mark.parametrize("scale", [0.2, 0.5, 1, 2])
     def test_returns_correct_section_of_strehl_map(self, scale):
         centre_fov = _centre_fov(10)
-        centre_fov.hdu.header["CDELT1"] *= scale
-        centre_fov.hdu.header["CDELT2"] *= scale
-        centre_fov.hdu.header["CRVAL1"] -= 15/3600.
-        centre_fov.hdu.header["CRVAL2"] -= 15/3600.
+        centre_fov.header["CDELT1"] *= scale
+        centre_fov.header["CDELT2"] *= scale
+        centre_fov.header["CRVAL1"] -= 15/3600.
+        centre_fov.header["CRVAL2"] -= 15/3600.
 
         fvpsf = FieldVaryingPSF(filename="test_FVPSF.fits")
         strehl_hdu = scopesim.effects.psf_utils.get_strehl_cutout(centre_fov.header,

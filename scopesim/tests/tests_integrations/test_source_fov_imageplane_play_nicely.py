@@ -51,10 +51,10 @@ class TestInteractionBetweenSourceFOVImagePlane:
         as2deg = u.arcsec.to(u.deg)
 
         fov = FieldOfView(fov_hdr, waverange=[0.5, 2.5]*u.um)
-        fov.hdu.header["CRVAL1"] += 1.5 * as2deg
-        fov.hdu.header["CRVAL2"] -= 1.5 * as2deg
-        fov.hdu.header["CRVAL1D"] += 30
-        fov.hdu.header["CRVAL2D"] -= 30
+        fov.header["CRVAL1"] += 1.5 * as2deg
+        fov.header["CRVAL2"] -= 1.5 * as2deg
+        fov.header["CRVAL1D"] += 30
+        fov.header["CRVAL2D"] -= 30
 
         imp = ImagePlane(implane_hdr)
         fov.extract_from(comb_src)

@@ -210,8 +210,8 @@ class AtmosphericDispersionCorrection(Shift3D):
             dy_pix = shift_rel_pixel * np.cos(np.deg2rad(pup_ang))
             dx_pix = shift_rel_pixel * np.sin(np.deg2rad(pup_ang))
 
-            fov.hdu.header["CRPIX1D"] += dx_pix
-            fov.hdu.header["CRPIX2D"] += dy_pix
+            fov.header["CRPIX1D"] += dx_pix
+            fov.header["CRPIX2D"] += dy_pix
 
         return fov
 

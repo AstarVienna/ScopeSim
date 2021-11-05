@@ -62,22 +62,19 @@ class FieldOfView(FieldOfViewBase):
             raise ValueError("header must contain a valid image-plane WCS: {}"
                              "".format(dict(header)))
 
-        if isinstance(header, PoorMansHeader):
-            self.hdu = fits.ImageHDU()
-            self.hdu.header.update(header)
-        else:
-            self.hdu = fits.ImageHDU(header=header)
-        self.hdu.header["NAXIS"] = 2
-        self.hdu.header["NAXIS1"] = header["NAXIS1"]
-        self.hdu.header["NAXIS2"] = header["NAXIS2"]
+        self.header = fits.Header()
+        self.header["NAXIS"] = 2
+        self.header["NAXIS1"] = header["NAXIS1"]
+        self.header["NAXIS2"] = header["NAXIS2"]
+        self.header.update(header)
 
         self.image_plane_id = 0
         self.fields = []
         self.spectra = {}
 
-        self.cube = None        # IFU, long-lit, Slicer-MOS
-        self.image = None       # Imagers
-        self.spectrum = None    # Fibre-fed MOS
+        self.cube = None        # 3D ImageHDU for IFU, long-lit, Slicer-MOS
+        self.image = None       # 2D ImageHDU for Imagers
+        self.spectrum = None    # SourceSPectrum for Fibre-fed MOS
 
         self._waverange = None
         self._wavelength = None
@@ -96,7 +93,7 @@ class FieldOfView(FieldOfViewBase):
                              "".format(type(src)))
 
         fields_in_fov = [field for field in src.fields
-                         if fu.is_field_in_fov(self.hdu.header, field)]
+                         if fu.is_field_in_fov(self.header, field)]
 
         spec_refs = []
         volume = self.volume()
@@ -228,7 +225,7 @@ class FieldOfView(FieldOfViewBase):
         if self.cube is not None:
             image = cube.sum(axis=0)
             canvas_image_hdu = fits.ImageHDU(data=image,
-                                             header=self.hdu.header)
+                                             header=self.header)
             return canvas_image_hdu
 
         # 1. Make waveset and canvas image
@@ -241,9 +238,9 @@ class FieldOfView(FieldOfViewBase):
         specs = {ref: (spec(fov_waveset) * bin_widths * area).to(u.ph / u.s)
                  for ref, spec in self.spectra.items()}
         fluxes = {ref: np.sum(spec).value for ref, spec in specs.items()}
-        naxis1, naxis2 = self.hdu.header["NAXIS1"], self.hdu.header["NAXIS2"]
+        naxis1, naxis2 = self.header["NAXIS1"], self.header["NAXIS2"]
         canvas_image_hdu = fits.ImageHDU(data=np.zeros((naxis2, naxis1)),
-                                         header=self.hdu.header)
+                                         header=self.header)
 
         # 2. Find Cube fields
         for field in self.cube_fields:
@@ -264,7 +261,7 @@ class FieldOfView(FieldOfViewBase):
 
         for field in self.table_fields:
             # x, y are ALWAYS in arcsec - crval is in deg
-            xpix, ypix = imp_utils.val2pix(self.hdu.header,
+            xpix, ypix = imp_utils.val2pix(self.header,
                                            field["x"] / 3600,
                                            field["y"] / 3600)
             if utils.from_currsys(self.meta["sub_pixel"]):
@@ -344,10 +341,10 @@ class FieldOfView(FieldOfViewBase):
                  for ref, spec in self.spectra.items()}
 
         # make canvas cube based on waveset of largest cube and NAXIS1,2 from fov.header
-        naxis1, naxis2 = self.hdu.header["NAXIS1"], self.hdu.header["NAXIS2"]
+        naxis1, naxis2 = self.header["NAXIS1"], self.header["NAXIS2"]
         naxis3 = len(fov_waveset)
         canvas_cube_hdu = fits.ImageHDU(data=np.zeros((naxis3, naxis2, naxis1)),
-                                        header=self.hdu.header)
+                                        header=self.header)
         canvas_cube_hdu.header["BUNIT"] = "ph s-1 cm-2 AA-1"
 
         # 2. Add Cube fields
@@ -367,7 +364,7 @@ class FieldOfView(FieldOfViewBase):
         # 3. Find Image fields
         for field in self.image_fields:
             canvas_image_hdu = fits.ImageHDU(data=np.zeros((naxis2, naxis1)),
-                                             header=self.hdu.header)
+                                             header=self.header)
             canvas_image_hdu = imp_utils.add_imagehdu_to_imagehdu(field,
                                                                canvas_image_hdu)
             spec = specs[field.header["SPEC_REF"]]
@@ -378,7 +375,7 @@ class FieldOfView(FieldOfViewBase):
         for field in self.table_fields:
             for xsky, ysky, ref, weight in field:  # field is a Table and the iterable is the row vector
                 # x, y are ALWAYS in arcsec - crval is in deg
-                xpix, ypix = imp_utils.val2pix(self.hdu.header, xsky / 3600, ysky / 3600)
+                xpix, ypix = imp_utils.val2pix(self.header, xsky / 3600, ysky / 3600)
                 if utils.from_currsys(self.meta["sub_pixel"]):
                     xs, ys, fracs = imp_utils.sub_pixel_fractions(xpix, ypix)
                     for i, j, k in zip(xs, ys, fracs):
@@ -421,14 +418,23 @@ class FieldOfView(FieldOfViewBase):
         return self._volume
 
     @property
-    def header(self):
-        return self.hdu.header
+    def hdu(self):
+        if self.data is None:
+            self.image = self.make_image()
+        return fits.ImageHDU(data=self.data, header=self.header)
 
     @property
     def data(self):
-        if self.hdu.data is None:
-            self.view(self.meta["sub_pixel"])
-        return self.hdu.data
+        if self.image is not None:
+            data = self.image
+        elif self.cube is not None:
+            data = self.cube
+        elif self.spectrum is not None:
+            data = self.spectrum
+        else:
+            data = None
+
+        return data
 
     @property
     def corners(self):

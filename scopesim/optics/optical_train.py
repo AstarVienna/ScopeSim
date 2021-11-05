@@ -169,10 +169,6 @@ class OpticalTrain:
             # .. todo: possible bug with bg flux not using plate_scale
             #          see fov_utils.combine_imagehdu_fields
             fov.extract_from(source)
-
-            # Does this need to be here?
-            # fov.view()
-
             for effect in self.optics_manager.fov_effects:
                 fov = effect.apply_to(fov)
 
