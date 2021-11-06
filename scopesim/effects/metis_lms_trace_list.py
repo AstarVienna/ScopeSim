@@ -2,7 +2,7 @@
 import numpy as np
 
 from astropy.io import fits
-
+from astropy.io import ascii as ioascii
 from astropy.table import Table
 
 from ..utils import from_currsys
@@ -29,7 +29,7 @@ class MetisLMSSpectralTraceList(SpectralTraceList):
         #self.params = {"wavelen": "!OBS.wavelen"}
         #self.params.update(kwargs)
 
-        #self.wavelen = self.params['wavelen']
+        self.wavelen = self.meta['wavelen']
 
         # field of view of the instrument
         # ..todo: get this from aperture list
@@ -46,7 +46,7 @@ class MetisLMSSpectralTraceList(SpectralTraceList):
         """
         #nslice = len(self._file['Aperture List'].data)
         # determine echelle order and angle from specified wavelength
-        tempres = self.angle_from_lambda()
+        tempres = self._angle_from_lambda()
         self.meta['order'] = tempres['Ord']
         self.meta['angle'] = tempres['Angle']
 
@@ -59,42 +59,64 @@ class MetisLMSSpectralTraceList(SpectralTraceList):
 
         self.spectral_traces = spec_traces
 
-    def angle_from_lambda(self):
+    def _angle_from_lambda(self):
         """
         Determine optimal echelle rotation angle for wavelength
-
-        Parameters
-        ----------
-        lambda : float
-                central wavelength in microns
-        grat_spacing : float
-                grating rule spacing in microns
-
-        Returns
-        -------
-        a `dict` with entries
-        - `Ord`: echelle order
-        - `Angle`: grism angle
-        - `Phase`: phase
         """
         lam = from_currsys(self.meta['wavelen'])
         grat_spacing = self.meta['grat_spacing']
-
-        # Read wcal extension of layout file
         wcal = self._file['WCAL'].data
+        return echelle_setting(lam, grat_spacing, wcal)
 
-        # Compute angles, determine which order gives angle closest to zero
-        angles = wcal['c0'] * lam + wcal['c1']
-        imin = np.argmin(np.abs(angles))
+def echelle_setting(wavelength, grat_spacing, wcal_def):
+    """
+    Determine optimal echelle rotation angle for wavelength
 
-        # Extract parameters
-        order = wcal['Ord'][imin]
-        angle = angles[imin]
+    Parameters
+    ----------
+    lambda : float
+            central wavelength in microns
+    grat_spacing : float
+            grating rule spacing in microns
+    wcal_def: fits.TableHDU, fits.BinTableHDU, Table, str
+            definition of the wavelength calibration parameters
+            If str, interpreted as name of a fits file, with a
+            table extension 'WCAL'.
 
-        # Compute the phase corresponding to the wavelength
-        phase = lam * order / (2 * grat_spacing)
+    Returns
+    -------
+    a `dict` with entries
+    - `Ord`: echelle order
+    - `Angle`: grism angle
+    - `Phase`: phase
+    """
+    if isinstance(wcal_def, fits.FITS_rec):
+        wcal = wcal_def
+    elif isinstance(wcal_def, (fits.TableHDU, fits.BinTableHDU)):
+        # Read wcal extension of layout file
+        wcal = wcal_def.data
+    elif isinstance(wcal_def, Table):
+        wcal = wcal_def
+    elif isinstance(wcal_def, str):
+        try:
+            wcal = fits.getdata(wcal_def, extname='WCAL')
+        except OSError:
+            wcal = ioascii.read(wcal_def, comment="^#", format="csv")
+    else:
+        raise TypeError("wcal_def not in recognised format:", wcal_def)
 
-        return {"Ord": order, "Angle": angle, "Phase": phase}
+    # Compute angles, determine which order gives angle closest to zero
+    angles = wcal['c0'] * wavelength + wcal['c1']
+    imin = np.argmin(np.abs(angles))
+
+    # Extract parameters
+    order = wcal['Ord'][imin]
+    angle = angles[imin]
+
+    # Compute the phase corresponding to the wavelength
+    phase = wavelength * order / (2 * grat_spacing)
+
+    return {"Ord": order, "Angle": angle, "Phase": phase}
 
 
 class MetisLMSSpectralTrace(SpectralTrace):
