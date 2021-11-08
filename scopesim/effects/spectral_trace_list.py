@@ -147,20 +147,18 @@ class SpectralTraceList(Effect):
 
         return fov
 
-    #    def fov_grid(self, which="waveset", **kwargs):
-    #        self.meta.update(kwargs)
-    #        self.meta = from_currsys(self.meta)
-    #
-    #        if which == "waveset":
-    #            if "pixel_size" not in kwargs:
-    #                kwargs["pixel_size"] = None
-    #            return self.get_waveset(kwargs["pixel_size"])
-    #
-    #        elif which == "edges":
-    #            check_keys(kwargs, ["sky_header", "det_header",
-    #                                "wave_min", "wave_max",
-    #                                "pixel_scale", "plate_scale"], "error")
-    #            return self.get_fov_headers(**kwargs)
+    def fov_grid(self, fov_manager):
+        """
+        Provide information on the source space volume required by the effect
+
+        Returns
+        -------
+        A list of dictionaries with entries `wave_min`, `wave_max`, `x_min`,
+        `x_max`, `y_min`, `y_max`. The dictionaries are created by the
+        correspondin method for the individual `SpectralTrace`.
+        """
+        return [self.spectral_traces[spt].fov_grid(fov_manager)
+                for spt in self.spectral_traces]
 
     def get_waveset(self, pixel_size=None):
         if pixel_size is None:

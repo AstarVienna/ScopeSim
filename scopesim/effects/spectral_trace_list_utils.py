@@ -77,6 +77,22 @@ class SpectralTrace:
         # Interpolation functions   ..todo: equivalent for LMS
         self.compute_interpolation_functions()
 
+    def fov_grid(self, fov_manager):
+        """
+        Provide information on the source space volume required by the effect
+
+        Returns
+        -------
+        A dictionary with entries `wave_min` and `wave_max`.
+        Spatial limits are determined by the `ApertureMask` effect
+        and are not returned here.
+        """
+        lam_arr = self.table[self.meta['wave_colname']]
+
+        wave_max = np.max(lam_arr)
+        wave_min = np.min(lam_arr)
+
+        return {'wave_min': wave_min, 'wave_max': wave_max}
 
     def compute_interpolation_functions(self):
         """
