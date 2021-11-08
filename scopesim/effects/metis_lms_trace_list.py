@@ -54,7 +54,7 @@ class MetisLMSSpectralTraceList(SpectralTraceList):
         for sli in np.arange(self.meta['nslice']):
             slicename = "Slice " + str(sli + 1)
             spec_traces[slicename] = MetisLMSSpectralTrace(
-                self._file["Polynomial Coefficients"],
+                self._file,
                 spslice=sli, params=self.meta)
 
         self.spectral_traces = spec_traces
@@ -67,56 +67,6 @@ class MetisLMSSpectralTraceList(SpectralTraceList):
         grat_spacing = self.meta['grat_spacing']
         wcal = self._file['WCAL'].data
         return echelle_setting(lam, grat_spacing, wcal)
-
-def echelle_setting(wavelength, grat_spacing, wcal_def):
-    """
-    Determine optimal echelle rotation angle for wavelength
-
-    Parameters
-    ----------
-    lambda : float
-            central wavelength in microns
-    grat_spacing : float
-            grating rule spacing in microns
-    wcal_def: fits.TableHDU, fits.BinTableHDU, Table, str
-            definition of the wavelength calibration parameters
-            If str, interpreted as name of a fits file, with a
-            table extension 'WCAL'.
-
-    Returns
-    -------
-    a `dict` with entries
-    - `Ord`: echelle order
-    - `Angle`: grism angle
-    - `Phase`: phase
-    """
-    if isinstance(wcal_def, fits.FITS_rec):
-        wcal = wcal_def
-    elif isinstance(wcal_def, (fits.TableHDU, fits.BinTableHDU)):
-        # Read wcal extension of layout file
-        wcal = wcal_def.data
-    elif isinstance(wcal_def, Table):
-        wcal = wcal_def
-    elif isinstance(wcal_def, str):
-        try:
-            wcal = fits.getdata(wcal_def, extname='WCAL')
-        except OSError:
-            wcal = ioascii.read(wcal_def, comment="^#", format="csv")
-    else:
-        raise TypeError("wcal_def not in recognised format:", wcal_def)
-
-    # Compute angles, determine which order gives angle closest to zero
-    angles = wcal['c0'] * wavelength + wcal['c1']
-    imin = np.argmin(np.abs(angles))
-
-    # Extract parameters
-    order = wcal['Ord'][imin]
-    angle = angles[imin]
-
-    # Compute the phase corresponding to the wavelength
-    phase = wavelength * order / (2 * grat_spacing)
-
-    return {"Ord": order, "Angle": angle, "Phase": phase}
 
 
 class MetisLMSSpectralTrace(SpectralTrace):
@@ -132,16 +82,35 @@ class MetisLMSSpectralTrace(SpectralTrace):
         "plate_scale": 0.303,
     }
 
-    # ..todo:
-    # In SpectralTrace, move all action to a method make_trace
-    # Here, implement make_trace as well
-
-    def __init__(self, polyhdu, spslice, params, **kwargs):
+    def __init__(self, hdulist, spslice, params, **kwargs):
+        polyhdu = hdulist['Polynomial coefficients']
         params.update(kwargs)
         params['aperture_id'] = spslice
         params['slice'] = spslice
         super().__init__(polyhdu, **params)
+        self._file = hdulist
         self.meta['description'] = "Slice " + str(spslice + 1)
+        self.meta.update(params)
+
+    def fov_grid(self, fov_manager):
+        """
+        Provide information on the source space volume required by the effect
+
+        Returns
+        -------
+        A dictionary with entries `wave_min` and `wave_max`, `x_min`, `y_min`,
+        `x_max`, `y_max`. Spatial limits refer to the sky and are given in
+        arcsec.
+        """
+        aperture = self._file['Aperture list'].data[self.meta['slice']]
+        x_min = aperture['left']
+        x_max = aperture['right']
+        y_min = aperture['bottom']
+        y_max = aperture['top']
+
+        # ..todo: compute wave_min and wave_max
+        return {"x_min": x_min, "x_max": x_max,
+                "y_min": y_min, "y_max": y_max}
 
 
     def compute_interpolation_functions(self):
@@ -270,3 +239,54 @@ class MetisLMSSpectralTrace(SpectralTrace):
                       self.meta["order"],
                       self.meta["angle"])
         return msg
+
+
+def echelle_setting(wavelength, grat_spacing, wcal_def):
+    """
+    Determine optimal echelle rotation angle for wavelength
+
+    Parameters
+    ----------
+    lambda : float
+            central wavelength in microns
+    grat_spacing : float
+            grating rule spacing in microns
+    wcal_def: fits.TableHDU, fits.BinTableHDU, Table, str
+            definition of the wavelength calibration parameters
+            If str, interpreted as name of a fits file, with a
+            table extension 'WCAL'.
+
+    Returns
+    -------
+    a `dict` with entries
+    - `Ord`: echelle order
+    - `Angle`: grism angle
+    - `Phase`: phase
+    """
+    if isinstance(wcal_def, fits.FITS_rec):
+        wcal = wcal_def
+    elif isinstance(wcal_def, (fits.TableHDU, fits.BinTableHDU)):
+        # Read wcal extension of layout file
+        wcal = wcal_def.data
+    elif isinstance(wcal_def, Table):
+        wcal = wcal_def
+    elif isinstance(wcal_def, str):
+        try:
+            wcal = fits.getdata(wcal_def, extname='WCAL')
+        except OSError:
+            wcal = ioascii.read(wcal_def, comment="^#", format="csv")
+    else:
+        raise TypeError("wcal_def not in recognised format:", wcal_def)
+
+    # Compute angles, determine which order gives angle closest to zero
+    angles = wcal['c0'] * wavelength + wcal['c1']
+    imin = np.argmin(np.abs(angles))
+
+    # Extract parameters
+    order = wcal['Ord'][imin]
+    angle = angles[imin]
+
+    # Compute the phase corresponding to the wavelength
+    phase = wavelength * order / (2 * grat_spacing)
+
+    return {"Ord": order, "Angle": angle, "Phase": phase}
