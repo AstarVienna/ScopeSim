@@ -43,9 +43,6 @@ Imaging dependent on:
 """
 
 
-
-
-
 from astropy.table import Table
 from . import fov_manager_utils as fmu
 from ..effects.effects_utils import is_spectroscope
@@ -117,6 +114,72 @@ class FOVManager:
     @property
     def fov_footprints(self, which="both"):
         return None
+
+
+class FovVolumeList:
+    """
+    List of FOV volumes for FOVManager
+
+    Parameters
+    ----------
+    initial_guess : dict
+        Initial on-sky volume {wave_min, wave_max, x_min, x_max, y_min, y_max}
+
+    """
+
+    def __init__(self, initial_guess):
+
+        self.volumes = [initial_guess]
+        self.detector_limits = {"xd_min": 0, "xd_max": 0,
+                                "yd_min": 0, "yd_max": 0}
+
+    def split(self, axis, value):
+        """
+        - Loop through all volume dict
+        - Pop any entries where min < value < max
+        - Add two new entries with [min, value], [value, max]
+
+        Parameters
+        ----------
+        axis : str
+            "wave", "x", "y"
+        value : float
+
+        """
+        pass
+
+    def shrink(self, axis, values):
+        """
+        - Loop through all volume dict
+        - Replace any entries where min < values.min
+        - Replace any entries where max > values.max
+
+        Parameters
+        ----------
+        axis : str
+            "wave", "x", "y"
+        values : list of float
+            [min, max], [min], [None, max]
+
+        """
+        pass
+
+    def shrink(self, axis, values):
+        """
+        - Loop through all volume dict
+        - Replace any entries where min < values.min
+        - Replace any entries where max > values.max
+
+        Parameters
+        ----------
+        axis : str
+            "wave", "x", "y"
+        values : list of float
+            [min, max], [min], [None, max]
+
+        """
+        pass
+
 
 # Spectroscopy FOV setup
 # ======================

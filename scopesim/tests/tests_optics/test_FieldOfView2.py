@@ -472,3 +472,5 @@ class TestMakeSpectrumImageCubeAllPlayNicely:
         image = fov.make_image()
 
         assert np.sum(cube.data) == approx(np.sum(image.data), rel=0.001)
+
+
