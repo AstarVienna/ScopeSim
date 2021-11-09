@@ -156,7 +156,7 @@ class SpectralTraceList(Effect):
 
         return fov_headers
 
-    def apply_to(self, fov):
+    def apply_to(self, fov, **kwargs):
         return fov
 
     @property

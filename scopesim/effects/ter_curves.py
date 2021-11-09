@@ -15,7 +15,7 @@ from .effects import Effect
 from ..optics.surface import SpectralSurface
 from ..source.source_utils import make_imagehdu_from_table
 from ..source.source import Source
-from ..base_classes import SourceBase
+from ..base_classes import SourceBase, FOVSetupBase
 from ..utils import from_currsys, quantify, check_keys
 
 
@@ -87,7 +87,7 @@ class TERCurve(Effect):
 
     # ####### added in new branch
 
-    def apply_to(self, obj):
+    def apply_to(self, obj, **kwargs):
         if isinstance(obj, SourceBase):
             self.meta = from_currsys(self.meta)
             wave_min = quantify(self.meta["wave_min"], u.um).to(u.AA)
@@ -102,6 +102,16 @@ class TERCurve(Effect):
             # add the effect background to the source background field
             if self.background_source is not None:
                 obj.append(self.background_source)
+
+        if isinstance(obj, FOVSetupBase):
+            wave = self.surface.throughput.waveset
+            thru = self.surface.throughput(wave)
+            valid_waves = np.argwhere(thru > 0)
+            wave_min = wave[max(0, valid_waves[0][0] - 1)]
+            wave_max = wave[min(len(wave) - 1, valid_waves[-1][0] + 1)]
+
+            obj.shrink("wave", [wave_min.to(u.um).value,
+                                wave_max.to(u.um).value])
 
         return obj
 
@@ -280,7 +290,6 @@ class QuantumEfficiencyCurve(TERCurve):
         self.meta["z_order"] = [113, 513]
         self.meta["position"] = -1          # position in surface table
 
-
 class FilterCurve(TERCurve):
     """
     Other Parameters
@@ -445,9 +454,9 @@ class FilterWheel(Effect):
         self.table = self.get_table()
 
 
-    def apply_to(self, obj):
+    def apply_to(self, obj, **kwargs):
         '''Use apply_to of current filter'''
-        return self.current_filter.apply_to(obj)
+        return self.current_filter.apply_to(obj, **kwargs)
 
     def fov_grid(self, which="waveset", **kwargs):
         return self.current_filter.fov_grid(which=which, **kwargs)

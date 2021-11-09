@@ -10,7 +10,7 @@ import anisocado as aniso
 from .effects import Effect
 from . import ter_curves_utils as tu
 from . import psf_utils as pu
-from ..base_classes import ImagePlaneBase, FieldOfViewBase
+from ..base_classes import ImagePlaneBase, FieldOfViewBase, FOVSetupBase
 from .. import utils
 
 
@@ -48,10 +48,15 @@ class PSF(Effect):
         self.meta.update(params)
         self.meta.update(kwargs)
         self.meta = utils.from_currsys(self.meta)
-        self.apply_to_classes = (FieldOfViewBase, ImagePlaneBase)
+        self.convolution_classes = (FieldOfViewBase, ImagePlaneBase)
 
-    def apply_to(self, obj):
-        if isinstance(obj, self.apply_to_classes):
+    def apply_to(self, obj, **kwargs):
+        if isinstance(obj, FOVSetupBase):
+            waveset = self._waveset
+            if waveset is not None:
+                obj.split("wave", utils.quantify(waveset, u.um).value)
+
+        elif isinstance(obj, self.convolution_classes):
             if (hasattr(obj, "fields") and len(obj.fields) > 0) or \
                     obj.hdu.data is not None:
 
@@ -551,7 +556,7 @@ class FieldConstantPSF(DiscretePSF):
         self.current_data = None
         self.kernel = None
 
-    # def apply_to(self, fov):
+    # def apply_to(self, fov, **kwargs):
     #   Taken care of by PSF base class
 
     # def fov_grid(self, which="waveset", **kwargs):
@@ -613,7 +618,7 @@ class FieldVaryingPSF(DiscretePSF):
         self.current_data = None
         self._strehl_imagehdu = None
 
-    def apply_to(self, fov):
+    def apply_to(self, fov, **kwargs):
         # .. todo: add in field rotation
         # accept "full", "dit", "none
 
