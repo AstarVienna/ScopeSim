@@ -36,9 +36,20 @@ class TestGenerateFovList:
         fovs = fov_man.generate_fovs_list()
         fov_volume = fovs[0].volume()
 
-        for effect in fov_man.effects:
-            print(effect)
-
         assert len(fovs) == 1
         assert fov_volume["xs"][0] == -1024 / 3600      # [deg] 2k detector / pixel_scale
         assert fov_volume["waves"][0] == 0.6            # [um] filter blue edge
+
+    @pytest.mark.parametrize("chunk_size, n_fovs",
+                             [(500, 25), (512, 16), (1000, 9), (1024, 4)])
+    def test_returns_n_fovs_for_smaller_chunk_size(self, chunk_size, n_fovs):
+        effects = eo._mvs_effects_list()
+        fov_man = FOVManager(effects=effects, pixel_scale=1, plate_scale=1,
+                             max_segment_size=1024**2, chunk_size=1024)
+        fovs = fov_man.generate_fovs_list()
+        fov_volume = fovs[0].volume()
+
+        assert len(fovs) == 4
+        assert fov_volume["xs"][0] == -1024 / 3600      # [deg] 2k detector / pixel_scale
+        assert fov_volume["waves"][0] == 0.6            # [um] filter blue edge
+

@@ -42,6 +42,7 @@ Imaging dependent on:
 """
 
 from copy import deepcopy, copy
+import numpy as np
 from astropy.table import Table
 
 from . import fov_manager_utils as fmu
@@ -99,18 +100,32 @@ class FOVManager:
 
         """
 
+        # Ask all the effects to alter the volume_
         params = {"pixel_scale": self.meta["pixel_scale"]}
+
         for effect in self.effects:
             self.volumes_list = effect.apply_to(self.volumes_list, **params)
 
         # ..todo: add catch to split volumes larger than chunk_size
-
-
-
         pixel_scale = from_currsys(self.meta["pixel_scale"])
         plate_scale = from_currsys(self.meta["plate_scale"])
         pixel_size = pixel_scale / plate_scale
         plate_scale_deg = plate_scale / 3600.  # ["/mm] / 3600 = [deg/mm]
+
+        chunk_size = from_currsys(self.meta["chunk_size"])
+        max_seg_size = from_currsys(self.meta["max_segment_size"])
+
+        split_xs = []
+        split_ys = []
+        for vol in self.volumes_list:
+            vol_pix_area = (vol["x_max"] - vol["x_min"]) * \
+                           (vol["y_max"] - vol["y_min"]) / pixel_scale**2
+            if vol_pix_area > max_seg_size:
+                step = chunk_size * pixel_scale
+                split_xs += list(np.arange(vol["x_min"], vol["x_max"], step))
+                split_ys += list(np.arange(vol["y_min"], vol["y_max"], step))
+
+        self.volumes_list.split(axis=["x", "y"], value=(split_xs, split_ys))
 
         fovs = []
 
