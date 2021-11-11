@@ -1,6 +1,8 @@
-numpy==1.16
+pytest
+
+numpy>=1.16
 scipy
-astropy==3.2
+astropy
 matplotlib
 jupyter
 
@@ -9,7 +11,7 @@ requests
 beautifulsoup4
 pyyaml
 
-synphot<0.2
+synphot
 skycalc_ipy
 anisocado
 

@@ -24,7 +24,7 @@ class TestDefaultsYamlFile:
     def test_rc_file_readable_by_scopesim_parser(self):
         default_file = os.path.join(rc.__pkg_dir__, "defaults.yaml")
         with open(default_file, "r") as f:
-            default_dict = [dic for dic in yaml.load_all(f)]
+            default_dict = [dic for dic in yaml.full_load_all(f)]
 
         assert isinstance(default_dict[0], dict)
         assert len(default_dict[0]) > 0

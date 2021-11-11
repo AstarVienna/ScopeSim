@@ -24,6 +24,8 @@ from scopesim.source.source import Source
 from scopesim.optics.image_plane import ImagePlane
 from scopesim.utils import convert_table_comments_to_dict
 
+from scopesim.tests.mocks.py_objects import source_objects as so
+
 import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm
 
@@ -204,6 +206,20 @@ class TestSourceAddition:
         image_source.fields[0].header["SPEC_REF"] = ""
         new_source = table_source + image_source
         assert new_source.fields[1].header["SPEC_REF"] == ""
+
+    def test_fits_image_and_array_image_are_added_correctly(self):
+        img_src = so._image_source()
+        fits_src = so._fits_image_source()
+
+        img_fits_src = img_src + fits_src
+        fits_img_src = fits_src + img_src
+
+        assert len(img_src.fields) == 1
+        assert len(fits_src.fields) == 1
+        assert len(img_fits_src.fields) == 2
+        assert len(fits_img_src.fields) == 2
+        assert fits_img_src.fields[0] is fits_src.fields[0]
+        assert img_fits_src.fields[0] is not img_src.fields[0]
 
 
 @pytest.mark.usefixtures("table_source", "image_source")

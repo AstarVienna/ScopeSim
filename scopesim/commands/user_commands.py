@@ -86,7 +86,7 @@ class UserCommands:
     --------
     Here we use a combination of the main parameters: ``packages``, ``yamls``,
     and ``properties``. When not using the ``use_instrument`` key, ``packages``
-    and ``yamls`` must be specified, otherwise scopesim will not know which
+    and ``yamls`` must be specified, otherwise scopesim will not know
     where to look for yaml files (only relevant if reading in yaml files)::
 
         >>> from scopesim.server.database import download_package
@@ -325,7 +325,7 @@ def load_yaml_dicts(filename):
 
     yaml_dicts = []
     with open(filename) as f:
-        yaml_dicts += [dic for dic in yaml.load_all(f)]
+        yaml_dicts += [dic for dic in yaml.full_load_all(f)]
 
     return yaml_dicts
 

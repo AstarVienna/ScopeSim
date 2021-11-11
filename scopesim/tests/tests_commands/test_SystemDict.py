@@ -13,7 +13,7 @@ properties :
 
 @pytest.fixture(scope="class")
 def basic_yaml():
-    return yaml.load(_basic_yaml)
+    return yaml.full_load(_basic_yaml)
 
 
 @pytest.mark.usefixtures("basic_yaml")

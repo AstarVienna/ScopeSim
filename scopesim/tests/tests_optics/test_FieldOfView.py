@@ -107,8 +107,6 @@ class TestFieldOfViewExtractFrom:
         assert len(the_fov.fields) == 1
         assert len(the_fov.spectra) == 0
         assert len(the_fov.fields[0].data.shape) == 3
-        # ..todo: currently tests temporary implementation of make_cube()
-        assert len(the_fov.cube.data.shape) == 3
 
 
 @pytest.mark.usefixtures("basic_fov_header")
@@ -124,7 +122,7 @@ class TestFieldOfViewView:
 
         assert np.isclose(np.sum(the_fov.hdu.data), orig_sum)
 
-        if PLOTS:
+        if not PLOTS:
             plt.imshow(src.fields[0].data, origin="lower", norm=LogNorm())
             plt.colorbar()
             plt.show()
@@ -222,20 +220,6 @@ class TestIsFieldInFOV:
         image_source.fields[0].header["CRVAL2"] -= 10*u.arcsec.to(u.deg)
         assert fov_utils.is_field_in_fov(basic_fov_header, image_source.fields[0])
 
-
-class TestMakeFluxTable:
-    def test_flux_in_equals_flux_out(self):
-        pass
-
-
-class TestCombineTableFields:
-    def test_flux_in_equals_flux_out(self):
-        pass
-
-
-class TestCombineImageHDUFields:
-    def test_flux_in_equals_flux_out(self):
-        pass
 
 
 @pytest.mark.usefixtures("cube_source")

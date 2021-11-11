@@ -73,7 +73,7 @@ effects:
   class: DetectorList
   kwargs:
     array_dict: {"id": [1], "x_cen": [0], "y_cen":[0], "xhw": [1024],
-                 "yhw": [1024], "x_len": [900], "y_len": [900],
+                 "yhw": [1024], "x_len": [900], "y_len": [900],         # something super weird here! xhw != x_len
                  "pixsize": [1.], "angle": [0.], "gain": [1.0]}
     x_cen_unit : mm
     y_cen_unit : mm

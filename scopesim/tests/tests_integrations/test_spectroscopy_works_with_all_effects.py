@@ -17,6 +17,8 @@ rc.__search_path__.insert(0, MOCK_DIR)
 PLOTS = False
 
 
+
+
 ################################################################################
 # Everything needed to test the FOVManager in Spectroscopy mode
 
@@ -82,7 +84,7 @@ def shift_3d():
 
 ################################################################################
 
-
+@pytest.mark.skip(reason="Ignoring old Spectroscopy integration tests")
 class TestSpectroscopyFOVs:
     @pytest.mark.usefixtures("ap_list", "spt_list", "det_list", "config_yaml",
                              "point_source", "ext_source", "gauss_psf")
@@ -191,7 +193,7 @@ class TestSpectroscopyFOVs:
             plt.imshow(implane.data, origin="lower")
             plt.show()
 
-
+@pytest.mark.skip(reason="Ignoring old Spectroscopy integration tests")
 class TestSpectroscopyMICADO:
     def test_initialises_spectral_trace_file(self):
         config = {"!SIM.spectral.wave_min": 1.45,

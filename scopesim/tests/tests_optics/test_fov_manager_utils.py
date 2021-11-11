@@ -174,14 +174,14 @@ class TestGetImagingFOVs:
             from scopesim.optics.image_plane_utils import calc_footprint
             plt.subplot(121)
             for fov in fovs:
-                x, y = calc_footprint(fov.hdu.header)
+                x, y = calc_footprint(fov.header)
                 plt.fill(x*3600, y*3600, alpha=0.1, c="b")
                 plt.title("Sky plane")
                 plt.xlabel("[arcsec]")
 
             plt.subplot(122)
             for fov in fovs:
-                x, y = calc_footprint(fov.hdu.header, "D")
+                x, y = calc_footprint(fov.header, "D")
                 plt.fill(x, y)
                 plt.title("Detector focal plane")
                 plt.xlabel("[mm]")

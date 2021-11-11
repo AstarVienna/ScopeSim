@@ -548,13 +548,13 @@ def convert_table_comments_to_dict(tbl):
     if "comments" in tbl.meta:
         try:
             comments_str = "\n".join(tbl.meta["comments"])
-            comments_dict = yaml.load(comments_str)
+            comments_dict = yaml.full_load(comments_str)
         except:
             warnings.warn("Couldn't convert <table>.meta['comments'] to dict")
             comments_dict = tbl.meta["comments"]
     elif "COMMENT" in tbl.meta:
         try:
-            comments_dict = yaml.load("\n".join(tbl.meta["COMMENT"]))
+            comments_dict = yaml.full_load("\n".join(tbl.meta["COMMENT"]))
         except:
             warnings.warn("Couldn't convert <table>.meta['COMMENT'] to dict")
             comments_dict = tbl.meta["COMMENT"]
@@ -675,7 +675,10 @@ def quantify(item, unit):
     if isinstance(item, u.Quantity):
         quant = item.to(u.Unit(unit))
     else:
-        quant = item * u.Unit(unit)
+        if isinstance(item, (np.ndarray, list, tuple)) and np.size(item) > 1000:
+            quant = item << u.Unit(unit)
+        else:
+            quant = item * u.Unit(unit)
     return quant
 
 
@@ -761,7 +764,10 @@ def get_fits_type(filename):
 def quantity_from_table(colname, table, default_unit=""):
     col = table[colname]
     if col.unit is not None:
-        col = col.data * col.unit
+        if len(col) < 1000:
+            col = col.data * col.unit
+        else:
+            col = col.data << col.unit
     else:
         colname_u = colname + "_unit"
         if colname_u in table.meta:
@@ -769,7 +775,10 @@ def quantity_from_table(colname, table, default_unit=""):
         else:
             com_tbl = convert_table_comments_to_dict(table)
             if colname_u in com_tbl:
-                col = col * u.Unit(com_tbl[colname_u])
+                if len(col) < 1000:
+                    col = col * u.Unit(com_tbl[colname_u])
+                else:
+                    col = col << u.Unit(com_tbl[colname_u])
             else:
                 col = col * u.Unit(default_unit)
                 warnings.warn(

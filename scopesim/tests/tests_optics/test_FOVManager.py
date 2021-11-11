@@ -101,13 +101,13 @@ class TestGenerateFovsImagingMode:
             plt.subplot(121)
             for fov in fovs:
                 from scopesim.optics.image_plane_utils import calc_footprint
-                x, y = calc_footprint(fov.hdu.header)
+                x, y = calc_footprint(fov.header)
                 plt.fill(x*3600, y*3600)
 
             plt.subplot(122)
             for fov in fovs:
                 from scopesim.optics.image_plane_utils import calc_footprint
-                x, y = calc_footprint(fov.hdu.header, "D")
+                x, y = calc_footprint(fov.header, "D")
                 plt.plot(x, y)
 
             plt.show()
@@ -130,7 +130,7 @@ class TestGenerateFovsImagingMode:
         # .. todo: Fix this - find out why!!!
         # assert np.all(implane.image == 1)
 
-
+@pytest.mark.skip(reason="Ignoring old Spectroscopy integration tests")
 @pytest.mark.usefixtures("ap_list", "spt_list", "det_list",
                          "config_yaml", "spec_source")
 class TestGenerateFOVsSpectroscopyMode:

@@ -165,6 +165,7 @@ class SpectralSurface:
         ----------
         ter_property : str
             ``transmission``, ``emissivity``, ``reflection``
+        fmt : str
 
         Returns
         -------

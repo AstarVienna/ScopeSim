@@ -81,8 +81,8 @@ class TestGetKernel:
     @pytest.mark.parametrize("factor", [1/3., 1, 5])
     def test_kernel_is_scale_properly_if_cdelts_differ(self, factor):
         fov = _centre_fov(n=10, waverange=[1.5, 1.7])
-        fov.hdu.header["CDELT1"] *= factor
-        fov.hdu.header["CDELT2"] *= factor
+        fov.header["CDELT1"] *= factor
+        fov.header["CDELT2"] *= factor
 
         constpsf = FieldConstantPSF(filename="test_ConstPSF.fits")
         kernel = constpsf.get_kernel(fov)

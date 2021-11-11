@@ -2,8 +2,7 @@ import os
 from astropy.table import Table
 
 from ..effects.data_container import DataContainer
-from ..base_classes import SourceBase, FieldOfViewBase, ImagePlaneBase, \
-    DetectorBase
+from .. import base_classes as bc
 from ..utils import from_currsys, write_report
 from ..reports.rst_utils import table_to_rst
 from .. import rc
@@ -44,12 +43,13 @@ class Effect(DataContainer):
         self.meta["include"] = True
         self.meta.update(kwargs)
 
-    def apply_to(self, obj):
-        if not isinstance(obj, (SourceBase, FieldOfViewBase,
-                                ImagePlaneBase, DetectorBase)):
-            raise ValueError("object must one of the following: "
-                             "Source, FieldOfView, ImagePlane, Detector: "
-                             "{}".format(type(obj)))
+    def apply_to(self, obj, **kwargs):
+        if not isinstance(obj, (bc.FOVSetupBase, bc.SourceBase,
+                                bc.FieldOfViewBase, bc.ImagePlaneBase,
+                                bc.DetectorBase)):
+            raise ValueError(f"object must one of the following: FOVSetupBase, "
+                             f"Source, FieldOfView, ImagePlane, Detector: "
+                             f"{type(obj)}")
 
         return obj
 

@@ -1,12 +1,15 @@
 from copy import deepcopy
+from shutil import copyfileobj
+from astropy.io import fits
 
-from .. import rc
-from ..commands.user_commands import UserCommands
 from .optics_manager import OpticsManager
 from .fov_manager import FOVManager
 from .image_plane import ImagePlane
+from ..commands.user_commands import UserCommands
 from ..detector import DetectorArray
+from ..source.source import Source
 from ..utils import from_currsys
+from .. import rc
 
 
 class OpticalTrain:
@@ -152,7 +155,8 @@ class OpticalTrain:
 
         self.set_focus(kwargs)    # put focus back on current instrument package
 
-        source = deepcopy(orig_source)
+        # ..todo:: check if orig_source is a pointer, or a data array
+        source = orig_source.make_copy()
 
         # [1D - transmission curves]
         for effect in self.optics_manager.source_effects:
@@ -165,10 +169,6 @@ class OpticalTrain:
             # .. todo: possible bug with bg flux not using plate_scale
             #          see fov_utils.combine_imagehdu_fields
             fov.extract_from(source)
-
-            # Does this need to be here?
-            # fov.view()
-
             for effect in self.optics_manager.fov_effects:
                 fov = effect.apply_to(fov)
 

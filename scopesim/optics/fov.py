@@ -42,6 +42,8 @@ class FieldOfView(FieldOfViewBase):
                                     "rotation": 0,
                                     "radius_of_curvature": None},
                      "conserve_image": True,
+                     "trace_id": None,
+                     "aperture_id": None,
                      }
         self.meta.update(kwargs)
 
@@ -65,9 +67,9 @@ class FieldOfView(FieldOfViewBase):
         self.fields = []
         self.spectra = []
 
-        self._cube = None       # IFU, long-lit, Slicer-MOS
-        self._image = None      # Imagers
-        self._spectrum = None   # Fibre-fed MOS
+        self.cube = None        # IFU, long-lit, Slicer-MOS
+        self.image = None       # Imagers
+        self.spectrum = None    # Fibre-fed MOS
 
         self._waverange = None
         self._wavelength = None
@@ -145,8 +147,7 @@ class FieldOfView(FieldOfViewBase):
         # if sub_pixel is None:
         #     sub_pixel = self.meta["sub_pixel"]
         #
-        # self.hdu.data = np.zeros((self.hdu.header["NAXIS2"],
-        #                           self.hdu.header["NAXIS1"]))
+        # self.hdu.data = np.zeros((  ))
         # if len(self.fields) > 0:
         #     for field in self.fields:
         #         if isinstance(field, Table):
@@ -187,6 +188,16 @@ class FieldOfView(FieldOfViewBase):
         ## Works only when a single cube source is specified
         return self.fields[0]
 
+    def volume(self, wcs_prefix=""):
+        xs, ys = imp_utils.calc_footprint(self.header, wcs_suffix=wcs_prefix)
+        wave_corners = self.waverange
+        self._volume = {"xs": [min(xs), max(xs)],
+                        "ys": [min(ys), max(ys)],
+                        "waves": self.waverange,
+                        "xy_unit": "mm" if wcs_prefix == "D" else "deg",
+                        "wave_unit": "um"}
+        return self._volume
+
     @property
     def header(self):
         return self.hdu.header
@@ -198,38 +209,10 @@ class FieldOfView(FieldOfViewBase):
         return self.hdu.data
 
     @property
-    def spectrum(self):
-        if self._spectrum is None:
-            self._spectrum = self.make_spectrum()
-        return self._spectrum
-
-    @property
-    def image(self):
-        if self._image is None:
-            self._image = self.make_image()
-        return self._image
-
-    @property
-    def cube(self):
-        if self._cube is None:
-            self._cube = self.make_cube()
-        return self._cube
-
-    @property
     def corners(self):
         sky_corners = imp_utils.calc_footprint(self.header)
         imp_corners = imp_utils.calc_footprint(self.header, "D")
         return sky_corners, imp_corners
-
-    def volume(self, wcs_prefix=""):
-        xs, ys = imp_utils.calc_footprint(self.header, wcs_suffix=wcs_prefix)
-        wave_corners = self.waverange
-        self._volume = {"xs": [min(xs), max(xs)],
-                        "ys": [min(ys), max(ys)],
-                        "waves": self.waverange,
-                        "xy_unit": "mm" if wcs_prefix == "D" else "deg",
-                        "wave_unit": "um"}
-        return self._volume
 
     @property
     def waverange(self):

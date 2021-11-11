@@ -51,7 +51,7 @@ from matplotlib.colors import LogNorm
 def process_comment_code(node, context_code):
     """Add code from a ``comment`` node to the context_code string"""
     result = node.rawsource.split("---")
-    options = yaml.load(result[0]) if len(result) > 1 else {}
+    options = yaml.full_load(result[0]) if len(result) > 1 else {}
     new_code = result[-1]
     context_code = process_code(context_code, new_code, options)
 
