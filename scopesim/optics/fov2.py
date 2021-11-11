@@ -421,7 +421,7 @@ class FieldOfView(FieldOfViewBase):
     def hdu(self):
         if self.data is None:
             self.image = self.make_image()
-        return fits.ImageHDU(data=self.data, header=self.header)
+        return fits.ImageHDU(data=self.data.data, header=self.header)
 
     @property
     def data(self):

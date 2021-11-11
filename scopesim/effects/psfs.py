@@ -48,7 +48,6 @@ class PSF(Effect):
         self.meta.update(params)
         self.meta.update(kwargs)
         self.meta = utils.from_currsys(self.meta)
-        self.convolution_classes = (FieldOfViewBase, ImagePlaneBase)
 
     def apply_to(self, obj, **kwargs):
         if isinstance(obj, FOVSetupBase):
@@ -56,7 +55,7 @@ class PSF(Effect):
             if waveset is not None:
                 obj.split("wave", utils.quantify(waveset, u.um).value)
 
-        elif isinstance(obj, self.convolution_classes):
+        elif isinstance(obj, (FieldOfViewBase, ImagePlaneBase)):
             if (hasattr(obj, "fields") and len(obj.fields) > 0) or \
                     obj.hdu.data is not None:
 

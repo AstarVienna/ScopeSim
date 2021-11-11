@@ -1,6 +1,8 @@
 '''Effects related to field masks, including spectroscopic slits'''
 from os import path as pth
 from copy import deepcopy
+import warnings
+
 import numpy as np
 from matplotlib.path import Path
 from astropy.io import fits
@@ -9,6 +11,7 @@ from astropy.table import Table
 
 from .effects import Effect
 from ..optics import image_plane_utils as imp_utils
+from ..base_classes import FOVSetupBase
 
 from ..utils import quantify, quantity_from_table, from_currsys, check_keys
 
@@ -101,8 +104,18 @@ class ApertureMask(Effect):
         self.required_keys = ["filename", "table", "array_dict"]
         check_keys(kwargs, self.required_keys, "warning", all_any="any")
 
+    def apply_to(self, obj, **kwargs):
+        if isinstance(obj, FOVSetupBase):
+            x = quantity_from_table("x", self.table, u.arcsec).value
+            y = quantity_from_table("y", self.table, u.arcsec).value
+            obj.shrink(["x", "y"], ([min(x), max(x)], [min(y), max(y)]))
+
+        return obj
+
     def fov_grid(self, which="edges", **kwargs):
         """ Returns a header with the sky coordinates """
+        warnings.warn("DetectorList.fov_grid will be depreciated in v1.0",
+                      PendingDeprecationWarning)
         if which == "edges":
             self.meta.update(kwargs)
             return self.header
