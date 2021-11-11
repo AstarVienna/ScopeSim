@@ -136,7 +136,7 @@ class SpectralTraceList(Effect):
         '''Apply the effect to the FieldOfView'''
         trace_id = fov.meta['trace_id']
         spt = self.spectral_traces[trace_id]
-        fov._image = spt.map_spectra_to_focal_plane(fov)
+        fov.image = spt.map_spectra_to_focal_plane(fov)
 
         return fov
 
