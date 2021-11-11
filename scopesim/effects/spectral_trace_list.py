@@ -175,8 +175,8 @@ class SpectralTraceList(Effect):
     @property
     def footprint(self):
         xs, ys = [], []
-        for spt in self.spectral_traces:
-            xi, yi = spt.footprint
+        for spt in self.spectral_traces.values():
+            xi, yi = spt.footprint()
             xs += xi
             ys += yi
 
