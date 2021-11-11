@@ -157,8 +157,8 @@ class SpectralTraceList(Effect):
         `x_max`, `y_min`, `y_max`. The dictionaries are created by the
         correspondin method for the individual `SpectralTrace`.
         """
-        return [self.spectral_traces[spt].fov_grid(fov_manager)
-                for spt in self.spectral_traces]
+        return [self.spectral_traces[key].fov_grid(fov_manager)
+                for key in self.spectral_traces]
 
     def get_waveset(self, pixel_size=None):
         if pixel_size is None:
