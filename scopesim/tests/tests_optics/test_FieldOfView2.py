@@ -8,7 +8,7 @@ from matplotlib.colors import LogNorm
 
 from scopesim.tests.mocks.py_objects import header_objects as ho
 from scopesim.tests.mocks.py_objects import source_objects as so
-from scopesim.optics.fov2 import FieldOfView
+from scopesim.optics.fov import FieldOfView
 from scopesim.optics.fov_utils import get_cube_waveset
 
 

@@ -4,7 +4,7 @@ from pytest import approx
 
 from astropy import units as u
 
-from scopesim.optics.fov2 import FieldOfView
+from scopesim.optics.fov import FieldOfView
 from scopesim.optics.image_plane import ImagePlane
 
 from scopesim.tests.mocks.py_objects import source_objects as src

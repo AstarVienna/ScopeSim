@@ -3,8 +3,8 @@ import pytest
 
 import numpy as np
 
-from scopesim.optics.fov2 import FieldOfView
-from scopesim.optics.fov_manager2 import FOVManager
+from scopesim.optics.fov import FieldOfView
+from scopesim.optics.fov_manager import FOVManager
 
 from scopesim.tests.mocks.py_objects import effects_objects as eo
 from scopesim.tests.mocks.py_objects import yaml_objects as yo
@@ -52,4 +52,3 @@ class TestGenerateFovList:
         assert len(fovs) == 4
         assert fov_volume["xs"][0] == -1024 / 3600      # [deg] 2k detector / pixel_scale
         assert fov_volume["waves"][0] == 0.6            # [um] filter blue edge
-
