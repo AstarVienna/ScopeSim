@@ -174,16 +174,17 @@ class SpectralTraceList(Effect):
 
     @property
     def footprint(self):
-        xs, ys = [], []
+        """Return the footprint of the entire SpectralTraceList"""
+        xfoot, yfoot = [], []
         for spt in self.spectral_traces.values():
-            xi, yi = spt.footprint()
-            xs += xi
-            ys += yi
+            xtrace, ytrace = spt.footprint()
+            xfoot += xtrace
+            yfoot += ytrace
 
-        xs = [np.min(xs), np.max(xs), np.max(xs), np.min(xs)]
-        ys = [np.min(ys), np.min(ys), np.max(ys), np.max(ys)]
+        xfoot = [np.min(xfoot), np.max(xfoot), np.max(xfoot), np.min(xfoot)]
+        yfoot = [np.min(yfoot), np.min(yfoot), np.max(yfoot), np.max(yfoot)]
 
-        return xs, ys
+        return xfoot, yfoot
 
     @property
     def image_plane_header(self):
