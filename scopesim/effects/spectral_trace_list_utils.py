@@ -7,7 +7,6 @@ This module contains
 
 import warnings
 
-import re
 import numpy as np
 
 from scipy.interpolate import RectBivariateSpline
@@ -22,7 +21,7 @@ from astropy.wcs import WCS
 from astropy.modeling.models import Polynomial2D
 
 from ..optics import image_plane_utils as imp_utils
-from ..utils import deriv_polynomial2d, interp2, check_keys, \
+from ..utils import deriv_polynomial2d, power_vector, interp2, check_keys,\
     from_currsys, quantify
 
 
@@ -59,7 +58,7 @@ class SpectralTrace:
         if isinstance(trace_tbl, (fits.BinTableHDU, fits.TableHDU)):
             self.table = Table.read(trace_tbl)
             try:
-                self.meta["description"] = trace_tbl.header['EXTNAME']
+                self.meta["trace_id"] = trace_tbl.header['EXTNAME']
             except KeyError:
                 pass
         elif isinstance(trace_tbl, Table):
@@ -96,6 +95,26 @@ class SpectralTrace:
 
         # Interpolation functions   ..todo: equivalent for LMS
         self.compute_interpolation_functions()
+
+    def fov_grid(self):
+        """
+        Provide information on the source space volume required by the effect
+
+        Returns
+        -------
+        A dictionary with entries `wave_min` and `wave_max`.
+        Spatial limits are determined by the `ApertureMask` effect
+        and are not returned here.
+        """
+        trace_id = self.meta['name']
+        aperture_id = self.meta['aperture_id']
+        lam_arr = self.table[self.meta['wave_colname']]
+
+        wave_max = np.max(lam_arr)
+        wave_min = np.min(lam_arr)
+
+        return {'wave_min': wave_min, 'wave_max': wave_max,
+                'trace_id': trace_id, 'aperture_id': aperture_id}
 
     def compute_interpolation_functions(self):
         """
@@ -194,7 +213,7 @@ class SpectralTrace:
         try:
             xilam = XiLamImage(fov, avg_dlam_per_pix)
         except ValueError:
-            print(" ---> " + self.description + "gave ValueError")
+            print(" ---> ", self.meta['trace_id'], "gave ValueError")
 
         npix_xi, npix_lam = xilam.npix_xi, xilam.npix_lam
         xilam_wcs = xilam.wcs
@@ -456,7 +475,7 @@ class SpectralTrace:
     def __repr__(self):
         msg = '<SpectralTrace> "{}" : [{}, {}]um : Ext {} : Aperture {} : ' \
               'ImagePlane {}' \
-              ''.format(self.meta["description"],
+              ''.format(self.meta["trace_id"],
                         round(self.wave_min, 4), round(self.wave_max, 4),
                         self.meta["extension_id"], self.meta["aperture_id"],
                         self.meta["image_plane_id"])
@@ -655,15 +674,6 @@ def fit2matrix(fit):
                 pass
     return mat
 
-
-def power_vector(val, degree):
-    """Return the vector of powers of val up to a degree"""
-    if degree < 0 or not isinstance(degree, int):
-        raise ValueError("degree must be a positive integer")
-
-    return np.array([val**exp for exp in range(degree + 1)])
-
-
 # ..todo: should the next three functions be combined and return a dictionary of fits?
 def xilam2xy_fit(layout, params):
     """
@@ -689,9 +699,8 @@ def xilam2xy_fit(layout, params):
     pinit_y = Polynomial2D(degree=4)
     fitter = fitting.LinearLSQFitter()
     xilam2x = fitter(pinit_x, xi_arr, lam_arr, x_arr)
-    #xilam2x.name = 'xilam2x'
     xilam2y = fitter(pinit_y, xi_arr, lam_arr, y_arr)
-    #xilam2y.name = 'xilam2y'
+
     return xilam2x, xilam2y
 
 def xy2xilam_fit(layout, params):
@@ -706,21 +715,12 @@ def xy2xilam_fit(layout, params):
     x_arr = layout[params['x_colname']]
     y_arr = layout[params['y_colname']]
 
-    # # Filter the lists: remove any points with x==0
-    # # ..todo: this may not be necessary after sanitising the table
-    # good = x != 0
-    # xi = xi[good]
-    # lam = lam[good]
-    # x = x[good]
-    # y = y[good]
-
     pinit_xi = Polynomial2D(degree=4)
     pinit_lam = Polynomial2D(degree=4)
     fitter = fitting.LinearLSQFitter()
     xy2xi = fitter(pinit_xi, x_arr, y_arr, xi_arr)
-    #xy2xi.name = 'xy2xi'
     xy2lam = fitter(pinit_lam, x_arr, y_arr, lam_arr)
-    #xy2lam.name = 'xy2lam'
+
     return xy2xi, xy2lam
 
 
@@ -738,51 +738,13 @@ def _xiy2xlam_fit(layout, params):
     x_arr = layout[params['x_colname']]
     y_arr = layout[params['y_colname']]
 
-    # # Filter the lists: remove any points with x==0
-    # # ..todo: this may not be necessary after sanitising the table
-    # good = x != 0
-    # xi = xi[good]
-    # lam = lam[good]
-    # x = x[good]
-    # y = y[good]
-
     pinit_x = Polynomial2D(degree=4)
     pinit_lam = Polynomial2D(degree=4)
     fitter = fitting.LinearLSQFitter()
     xiy2x = fitter(pinit_x, xi_arr, y_arr, x_arr)
-    #xy2xi.name = 'xy2xi'
     xiy2lam = fitter(pinit_lam, xi_arr, y_arr, lam_arr)
-    #xy2lam.name = 'xy2lam'
     return xiy2x, xiy2lam
 
-
-def deriv_polynomial2d(poly):
-    '''Derivatives (gradient) of a Polynomial2D model
-
-    Parameters
-    ----------
-    poly : astropy.modeling.models.Polynomial2D
-
-    Output
-    ------
-    gradient : tuple of Polynomial2d
-    '''
-    degree = poly.degree
-    dpoly_dx = Polynomial2D(degree=degree - 1)
-    dpoly_dy = Polynomial2D(degree=degree - 1)
-    regexp = re.compile(r'c(\d+)_(\d+)')
-    for pname in poly.param_names:
-        # analyse the name
-        match = regexp.match(pname)
-        i = int(match.group(1))
-        j = int(match.group(2))
-        cij = getattr(poly, pname)
-        pname_x = "c%d_%d" % (i-1, j)
-        pname_y = "c%d_%d" % (i, j-1)
-        setattr(dpoly_dx, pname_x, i * cij)
-        setattr(dpoly_dy, pname_y, j * cij)
-
-    return dpoly_dx, dpoly_dy
 
 # ..todo: Check whether the following functions are actually used
 def rolling_median(x, n):

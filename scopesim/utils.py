@@ -172,6 +172,12 @@ def nearest(arr, val):
 
     return np.argmin(abs(arr - val))
 
+def power_vector(val, degree):
+    """Return the vector of powers of val up to a degree"""
+    if degree < 0 or not isinstance(degree, int):
+        raise ValueError("degree must be a positive integer")
+
+    return np.array([val**exp for exp in range(degree + 1)])
 
 def deriv_polynomial2d(poly):
     """Derivatives (gradient) of a Polynomial2D model

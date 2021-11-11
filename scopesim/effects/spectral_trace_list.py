@@ -14,7 +14,7 @@ from .effects import Effect
 from .spectral_trace_list_utils import SpectralTrace
 from ..utils import from_currsys, check_keys, interp2
 from ..optics.image_plane_utils import header_from_list_of_xy
-
+from ..base_classes import FieldOfViewBase, FOVSetupBase
 
 class SpectralTraceList(Effect):
     """
@@ -115,45 +115,33 @@ class SpectralTraceList(Effect):
             params = {col: row[col] for col in row.colnames}
             params.update(self.meta)
             hdu = self._file[row["extension_id"]]
-
-            if self.meta["center_on_wave_mid"]:
-                wave_mid = from_currsys(self.meta["wave_mid"])
-                waves = hdu.data[self.meta["wave_colname"]]
-                i_mid = int(interp2(wave_mid, waves, np.arange(len(waves))))
-                row = np.array(hdu.data[i_mid])
-                for colname in ["s_colname", "x_colname", "y_colname"]:
-                    mask = [self.meta[colname] in name for name in hdu.columns.names]
-                    av = np.average(row[mask])
-                    for cn in np.array(hdu.columns.names)[mask]:
-                        hdu.data[cn] -= av
-
-            # ..todo: add in re-centre on wave_mid here
             spec_traces[row["description"]] = SpectralTrace(hdu, **params)
 
         return spec_traces
 
-    def apply_to(self, fov):
-        '''Apply the effect to the FieldOfView'''
-        trace_id = fov.meta['trace_id']
-        spt = self.spectral_traces[trace_id]
-        fov.image = spt.map_spectra_to_focal_plane(fov)
+    def apply_to(self, obj):
+        '''
+        Interface between FieldOfView and SpectralTraceList
 
-        return fov
+        This is called twice:
+        1. During setup of the required FieldOfView objects, the
+        SpectralTraceList is asked for the source space volumes that
+        it requires (spatial limits and wavelength limits).
+        2. During "observation" the method is passed a single FieldOfView
+        object and applies the mapping to the image plane to it.
+        The FieldOfView object is associated to one SpectralTrace from the
+        list, identified by meta['trace_id'].
+        '''
+        if isinstance(obj, FOVSetupBase):
+            return [self.spectral_traces[key].fov_grid()
+                    for key in self.spectral_traces]
+        if isinstance(obj, FieldOfViewBase):
+            trace_id = obj.meta['trace_id']
+            spt = self.spectral_traces[trace_id]
+            obj.image = spt.map_spectra_to_focal_plane(obj)
+            return obj
 
-    #    def fov_grid(self, which="waveset", **kwargs):
-    #        self.meta.update(kwargs)
-    #        self.meta = from_currsys(self.meta)
-    #
-    #        if which == "waveset":
-    #            if "pixel_size" not in kwargs:
-    #                kwargs["pixel_size"] = None
-    #            return self.get_waveset(kwargs["pixel_size"])
-    #
-    #        elif which == "edges":
-    #            check_keys(kwargs, ["sky_header", "det_header",
-    #                                "wave_min", "wave_max",
-    #                                "pixel_scale", "plate_scale"], "error")
-    #            return self.get_fov_headers(**kwargs)
+        return None   # Should never get there
 
     def get_waveset(self, pixel_size=None):
         if pixel_size is None:
