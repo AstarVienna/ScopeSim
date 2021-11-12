@@ -106,7 +106,7 @@ class SpectralTrace:
         Spatial limits are determined by the `ApertureMask` effect
         and are not returned here.
         """
-        trace_id = self.meta['name']
+        trace_id = self.meta['trace_id']
         aperture_id = self.meta['aperture_id']
         lam_arr = self.table[self.meta['wave_colname']]
 
