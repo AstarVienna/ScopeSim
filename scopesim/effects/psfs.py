@@ -622,49 +622,51 @@ class FieldVaryingPSF(DiscretePSF):
         # accept "full", "dit", "none
 
         # check if there are any fov.fields to apply a psf to
-        if len(fov.fields) > 0:
-            if fov.image is None:
-                fov.image = fov.make_image_hdu().data
+        if isinstance(fov, self.convolution_classes):
+            if len(fov.fields) > 0:
+                if fov.image is None:
+                    fov.image = fov.make_image_hdu().data
 
-            old_shape = fov.image.shape
+                old_shape = fov.image.shape
 
-            # get the kernels that cover this fov, and their respective masks
-            # kernels and masks are returned by .get_kernel as a list of tuples
-            canvas = None
-            kernels_masks = self.get_kernel(fov)
-            for kernel, mask in kernels_masks:
+                # get the kernels that cover this fov, and their respective
+                # masks kernels and masks are returned by .get_kernel as a list
+                # of tuples
+                canvas = None
+                kernels_masks = self.get_kernel(fov)
+                for kernel, mask in kernels_masks:
 
-                # renormalise the kernel if needs be
-                sum_kernel = np.sum(kernel)
-                if abs(sum_kernel - 1) > self.meta["flux_accuracy"]:
-                    kernel /= sum_kernel
+                    # renormalise the kernel if needs be
+                    sum_kernel = np.sum(kernel)
+                    if abs(sum_kernel - 1) > self.meta["flux_accuracy"]:
+                        kernel /= sum_kernel
 
-                # image convolution
-                image = fov.image.astype(float)
-                kernel = kernel.astype(float)
-                new_image = convolve(image, kernel, mode="same")
-                if canvas is None:
-                    canvas = np.zeros(new_image.shape)
+                    # image convolution
+                    image = fov.image.astype(float)
+                    kernel = kernel.astype(float)
+                    new_image = convolve(image, kernel, mode="same")
+                    if canvas is None:
+                        canvas = np.zeros(new_image.shape)
 
-                # mask convolution + combine with convolved image
-                if mask is not None:
-                    new_mask = convolve(mask, kernel, mode="same")
-                    canvas += new_image * new_mask
-                else:
-                    canvas = new_image
+                    # mask convolution + combine with convolved image
+                    if mask is not None:
+                        new_mask = convolve(mask, kernel, mode="same")
+                        canvas += new_image * new_mask
+                    else:
+                        canvas = new_image
 
-            # reset WCS header info
-            new_shape = canvas.shape
-            fov.image = canvas
+                # reset WCS header info
+                new_shape = canvas.shape
+                fov.image = canvas
 
-            # ..todo: careful with which dimensions mean what
-            if "CRPIX1" in fov.header:
-                fov.header["CRPIX1"] += (new_shape[0] - old_shape[0]) / 2
-                fov.header["CRPIX2"] += (new_shape[1] - old_shape[1]) / 2
+                # ..todo: careful with which dimensions mean what
+                if "CRPIX1" in fov.header:
+                    fov.header["CRPIX1"] += (new_shape[0] - old_shape[0]) / 2
+                    fov.header["CRPIX2"] += (new_shape[1] - old_shape[1]) / 2
 
-            if "CRPIX1D" in fov.header:
-                fov.header["CRPIX1D"] += (new_shape[0] - old_shape[0]) / 2
-                fov.header["CRPIX2D"] += (new_shape[1] - old_shape[1]) / 2
+                if "CRPIX1D" in fov.header:
+                    fov.header["CRPIX1D"] += (new_shape[0] - old_shape[0]) / 2
+                    fov.header["CRPIX2D"] += (new_shape[1] - old_shape[1]) / 2
 
         return fov
 

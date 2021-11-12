@@ -79,7 +79,7 @@ class TestObserve:
         im = opt.image_planes[0].image
         src_flux = tbl_src.photons_in_range(1, 2, 1)[0].value
 
-        if not PLOTS:
+        if PLOTS:
             implane = opt.image_planes[0]
             plt.imshow(implane.image.T, origin="lower", norm=LogNorm())
             plt.colorbar()

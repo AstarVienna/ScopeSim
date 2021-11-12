@@ -69,6 +69,7 @@ class TERCurve(Effect):
                   "wave_max": "!SIM.spectral.wave_max",
                   "wave_unit": "!SIM.spectral.wave_unit",
                   "wave_bin": "!SIM.spectral.spectral_resolution",
+                  "bg_cell_width": "!SIM.computing.bg_cell_width",
                   "report_plot_include": True,
                   "report_table_include": False}
         self.meta.update(params)
@@ -128,8 +129,10 @@ class TERCurve(Effect):
         if self._background_source is None:
             # add a single pixel ImageHDU for the extended background with a
             # size of 1 degree
+            bg_cell_width = from_currsys(self.meta["bg_cell_width"])
             flux = self.emission
-            bg_hdu = make_imagehdu_from_table([0], [0], [1], 1 * u.deg)
+            bg_hdu = make_imagehdu_from_table([0], [0], [1],
+                                              bg_cell_width * u.arcsec)
             bg_hdu.header["BG_SRC"] = True
             bg_hdu.header["BG_SURF"] = self.meta.get("name", "<untitled>")
             self._background_source = Source(image_hdu=bg_hdu, spectra=flux)
