@@ -8,6 +8,7 @@ from astropy.wcs import WCS
 from matplotlib import pyplot as plt
 
 from scopesim.effects.spectral_trace_list import SpectralTraceList
+from scopesim.optics.fov_manager import FovVolumeList
 from scopesim.tests.mocks.py_objects import trace_list_objects as tlo
 from scopesim.tests.mocks.py_objects import header_objects as ho
 from scopesim.base_classes import PoorMansHeader
@@ -106,6 +107,17 @@ class TestGetFOVHeaders:
                 xw, yw = wcs.all_pix2world(xp, yp, 1)
                 plt.plot(xw, yw, alpha=0.2)
             plt.show()
+
+
+class TestApplyTo:
+    def test_fov_setup_base_returns_only_extracted_fov_limits(self):
+        fname = r"F:\Work\irdb\MICADO\TRACE_MICADO.fits"
+        spt = SpectralTraceList(filename=fname, s_colname='xi')
+
+        fvl = FovVolumeList()
+        fvl = spt.apply_to(fvl)
+
+        assert len(fvl) == 17
 
 
 ################################################################################

@@ -106,8 +106,8 @@ class ApertureMask(Effect):
 
     def apply_to(self, obj, **kwargs):
         if isinstance(obj, FOVSetupBase):
-            x = quantity_from_table("x", self.table, u.arcsec).value
-            y = quantity_from_table("y", self.table, u.arcsec).value
+            x = quantity_from_table("x", self.table, u.arcsec).to(u.arcsec).value
+            y = quantity_from_table("y", self.table, u.arcsec).to(u.arcsec).value
             obj.shrink(["x", "y"], ([min(x), max(x)], [min(y), max(y)]))
 
         return obj

@@ -44,6 +44,7 @@ Imaging dependent on:
 from copy import deepcopy, copy
 import numpy as np
 from astropy.table import Table
+from astropy import units as u
 
 from . import fov_manager_utils as fmu
 from . import image_plane_utils as ipu
@@ -185,7 +186,7 @@ class FovVolumeList(FOVSetupBase):
                          "x_max": 1800,
                          "y_min": -1800,
                          "y_max": 1800,
-                         "meta": {}
+                         "meta": {"area": 0 * u.um**2}
                          }]
         self.volumes[0].update(initial_volume)
         self.detector_limits = {"xd_min": 0,
@@ -221,7 +222,7 @@ class FovVolumeList(FOVSetupBase):
         if isinstance(axis, (tuple, list)):
             for ax, val in zip(axis, value):
                 self.split(ax, val)
-        elif isinstance(value, (tuple, list)):
+        elif isinstance(value, (tuple, list, np.ndarray)):
             for val in value:
                 self.split(axis, val)
         else:
@@ -293,7 +294,7 @@ class FovVolumeList(FOVSetupBase):
         ::
             >>> fvl = FovVolumeList()
             >>> fvl.split("x", 0)
-            >>> new_vols = fvl.extract(axes=["wave"], edges=[0.5, 0.6])
+            >>> new_vols = fvl.extract(axes=["wave"], edges=([0.5, 0.6]))
             >>> new_vols = fvl.extract(axes=["x", "y"], edges=([-1, 1], [0, 5]))
             >>> new_vols = fvl.extract(axes=["x", "y", "wave"],
             >>>                        edges=([-1, 1], [0, 5], [0.5, 0.6]))

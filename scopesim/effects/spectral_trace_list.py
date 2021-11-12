@@ -82,7 +82,7 @@ class SpectralTraceList(Effect):
         if "hdulist" in kwargs and isinstance(kwargs["hdulist"], fits.HDUList):
             self._file = kwargs["hdulist"]
 
-        params = {"z_order": [70, 270],
+        params = {"z_order": [70, 270, 670],
                   "pixel_scale": "!INST.pixel_scale",  # [arcsec / pix]}
                   "plate_scale": "!INST.plate_scale",  # [arcsec / mm]
                   "wave_min": "!SIM.spectral.wave_min",  # [um]
@@ -119,7 +119,7 @@ class SpectralTraceList(Effect):
 
         return spec_traces
 
-    def apply_to(self, obj):
+    def apply_to(self, obj, **kwargs):
         '''
         Interface between FieldOfView and SpectralTraceList
 
@@ -133,15 +133,31 @@ class SpectralTraceList(Effect):
         list, identified by meta['trace_id'].
         '''
         if isinstance(obj, FOVSetupBase):
-            return [self.spectral_traces[key].fov_grid()
-                    for key in self.spectral_traces]
+            volumes = [self.spectral_traces[key].fov_grid()
+                       for key in self.spectral_traces]
+            new_vols_list = []
+            for vol in volumes:
+                edges = [vol["wave_min"], vol["wave_max"]]
+                extracted_vols = obj.extract(axes=["wave"], edges=([edges]))
+                for ex_vol in extracted_vols:
+                    ex_vol["meta"].update(vol)
+                    ex_vol["meta"].pop("wave_min")
+                    ex_vol["meta"].pop("wave_max")
+                new_vols_list += extracted_vols
+
+            obj.volumes = new_vols_list
+
         if isinstance(obj, FieldOfViewBase):
+            if obj.hdu is not None and obj.hdu.header["NAXIS"] == 3:
+                obj.cube = obj.hdu
+            elif obj.hdu is None and obj.cube is None:
+                obj.cube = obj.make_cube_hdu()
+
             trace_id = obj.meta['trace_id']
             spt = self.spectral_traces[trace_id]
-            obj.image = spt.map_spectra_to_focal_plane(obj)
-            return obj
+            obj.hdu = spt.map_spectra_to_focal_plane(obj)
 
-        return None   # Should never get there
+        return obj
 
     def get_waveset(self, pixel_size=None):
         if pixel_size is None:

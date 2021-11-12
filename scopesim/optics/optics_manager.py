@@ -265,8 +265,8 @@ class OpticsManager:
         included = [eff.meta["include"] for eff in all_effs]
         z_orders = [eff.meta["z_order"] for eff in all_effs]
 
-        colnames = ["element", "name", "class", "included", "z_orders"]
-        data = [elements, names, classes, included, z_orders]
+        colnames = ["element", "name", "class", "included"]     #, "z_orders"
+        data = [elements, names, classes, included]             #, z_orders
         tbl = Table(names=colnames, data=data, copy=False)
 
         return tbl

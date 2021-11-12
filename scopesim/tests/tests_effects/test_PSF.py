@@ -71,3 +71,6 @@ class TestRotationBlur:
 
         assert np.sum(implane.data) == approx(1)
 
+
+class TestConvolvesWithImageFov:
+    pass

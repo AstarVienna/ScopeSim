@@ -69,8 +69,8 @@ class PSF(Effect):
                 if self.meta["normalise_kernel"] is True:
                     kernel /= np.sum(kernel)
 
-                # ..todo: add in image vs cube here
                 image = obj.hdu.data.astype(float)
+                # ..todo: add in image vs cube here
                 ny_old, nx_old = image.shape
 
                 bkg_width = self.meta["bkg_width"]

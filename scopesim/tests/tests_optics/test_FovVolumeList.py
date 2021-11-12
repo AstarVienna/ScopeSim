@@ -126,6 +126,13 @@ class TestExtract:
 
         assert len(new_vols) == 2
 
+    def test_extracts_only_wavelength_range(self):
+        fvl = FovVolumeList()
+        fvl.split("x", 0)
+        new_vols = fvl.extract(["wave"], ([1, 2]))
+
+        assert len(new_vols) == 2
+
 
 class TestAdd:
     def test_adds_extracted_volumes(self):
