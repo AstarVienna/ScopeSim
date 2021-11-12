@@ -49,21 +49,18 @@ class TestInteractionBetweenSourceFOVImagePlane:
         imp = ImagePlane(implane_hdr)
 
         fov.extract_from(comb_src)
-        fov.image = fov.make_image()
+        fov.view()
         imp.add(fov.hdu, wcs_suffix="D")
 
-        #ipt = np.sum(fov.fields[0]["flux"]) + np.sum(fov.fields[1].data)
-        #opt = np.sum(imp.image)
+        assert np.sum(imp.image) > 0
 
-        # assert ipt == approx(opt)
-
-        if not PLOTS:
+        if PLOTS:
             plt.subplot(131)
             plt.imshow(comb_src.fields[3].data, origin="lower", norm=LogNorm())
 
             plt.subplot(132)
-            plt.imshow(fov.image.data, origin="lower", norm=LogNorm())
+            plt.imshow(fov.hdu.data, origin="lower", norm=LogNorm())
 
             plt.subplot(133)
-            plt.imshow(imp.image.data, origin="lower", norm=LogNorm())
+            plt.imshow(imp.hdu.data, origin="lower", norm=LogNorm())
             plt.show()

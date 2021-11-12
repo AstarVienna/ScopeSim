@@ -48,6 +48,7 @@ class PSF(Effect):
         self.meta.update(params)
         self.meta.update(kwargs)
         self.meta = utils.from_currsys(self.meta)
+        self.convolution_classes = (FieldOfViewBase, ImagePlaneBase)
 
     def apply_to(self, obj, **kwargs):
         if isinstance(obj, FOVSetupBase):
@@ -55,12 +56,9 @@ class PSF(Effect):
             if waveset is not None:
                 obj.split("wave", utils.quantify(waveset, u.um).value)
 
-        elif isinstance(obj, (FieldOfViewBase, ImagePlaneBase)):
+        elif isinstance(obj, self.convolution_classes):
             if (hasattr(obj, "fields") and len(obj.fields) > 0) or \
-                    obj.hdu.data is not None:
-
-                if obj.hdu.data is None:
-                    obj.view(self.meta["sub_pixel_flag"])
+                    obj.hdu is not None:
 
                 kernel = self.get_kernel(obj).astype(float)
 
@@ -71,6 +69,7 @@ class PSF(Effect):
                 if self.meta["normalise_kernel"] is True:
                     kernel /= np.sum(kernel)
 
+                # ..todo: add in image vs cube here
                 image = obj.hdu.data.astype(float)
                 ny_old, nx_old = image.shape
 
@@ -138,7 +137,7 @@ class AnalyticalPSF(PSF):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.meta["z_order"] = [41, 641]
-        self.apply_to_classes = FieldOfViewBase
+        self.convolution_classes = FieldOfViewBase
 
 
 class Vibration(AnalyticalPSF):
@@ -149,7 +148,7 @@ class Vibration(AnalyticalPSF):
         super().__init__(**kwargs)
         self.meta["z_order"] = [244, 744]
         self.meta["width_n_fwhms"] = 4
-        self.apply_to_classes = ImagePlaneBase
+        self.convolution_classes = ImagePlaneBase
 
         self.required_keys = ["fwhm", "pixel_scale"]
         utils.check_keys(self.meta, self.required_keys, action="error")
@@ -184,6 +183,7 @@ class NonCommonPathAberration(AnalyticalPSF):
 
         self.valid_waverange = [0.1 * u.um, 0.2 * u.um]
 
+        self.convolution_classes = FieldOfViewBase
         self.required_keys = ["pixel_scale"]
         utils.check_keys(self.meta, self.required_keys, action="error")
 
@@ -342,8 +342,8 @@ class SemiAnalyticalPSF(PSF):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.meta["z_order"] = [42]
-        self.apply_to_classes = FieldOfViewBase
-        # self.apply_to_classes = ImagePlaneBase
+        self.convolution_classes = FieldOfViewBase
+        # self.convolution_classes = ImagePlaneBase
 
 
 class AnisocadoConstPSF(SemiAnalyticalPSF):
@@ -535,8 +535,8 @@ class DiscretePSF(PSF):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.meta["z_order"] = [43]
-        self.apply_to_classes = FieldOfViewBase
-        # self.apply_to_classes = ImagePlaneBase
+        self.convolution_classes = FieldOfViewBase
+        # self.convolution_classes = ImagePlaneBase
 
 
 class FieldConstantPSF(DiscretePSF):
@@ -624,9 +624,9 @@ class FieldVaryingPSF(DiscretePSF):
         # check if there are any fov.fields to apply a psf to
         if len(fov.fields) > 0:
             if fov.image is None:
-                fov.image = fov.make_image()
+                fov.image = fov.make_image_hdu().data
 
-            old_shape = fov.image.data.shape
+            old_shape = fov.image.shape
 
             # get the kernels that cover this fov, and their respective masks
             # kernels and masks are returned by .get_kernel as a list of tuples
@@ -640,7 +640,7 @@ class FieldVaryingPSF(DiscretePSF):
                     kernel /= sum_kernel
 
                 # image convolution
-                image = fov.image.data.astype(float)
+                image = fov.image.astype(float)
                 kernel = kernel.astype(float)
                 new_image = convolve(image, kernel, mode="same")
                 if canvas is None:
@@ -655,7 +655,7 @@ class FieldVaryingPSF(DiscretePSF):
 
             # reset WCS header info
             new_shape = canvas.shape
-            fov.image.data = canvas
+            fov.image = canvas
 
             # ..todo: careful with which dimensions mean what
             if "CRPIX1" in fov.header:

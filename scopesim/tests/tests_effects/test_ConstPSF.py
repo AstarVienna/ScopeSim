@@ -101,6 +101,7 @@ class TestApplyTo:
     def test_convolves_with_basic_fov_for_each_waveleng(self, waves, max_pixel):
         centre_fov = _centre_fov(n=10, waverange=waves)
         nax1, nax2 = centre_fov.header["NAXIS1"], centre_fov.header["NAXIS2"]
+        centre_fov.view("image")
         centre_fov.hdu.data = np.zeros((nax2, nax1))
         centre_fov.hdu.data[1::4, 1::4] = 1
 
@@ -123,6 +124,7 @@ class TestApplyTo:
         centre_fov = _centre_fov(n=10, waverange=[1.1, 1.3])
         nax1, nax2 = centre_fov.header["NAXIS1"], centre_fov.header["NAXIS2"]
 
+        centre_fov.view()
         centre_fov.hdu.data = np.ones((nax2, nax1), dtype=np.float32)
 
         constpsf = FieldConstantPSF(filename="test_ConstPSF.fits")

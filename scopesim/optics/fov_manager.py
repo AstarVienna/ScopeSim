@@ -82,10 +82,14 @@ class FOVManager:
                      "preload_fovs": "!SIM.computing.preload_field_of_views"}
         self.meta.update(kwargs)
 
-        self.volumes_list = FovVolumeList()
+        params = from_currsys({"wave_min": self.meta["wave_min"],
+                               "wave_max": self.meta["wave_max"],
+                               "meta": {"area": self.meta["area"]}})
+        self.volumes_list = FovVolumeList(initial_volume=params)
 
         self.effects = effects
         self._fovs_list = []
+        self.is_spectroscope = is_spectroscope(effects)
 
         if from_currsys(self.meta["preload_fovs"]) is True:
             self._fovs_list = self.generate_fovs_list()
@@ -173,7 +177,7 @@ class FovVolumeList(FOVSetupBase):
 
     """
 
-    def __init__(self):
+    def __init__(self, initial_volume={}):
 
         self.volumes = [{"wave_min": 0.3,
                          "wave_max": 30,
@@ -183,6 +187,7 @@ class FovVolumeList(FOVSetupBase):
                          "y_max": 1800,
                          "meta": {}
                          }]
+        self.volumes[0].update(initial_volume)
         self.detector_limits = {"xd_min": 0,
                                 "xd_max": 0,
                                 "yd_min": 0,

@@ -68,13 +68,15 @@ class FieldOfView(FieldOfViewBase):
         self.header["NAXIS2"] = header["NAXIS2"]
         self.header.update(header)
 
+        self.hdu = None
+
         self.image_plane_id = 0
         self.fields = []
         self.spectra = {}
 
-        self.cube = None        # 3D ImageHDU for IFU, long-lit, Slicer-MOS
-        self.image = None       # 2D ImageHDU for Imagers
-        self.spectrum = None    # SourceSPectrum for Fibre-fed MOS
+        self.cube = None        # 3D array for IFU, long-lit, Slicer-MOS
+        self.image = None       # 2D array for Imagers
+        self.spectrum = None    # SourceSpectrum for Fibre-fed MOS
 
         self._waverange = None
         self._wavelength = None
@@ -83,7 +85,7 @@ class FieldOfView(FieldOfViewBase):
     def extract_from(self, src):
         """ ..assumption: Bandpass has been applied
 
-        .. note:: Spectra are cut and copied from the original Source object
+        .. note:: Spectra are cut and copied from the original Source object.
             They are in original units. ph/s/pix comes in the make_**** methods
 
         """
@@ -119,8 +121,37 @@ class FieldOfView(FieldOfViewBase):
         self.fields = fields_in_fov
         self.spectra = spectra
 
-    def view(self, sub_pixel=None):
-        return self.make_image()
+    def view(self, hdu_type="image", sub_pixel=None):
+        """
+        Forces the self.fields to be viewed as a single object
+
+        Parameters
+        ----------
+        sub_pixel : bool
+        hdu_type : str
+            ["cube", "image", "spectrum"]
+
+        Returns
+        -------
+        self.hdu : fits.ImageHDU, synphot.SourceSpectrum
+
+        """
+        if sub_pixel is not None:
+            self.meta["sub_pixel"] = sub_pixel
+
+        if hdu_type == "image":
+            self.hdu = self.make_image_hdu()
+        elif hdu_type == "cube":
+            self.hdu = self.make_cube_hdu()
+        elif hdu_type == "spectrum":
+            self.hdu = self.make_spectrum()
+
+        return self.hdu
+
+    def flatten(self):
+        if self.hdu.header["NAXIS"] == 3:
+            image = np.sum(self.hdu.data, axis=0)
+            self.hdu.data = image
 
     def make_spectrum(self):
         """
@@ -187,7 +218,7 @@ class FieldOfView(FieldOfViewBase):
 
         return spectrum
 
-    def make_image(self):
+    def make_image_hdu(self):
         """
         Used for imaging
 
@@ -222,12 +253,6 @@ class FieldOfView(FieldOfViewBase):
 
         """
 
-        if self.cube is not None:
-            image = cube.sum(axis=0)
-            canvas_image_hdu = fits.ImageHDU(data=image,
-                                             header=self.header)
-            return canvas_image_hdu
-
         # 1. Make waveset and canvas image
         fov_waveset = self.waveset
         bin_widths = np.diff(fov_waveset)       # u.um
@@ -247,7 +272,8 @@ class FieldOfView(FieldOfViewBase):
             image = np.sum(field.data, axis=0)
             tmp_hdu = fits.ImageHDU(data=image, header=field.header)
             canvas_image_hdu = imp_utils.add_imagehdu_to_imagehdu(tmp_hdu,
-                                                               canvas_image_hdu)
+                                                             canvas_image_hdu,
+                                                             conserve_flux=True)
 
         # 2. Find Image fields
         for field in self.image_fields:
@@ -255,7 +281,8 @@ class FieldOfView(FieldOfViewBase):
             tmp_hdu = fits.ImageHDU(data=image, header=field.header)
             tmp_hdu.data *= fluxes[field.header["SPEC_REF"]]  # ph / s
             canvas_image_hdu = imp_utils.add_imagehdu_to_imagehdu(tmp_hdu,
-                                                               canvas_image_hdu)
+                                                             canvas_image_hdu,
+                                                             conserve_flux=True)
 
         # 2. Find Table fields
 
@@ -268,6 +295,7 @@ class FieldOfView(FieldOfViewBase):
                 for i, row in enumerate(field):
                     xs, ys, fracs = imp_utils.sub_pixel_fractions(xpix[i],
                                                                   ypix[i])
+                    ref, weight = row["ref"], row["weight"]
                     for x, y, f in zip(xs, ys, fracs):
                         canvas_image_hdu.data[y, x] += fluxes[ref] * weight * f
             else:
@@ -281,7 +309,7 @@ class FieldOfView(FieldOfViewBase):
 
         return image_hdu
 
-    def make_cube(self):
+    def make_cube_hdu(self):
         """
         Used for IFUs, slit spectrographs, and coherent MOSs (e.g.KMOS)
 
@@ -418,14 +446,10 @@ class FieldOfView(FieldOfViewBase):
         return self._volume
 
     @property
-    def hdu(self):
-        if self.data is None:
-            self.image = self.make_image()
-        return fits.ImageHDU(data=self.data.data, header=self.header)
-
-    @property
     def data(self):
-        if self.image is not None:
+        if self.hdu is not None:
+            data = self.hdu.data
+        elif self.image is not None:
             data = self.image
         elif self.cube is not None:
             data = self.cube
@@ -456,7 +480,7 @@ class FieldOfView(FieldOfViewBase):
         """Returns central wavelength in um"""
         if self._wavelength is None:
             self._wavelength = np.average(self.waverange)
-        return self._wavelength
+        return utils.quantify(self._wavelength, u.um)
 
     @property
     def waveset(self):
@@ -467,9 +491,11 @@ class FieldOfView(FieldOfViewBase):
             i = np.argmax([cube.header["NAXIS3"] for cube in field_cubes])
             _waveset = fu.get_cube_waveset(field_cubes[i].header,
                                               return_quantity=True)
-        else:
+        elif len(self.spectra) > 0:
             i = np.argmax([len(spec.waveset) for spec in self.spectra.values()])
             _waveset = self.spectra[i].waveset
+        else:
+            _waveset = self.waverange * u.um
 
         return _waveset.to(u.um)
 

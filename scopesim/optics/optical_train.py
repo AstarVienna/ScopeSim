@@ -164,14 +164,18 @@ class OpticalTrain:
 
         # [3D - Atmospheric shifts, PSF, NCPAs, Grating shift/distortion]
         fovs = self.fov_manager.fovs
-        for fov_i, fov in enumerate(fovs):
+        for fov in fovs:
             # print("FOV", fov_i+1, "of", n_fovs, flush=True)
             # .. todo: possible bug with bg flux not using plate_scale
             #          see fov_utils.combine_imagehdu_fields
             fov.extract_from(source)
+
+            hdu_type = "cube" if self.fov_manager.is_spectroscope else "image"
+            fov.view(hdu_type)
             for effect in self.optics_manager.fov_effects:
                 fov = effect.apply_to(fov)
 
+            fov.flatten()
             self.image_planes[fov.image_plane_id].add(fov.hdu, wcs_suffix="D")
             # ..todo: finish off the multiple image plane stuff
 

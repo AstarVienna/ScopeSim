@@ -48,26 +48,28 @@ class TestInit:
 class TestApplyTo:
     def test_size_of_fov_increases_when_convolved_if_convolve_mode_set_to_full(self, basic_fov):
         effect = efs.GaussianDiffractionPSF(1, convolve_mode="full")
-        basic_fov = effect.apply_to(basic_fov)
+        basic_fov.view()
+        #basic_fov = effect.apply_to(basic_fov)
 
         orig_size = np.prod(basic_fov.fields[0].data.shape)
-        orig_sum = np.sum(basic_fov.fields[0].data)
-        new_size = np.prod(basic_fov.data.shape)
+        orig_sum = np.sum(basic_fov.fields[0].data) * 2     # integ. flux of spec = 2.0
+        new_size = np.prod(basic_fov.hdu.data.shape)
+        new_sum = np.sum(basic_fov.hdu.data)
+
+        assert new_size > orig_size
+        assert new_sum == approx(orig_sum, rel=1e-3)
 
         if PLOTS:
-
             plt.subplot(121)
-            plt.imshow(basic_fov.fields[0].data, origin="lower",
-                       norm=LogNorm())
+            plt.imshow(basic_fov.fields[0].data, origin="lower", norm=LogNorm())
             plt.subplot(122)
             plt.imshow(basic_fov.data, origin="lower", norm=LogNorm())
             plt.show()
 
-        assert new_size > orig_size
-        assert np.sum(basic_fov.data) == approx(orig_sum, rel=1e-3)
 
     def test_crval_stays_the_same(self, basic_fov):
         basic_fov.header["CRPIX1"] = 0
+        basic_fov.view()
         effect = efs.GaussianDiffractionPSF(1)
 
         x0, y0 = pix2val(basic_fov.header,

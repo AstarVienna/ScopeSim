@@ -46,7 +46,9 @@ for NEW_PATH in [YAMLS_PATH, FILES_PATH]:
 
 @pytest.fixture(scope="function")
 def centre_fov():
-    return _centre_fov()
+    fov = _centre_fov()
+    fov.view()
+    return fov
 
 
 @pytest.fixture(scope="function")
@@ -120,6 +122,7 @@ class TestApplyTo:
         centre_fov.hdu.data[::3, ::3] = 1
         sum_orig = np.sum(centre_fov.hdu.data)
 
+
         fvpsf = FieldVaryingPSF(filename="test_FVPSF.fits")
         fov_back = fvpsf.apply_to(centre_fov)
 
@@ -147,6 +150,7 @@ class TestApplyTo:
 
     def test_circular_fvpsf(self, basic_circular_fvpsf):
         centre_fov = _centre_fov(n=62)
+        centre_fov.view()
         nax1, nax2 = centre_fov.header["NAXIS1"], centre_fov.header["NAXIS2"]
         centre_fov.hdu.data = np.zeros((nax2, nax1))
 

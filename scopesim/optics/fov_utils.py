@@ -291,6 +291,8 @@ def extract_area_from_imagehdu(imagehdu, fov_volume):
 
     xp, yp = imp_utils.val2pix(hdr, np.array([x0s, x1s]), np.array([y0s, y1s]))
     (x0p, x1p), (y0p, y1p) = np.round(xp).astype(int), np.round(yp).astype(int)
+    if x0p == x1p: x1p += 1
+    if y0p == y1p: y1p += 1
 
     new_hdr = imp_utils.header_from_list_of_xy([x0s, x1s], [y0s, y1s],
                                                pixel_scale=hdr["CDELT1"])
@@ -382,12 +384,14 @@ def extract_range_from_spectrum(spectrum, waverange):
     spec_waveset = spectrum.waveset.to(u.AA).value
     mask = (spec_waveset > wave_min) * (spec_waveset < wave_max)
 
-    if sum(mask) == 0:
-        raise ValueError(f"Waverange does not overlap with Spectrum waveset:"
-                         f"{waverange} <> {spectrum.waveset}")
-    if wave_min < min(spec_waveset) or wave_max > max(spec_waveset):
-        raise ValueError(f"Waverange partially overlaps with Spectrum waveset:"
-                         f"{waverange} <> {spectrum.waveset}")
+    # if sum(mask) == 0:
+    #     warnings.warn(f"Waverange does not overlap with Spectrum waveset: "
+    #                   f"{[wave_min, wave_max]} <> {spec_waveset} "
+    #                   f"for spectrum {spectrum})
+    # if wave_min < min(spec_waveset) or wave_max > max(spec_waveset):
+    #     warnings.warn(f"Waverange partially overlaps with Spectrum waveset: "
+    #                   f"{[wave_min, wave_max]} <> {spec_waveset} ")
+    #                   f"for spectrum {spectrum})
 
     wave = np.r_[wave_min, spec_waveset[mask], wave_max]
     flux = spectrum(wave)
