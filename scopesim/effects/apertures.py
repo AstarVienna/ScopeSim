@@ -110,6 +110,11 @@ class ApertureMask(Effect):
             y = quantity_from_table("y", self.table, u.arcsec).to(u.arcsec).value
             obj.shrink(["x", "y"], ([min(x), max(x)], [min(y), max(y)]))
 
+            # ..todo: HUGE HACK - Get rid of this!
+            for vol in obj.volumes:
+                vol["meta"]["xi_min"] = min(x) * u.arcsec
+                vol["meta"]["xi_max"] = max(x) * u.arcsec
+
         return obj
 
     def fov_grid(self, which="edges", **kwargs):

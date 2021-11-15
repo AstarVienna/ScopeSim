@@ -70,33 +70,36 @@ class PSF(Effect):
                     kernel /= np.sum(kernel)
 
                 image = obj.hdu.data.astype(float)
-                # ..todo: add in image vs cube here
-                ny_old, nx_old = image.shape
 
-                bkg_width = self.meta["bkg_width"]
-                if bkg_width < 0:
+                # subtract background level before convolving. Then re-add it
+                bg_w = self.meta["bkg_width"]
+                if bg_w < 0:
                     bkg_level = np.median(image)
-                elif bkg_width == 0:
+                elif bg_w == 0:
                     bkg_level = 0
                 else:
-                    mask = np.ones((ny_old, nx_old), dtype=np.bool)
-                    mask[bkg_width:(ny_old - bkg_width),
-                         bkg_width:(nx_old - bkg_width)] = 0
-                    bkg_level = np.median(image[mask])
+                    bg_image = image.copy()
+                    if image.ndim == 2:
+                        bg_image[bg_w:-bg_w, bg_w:-bg_w] = 0
+                        bkg_level = np.median(bg_image)
+                    elif image.ndim == 3:
+                        bg_image[:, bg_w:-bg_w, bg_w:-bg_w] = 0
+                        bkg_level = np.median(bg_image, axis=(2, 1))
+                        bkg_level = bkg_level[:, None, None]
 
-                # y = min(image.shape[0], kernel.shape[0])
-                # x = min(image.shape[1], kernel.shape[1])
-                # new_image = convolve(image[:y, :x] - bkg_level, kernel[:y, :x], mode=mode)
-                mode = self.meta["convolve_mode"]
+                mode = utils.from_currsys(self.meta["convolve_mode"])
+                if image.ndim == 3:
+                    kernel = kernel[None, :, :]
                 new_image = convolve(image - bkg_level, kernel, mode=mode)
-                ny_new, nx_new = new_image.shape
                 obj.hdu.data = new_image + bkg_level
 
                 # ..todo: careful with which dimensions mean what
+                dx = new_image.shape[-1] - image.shape[-1]
+                dy = new_image.shape[-2] - image.shape[-2]
                 for s in ["", "D"]:
                     if "CRPIX1"+s in obj.hdu.header:
-                        obj.hdu.header["CRPIX1"+s] += (nx_new - nx_old) / 2
-                        obj.hdu.header["CRPIX2"+s] += (ny_new - ny_old) / 2
+                        obj.hdu.header["CRPIX1"+s] += dx / 2
+                        obj.hdu.header["CRPIX2"+s] += dy / 2
 
         return obj
 
