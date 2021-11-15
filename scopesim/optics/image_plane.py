@@ -124,6 +124,10 @@ class ImagePlane(ImagePlaneBase):
     def data(self):
         return self.hdu.data
 
+    @data.setter
+    def data(self, new_data):
+        self.hdu.data = new_data
+
     @property
     def image(self):
         return self.data
