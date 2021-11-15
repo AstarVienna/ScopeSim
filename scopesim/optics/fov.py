@@ -429,7 +429,7 @@ class FieldOfView(FieldOfViewBase):
                                        "CRVAL3": fov_waveset[0].value,
                                        "CRPIX3": 0,
                                        "CUNIT3": "um",
-                                       "CTYPE3": "WAV"})
+                                       "CTYPE3": "WAVE"})
 
         cube_hdu = canvas_cube_hdu
 
