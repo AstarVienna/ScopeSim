@@ -160,7 +160,7 @@ class FOVManager:
             # useful for spectroscopy mode where slit dimensions is not the same
             # as detector dimensions
             # ..todo: Make sure this changes for multiple image planes
-            if from_currsys(self.meta["decouple_sky_det_hdrs"]) is False:
+            if from_currsys(self.meta["decouple_sky_det_hdrs"]) is True:
                 det_eff = eu.get_all_effects(self.effects, DetectorList)[0]
                 dethdr = det_eff.image_plane_header
 

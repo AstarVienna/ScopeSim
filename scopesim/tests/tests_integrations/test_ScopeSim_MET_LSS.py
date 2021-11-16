@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+from matplotlib.colors import LogNorm
 import scopesim as sim
 from scopesim import rc
 
@@ -17,10 +18,10 @@ class TestMetisLss:
         metis.observe(src)
         hdus = metis.readout()
 
-        plt.subplot(121)
-        plt.imshow(metis.image_planes[0].data, origin="lower")
-        plt.subplot(122)
+        # plt.subplot(122)
         plt.imshow(hdus[0][1].data, origin="lower")
+        # plt.subplot(121)
+        plt.imshow(metis.image_planes[0].data, origin="lower", norm=LogNorm())
         plt.show()
 
 

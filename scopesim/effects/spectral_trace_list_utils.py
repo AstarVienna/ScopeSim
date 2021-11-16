@@ -168,6 +168,7 @@ class SpectralTrace:
         pixscale = pixscale.to(u.arcsec).value
 
         fpa_wcsd = WCS(det_header, key='D')
+        naxis1d, naxis2d = det_header['NAXIS1'], det_header['NAXIS2']
         xlim_px, ylim_px = fpa_wcsd.all_world2pix(xlim_mm, ylim_mm, 0)
         xmin = np.floor(xlim_px.min()).astype(int)
         xmax = np.ceil(xlim_px.max()).astype(int)
@@ -175,22 +176,22 @@ class SpectralTrace:
         ymax = np.ceil(ylim_px.max()).astype(int)
 
         ## Check if spectral trace footprint is outside FoV
-        if xmax < 0 or xmin > naxis1 or ymax < 0 or ymin > naxis2:
+        if xmax < 0 or xmin > naxis1d or ymax < 0 or ymin > naxis2d:
             warnings.warn("Spectral trace footprint is outside FoV")
             return None
 
         # Only work on parts within the FoV
         xmin = max(xmin, 0)
-        xmax = min(xmax, naxis1)
+        xmax = min(xmax, naxis1d)
         ymin = max(ymin, 0)
-        ymax = min(ymax, naxis2)
+        ymax = min(ymax, naxis2d)
 
         # Create header for the subimage - I think this only needs the DET one,
         # but we'll do both. The WCSs are initialised from the full fpa WCS and
         # then shifted accordingly.
         # sub_wcs = WCS(fov_header, key=" ")
         # sub_wcs.wcs.crpix -= np.array([xmin, ymin])
-        det_wcs = WCS(fov_header, key="D")
+        det_wcs = WCS(det_header, key="D")
         det_wcs.wcs.crpix -= np.array([xmin, ymin])
 
         sub_naxis1 = xmax - xmin
