@@ -48,7 +48,8 @@ from astropy import units as u
 
 from . import fov_manager_utils as fmu
 from . import image_plane_utils as ipu
-from ..effects.effects_utils import is_spectroscope
+from ..effects import DetectorList
+from ..effects import effects_utils as eu
 from ..utils import from_currsys
 
 from .fov import FieldOfView
@@ -80,7 +81,8 @@ class FOVManager:
                      "max_segment_size": "!SIM.computing.max_segment_size",
                      "sub_pixel": "!SIM.sub_pixel.flag",
                      "sub_pixel_fraction": "!SIM.sub_pixel.fraction",
-                     "preload_fovs": "!SIM.computing.preload_field_of_views"}
+                     "preload_fovs": "!SIM.computing.preload_field_of_views",
+                     "decouple_sky_det_hdrs": "!INST.decouple_detector_from_sky_headers"}
         self.meta.update(kwargs)
 
         params = from_currsys({"wave_min": self.meta["wave_min"],
@@ -90,10 +92,17 @@ class FOVManager:
 
         self.effects = effects
         self._fovs_list = []
-        self.is_spectroscope = is_spectroscope(effects)
+        self.is_spectroscope = eu.is_spectroscope(effects)
 
         if from_currsys(self.meta["preload_fovs"]) is True:
             self._fovs_list = self.generate_fovs_list()
+
+        # ..todo: Make sure this is changed for multiple detectors
+        # x_mm, y_mm = ipu.calc_footprint(det_eff.image_plane_header, "D")
+        # self.volumes_list.detector_limits = {"xd_min": min(x_mm),
+        #                                      "xd_max": max(x_mm),
+        #                                      "yd_min": min(y_mm),
+        #                                      "yd_max": min(y_mm)}
 
     def generate_fovs_list(self):
         """
@@ -148,7 +157,15 @@ class FOVManager:
             dethdr = ipu.header_from_list_of_xy(x_det, y_det, pixel_size, "D")
             skyhdr.update(dethdr)
 
-            fovs += [FieldOfView(skyhdr, waverange, **vol["meta"])]
+            # useful for spectroscopy mode where slit dimensions is not the same
+            # as detector dimensions
+            # ..todo: Make sure this changes for multiple image planes
+            if from_currsys(self.meta["decouple_sky_det_hdrs"]) is False:
+                det_eff = eu.get_all_effects(self.effects, DetectorList)[0]
+                dethdr = det_eff.image_plane_header
+
+            fovs += [FieldOfView(skyhdr, waverange, detector_header=dethdr,
+                                 **vol["meta"])]
 
         return fovs
 

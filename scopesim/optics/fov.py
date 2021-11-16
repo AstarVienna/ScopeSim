@@ -36,7 +36,7 @@ class FieldOfView(FieldOfViewBase):
 
     """
 
-    def __init__(self, header, waverange, **kwargs):
+    def __init__(self, header, waverange, detector_header=None, **kwargs):
         self.meta = {"id": None,
                      "wave_min": utils.quantify(waverange[0], u.um),
                      "wave_max": utils.quantify(waverange[1], u.um),
@@ -67,7 +67,7 @@ class FieldOfView(FieldOfViewBase):
         self.header["NAXIS1"] = header["NAXIS1"]
         self.header["NAXIS2"] = header["NAXIS2"]
         self.header.update(header)
-
+        self.detector_header = detector_header
         self.hdu = None
 
         self.image_plane_id = 0

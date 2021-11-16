@@ -622,10 +622,11 @@ class FieldVaryingPSF(DiscretePSF):
 
     def apply_to(self, fov, **kwargs):
         # .. todo: add in field rotation
+        # .. todo: add in 3D cubes
         # accept "full", "dit", "none
 
         # check if there are any fov.fields to apply a psf to
-        if isinstance(fov, self.convolution_classes):
+        if isinstance(fov, FieldOfViewBase):
             if len(fov.fields) > 0:
                 if fov.image is None:
                     fov.image = fov.make_image_hdu().data
