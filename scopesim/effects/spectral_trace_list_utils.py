@@ -255,8 +255,8 @@ class SpectralTrace:
 
         # Scale to ph / s / pixel
         dlam_by_dx, dlam_by_dy = self.xy2lam.gradient()
-        dlam_per_pix = pixsize * np.sqrt(dlam_by_dx(ximg_fpa, yimg_fpa)**2
-                                         + dlam_by_dy(ximg_fpa, yimg_fpa)**2)
+        dlam_per_pix = pixsize * np.sqrt(dlam_by_dx(ximg_fpa, yimg_fpa)**2 +
+                                         dlam_by_dy(ximg_fpa, yimg_fpa)**2)
         image *= pixscale * dlam_per_pix
 
         # img_header = sub_wcs.to_header()

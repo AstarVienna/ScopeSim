@@ -131,10 +131,13 @@ class TERCurve(Effect):
             # size of 1 degree
             bg_cell_width = from_currsys(self.meta["bg_cell_width"])
             flux = self.emission
-            bg_hdu = make_imagehdu_from_table([0], [0], [1],
-                                              bg_cell_width * u.arcsec)
-            bg_hdu.header["BG_SRC"] = True
-            bg_hdu.header["BG_SURF"] = self.meta.get("name", "<untitled>")
+            bg_hdu = fits.ImageHDU()
+            bg_hdu.header.update({"BG_SRC": True,
+                                  "BG_SURF": self.meta.get("name", "<untitled>"),
+                                  "CUNIT1": "DEG",
+                                  "CUNIT2": "DEG",
+                                  "CDELT1": 0,
+                                  "CDELT2": 0,})
             self._background_source = Source(image_hdu=bg_hdu, spectra=flux)
 
         return self._background_source

@@ -121,7 +121,7 @@ class FieldOfView(FieldOfViewBase):
         self.fields = fields_in_fov
         self.spectra = spectra
 
-    def view(self, hdu_type="image", sub_pixel=None):
+    def view(self, hdu_type="image", sub_pixel=None, use_photlam=None):
         """
         Forces the self.fields to be viewed as a single object
 
@@ -140,9 +140,11 @@ class FieldOfView(FieldOfViewBase):
             self.meta["sub_pixel"] = sub_pixel
 
         if hdu_type == "image":
-            self.hdu = self.make_image_hdu()
+            use_photlam = False if use_photlam is None else use_photlam
+            self.hdu = self.make_image_hdu(use_photlam=use_photlam)
         elif hdu_type == "cube":
-            self.hdu = self.make_cube_hdu()
+            use_photlam = False if use_photlam is None else use_photlam
+            self.hdu = self.make_cube_hdu(use_photlam=use_photlam)
         elif hdu_type == "spectrum":
             self.hdu = self.make_spectrum()
 
@@ -213,12 +215,18 @@ class FieldOfView(FieldOfViewBase):
             for ref, weight in weight_sums.items():
                 canvas_flux += self.spectra[ref](fov_waveset).value * weight
 
+        for field in self.background_fields:
+            ref = field.header["SPEC_REF"]
+            weight = np.sum(field.data)
+            canvas_flux += self.spectra[ref](fov_waveset).value * weight
+
+
         spectrum = SourceSpectrum(Empirical1D, points=fov_waveset,
                                   lookup_table=canvas_flux)
 
         return spectrum
 
-    def make_image_hdu(self):
+    def make_image_hdu(self, use_photlam=False):
         """
         Used for imaging
 
@@ -260,8 +268,11 @@ class FieldOfView(FieldOfViewBase):
         area = utils.from_currsys(self.meta["area"])    # u.m2
 
         # PHOTLAM * u.um * u.m2 --> ph / s
-        specs = {ref: (spec(fov_waveset) * bin_widths * area).to(u.ph / u.s)
-                 for ref, spec in self.spectra.items()}
+        specs = {ref: spec(fov_waveset) for ref, spec in self.spectra.items()}
+        if use_photlam is False:
+            for key in specs:
+                specs[key] = (specs[key] * bin_widths * area).to(u.ph / u.s)
+
         fluxes = {ref: np.sum(spec).value for ref, spec in specs.items()}
         naxis1, naxis2 = self.header["NAXIS1"], self.header["NAXIS2"]
         canvas_image_hdu = fits.ImageHDU(data=np.zeros((naxis2, naxis1)),
@@ -284,8 +295,7 @@ class FieldOfView(FieldOfViewBase):
                                                              canvas_image_hdu,
                                                              conserve_flux=True)
 
-        # 2. Find Table fields
-
+        # 3. Find Table fields
         for field in self.table_fields:
             # x, y are ALWAYS in arcsec - crval is in deg
             xpix, ypix = imp_utils.val2pix(self.header,
@@ -305,11 +315,15 @@ class FieldOfView(FieldOfViewBase):
                 weight = np.array(field["weight"])
                 canvas_image_hdu.data[y, x] += f * weight
 
+        # 4. Find Background fields
+        for field in self.background_fields:
+            canvas_cube_hdu += fluxes[field.header["SPEC_REF"]]
+
         image_hdu = canvas_image_hdu
 
         return image_hdu
 
-    def make_cube_hdu(self):
+    def make_cube_hdu(self, use_photlam=True):
         """
         Used for IFUs, slit spectrographs, and coherent MOSs (e.g.KMOS)
 
@@ -414,15 +428,21 @@ class FieldOfView(FieldOfViewBase):
                     flux_vector = specs[ref].value * weight
                     canvas_cube_hdu.data[:, y, x] += flux_vector
 
-        # 5. Convert from PHOTLAM to ph/s/voxel
+        # 5. Add Background fields
+        for field in self.background_fields:
+            spec = specs[field.header["SPEC_REF"]]
+            canvas_cube_hdu += spec[:, None, None].value
+
+        # 6. Convert from PHOTLAM to ph/s/voxel
         #    PHOTLAM = ph/s/cm-2/AA
         #    area = m2, fov_waveset = um
-        area = utils.from_currsys(self.meta["area"])    # u.m2
-        canvas_cube_hdu.data *= area.to(u.cm**2).value
+        if use_photlam is False:
+            area = utils.from_currsys(self.meta["area"])    # u.m2
+            canvas_cube_hdu.data *= area.to(u.cm**2).value
 
-        bin_widths = np.diff(fov_waveset).to(u.AA).value
-        bin_widths = 0.5 * (np.r_[0, bin_widths] + np.r_[bin_widths, 0])
-        canvas_cube_hdu.data *= bin_widths[:, None, None]
+            bin_widths = np.diff(fov_waveset).to(u.AA).value
+            bin_widths = 0.5 * (np.r_[0, bin_widths] + np.r_[bin_widths, 0])
+            canvas_cube_hdu.data *= bin_widths[:, None, None]
 
         cdelt3 = np.diff(fov_waveset)[0]
         canvas_cube_hdu.header.update({"CDELT3": cdelt3.to(u.um).value,
@@ -503,18 +523,27 @@ class FieldOfView(FieldOfViewBase):
     def cube_fields(self):
         return [field for field in self.fields
                 if isinstance(field, fits.ImageHDU)
-                and field.header["NAXIS"] == 3]
+                and field.header["NAXIS"] == 3
+                and field.header.get("BG_SRC", False) is False]
 
     @property
     def image_fields(self):
         return [field for field in self.fields
                 if isinstance(field, fits.ImageHDU)
-                and field.header["NAXIS"] == 2]
+                and field.header["NAXIS"] == 2
+                and field.header.get("BG_SRC", False) is False]
 
     @property
     def table_fields(self):
         return [field for field in self.fields
                 if isinstance(field, Table)]
+
+
+    @property
+    def background_fields(self):
+        return [field for field in self.fields
+                if isinstance(field, fits.ImageHDU)
+                and field.header.get("BG_SRC", False) is True]
 
     def __repr__(self):
         msg = "FOV id: {}, with dimensions ({}, {})\n" \
