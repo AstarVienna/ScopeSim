@@ -40,30 +40,30 @@ class TestMicadoSpec:
             plt.show()
 
 
-def test_plot_spec_trace_layout():
-
-    spt = efs.SpectralTraceList(filename="TRACE_15arcsec.fits",
-                                wave_colname="lam", s_colname="xi",
-                                invalid_value=0, col_number_start=1)
-    det = efs.DetectorList(filename="FPA_array_layout.dat")
-
-    if PLOTS:
-        spt.plot(1.4, 2.5)
-        det.plot()
-        plt.show()
-
-
-def test_reads_psf_scao_file():
-    psf = efs.FieldConstantPSF(filename="PSF_SCAO.fits")
-    assert isinstance(psf, efs.PSF)
-
-    if PLOTS:
-        print(psf._file.info())
-        plt.imshow(psf.get_data(1), norm=LogNorm())
-        plt.show()
-
-
-def test_spanish_vo_filter_timing():
-    filt = efs.SpanishVOFilterCurve(observatory="Paranal", instrument="HAWKI",
-                                    filter_name="H")
-    assert isinstance(filt, efs.SpanishVOFilterCurve)
+# def test_plot_spec_trace_layout():
+#
+#     spt = efs.SpectralTraceList(filename="TRACE_15arcsec.fits",
+#                                 wave_colname="lam", s_colname="xi",
+#                                 invalid_value=0, col_number_start=1)
+#     det = efs.DetectorList(filename="FPA_array_layout.dat")
+#
+#     if PLOTS:
+#         spt.plot(1.4, 2.5)
+#         det.plot()
+#         plt.show()
+#
+#
+# def test_reads_psf_scao_file():
+#     psf = efs.FieldConstantPSF(filename="PSF_SCAO.fits")
+#     assert isinstance(psf, efs.PSF)
+#
+#     if PLOTS:
+#         print(psf._file.info())
+#         plt.imshow(psf.get_data(1), norm=LogNorm())
+#         plt.show()
+#
+#
+# def test_spanish_vo_filter_timing():
+#     filt = efs.SpanishVOFilterCurve(observatory="Paranal", instrument="HAWKI",
+#                                     filter_name="H")
+#     assert isinstance(filt, efs.SpanishVOFilterCurve)

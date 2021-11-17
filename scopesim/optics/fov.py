@@ -105,14 +105,13 @@ class FieldOfView(FieldOfViewBase):
                 fields_in_fov[i] = fu.extract_area_from_table(fld, volume)
                 spec_refs += list(np.unique(fields_in_fov[i] ["ref"]))
 
-            elif isinstance(fld, fits.ImageHDU) and fld.header["NAXIS"] == 2:
-                fields_in_fov[i] = fu.extract_area_from_imagehdu(fld, volume)
-                ref = fld.header.get("SPEC_REF")
-                if ref is not None:
-                    spec_refs += [ref]
-
-            elif isinstance(fld, fits.ImageHDU) and fld.header["NAXIS"] == 3:
-                fields_in_fov[i] = fu.extract_area_from_imagehdu(fld, volume)
+            elif isinstance(fld, fits.ImageHDU):
+                if fld.header["NAXIS"] in (2, 3):
+                    fields_in_fov[i] = fu.extract_area_from_imagehdu(fld, volume)
+                if fld.header["NAXIS"] == 2 or fld.header.get("BG_SRC"):
+                    ref = fld.header.get("SPEC_REF")
+                    if ref is not None:
+                        spec_refs += [ref]
 
         waves = volume["waves"] * u.Unit(volume["wave_unit"])
         spectra = {ref: fu.extract_range_from_spectrum(src.spectra[ref], waves)
@@ -254,10 +253,15 @@ class FieldOfView(FieldOfViewBase):
             sum spectra between wavelength edges
             add summed flux at x,y position in canvas image
 
+        Parameters
+        ----------
+        use_photlam : bool
+            Default False. Defines the flux units of the image pixels
+
         Returns
         -------
         image_hdu : fits.ImageHDU
-            [ph s-1 pixel-1]
+            [ph s-1 pixel-1] or PHOTLAM (if use_photlam=True)
 
         """
 
@@ -317,7 +321,7 @@ class FieldOfView(FieldOfViewBase):
 
         # 4. Find Background fields
         for field in self.background_fields:
-            canvas_cube_hdu += fluxes[field.header["SPEC_REF"]]
+            canvas_image_hdu.data += fluxes[field.header["SPEC_REF"]]
 
         image_hdu = canvas_image_hdu
 
@@ -370,10 +374,15 @@ class FieldOfView(FieldOfViewBase):
 
         .. warning:: Images and Cubes need to be in units of pixel-1 (or voxel-1), not arcsec-2
 
+        Parameters
+        ----------
+        use_photlam : bool
+            Default True. Defines the flux units of the image pixels
+
         Returns
         -------
         canvas_cube_hdu : fits.ImageHDU
-            [ph s-1 voxel-1]
+            [ph s-1 cm-2 AA-1] or if use_photlam=False [ph s-1 voxel-1]
 
 
         """
@@ -431,7 +440,7 @@ class FieldOfView(FieldOfViewBase):
         # 5. Add Background fields
         for field in self.background_fields:
             spec = specs[field.header["SPEC_REF"]]
-            canvas_cube_hdu += spec[:, None, None].value
+            canvas_cube_hdu.data += spec[:, None, None].value
 
         # 6. Convert from PHOTLAM to ph/s/voxel
         #    PHOTLAM = ph/s/cm-2/AA

@@ -145,16 +145,15 @@ class SpectralTrace:
 
         # Initialise the image based on the footprint of the spectral
         # trace and the focal plane WCS
-        wave_min = fov.meta['wave_min'].value
-        wave_max = fov.meta['wave_max'].value
-        xi_min = fov.meta['xi_min'].value
-        xi_max = fov.meta['xi_max'].value
+        wave_min = fov.meta['wave_min'].value       # [um]
+        wave_max = fov.meta['wave_max'].value       # [um]
+        xi_min = fov.meta['xi_min'].value           # [arcsec]
+        xi_max = fov.meta['xi_max'].value           # [arcsec]
         xlim_mm, ylim_mm = self.footprint(wave_min=wave_min, wave_max=wave_max,
                                           xi_min=xi_min, xi_max=xi_max)
 
         if xlim_mm is None:
             return None
-
 
         fov_header = fov.header
         det_header = fov.detector_header
