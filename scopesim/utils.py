@@ -6,6 +6,7 @@ import os
 from pathlib import Path
 import sys
 import warnings
+import logging
 from collections import OrderedDict
 from docutils.core import publish_string
 from copy import deepcopy
@@ -433,6 +434,56 @@ def angle_in_arcseconds(distance, width):
     """
 
     return np.arctan2(width, distance) * u.rad.to(u.arcsec)
+
+
+def setup_loggers(**kwargs):
+    """
+    Sets up both console and file loggers.
+
+    Acceptable parameters are the same as the ``!SIM.logging'' sub dictionary
+
+    """
+    logd = rc.__currsys__["!SIM.logging"]
+    logd.update(kwargs)
+
+    logger = logging.getLogger()
+    hdlr_names = [hdlr.name for hdlr in logger.handlers]
+
+    if logd["log_to_file"] and "scopesim_file_logger" not in hdlr_names:
+        f_handler = logging.FileHandler(logd["file_path"],
+                                        logd["file_open_mode"])
+        f_handler.name = "scopesim_file_logger"
+        f_handler.setLevel(logd["file_level"])
+        logger.addHandler(f_handler)
+
+    if logd["log_to_console"] and "scopesim_console_logger" not in hdlr_names:
+        s_handler = logging.StreamHandler(sys.stdout)
+        s_handler.name = "scopesim_console_logger"
+        s_handler.setLevel(logd["console_level"])
+        logger.addHandler(s_handler)
+
+
+def set_logger_level(which="console", level="ERROR"):
+    """
+    Sets the level of logging for either the console or file logger
+
+    Parameters
+    ----------
+    which : str
+        ["console", "file"]
+    level : str
+        ["ON", "OFF", "DEBUG", "INFO", "WARN", "ERROR", "CRITICAL"]
+
+    """
+
+
+    hdlr_name = f"scopesim_{which}_logger"
+    level = {"ON": "INFO", "OFF": "CRITICAL"}.get(level.upper(), level)
+    logger = logging.getLogger()
+    logger.setLevel(level)
+    for hdlr in logger.handlers:
+        if hdlr.name == hdlr_name:
+            hdlr.setLevel(level)
 
 
 def bug_report():

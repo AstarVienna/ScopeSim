@@ -250,8 +250,8 @@ class SpectralSurface:
         elif colname in self.table.colnames:
             val = self.table[colname].data
         else:
-            warnings.warn("{} not found in either '.meta' or '.table'"
-                          "".format(colname))
+            warnings.warn(f"{colname} not found in either '.meta' or '.table': "
+                          f"[{self.meta.get('name', self.meta['filename'])}]")
             return None
 
         col_units = colname+"_unit"
