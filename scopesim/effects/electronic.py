@@ -22,7 +22,7 @@ class SummedExposure(Effect):
         required_keys = ["dit", "ndit"]
         check_keys(self.meta, required_keys, action="error")
 
-    def apply_to(self, obj):
+    def apply_to(self, obj, **kwargs):
         if isinstance(obj, DetectorBase):
             dit = from_currsys(self.meta["dit"])
             ndit = from_currsys(self.meta["ndit"])
@@ -49,7 +49,7 @@ class PoorMansHxRGReadoutNoise(Effect):
         self.required_keys = ["noise_std", "n_channels", "ndit"]
         check_keys(self.meta, self.required_keys, action="error")
 
-    def apply_to(self, det):
+    def apply_to(self, det, **kwargs):
         if isinstance(det, DetectorBase):
             self.meta["random_seed"] = from_currsys(self.meta["random_seed"])
             if self.meta["random_seed"] is not None:
@@ -94,7 +94,7 @@ class BasicReadoutNoise(Effect):
         self.required_keys = ["noise_std", "ndit"]
         check_keys(self.meta, self.required_keys, action="error")
 
-    def apply_to(self, det):
+    def apply_to(self, det, **kwargs):
         if isinstance(det, DetectorBase):
             self.meta = from_currsys(self.meta)
             if self.meta["random_seed"] is not None:
@@ -124,7 +124,7 @@ class ShotNoise(Effect):
         self.meta["random_seed"] = "!SIM.random.seed"
         self.meta.update(kwargs)
 
-    def apply_to(self, det):
+    def apply_to(self, det, **kwargs):
         if isinstance(det, DetectorBase):
             self.meta["random_seed"] = from_currsys(self.meta["random_seed"])
             if self.meta["random_seed"] is not None:
@@ -168,7 +168,7 @@ class DarkCurrent(Effect):
         required_keys = ["value", "dit", "ndit"]
         check_keys(self.meta, required_keys, action="error")
 
-    def apply_to(self, obj):
+    def apply_to(self, obj, **kwargs):
         if isinstance(obj, DetectorBase):
             if isinstance(self.meta["value"], dict):
                 dtcr_id = obj.meta[real_colname("id", obj.meta)]
@@ -212,7 +212,7 @@ class LinearityCurve(Effect):
         self.required_keys = ["ndit"]
         check_keys(self.meta, self.required_keys, action="error")
 
-    def apply_to(self, det):
+    def apply_to(self, det, **kwargs):
         if isinstance(det, DetectorBase):
             ndit = from_currsys(self.meta["ndit"])
             incident = self.table["incident"] * ndit
@@ -248,7 +248,8 @@ class ReferencePixelBorder(Effect):
         self.meta.update(widths)
         self.meta.update(kwargs)
 
-    def apply_to(self, implane):
+    def apply_to(self, implane, **kwargs):
+        # .. todo: should this be ImagePlaneBase here?
         if isinstance(implane, ImagePlaneBase):
             if self.meta["top"] > 0:
                 implane.hdu.data[:, -self.meta["top"]:] = 0
@@ -277,7 +278,7 @@ class BinnedImage(Effect):
         self.required_keys = ["bin_size"]
         check_keys(self.meta, self.required_keys, action="error")
 
-    def apply_to(self, det):
+    def apply_to(self, det, **kwargs):
         if isinstance(det, DetectorBase):
             bs = from_currsys(self.meta["bin_size"])
             image = det._hdu.data

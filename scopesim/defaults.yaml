@@ -29,6 +29,7 @@ properties :
     spline_order : 1
     flux_accuracy : !!float 1E-3
     preload_field_of_views : False
+    bg_cell_width: 60         # arcsec
 
   file :
     local_packages_path : "./inst_pkgs/"

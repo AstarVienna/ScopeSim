@@ -91,6 +91,7 @@ class TestApplyTo:
             src += srcobj._vega_source(x=x[i], y=y[i], mag=mag[i])
         fov = fovobj._centre_micado_fov(n=1)
         fov.extract_from(src)
+        fov.view()
 
         psf = AnisocadoConstPSF(filename="test_AnisoCADO_rms_map.fits",
                                 strehl=0.5, wavelength=2.15,

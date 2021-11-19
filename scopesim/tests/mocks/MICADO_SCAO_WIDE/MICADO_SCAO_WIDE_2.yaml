@@ -1,3 +1,16 @@
+# SIMULATION
+object : Simulation parameters
+alias : SIM
+name : MICADO_SCAO_WIDE_2 simulation parameters
+
+properties:
+    computing:
+        chunk_size: 4096
+        max_segment_size: 16777216
+        bg_cell_width: 17          # arcsec
+
+---
+
 # ATMOSPHERE
 object : atmosphere
 alias : ATMO
@@ -63,7 +76,8 @@ inst_pkg_name : micado
 
 properties :
     temperature : -190
-    pixel_scale : 0.004
+    pixel_scale : 0.004         # arcsec / pixel
+    plate_scale : 0.26666666666 # arcsec / mm
 
 effects :
 -   name : micado_surface_list

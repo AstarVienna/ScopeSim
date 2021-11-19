@@ -8,6 +8,7 @@
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
+
 ## Summary
 
 Telescopy aims to simulate images of astronomical objects observed with visual 
@@ -21,7 +22,7 @@ This code was originally based on the [SimCADO](www.univie.ac.at/simcado) packag
 ## Documentation
 The main set of documentation can be found here: 
 https://scopesim.readthedocs.io/en/latest/
->
+
 A basic Jupyter Notebook can be found here: 
 [scopesim_basic_intro.ipynb](docs/source/_static/scopesim_basic_intro.ipynb)
 

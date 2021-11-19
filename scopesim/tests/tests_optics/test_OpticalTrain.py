@@ -124,7 +124,7 @@ class TestObserve:
         opt.observe(tbl_src)
 
         if PLOTS:
-            plt.imshow(opt.image_plane.image.T, origin="lower", norm=LogNorm())
+            plt.imshow(opt.image_planes[0].image.T, origin="lower", norm=LogNorm())
             plt.show()
 
     def test_observe_works_for_image(self, cmds, im_src):
@@ -132,7 +132,7 @@ class TestObserve:
         opt.observe(im_src)
 
         if PLOTS:
-            plt.imshow(opt.image_plane.image.T, origin="lower", norm=LogNorm())
+            plt.imshow(opt.image_planes[0].image.T, origin="lower", norm=LogNorm())
             plt.show()
 
     def test_observe_works_for_source_distributed_over_several_fovs(self, cmds,

@@ -1,7 +1,8 @@
 import numpy as np
 from astropy import units as u
 
-from scopesim.optics import image_plane_utils as imp_utils, FieldOfView
+from scopesim.optics import image_plane_utils as imp_utils
+from scopesim.optics.fov import FieldOfView
 
 
 def _centre_fov(n=55, waverange=(1.0, 2.0)):

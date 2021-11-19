@@ -17,7 +17,7 @@ if FILES_PATH not in rc.__search_path__:
 
 
 def _table_source():
-    n = 100
+    n = 101
     unit = u.Unit("ph s-1 m-2 um-1")
     wave = np.linspace(0.5, 2.5, n) * u.um
     specs = [SourceSpectrum(Empirical1D, points=wave,
@@ -52,7 +52,7 @@ def _image_source(dx=0, dy=0, angle=0, weight=1):
     -------
 
     """
-    n = 50
+    n = 101
     unit = u.Unit("ph s-1 m-2 um-1")
     wave = np.linspace(0.5, 2.5, n) * u.um
     specs = [SourceSpectrum(Empirical1D, points=wave,
@@ -98,6 +98,41 @@ def _fits_image_source():
     fits_src = Source(image_hdu=hdulist[0], spectra=specs)
 
     return fits_src
+
+
+def _cube_source(**kwargs):
+    """
+    An image with 3 point sources on a random BG
+
+    Parameters
+    ----------
+    dx, dy : float
+        [arcsec] Offset from optical axis
+    angle : float
+        [deg]
+    weight : float
+
+    Returns
+    -------
+
+    """
+
+    n = 101
+    im_src = _image_source(**kwargs)
+    data = im_src.fields[0].data
+
+        # Broadcast the array onto a 3rd dimension and scale along the new axis
+    im_src.fields[0].data = data[None, :, :] * np.linspace(0, 4, n)[:, None, None]
+    im_src.spectra = []
+
+    cube_hdr_dict = {"CUNIT3": "um", "CTYPE3": "WAVE", "CDELT3": 0.02,
+                     "CRVAL3": 1.5, "CRPIX3": 50, "SPEC_REF": None,
+                     "BUNIT": "ph s-1 m-2 um-1"}
+
+    im_src.fields[0].header.update(cube_hdr_dict)
+
+    return im_src
+
 
 
 def _combined_source(im_angle=0, dx=[0, 0, 0], dy=[0, 0, 0], weight=[1, 1, 1]):

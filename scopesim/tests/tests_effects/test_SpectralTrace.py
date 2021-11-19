@@ -4,8 +4,8 @@ from _pytest.python_api import approx
 from astropy.wcs import WCS
 from matplotlib import pyplot as plt
 
-from scopesim.optics.spectral_trace import SpectralTrace
-from scopesim.optics.spectral_trace_utils import get_affine_parameters
+from scopesim.effects.spectral_trace_list_utils import SpectralTrace
+from scopesim.effects.spectral_trace_list_utils import get_affine_parameters
 from scopesim.tests.mocks.py_objects import trace_list_objects as tlo
 from scopesim.tests.tests_effects.test_SpectralTraceList import PLOTS
 
@@ -50,7 +50,7 @@ class TestGetMaxDispersion:
         spt = SpectralTrace(basic_trace)
         disp, wave = spt.get_max_dispersion()
         # dispersion is calculated by distance [mm] / wavelength coverage [um]
-        dy = np.diff(basic_trace["y2"])
+        dy = np.diff(basic_trace["y"])
         dw = np.diff(basic_trace["wavelength"])
         assert np.average(disp) == approx(np.average(dy / dw), rel=1e-5)
         assert len(disp) == len(wave)
@@ -60,7 +60,7 @@ class TestGetMaxDispersion:
     def test_dispersion_for_horizontally_aligned_trace(self, horizontal_trace):
         spt = SpectralTrace(horizontal_trace)
         disp, wave = spt.get_max_dispersion()
-        dx = np.abs(np.diff(horizontal_trace["x2"]))
+        dx = np.abs(np.diff(horizontal_trace["x"]))
         dw = np.abs(np.diff(horizontal_trace["wavelength"]))
 
         assert np.average(disp) == approx(np.average(dx / dw), rel=1e-5)
@@ -102,6 +102,7 @@ class TestGetPixelEdges:
         assert dist_between_mtc == approx(pixel_size, rel=1e-5)
 
 
+@pytest.mark.skip(reason="MonochromaticTraceCurves not needed for SpecCADO")
 class TestGetTraceCurves:
     @pytest.mark.usefixtures("basic_trace")
     def test_mtc_are_one_pixel_removed_from_each_other(self, basic_trace):
@@ -156,6 +157,7 @@ class TestGetTraceCurves:
             plt.show()
 
 
+@pytest.mark.skip(reason="MonochromaticTraceCurves not needed for SpecCADO")
 class TestGetCurveHeaders:
     @pytest.mark.usefixtures("basic_trace")
     def test_vertical_headers_are_all_one_pixel_apart(self, basic_trace):
@@ -259,6 +261,7 @@ class TestGetAffineParameters:
             plt.ylim(-5, 5)
             plt.show()
 
+    @pytest.mark.skip(reason="no way of currently testing this")
     @pytest.mark.usefixtures("curved_trace")
     def test_no_same_angles_for_curved_trace(self, curved_trace):
         spt = SpectralTrace(curved_trace)

@@ -10,7 +10,7 @@ import anisocado as aniso
 from .effects import Effect
 from . import ter_curves_utils as tu
 from . import psf_utils as pu
-from ..base_classes import ImagePlaneBase, FieldOfViewBase
+from ..base_classes import ImagePlaneBase, FieldOfViewBase, FOVSetupBase
 from .. import utils
 
 
@@ -48,15 +48,17 @@ class PSF(Effect):
         self.meta.update(params)
         self.meta.update(kwargs)
         self.meta = utils.from_currsys(self.meta)
-        self.apply_to_classes = (FieldOfViewBase, ImagePlaneBase)
+        self.convolution_classes = (FieldOfViewBase, ImagePlaneBase)
 
-    def apply_to(self, obj):
-        if isinstance(obj, self.apply_to_classes):
+    def apply_to(self, obj, **kwargs):
+        if isinstance(obj, FOVSetupBase):
+            waveset = self._waveset
+            if waveset is not None:
+                obj.split("wave", utils.quantify(waveset, u.um).value)
+
+        elif isinstance(obj, self.convolution_classes):
             if (hasattr(obj, "fields") and len(obj.fields) > 0) or \
-                    obj.hdu.data is not None:
-
-                if obj.hdu.data is None:
-                    obj.view(self.meta["sub_pixel_flag"])
+                    obj.hdu is not None:
 
                 kernel = self.get_kernel(obj).astype(float)
 
@@ -68,32 +70,36 @@ class PSF(Effect):
                     kernel /= np.sum(kernel)
 
                 image = obj.hdu.data.astype(float)
-                ny_old, nx_old = image.shape
 
-                bkg_width = self.meta["bkg_width"]
-                if bkg_width < 0:
+                # subtract background level before convolving. Then re-add it
+                bg_w = self.meta["bkg_width"]
+                if bg_w < 0:
                     bkg_level = np.median(image)
-                elif bkg_width == 0:
+                elif bg_w == 0:
                     bkg_level = 0
                 else:
-                    mask = np.ones((ny_old, nx_old), dtype=np.bool)
-                    mask[bkg_width:(ny_old - bkg_width),
-                         bkg_width:(nx_old - bkg_width)] = 0
-                    bkg_level = np.median(image[mask])
+                    bg_image = image.copy()
+                    if image.ndim == 2:
+                        bg_image[bg_w:-bg_w, bg_w:-bg_w] = 0
+                        bkg_level = np.median(bg_image)
+                    elif image.ndim == 3:
+                        bg_image[:, bg_w:-bg_w, bg_w:-bg_w] = 0
+                        bkg_level = np.median(bg_image, axis=(2, 1))
+                        bkg_level = bkg_level[:, None, None]
 
-                # y = min(image.shape[0], kernel.shape[0])
-                # x = min(image.shape[1], kernel.shape[1])
-                # new_image = convolve(image[:y, :x] - bkg_level, kernel[:y, :x], mode=mode)
-                mode = self.meta["convolve_mode"]
+                mode = utils.from_currsys(self.meta["convolve_mode"])
+                if image.ndim == 3:
+                    kernel = kernel[None, :, :]
                 new_image = convolve(image - bkg_level, kernel, mode=mode)
-                ny_new, nx_new = new_image.shape
                 obj.hdu.data = new_image + bkg_level
 
                 # ..todo: careful with which dimensions mean what
+                dx = new_image.shape[-1] - image.shape[-1]
+                dy = new_image.shape[-2] - image.shape[-2]
                 for s in ["", "D"]:
                     if "CRPIX1"+s in obj.hdu.header:
-                        obj.hdu.header["CRPIX1"+s] += (nx_new - nx_old) / 2
-                        obj.hdu.header["CRPIX2"+s] += (ny_new - ny_old) / 2
+                        obj.hdu.header["CRPIX1"+s] += dx / 2
+                        obj.hdu.header["CRPIX2"+s] += dy / 2
 
         return obj
 
@@ -134,7 +140,7 @@ class AnalyticalPSF(PSF):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.meta["z_order"] = [41, 641]
-        self.apply_to_classes = FieldOfViewBase
+        self.convolution_classes = FieldOfViewBase
 
 
 class Vibration(AnalyticalPSF):
@@ -145,7 +151,7 @@ class Vibration(AnalyticalPSF):
         super().__init__(**kwargs)
         self.meta["z_order"] = [244, 744]
         self.meta["width_n_fwhms"] = 4
-        self.apply_to_classes = ImagePlaneBase
+        self.convolution_classes = ImagePlaneBase
 
         self.required_keys = ["fwhm", "pixel_scale"]
         utils.check_keys(self.meta, self.required_keys, action="error")
@@ -180,6 +186,7 @@ class NonCommonPathAberration(AnalyticalPSF):
 
         self.valid_waverange = [0.1 * u.um, 0.2 * u.um]
 
+        self.convolution_classes = FieldOfViewBase
         self.required_keys = ["pixel_scale"]
         utils.check_keys(self.meta, self.required_keys, action="error")
 
@@ -338,8 +345,8 @@ class SemiAnalyticalPSF(PSF):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.meta["z_order"] = [42]
-        self.apply_to_classes = FieldOfViewBase
-        # self.apply_to_classes = ImagePlaneBase
+        self.convolution_classes = FieldOfViewBase
+        # self.convolution_classes = ImagePlaneBase
 
 
 class AnisocadoConstPSF(SemiAnalyticalPSF):
@@ -531,8 +538,8 @@ class DiscretePSF(PSF):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.meta["z_order"] = [43]
-        self.apply_to_classes = FieldOfViewBase
-        # self.apply_to_classes = ImagePlaneBase
+        self.convolution_classes = FieldOfViewBase
+        # self.convolution_classes = ImagePlaneBase
 
 
 class FieldConstantPSF(DiscretePSF):
@@ -551,7 +558,7 @@ class FieldConstantPSF(DiscretePSF):
         self.current_data = None
         self.kernel = None
 
-    # def apply_to(self, fov):
+    # def apply_to(self, fov, **kwargs):
     #   Taken care of by PSF base class
 
     # def fov_grid(self, which="waveset", **kwargs):
@@ -573,7 +580,7 @@ class FieldConstantPSF(DiscretePSF):
                 unit_factor = 1
 
             kernel_pixel_scale = hdr["CDELT1"] * unit_factor
-            fov_pixel_scale = fov.hdu.header["CDELT1"]
+            fov_pixel_scale = fov.header["CDELT1"]
 
             # rescaling kept inside loop to avoid rescaling for every fov
             pix_ratio = kernel_pixel_scale / fov_pixel_scale
@@ -613,54 +620,56 @@ class FieldVaryingPSF(DiscretePSF):
         self.current_data = None
         self._strehl_imagehdu = None
 
-    def apply_to(self, fov):
+    def apply_to(self, fov, **kwargs):
         # .. todo: add in field rotation
         # accept "full", "dit", "none
 
         # check if there are any fov.fields to apply a psf to
-        if len(fov.fields) > 0:
-            if fov.hdu.data is None:
-                fov.view(self.meta["sub_pixel_flag"])
+        if isinstance(fov, self.convolution_classes):
+            if len(fov.fields) > 0:
+                if fov.image is None:
+                    fov.image = fov.make_image_hdu().data
 
-            old_shape = fov.hdu.data.shape
+                old_shape = fov.image.shape
 
-            # get the kernels that cover this fov, and their respective masks
-            # kernels and masks are returned by .get_kernel as a list of tuples
-            canvas = None
-            kernels_masks = self.get_kernel(fov)
-            for kernel, mask in kernels_masks:
+                # get the kernels that cover this fov, and their respective
+                # masks kernels and masks are returned by .get_kernel as a list
+                # of tuples
+                canvas = None
+                kernels_masks = self.get_kernel(fov)
+                for kernel, mask in kernels_masks:
 
-                # renormalise the kernel if needs be
-                sum_kernel = np.sum(kernel)
-                if abs(sum_kernel - 1) > self.meta["flux_accuracy"]:
-                    kernel /= sum_kernel
+                    # renormalise the kernel if needs be
+                    sum_kernel = np.sum(kernel)
+                    if abs(sum_kernel - 1) > self.meta["flux_accuracy"]:
+                        kernel /= sum_kernel
 
-                # image convolution
-                image = fov.hdu.data.astype(float)
-                kernel = kernel.astype(float)
-                new_image = convolve(image, kernel, mode="same")
-                if canvas is None:
-                    canvas = np.zeros(new_image.shape)
+                    # image convolution
+                    image = fov.image.astype(float)
+                    kernel = kernel.astype(float)
+                    new_image = convolve(image, kernel, mode="same")
+                    if canvas is None:
+                        canvas = np.zeros(new_image.shape)
 
-                # mask convolution + combine with convolved image
-                if mask is not None:
-                    new_mask = convolve(mask, kernel, mode="same")
-                    canvas += new_image * new_mask
-                else:
-                    canvas = new_image
+                    # mask convolution + combine with convolved image
+                    if mask is not None:
+                        new_mask = convolve(mask, kernel, mode="same")
+                        canvas += new_image * new_mask
+                    else:
+                        canvas = new_image
 
-            # reset WCS header info
-            new_shape = canvas.shape
-            fov.hdu.data = canvas
+                # reset WCS header info
+                new_shape = canvas.shape
+                fov.image = canvas
 
-            # ..todo: careful with which dimensions mean what
-            if "CRPIX1" in fov.hdu.header:
-                fov.hdu.header["CRPIX1"] += (new_shape[0] - old_shape[0]) / 2
-                fov.hdu.header["CRPIX2"] += (new_shape[1] - old_shape[1]) / 2
+                # ..todo: careful with which dimensions mean what
+                if "CRPIX1" in fov.header:
+                    fov.header["CRPIX1"] += (new_shape[0] - old_shape[0]) / 2
+                    fov.header["CRPIX2"] += (new_shape[1] - old_shape[1]) / 2
 
-            if "CRPIX1D" in fov.hdu.header:
-                fov.hdu.header["CRPIX1D"] += (new_shape[0] - old_shape[0]) / 2
-                fov.hdu.header["CRPIX2D"] += (new_shape[1] - old_shape[1]) / 2
+                if "CRPIX1D" in fov.header:
+                    fov.header["CRPIX1D"] += (new_shape[0] - old_shape[0]) / 2
+                    fov.header["CRPIX2D"] += (new_shape[1] - old_shape[1]) / 2
 
         return fov
 
@@ -685,11 +694,11 @@ class FieldVaryingPSF(DiscretePSF):
 
         # compare the fov and psf pixel scales
         kernel_pixel_scale = self._file[ext].header["CDELT1"]
-        fov_pixel_scale = fov.hdu.header["CDELT1"]
+        fov_pixel_scale = fov.header["CDELT1"]
 
         # get the spatial map of the kernel cube layers
         strl_hdu = self.strehl_imagehdu
-        strl_cutout = pu.get_strehl_cutout(fov.hdu.header, strl_hdu)
+        strl_cutout = pu.get_strehl_cutout(fov.header, strl_hdu)
 
         # get the kernels and mask that fit inside the fov boundaries
         layer_ids = np.round(np.unique(strl_cutout.data)).astype(int)

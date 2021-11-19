@@ -98,8 +98,8 @@ class TestCombinedWithAtmoDisp:
         atmo_params["sub_pixel_fraction"] = 0.001
 
         fov = _centre_fov(n=10, waverange=waves)
-        fov.hdu.header["CDELT1"] = 1 / 3600 * pixel_scale
-        fov.hdu.header["CDELT2"] = 1 / 3600 * pixel_scale
+        fov.header["CDELT1"] = 1 / 3600 * pixel_scale
+        fov.header["CDELT2"] = 1 / 3600 * pixel_scale
         old_crpix_d = np.array([fov.header["CRPIX1D"], fov.header["CRPIX2D"]])
 
         ad = AD(**atmo_params)

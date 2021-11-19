@@ -15,7 +15,7 @@ from .effects import Effect
 from ..optics.surface import SpectralSurface
 from ..source.source_utils import make_imagehdu_from_table
 from ..source.source import Source
-from ..base_classes import SourceBase
+from ..base_classes import SourceBase, FOVSetupBase
 from ..utils import from_currsys, quantify, check_keys
 
 
@@ -69,6 +69,7 @@ class TERCurve(Effect):
                   "wave_max": "!SIM.spectral.wave_max",
                   "wave_unit": "!SIM.spectral.wave_unit",
                   "wave_bin": "!SIM.spectral.spectral_resolution",
+                  "bg_cell_width": "!SIM.computing.bg_cell_width",
                   "report_plot_include": True,
                   "report_table_include": False}
         self.meta.update(params)
@@ -87,7 +88,7 @@ class TERCurve(Effect):
 
     # ####### added in new branch
 
-    def apply_to(self, obj):
+    def apply_to(self, obj, **kwargs):
         if isinstance(obj, SourceBase):
             self.meta = from_currsys(self.meta)
             wave_min = quantify(self.meta["wave_min"], u.um).to(u.AA)
@@ -102,6 +103,16 @@ class TERCurve(Effect):
             # add the effect background to the source background field
             if self.background_source is not None:
                 obj.append(self.background_source)
+
+        if isinstance(obj, FOVSetupBase):
+            wave = self.surface.throughput.waveset
+            thru = self.surface.throughput(wave)
+            valid_waves = np.argwhere(thru > 0)
+            wave_min = wave[max(0, valid_waves[0][0] - 1)]
+            wave_max = wave[min(len(wave) - 1, valid_waves[-1][0] + 1)]
+
+            obj.shrink("wave", [wave_min.to(u.um).value,
+                                wave_max.to(u.um).value])
 
         return obj
 
@@ -118,8 +129,10 @@ class TERCurve(Effect):
         if self._background_source is None:
             # add a single pixel ImageHDU for the extended background with a
             # size of 1 degree
+            bg_cell_width = from_currsys(self.meta["bg_cell_width"])
             flux = self.emission
-            bg_hdu = make_imagehdu_from_table([0], [0], [1], 1 * u.deg)
+            bg_hdu = make_imagehdu_from_table([0], [0], [1],
+                                              bg_cell_width * u.arcsec)
             bg_hdu.header["BG_SRC"] = True
             bg_hdu.header["BG_SURF"] = self.meta.get("name", "<untitled>")
             self._background_source = Source(image_hdu=bg_hdu, spectra=flux)
@@ -279,7 +292,6 @@ class QuantumEfficiencyCurve(TERCurve):
         self.meta["action"] = "transmission"
         self.meta["z_order"] = [113, 513]
         self.meta["position"] = -1          # position in surface table
-
 
 class FilterCurve(TERCurve):
     """
@@ -445,9 +457,9 @@ class FilterWheel(Effect):
         self.table = self.get_table()
 
 
-    def apply_to(self, obj):
+    def apply_to(self, obj, **kwargs):
         '''Use apply_to of current filter'''
-        return self.current_filter.apply_to(obj)
+        return self.current_filter.apply_to(obj, **kwargs)
 
     def fov_grid(self, which="waveset", **kwargs):
         return self.current_filter.fov_grid(which=which, **kwargs)
