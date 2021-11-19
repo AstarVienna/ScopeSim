@@ -1,7 +1,7 @@
 '''Effects related to field masks, including spectroscopic slits'''
 from os import path as pth
 from copy import deepcopy
-import warnings
+import logging
 
 import numpy as np
 from matplotlib.path import Path
@@ -119,7 +119,7 @@ class ApertureMask(Effect):
 
     def fov_grid(self, which="edges", **kwargs):
         """ Returns a header with the sky coordinates """
-        warnings.warn("DetectorList.fov_grid will be depreciated in v1.0",
+        logging.warning("DetectorList.fov_grid will be depreciated in v1.0",
                       PendingDeprecationWarning)
         if which == "edges":
             self.meta.update(kwargs)

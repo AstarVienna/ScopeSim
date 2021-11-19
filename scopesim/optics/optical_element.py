@@ -1,4 +1,4 @@
-import warnings
+import logging
 from inspect import isclass
 
 from astropy.table import Table
@@ -82,7 +82,7 @@ class OpticalElement:
         if isinstance(effect, efs.Effect):
             self.effects += [effect]
         else:
-            warnings.warn("{} is not an Effect object and was not added"
+            logging.warning("{} is not an Effect object and was not added"
                           "".format(effect))
 
     def get_all(self, effect_class):

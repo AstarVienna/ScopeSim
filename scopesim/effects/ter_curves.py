@@ -1,7 +1,7 @@
 import numpy as np
 from astropy import units as u
 from os import path as pth
-import warnings
+import logging
 
 from astropy.io import fits
 from astropy.table import Table
@@ -131,10 +131,13 @@ class TERCurve(Effect):
             # size of 1 degree
             bg_cell_width = from_currsys(self.meta["bg_cell_width"])
             flux = self.emission
-            bg_hdu = make_imagehdu_from_table([0], [0], [1],
-                                              bg_cell_width * u.arcsec)
-            bg_hdu.header["BG_SRC"] = True
-            bg_hdu.header["BG_SURF"] = self.meta.get("name", "<untitled>")
+            bg_hdu = fits.ImageHDU()
+            bg_hdu.header.update({"BG_SRC": True,
+                                  "BG_SURF": self.meta.get("name", "<untitled>"),
+                                  "CUNIT1": "DEG",
+                                  "CUNIT2": "DEG",
+                                  "CDELT1": 0,
+                                  "CDELT2": 0,})
             self._background_source = Source(image_hdu=bg_hdu, spectra=flux)
 
         return self._background_source
@@ -272,7 +275,7 @@ class SkycalcTERCurve(AtmosphericTERCurve):
             tbl = self.skycalc_conn.get_sky_spectrum(return_type="table",
                                                      filename=filename)
         except:
-            warnings.warn("Could not connect to skycalc server")
+            logging.warning("Could not connect to skycalc server")
             if pth.exists(filename):
                 pass
             else:

@@ -83,7 +83,6 @@ class TestGetKernel:
 
 class TestApplyTo:
     def test_is_applied_to_point_sources(self):
-
         n = 10
         x, y, mag = 2 * np.random.random(size=(3, n)) - 1
         src = srcobj._vega_source(x=x[0], y=y[0], mag=mag[0])

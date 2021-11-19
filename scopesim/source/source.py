@@ -33,7 +33,7 @@
 """
 
 import pickle
-import warnings
+import logging
 from copy import deepcopy
 import numpy as np
 
@@ -198,7 +198,7 @@ class Source(SourceBase):
             self.spectra += spectra
         else:
             image_hdu.header["SPEC_REF"] = ""
-            warnings.warn("No spectrum was provided. SPEC_REF set to ''. "
+            logging.warning("No spectrum was provided. SPEC_REF set to ''. "
                           "This could cause problems later")
             raise NotImplementedError
 
@@ -251,7 +251,7 @@ class Source(SourceBase):
             u.Unit(bunit)
         except KeyError as e:
             bunit = "erg / (s cm2 arcsec2)"
-            warnings.warn("Keyword 'BUNIT' not found, setting to %s by default" % bunit)
+            logging.warning(f"Keyword 'BUNIT' not found, setting to {bunit} by default")
         except ValueError as e:
             print("'BUNIT' keyword is malformed", e)
             raise
@@ -477,7 +477,7 @@ class Source(SourceBase):
                 msg += "[{}]: Table with {} rows, referencing spectra {} \n" \
                        "".format(ii, tbl_len, num_spec)
             elif isinstance(self.fields[ii], (fits.ImageHDU, fits.PrimaryHDU)):
-                im_size = self.fields[ii].data.shape
+                im_size = self.fields[ii].data.shape if self.fields[ii].data is not None else "<empty>"
                 num_spec = "-"
                 if self.fields[ii].header["SPEC_REF"] != "":
                     num_spec = self.fields[ii].header["SPEC_REF"]

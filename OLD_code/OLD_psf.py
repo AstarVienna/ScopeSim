@@ -101,7 +101,7 @@ convolution of a list of PSF components
 
 """
 
-import warnings
+import logging
 from copy import deepcopy
 
 import numpy as np
@@ -402,7 +402,7 @@ class AiryPSF(PSF):
             # size = 511
             # print("FWHM [arcsec]:", fwhm, "- pixel res [arcsec]:", pix_res)
             # print("Array size:", size, "x", size, "- PSF FoV:", size * pix_res)
-            # warnings.warn("PSF dimensions too large - cropped to 512x512")
+            # logging.warning("PSF dimensions too large - cropped to 512x512")
 
         # Check for 'mode' keyword argument
         if "mode" in kwargs.keys():
@@ -1191,7 +1191,7 @@ class UserPSFCube(PSFCube):
                                filename)
 
             if pix_res > 1:
-                warnings.warn("CDELT > 1. Assuming the scale to be [mas]")
+                logging.warning("CDELT > 1. Assuming the scale to be [mas]")
                 pix_res *= 1E-3
 
             psf = PSF(size=hdr["NAXIS1"], pix_res=pix_res)
@@ -1747,7 +1747,7 @@ def seeing_psf(fwhm=0.8, psf_type="moffat", size=1024, pix_res=0.004,
     """
 
     if fwhm > 5:
-        warnings.warn("FWHM is rather large: [arcsec]"+str(fwhm))
+        logging.warning("FWHM is rather large: [arcsec]"+str(fwhm))
     fwhm_pix = fwhm/pix_res
 
     if "moff" in psf_type.lower():
@@ -1901,7 +1901,7 @@ def poppy_eelt_psf(plan="A", wavelength=2.2, mode="wide", size=1024,
                       fov_arcsec = params["pixelscale"] * size)
 
     if np.any(wavelength) < 0.1:
-        warnings.warn("One or more wavelengths is/are very short")
+        logging.warning("One or more wavelengths is/are very short")
         print(wavelength)
 
     wavelength *= 1E-6

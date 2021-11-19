@@ -1,5 +1,5 @@
 import os
-import warnings
+import logging
 import copy
 
 import yaml
@@ -85,7 +85,7 @@ class UserCommands:
 
     def __setitem__(self, key, val):
         if key not in self.cmds:
-            warnings.warn("{} not in self.keys. Ignoring.".format(key))
+            logging.warning("{} not in self.keys. Ignoring.".format(key))
             return None
 
         self.cmds[key] = cutils.str_to_python_type(val)

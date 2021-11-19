@@ -49,6 +49,14 @@ properties :
     image_format: "png"
     preamble_file: None
 
+  logging :
+    log_to_file: False
+    log_to_console: False
+    file_path: ".scopesim.log"
+    file_open_mode: "w"   # w - overwrite, a - append
+    file_level: "DEBUG"            # DEBUG INFO WARNING ERROR CRITICAL
+    console_level: "CRITICAL"      # DEBUG INFO WARNING ERROR CRITICAL
+
   tests :
     # overridden in tests/__init__.py
     run_integration_tests : True
@@ -88,3 +96,4 @@ alias : INST
 properties :
   pixel_scale : 0     # ["/pix]
   plate_scale : 0     # ["/mm]
+  decouple_detector_from_sky_headers : False
