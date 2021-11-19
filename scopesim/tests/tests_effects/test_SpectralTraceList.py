@@ -109,15 +109,15 @@ class TestGetFOVHeaders:
             plt.show()
 
 
-class TestApplyTo:
-    def test_fov_setup_base_returns_only_extracted_fov_limits(self):
-        fname = r"F:\Work\irdb\MICADO\TRACE_MICADO.fits"
-        spt = SpectralTraceList(filename=fname, s_colname='xi')
-
-        fvl = FovVolumeList()
-        fvl = spt.apply_to(fvl)
-
-        assert len(fvl) == 17
+# class TestApplyTo:
+#     def test_fov_setup_base_returns_only_extracted_fov_limits(self):
+#         fname = r"F:\Work\irdb\MICADO\TRACE_MICADO.fits"
+#         spt = SpectralTraceList(filename=fname, s_colname='xi')
+#
+#         fvl = FovVolumeList()
+#         fvl = spt.apply_to(fvl)
+#
+#         assert len(fvl) == 17
 
 
 ################################################################################
