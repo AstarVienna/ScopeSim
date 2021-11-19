@@ -69,8 +69,7 @@ class DetectorList(Effect):
 
     def fov_grid(self, which="edges", **kwargs):
         """Returns an ApertureMask object. kwargs are "pixel_scale" [arcsec]"""
-        logging.warning("DetectorList.fov_grid will be depreciated in v1.0",
-                      PendingDeprecationWarning)
+        logging.warning("DetectorList.fov_grid will be depreciated in v1.0")
         aperture_mask = None
         if which == "edges":
             self.meta.update(kwargs)

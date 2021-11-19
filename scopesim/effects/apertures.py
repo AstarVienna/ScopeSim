@@ -119,8 +119,7 @@ class ApertureMask(Effect):
 
     def fov_grid(self, which="edges", **kwargs):
         """ Returns a header with the sky coordinates """
-        logging.warning("DetectorList.fov_grid will be depreciated in v1.0",
-                      PendingDeprecationWarning)
+        logging.warning("DetectorList.fov_grid will be depreciated in v1.0")
         if which == "edges":
             self.meta.update(kwargs)
             return self.header
