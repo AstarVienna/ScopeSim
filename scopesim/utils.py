@@ -563,8 +563,15 @@ def find_file(filename, path=None, silent=False):
             continue
 
     # no file found
+    msg = f"File cannot be found: {filename}"
+    logging.error(msg)
+
     if not silent:
-        print("File cannot be found: " + filename)
+        print(msg)
+
+    if from_currsys("!SIM.file.error_on_missing_file") is True:
+        raise ValueError("")
+
     return None
 
 
