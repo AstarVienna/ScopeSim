@@ -36,7 +36,7 @@ properties :
     server_base_url : "https://www.univie.ac.at/simcado/InstPkgSvr/"
     use_cached_downloads : "update"
     search_path : ["./inst_pkgs/", "./"]
-    error_on_missing_file : True
+    error_on_missing_file : False
 
   reports :
     # for our own statistics, we track exclusively your institute's ip address
