@@ -1,4 +1,4 @@
-import warnings
+import logging
 
 import numpy as np
 from astropy import units as u
@@ -28,7 +28,7 @@ def make_emission_from_emissivity(temp, emiss_src_spec):
         temp = temp.to(u.deg_C)
 
     if emiss_src_spec is None:
-        warnings.warn("Either emission or emissivity must be set")
+        logging.warning("Either emission or emissivity must be set")
         flux = None
     else:
         flux = SourceSpectrum(BlackBody1D, temperature=temp)
@@ -65,7 +65,7 @@ def make_emission_from_array(flux, wave, meta):
         if "emission_unit" in meta:
             flux = quantify(flux, meta["emission_unit"])
         else:
-            warnings.warn("emission_unit must be set in self.meta, "
+            logging.warning("emission_unit must be set in self.meta, "
                           "or emission must be an astropy.Quantity")
             flux = None
 
@@ -83,7 +83,7 @@ def make_emission_from_array(flux, wave, meta):
         flux.meta["history"] = ["Created from emission array with units {}"
                                 "".format(orig_unit)]
     else:
-        warnings.warn("wavelength and emission must be "
+        logging.warning("wavelength and emission must be "
                       "astropy.Quantity py_objects")
         flux = None
 

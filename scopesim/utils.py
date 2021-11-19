@@ -5,7 +5,7 @@ import math
 import os
 from pathlib import Path
 import sys
-import warnings
+import logging
 import logging
 from collections import OrderedDict
 from docutils.core import publish_string
@@ -607,16 +607,16 @@ def convert_table_comments_to_dict(tbl):
             comments_str = "\n".join(tbl.meta["comments"])
             comments_dict = yaml.full_load(comments_str)
         except:
-            warnings.warn("Couldn't convert <table>.meta['comments'] to dict")
+            logging.warning("Couldn't convert <table>.meta['comments'] to dict")
             comments_dict = tbl.meta["comments"]
     elif "COMMENT" in tbl.meta:
         try:
             comments_dict = yaml.full_load("\n".join(tbl.meta["COMMENT"]))
         except:
-            warnings.warn("Couldn't convert <table>.meta['COMMENT'] to dict")
+            logging.warning("Couldn't convert <table>.meta['COMMENT'] to dict")
             comments_dict = tbl.meta["COMMENT"]
     else:
-        warnings.warn("No comments in table")
+        logging.warning("No comments in table")
 
     return comments_dict
 
@@ -648,7 +648,7 @@ def real_colname(name, colnames, silent=True):
     if len(real_name) == 0:
         real_name = None
         if not silent:
-            warnings.warn("None of {} were found in {}".format(names, colnames))
+            logging.warning("None of {} were found in {}".format(names, colnames))
     else:
         real_name = real_name[0]
 
@@ -838,7 +838,7 @@ def quantity_from_table(colname, table, default_unit=""):
                     col = col << u.Unit(com_tbl[colname_u])
             else:
                 col = col * u.Unit(default_unit)
-                warnings.warn(
+                logging.warning(
                     "{}_unit was not found in table.meta: {}. Default to: {}"
                     "".format(colname, table.meta, default_unit))
 
@@ -860,7 +860,7 @@ def unit_from_table(colname, table, default_unit=""):
         if colname_u in com_tbl:
             unit = u.Unit(com_tbl[colname_u])
         else:
-            warnings.warn("{}_unit was not found in table.meta: {}. "
+            logging.warning("{}_unit was not found in table.meta: {}. "
                           "Default to: {}"
                           "".format(colname, table.meta, default_unit))
             unit = u.Unit(default_unit)
@@ -974,7 +974,7 @@ def check_keys(input_dict, required_keys, action="error", all_any="all"):
                              "from input_dict: \n{} \n{}"
                              "".format(required_keys, input_dict.keys()))
         elif "warn" in action:
-            warnings.warn("One or more of the following keys missing "
+            logging.warning("One or more of the following keys missing "
                           "from input_dict: \n{} \n{}"
                           "".format(required_keys, input_dict.keys()))
 

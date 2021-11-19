@@ -1,5 +1,5 @@
 import os
-import warnings
+import logging
 
 import numpy as np
 
@@ -189,7 +189,7 @@ class SpectralSurface:
             response_curve = value_arr
         else:
             response_curve = None
-            warnings.warn("Both wavelength and {} must be set"
+            logging.warning("Both wavelength and {} must be set"
                           "".format(ter_property))
 
         return response_curve
@@ -250,7 +250,7 @@ class SpectralSurface:
         elif colname in self.table.colnames:
             val = self.table[colname].data
         else:
-            warnings.warn(f"{colname} not found in either '.meta' or '.table': "
+            logging.warning(f"{colname} not found in either '.meta' or '.table': "
                           f"[{self.meta.get('name', self.meta['filename'])}]")
             return None
 

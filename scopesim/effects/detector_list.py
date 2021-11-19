@@ -1,4 +1,4 @@
-import warnings
+import logging
 
 import numpy as np
 from astropy import units as u
@@ -69,7 +69,7 @@ class DetectorList(Effect):
 
     def fov_grid(self, which="edges", **kwargs):
         """Returns an ApertureMask object. kwargs are "pixel_scale" [arcsec]"""
-        warnings.warn("DetectorList.fov_grid will be depreciated in v1.0",
+        logging.warning("DetectorList.fov_grid will be depreciated in v1.0",
                       PendingDeprecationWarning)
         aperture_mask = None
         if which == "edges":

@@ -1,4 +1,4 @@
-import warnings
+import logging
 
 from astropy.io import fits
 
@@ -102,7 +102,7 @@ def make_effects_hdu(effects):
 #     detector_lists = get_all_effects(effects, efs.DetectorList)
 #
 #     if len(detector_lists) != 1:
-#         warnings.warn("None or more than one DetectorList found. Using the"
+#         logging.warning("None or more than one DetectorList found. Using the"
 #                       " first instance.{}".format(detector_lists))
 #
 #     return detector_lists[0]

@@ -51,7 +51,7 @@
 
 import os
 import glob
-import warnings
+import logging
 import copy
 
 import yaml
@@ -331,7 +331,7 @@ class UserCommands(object):
         try:
             missing_files = self._find_files()
         except ValueError:
-            warnings.warn("Local package database couldn't be found")
+            logging.warning("Local package database couldn't be found")
             missing_files = -1
         files_exist = len(missing_files) == 0
 
@@ -473,7 +473,7 @@ class UserCommands(object):
                 self.cmds["INST_FILTER_TC"] = full_name
 
             else:
-                warnings.warn("{} was not found".format(new_filter))
+                logging.warning("{} was not found".format(new_filter))
 
         else:
             raise TypeError("{} must have type `str` or "
@@ -513,7 +513,7 @@ class UserCommands(object):
             pattern = "TC_filter_"
 
         if self.inst_pkg_path is None:
-            warnings.warn("SIM_INSTRUMENT_PACKAGE is not set")
+            logging.warning("SIM_INSTRUMENT_PACKAGE is not set")
             my_list = []
         else:
             glob_list = glob.glob(self.inst_pkg_path + "/*" + pattern + "*")
@@ -557,7 +557,7 @@ class UserCommands(object):
         new_search_path += rc.__search_path__
 
         if self["SIM_INSTRUMENT_PACKAGE"] is None:
-            warnings.warn("Instrument package not set.")
+            logging.warning("Instrument package not set.")
 
         self["SCOPE_PSF_FILE"] = self._get_psf_path()
 
@@ -585,7 +585,7 @@ class UserCommands(object):
                 fname = find_file(keyval, path=new_search_path, silent=silent)
                 if fname is None:
                     broken_paths += [keyval]
-                    warnings.warn("Keyword "+key+" path doesn't exist: "
+                    logging.warning("Keyword "+key+" path doesn't exist: "
                                   + keyval)
                 else:
                     self.cmds[key] = fname
@@ -608,12 +608,12 @@ class UserCommands(object):
                 psf_path = self["SCOPE_PSF_FILE"]
             else:
                 psf_path = None
-                warnings.warn("PSF file not found: {}"
+                logging.warning("PSF file not found: {}"
                               "".format(self["SCOPE_PSF_FILE"]))
         elif svr.get_path(self["SCOPE_PSF_FILE"]) is not None:
             psf_path = svr.get_path(self["SCOPE_PSF_FILE"])
         else:
-            warnings.warn("PSF file not found in the DB: {}"
+            logging.warning("PSF file not found in the DB: {}"
                           "".format(self["SCOPE_PSF_FILE"]))
             psf_path = None
 
@@ -765,7 +765,7 @@ class UserCommands(object):
 
     def __setitem__(self, key, val):
         if key not in self.cmds:
-            warnings.warn("{} not in self.keys. Ignoring.".format(key))
+            logging.warning("{} not in self.keys. Ignoring.".format(key))
             return None
 
         self.cmds[key] = cutils.str_to_python_type(val)
@@ -778,7 +778,7 @@ class UserCommands(object):
     #     elif cutils.is_item_subcategory(item, self.cmds):
     #         attr = cutils.get_subcategory(item, self.cmds)
     #     else:
-    #         warnings.warn("{} doesn't exist. Capital letters?". format(item))
+    #         logging.warning("{} doesn't exist. Capital letters?". format(item))
     #         raise AttributeError(item)
     #     return attr
 
@@ -829,7 +829,7 @@ class UserCommands(object):
             print(num, wfe)
             tot_wfe = np.sqrt(np.sum(num * wfe**2))
         else:
-            warnings.warn("INST_WFE is None. Returning zero wavefront error")
+            logging.warning("INST_WFE is None. Returning zero wavefront error")
             tot_wfe = 0
 
         return tot_wfe
