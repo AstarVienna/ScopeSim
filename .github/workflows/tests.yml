@@ -4,10 +4,12 @@ on:
   push:
     branches:
       - master
+      - dev_master
 
   pull_request:
     branches:
       - master
+      - dev_master
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
