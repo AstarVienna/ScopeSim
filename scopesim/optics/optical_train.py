@@ -66,7 +66,6 @@ class OpticalTrain:
         >>> opt["dark_current"] = {"value": 0.75, "dit": 30}
 
     """
-
     def __init__(self, cmds=None):
 
         self._description = self.__repr__()
