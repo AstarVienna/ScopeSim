@@ -251,7 +251,7 @@ class Source(SourceBase):
             u.Unit(bunit)
         except KeyError as e:
             bunit = "erg / (s cm2 arcsec2)"
-            logging.warning("Keyword 'BUNIT' not found, setting to %s by default" % bunit)
+            logging.warning(f"Keyword 'BUNIT' not found, setting to {bunit} by default")
         except ValueError as e:
             print("'BUNIT' keyword is malformed", e)
             raise
