@@ -1,4 +1,4 @@
-import warnings
+import logging
 
 import numpy as np
 from astropy import wcs, units as u
@@ -13,7 +13,7 @@ def validate_source_input(**kwargs):
     if "filename" in kwargs and kwargs["filename"] is not None:
         filename = kwargs["filename"]
         if utils.find_file(filename) is None:
-            warnings.warn("filename was not found: {}".format(filename))
+            logging.warning("filename was not found: {}".format(filename))
 
     if "image" in kwargs and kwargs["image"] is not None:
         image_hdu = kwargs["image"]
@@ -22,7 +22,7 @@ def validate_source_input(**kwargs):
                              "type(image) == {}".format(type(image_hdu)))
 
         if len(wcs.find_all_wcs(image_hdu.header)) == 0:
-            warnings.warn("image does not contain valid WCS. {}"
+            logging.warning("image does not contain valid WCS. {}"
                           "".format(wcs.WCS(image_hdu)))
 
     if "table" in kwargs and kwargs["table"] is not None:
@@ -231,7 +231,7 @@ def scale_imagehdu(imagehdu, waverange, area=None):
 #         imagehdu.data = imagehdu.data.value
 #     else:
 #         unit = ""
-#         warnings.warn("No flux unit found on ImageHDU. Please add BUNIT or "
+#         logging.warning("No flux unit found on ImageHDU. Please add BUNIT or "
 #                       "FLUXUNIT to the header.")
 #
 #     return unit

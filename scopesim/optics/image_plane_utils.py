@@ -1,4 +1,4 @@
-import warnings
+import logging
 
 import numpy as np
 from astropy import units as u, wcs
@@ -48,11 +48,11 @@ def get_canvas_header(hdu_or_table_list, pixel_scale=1 * u.arcsec):
                                                    pixel_scale=pixel_scale)
         num_pix = hdr["NAXIS1"] * hdr["NAXIS2"]
         if num_pix > 2 ** 25:  # 2 * 4096**2
-            warnings.warn(size_warning.format("", num_pix, "256 MB"))
+            logging.warning(size_warning.format("", num_pix, "256 MB"))
         elif num_pix > 2 ** 28:
             raise MemoryError(size_warning.format("too", num_pix, "8 GB"))
     else:
-        warnings.warn("No tables or ImageHDUs were passed")
+        logging.warning("No tables or ImageHDUs were passed")
         hdr = None
 
     return hdr
@@ -554,7 +554,7 @@ def reorient_imagehdu(imagehdu, wcs_suffix="", conserve_flux=True, order=1):
         imagehdu.header = hdr
 
     elif any(["PC1_1" in key for key in imagehdu.header]):
-        warnings.warn("PC Keywords were found, but not used due to different "
+        logging.warning("PC Keywords were found, but not used due to different "
                       "wcs_suffix given: {} \n {}"
                       "".format(wcs_suffix, dict(imagehdu.header)))
 

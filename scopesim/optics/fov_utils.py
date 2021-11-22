@@ -1,4 +1,4 @@
-import warnings
+import logging
 from copy import deepcopy
 
 import numpy as np
@@ -43,7 +43,7 @@ def is_field_in_fov(fov_header, field, wcs_suffix=""):
         elif isinstance(field, fits.ImageHDU):
             field_header = field.header
         else:
-            warnings.warn("Input was neither Table nor ImageHDU: {}"
+            logging.warning("Input was neither Table nor ImageHDU: {}"
                           "".format(field))
             return False
 
@@ -155,7 +155,7 @@ def combine_imagehdu_fields(fov_header, src, fields_indexes, wave_min, wave_max,
 
     image = np.zeros((fov_header["NAXIS2"], fov_header["NAXIS1"]))
     canvas_hdu = fits.ImageHDU(header=fov_header, data=image)
-    order = int(rc.__config__["!SIM.computing.spline_order"])
+    order = utils.from_currsys("!SIM.computing.spline_order")
     pixel_area = fov_header["CDELT1"] * fov_header["CDELT2"] * \
                  u.Unit(fov_header["CUNIT1"]).to(u.arcsec) ** 2
 
@@ -388,11 +388,11 @@ def extract_range_from_spectrum(spectrum, waverange):
     mask = (spec_waveset > wave_min) * (spec_waveset < wave_max)
 
     if sum(mask) == 0:
-        warnings.warn(f"Waverange does not overlap with Spectrum waveset: "
+        logging.warning(f"Waverange does not overlap with Spectrum waveset: "
                       f"{[wave_min, wave_max]} <> {spec_waveset} "
                       f"for spectrum {spectrum}")
     if wave_min < min(spec_waveset) or wave_max > max(spec_waveset):
-        warnings.warn(f"Waverange only partially overlaps with Spectrum waveset: "
+        logging.warning(f"Waverange only partially overlaps with Spectrum waveset: "
                       f"{[wave_min, wave_max]} <> {spec_waveset} "
                       f"for spectrum {spectrum}")
 

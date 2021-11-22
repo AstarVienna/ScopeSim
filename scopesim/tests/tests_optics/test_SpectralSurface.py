@@ -6,7 +6,7 @@ import pytest
 import inspect
 import os
 import sys
-import warnings
+import logging
 
 import numpy as np
 from astropy.table import Table, Column
@@ -165,7 +165,7 @@ class TestSpectralSurfaceComplimentArray:
             assert np.all(np.isclose(col3.data, expected.data))
             assert col3.unit == expected.unit
         else:
-            warnings.warn("Data equality isn't tested for 2.7")
+            logging.warning("Data equality isn't tested for 2.7")
             assert col3.unit == expected.unit
 
     @pytest.mark.parametrize("colname1, colname2, col1, col2, expected",
@@ -194,7 +194,7 @@ class TestSpectralSurfaceComplimentArray:
             assert col3.data == pytest.approx(expected)
             assert len(col3.data) == len(expected)
         else:
-            warnings.warn("Data equality isn't tested for 2.7")
+            logging.warning("Data equality isn't tested for 2.7")
 
 
 class TestSpectralSurfaceAreaProperty:

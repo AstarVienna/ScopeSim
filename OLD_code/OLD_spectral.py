@@ -55,7 +55,7 @@
 import os
 
 from copy import deepcopy
-import warnings
+import logging
 
 import numpy as np
 from astropy import units as u
@@ -272,7 +272,7 @@ class TransmissionCurve(object):
 
         lam_res = lam_tmp[1] - lam_tmp[0]
         if self.params["min_step"] >= lam_res:
-            warnings.warn("min_step > resample resolution. Can't resample")
+            logging.warning("min_step > resample resolution. Can't resample")
 
         # define the edges and centres of each wavelength bin
         if use_edges:
@@ -580,7 +580,7 @@ class EmissionCurve(TransmissionCurve):
                           "area"    :978,
                           "units"   :"ph/(s m2 um arcsec2)"}
         if "units" not in kwargs.keys():
-            warnings.warn("""
+            logging.warning("""
             No 'units' specified in EmissionCurve.
             Assuming ph/(s m2 micron arcsec2)""", RuntimeWarning)
         default_params.update(kwargs)
@@ -645,7 +645,7 @@ class EmissionCurve(TransmissionCurve):
             lam_max = self.lam[-1]
 
         if lam_min > self.lam[-1] or lam_max < self.lam[0]:
-            warnings.warn("wavelength limits outside wavelength range")
+            logging.warning("wavelength limits outside wavelength range")
             photons = 0
         else:
             if (lam_max - lam_min) < 2 * self.res:

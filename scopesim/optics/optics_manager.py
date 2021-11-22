@@ -1,4 +1,4 @@
-import warnings
+import logging
 from inspect import isclass
 
 import numpy as np
@@ -320,7 +320,7 @@ Summary of Effects in Optical Elements:
     def __setitem__(self, key, value):
         obj = self.__getitem__(key)
         if isinstance(obj, list) and len(obj) > 1:
-            warnings.warn("{} does not return a singular object:\n {}"
+            logging.warning("{} does not return a singular object:\n {}"
                           "".format(key, obj))
         elif isinstance(obj, efs.Effect) and isinstance(value, dict):
             obj.meta.update(value)

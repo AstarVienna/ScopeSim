@@ -1,5 +1,6 @@
 import sys
 import os
+import logging
 import yaml
 
 from scopesim import __version__, rc

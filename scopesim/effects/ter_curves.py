@@ -1,7 +1,7 @@
 import numpy as np
 from astropy import units as u
 from os import path as pth
-import warnings
+import logging
 
 from astropy.io import fits
 from astropy.table import Table
@@ -275,7 +275,7 @@ class SkycalcTERCurve(AtmosphericTERCurve):
             tbl = self.skycalc_conn.get_sky_spectrum(return_type="table",
                                                      filename=filename)
         except:
-            warnings.warn("Could not connect to skycalc server")
+            logging.warning("Could not connect to skycalc server")
             if pth.exists(filename):
                 pass
             else:

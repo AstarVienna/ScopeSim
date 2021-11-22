@@ -16,6 +16,7 @@
 # * a spectrum of a bunch of stars and their positions
 # * a yaml file which contains the description of MICADO
 
+import pytest
 import os
 
 import numpy as np
@@ -45,6 +46,7 @@ if TEST_PATH not in rc.__search_path__:
 PLOTS = False
 
 
+@pytest.mark.skip("Calls a 256MB PSF file. Not including that on Git.")
 class Test_MICADO_MVP_YAML:
     def test_yaml_file_can_be_loaded_into_optical_train(self):
         # .. todo: get this working on Travis
