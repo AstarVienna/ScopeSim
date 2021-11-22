@@ -145,24 +145,29 @@ class SpectralTrace:
 
         # Initialise the image based on the footprint of the spectral
         # trace and the focal plane WCS
-        wave_min = fov.meta['wave_min'].value
-        wave_max = fov.meta['wave_max'].value
-        xi_min = fov.meta['xi_min'].value
-        xi_max = fov.meta['xi_max'].value
+        wave_min = fov.meta['wave_min'].value       # [um]
+        wave_max = fov.meta['wave_max'].value       # [um]
+        xi_min = fov.meta['xi_min'].value           # [arcsec]
+        xi_max = fov.meta['xi_max'].value           # [arcsec]
         xlim_mm, ylim_mm = self.footprint(wave_min=wave_min, wave_max=wave_max,
                                           xi_min=xi_min, xi_max=xi_max)
 
         if xlim_mm is None:
             return None
 
+        fov_header = fov.header
+        det_header = fov.detector_header
+
         # WCSD from the FieldOfView - this is the full detector plane
-        fpa_wcsd = WCS(fov.header, key='D')
-        naxis1, naxis2 = fov.header['NAXIS1'], fov.header['NAXIS2']
-        pixsize = fov.header['CDELT1D'] * u.Unit(fov.header['CUNIT1D'])
+        fpa_wcs = WCS(fov_header, key='D')
+        naxis1, naxis2 = fov_header['NAXIS1'], fov_header['NAXIS2']
+        pixsize = fov_header['CDELT1D'] * u.Unit(fov_header['CUNIT1D'])
         pixsize = pixsize.to(u.mm).value
-        pixscale = fov.header['CDELT1'] * u.Unit(fov.header['CUNIT1'])
+        pixscale = fov_header['CDELT1'] * u.Unit(fov_header['CUNIT1'])
         pixscale = pixscale.to(u.arcsec).value
 
+        fpa_wcsd = WCS(det_header, key='D')
+        naxis1d, naxis2d = det_header['NAXIS1'], det_header['NAXIS2']
         xlim_px, ylim_px = fpa_wcsd.all_world2pix(xlim_mm, ylim_mm, 0)
         xmin = np.floor(xlim_px.min()).astype(int)
         xmax = np.ceil(xlim_px.max()).astype(int)
@@ -170,30 +175,23 @@ class SpectralTrace:
         ymax = np.ceil(ylim_px.max()).astype(int)
 
         ## Check if spectral trace footprint is outside FoV
-        if xmax < 0 or xmin > naxis1 or ymax < 0 or ymin > naxis2:
+        if xmax < 0 or xmin > naxis1d or ymax < 0 or ymin > naxis2d:
             warnings.warn("Spectral trace footprint is outside FoV")
             return None
 
         # Only work on parts within the FoV
         xmin = max(xmin, 0)
-        xmax = min(xmax, naxis1)
+        xmax = min(xmax, naxis1d)
         ymin = max(ymin, 0)
-        ymax = min(ymax, naxis2)
+        ymax = min(ymax, naxis2d)
 
         # Create header for the subimage - I think this only needs the DET one,
         # but we'll do both. The WCSs are initialised from the full fpa WCS and
         # then shifted accordingly.
-        sub_wcs = WCS(fov.header, key=" ")
-        sub_wcs.wcs.crpix -= np.array([xmin, ymin])
-        det_wcs = WCS(fov.header, key="D")
+        # sub_wcs = WCS(fov_header, key=" ")
+        # sub_wcs.wcs.crpix -= np.array([xmin, ymin])
+        det_wcs = WCS(det_header, key="D")
         det_wcs.wcs.crpix -= np.array([xmin, ymin])
-
-        img_header = sub_wcs.to_header()
-        img_header.update(det_wcs.to_header())
-        img_header["XMIN"] = xmin
-        img_header["XMAX"] = xmax
-        img_header["YMIN"] = ymin
-        img_header["YMAX"] = ymax
 
         sub_naxis1 = xmax - xmin
         sub_naxis2 = ymax - ymin
@@ -256,11 +254,21 @@ class SpectralTrace:
 
         # Scale to ph / s / pixel
         dlam_by_dx, dlam_by_dy = self.xy2lam.gradient()
-        dlam_per_pix = pixsize * np.sqrt(dlam_by_dx(ximg_fpa, yimg_fpa)**2
-                                         + dlam_by_dy(ximg_fpa, yimg_fpa)**2)
+        dlam_per_pix = pixsize * np.sqrt(dlam_by_dx(ximg_fpa, yimg_fpa)**2 +
+                                         dlam_by_dy(ximg_fpa, yimg_fpa)**2)
         image *= pixscale * dlam_per_pix
 
-        return fits.ImageHDU(header=img_header, data=image)
+        # img_header = sub_wcs.to_header()
+        # img_header.update(det_wcs.to_header())
+        img_header = det_wcs.to_header()
+        img_header["XMIN"] = xmin
+        img_header["XMAX"] = xmax
+        img_header["YMIN"] = ymin
+        img_header["YMAX"] = ymax
+
+        image_hdu = fits.ImageHDU(header=img_header, data=image)
+
+        return image_hdu
 
 
     def get_max_dispersion(self, **kwargs):

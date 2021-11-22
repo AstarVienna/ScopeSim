@@ -267,8 +267,10 @@ def combine_two_spectra(spec_a, spec_b, action, wave_min, wave_max):
     new_source : synphot.SourceSpectrum
 
     """
-
-    wave_val = spec_a.waveset.value
+    if spec_a.waveset is None:
+        wave_val = spec_b.waveset.value
+    else:
+        wave_val = spec_a.waveset.value
     mask = (wave_val > wave_min.value) * (wave_val < wave_max.value)
 
     wave = ([wave_min.value] + list(wave_val[mask]) + [wave_max.value]) * u.AA
