@@ -11,7 +11,7 @@ from scopesim import utils, rc
 from scopesim.optics import image_plane_utils as imp_utils
 
 
-def is_field_in_fov(fov_header, table_or_imagehdu, wcs_suffix=""):
+def is_field_in_fov(fov_header, field, wcs_suffix=""):
     """
     Returns True if Source.field footprint is inside the FieldOfView footprint
 
@@ -19,7 +19,7 @@ def is_field_in_fov(fov_header, table_or_imagehdu, wcs_suffix=""):
     ----------
     fov_header : fits.Header
         Header from a FieldOfView object
-    table_or_imagehdu : [astropy.Table, astropy.ImageHDU]
+    field : [astropy.Table, astropy.ImageHDU]
         Field object from a Source object
     wcs_suffix : str
         ["S", "D"] Coordinate system: Sky or Detector
@@ -30,27 +30,30 @@ def is_field_in_fov(fov_header, table_or_imagehdu, wcs_suffix=""):
 
     """
 
-    s = wcs_suffix
-    pixel_scale = utils.quantify(fov_header["CDELT1"+s], u.deg)
-
-    if isinstance(table_or_imagehdu, Table):
-        ext_hdr = imp_utils._make_bounding_header_for_tables(
-                                            [table_or_imagehdu], pixel_scale)
-    elif isinstance(table_or_imagehdu, fits.ImageHDU):
-        ext_hdr = imp_utils._make_bounding_header_from_imagehdus(
-                                            [table_or_imagehdu], pixel_scale)
+    if isinstance(field, fits.ImageHDU) and \
+            field.header.get("BG_SRC") is not None:
+        is_inside_fov = True
     else:
-        warnings.warn("Input was neither Table nor ImageHDU: {}"
-                      "".format(table_or_imagehdu))
-        return False
+        if isinstance(field, Table):
+            x = list(field["x"].to(u.deg).value)
+            y = list(field["y"].to(u.deg).value)
+            s = wcs_suffix
+            cdelt = utils.quantify(fov_header["CDELT1" + s], u.deg).value
+            field_header = imp_utils.header_from_list_of_xy(x, y, cdelt, s)
+        elif isinstance(field, fits.ImageHDU):
+            field_header = field.header
+        else:
+            warnings.warn("Input was neither Table nor ImageHDU: {}"
+                          "".format(field))
+            return False
 
-    ext_xsky, ext_ysky = imp_utils.calc_footprint(ext_hdr, wcs_suffix)
-    fov_xsky, fov_ysky = imp_utils.calc_footprint(fov_header, wcs_suffix)
+        ext_xsky, ext_ysky = imp_utils.calc_footprint(field_header, wcs_suffix)
+        fov_xsky, fov_ysky = imp_utils.calc_footprint(fov_header, wcs_suffix)
 
-    is_inside_fov = min(ext_xsky) < max(fov_xsky) and \
-                    max(ext_xsky) > min(fov_xsky) and \
-                    min(ext_ysky) < max(fov_ysky) and \
-                    max(ext_ysky) > min(fov_ysky)
+        is_inside_fov = min(ext_xsky) < max(fov_xsky) and \
+                        max(ext_xsky) > min(fov_xsky) and \
+                        min(ext_ysky) < max(fov_ysky) and \
+                        max(ext_ysky) > min(fov_ysky)
 
     return is_inside_fov
 
@@ -384,14 +387,14 @@ def extract_range_from_spectrum(spectrum, waverange):
     spec_waveset = spectrum.waveset.to(u.AA).value
     mask = (spec_waveset > wave_min) * (spec_waveset < wave_max)
 
-    # if sum(mask) == 0:
-    #     warnings.warn(f"Waverange does not overlap with Spectrum waveset: "
-    #                   f"{[wave_min, wave_max]} <> {spec_waveset} "
-    #                   f"for spectrum {spectrum})
-    # if wave_min < min(spec_waveset) or wave_max > max(spec_waveset):
-    #     warnings.warn(f"Waverange partially overlaps with Spectrum waveset: "
-    #                   f"{[wave_min, wave_max]} <> {spec_waveset} ")
-    #                   f"for spectrum {spectrum})
+    if sum(mask) == 0:
+        warnings.warn(f"Waverange does not overlap with Spectrum waveset: "
+                      f"{[wave_min, wave_max]} <> {spec_waveset} "
+                      f"for spectrum {spectrum}")
+    if wave_min < min(spec_waveset) or wave_max > max(spec_waveset):
+        warnings.warn(f"Waverange only partially overlaps with Spectrum waveset: "
+                      f"{[wave_min, wave_max]} <> {spec_waveset} "
+                      f"for spectrum {spectrum}")
 
     wave = np.r_[wave_min, spec_waveset[mask], wave_max]
     flux = spectrum(wave)

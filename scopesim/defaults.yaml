@@ -88,3 +88,4 @@ alias : INST
 properties :
   pixel_scale : 0     # ["/pix]
   plate_scale : 0     # ["/mm]
+  decouple_detector_from_sky_headers : False

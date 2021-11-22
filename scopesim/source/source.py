@@ -477,7 +477,7 @@ class Source(SourceBase):
                 msg += "[{}]: Table with {} rows, referencing spectra {} \n" \
                        "".format(ii, tbl_len, num_spec)
             elif isinstance(self.fields[ii], (fits.ImageHDU, fits.PrimaryHDU)):
-                im_size = self.fields[ii].data.shape
+                im_size = self.fields[ii].data.shape if self.fields[ii].data is not None else "<empty>"
                 num_spec = "-"
                 if self.fields[ii].header["SPEC_REF"] != "":
                     num_spec = self.fields[ii].header["SPEC_REF"]
