@@ -143,7 +143,7 @@ class FieldOfView(FieldOfViewBase):
             use_photlam = False if use_photlam is None else use_photlam
             self.hdu = self.make_image_hdu(use_photlam=use_photlam)
         elif hdu_type == "cube":
-            use_photlam = False if use_photlam is None else use_photlam
+            use_photlam = True if use_photlam is None else use_photlam
             self.hdu = self.make_cube_hdu(use_photlam=use_photlam)
         elif hdu_type == "spectrum":
             self.hdu = self.make_spectrum()
@@ -453,19 +453,21 @@ class FieldOfView(FieldOfViewBase):
             pixel_area = utils.from_currsys(self.meta["pixel_scale"]) ** 2      # float [arcsec2]
             area_factor = pixel_area * bg_solid_angle                           # float [arcsec2 * arcsec-2]
 
-            spec = specs[field.header["SPEC_REF"]] * area_factor
+            # Cube should be in PHOTLAM arcsec-2 for SpectralTrace mapping
+            # spec = specs[field.header["SPEC_REF"]] * area_factor
+            spec = specs[field.header["SPEC_REF"]]
             canvas_cube_hdu.data += spec[:, None, None].value
 
         # 6. Convert from PHOTLAM to ph/s/voxel
         #    PHOTLAM = ph/s/cm-2/AA
         #    area = m2, fov_waveset = um
-        if use_photlam is False:
-            area = utils.from_currsys(self.meta["area"])    # u.m2
-            canvas_cube_hdu.data *= area.to(u.cm**2).value
+        # if use_photlam is False:
+        area = utils.from_currsys(self.meta["area"])  # u.m2
+        canvas_cube_hdu.data *= area.to(u.cm ** 2).value
 
-            bin_widths = np.diff(fov_waveset).to(u.AA).value
-            bin_widths = 0.5 * (np.r_[0, bin_widths] + np.r_[bin_widths, 0])
-            canvas_cube_hdu.data *= bin_widths[:, None, None]
+        bin_widths = np.diff(fov_waveset).to(u.AA).value
+        bin_widths = 0.5 * (np.r_[0, bin_widths] + np.r_[bin_widths, 0])
+        canvas_cube_hdu.data *= bin_widths[:, None, None]
 
         cdelt3 = np.diff(fov_waveset)[0]
         canvas_cube_hdu.header.update({"CDELT3": cdelt3.to(u.um).value,
