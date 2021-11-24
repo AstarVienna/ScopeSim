@@ -134,10 +134,12 @@ class TERCurve(Effect):
             bg_hdu = fits.ImageHDU()
             bg_hdu.header.update({"BG_SRC": True,
                                   "BG_SURF": self.meta.get("name", "<untitled>"),
-                                  "CUNIT1": "DEG",
-                                  "CUNIT2": "DEG",
+                                  "CUNIT1": "ARCSEC",
+                                  "CUNIT2": "ARCSEC",
                                   "CDELT1": 0,
-                                  "CDELT2": 0,})
+                                  "CDELT2": 0,
+                                  "BUNIT": "PHOTLAM arcsec-2",
+                                  "SOLIDANG": "arcsec-2"})
             self._background_source = Source(image_hdu=bg_hdu, spectra=flux)
 
         return self._background_source

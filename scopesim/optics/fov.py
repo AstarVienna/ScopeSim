@@ -43,6 +43,7 @@ class FieldOfView(FieldOfViewBase):
                      "wave_bin_n": 1,
                      "wave_bin_type": "linear",
                      "area": 0 * u.m**2,
+                     "pixel_scale": "!INST.pixel_scale",
                      "sub_pixel": "!SIM.sub_pixel.flag",
                      "distortion": {"scale": [1, 1],
                                     "offset": [0, 0],
@@ -215,10 +216,12 @@ class FieldOfView(FieldOfViewBase):
                 canvas_flux += self.spectra[ref](fov_waveset).value * weight
 
         for field in self.background_fields:
-            ref = field.header["SPEC_REF"]
-            weight = np.sum(field.data)
-            canvas_flux += self.spectra[ref](fov_waveset).value * weight
+            bg_solid_angle = u.Unit(field.header["SOLIDANG"]).to(u.arcsec**-2)
+            pixel_area = utils.from_currsys(self.meta["pixel_scale"]) ** 2
+            area_factor = pixel_area * bg_solid_angle       # arcsec**2 * arcsec**-2
 
+            ref = field.header["SPEC_REF"]
+            canvas_flux += self.spectra[ref](fov_waveset).value * area_factor
 
         spectrum = SourceSpectrum(Empirical1D, points=fov_waveset,
                                   lookup_table=canvas_flux)
@@ -321,7 +324,12 @@ class FieldOfView(FieldOfViewBase):
 
         # 4. Find Background fields
         for field in self.background_fields:
-            canvas_image_hdu.data += fluxes[field.header["SPEC_REF"]]
+            bg_solid_angle = u.Unit(field.header["SOLIDANG"]).to(u.arcsec**-2)
+            pixel_area = utils.from_currsys(self.meta["pixel_scale"]) ** 2
+            area_factor = pixel_area * bg_solid_angle       # arcsec**2 * arcsec**-2
+
+            flux = fluxes[field.header["SPEC_REF"]] * area_factor
+            canvas_image_hdu.data += flux
 
         image_hdu = canvas_image_hdu
 
@@ -424,7 +432,9 @@ class FieldOfView(FieldOfViewBase):
 
         # 4. Find Table fields
         for field in self.table_fields:
-            for xsky, ysky, ref, weight in field:  # field is a Table and the iterable is the row vector
+            for row in field:
+                xsky, ysky = row["x"], row["y"]
+                ref, weight = row["ref"], row["weight"]
                 # x, y are ALWAYS in arcsec - crval is in deg
                 xpix, ypix = imp_utils.val2pix(self.header, xsky / 3600, ysky / 3600)
                 if utils.from_currsys(self.meta["sub_pixel"]):
@@ -439,7 +449,11 @@ class FieldOfView(FieldOfViewBase):
 
         # 5. Add Background fields
         for field in self.background_fields:
-            spec = specs[field.header["SPEC_REF"]]
+            bg_solid_angle = u.Unit(field.header["SOLIDANG"]).to(u.arcsec**-2)  # float [arcsec-2]
+            pixel_area = utils.from_currsys(self.meta["pixel_scale"]) ** 2      # float [arcsec2]
+            area_factor = pixel_area * bg_solid_angle                           # float [arcsec2 * arcsec-2]
+
+            spec = specs[field.header["SPEC_REF"]] * area_factor
             canvas_cube_hdu.data += spec[:, None, None].value
 
         # 6. Convert from PHOTLAM to ph/s/voxel

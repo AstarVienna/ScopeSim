@@ -86,8 +86,9 @@ class FOVManager:
         self.meta.update(kwargs)
 
         params = from_currsys({"wave_min": self.meta["wave_min"],
-                               "wave_max": self.meta["wave_max"],
-                               "meta": {"area": self.meta["area"]}})
+                               "wave_max": self.meta["wave_max"]})
+        fvl_meta = ["area", "pixel_scale"]
+        params["meta"] = from_currsys({key: self.meta[key] for key in fvl_meta})
         self.volumes_list = FovVolumeList(initial_volume=params)
 
         self.effects = effects

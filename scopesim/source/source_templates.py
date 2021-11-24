@@ -1,15 +1,14 @@
-from os import path as pth
-
 import numpy as np
 from astropy import units as u
 from astropy.table import Table
+from scopesim.source.spectrum_templates import vega_spectrum, ab_spectrum
 
-from synphot import SourceSpectrum, ConstFlux1D
 from synphot.units import PHOTLAM
 
-from scopesim.rc import __pkg_dir__
 from .source import Source
 from .. import rc
+
+__all__ = ["empty_sky", "star", "star_field"]
 
 
 def empty_sky(flux=0):
@@ -24,6 +23,46 @@ def empty_sky(flux=0):
     sky = Source(lam=[0.3, 3.0]*u.um, spectra=[flux, flux]*PHOTLAM,
                  x=[0], y=[0], ref=[0], weight=[1])
     return sky
+
+def star(x=0, y=0, mag=0, photometric_system="vega"):
+    """
+    Source object for a single star in either vega or AB magnitudes
+
+    THe star is associated with the reference spectrum for each photometric
+    system, therefore a reference wavelength or filter does not need to be given
+
+    Parameters
+    ----------
+    x, y : float
+        [arcsec] position from centre of field of view
+    mag : float
+        [vega mag or AB mag] Stellar brightness
+    photometric_system : str
+        ["vega", "ab"]
+
+    Returns
+    -------
+    src : Source
+        A source object with a single entry table field and a reference spectrum
+
+    """
+
+    if photometric_system.lower() == "ab":
+        spec = ab_spectrum()
+    else:
+        spec = vega_spectrum()
+
+    w = 10**(-0.4 * mag)
+    ref = 0
+
+    mag_unit = u.mag if photometric_system == "vega" else u.ABmag
+    tbl = Table(data=[[x], [y], [w], [ref], [mag]],
+                names=["x", "y", "weight", "ref", "mag"],
+                units=[u.arcsec, u.arcsec, None, None, mag_unit])
+    tbl.meta["photometric_system"] = photometric_system
+    src = Source(spectra=spec, table=tbl)
+
+    return src
 
 
 def star_field(n, mmin, mmax, width, height=None, photometric_system="vega",
@@ -88,23 +127,11 @@ def star_field(n, mmin, mmax, width, height=None, photometric_system="vega",
     w = 10**(-0.4 * mags)
     ref = np.zeros(n, dtype=int)
 
+    mag_unit = u.mag if photometric_system == "vega" else u.ABmag
     tbl = Table(data=[x, y, w, ref, mags],
-                names=["x", "y", "weight", "ref", "mag"])
+                names=["x", "y", "weight", "ref", "mag"],
+                units=[u.arcsec, u.arcsec, None, None, mag_unit])
     tbl.meta["photometric_system"] = photometric_system
     stars = Source(spectra=spec, table=tbl)
 
     return stars
-
-
-def vega_spectrum(mag=0):
-    vega = SourceSpectrum.from_file(pth.join(__pkg_dir__, "vega.fits"))
-    vega = vega * 10 ** (-0.4 * mag)
-    return vega
-
-
-def st_spectrum(mag=0):
-    return SourceSpectrum(ConstFlux1D, amplitude=mag*u.STmag)
-
-
-def ab_spectrum(mag=0):
-    return SourceSpectrum(ConstFlux1D, amplitude=mag*u.ABmag)
