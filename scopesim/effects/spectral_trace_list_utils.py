@@ -5,7 +5,7 @@ This module contains
    - utility functions for use with spectral traces
 """
 
-import warnings
+import logging
 
 import numpy as np
 
@@ -176,7 +176,7 @@ class SpectralTrace:
 
         ## Check if spectral trace footprint is outside FoV
         if xmax < 0 or xmin > naxis1d or ymax < 0 or ymin > naxis2d:
-            warnings.warn("Spectral trace footprint is outside FoV")
+            logging.warning("Spectral trace footprint is outside FoV")
             return None
 
         # Only work on parts within the FoV
@@ -960,7 +960,7 @@ def sanitize_table(tbl, invalid_value, wave_colname, x_colname, y_colname,
             continue
 
         if sum(valid) == 0:
-            warnings.warn("--- Extension {} ---"
+            logging.warning("--- Extension {} ---"
                           "All points in {} or {} were invalid. \n"
                           "THESE COLUMNS HAVE BEEN REMOVED FROM THE TABLE \n"
                           "invalid_value = {} \n"

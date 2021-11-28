@@ -817,7 +817,7 @@ def snr(exptimes, mags, filter_name="Ks", cmds=None, **kwargs):
     # """
     # TODO: What about argument cmds? (OC)
 
-    # warnings.warn("""This is in the process of being depreciated.
+    # logging.warning("""This is in the process of being depreciated.
                      # Use 'snr_curve()' until ScopeSim v0.5 is released""")
 
     # if cmds is None:

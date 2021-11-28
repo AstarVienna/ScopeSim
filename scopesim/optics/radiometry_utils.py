@@ -1,6 +1,6 @@
 from collections import OrderedDict
 from copy import deepcopy
-import warnings
+import logging
 
 import numpy as np
 from astropy import units as u
@@ -54,7 +54,7 @@ def combine_emissions(tbl, surfaces, row_indexes, etendue, use_area=False):
                     emission = emission + surf_emission
 
             else:
-                warnings.warn('Ignoring emission from surface: "{}". Area came '
+                logging.warning('Ignoring emission from surface: "{}". Area came '
                               'back as "None"'.format(surf.meta["name"]))
 
     return emission
@@ -134,7 +134,7 @@ def add_surface_to_table(tbl, surf, name, position, silent=True):
                                          position=position)
         else:
             if not silent:
-                warnings.warn("{} was not found in the meta dictionary of {}. "
+                logging.warning("{} was not found in the meta dictionary of {}. "
                               "This could cause problems".format(colname, name))
 
     colname = real_colname("name", new_tbl.colnames)
