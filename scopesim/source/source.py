@@ -228,7 +228,7 @@ class Source(SourceBase):
             flux = flux.value
         spectra = [spec_template(flux)]
 
-        self._from_imagehdu_and_spectra(image_hdu, spec)
+        self._from_imagehdu_and_spectra(image_hdu, spectra)
 
     def _from_arrays(self, x, y, ref, weight, spectra):
         if weight is None:
