@@ -396,6 +396,16 @@ class FieldOfView(FieldOfViewBase):
         """
         # 1. Make waveset and canvas cube (area, bin_width are applied at end)
         fov_waveset = self.waveset
+        wave_bin_n = len(fov_waveset)
+        wave_min = self.meta["wave_min"]
+        wave_max = self.meta["wave_max"]
+
+        if "lin" in self.meta["wave_bin_type"]:
+            fov_waveset = np.linspace(wave_min, wave_max, wave_bin_n)
+        elif "log" in self.meta["wave_bin_type"]:
+            wmin, wmax = wave_min.to(u.um).value, wave_max.to(u.um).value
+            fov_waveset = np.logspace(wmin, wmax, wave_bin_n) * u.um
+
         specs = {ref: spec(fov_waveset)
                  for ref, spec in self.spectra.items()}
 
@@ -469,12 +479,13 @@ class FieldOfView(FieldOfViewBase):
         bin_widths = 0.5 * (np.r_[0, bin_widths] + np.r_[bin_widths, 0])
         canvas_cube_hdu.data *= bin_widths[:, None, None]
 
-        cdelt3 = np.diff(fov_waveset)[0]
+        cdelt3 = np.diff(fov_waveset[:2])[0]
         canvas_cube_hdu.header.update({"CDELT3": cdelt3.to(u.um).value,
                                        "CRVAL3": fov_waveset[0].value,
                                        "CRPIX3": 0,
                                        "CUNIT3": "um",
-                                       "CTYPE3": "WAV"})
+                                       "CTYPE3": "WAVE"})
+        # ..todo: Add the log wavelength keyword here, if log scale is needed
 
         cube_hdu = canvas_cube_hdu
 
