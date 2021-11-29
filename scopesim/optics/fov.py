@@ -471,13 +471,14 @@ class FieldOfView(FieldOfViewBase):
         # 6. Convert from PHOTLAM to ph/s/voxel
         #    PHOTLAM = ph/s/cm-2/AA
         #    area = m2, fov_waveset = um
+        # SpectralTrace wants ph/s/um/arcsec2 --> get rid of m2, leave um
         # if use_photlam is False:
         area = utils.from_currsys(self.meta["area"])  # u.m2
         canvas_cube_hdu.data *= area.to(u.cm ** 2).value
 
-        bin_widths = np.diff(fov_waveset).to(u.AA).value
-        bin_widths = 0.5 * (np.r_[0, bin_widths] + np.r_[bin_widths, 0])
-        canvas_cube_hdu.data *= bin_widths[:, None, None]
+        # bin_widths = np.diff(fov_waveset).to(u.AA).value
+        # bin_widths = 0.5 * (np.r_[0, bin_widths] + np.r_[bin_widths, 0])
+        # canvas_cube_hdu.data *= bin_widths[:, None, None]
 
         cdelt3 = np.diff(fov_waveset[:2])[0]
         canvas_cube_hdu.header.update({"CDELT3": cdelt3.to(u.um).value,
