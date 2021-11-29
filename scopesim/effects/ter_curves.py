@@ -271,17 +271,12 @@ class SkycalcTERCurve(AtmosphericTERCurve):
         conn_kwargs = from_currsys(conn_kwargs)
         self.skycalc_conn.values.update(conn_kwargs)
 
-        local_path = from_currsys("!SIM.file.local_packages_path")
-        filename = pth.join(local_path, "skycalc_temp.fits")
         try:
-            tbl = self.skycalc_conn.get_sky_spectrum(return_type="table",
-                                                     filename=filename)
+            tbl = self.skycalc_conn.get_sky_spectrum(return_type="table")
         except:
-            logging.warning("Could not connect to skycalc server")
-            if pth.exists(filename):
-                pass
-            else:
-                raise ValueError("No local copy exists: {}".format(filename))
+            msg = "Could not connect to skycalc server"
+            logging.exception(msg)
+            raise ValueError(msg)
 
         for i, colname in enumerate(["wavelength", "transmission", "emission"]):
             tbl.columns[i].name = colname
