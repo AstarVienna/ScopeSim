@@ -151,7 +151,8 @@ class Source(SourceBase):
                                       ext=ext, image_hdu=image_hdu, flux=flux,
                                       filename=filename)
 
-        spectra = convert_to_list_of_spectra(spectra, lam)
+        if spectra is not None:
+            spectra = convert_to_list_of_spectra(spectra, lam)
 
         if filename is not None and spectra is not None:
             self._from_file(filename, spectra)
@@ -166,6 +167,7 @@ class Source(SourceBase):
             self._from_imagehdu_and_spectra(image_hdu, spectra)
 
         elif image_hdu is not None and flux is not None:
+
             self._from_imagehdu_and_flux(image_hdu, flux)
 
         elif x is not None and y is not None and \
@@ -201,6 +203,7 @@ class Source(SourceBase):
         self.spectra += spectra
 
     def _from_imagehdu_and_spectra(self, image_hdu, spectra):
+
         if spectra is not None and len(spectra) > 0:
             image_hdu.header["SPEC_REF"] = len(self.spectra)
             self.spectra += spectra
@@ -227,7 +230,6 @@ class Source(SourceBase):
                 flux = flux.to(u.ABmag)
             flux = flux.value
         spectra = [spec_template(flux)]
-
         self._from_imagehdu_and_spectra(image_hdu, spectra)
 
     def _from_arrays(self, x, y, ref, weight, spectra):

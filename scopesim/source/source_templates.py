@@ -4,8 +4,9 @@ import numpy as np
 from astropy import units as u
 from astropy.table import Table
 
-from synphot import SourceSpectrum, ConstFlux1D
+from synphot import SourceSpectrum, ConstFlux1D, Empirical1D
 from synphot.units import PHOTLAM
+from synphot.utils import generate_wavelengths
 
 from scopesim.rc import __pkg_dir__
 from .source import Source
@@ -103,8 +104,16 @@ def vega_spectrum(mag=0):
 
 
 def st_spectrum(mag=0):
-    return SourceSpectrum(ConstFlux1D, amplitude=mag*u.STmag)
+    waves = np.geomspace(100, 50000, 5000)
+    sp = ConstFlux1D(amplitude=mag*u.STmag)
+
+    return SourceSpectrum(Empirical1D, points=waves, lookup_table=sp(waves))
 
 
 def ab_spectrum(mag=0):
-    return SourceSpectrum(ConstFlux1D, amplitude=mag*u.ABmag)
+    waves = np.geomspace(100, 50000, 5000)
+    sp = ConstFlux1D(amplitude=mag * u.ABmag)
+
+    return SourceSpectrum(Empirical1D, points=waves, lookup_table=sp(waves))
+
+
