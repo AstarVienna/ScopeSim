@@ -7,7 +7,7 @@ from astropy.table import Table
 from synphot import SourceSpectrum, Empirical1D
 
 from scopesim.source.source import Source
-from scopesim.source.spectrum_templates import vega_spectrum
+from scopesim.source.source_templates import vega_spectrum
 from scopesim import rc
 
 FILES_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),

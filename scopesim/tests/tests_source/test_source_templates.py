@@ -1,5 +1,5 @@
 import pytest
-import scopesim.source.spectrum_templates
+from scopesim.source import source_templates
 from _pytest.python_api import approx
 from astropy import units as u
 from astropy.table import Table
@@ -25,9 +25,9 @@ class TestStarField:
 
 def test_all_zero_spectra_line_up():
     mag = 0
-    vega = scopesim.source.spectrum_templates.vega_spectrum(mag)
-    ab = scopesim.source.spectrum_templates.ab_spectrum(mag)
-    st = scopesim.source.spectrum_templates.st_spectrum(mag)
+    vega = source_templates.vega_spectrum(mag)
+    ab = source_templates.ab_spectrum(mag)
+    st = source_templates.st_spectrum(mag)
 
     wave = 0.55 * u.um
     assert st(wave).value == approx(vega(wave).value, rel=0.03)

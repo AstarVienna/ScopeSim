@@ -1,10 +1,13 @@
+from os import path as pth
+
 import numpy as np
 from astropy import units as u
 from astropy.table import Table
-from scopesim.source.spectrum_templates import vega_spectrum, ab_spectrum
 
+from synphot import SourceSpectrum, ConstFlux1D, Empirical1D
 from synphot.units import PHOTLAM
 
+from scopesim.rc import __pkg_dir__
 from .source import Source
 from .. import rc
 
@@ -135,3 +138,23 @@ def star_field(n, mmin, mmax, width, height=None, photometric_system="vega",
     stars = Source(spectra=spec, table=tbl)
 
     return stars
+
+
+def vega_spectrum(mag=0):
+    vega = SourceSpectrum.from_file(pth.join(__pkg_dir__, "vega.fits"))
+    vega = vega * 10 ** (-0.4 * mag)
+    return vega
+
+
+def st_spectrum(mag=0):
+    waves = np.geomspace(100, 50000, 5000)
+    sp = ConstFlux1D(amplitude=mag*u.STmag)
+
+    return SourceSpectrum(Empirical1D, points=waves, lookup_table=sp(waves))
+
+
+def ab_spectrum(mag=0):
+    waves = np.geomspace(100, 50000, 5000)
+    sp = ConstFlux1D(amplitude=mag * u.ABmag)
+
+    return SourceSpectrum(Empirical1D, points=waves, lookup_table=sp(waves))

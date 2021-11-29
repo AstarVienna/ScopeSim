@@ -48,6 +48,7 @@ from ..optics.image_plane import ImagePlane
 from ..optics import image_plane_utils as imp_utils
 from .source_utils import validate_source_input, convert_to_list_of_spectra, \
     photons_in_range
+from . import source_templates as src_tmp
 
 from ..base_classes import SourceBase
 from .. import utils
@@ -83,6 +84,7 @@ class Source(SourceBase):
         - ``table=<astropy.Table>, lam=<array>, spectra=<list of array>
         - ``image_hdu=<fits.ImageHDU>, spectra=<list of synphot.SourceSpectrum>``
         - ``image_hdu=<fits.ImageHDU>, lam=<array>, spectra=<list of array>
+        - ``image_hdu=<fits.ImageHDU>, flux=<astropy.Quantity>
 
         Old SimCADO-style input
         - ``x=<array>, y=<array>, ref=<array>, spectra=<list of synphot.SourceSpectrum>``
@@ -113,6 +115,8 @@ class Source(SourceBase):
 
     image_hdu : fits.ImageHDU
 
+    flux : astropy.Quantity
+        [u.mag, u.ABmag, u.Jy]
 
     Attributes
     ----------
@@ -132,7 +136,7 @@ class Source(SourceBase):
 
     def __init__(self, filename=None, cube=None, ext=0,
                  lam=None, spectra=None, x=None, y=None, ref=None, weight=None,
-                 table=None, image_hdu=None, **kwargs):
+                 table=None, image_hdu=None, flux=None, **kwargs):
 
         self.meta = {}
         self.meta.update(kwargs)
@@ -143,22 +147,33 @@ class Source(SourceBase):
         self.bandpass = None
 
         valid = validate_source_input(lam=lam, x=x, y=y, ref=ref, weight=weight,
-                                      spectra=spectra, table=table, cube=cube, ext=ext,
-                                      image_hdu=image_hdu, filename=filename)
+                                      spectra=spectra, table=table, cube=cube,
+                                      ext=ext, image_hdu=image_hdu, flux=flux,
+                                      filename=filename)
 
-        spectra = convert_to_list_of_spectra(spectra, lam)
+        if spectra is not None:
+            spectra = convert_to_list_of_spectra(spectra, lam)
 
         if filename is not None and spectra is not None:
             self._from_file(filename, spectra)
 
-        if cube is not None:
+        elif cube is not None:
             self._from_cube(cube=cube, ext=ext)
 
         elif table is not None and spectra is not None:
             self._from_table(table, spectra)
 
         elif image_hdu is not None and spectra is not None:
-            self._from_imagehdu(image_hdu, spectra)
+            self._from_imagehdu_and_spectra(image_hdu, spectra)
+
+        elif image_hdu is not None and flux is not None:
+            self._from_imagehdu_and_flux(image_hdu, flux)
+
+        elif image_hdu is not None and flux is None and spectra is None:
+            msg = f"image_hdu must be accompanied by either spectra or flux:\n" \
+                  f"spectra: {spectra}, flux: {flux}"
+            logging.exception(msg)
+            raise NotImplementedError
 
         elif x is not None and y is not None and \
                 ref is not None and spectra is not None:
@@ -173,7 +188,7 @@ class Source(SourceBase):
             hdr = fits.getheader(filename)
             if fits_type == "image":
                 image = fits.ImageHDU(data=data, header=hdr)
-                self._from_imagehdu(image, spectra)
+                self._from_imagehdu_and_spectra(image, spectra)
             elif fits_type == "bintable":
                 hdr1 = fits.getheader(filename, 1)
                 hdr.update(hdr1)
@@ -192,7 +207,8 @@ class Source(SourceBase):
         self.fields += [tbl]
         self.spectra += spectra
 
-    def _from_imagehdu(self, image_hdu, spectra):
+    def _from_imagehdu_and_spectra(self, image_hdu, spectra):
+
         if spectra is not None and len(spectra) > 0:
             image_hdu.header["SPEC_REF"] = len(self.spectra)
             self.spectra += spectra
@@ -210,6 +226,16 @@ class Source(SourceBase):
             image_hdu.header["CDELT"+str(i)] = val * unit.to(u.deg)
 
         self.fields += [image_hdu]
+
+    def _from_imagehdu_and_flux(self, image_hdu, flux):
+        spec_template = src_tmp.vega_spectrum
+        if isinstance(flux, u.Quantity):
+            if flux.unit.physical_type == "spectral flux density":  # ABmag and Jy
+                spec_template = src_tmp.ab_spectrum
+                flux = flux.to(u.ABmag)
+            flux = flux.value
+        spectra = [spec_template(flux)]
+        self._from_imagehdu_and_spectra(image_hdu, spectra)
 
     def _from_arrays(self, x, y, ref, weight, spectra):
         if weight is None:

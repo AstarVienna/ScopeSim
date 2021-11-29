@@ -2,7 +2,7 @@ import pytest
 import cProfile
 
 import matplotlib.pyplot as plt
-import scopesim.source.spectrum_templates
+from scopesim.source import source_templates
 from matplotlib.colors import LogNorm
 import scopesim as sim
 from scopesim import rc
@@ -12,7 +12,7 @@ rc.__currsys__['!SIM.file.local_packages_path'] = r"F:/Work/irdb"
 
 def run_metis_lss():
     # src = sim.source.source_templates.empty_sky()
-    spec = scopesim.source.spectrum_templates.ab_spectrum()
+    spec = source_templates.ab_spectrum()
     src = sim.Source(x=[-1, 0, 1], y=[0, 0, 0],
                      ref=[0, 0, 0], weight=[1, 1, 1],
                      spectra=[spec])

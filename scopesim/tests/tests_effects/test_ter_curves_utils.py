@@ -1,5 +1,5 @@
 import pytest
-import scopesim.source.spectrum_templates
+import scopesim.source.source_templates
 from pytest import approx
 
 import numpy as np
@@ -49,7 +49,7 @@ def test_compare_br_gamma():
 
 class TestScaleSpectrum:
     def test_scales_vega_spectrum_to_vega_ab_or_jansky(self):
-        spec = scopesim.source.spectrum_templates.vega_spectrum()
+        spec = scopesim.source.source_templates.vega_spectrum()
         vega_185 = ter_utils.scale_spectrum(spec, "Ks", -1.85 * u.mag)
         ab_0 = ter_utils.scale_spectrum(spec, "Ks", 0 * u.ABmag)
         jy_3630 = ter_utils.scale_spectrum(spec, "Ks", 3630 * u.Jy)
