@@ -535,10 +535,10 @@ class FieldOfView(FieldOfViewBase):
         if len(field_cubes) > 0:
             i = np.argmax([cube.header["NAXIS3"] for cube in field_cubes])
             _waveset = fu.get_cube_waveset(field_cubes[i].header,
-                                              return_quantity=True)
+                                           return_quantity=True)
         elif len(self.spectra) > 0:
-            i = np.argmax([len(spec.waveset) for spec in self.spectra.values()])
-            _waveset = self.spectra[i].waveset
+            wavesets = [spec.waveset for spec in self.spectra.values()]
+            _waveset = np.unique(np.concatenate(wavesets))
         else:
             _waveset = self.waverange * u.um
 
