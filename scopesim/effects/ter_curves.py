@@ -451,6 +451,9 @@ class FilterWheel(Effect):
                   "report_table_rounding": 4}
         self.meta.update(params)
         self.meta.update(kwargs)
+        self.meta["name_str"] = self.meta['name'] + " : [{}]"
+        curr_filt = from_currsys(self.meta["current_filter"])
+        self.meta["name"] = self.meta["name_str"].format(curr_filt)
 
         path = pth.join(self.meta["path"],
                         from_currsys(self.meta["filename_format"]))
@@ -473,6 +476,7 @@ class FilterWheel(Effect):
         '''Change the current filter'''
         if filtername in self.filters.keys():
             self.meta['current_filter'] = filtername
+            self.meta["name"] = self.meta["name_str"].format(filtername)
         else:
             raise ValueError("Unknown filter requested: " + filtername)
 

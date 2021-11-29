@@ -93,6 +93,7 @@ class PSF(Effect):
                 if image.ndim == 3:
                     kernel = kernel[None, :, :]
                 new_image = convolve(image - bkg_level, kernel, mode=mode)
+                new_image[new_image < 0.] = 0.
                 obj.hdu.data = new_image + bkg_level
 
                 # ..todo: careful with which dimensions mean what

@@ -77,9 +77,8 @@ def download_svo_filter(filter_name, return_style="synphot"):
         Astronomical filter object.
 
     """
-    path = download_file('http://svo2.cab.inta-csic.es/'
-                         'theory/fps3/fps.php?ID={}'.format(filter_name),
-                         cache=True)
+    url = f"http://svo2.cab.inta-csic.es/theory/fps3/fps.php?ID={filter_name}"
+    path = download_file(url, cache=True)
 
     tbl = Table.read(path, format='votable')
     wave = u.Quantity(tbl['Wavelength'].data.data, u.Angstrom, copy=False)

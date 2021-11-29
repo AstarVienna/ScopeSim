@@ -10,7 +10,7 @@ from .optical_element import OpticalElement
 from .. import effects as efs
 from ..effects.effects_utils import is_spectroscope
 from ..effects.effects_utils import combine_surface_effects
-from ..utils import write_report
+from ..utils import write_report, from_currsys
 from ..reports.rst_utils import table_to_rst
 from .. import rc
 
@@ -267,6 +267,7 @@ class OpticsManager:
 
         colnames = ["element", "name", "class", "included"]     #, "z_orders"
         data = [elements, names, classes, included]             #, z_orders
+        data = from_currsys(data)
         tbl = Table(names=colnames, data=data, copy=False)
 
         return tbl
