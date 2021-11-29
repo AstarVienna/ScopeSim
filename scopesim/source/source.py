@@ -167,7 +167,6 @@ class Source(SourceBase):
             self._from_imagehdu_and_spectra(image_hdu, spectra)
 
         elif image_hdu is not None and flux is not None:
-
             self._from_imagehdu_and_flux(image_hdu, flux)
 
         elif x is not None and y is not None and \

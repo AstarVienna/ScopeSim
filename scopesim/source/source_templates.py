@@ -115,5 +115,3 @@ def ab_spectrum(mag=0):
     sp = ConstFlux1D(amplitude=mag * u.ABmag)
 
     return SourceSpectrum(Empirical1D, points=waves, lookup_table=sp(waves))
-
-
