@@ -155,6 +155,12 @@ class TestSourceInit:
         assert isinstance(src.spectra[0], SourceSpectrum)
         assert isinstance(src.fields[0], fits.PrimaryHDU)
 
+    def test_initialises_with_image_and_flux(self, input_hdulist):
+        src = Source(image_hdu=input_hdulist[0], flux=20*u.ABmag)
+        assert isinstance(src, Source)
+        assert isinstance(src.spectra[0], SourceSpectrum)
+        assert isinstance(src.fields[0], fits.PrimaryHDU)
+
     def test_initialises_with_image_and_0_spectra(self, input_hdulist):
         with pytest.raises(NotImplementedError):
             src = Source(image_hdu=input_hdulist[0])
