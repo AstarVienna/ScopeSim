@@ -416,6 +416,9 @@ class FieldOfView(FieldOfViewBase):
 
         # 2. Add Cube fields
         for field in self.cube_fields:
+            # Cube should be in PHOTLAM arcsec-2 for SpectralTrace mapping
+            # Assumption is that ImageHDUs have units of PHOTLAM arcsec-2
+            # ..todo: Add a catch to get ImageHDU with BUNITs
             field_waveset = fu.get_cube_waveset(field.header,
                                                 return_quantity=True)
             field_interp = interp1d(field_waveset.to(u.um).value,
@@ -430,11 +433,13 @@ class FieldOfView(FieldOfViewBase):
 
         # 3. Find Image fields
         for field in self.image_fields:
+            # Cube should be in PHOTLAM arcsec-2 for SpectralTrace mapping
+            # Assumption is that ImageHDUs have units of PHOTLAM arcsec-2
+            # ..todo: Add a catch to get ImageHDU with BUNITs
             canvas_image_hdu = fits.ImageHDU(data=np.zeros((naxis2, naxis1)),
                                              header=self.header)
             canvas_image_hdu = imp_utils.add_imagehdu_to_imagehdu(field,
                                                                canvas_image_hdu)
-            spec = specs[field.header["SPEC_REF"]]
             field_cube = canvas_image_hdu.data[None, :, :] * spec[:, None, None]  # 2D * 1D -> 3D
             canvas_cube_hdu.data += field_cube.value
 

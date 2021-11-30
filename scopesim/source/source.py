@@ -100,8 +100,8 @@ class Source(SourceBase):
 
     lam : np.array
         [um] Wavelength bins of length (m)
-    spectra : np.array
-        [ph/s/m2/bin] A (n, m) array with n spectra, each with m spectral bins
+    spectra : list of synphot.SourceSpectra
+        [ph/s/cm2/AA]
     x, y : np.array
         [arcsec] coordinates of where the emitting files are relative to the
         centre of the field of view
@@ -110,13 +110,15 @@ class Source(SourceBase):
         ``flux(x[i], y[i]) = spectra[ref[i]] * weight[i]``
     weight : np.array
         A weighting to scale the relevant spectrum for each position
-
     table : astropy.Table
-
     image_hdu : fits.ImageHDU
-
+        [arcsec-2] The .data array is simply a map of weights for the assiciated
+        spectrum referenced by .header["SPEC_REF].
+        Surface brightness values are assumed to be per arcsec2
     flux : astropy.Quantity
-        [u.mag, u.ABmag, u.Jy]
+        [u.mag, u.ABmag, u.Jy] Flux values are converted to a reference spectrum
+        that is referenced by image_hdu.header["SPEC_REF"].
+        flux can only be used in conjuction with image_hdu
 
     Attributes
     ----------
