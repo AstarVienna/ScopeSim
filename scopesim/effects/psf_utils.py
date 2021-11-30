@@ -109,11 +109,11 @@ def make_strehl_map_from_table(tbl, pixel_scale=1*u.arcsec):
     return map_hdu
 
 
-def rescale_kernel(image, scale_factor, order=None):
-    if order is None:
-        order = rc.__currsys__["!SIM.computing.spline_order"]
+def rescale_kernel(image, scale_factor, spline_order=None):
+    if spline_order is None:
+        spline_order = utils.from_currsys("!SIM.computing.spline_order")
     sum_image = np.sum(image)
-    image = zoom(image, scale_factor, order=order)
+    image = zoom(image, scale_factor, order=spline_order)
     image = np.nan_to_num(image, copy=False)        # numpy version >=1.13
     sum_new_image = np.sum(image)
     image *= sum_image / sum_new_image
@@ -138,7 +138,7 @@ def get_strehl_cutout(fov_header, strehl_imagehdu):
     image = np.zeros((fov_header["NAXIS2"], fov_header["NAXIS1"]))
     canvas_hdu = fits.ImageHDU(header=fov_header, data=image)
     canvas_hdu = imp_utils.add_imagehdu_to_imagehdu(strehl_imagehdu,
-                                                    canvas_hdu, order=0,
+                                                    canvas_hdu, spline_order=0,
                                                     conserve_flux=False)
     canvas_hdu.data = canvas_hdu.data.astype(int)
 

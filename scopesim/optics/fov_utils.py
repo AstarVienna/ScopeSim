@@ -157,7 +157,7 @@ def combine_imagehdu_fields(fov_header, src, fields_indexes, wave_min, wave_max,
 
     image = np.zeros((fov_header["NAXIS2"], fov_header["NAXIS1"]))
     canvas_hdu = fits.ImageHDU(header=fov_header, data=image)
-    order = utils.from_currsys("!SIM.computing.spline_order")
+    spline_order = utils.from_currsys("!SIM.computing.spline_order")
     pixel_area = fov_header["CDELT1"] * fov_header["CDELT2"] * \
                  u.Unit(fov_header["CUNIT1"]).to(u.arcsec) ** 2
 
@@ -175,8 +175,8 @@ def combine_imagehdu_fields(fov_header, src, fields_indexes, wave_min, wave_max,
                 # .. todo: check if we need to take pixel_scale into account
                 temp_hdu.data += flux[0].value * pixel_area
             else:
-                temp_hdu = imp_utils.add_imagehdu_to_imagehdu(field, temp_hdu,
-                                                              order, wcs_suffix)
+                temp_hdu = imp_utils.add_imagehdu_to_imagehdu(
+                    field, temp_hdu, spline_order, wcs_suffix)
                 temp_hdu.data *= flux[0].value
 
             canvas_hdu.data += temp_hdu.data
