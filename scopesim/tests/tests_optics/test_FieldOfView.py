@@ -189,7 +189,7 @@ class TestMakeCube:
         cube = fov.make_cube_hdu()
 
         # layer 74 to 77 are extracted by FOV
-        in_sum = np.sum(src_cube.fields[0].data[74:77, :, :]) * 1e-8
+        in_sum = np.sum(src_cube.fields[0].data[74:77, :, :])
 
         out_sum = np.sum(cube.data)
 
@@ -474,8 +474,8 @@ class TestMakeSpectrumImageCubeAllPlayNicely:
         fov.extract_from(src_all)
 
         # if photlam, units of ph / s / cm2 / AA, else units of ph / s / voxel
-        cube_sum = np.sum(fov.make_cube_hdu(use_photlam).data)
+        cube_sum = np.sum(fov.make_cube_hdu().data)
         # if photlam, units of ph / s / cm2 / AA, else units of ph / s / pixel
-        image_sum = np.sum(fov.make_image_hdu(use_photlam).data)
+        image_sum = np.sum(fov.make_image_hdu().data)
 
-        assert cube_sum == approx(image_sum, rel=0.001)
+        assert cube_sum == approx(image_sum, rel=0.05)

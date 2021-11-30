@@ -380,21 +380,16 @@ class FieldOfView(FieldOfViewBase):
 
         PHOTLAM = ph/s/m2/um
         original source fields are in units of:
-        - tables: PHOTLAM (spectra)
-        - images: PHOTLAM (spectra)
-        - cubes: PHOTLAM * bin_width
+        - tables: (PHOTLAM in spectrum)
+        - images: arcsec-2 (PHOTLAM in spectrum)
+        - cubes: PHOTLAM arcsec-2
 
-        .. warning:: Images and Cubes need to be in units of pixel-1 (or voxel-1), not arcsec-2
-
-        Parameters
-        ----------
-        use_photlam : bool
-            Default True. Defines the flux units of the image pixels
+        .. warning:: Input Images and Cubes should have units of PHOTLAM arcsec-2
 
         Returns
         -------
         canvas_cube_hdu : fits.ImageHDU
-            [ph s-1 AA-1 arcsec-2]
+            [ph s-1 AA-1 arcsec-2]      # as needed by SpectralTrace
 
         """
         spline_order = utils.from_currsys("!SIM.computing.spline_order")
@@ -428,17 +423,18 @@ class FieldOfView(FieldOfViewBase):
             # ..todo: Add a catch to get ImageHDU with BUNITs
             field_waveset = fu.get_cube_waveset(field.header,
                                                 return_quantity=True)
+            # ..todo: Deal with this bounds_error in a more elegant way
             field_interp = interp1d(field_waveset.to(u.um).value,
-                                    field.data, axis=0, kind="linear")
+                                    field.data, axis=0, kind="linear",
+                                    bounds_error=False, fill_value=0)
             field_data = field_interp(fov_waveset.value)
             field_unit = field.header.get("BUNIT", "ph s-1 cm-2 AA-1")
             flux_scale_factor = u.Unit(field_unit).to("ph s-1 cm-2 AA-1")
             field_hdu = fits.ImageHDU(data=field_data * flux_scale_factor,
                                       header=field.header)
-            canvas_cube_hdu = imp_utils.add_imagehdu_to_imagehdu(
-                field_hdu,
-                canvas_cube_hdu,
-                spline_order=spline_order)
+            canvas_cube_hdu = imp_utils.add_imagehdu_to_imagehdu(field_hdu,
+                                                    canvas_cube_hdu,
+                                                    spline_order=spline_order)
 
         # 3. Find Image fields
         for field in self.image_fields:
@@ -447,10 +443,9 @@ class FieldOfView(FieldOfViewBase):
             # ..todo: Add a catch to get ImageHDU with BUNITs
             canvas_image_hdu = fits.ImageHDU(data=np.zeros((naxis2, naxis1)),
                                              header=self.header)
-            canvas_image_hdu = imp_utils.add_imagehdu_to_imagehdu(
-                field,
-                canvas_image_hdu,
-                spline_order=spline_order)
+            canvas_image_hdu = imp_utils.add_imagehdu_to_imagehdu(field,
+                                                    canvas_image_hdu,
+                                                    spline_order=spline_order)
             spec = specs[field.header["SPEC_REF"]]
             field_cube = canvas_image_hdu.data[None, :, :] * spec[:, None, None]  # 2D * 1D -> 3D
             canvas_cube_hdu.data += field_cube.value
