@@ -56,22 +56,22 @@ from .. import utils
 class Source(SourceBase):
     """
     Create a source object from a file or from arrays
-    
+
     A Source object must consist of a spatial and a spectral description
     of the on-sky source. Many sources can be added together and kept
     in memory as a single Source object.
-    
+
     The spatial descriptions are kept in the ``<Source>.fields`` list,
     while the spectral descriptions are in ``<Source>.spectra`` list.
-    
+
     The spatial description can be built from any combination of:
-    
+
     * a list of arrays (like in SimCADO >v0.5)
     * astropy Table objects
     * astropy ImageHDU objects
     * on disk FITS files
     * on disk ASCII tables
-    
+
     while the spectral descriptions can be passed as either
     ``synphot.SourceSpectrum`` objects, or a set of two equal length arrays
     for wavelength and flux.
@@ -285,7 +285,7 @@ class Source(SourceBase):
         return fields
 
     def image_in_range(self, wave_min, wave_max, pixel_scale=1*u.arcsec,
-                       layers=None, area=None, order=1, sub_pixel=False):
+                       layers=None, area=None, spline_order=1, sub_pixel=False):
         if layers is None:
             layers = range(len(self.fields))
         fields = [self.fields[ii] for ii in layers]
@@ -326,7 +326,8 @@ class Source(SourceBase):
             else:
                 continue
 
-            im_plane.add(hdu_or_table, sub_pixel=sub_pixel, order=order)
+            im_plane.add(hdu_or_table, sub_pixel=sub_pixel,
+                         spline_order=spline_order)
 
         return im_plane
 

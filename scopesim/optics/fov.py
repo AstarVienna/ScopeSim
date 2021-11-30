@@ -264,6 +264,7 @@ class FieldOfView(FieldOfViewBase):
             [ph s-1 pixel-1] or PHOTLAM (if use_photlam=True)
 
         """
+        spline_order = utils.from_currsys("!SIM.computing.spline_order")
 
         # 1. Make waveset and canvas image
         fov_waveset = self.waveset
@@ -286,18 +287,22 @@ class FieldOfView(FieldOfViewBase):
         for field in self.cube_fields:
             image = np.sum(field.data, axis=0)
             tmp_hdu = fits.ImageHDU(data=image, header=field.header)
-            canvas_image_hdu = imp_utils.add_imagehdu_to_imagehdu(tmp_hdu,
-                                                             canvas_image_hdu,
-                                                             conserve_flux=True)
+            canvas_image_hdu = imp_utils.add_imagehdu_to_imagehdu(
+                tmp_hdu,
+                canvas_image_hdu,
+                conserve_flux=True,
+                spline_order=spline_order)
 
         # 2. Find Image fields
         for field in self.image_fields:
             image = deepcopy(field.data)
             tmp_hdu = fits.ImageHDU(data=image, header=field.header)
             tmp_hdu.data *= fluxes[field.header["SPEC_REF"]]  # ph / s
-            canvas_image_hdu = imp_utils.add_imagehdu_to_imagehdu(tmp_hdu,
-                                                             canvas_image_hdu,
-                                                             conserve_flux=True)
+            canvas_image_hdu = imp_utils.add_imagehdu_to_imagehdu(
+                tmp_hdu,
+                canvas_image_hdu,
+                conserve_flux=True,
+                spline_order=spline_order)
 
         # 3. Find Table fields
         for field in self.table_fields:
@@ -386,6 +391,8 @@ class FieldOfView(FieldOfViewBase):
 
 
         """
+        spline_order = utils.from_currsys("!SIM.computing.spline_order")
+
         # 1. Make waveset and canvas cube (area, bin_width are applied at end)
         fov_waveset = self.waveset
         specs = {ref: spec(fov_waveset)
@@ -409,15 +416,19 @@ class FieldOfView(FieldOfViewBase):
             flux_scale_factor = u.Unit(field_unit).to("ph s-1 cm-2 AA-1")
             field_hdu = fits.ImageHDU(data=field_data * flux_scale_factor,
                                       header=field.header)
-            canvas_cube_hdu = imp_utils.add_imagehdu_to_imagehdu(field_hdu,
-                                                                 canvas_cube_hdu)
+            canvas_cube_hdu = imp_utils.add_imagehdu_to_imagehdu(
+                field_hdu,
+                canvas_cube_hdu,
+                spline_order=spline_order)
 
         # 3. Find Image fields
         for field in self.image_fields:
             canvas_image_hdu = fits.ImageHDU(data=np.zeros((naxis2, naxis1)),
                                              header=self.header)
-            canvas_image_hdu = imp_utils.add_imagehdu_to_imagehdu(field,
-                                                               canvas_image_hdu)
+            canvas_image_hdu = imp_utils.add_imagehdu_to_imagehdu(
+                field,
+                canvas_image_hdu,
+                spline_order=spline_order)
             spec = specs[field.header["SPEC_REF"]]
             field_cube = canvas_image_hdu.data[None, :, :] * spec[:, None, None]  # 2D * 1D -> 3D
             canvas_cube_hdu.data += field_cube.value
@@ -458,7 +469,7 @@ class FieldOfView(FieldOfViewBase):
                                        "CRVAL3": fov_waveset[0].value,
                                        "CRPIX3": 0,
                                        "CUNIT3": "um",
-                                       "CTYPE3": "WAV"})
+                                       "CTYPE3": "WAVE"})
 
         cube_hdu = canvas_cube_hdu
 
