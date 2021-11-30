@@ -45,5 +45,3 @@ def test_all_zero_spectra_line_up():
     wave = 0.55 * u.um
     assert st(wave).value == approx(vega(wave).value, rel=0.03)
     assert ab(wave).value == approx(vega(wave).value, rel=0.03)
-
-

@@ -331,7 +331,7 @@ class FieldOfView(FieldOfViewBase):
             flux = fluxes[field.header["SPEC_REF"]] * area_factor
             canvas_image_hdu.data += flux
 
-        image_hdu = canvas_image_hdu
+        image_hdu = canvas_image_hdu        # [ph s-1 pixel-1]
 
         return image_hdu
 
@@ -390,8 +390,7 @@ class FieldOfView(FieldOfViewBase):
         Returns
         -------
         canvas_cube_hdu : fits.ImageHDU
-            [ph s-1 cm-2 AA-1] or if use_photlam=False [ph s-1 voxel-1]
-
+            [ph s-1 AA-1 arcsec-2]
 
         """
         # 1. Make waveset and canvas cube (area, bin_width are applied at end)
@@ -488,7 +487,7 @@ class FieldOfView(FieldOfViewBase):
                                        "CTYPE3": "WAVE"})
         # ..todo: Add the log wavelength keyword here, if log scale is needed
 
-        cube_hdu = canvas_cube_hdu
+        cube_hdu = canvas_cube_hdu      # [ph s-1 AA-1 (arcsec-2)]
 
         return cube_hdu
 
