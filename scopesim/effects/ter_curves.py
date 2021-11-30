@@ -133,7 +133,7 @@ class TERCurve(Effect):
             flux = self.emission
             bg_hdu = fits.ImageHDU()
             bg_hdu.header.update({"BG_SRC": True,
-                                  "BG_SURF": self.meta.get("name", "<untitled>"),
+                                  "BG_SURF": self.display_name,
                                   "CUNIT1": "ARCSEC",
                                   "CUNIT2": "ARCSEC",
                                   "CDELT1": 0,

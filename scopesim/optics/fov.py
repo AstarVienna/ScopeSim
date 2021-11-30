@@ -143,8 +143,7 @@ class FieldOfView(FieldOfViewBase):
             use_photlam = False if use_photlam is None else use_photlam
             self.hdu = self.make_image_hdu(use_photlam=use_photlam)
         elif hdu_type == "cube":
-            use_photlam = True if use_photlam is None else use_photlam
-            self.hdu = self.make_cube_hdu(use_photlam=use_photlam)
+            self.hdu = self.make_cube_hdu()
         elif hdu_type == "spectrum":
             self.hdu = self.make_spectrum()
 
@@ -335,7 +334,7 @@ class FieldOfView(FieldOfViewBase):
 
         return image_hdu
 
-    def make_cube_hdu(self, use_photlam=True):
+    def make_cube_hdu(self):
         """
         Used for IFUs, slit spectrographs, and coherent MOSs (e.g.KMOS)
 
@@ -441,6 +440,10 @@ class FieldOfView(FieldOfViewBase):
 
         # 4. Find Table fields
         for field in self.table_fields:
+            # Cube should be in PHOTLAM arcsec-2 for SpectralTrace mapping
+            # Point sources are in PHOTLAM per pixel
+            # Point sources need to be scaled up by inverse pixel_area
+            pixel_area = utils.from_currsys(self.meta["pixel_scale"]) ** 2
             for row in field:
                 xsky, ysky = row["x"], row["y"]
                 ref, weight = row["ref"], row["weight"]
@@ -449,18 +452,18 @@ class FieldOfView(FieldOfViewBase):
                 if utils.from_currsys(self.meta["sub_pixel"]):
                     xs, ys, fracs = imp_utils.sub_pixel_fractions(xpix, ypix)
                     for i, j, k in zip(xs, ys, fracs):
-                        wk = weight * k
-                        canvas_cube_hdu.data[:, j, i] += specs[ref].value * wk
+                        flux_vector = specs[ref].value * weight * k / pixel_area
+                        canvas_cube_hdu.data[:, j, i] +=  flux_vector
                 else:
                     x, y = int(xpix), int(ypix)
-                    flux_vector = specs[ref].value * weight
+                    flux_vector = specs[ref].value * weight / pixel_area
                     canvas_cube_hdu.data[:, y, x] += flux_vector
 
         # 5. Add Background fields
         for field in self.background_fields:
-            bg_solid_angle = u.Unit(field.header["SOLIDANG"]).to(u.arcsec**-2)  # float [arcsec-2]
-            pixel_area = utils.from_currsys(self.meta["pixel_scale"]) ** 2      # float [arcsec2]
-            area_factor = pixel_area * bg_solid_angle                           # float [arcsec2 * arcsec-2]
+            # bg_solid_angle = u.Unit(field.header["SOLIDANG"]).to(u.arcsec**-2)  # float [arcsec-2]
+            # pixel_area = utils.from_currsys(self.meta["pixel_scale"]) ** 2      # float [arcsec2]
+            # area_factor = pixel_area * bg_solid_angle                           # float [arcsec2 * arcsec-2]
 
             # Cube should be in PHOTLAM arcsec-2 for SpectralTrace mapping
             # spec = specs[field.header["SPEC_REF"]] * area_factor
@@ -471,7 +474,6 @@ class FieldOfView(FieldOfViewBase):
         #    PHOTLAM = ph/s/cm-2/AA
         #    area = m2, fov_waveset = um
         # SpectralTrace wants ph/s/um/arcsec2 --> get rid of m2, leave um
-        # if use_photlam is False:
         area = utils.from_currsys(self.meta["area"])  # u.m2
         canvas_cube_hdu.data *= area.to(u.cm ** 2).value
         canvas_cube_hdu.data *= 1e4        # ph/s/AA/arcsec2 --> ph/s/um/arcsec2

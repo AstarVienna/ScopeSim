@@ -260,7 +260,7 @@ class OpticsManager:
 
         elements = [opt_el.meta["name"] for opt_el in self.optical_elements
                     for eff in opt_el.effects]
-        names = [eff.meta["name"] for eff in all_effs]
+        names = [eff.display_name for eff in all_effs]
         classes = [eff.__class__.__name__ for eff in all_effs]
         included = [eff.meta["include"] for eff in all_effs]
         z_orders = [eff.meta["z_order"] for eff in all_effs]
