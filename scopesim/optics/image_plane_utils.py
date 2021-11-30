@@ -442,7 +442,7 @@ def overlay_image(small_im, big_im, coords, mask=None, sub_pixel=False):
 
 
 def rescale_imagehdu(imagehdu, pixel_scale, wcs_suffix="", conserve_flux=True,
-                     order=1):
+                     spline_order=1):
     """
     Scales the .data array by the ratio of pixel_scale [deg] and CDELTn
 
@@ -457,7 +457,7 @@ def rescale_imagehdu(imagehdu, pixel_scale, wcs_suffix="", conserve_flux=True,
 
     conserve_flux : bool
 
-    order : int
+    spline_order : int
         [1..5] Order of the spline interpolation used by
         ``scipy.ndimage.rotate``
 
@@ -480,7 +480,7 @@ def rescale_imagehdu(imagehdu, pixel_scale, wcs_suffix="", conserve_flux=True,
 
     if zoom1 != 1 or zoom2 != 1:
         sum_orig = np.sum(imagehdu.data)
-        new_im = ndi.zoom(imagehdu.data, zoom_tuple, order=order)
+        new_im = ndi.zoom(imagehdu.data, zoom_tuple, order=spline_order)
 
         if conserve_flux:
             new_im = np.nan_to_num(new_im, copy=False)
@@ -502,7 +502,8 @@ def rescale_imagehdu(imagehdu, pixel_scale, wcs_suffix="", conserve_flux=True,
     return imagehdu
 
 
-def reorient_imagehdu(imagehdu, wcs_suffix="", conserve_flux=True, order=1):
+def reorient_imagehdu(imagehdu, wcs_suffix="", conserve_flux=True,
+                      spline_order=1):
     """
     Applies an affine transformation to the image, as given in its header
 
@@ -514,7 +515,7 @@ def reorient_imagehdu(imagehdu, wcs_suffix="", conserve_flux=True, order=1):
 
     conserve_flux : bool
 
-    order : int
+    spline_order : int
         [1..5] Order of the spline interpolation used by
         ``scipy.ndimage.rotate``
 
@@ -539,8 +540,9 @@ def reorient_imagehdu(imagehdu, wcs_suffix="", conserve_flux=True, order=1):
         if imagehdu.data.ndim == 2:
             mat = mat[:2, :2]
 
-        new_im = affine_map(imagehdu.data, matrix=mat, reshape=True, order=order)
-        # new_im = ndi.rotate(imagehdu.data, angle, reshape=True, order=order)
+        new_im = affine_map(imagehdu.data, matrix=mat, reshape=True,
+                            spline_order=spline_order)
+        # new_im = ndi.rotate(imagehdu.data, angle, reshape=True, order=spline_order)
 
         if conserve_flux:
             new_im = np.nan_to_num(new_im, copy=False)
@@ -562,7 +564,7 @@ def reorient_imagehdu(imagehdu, wcs_suffix="", conserve_flux=True, order=1):
 
 
 def affine_map(input, matrix=None, rotation_angle=0, shear_angle=0,
-               scale_factor=None, reshape=True, order=3):
+               scale_factor=None, reshape=True, spline_order=3):
     """
     Applies an affine transformation matrix to an image around its centre
 
@@ -587,7 +589,7 @@ def affine_map(input, matrix=None, rotation_angle=0, shear_angle=0,
         [mx, my] If matrix==None, a scaling matrix is built from this list
     reshape : bool, optional
         If True, the array is re-sized to contain the whole transformed image
-    order : int, optional
+    spline_order : int, optional
         Default is 3. Spline interpolation order
 
     Returns
@@ -628,13 +630,14 @@ def affine_map(input, matrix=None, rotation_angle=0, shear_angle=0,
         out = np.r_[input.shape[0], out]
 
     output = ndi.affine_transform(input, np.rot90(mat, 2),
-                                  output_shape=out, offset=offset, order=order)
+                                  output_shape=out, offset=offset,
+                                  order=spline_order)
 
     return output
 
 
-def add_imagehdu_to_imagehdu(image_hdu, canvas_hdu, order=1, wcs_suffix="",
-                             conserve_flux=True):
+def add_imagehdu_to_imagehdu(image_hdu, canvas_hdu, spline_order=1,
+                             wcs_suffix="", conserve_flux=True):
     """
     Re-project one ``fits.ImageHDU`` onto another ``fits.ImageHDU``
 
@@ -649,7 +652,7 @@ def add_imagehdu_to_imagehdu(image_hdu, canvas_hdu, order=1, wcs_suffix="",
         The ``ImageHDU`` onto which the image_hdu should be projected.
         This must include a valid WCS
 
-    order : int, optional
+    spline_order : int, optional
         Default is 1. The order of the spline interpolator used by the
         ``scipy.ndimage`` functions
 
@@ -673,10 +676,10 @@ def add_imagehdu_to_imagehdu(image_hdu, canvas_hdu, order=1, wcs_suffix="",
     pixel_scale = float(canvas_hdu.header["CDELT1"+wcs_suffix])
 
     new_hdu = rescale_imagehdu(image_hdu, pixel_scale=pixel_scale,
-                               wcs_suffix=wcs_suffix, order=order,
+                               wcs_suffix=wcs_suffix, spline_order=spline_order,
                                conserve_flux=conserve_flux)
     new_hdu = reorient_imagehdu(new_hdu,
-                                wcs_suffix=wcs_suffix, order=order,
+                                wcs_suffix=wcs_suffix, spline_order=spline_order,
                                 conserve_flux=conserve_flux)
 
     xcen_im = new_hdu.header["NAXIS1"] // 2
@@ -848,6 +851,3 @@ def split_header(hdr, chunk_size, wcs_suffix=""):
             hdr_list += [hdr_sky]
 
     return hdr_list
-
-
-

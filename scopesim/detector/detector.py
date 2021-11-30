@@ -16,7 +16,7 @@ class Detector(DetectorBase):
         self.meta.update(header)
         self.meta.update(kwargs)
 
-    def extract_from(self, image_plane, order=1, reset=True):
+    def extract_from(self, image_plane, spline_order=1, reset=True):
         if reset:
             self.reset()
         if not isinstance(image_plane, ImagePlaneBase):
@@ -24,7 +24,7 @@ class Detector(DetectorBase):
                              "".format(type(image_plane)))
 
         self._hdu = imp_utils.add_imagehdu_to_imagehdu(image_plane.hdu,
-                                                       self.hdu, order,
+                                                       self.hdu, spline_order,
                                                        wcs_suffix="D")
 
     def reset(self):
