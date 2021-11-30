@@ -405,7 +405,7 @@ class FieldOfView(FieldOfViewBase):
             wmin, wmax = wave_min.to(u.um).value, wave_max.to(u.um).value
             fov_waveset = np.logspace(wmin, wmax, wave_bin_n) * u.um
 
-        specs = {ref: spec(fov_waveset)
+        specs = {ref: spec(fov_waveset)                     # PHOTLAM = ph/s/cm2/AA
                  for ref, spec in self.spectra.items()}
 
         # make canvas cube based on waveset of largest cube and NAXIS1,2 from fov.header
@@ -474,6 +474,7 @@ class FieldOfView(FieldOfViewBase):
         # if use_photlam is False:
         area = utils.from_currsys(self.meta["area"])  # u.m2
         canvas_cube_hdu.data *= area.to(u.cm ** 2).value
+        canvas_cube_hdu.data *= 1e4        # ph/s/AA/arcsec2 --> ph/s/um/arcsec2
 
         # bin_widths = np.diff(fov_waveset).to(u.AA).value
         # bin_widths = 0.5 * (np.r_[0, bin_widths] + np.r_[bin_widths, 0])

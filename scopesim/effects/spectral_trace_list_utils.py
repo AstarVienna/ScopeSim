@@ -249,14 +249,14 @@ class SpectralTrace:
                   * (j_img >= 0) * (j_img < npix_xi))
 
         # do the actual interpolation
-        image = (xilam.interp(xi_fpa, lam_fpa, grid=False)
+        image = (xilam.interp(xi_fpa, lam_fpa, grid=False)      # [ph/s/um/arcsec]
                  * ijmask)
 
         # Scale to ph / s / pixel
         dlam_by_dx, dlam_by_dy = self.xy2lam.gradient()
         dlam_per_pix = pixsize * np.sqrt(dlam_by_dx(ximg_fpa, yimg_fpa)**2 +
                                          dlam_by_dy(ximg_fpa, yimg_fpa)**2)
-        image *= pixscale * dlam_per_pix
+        image *= pixscale * dlam_per_pix        # [arcsec/pix] * [um/pix]
 
         # img_header = sub_wcs.to_header()
         # img_header.update(det_wcs.to_header())
@@ -544,6 +544,8 @@ class XiLamImage():
                 plane = fov.cube.data[:, i, :].T
                 plane_interp = RectBivariateSpline(cube_xi, cube_lam, plane)
                 self.image += plane_interp(cube_xi, lam0)
+
+        self.image *= d_eta     # ph/s/um/arcsec2 --> ph/s/um/arcsec
 
         # WCS for the xi-lambda image, i.e. the rectified 2D spectrum
         # Default WCS with xi in arcsec
