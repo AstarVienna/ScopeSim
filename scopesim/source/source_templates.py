@@ -27,21 +27,19 @@ def empty_sky(flux=0):
                  x=[0], y=[0], ref=[0], weight=[1])
     return sky
 
-def star(x=0, y=0, mag=0, photometric_system="vega"):
+def star(x=0, y=0, flux=0):
     """
-    Source object for a single star in either vega or AB magnitudes
+    Source object for a single star in either vega, AB magnitudes, or Jansky
 
-    THe star is associated with the reference spectrum for each photometric
+    The star is associated with the reference spectrum for each photometric
     system, therefore a reference wavelength or filter does not need to be given
 
     Parameters
     ----------
     x, y : float
         [arcsec] position from centre of field of view
-    mag : float
-        [vega mag or AB mag] Stellar brightness
-    photometric_system : str
-        ["vega", "ab"]
+    flux : float
+        [vega mag, AB mag, Jy] Stellar brightness
 
     Returns
     -------
@@ -50,26 +48,30 @@ def star(x=0, y=0, mag=0, photometric_system="vega"):
 
     """
 
-    if photometric_system.lower() == "ab":
-        spec = ab_spectrum()
-    else:
-        spec = vega_spectrum()
+    mag_unit = u.mag
+    spec_template = vega_spectrum
+    if isinstance(flux, u.Quantity):
+        if flux.unit.physical_type == "spectral flux density":  # ABmag and Jy
+            mag_unit = u.ABmag
+            spec_template = ab_spectrum
+            flux = flux.to(u.ABmag)
+        flux = flux.value
 
-    w = 10**(-0.4 * mag)
+    spec = spec_template()
+
+    w = 10**(-0.4 * flux)
     ref = 0
 
-    mag_unit = u.mag if photometric_system == "vega" else u.ABmag
-    tbl = Table(data=[[x], [y], [w], [ref], [mag]],
+    tbl = Table(data=[[x], [y], [w], [ref], [flux]],
                 names=["x", "y", "weight", "ref", "mag"],
                 units=[u.arcsec, u.arcsec, None, None, mag_unit])
-    tbl.meta["photometric_system"] = photometric_system
+    tbl.meta["photometric_system"] = "vega" if mag_unit == u.mag else "ab"
     src = Source(spectra=spec, table=tbl)
 
     return src
 
 
-def star_field(n, mmin, mmax, width, height=None, photometric_system="vega",
-               use_grid=False):
+def star_field(n, mmin, mmax, width, height=None, use_grid=False):
     """
     Creates a super basic field of stars with random positions and brightnesses
 
@@ -78,17 +80,15 @@ def star_field(n, mmin, mmax, width, height=None, photometric_system="vega",
     n : int
         number of stars
 
-    mmin, mmax : float
-        [mag] minimum and maximum magnitudes of the population
+    mmin, mmax : float, astropy.Quantity
+        [mag, ABmag, Jy] min and max magnitudes/fluxes of the population stars.
+        If floats, then assumed Quantity is vega magnitudes
 
     width : float
         [arcsec] width of region to put stars in
 
     height : float, optional
         [arcsec] if None, then height=width
-
-    photometric_system : str, optional
-        [vega, AB]
 
     use_grid : bool, optional
         Place stars randomly or on a grid
@@ -108,10 +108,16 @@ def star_field(n, mmin, mmax, width, height=None, photometric_system="vega",
     if height is None:
         height = width
 
-    if photometric_system.lower() == "ab":
-        spec = ab_spectrum()
-    else:
-        spec = vega_spectrum()
+    mag_unit = u.mag
+    spec_template = vega_spectrum
+    if isinstance(mmin, u.Quantity):
+        if mmin.unit.physical_type == "spectral flux density":  # ABmag and Jy
+            mag_unit = u.ABmag
+            spec_template = ab_spectrum
+            mmin, mmax = mmin.to(u.ABmag), mmax.to(u.ABmag)
+        mmin, mmax = mmin.value, mmax.value
+
+    spec = spec_template()
 
     if rc.__config__["!SIM.random.seed"] is not None:
         np.random.seed(rc.__config__["!SIM.random.seed"])
@@ -130,11 +136,10 @@ def star_field(n, mmin, mmax, width, height=None, photometric_system="vega",
     w = 10**(-0.4 * mags)
     ref = np.zeros(n, dtype=int)
 
-    mag_unit = u.mag if photometric_system == "vega" else u.ABmag
     tbl = Table(data=[x, y, w, ref, mags],
                 names=["x", "y", "weight", "ref", "mag"],
                 units=[u.arcsec, u.arcsec, None, None, mag_unit])
-    tbl.meta["photometric_system"] = photometric_system
+    tbl.meta["photometric_system"] = "vega" if mag_unit == u.mag else "ab"
     stars = Source(spectra=spec, table=tbl)
 
     return stars
