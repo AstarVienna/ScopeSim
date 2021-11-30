@@ -125,7 +125,7 @@ class OpticalElement:
 
     def list_effects(self):
         elements = [self.meta["name"]] * len(self.effects)
-        names = [eff.meta["name"] for eff in self.effects]
+        names = [eff.display_name for eff in self.effects]
         classes = [eff.__class__.__name__ for eff in self.effects]
         included = [eff.meta["include"] for eff in self.effects]
         z_orders = [eff.meta["z_order"] for eff in self.effects]

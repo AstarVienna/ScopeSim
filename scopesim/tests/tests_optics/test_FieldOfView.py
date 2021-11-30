@@ -141,24 +141,19 @@ class TestExtractFrom:
             assert isinstance(the_fov.fields[2], Table)
 
 
-
 class TestMakeCube:
-    @pytest.mark.parametrize("use_photlam", [True, False])
-    def test_makes_cube_from_table(self, use_photlam):
+    def test_makes_cube_from_table(self):
         src_table = so._table_source()            # 10x10" @ 0.2"/pix, [0.5, 2.5]m @ 0.02µm
         fov = _fov_190_210_um()
         fov.extract_from(src_table)
 
-        cube = fov.make_cube_hdu(use_photlam)
+        cube = fov.make_cube_hdu()
 
         in_sum = 0
         waveset = fov.spectra[0].waveset
         for x, y, ref, weight in src_table.fields[0]:
-            flux = src_table.spectra[ref](waveset).to(u.ph/u.s/u.cm**2/u.AA).value
+            flux = src_table.spectra[ref](waveset).to(u.ph/u.s/u.m**2/u.um).value
             in_sum += np.sum(flux) * weight
-
-        if not use_photlam:
-            in_sum *= 0.02 * 0.91 * 1e8
 
         out_sum = np.sum(cube.data)
 
@@ -168,21 +163,17 @@ class TestMakeCube:
             plt.imshow(cube.data[0, :, :], origin="lower")
             plt.show()
 
-    @pytest.mark.parametrize("use_photlam", [True, False])
-    def test_makes_cube_from_imagehdu(self, use_photlam):
+    def test_makes_cube_from_imagehdu(self):
         src_image = so._image_source()            # 10x10" @ 0.2"/pix, [0.5, 2.5]m @ 0.02µm
         fov = _fov_190_210_um()
         fov.extract_from(src_image)
 
-        cube = fov.make_cube_hdu(use_photlam)
+        cube = fov.make_cube_hdu()
 
         waveset = np.linspace(1.9, 2.1, np.shape(cube)[0]) * u.um
-        spec = fov.spectra[0](waveset).to(u.ph/u.s/u.cm**2/u.AA).value
+        spec = fov.spectra[0](waveset).to(u.ph/u.s/u.m**2/u.um).value
         in_sum = np.sum(src_image.fields[0].data) * np.sum(spec)
         out_sum = np.sum(cube.data)
-
-        if not use_photlam:
-            in_sum *= 0.02 * 0.91 * 1e8     # bin width * edge bin compensation * photlam-> SI
 
         assert out_sum == approx(in_sum, rel=0.01)
 
@@ -190,20 +181,15 @@ class TestMakeCube:
             plt.imshow(cube.data[0, :, :], origin="lower")
             plt.show()
 
-    @pytest.mark.parametrize("use_photlam", [True, False])
-    def test_makes_cube_from_other_cube_imagehdu(self, use_photlam):
+    def test_makes_cube_from_other_cube_imagehdu(self):
         src_cube = so._cube_source()            # 10x10" @ 0.2"/pix, [0.5, 2.5]m @ 0.02µm
         fov = _fov_197_202_um()
         fov.extract_from(src_cube)
 
-        cube = fov.make_cube_hdu(use_photlam)
+        cube = fov.make_cube_hdu()
 
         # layer 74 to 77 are extracted by FOV
-        if not use_photlam:
-            bin_widths = np.array([0.01, 0.02, 0.01])[:, None, None]
-            in_sum = np.sum(src_cube.fields[0].data[74:77, :, :] * bin_widths)
-        else:
-            in_sum = np.sum(src_cube.fields[0].data[74:77, :, :]) * 1e-8
+        in_sum = np.sum(src_cube.fields[0].data[74:77, :, :])
 
         out_sum = np.sum(cube.data)
 
@@ -212,20 +198,18 @@ class TestMakeCube:
         if PLOTS:
             plt.imshow(cube.data[0, :, :], origin="lower")
             plt.show()
-    @pytest.mark.parametrize("use_photlam", [True, False])
-    def test_makes_cube_from_two_similar_cube_imagehdus(self, use_photlam):
+
+    def test_makes_cube_from_two_similar_cube_imagehdus(self):
         src_cube = so._cube_source() + so._cube_source(dx=1)            # 2 cubes 10x10" @ 0.2"/pix, [0.5, 2.5]m @ 0.02µm
         fov = _fov_197_202_um()
         fov.extract_from(src_cube)
 
-        cube = fov.make_cube_hdu(use_photlam)
+        cube = fov.make_cube_hdu()
 
         # layer 74 to 77 are extracted by FOV
-        if not use_photlam:
-            bin_widths = np.array([0.01, 0.02, 0.01])[:, None, None]
-            in_sum = 2 * np.sum(src_cube.fields[0].data[74:77, :, :] * bin_widths)
-        else:
-            in_sum = 2 * np.sum(src_cube.fields[0].data[74:77, :, :]) * 1e-8
+        bin_widths = np.array([0.01, 0.02, 0.01])[:, None, None]
+        in_sum = 2 * np.sum(src_cube.fields[0].data[74:77, :, :] * bin_widths)
+
         out_sum = np.sum(cube.data)
 
         assert out_sum == approx(in_sum)
@@ -234,8 +218,7 @@ class TestMakeCube:
             plt.imshow(cube.data[0, :, :], origin="lower")
             plt.show()
 
-    @pytest.mark.parametrize("use_photlam", [True, False])
-    def test_makes_cube_from_all_types_of_source_object(self, use_photlam):
+    def test_makes_cube_from_all_types_of_source_object(self):
         src_all = so._table_source() + \
                   so._image_source(dx=-4, dy=-4) + \
                   so._cube_source(weight=1e-8, dx=4)
@@ -243,17 +226,16 @@ class TestMakeCube:
         fov = _fov_190_210_um()
         fov.extract_from(src_all)
 
-        cube = fov.make_cube_hdu(use_photlam)
+        cube = fov.make_cube_hdu()
 
         # sum up the expected flux in the output cube
         # bin_width * half width edge bin * PHOTLAM -> SI
-        scale_factor = 0.02 * 0.91 * 1e8 if not use_photlam else 1
         waveset = fov.spectra[0].waveset
 
         table_sum = 0
         for x, y, ref, weight in src_all.fields[0]:
             flux = src_all.spectra[ref](waveset).value
-            table_sum += np.sum(flux) * weight * scale_factor
+            table_sum += np.sum(flux) * weight
 
         ref = src_all.fields[1].header["SPEC_REF"]
         spec = fov.spectra[ref](waveset).value
@@ -453,8 +435,7 @@ class TestMakeSpectrum:
             plt.show()
 
 class TestMakeSpectrumImageCubeAllPlayNicely:
-    @pytest.mark.parametrize("use_photlam", [True, False])
-    def test_make_cube_and_make_spectrum_return_the_same_fluxes(self,use_photlam):
+    def test_make_cube_and_make_spectrum_return_the_same_fluxes(self):
         src_all = so._table_source() + \
                   so._image_source(dx=-4, dy=-4) + \
                   so._cube_source(weight=1e-8, dx=4)
@@ -463,7 +444,7 @@ class TestMakeSpectrumImageCubeAllPlayNicely:
         fov.extract_from(src_all)
 
         # if photlam, units of ph / s / cm2 / AA, else units of ph / s / voxel
-        cube = fov.make_cube_hdu(use_photlam)
+        cube = fov.make_cube_hdu()
         cube_waves = get_cube_waveset(cube.header)
         cube_spectrum = cube.data.sum(axis=2).sum(axis=1)
 
@@ -474,8 +455,8 @@ class TestMakeSpectrumImageCubeAllPlayNicely:
         bin_width = 0.02        # um
         photlam_to_si = 1e8     # cm-2 AA-1 --> m-2 um-1
         edge_compensation = 0.91
-        if not use_photlam:
-            spectrum *= bin_width * photlam_to_si * edge_compensation
+
+        spectrum *= bin_width * photlam_to_si * edge_compensation
 
         if PLOTS:
             plt.plot(waves, spectrum, "k")
@@ -484,8 +465,7 @@ class TestMakeSpectrumImageCubeAllPlayNicely:
 
         assert np.sum(cube.data) == approx(np.sum(spectrum), rel=0.001)
 
-    @pytest.mark.parametrize("use_photlam", [True, False])
-    def test_make_cube_and_make_image_return_the_same_fluxes(self, use_photlam):
+    def test_make_cube_and_make_image_return_the_same_fluxes(self):
         src_all = so._cube_source(weight=1e-8, dx=4)
                   # so._image_source(dx=-4, dy=-4) #
                   # so._table_source()# + \
@@ -494,13 +474,8 @@ class TestMakeSpectrumImageCubeAllPlayNicely:
         fov.extract_from(src_all)
 
         # if photlam, units of ph / s / cm2 / AA, else units of ph / s / voxel
-        cube_sum = np.sum(fov.make_cube_hdu(use_photlam).data)
+        cube_sum = np.sum(fov.make_cube_hdu().data)
         # if photlam, units of ph / s / cm2 / AA, else units of ph / s / pixel
-        image_sum = np.sum(fov.make_image_hdu(use_photlam).data)
+        image_sum = np.sum(fov.make_image_hdu().data)
 
-        if use_photlam:
-            scale_factor = 1e-8         # _cube_source units: ph s-1 m-2 um-1
-        else:
-            scale_factor = 0.02 * 0.95  # * bin_width * bin_edge_compensation
-
-        assert cube_sum == approx(image_sum * scale_factor, rel=0.001)
+        assert cube_sum == approx(image_sum, rel=0.05)

@@ -61,7 +61,7 @@ def get_server_elements(url, unique_str="/"):
     except:
         raise ValueError("URL returned error: {}".format(url))
 
-    soup = bs4.BeautifulSoup(result)
+    soup = bs4.BeautifulSoup(result, features="lxml")
     paths = soup.findAll("a", href=True)
     paths = [tmp.string for tmp in paths if tmp.string is not None and unique_str in tmp.string]
 

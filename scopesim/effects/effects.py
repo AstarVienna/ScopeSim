@@ -110,6 +110,10 @@ class Effect(DataContainer):
         self.meta["include"] = item
 
     @property
+    def display_name(self):
+        return self.meta["name"]
+
+    @property
     def meta_string(self):
         meta_str = ""
         max_key_len = max([len(key) for key in self.meta.keys()])

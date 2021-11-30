@@ -35,8 +35,10 @@ def is_field_in_fov(fov_header, field, wcs_suffix=""):
         is_inside_fov = True
     else:
         if isinstance(field, Table):
-            x = list(field["x"].to(u.deg).value)
-            y = list(field["y"].to(u.deg).value)
+            x = list(utils.quantity_from_table("x", field,
+                                               u.arcsec).to(u.deg).value)
+            y = list(utils.quantity_from_table("y", field,
+                                               u.arcsec).to(u.deg).value)
             s = wcs_suffix
             cdelt = utils.quantify(fov_header["CDELT1" + s], u.deg).value
             field_header = imp_utils.header_from_list_of_xy(x, y, cdelt, s)

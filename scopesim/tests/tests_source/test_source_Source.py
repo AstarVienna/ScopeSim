@@ -161,7 +161,7 @@ class TestSourceInit:
         assert isinstance(src.spectra[0], SourceSpectrum)
         assert isinstance(src.fields[0], fits.PrimaryHDU)
 
-    def test_initialises_with_image_and_0_spectra(self, input_hdulist):
+    def test_initialises_with_only_image(self, input_hdulist):
         with pytest.raises(NotImplementedError):
             src = Source(image_hdu=input_hdulist[0])
             # assert len(st.spectra) == 0

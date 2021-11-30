@@ -6,7 +6,7 @@ from astropy.io import ascii as ioascii
 from synphot import SpectralElement, SourceSpectrum, Empirical1D, Observation
 from synphot.units import PHOTLAM
 
-from ..source.source_templates import vega_spectrum, st_spectrum, \
+from scopesim.source.source_templates import vega_spectrum, st_spectrum, \
     ab_spectrum
 from ..utils import find_file, quantity_from_table, from_currsys
 
@@ -77,9 +77,8 @@ def download_svo_filter(filter_name, return_style="synphot"):
         Astronomical filter object.
 
     """
-    path = download_file('http://svo2.cab.inta-csic.es/'
-                         'theory/fps3/fps.php?ID={}'.format(filter_name),
-                         cache=True)
+    url = f"http://svo2.cab.inta-csic.es/theory/fps3/fps.php?ID={filter_name}"
+    path = download_file(url, cache=True)
 
     tbl = Table.read(path, format='votable')
     wave = u.Quantity(tbl['Wavelength'].data.data, u.Angstrom, copy=False)
@@ -207,9 +206,10 @@ def scale_spectrum(spectrum, filter_name, amplitude):
     --------
     ::
 
+        >>> from scopesim.source.source_templates import vega_spectrum
         >>> from scopesim.effects.ter_curves_utils as ter_utils
         >>>
-        >>> spec = ter_utils.vega_spectrum()
+        >>> spec = vega_spectrum()
         >>> vega_185 = ter_utils.scale_spectrum(spec, "Ks", -1.85 * u.mag)
         >>> ab_0 = ter_utils.scale_spectrum(spec, "Ks", 0 * u.ABmag)
         >>> jy_3630 = ter_utils.scale_spectrum(spec, "Ks", 3630 * u.Jy)
@@ -231,8 +231,8 @@ def scale_spectrum(spectrum, filter_name, amplitude):
             ref_spec = vega_spectrum(amplitude.value)
 
         else:
-            raise ValueError("Units of amplitude must be one of "
-                             "[u.mag, u.ABmag, u.STmag]: {}".format(amplitude))
+            raise ValueError(f"Units of amplitude must be one of "
+                             f"[u.mag, u.ABmag, u.STmag, u.Jy]: {amplitude}")
     else:
         ref_spec = vega_spectrum(amplitude)
 

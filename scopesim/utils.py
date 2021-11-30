@@ -570,7 +570,7 @@ def find_file(filename, path=None, silent=False):
         print(msg)
 
     if from_currsys("!SIM.file.error_on_missing_file") is True:
-        raise ValueError("")
+        raise ValueError(msg)
 
     return None
 
@@ -936,9 +936,10 @@ def from_currsys(item):
     if isinstance(item, Table):
         tbl_dict = {col: item[col].data for col in item.colnames}
         tbl_dict = from_currsys(tbl_dict)
-        item = Table(data=[tbl_dict[key] for key in tbl_dict],
-                     names=tbl_dict.keys(),
-                     meta=item.meta)
+        item_meta = item.meta
+        item = Table(data=list(tbl_dict.values()),
+                     names=list(tbl_dict.keys()))
+        item.meta = item_meta
 
     if isinstance(item, np.ndarray) and not isinstance(item, u.Quantity):
         item = np.array([from_currsys(x) for x in item])

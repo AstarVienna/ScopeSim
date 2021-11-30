@@ -62,12 +62,14 @@ class PSF(Effect):
 
                 kernel = self.get_kernel(obj).astype(float)
 
+
                 rot_blur_angle = self.meta["rotational_blur_angle"]
                 if abs(rot_blur_angle) > 0:
                     kernel = pu.rotational_blur(kernel, rot_blur_angle)         # makes a copy of kernel
 
                 if self.meta["normalise_kernel"] is True:
                     kernel /= np.sum(kernel)
+                    kernel[kernel < 0.] = 0.
 
                 image = obj.hdu.data.astype(float)
 
@@ -91,6 +93,7 @@ class PSF(Effect):
                 if image.ndim == 3:
                     kernel = kernel[None, :, :]
                 new_image = convolve(image - bkg_level, kernel, mode=mode)
+                new_image[new_image < 0.] = 0.
                 obj.hdu.data = new_image + bkg_level
 
                 # ..todo: careful with which dimensions mean what
@@ -641,6 +644,7 @@ class FieldVaryingPSF(DiscretePSF):
                 for kernel, mask in kernels_masks:
 
                     # renormalise the kernel if needs be
+                    kernel[kernel<0.] = 0.
                     sum_kernel = np.sum(kernel)
                     if abs(sum_kernel - 1) > self.meta["flux_accuracy"]:
                         kernel /= sum_kernel

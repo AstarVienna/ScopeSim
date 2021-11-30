@@ -409,6 +409,11 @@ class SlitWheel(Effect):
         '''Return the currently used slit'''
         return self.slits[from_currsys(self.meta["current_slit"])]
 
+    @property
+    def display_name(self):
+        return f'{self.meta["name"]} : [{self.meta["current_filter"]}]'
+
+
     def __getattr__(self, item):
         return getattr(self.current_slit, item)
 
@@ -423,9 +428,9 @@ class SlitWheel(Effect):
                          .to(u.mas) for slit in slits])
         xmin = np.array([slit.data['x'].min() * u.Unit(slit.meta['x_unit'])
                          .to(u.mas) for slit in slits])
-        ymax = np.array([slit.data['y'].max() * u.Unit(slit.meta['x_unit'])
+        ymax = np.array([slit.data['y'].max() * u.Unit(slit.meta['y_unit'])
                          .to(u.mas) for slit in slits])
-        ymin = np.array([slit.data['y'].min() * u.Unit(slit.meta['x_unit'])
+        ymin = np.array([slit.data['y'].min() * u.Unit(slit.meta['y_unit'])
                          .to(u.mas) for slit in slits])
         xmax = quantify(xmax, u.mas)
         xmin = quantify(xmin, u.mas)

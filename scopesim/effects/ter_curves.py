@@ -133,11 +133,13 @@ class TERCurve(Effect):
             flux = self.emission
             bg_hdu = fits.ImageHDU()
             bg_hdu.header.update({"BG_SRC": True,
-                                  "BG_SURF": self.meta.get("name", "<untitled>"),
-                                  "CUNIT1": "DEG",
-                                  "CUNIT2": "DEG",
+                                  "BG_SURF": self.display_name,
+                                  "CUNIT1": "ARCSEC",
+                                  "CUNIT2": "ARCSEC",
                                   "CDELT1": 0,
-                                  "CDELT2": 0,})
+                                  "CDELT2": 0,
+                                  "BUNIT": "PHOTLAM arcsec-2",
+                                  "SOLIDANG": "arcsec-2"})
             self._background_source = Source(image_hdu=bg_hdu, spectra=flux)
 
         return self._background_source
@@ -472,6 +474,10 @@ class FilterWheel(Effect):
     @property
     def current_filter(self):
         return self.filters[from_currsys(self.meta["current_filter"])]
+
+    @property
+    def display_name(self):
+        return f'{self.meta["name"]} : [{self.meta["current_filter"]}]'
 
     def __getattr__(self, item):
         return getattr(self.current_filter, item)
