@@ -239,7 +239,7 @@ class TestMakeCube:
 
         ref = src_all.fields[1].header["SPEC_REF"]
         spec = fov.spectra[ref](waveset).value
-        image_sum = np.sum(src_all.fields[1].data) * np.sum(spec) * scale_factor
+        image_sum = np.sum(src_all.fields[1].data) * np.sum(spec)
 
         cube_sum = np.sum(src_all.fields[2].data[70:81, :, :]) * 0.02 * 0.95
 
