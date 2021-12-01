@@ -495,7 +495,7 @@ def bug_report():
         import_module = __import__
 
     packages = ["scopesim", "numpy", "scipy", "astropy", "matplotlib",
-                "synphot", "requests", "bs4", "yaml"]
+                "synphot", "skycalc_ipy", "requests", "bs4", "yaml"]
 
     # Check Python version
     print("Python:\n", sys.version)
@@ -508,6 +508,8 @@ def bug_report():
             print(package_name, ": ", pkg.__version__)
         except ImportError:
             print(package_name, "could not be loaded.")
+        except AttributeError:
+            print(package_name, ": version number not available")
 
     # Check operating system
     import platform
