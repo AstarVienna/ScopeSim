@@ -42,7 +42,7 @@ def is_field_in_fov(fov_header, field, wcs_suffix=""):
             s = wcs_suffix
             cdelt = utils.quantify(fov_header["CDELT1" + s], u.deg).value
             field_header = imp_utils.header_from_list_of_xy(x, y, cdelt, s)
-        elif isinstance(field, fits.ImageHDU):
+        elif isinstance(field, (fits.ImageHDU, fits.PrimaryHDU)):
             field_header = field.header
         else:
             logging.warning("Input was neither Table nor ImageHDU: {}"

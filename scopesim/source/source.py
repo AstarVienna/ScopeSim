@@ -172,16 +172,19 @@ class Source(SourceBase):
             self._from_imagehdu_and_flux(image_hdu, flux)
 
         elif image_hdu is not None and flux is None and spectra is None:
-            msg = f"image_hdu must be accompanied by either spectra or flux:\n" \
-                  f"spectra: {spectra}, flux: {flux}"
-            logging.exception(msg)
-            raise NotImplementedError
+            if image_hdu.header.get("BUNIT") is not None:
+                self._from_imagehdu_only(image_hdu)
+            else:
+                msg = f"image_hdu must be accompanied by either spectra or flux:\n" \
+                      f"spectra: {spectra}, flux: {flux}"
+                logging.exception(msg)
+                raise NotImplementedError
 
         elif x is not None and y is not None and \
                 ref is not None and spectra is not None:
             self._from_arrays(x, y, ref, weight, spectra)
 
-    def _from_file(self, filename, spectra):
+    def _from_file(self, filename, spectra, flux):
         filename = utils.find_file(filename)
 
         if utils.is_fits(filename):
@@ -190,7 +193,12 @@ class Source(SourceBase):
             hdr = fits.getheader(filename)
             if fits_type == "image":
                 image = fits.ImageHDU(data=data, header=hdr)
-                self._from_imagehdu_and_spectra(image, spectra)
+                if spectra is not None:
+                    self._from_imagehdu_and_spectra(image, spectra)
+                elif flux is not None:
+                    self._from_imagehdu_and_flux(image, flux)
+                else:
+                    self._from_imagehdu_only(image)
             elif fits_type == "bintable":
                 hdr1 = fits.getheader(filename, 1)
                 hdr.update(hdr1)
@@ -210,7 +218,6 @@ class Source(SourceBase):
         self.spectra += spectra
 
     def _from_imagehdu_and_spectra(self, image_hdu, spectra):
-
         if spectra is not None and len(spectra) > 0:
             image_hdu.header["SPEC_REF"] = len(self.spectra)
             self.spectra += spectra
@@ -230,6 +237,9 @@ class Source(SourceBase):
         self.fields += [image_hdu]
 
     def _from_imagehdu_and_flux(self, image_hdu, flux):
+        if isinstance(flux, u.Unit):
+            flux = 1 * flux
+
         spec_template = src_tmp.vega_spectrum
         if isinstance(flux, u.Quantity):
             if flux.unit.physical_type == "spectral flux density":  # ABmag and Jy
@@ -238,6 +248,39 @@ class Source(SourceBase):
             flux = flux.value
         spectra = [spec_template(flux)]
         self._from_imagehdu_and_spectra(image_hdu, spectra)
+
+    def _from_imagehdu_only(self, image_hdu):
+        bunit = image_hdu.header.get("BUNIT")
+        try:
+            bunit = u.Unit(bunit)
+        except:
+            f"Astropy cannot parse BUNIT [{bunit}].\n" \
+            f"You can bypass this checkby passing an astropy Unit to the flux parameter:\n" \
+            f">>> Source(image_hdu=..., flux=u.Unit(bunit), ...)"
+
+        phys_types = [base.physical_type for base in bunit.bases]
+        if "solid angle" in phys_types or "angle" in phys_types:
+            ang_i = np.argwhere([(pt == "solid angle" or pt == "angle")
+                                 for pt in phys_types])[0][0]
+            solid_angle = bunit.bases[ang_i] ** bunit.powers[ang_i]
+            scale_factor = solid_angle.to(u.arcsec**-2)
+
+        else:
+            hdr = image_hdu.header
+            pixel_area = hdr["CDELT1"] * u.Unit(hdr["CUNIT1"]) * \
+                         hdr["CDELT2"] * u.Unit(hdr["CUNIT2"])
+            scale_factor = (1 / pixel_area).to(u.arcsec**-2).value
+
+        image_hdu.data *= scale_factor
+        image_hdu.header["SOLIDANG"] = "arcsec-2"
+
+        flux_unit = u.Unit("")
+        for i in range(len(bunit.bases)):
+            if i != ang_i:
+                flux_unit *= (bunit.bases[i] ** bunit.powers[i])
+
+        value = 0 if flux_unit in [u.mag, u.ABmag] else 1
+        self._from_imagehdu_and_flux(image_hdu, value*flux_unit)
 
     def _from_arrays(self, x, y, ref, weight, spectra):
         if weight is None:

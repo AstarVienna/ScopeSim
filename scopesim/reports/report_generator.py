@@ -6,10 +6,16 @@
 # list the dependencies
 # produces all the plots
 # produces all the rst files
-# produces all the latex files
 # produces a top-level rst / latex file that references all the generated ones
 # can read in preambles / other package specific descriptions
 
 
 class ReportGenerator:
-    pass
+    def __init__(self, pkg_name):
+        self.pkg_name = pkg_name
+
+    def rst_default_yaml(self):
+        pass
+
+
+

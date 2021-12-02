@@ -189,6 +189,19 @@ class TestSourceInit:
         assert isinstance(src.spectra[0], SourceSpectrum)
         assert isinstance(src.fields[0], Table)
 
+    def test_initialise_with_only_imagehdu(self):
+        hdu = fits.ImageHDU(data=np.ones([3, 3]))
+        hdu.header["BUNIT"] = "Jy/arcsec2"
+        hdu.header["CDELT1"] = 0.1
+        hdu.header["CUNIT1"] = "arcsec"
+        hdu.header["CDELT2"] = 0.1
+        hdu.header["CUNIT2"] = "arcsec"
+        src = Source(image_hdu=hdu)
+
+        assert isinstance(src, Source)
+        assert isinstance(src.spectra[0], SourceSpectrum)
+        assert isinstance(src.fields[0], Table)
+
 
 @pytest.mark.usefixtures("table_source", "image_source")
 class TestSourceAddition:
