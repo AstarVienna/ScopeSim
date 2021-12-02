@@ -9,7 +9,7 @@ from astropy.table import Table, vstack
 
 from .surface import SpectralSurface
 from ..utils import real_colname, insert_into_ordereddict, quantify, \
-    change_table_entry, convert_table_comments_to_dict
+    change_table_entry, convert_table_comments_to_dict, from_currsys
 
 
 def combine_emissions(tbl, surfaces, row_indexes, etendue, use_area=False):
@@ -100,6 +100,7 @@ def combine_tables(new_tables, old_table=None, prepend=False):
         if old_table is None:
             old_table = new_table
         else:
+            new_table = from_currsys(new_table)
             if prepend:
                 old_table = vstack([new_table, old_table])
             else:

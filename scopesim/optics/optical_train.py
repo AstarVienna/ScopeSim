@@ -152,7 +152,7 @@ class OpticalTrain:
         if update:
             self.update(**kwargs)
 
-        self.set_focus(kwargs)    # put focus back on current instrument package
+        self.set_focus(**kwargs)    # put focus back on current instrument package
 
         # ..todo:: check if orig_source is a pointer, or a data array
         source = orig_source.make_copy()
@@ -221,7 +221,7 @@ class OpticalTrain:
 
         return hdus
 
-    def set_focus(self, kwargs):
+    def set_focus(self, **kwargs):
         self.cmds.update(**kwargs)
         dy = self.cmds.default_yamls
         if len(dy) > 0 and "packages" in dy:

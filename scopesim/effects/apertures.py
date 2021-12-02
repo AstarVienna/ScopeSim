@@ -411,7 +411,8 @@ class SlitWheel(Effect):
 
     @property
     def display_name(self):
-        return f'{self.meta["name"]} : [{self.meta["current_slit"]}]'
+        return f'{self.meta["name"]} : ' \
+               f'[{from_currsys(self.meta["current_slit"])}]'
 
 
     def __getattr__(self, item):
