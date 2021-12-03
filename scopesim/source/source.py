@@ -211,6 +211,16 @@ class Source(SourceBase):
 
     def _from_imagehdu_and_spectra(self, image_hdu, spectra):
 
+        if not image_hdu.header.get("BG_SRC"):
+            image_hdu.header["CRVAL1"] = 0
+            image_hdu.header["CRVAL2"] = 0
+            image_hdu.header["CRPIX1"] = image_hdu.header["NAXIS1"] / 2
+            image_hdu.header["CRPIX2"] = image_hdu.header["NAXIS2"] / 2
+
+        if isinstance(image_hdu, fits.PrimaryHDU):
+            image_hdu = fits.ImageHDU(data=image_hdu.data,
+                                      header=image_hdu.header)
+
         if spectra is not None and len(spectra) > 0:
             image_hdu.header["SPEC_REF"] = len(self.spectra)
             self.spectra += spectra

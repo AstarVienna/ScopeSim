@@ -154,14 +154,14 @@ def vega_spectrum(mag=0):
 
 
 def st_spectrum(mag=0):
-    waves = np.geomspace(100, 50000, 5000)
+    waves = np.geomspace(100, 300000, 5000)
     sp = ConstFlux1D(amplitude=mag*u.STmag)
 
     return SourceSpectrum(Empirical1D, points=waves, lookup_table=sp(waves))
 
 
 def ab_spectrum(mag=0):
-    waves = np.geomspace(100, 50000, 5000)
+    waves = np.geomspace(100, 300000, 5000)
     sp = ConstFlux1D(amplitude=mag * u.ABmag)
 
     return SourceSpectrum(Empirical1D, points=waves, lookup_table=sp(waves))

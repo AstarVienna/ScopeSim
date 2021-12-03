@@ -315,6 +315,8 @@ Summary of Effects in Optical Elements:
 
         if isinstance(obj, list) and len(obj) == 1:
             obj = obj[0]
+        elif isinstance(obj, list) and len(obj) == 0:
+            raise ValueError(f"Cannot find object: {item}")
 
         return obj
 
