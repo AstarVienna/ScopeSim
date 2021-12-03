@@ -216,6 +216,8 @@ class Source(SourceBase):
             image_hdu.header["CRVAL2"] = 0
             image_hdu.header["CRPIX1"] = image_hdu.header["NAXIS1"] / 2
             image_hdu.header["CRPIX2"] = image_hdu.header["NAXIS2"] / 2
+            image_hdu.header["CDELT1"] = abs(image_hdu.header["CDELT1"])
+            image_hdu.header["CDELT2"] = abs(image_hdu.header["CDELT2"])
 
         if isinstance(image_hdu, fits.PrimaryHDU):
             image_hdu = fits.ImageHDU(data=image_hdu.data,
