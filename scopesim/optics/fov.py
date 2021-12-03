@@ -437,8 +437,10 @@ class FieldOfView(FieldOfViewBase):
                                     bounds_error=False, fill_value=0)
             field_data = field_interp(fov_waveset.value)
             field_unit = field.header.get("BUNIT", "ph s-1 cm-2 AA-1")
-            flux_scale_factor = u.Unit(field_unit).to("ph s-1 cm-2 AA-1")
-            field_hdu = fits.ImageHDU(data=field_data * flux_scale_factor,
+            eq = u.spectral_density(fov_waveset)
+            flux_scale_factor = u.Unit(field_unit).to("ph s-1 cm-2 AA-1",
+                                                      equivalencies=eq)
+            field_hdu = fits.ImageHDU(data=field_data * flux_scale_factor[:, None, None],
                                       header=field.header)
             canvas_cube_hdu = imp_utils.add_imagehdu_to_imagehdu(field_hdu,
                                                     canvas_cube_hdu,

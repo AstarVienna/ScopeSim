@@ -322,9 +322,9 @@ def extract_area_from_imagehdu(imagehdu, fov_volume):
         mask = (hdu_waves > fov_waves[0] - 0.5 * wdel) * \
                (hdu_waves <= fov_waves[1] + 0.5 * wdel)                         # need to go [+/-] half a bin
 
-        if min(hdu_waves) > min(fov_waves) or max(hdu_waves) < max(fov_waves):
-            raise ValueError(f"FOV waveset is not a subset of cube waveset: "
-                             f"{fov_waves} --> {hdu_waves}")
+        # if min(hdu_waves) > min(fov_waves) or max(hdu_waves) < max(fov_waves):
+        #     raise ValueError(f"FOV waveset is not a subset of cube waveset: "
+        #                      f"{fov_waves} --> {hdu_waves}")
 
         i0p, i1p = np.where(mask)[0][0], np.where(mask)[0][-1]
         f0 = (abs(hdu_waves[i0p] - fov_waves[0] + 0.5 * wdel) % wdel) / wdel    # blue edge
