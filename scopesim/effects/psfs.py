@@ -62,12 +62,11 @@ class PSF(Effect):
 
                 kernel = self.get_kernel(obj).astype(float)
 
-
                 rot_blur_angle = self.meta["rotational_blur_angle"]
                 if abs(rot_blur_angle) > 0:
                     kernel = pu.rotational_blur(kernel, rot_blur_angle)         # makes a copy of kernel
 
-                if self.meta["normalise_kernel"] is True:
+                if utils.from_currsys(self.meta["normalise_kernel"]) is True:
                     kernel /= np.sum(kernel)
                     kernel[kernel < 0.] = 0.
 
@@ -168,6 +167,7 @@ class Vibration(AnalyticalPSF):
             width = max(1, int(fwhm_pix * self.meta["width_n_fwhms"]))
             self.kernel = Gaussian2DKernel(sigma, x_size=width, y_size=width,
                                            mode="center").array
+            self.kernel /= np.sum(self.kernel)
 
         return self.kernel.astype(float)
 
@@ -224,6 +224,8 @@ class NonCommonPathAberration(AnalyticalPSF):
             self.valid_waverange = waves
             self.kernel = pu.wfe2gauss(wfe=self.total_wfe, wave=wave_mid_new,
                                        width=self.meta["kernel_width"])
+            self.kernel /= np.sum(self.kernel)
+
         return self.kernel
 
     @property
@@ -285,6 +287,7 @@ class SeeingPSF(AnalyticalPSF):
 
         sigma = fwhm.value / 2.35
         kernel = Gaussian2DKernel(sigma, mode="center").array
+        kernel /= np.sum(kernel)
 
         return kernel
 
@@ -333,6 +336,7 @@ class GaussianDiffractionPSF(AnalyticalPSF):
 
         sigma = fwhm.value / 2.35
         kernel = Gaussian2DKernel(sigma, mode="center").array
+        kernel /= np.sum(kernel)
 
         return kernel
 
@@ -441,6 +445,7 @@ class AnisocadoConstPSF(SemiAnalyticalPSF):
                                                 self.meta["offset"][1])
 
             self._kernel = self._psf_object.psf_latest
+            self._kernel /= np.sum(self._kernel)
             if self.meta["rounded_edges"]:
                 self._kernel = pu.round_kernel_edges(self._kernel)
 
@@ -575,6 +580,8 @@ class FieldConstantPSF(DiscretePSF):
             self.kernel = self._file[ext].data
             self.current_layer_id = ext
             hdr = self._file[ext].header
+
+            self.kernel /= np.sum(self.kernel)
 
             # compare kernel and fov pixel scales, rescale if needed
             if "CUNIT1" in hdr:
@@ -722,6 +729,8 @@ class FieldVaryingPSF(DiscretePSF):
         if abs(pix_ratio - 1) > self.meta["flux_accuracy"]:
             for ii in range(len(self.kernel)):
                 self.kernel[ii][0] = pu.rescale_kernel(self.kernel[ii][0], pix_ratio)
+
+        self.kernel /= np.sum(self.kernel)
 
         return self.kernel
 
