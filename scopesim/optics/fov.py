@@ -42,6 +42,7 @@ class FieldOfView(FieldOfViewBase):
                      "wave_max": utils.quantify(waverange[1], u.um),
                      "wave_bin_n": 1,
                      "wave_bin_type": "linear",
+
                      "area": 0 * u.m**2,
                      "pixel_scale": "!INST.pixel_scale",
                      "sub_pixel": "!SIM.sub_pixel.flag",
@@ -394,17 +395,24 @@ class FieldOfView(FieldOfViewBase):
         """
         spline_order = utils.from_currsys("!SIM.computing.spline_order")
 
+
         # 1. Make waveset and canvas cube (area, bin_width are applied at end)
-        fov_waveset = self.waveset
-        wave_bin_n = len(fov_waveset)
-        wave_min = self.meta["wave_min"]
+
+        wave_min = self.meta["wave_min"]        # Quantity [um]
         wave_max = self.meta["wave_max"]
 
-        if "lin" in self.meta["wave_bin_type"]:
-            fov_waveset = np.linspace(wave_min, wave_max, wave_bin_n)
-        elif "log" in self.meta["wave_bin_type"]:
-            wmin, wmax = wave_min.to(u.um).value, wave_max.to(u.um).value
-            fov_waveset = np.logspace(wmin, wmax, wave_bin_n) * u.um
+        wave_unit = u.Unit(utils.from_currsys("!SIM.spectral.wave_unit"))
+        dwave = utils.from_currsys("!SIM.spectral.spectral_resolution")         # Not a quantity
+        fov_waveset = np.arange(wave_min.value, wave_max.value, dwave) * wave_unit
+        fov_waveset = fov_waveset.to(u.um)
+
+        # fov_waveset = self.waveset
+        # wave_bin_n = len(fov_waveset)
+        # if "lin" in self.meta["wave_bin_type"]:
+        #     fov_waveset = np.linspace(wave_min, wave_max, wave_bin_n)
+        # elif "log" in self.meta["wave_bin_type"]:
+        #     wmin, wmax = wave_min.to(u.um).value, wave_max.to(u.um).value
+        #     fov_waveset = np.logspace(wmin, wmax, wave_bin_n)
 
         specs = {ref: spec(fov_waveset)                     # PHOTLAM = ph/s/cm2/AA
                  for ref, spec in self.spectra.items()}
