@@ -211,11 +211,13 @@ class Source(SourceBase):
 
     def _from_imagehdu_and_spectra(self, image_hdu, spectra):
 
+
         if not image_hdu.header.get("BG_SRC"):
             image_hdu.header["CRVAL1"] = 0
             image_hdu.header["CRVAL2"] = 0
             image_hdu.header["CRPIX1"] = image_hdu.header["NAXIS1"] / 2
             image_hdu.header["CRPIX2"] = image_hdu.header["NAXIS2"] / 2
+            # .. todo:: find where the actual problem is with negative CDELTs
             if image_hdu.header["CDELT1"] < 0:
                 image_hdu.header["CDELT1"] *= -1
                 image_hdu.data = image_hdu.data[:, ::-1]
