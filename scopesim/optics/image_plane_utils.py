@@ -174,7 +174,8 @@ def header_from_list_of_xy(x, y, pixel_scale, wcs_suffix=""):
     crval1 = min(x)
     crval2 = min(y)
 
-    # ..todo:: give the 9 a variable in !SIM.computing
+    # ..todo:: test whether abs(pixel_scale) breaks anything
+    pixel_scale = abs(pixel_scale)
     dx = (max(x) - min(x)) / pixel_scale
     dy = (max(y) - min(y)) / pixel_scale
     naxis1 = int(np.round(dx))

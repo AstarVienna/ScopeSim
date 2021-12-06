@@ -440,8 +440,8 @@ class FieldOfView(FieldOfViewBase):
             eq = u.spectral_density(fov_waveset)
             flux_scale_factor = u.Unit(field_unit).to("ph s-1 cm-2 AA-1",
                                                       equivalencies=eq)
-            field_hdu = fits.ImageHDU(data=field_data * flux_scale_factor[:, None, None],
-                                      header=field.header)
+            field_data *= flux_scale_factor[:, None, None]
+            field_hdu = fits.ImageHDU(data=field_data, header=field.header)
             canvas_cube_hdu = imp_utils.add_imagehdu_to_imagehdu(field_hdu,
                                                     canvas_cube_hdu,
                                                     spline_order=spline_order)
