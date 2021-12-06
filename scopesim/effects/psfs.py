@@ -53,8 +53,9 @@ class PSF(Effect):
     def apply_to(self, obj, **kwargs):
         if isinstance(obj, FOVSetupBase):
             waveset = self._waveset
+            waveset_edges = 0.5 * (waveset[:-1] + waveset[1:])
             if waveset is not None:
-                obj.split("wave", utils.quantify(waveset, u.um).value)
+                obj.split("wave", utils.quantify(waveset_edges, u.um).value)
 
         elif isinstance(obj, self.convolution_classes):
             if (hasattr(obj, "fields") and len(obj.fields) > 0) or \
@@ -82,7 +83,7 @@ class PSF(Effect):
                     bg_image = image.copy()
                     if image.ndim == 2:
                         bg_image[bg_w:-bg_w, bg_w:-bg_w] = 0
-                        bkg_level = np.median(bg_image)
+                        bkg_level = np.median(bg_image[bg_image>0])
                     elif image.ndim == 3:
                         bg_image[:, bg_w:-bg_w, bg_w:-bg_w] = 0
                         bkg_level = np.median(bg_image, axis=(2, 1))
@@ -558,8 +559,8 @@ class FieldConstantPSF(DiscretePSF):
         utils.check_keys(self.meta, self.required_keys, action="error")
 
         self.meta["z_order"] = [262, 662]
-        self._waveset, self.kernel_indexes = pu.get_psf_wave_exts(self._file,
-                                                                  self.meta["wave_key"])
+        self._waveset, self.kernel_indexes = pu.get_psf_wave_exts(
+                                              self._file, self.meta["wave_key"])
         self.current_layer_id = None
         self.current_ext = None
         self.current_data = None

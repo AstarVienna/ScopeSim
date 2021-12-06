@@ -228,11 +228,15 @@ class SpectralTrace:
         xi_fpa = self.xy2xi(ximg_fpa, yimg_fpa).astype(np.float32)
         lam_fpa = self.xy2lam(ximg_fpa, yimg_fpa).astype(np.float32)
 
-        # mask everything outside the slit
+        # mask everything outside the wavelength range
         mask = (xi_fpa >= xi_min) & (xi_fpa <= xi_max)
         xi_fpa *= mask
         lam_fpa *= mask
 
+        # mask everything outside the wavelength range
+        mask = (lam_fpa >= wave_min) & (lam_fpa <= wave_max)
+        xi_fpa *= mask
+        lam_fpa *= mask
 
         # Convert to pixel images
         # These are the pixel coordinates in the image corresponding to

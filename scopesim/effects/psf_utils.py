@@ -115,6 +115,19 @@ def rescale_kernel(image, scale_factor, spline_order=None):
     sum_image = np.sum(image)
     image = zoom(image, scale_factor, order=spline_order)
     image = np.nan_to_num(image, copy=False)        # numpy version >=1.13
+
+    # Re-centre kernel
+    im_shape = image.shape
+    dy, dx = np.divmod(np.argmax(image), im_shape[1]) - np.array(im_shape) // 2
+    if dy > 0:
+        image = image[2*dy:, :]
+    elif dy < 0:
+        image = image[:2*abs(dy), :]
+    if dx > 0:
+        image = image[:, 2*dx:]
+    elif dx < 0:
+        image = image[:, 2*abs(dx), :]
+
     sum_new_image = np.sum(image)
     image *= sum_image / sum_new_image
 
@@ -168,9 +181,9 @@ def get_psf_wave_exts(hdu_list, wave_key="WAVE0"):
         raise ValueError("psf_effect must be a PSF object: {}"
                          "".format(type(hdu_list)))
 
-    tmp = np.array(
-        [[ii, hdu.header[wave_key]] for ii, hdu in enumerate(hdu_list)
-         if wave_key in hdu.header and hdu.data is not None])
+    tmp = np.array([[ii, hdu.header[wave_key]]
+                    for ii, hdu in enumerate(hdu_list)
+                    if wave_key in hdu.header and hdu.data is not None])
     wave_ext = tmp[:, 0].astype(int)
     wave_set = tmp[:, 1]
 
