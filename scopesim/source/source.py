@@ -218,6 +218,7 @@ class Source(SourceBase):
             image_hdu.header["CRPIX1"] = image_hdu.header["NAXIS1"] / 2
             image_hdu.header["CRPIX2"] = image_hdu.header["NAXIS2"] / 2
             # .. todo:: find where the actual problem is with negative CDELTs
+            # .. todo:: --> abs(pixel_scale) in header_from_list_of_xy
             if image_hdu.header["CDELT1"] < 0:
                 image_hdu.header["CDELT1"] *= -1
                 image_hdu.data = image_hdu.data[:, ::-1]

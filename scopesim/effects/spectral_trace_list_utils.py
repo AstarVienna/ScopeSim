@@ -234,9 +234,9 @@ class SpectralTrace:
         lam_fpa *= mask
 
         # mask everything outside the wavelength range
-        mask = (lam_fpa >= wave_min) & (lam_fpa <= wave_max)
-        xi_fpa *= mask
-        lam_fpa *= mask
+        # mask = (lam_fpa >= wave_min) & (lam_fpa <= wave_max)
+        # xi_fpa *= mask
+        # lam_fpa *= mask
 
         # Convert to pixel images
         # These are the pixel coordinates in the image corresponding to

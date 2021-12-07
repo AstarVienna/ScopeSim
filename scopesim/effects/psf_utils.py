@@ -126,7 +126,7 @@ def rescale_kernel(image, scale_factor, spline_order=None):
     if dx > 0:
         image = image[:, 2*dx:]
     elif dx < 0:
-        image = image[:, 2*abs(dx), :]
+        image = image[:, 2*abs(dx):]
 
     sum_new_image = np.sum(image)
     image *= sum_image / sum_new_image
