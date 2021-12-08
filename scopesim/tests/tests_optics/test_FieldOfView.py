@@ -63,7 +63,7 @@ class TestExtractFrom:
         fov = _fov_190_210_um()
         fov.extract_from(src)
 
-        assert fov.fields[0].data.shape == (51, 25)
+        assert fov.fields[0].data.shape == (51, 26)
         assert len(fov.spectra[0].waveset) == 11
         assert fov.spectra[0].waveset[0].value == approx(19000)
 
@@ -83,7 +83,7 @@ class TestExtractFrom:
         fov = _fov_197_202_um()
         fov.extract_from(src)
 
-        assert fov.fields[0].shape == (3, 51, 25)
+        assert fov.fields[0].shape == (3, 51, 26)
 
     def test_extract_one_of_each_type_from_source_object(self):
         src_table = so._table_source()              # 4 sources, put two outside of FOV
@@ -97,7 +97,7 @@ class TestExtractFrom:
         fov.extract_from(src)
 
         assert fov.fields[0].shape == (3, 51, 51)
-        assert fov.fields[1].shape == (51, 25)
+        assert fov.fields[1].shape == (51, 26)
         assert len(fov.fields[2]) == 2
 
         assert len(fov.spectra) == 3
@@ -182,6 +182,8 @@ class TestMakeCube:
             plt.show()
 
     def test_makes_cube_from_other_cube_imagehdu(self):
+        import scopesim as sim
+        sim.rc.__currsys__["!SIM.spectral.spectral_resolution"] = 0.01
         src_cube = so._cube_source()            # 10x10" @ 0.2"/pix, [0.5, 2.5]m @ 0.02µm
         fov = _fov_197_202_um()
         fov.extract_from(src_cube)
@@ -207,12 +209,12 @@ class TestMakeCube:
         cube = fov.make_cube_hdu()
 
         # layer 74 to 77 are extracted by FOV
-        bin_widths = np.array([0.01, 0.02, 0.01])[:, None, None]
+        bin_widths = np.array([0.01, 0.02, 0.01])[:, None, None] * 1e4      # um -> AA
         in_sum = 2 * np.sum(src_cube.fields[0].data[74:77, :, :] * bin_widths)
 
         out_sum = np.sum(cube.data)
 
-        assert out_sum == approx(in_sum)
+        assert out_sum == approx(in_sum, rel=1e-3)
 
         if PLOTS:
             plt.imshow(cube.data[0, :, :], origin="lower")

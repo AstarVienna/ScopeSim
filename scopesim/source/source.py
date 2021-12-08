@@ -157,7 +157,7 @@ class Source(SourceBase):
             spectra = convert_to_list_of_spectra(spectra, lam)
 
         if filename is not None and spectra is not None:
-            self._from_file(filename, spectra)
+            self._from_file(filename, spectra, flux)
 
         elif cube is not None:
             self._from_cube(cube=cube, ext=ext)
@@ -178,7 +178,7 @@ class Source(SourceBase):
                 msg = f"image_hdu must be accompanied by either spectra or flux:\n" \
                       f"spectra: {spectra}, flux: {flux}"
                 logging.exception(msg)
-                raise NotImplementedError
+                raise ValueError(msg)
 
         elif x is not None and y is not None and \
                 ref is not None and spectra is not None:
@@ -277,6 +277,7 @@ class Source(SourceBase):
             f"You can bypass this checkby passing an astropy Unit to the flux parameter:\n" \
             f">>> Source(image_hdu=..., flux=u.Unit(bunit), ...)"
 
+        ang_i = -1
         phys_types = [base.physical_type for base in bunit.bases]
         if "solid angle" in phys_types or "angle" in phys_types:
             ang_i = np.argwhere([(pt == "solid angle" or pt == "angle")
@@ -374,6 +375,7 @@ class Source(SourceBase):
                   isinstance(field, fits.ImageHDU) and field.header["NAXIS"] == 3]
         return fields
 
+    # ..todo: rewrite this method
     def image_in_range(self, wave_min, wave_max, pixel_scale=1*u.arcsec,
                        layers=None, area=None, spline_order=1, sub_pixel=False):
         if layers is None:

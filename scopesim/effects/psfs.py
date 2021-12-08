@@ -51,7 +51,7 @@ class PSF(Effect):
         self.convolution_classes = (FieldOfViewBase, ImagePlaneBase)
 
     def apply_to(self, obj, **kwargs):
-        if isinstance(obj, FOVSetupBase):
+        if isinstance(obj, FOVSetupBase) and self._waveset is not None:
             waveset = self._waveset
             waveset_edges = 0.5 * (waveset[:-1] + waveset[1:])
             if waveset is not None:
@@ -730,7 +730,8 @@ class FieldVaryingPSF(DiscretePSF):
             for ii in range(len(self.kernel)):
                 self.kernel[ii][0] = pu.rescale_kernel(self.kernel[ii][0], pix_ratio)
 
-        self.kernel /= np.sum(self.kernel)
+        for i in range(len(self.kernel)):
+            self.kernel[i][0] /= np.sum(self.kernel[i][0])
 
         return self.kernel
 
