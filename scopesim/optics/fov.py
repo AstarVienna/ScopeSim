@@ -192,22 +192,30 @@ class FieldOfView(FieldOfViewBase):
         specs = {ref: spec(fov_waveset) for ref, spec in self.spectra.items()}
 
         for field in self.cube_fields:
+            # Cube fields are units of flux/arcsec2 --> convert to flux/pixel
             hdu_waveset = fu.get_cube_waveset(field.header, return_quantity=True)
-            fluxes = field.data.sum(axis=2).sum(axis=1)
+            fluxes = field.data.sum(axis=(2, 1))
             fov_waveset_fluxes = np.interp(fov_waveset, hdu_waveset, fluxes)
-
             field_unit = field.header.get("BUNIT", PHOTLAM)
             flux_scale_factor = u.Unit(field_unit).to(PHOTLAM)
 
-            canvas_flux += fov_waveset_fluxes * flux_scale_factor
+            pix_area = field.header["CDELT1"] * u.Unit(field.header["CUNIT1"]) * \
+                       field.header["CDELT2"] * u.Unit(field.header["CUNIT2"])
+            pix_area = pix_area.to(u.arcsec**2).value
+
+            canvas_flux += fov_waveset_fluxes * flux_scale_factor * pix_area
 
         for field in self.image_fields:
+            # Image fields are units of flux/arcsec2 --> convert to flux/pixel
+            pix_area = field.header["CDELT1"] * u.Unit(field.header["CUNIT1"]) * \
+                       field.header["CDELT2"] * u.Unit(field.header["CUNIT2"])
+            pix_area = pix_area.to(u.arcsec**2).value
             ref = field.header["SPEC_REF"]
-            weight = np.sum(field.data)
+            weight = field.data.sum() * pix_area
             canvas_flux += self.spectra[ref](fov_waveset).value * weight
 
-
         for field in self.table_fields:
+            # Table fields are units of flux/pixel (i.e. PHOTLAM)
             refs = np.array(field["ref"])
             weights = np.array(field["weight"])
             weight_sums = {ref: np.sum(weights[refs == ref])
@@ -344,7 +352,8 @@ class FieldOfView(FieldOfViewBase):
         """
         Used for IFUs, slit spectrographs, and coherent MOSs (e.g.KMOS)
 
-        Returned cube units are ph s-1 voxel-1
+        Returned cube units are [ph s-1 um-1 arcsec-2]
+        Wavelengths for each bin can be found with ``self.waveset``
 
         .. note:: ``self.make_cube()`` does NOT store anything in ``self.cube``
 
@@ -379,7 +388,7 @@ class FieldOfView(FieldOfViewBase):
             evaluate spectra at waveset
             add spectrum at x,y position in canvas cube
 
-        PHOTLAM = ph/s/m2/um
+        PHOTLAM = ph/s/cm2/AA
         original source fields are in units of:
         - tables: (PHOTLAM in spectrum)
         - images: arcsec-2 (PHOTLAM in spectrum)
@@ -390,29 +399,14 @@ class FieldOfView(FieldOfViewBase):
         Returns
         -------
         canvas_cube_hdu : fits.ImageHDU
-            [ph s-1 AA-1 arcsec-2]      # as needed by SpectralTrace
+            [ph s-1 um-1 arcsec-2]      # as needed by SpectralTrace
 
         """
         spline_order = utils.from_currsys("!SIM.computing.spline_order")
 
 
         # 1. Make waveset and canvas cube (area, bin_width are applied at end)
-
-        wave_min = self.meta["wave_min"]        # Quantity [um]
-        wave_max = self.meta["wave_max"]
-
-        wave_unit = u.Unit(utils.from_currsys("!SIM.spectral.wave_unit"))
-        dwave = utils.from_currsys("!SIM.spectral.spectral_resolution")         # Not a quantity
-        fov_waveset = np.arange(wave_min.value, wave_max.value, dwave) * wave_unit
-        fov_waveset = fov_waveset.to(u.um)
-
-        # fov_waveset = self.waveset
-        # wave_bin_n = len(fov_waveset)
-        # if "lin" in self.meta["wave_bin_type"]:
-        #     fov_waveset = np.linspace(wave_min, wave_max, wave_bin_n)
-        # elif "log" in self.meta["wave_bin_type"]:
-        #     wmin, wmax = wave_min.to(u.um).value, wave_max.to(u.um).value
-        #     fov_waveset = np.logspace(wmin, wmax, wave_bin_n)
+        fov_waveset = self.waveset
 
         specs = {ref: spec(fov_waveset)                     # PHOTLAM = ph/s/cm2/AA
                  for ref, spec in self.spectra.items()}
@@ -427,8 +421,7 @@ class FieldOfView(FieldOfViewBase):
         # 2. Add Cube fields
         for field in self.cube_fields:
             # Cube should be in PHOTLAM arcsec-2 for SpectralTrace mapping
-            # Assumption is that ImageHDUs have units of PHOTLAM arcsec-2
-            # ..todo: Add a catch to get ImageHDU with BUNITs
+            # Assumption: no BUNIT means PHOTLAM arcsec-2
             field_waveset = fu.get_cube_waveset(field.header,
                                                 return_quantity=True)
             # ..todo: Deal with this bounds_error in a more elegant way
@@ -512,7 +505,7 @@ class FieldOfView(FieldOfViewBase):
                                        "CTYPE3": "WAVE"})
         # ..todo: Add the log wavelength keyword here, if log scale is needed
 
-        cube_hdu = canvas_cube_hdu      # [ph s-1 AA-1 (arcsec-2)]
+        cube_hdu = canvas_cube_hdu      # [ph s-1 um-1 (arcsec-2)]
 
         return cube_hdu
 
@@ -567,16 +560,26 @@ class FieldOfView(FieldOfViewBase):
     def waveset(self):
         """Returns a wavelength vector in um"""
 
-        field_cubes = self.cube_fields
-        if len(field_cubes) > 0:
-            i = np.argmax([cube.header["NAXIS3"] for cube in field_cubes])
-            _waveset = fu.get_cube_waveset(field_cubes[i].header,
-                                           return_quantity=True)
-        elif len(self.spectra) > 0:
-            wavesets = [spec.waveset for spec in self.spectra.values()]
-            _waveset = np.unique(np.concatenate(wavesets))
-        else:
-            _waveset = self.waverange * u.um
+        # field_cubes = self.cube_fields
+        # if len(field_cubes) > 0:
+        #     i = np.argmax([cube.header["NAXIS3"] for cube in field_cubes])
+        #     _waveset = fu.get_cube_waveset(field_cubes[i].header,
+        #                                    return_quantity=True)
+        # elif len(self.spectra) > 0:
+        #     wavesets = [spec.waveset for spec in self.spectra.values()]
+        #     _waveset = np.unique(np.concatenate(wavesets))
+        # else:
+        #     _waveset = self.waverange * u.um
+
+        wave_min = self.meta["wave_min"]  # Quantity [um]
+        wave_max = self.meta["wave_max"]
+
+        wave_unit = u.Unit(utils.from_currsys("!SIM.spectral.wave_unit"))
+        dwave = utils.from_currsys(
+            "!SIM.spectral.spectral_resolution")  # Not a quantity
+        _waveset = np.arange(wave_min.value,
+                             wave_max.value + 1e-7 * dwave,
+                             dwave) * wave_unit
 
         return _waveset.to(u.um)
 

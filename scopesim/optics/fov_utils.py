@@ -319,27 +319,34 @@ def extract_area_from_imagehdu(imagehdu, fov_volume):
         wdel = hdr["CDELT3"]
         wunit = u.Unit(hdr.get("CUNIT3", "AA"))
         fov_waves = utils.quantify(fov_volume["waves"], u.um).to(wunit).value
-        mask = (hdu_waves > fov_waves[0] - 0.5 * wdel) * \
-               (hdu_waves <= fov_waves[1] + 0.5 * wdel)                         # need to go [+/-] half a bin
 
         # if min(hdu_waves) > min(fov_waves) or max(hdu_waves) < max(fov_waves):
         #     raise ValueError(f"FOV waveset is not a subset of cube waveset: "
         #                      f"{fov_waves} --> {hdu_waves}")
 
-        i0p, i1p = np.where(mask)[0][0], np.where(mask)[0][-1]
-        f0 = (abs(hdu_waves[i0p] - fov_waves[0] + 0.5 * wdel) % wdel) / wdel    # blue edge
-        f1 = (abs(hdu_waves[i1p] - fov_waves[1] - 0.5 * wdel) % wdel) / wdel    # red edge
-        data = imagehdu.data[i0p:i1p+1, y0p:y1p, x0p:x1p]
-        data[0, :, :] *= f0
-        if i1p > i0p:
-            data[-1, :, :] *= f1
 
-        # w0, w1 : the closest cube wavelengths outside the fov edge wavelengths
-        # fov_waves : the fov edge wavelengths
-        # f0, f1 : the scaling factors for the blue and red edge cube slices
+        # ---------------------------------------------------------------------
+        # OLD way of extracting cube volume
         #
-        # w0, w1 = hdu_waves[i0p], hdu_waves[i1p]
-        # print(f"\nw0: {w0}, f0: {f0}, {fov_waves}, f1: {f1}, w1: {w1}")
+        # # fov_waves : the fov edge wavelengths
+        # # f0, f1 : the scaling factors for the blue and red edge cube slices
+        #
+        # mask = (hdu_waves > fov_waves[0] - 0.5 * wdel) * \
+        #        (hdu_waves <= fov_waves[1] + 0.5 * wdel)  # need to go [+/-] half a bin
+        # i0p, i1p = np.where(mask)[0][0], np.where(mask)[0][-1]
+        # f0 = (abs(hdu_waves[i0p] - fov_waves[0] + 0.5 * wdel) % wdel) / wdel    # blue edge
+        # f1 = (abs(hdu_waves[i1p] - fov_waves[1] - 0.5 * wdel) % wdel) / wdel    # red edge
+        # data = imagehdu.data[i0p:i1p+1, y0p:y1p, x0p:x1p]
+        # data[0, :, :] *= f0
+        # if i1p > i0p:
+        #     data[-1, :, :] *= f1
+
+        # ---------------------------------------------------------------------
+        # NEW way - just overshoot, as the cube will be interpolated anyway
+        mask = (hdu_waves > fov_waves[0]) * (hdu_waves <= fov_waves[1])
+        i0p = max(0, np.where(mask)[0][0] - 1)
+        i1p = min(len(hdu_waves), np.where(mask)[0][-1] + 1)
+        data = imagehdu.data[i0p:i1p+1, y0p:y1p, x0p:x1p]
 
         new_hdr.update({"NAXIS": 3,
                         "NAXIS3": data.shape[0],

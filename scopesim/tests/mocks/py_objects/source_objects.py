@@ -114,24 +114,25 @@ def _cube_source(**kwargs):
 
     Returns
     -------
-
+    cube_src : Source
+        [ph s-1 m-2 um-1]
     """
 
     n = 101
-    im_src = _image_source(**kwargs)
-    data = im_src.fields[0].data
+    cube_src = _image_source(**kwargs)
+    data = cube_src.fields[0].data
 
         # Broadcast the array onto a 3rd dimension and scale along the new axis
-    im_src.fields[0].data = data[None, :, :] * np.linspace(0, 4, n)[:, None, None]
-    im_src.spectra = []
+    cube_src.fields[0].data = data[None, :, :] * np.linspace(0, 4, n)[:, None, None]
+    cube_src.spectra = []
 
     cube_hdr_dict = {"CUNIT3": "um", "CTYPE3": "WAVE", "CDELT3": 0.02,
                      "CRVAL3": 1.5, "CRPIX3": 50, "SPEC_REF": None,
                      "BUNIT": "ph s-1 m-2 um-1"}
 
-    im_src.fields[0].header.update(cube_hdr_dict)
+    cube_src.fields[0].header.update(cube_hdr_dict)
 
-    return im_src
+    return cube_src
 
 
 
