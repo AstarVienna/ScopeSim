@@ -296,7 +296,9 @@ class FieldOfView(FieldOfViewBase):
 
         # 2. Find Cube fields
         for field in self.cube_fields:
-            image = np.sum(field.data, axis=0)
+            bin_factors = np.ones(field.data.shape[0])
+            # ..todo: add in here the alterations to the first and last elements
+            image = np.sum(field.data * bin_factors[:, None, None], axis=0)
             tmp_hdu = fits.ImageHDU(data=image, header=field.header)
             canvas_image_hdu = imp_utils.add_imagehdu_to_imagehdu(
                 tmp_hdu,

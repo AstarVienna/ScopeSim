@@ -471,15 +471,16 @@ class TestMakeSpectrumImageCubeAllPlayNicely:
         assert cube_sum == approx(spec_sum, rel=0.001)
 
     def test_make_cube_and_make_image_return_the_same_fluxes(self):
-        src_all = so._image_source(dx=-4, dy=-4) #
-            # so._cube_source(weight=1e-8, dx=4)
-                  # so._table_source()# + \
+        src_all = so._image_source(dx=-4, dy=-4)
+        # so._cube_source(weight=1e-8, dx=4)
+        # so._image_source(dx=-4, dy=-4)
+        # so._table_source()
 
         fov = _fov_190_210_um()
         fov.extract_from(src_all)
 
         image_sum = fov.make_image_hdu().data.sum()   # [ph s-1 pixel-1]
         cube_sum = fov.make_cube_hdu().data.sum()    # [ph s-1 um-1 arcsec-2]
-        cube_sum *= (0.2 * 0.2**2)
+        cube_sum *= (0.2**2 * 0.01)
 
         assert cube_sum == approx(image_sum, rel=0.05)
