@@ -1,3 +1,21 @@
+"""
+Electronic detector effects - related to detector readout
+
+Classes:
+- AutoExposure - determine DIT and NDIT automatically
+- SummedExposure - simulates a summed stack of ``ndit`` exposures
+- PoorMansHxRGReadoutNoise - simple readout noise for HAWAII detectors
+- BasicReadoutNoise - readout noise
+- ShotNoise - realisation of Poissonian photon noise
+- DarkCurrent - add dark current
+- LinearityCurve - apply detector (non-)linearity and saturation
+- ReferencePixelBorder
+- BinnedImage
+
+Functions:
+- make_ron_frame
+- pseudo_random_field
+"""
 import numpy as np
 
 from astropy.io import fits
@@ -6,6 +24,53 @@ from .. import rc
 from . import Effect
 from ..base_classes import DetectorBase, ImagePlaneBase
 from ..utils import real_colname, from_currsys, check_keys, interp2
+
+
+class AutoExposure(Effect):
+    """
+    Determine DIT and NDIT automatically from ImagePlane
+
+    DIT is determined such that the maximum value in the ``ImagePlane`` fills
+    the full well of the detector (``!DET.full_well``) to a given fraction
+    (``!OBS.autoexposure.fill_frac``). NDIT is determined such that
+    ``DIT`` * ``NDIT`` results in at least the requested exposure time.
+
+    The requested exposure time is taken as the product of the original
+    ``!OBS.dit`` and ``!OBS.ndit`` or directly via
+    ``!OBS.autoexposure.exptime``.
+    """
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        params = {"z_order": [760]}    # ..todo: change
+        self.meta.update(params)
+        self.meta.update(kwargs)
+
+        required_keys = ['fill_frac', 'exptime', 'full_well']
+        check_keys(self.meta, required_keys, action="error")
+
+    def apply_to(self, obj, **kwargs):
+        if isinstance(obj, ImagePlaneBase):
+            implane_max = np.max(obj.data)
+            exptime = from_currsys(self.meta["exptime"])
+            if exptime is None:
+                exptime = from_currsys("!OBS.dit") * from_currsys("!OBS.ndit")
+            full_well = from_currsys(self.meta["full_well"])
+            fill_frac = from_currsys(self.meta["fill_frac"])
+            dit = fill_frac * full_well / implane_max
+
+            if dit < from_currsys(self.meta["mindit"]):
+                dit = from_currsys(self.meta["mindit"])
+                print("Warning: The detector will be saturated!")
+                # ..todo: turn into proper warning
+
+            ndit = int(np.ceil(exptime / dit))
+            print("Exposure parameters:")
+            print("DIT: {:.3f} s     NDIT: {}".format(dit, ndit))
+
+            rc.__currsys__['!OBS.dit'] = dit
+            rc.__currsys__['!OBS.ndit'] = ndit
+
+        return obj
 
 
 class SummedExposure(Effect):
