@@ -319,12 +319,17 @@ def extract_area_from_imagehdu(imagehdu, fov_volume):
         wdel = hdr["CDELT3"]
         wunit = u.Unit(hdr.get("CUNIT3", "AA"))
         fov_waves = utils.quantify(fov_volume["waves"], u.um).to(wunit).value
-        mask = (hdu_waves > fov_waves[0] - 0.5 * wdel) * \
-               (hdu_waves <= fov_waves[1] + 0.5 * wdel)                         # need to go [+/-] half a bin
+        mask = ((hdu_waves > fov_waves[0] - 0.5 * wdel) *
+                (hdu_waves <= fov_waves[1] + 0.5 * wdel))  # need to go [+/-] half a bin
 
         # if min(hdu_waves) > min(fov_waves) or max(hdu_waves) < max(fov_waves):
         #     raise ValueError(f"FOV waveset is not a subset of cube waveset: "
         #                      f"{fov_waves} --> {hdu_waves}")
+
+        # OC [2021-12-14] if fov range is not covered by the source return nothing
+        if not np.any(mask):
+            print("FOV {} um - {} um: not covered by Source".format(fov_waves[0], fov_waves[1]))
+            return None
 
         i0p, i1p = np.where(mask)[0][0], np.where(mask)[0][-1]
         f0 = (abs(hdu_waves[i0p] - fov_waves[0] + 0.5 * wdel) % wdel) / wdel    # blue edge
