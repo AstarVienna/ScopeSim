@@ -207,9 +207,10 @@ class OpticalTrain:
 
         hdus = []
         for i, detector_array in enumerate(self.detector_arrays):
+            array_effects = self.optics_manager.detector_array_effects
             dtcr_effects = self.optics_manager.detector_effects
-            hdu = detector_array.readout(self.image_planes, dtcr_effects,
-                                         **kwargs)
+            hdu = detector_array.readout(self.image_planes, array_effects,
+                                         dtcr_effects, **kwargs)
 
             if filename is not None and isinstance(filename, str):
                 fname = filename
