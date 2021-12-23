@@ -52,17 +52,18 @@ class PSF(Effect):
 
     def apply_to(self, obj, **kwargs):
         if isinstance(obj, FOVSetupBase) and self._waveset is not None:
+            print("psf: on FOVSetupBase", type(obj), self._waveset)
             waveset = self._waveset
             waveset_edges = 0.5 * (waveset[:-1] + waveset[1:])
             if waveset is not None:
                 obj.split("wave", utils.quantify(waveset_edges, u.um).value)
 
         elif isinstance(obj, self.convolution_classes):
+            print("psf: apply on ", type(obj))
             if (hasattr(obj, "fields") and len(obj.fields) > 0) or \
                     obj.hdu is not None:
-
                 kernel = self.get_kernel(obj).astype(float)
-
+                print("kernel:", kernel.shape)
                 rot_blur_angle = self.meta["rotational_blur_angle"]
                 if abs(rot_blur_angle) > 0:
                     kernel = pu.rotational_blur(kernel, rot_blur_angle)         # makes a copy of kernel
@@ -90,7 +91,7 @@ class PSF(Effect):
                         bkg_level = bkg_level[:, None, None]
 
                 mode = utils.from_currsys(self.meta["convolve_mode"])
-                if image.ndim == 3:
+                if image.ndim == 3:  # ..todo: Check kernel shape. If 3D, do not recast
                     kernel = kernel[None, :, :]
                 new_image = convolve(image - bkg_level, kernel, mode=mode)
                 obj.hdu.data = new_image + bkg_level
@@ -134,6 +135,8 @@ class PSF(Effect):
         plt.imshow(kernel, norm=LogNorm(), origin='lower', **kwargs)
 
         return plt.gcf()
+
+
 
 ################################################################################
 # Analytical PSFs - Vibration, Seeing, NCPAs
@@ -539,7 +542,7 @@ class AnisocadoConstPSF(SemiAnalyticalPSF):
 
 
 ################################################################################
-# Discreet PSFs - MAORY and co PSFs
+# Discrete PSFs - MAORY and co PSFs
 
 
 class DiscretePSF(PSF):
@@ -573,9 +576,10 @@ class FieldConstantPSF(DiscretePSF):
     #   Taken care of by PSF base class
 
     def get_kernel(self, fov):
-        # find nearest wavelength and pull kernel from file
+        """find nearest wavelength and pull kernel from file"""
         ii = pu.nearest_index(fov.wavelength, self._waveset)
         ext = self.kernel_indexes[ii]
+        print("psf:", ii, ext, self.current_layer_id)
         if ext != self.current_layer_id:
             self.kernel = self._file[ext].data
             self.current_layer_id = ext
@@ -633,7 +637,7 @@ class FieldVaryingPSF(DiscretePSF):
     def apply_to(self, fov, **kwargs):
         # .. todo: add in field rotation
         # .. todo: add in 3D cubes
-        # accept "full", "dit", "none
+        # accept "full", "dit", "none"
 
         # check if there are any fov.fields to apply a psf to
         if isinstance(fov, FieldOfViewBase):
@@ -643,9 +647,8 @@ class FieldVaryingPSF(DiscretePSF):
 
                 old_shape = fov.image.shape
 
-                # get the kernels that cover this fov, and their respective
-                # masks kernels and masks are returned by .get_kernel as a list
-                # of tuples
+                # Get the kernels that cover this fov, and their respective masks.
+                # Kernels and masks are returned by .get_kernel as a list of tuples.
                 canvas = None
                 kernels_masks = self.get_kernel(fov)
                 for kernel, mask in kernels_masks:
@@ -752,3 +755,49 @@ class FieldVaryingPSF(DiscretePSF):
 
     def plot(self):
         return super().plot(PoorMansFOV())
+
+
+################################################################################
+# Wavelength-dependent PSF cube for spectroscopy
+
+class WavelengthVaryingPSF(FieldConstantPSF):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.meta["z_order"] = [42, 642]
+        self.convolution_classes = FieldOfViewBase
+
+    #def apply_to(self, obj, **kwargs):
+    #    # ..todo: do we need FOVSetupBase?
+    #
+    #    if not isinstance(obj, self.convolution_classes):
+    #        return obj
+    #
+    #    if hasattr(obj, "cube"):
+    #        print("Hello,",obj.cube)
+    #
+    #    kernel = self.get_kernel(obj).astype(float)
+    #
+    #    print(kernel)
+    #
+    #    # ..todo: do we need rot_blur_angle?
+    #
+    #    return obj
+
+    def get_kernel(self, fov):
+        """Build psf cube"""
+        ii = pu.nearest_index(fov.wavelength, self._waveset)
+        ext = self.kernel_indexes[ii]
+        if ext != self.current_layer_id:
+            self.ref_kernel = self._file[ext].data
+            self.ref_kernel /= np.sum(self.ref_kernel)
+
+            # need interpolation function on that
+            self.current_layer_id = ext
+            hdr = self._file[ext].header
+            ref_pixscale = hdr['CDELT1']
+
+            fov_pixel_scale = fov.header['CDELT1']
+
+            ## INSERT HERE psf_cube prototype!
+            ## cf. FieldConstantPSF.get_kernel()
+            ## self.kernel needs to be a cube on the wavelength grid of fov
