@@ -33,11 +33,24 @@ class AutoExposure(Effect):
     DIT is determined such that the maximum value in the ``ImagePlane`` fills
     the full well of the detector (``!DET.full_well``) to a given fraction
     (``!OBS.autoexposure.fill_frac``). NDIT is determined such that
-    ``DIT`` * ``NDIT`` results in at least the requested exposure time.
+    ``DIT`` * ``NDIT`` results in the requested exposure time.
 
-    The requested exposure time is taken as the product of the original
-    ``!OBS.dit`` and ``!OBS.ndit`` or directly via
-    ``!OBS.autoexposure.exptime``.
+    The requested exposure time is taken from ``!OBS.exptime``.
+
+    The effects sets the parameters `!OBS.dit` and `!OBS.ndit`.
+
+    Example yaml entry
+    ------------------
+    The parameters `!OBS.exptime`, `!DET.full_well` and `!DET.mindit` should
+    be defined as properties in the respective subsections.
+    ::
+       name: auto_exposure
+       description: automatic determination of DIT and NDIT
+       class: AutoExposure
+       include: True
+       kwargs:
+           fill_frac: "!OBS.auto_exposure.fill_frac"
+
     """
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -45,25 +58,31 @@ class AutoExposure(Effect):
         self.meta.update(params)
         self.meta.update(kwargs)
 
-        required_keys = ['fill_frac', 'exptime', 'full_well']
+        required_keys = ['fill_frac', 'full_well', 'mindit']
         check_keys(self.meta, required_keys, action="error")
 
     def apply_to(self, obj, **kwargs):
         if isinstance(obj, ImagePlaneBase):
             implane_max = np.max(obj.data)
-            exptime = from_currsys(self.meta["exptime"])
+            exptime = from_currsys("!OBS.exptime")
             if exptime is None:
                 exptime = from_currsys("!OBS.dit") * from_currsys("!OBS.ndit")
             full_well = from_currsys(self.meta["full_well"])
             fill_frac = from_currsys(self.meta["fill_frac"])
             dit = fill_frac * full_well / implane_max
 
+            # np.ceil so that dit is at most what is required for fill_frac
+            ndit = int(np.ceil(exptime / dit))
+            dit = exptime / ndit
+
+            # dit must be at least mindit, this might lead to saturation
+            # ndit changed so that exptime is not exceeded (hence np.floor)
             if dit < from_currsys(self.meta["mindit"]):
                 dit = from_currsys(self.meta["mindit"])
+                ndit = int(np.floor(exptime / dit))
                 print("Warning: The detector will be saturated!")
                 # ..todo: turn into proper warning
 
-            ndit = int(np.ceil(exptime / dit))
             print("Exposure parameters:")
             print("DIT: {:.3f} s     NDIT: {}".format(dit, ndit))
 
@@ -235,11 +254,11 @@ class DarkCurrent(Effect):
 
     def apply_to(self, obj, **kwargs):
         if isinstance(obj, DetectorBase):
-            if isinstance(self.meta["value"], dict):
+            if isinstance(from_currsys(self.meta["value"]), dict):
                 dtcr_id = obj.meta[real_colname("id", obj.meta)]
-                dark = self.meta["value"][dtcr_id]
-            elif isinstance(self.meta["value"], float):
-                dark = self.meta["value"]
+                dark = from_currsys(self.meta["value"][dtcr_id])
+            elif isinstance(from_currsys(self.meta["value"]), float):
+                dark = from_currsys(self.meta["value"])
             else:
                 raise ValueError("<DarkCurrent>.meta['value'] must be either"
                                  "dict or float: {}".format(self.meta["value"]))
