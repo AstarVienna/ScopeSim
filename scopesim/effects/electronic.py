@@ -16,7 +16,10 @@ Functions:
 - make_ron_frame
 - pseudo_random_field
 """
+import logging
+
 import numpy as np
+import matplotlib.pyplot as plt
 
 from astropy.io import fits
 
@@ -158,12 +161,10 @@ class PoorMansHxRGReadoutNoise(Effect):
         return det
 
     def plot(self, det, new_figure=False, **kwargs):
-        import matplotlib.pyplot as plt
         dtcr = self.apply_to(det)
         plt.imshow(dtcr.data, origin="lower")
 
     def plot_hist(self, det, **kwargs):
-        import matplotlib.pyplot as plt
         dtcr = self.apply_to(det)
         plt.hist(dtcr.data.flatten())
 
@@ -191,12 +192,10 @@ class BasicReadoutNoise(Effect):
         return det
 
     def plot(self, det):
-        import matplotlib.pyplot as plt
         dtcr = self.apply_to(det)
         plt.imshow(dtcr.data)
 
     def plot_hist(self, det, **kwargs):
-        import matplotlib.pyplot as plt
         dtcr = self.apply_to(det)
         plt.hist(dtcr.data.flatten())
 
@@ -215,11 +214,15 @@ class ShotNoise(Effect):
                 np.random.seed(self.meta["random_seed"])
 
             # ! poisson(x) === normal(mu=x, sigma=x**0.5)
-            # Windows has a porblem with generating poisson values above 2**30
+            # Windows has a problem with generating poisson values above 2**30
             # Above ~100 counts the poisson and normal distribution are
             # basically the same. For large arrays the normal distribution
             # takes only 60% as long as the poisson distribution
             data = det._hdu.data
+            if np.any(data > 0):
+                logging.warning("Effect ShotNoise:", np.sum(data < 0),
+                                "negative pixels")
+
             below = data < 2**20
             above = np.invert(below)
             data[below] = np.random.poisson(data[below]).astype(float)
@@ -231,12 +234,10 @@ class ShotNoise(Effect):
         return det
 
     def plot(self, det):
-        import matplotlib.pyplot as plt
         dtcr = self.apply_to(det)
         plt.imshow(dtcr.data)
 
     def plot_hist(self, det, **kwargs):
-        import matplotlib.pyplot as plt
         dtcr = self.apply_to(det)
         plt.hist(dtcr.data.flatten())
 
@@ -271,7 +272,6 @@ class DarkCurrent(Effect):
         return obj
 
     def plot(self, det, **kwargs):
-        import matplotlib.pyplot as plt
         dit = from_currsys(self.meta["dit"])
         ndit = from_currsys(self.meta["ndit"])
         total_time = dit * ndit
@@ -307,7 +307,6 @@ class LinearityCurve(Effect):
         return det
 
     def plot(self, **kwargs):
-        import matplotlib.pyplot as plt
         plt.gcf().clf()
 
         ndit = from_currsys(self.meta["ndit"])
@@ -347,8 +346,6 @@ class ReferencePixelBorder(Effect):
         return implane
 
     def plot(self, implane, **kwargs):
-        import matplotlib.pyplot as plt
-
         implane = self.apply_to(implane)
         plt.imshow(implane.data, origin="bottom", **kwargs)
         plt.show()

@@ -253,8 +253,8 @@ class SpectralTrace:
                   * (j_img >= 0) * (j_img < npix_xi))
 
         # do the actual interpolation
-        image = (xilam.interp(xi_fpa, lam_fpa, grid=False)      # [ph/s/um/arcsec]
-                 * ijmask)
+        # image is in [ph/s/um/arcsec]
+        image = xilam.interp(xi_fpa, lam_fpa, grid=False) * ijmask
 
         # Scale to ph / s / pixel
         dlam_by_dx, dlam_by_dy = self.xy2lam.gradient()
@@ -270,8 +270,12 @@ class SpectralTrace:
         img_header["YMIN"] = ymin
         img_header["YMAX"] = ymax
 
-        image_hdu = fits.ImageHDU(header=img_header, data=image)
+        if np.any(image < 0):
+            logging.warning("map_spectra_to_focal_plane:", np.sum(image < 0),
+                            "negative pixels")
 
+        image_hdu = fits.ImageHDU(header=img_header, data=image)
+        image_hdu.writeto("test_image.fits", overwrite=True)
         return image_hdu
 
 
@@ -504,12 +508,6 @@ class XiLamImage():
     """
 
     def __init__(self, fov, dlam_per_pix):
-
-        # Slit dimensions: oversample with respect to detector pixel scale
-
-        # Compute size of xi-lambda image: npix_xi, npix_lam
-
-
         # ..todo: we assume that we always have a cube. We use SpecCADO's
         #         add_cube_layer method
 
@@ -575,7 +573,18 @@ class XiLamImage():
         self.xi = self.wcs.all_pix2world(self.lam[0], np.arange(n_xi), 0)[1]
         self.npix_xi = n_xi
         self.npix_lam = n_lam
-        self.interp = RectBivariateSpline(self.xi, self.lam, self.image)
+        # ..todo: cubic spline introduces negative values, linear does not.
+        #  Alternative might be to cubic-spline interpolate on sqrt(image),
+        #  with subsequent squaring of the result. This would require
+        #  wrapping RectBivariateSpline in a new (sub)class.
+        spline_order = (1, 1)
+        self.interp = RectBivariateSpline(self.xi, self.lam, self.image,
+                                          kx=spline_order[0],
+                                          ky=spline_order[1])
+        # This is not executed. ..todo: define a switch?
+        if False:
+            fits.writeto("test_xilam.fits", data=self.image,
+                         header=self.wcs.to_header(), overwrite=True)
 
 
 class Transform2D():
@@ -628,7 +637,6 @@ class Transform2D():
 
         if not grid and x.shape != y.shape:
             raise ValueError("x and y must have the same length when grid is False")
-
 
         xvec = power_vector(x.flatten(), self.nx - 1)
         yvec = power_vector(y.flatten(), self.ny - 1)
@@ -967,12 +975,12 @@ def sanitize_table(tbl, invalid_value, wave_colname, x_colname, y_colname,
 
         if sum(valid) == 0:
             logging.warning("--- Extension {} ---"
-                          "All points in {} or {} were invalid. \n"
-                          "THESE COLUMNS HAVE BEEN REMOVED FROM THE TABLE \n"
-                          "invalid_value = {} \n"
-                          "wave = {} \nx = {} \ny = {}"
-                          "".format(ext_id, x_col, y_col, invalid_value,
-                                    wave, x, y))
+                            "All points in {} or {} were invalid. \n"
+                            "THESE COLUMNS HAVE BEEN REMOVED FROM THE TABLE \n"
+                            "invalid_value = {} \n"
+                            "wave = {} \nx = {} \ny = {}"
+                            "".format(ext_id, x_col, y_col, invalid_value,
+                                      wave, x, y))
             tbl.remove_columns([x_col, y_col])
             continue
 
