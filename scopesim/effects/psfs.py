@@ -61,19 +61,11 @@ class PSF(Effect):
                 obj.split("wave", utils.quantify(waveset_edges, u.um).value)
 
         elif isinstance(obj, self.convolution_classes):
-<<<<<<< HEAD
             if ((hasattr(obj, "fields") and len(obj.fields) > 0) or
                 (obj.hdu is not None)):
                 kernel = self.get_kernel(obj).astype(float)
 
                 # apply rotational blur for field-tracking observations
-=======
-            print("psf: apply on ", type(obj))
-            if (hasattr(obj, "fields") and len(obj.fields) > 0) or \
-                    obj.hdu is not None:
-                kernel = self.get_kernel(obj).astype(float)
-                print("kernel:", kernel.shape)
->>>>>>> f89f4bf671c468c367dd00e0dd23659842362092
                 rot_blur_angle = self.meta["rotational_blur_angle"]
                 if abs(rot_blur_angle) > 0:
                     # makes a copy of kernel
@@ -604,17 +596,8 @@ class FieldConstantPSF(DiscretePSF):
 
     def get_kernel(self, fov):
         """find nearest wavelength and pull kernel from file"""
-<<<<<<< HEAD
-        print(fov.hdu.header)
         ii = pu.nearest_index(fov.wavelength, self._waveset)
         ext = self.kernel_indexes[ii]
-        print("psf:", ii, ext, self.current_layer_id)
-
-=======
-        ii = pu.nearest_index(fov.wavelength, self._waveset)
-        ext = self.kernel_indexes[ii]
-        print("psf:", ii, ext, self.current_layer_id)
->>>>>>> f89f4bf671c468c367dd00e0dd23659842362092
         if ext != self.current_layer_id:
             if len(fov.hdu.data.shape) == 3:
                 self.current_layer_id = ext
