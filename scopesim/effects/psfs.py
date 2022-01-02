@@ -528,7 +528,7 @@ class AnisocadoConstPSF(SemiAnalyticalPSF):
         waves = np.arange(hdr["NAXIS2"]) * hdr["CDELT2"] + hdr["CRVAL2"]
         for i in np.arange(len(waves))[::-1]:
             plt.plot(wfes, data[i, :],
-                     label="{} $\mu m$".format(round(waves[i], 3)))
+                     label=r"{} $\mu m$".format(round(waves[i], 3)))
 
         plt.xlabel("RMS Wavefront Error [um]")
         plt.ylabel("Strehl Ratio")
