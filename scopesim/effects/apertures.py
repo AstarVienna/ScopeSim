@@ -399,7 +399,7 @@ class SlitWheel(Effect):
 
     def change_slit(self, slitname=None):
         '''Change the current slit'''
-        if slitname in self.slits.keys():
+        if not slitname or slitname in self.slits.keys():
             self.meta['current_slit'] = slitname
         else:
             raise ValueError("Unknown slit requested: " + slitname)
@@ -407,7 +407,10 @@ class SlitWheel(Effect):
     @property
     def current_slit(self):
         '''Return the currently used slit'''
-        return self.slits[from_currsys(self.meta["current_slit"])]
+        currslit = from_currsys(self.meta["current_slit"])
+        if not currslit:
+            return False
+        return self.slits[currslit]
 
     @property
     def display_name(self):

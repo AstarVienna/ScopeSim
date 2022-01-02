@@ -39,3 +39,13 @@ class TestSlitWheel:
     def test_change_to_unknown_slit(self, swheel):
         with pytest.raises(ValueError):
             swheel.change_slit('X')
+
+    def test_reports_current_slit_false(self):
+        swheel = SlitWheel(slit_names=["A", "B"],
+                           filename_format="MASK_slit_{}.dat",
+                           current_slit=False)
+        assert not swheel.current_slit
+
+    def test_changes_to_false(self, swheel):
+        swheel.change_slit(False)
+        assert not swheel.current_slit
