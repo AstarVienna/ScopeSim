@@ -1,10 +1,12 @@
 from copy import deepcopy
 import numpy as np
 from scipy.signal import convolve
+from scipy.interpolate import RectBivariateSpline
 
 from astropy import units as u
 from astropy.io import fits
 from astropy.convolution import Gaussian2DKernel
+from astropy.wcs import WCS
 import anisocado as aniso
 
 from .effects import Effect
@@ -52,25 +54,26 @@ class PSF(Effect):
 
     def apply_to(self, obj, **kwargs):
         if isinstance(obj, FOVSetupBase) and self._waveset is not None:
-            print("psf: on FOVSetupBase", type(obj), self._waveset)
             waveset = self._waveset
             waveset_edges = 0.5 * (waveset[:-1] + waveset[1:])
             if waveset is not None:
                 obj.split("wave", utils.quantify(waveset_edges, u.um).value)
 
         elif isinstance(obj, self.convolution_classes):
-            print("psf: apply on ", type(obj))
-            if (hasattr(obj, "fields") and len(obj.fields) > 0) or \
-                    obj.hdu is not None:
+            if ((hasattr(obj, "fields") and len(obj.fields) > 0) or
+                (obj.hdu is not None)):
                 kernel = self.get_kernel(obj).astype(float)
-                print("kernel:", kernel.shape)
+
+                # apply rotational blur for field-tracking observations
                 rot_blur_angle = self.meta["rotational_blur_angle"]
                 if abs(rot_blur_angle) > 0:
-                    kernel = pu.rotational_blur(kernel, rot_blur_angle)         # makes a copy of kernel
+                    # makes a copy of kernel
+                    kernel = pu.rotational_blur(kernel, rot_blur_angle)
 
-                if utils.from_currsys(self.meta["normalise_kernel"]) is True:
-                    kernel /= np.sum(kernel)
-                    kernel[kernel < 0.] = 0.
+                # normalise psf kernel      KERNEL SHOULD BE normalised within get_kernel()
+                #if utils.from_currsys(self.meta["normalise_kernel"]) is True:
+                #    kernel /= np.sum(kernel)
+                #    kernel[kernel < 0.] = 0.
 
                 image = obj.hdu.data.astype(float)
 
@@ -88,12 +91,26 @@ class PSF(Effect):
                     elif image.ndim == 3:
                         bg_image[:, bg_w:-bg_w, bg_w:-bg_w] = 0
                         bkg_level = np.median(bg_image, axis=(2, 1))
+                        print(bkg_level.shape)
                         bkg_level = bkg_level[:, None, None]
+                        print(bkg_level.shape)
 
                 mode = utils.from_currsys(self.meta["convolve_mode"])
-                if image.ndim == 3:  # ..todo: Check kernel shape. If 3D, do not recast
+                if image.ndim == 2 and kernel.ndim == 2:
+                    new_image = convolve(image - bkg_level, kernel, mode=mode)
+                elif kernel.ndim == 2:
                     kernel = kernel[None, :, :]
-                new_image = convolve(image - bkg_level, kernel, mode=mode)
+                    new_image = convolve(image - bkg_level, kernel, mode=mode)
+                elif kernel.ndim == 3:
+                    new_image = np.zeros(image.shape)  # assumes mode="same"
+                    print("new_image:", new_image.shape)
+                    print("image:    ", image.shape)
+                    print("bkg_level:", bkg_level.shape)
+                    print("kernel:   ", kernel.shape)
+                    image = image - bkg_level
+                    for iplane in range(image.shape[0]):
+                        new_image[iplane,] = convolve(image[iplane,], kernel[iplane,], mode=mode)
+
                 obj.hdu.data = new_image + bkg_level
 
                 # ..todo: careful with which dimensions mean what
@@ -577,35 +594,93 @@ class FieldConstantPSF(DiscretePSF):
 
     def get_kernel(self, fov):
         """find nearest wavelength and pull kernel from file"""
+        print(fov.hdu.header)
         ii = pu.nearest_index(fov.wavelength, self._waveset)
         ext = self.kernel_indexes[ii]
         print("psf:", ii, ext, self.current_layer_id)
+
         if ext != self.current_layer_id:
-            self.kernel = self._file[ext].data
-            self.current_layer_id = ext
-            hdr = self._file[ext].header
-
-            self.kernel /= np.sum(self.kernel)
-
-            # compare kernel and fov pixel scales, rescale if needed
-            if "CUNIT1" in hdr:
-                unit_factor = u.Unit(hdr["CUNIT1"]).to(u.deg)
+            if len(fov.hdu.data.shape) == 3:
+                self.current_layer_id = ext
+                self.make_psf_cube(fov)
             else:
-                unit_factor = 1
+                self.kernel = self._file[ext].data
+                self.current_layer_id = ext
+                hdr = self._file[ext].header
 
-            kernel_pixel_scale = hdr["CDELT1"] * unit_factor
-            fov_pixel_scale = fov.header["CDELT1"]
+                self.kernel /= np.sum(self.kernel)
 
-            # rescaling kept inside loop to avoid rescaling for every fov
-            pix_ratio = kernel_pixel_scale / fov_pixel_scale
-            if abs(pix_ratio - 1) > self.meta["flux_accuracy"]:
-                self.kernel = pu.rescale_kernel(self.kernel, pix_ratio)
+                # compare kernel and fov pixel scales, rescale if needed
+                if "CUNIT1" in hdr:
+                    unit_factor = u.Unit(hdr["CUNIT1"]).to(u.deg)
+                else:
+                    unit_factor = 1
 
-            if fov.header["NAXIS1"] < hdr["NAXIS1"] or \
-                    fov.header["NAXIS2"] < hdr["NAXIS2"]:
-                self.kernel = pu.cutout_kernel(self.kernel, fov.header)
+                kernel_pixel_scale = hdr["CDELT1"] * unit_factor
+                fov_pixel_scale = fov.header["CDELT1"]
+
+                # rescaling kept inside loop to avoid rescaling for every fov
+                pix_ratio = kernel_pixel_scale / fov_pixel_scale
+                if abs(pix_ratio - 1) > self.meta["flux_accuracy"]:
+                    self.kernel = pu.rescale_kernel(self.kernel, pix_ratio)
+
+                if ((fov.header["NAXIS1"] < hdr["NAXIS1"]) or
+                    (fov.header["NAXIS2"] < hdr["NAXIS2"])):
+                    self.kernel = pu.cutout_kernel(self.kernel, fov.header)
 
         return self.kernel
+
+    def make_psf_cube(self, fov):
+        """Create a wavelength-dependent psf cube"""
+
+        # Some data from the fov
+        nxfov, nyfov = fov.hdu.header["NAXIS1"], fov.hdu.header["NAXIS2"]
+        fov_pixel_scale = fov.hdu.header["CDELT1"]
+        fov_pixel_unit = fov.hdu.header["CUNIT1"]
+
+        lam = fov.hdu.header["CDELT3"] * (1 +  np.arange(fov.hdu.header["NAXIS3"])
+                                          - fov.hdu.header["CRPIX3"]) \
+                                          + fov.hdu.header["CRVAL3"]
+        print("make_psf_cube:", lam)
+
+        # adapt the size of the output cube to the FOV's spatial shape
+        nxpsf = min(512, 2 * (nxfov + 1))
+        nypsf = min(512, 2 * (nyfov + 1))
+
+        # Some data from the psf file
+        ext = self.current_layer_id
+        hdr = self._file[ext].header
+        refwave = hdr["WAVELENG"]   # ..todo: generalise
+        if "CUNIT1" in hdr:
+            unit_factor = u.Unit(hdr["CUNIT1"]).to(u.Unit(fov_pixel_unit))
+        else:
+            unit_factor = 1
+        ref_pixel_scale = hdr["CDELT1"] * unit_factor
+
+        psfwcs = WCS(hdr)
+        psf = self._file[ext].data
+        psf = psf/psf.sum()         # normalisation of the input psf
+        nxin, nyin = psf.shape
+        ipsf = RectBivariateSpline(np.arange(nxin), np.arange(nyin), psf)
+
+        xcube, ycube = np.meshgrid(np.arange(nxpsf), np.arange(nypsf))
+        cubewcs = WCS(naxis=2)
+        cubewcs.wcs.ctype = ["LINEAR", "LINEAR"]
+        cubewcs.wcs.crval = [0., 0.]
+        cubewcs.wcs.crpix = [(nxpsf + 1)/2, (nypsf + 1)/2]
+        cubewcs.wcs.cdelt = [fov_pixel_scale, fov_pixel_scale]
+        cubewcs.wcs.cunit = [fov_pixel_unit, fov_pixel_unit]
+
+        xworld, yworld = cubewcs.all_pix2world(xcube, ycube, 0)
+        outcube = np.zeros((lam.shape[0], nypsf, nxpsf), dtype=np.float32)
+        for i, wave in enumerate(lam):
+            psfwcs.wcs.cdelt = [ref_pixel_scale * wave / refwave,
+                                ref_pixel_scale * wave / refwave]
+            xpsf, ypsf = psfwcs.all_world2pix(xworld, yworld, 0)
+            outcube[i,] = ipsf(xpsf, ypsf, grid=False)
+        self.kernel = outcube.reshape((lam.shape[0], nypsf, nxpsf))
+        fits.writeto("testpsfcube.fits", data=self.kernel, overwrite=True)
+        print(self.kernel.ndim)
 
     def plot(self):
         return super().plot(PoorMansFOV())
