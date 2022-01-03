@@ -70,7 +70,7 @@ class TestRotationBlur:
             plt.imshow(implane.data)
             plt.show()
 
-        assert np.sum(implane.data) == approx(1)
+        assert np.sum(implane.data) == approx(1, 1e-2)
 
 
 class TestApplyTo:
@@ -119,5 +119,5 @@ class TestApplyTo:
                 plt.imshow(implane.data[i, :, :])
             plt.show()
 
-        assert np.sum(implane.data[1, :, :]) == approx(1)
+        assert np.sum(implane.data[1, :, :]) == approx(1, 1e-2)
         assert implane.data[1, 75, 75] == approx(np.max(psf.kernel), rel=1e-2)

@@ -67,9 +67,9 @@ class PSF(Effect):
                 if abs(rot_blur_angle) > 0:
                     kernel = pu.rotational_blur(kernel, rot_blur_angle)         # makes a copy of kernel
 
-                if utils.from_currsys(self.meta["normalise_kernel"]) is True:
-                    kernel /= np.sum(kernel)
-                    kernel[kernel < 0.] = 0.
+                #if utils.from_currsys(self.meta["normalise_kernel"]) is True:
+                #    kernel /= np.sum(kernel)
+                #    kernel[kernel < 0.] = 0.
 
                 image = obj.hdu.data.astype(float)
 
