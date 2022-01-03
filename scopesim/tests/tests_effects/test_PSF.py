@@ -57,7 +57,7 @@ class TestRotationBlur:
             plt.subplot(121)
             plt.imshow(implane.data)
 
-        # Without blur
+        # With blur
         implane = basic_image_plane()
         implane.data[75,75] = 1
 
