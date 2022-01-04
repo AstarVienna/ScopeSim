@@ -33,7 +33,8 @@ class AutoExposure(Effect):
     """
     Determine DIT and NDIT automatically from ImagePlane
 
-    DIT is determined such that the maximum value in the ``ImagePlane`` fills
+    DIT is determined such that the maximum value in the incident photon flux
+    (including astronomical source, sky and thermal backgrounds) fills
     the full well of the detector (``!DET.full_well``) to a given fraction
     (``!OBS.autoexposure.fill_frac``). NDIT is determined such that
     ``DIT`` * ``NDIT`` results in the requested exposure time.
@@ -56,8 +57,12 @@ class AutoExposure(Effect):
 
     """
     def __init__(self, **kwargs):
+        """
+        The effect is the first detector effect, hence essentially operates
+        on the `ImagePlane`, mapped to the detector array.
+        """
         super().__init__(**kwargs)
-        params = {"z_order": [760]}    # ..todo: change
+        params = {"z_order": [901]}
         self.meta.update(params)
         self.meta.update(kwargs)
 
@@ -65,11 +70,13 @@ class AutoExposure(Effect):
         check_keys(self.meta, required_keys, action="error")
 
     def apply_to(self, obj, **kwargs):
-        if isinstance(obj, ImagePlaneBase):
+        if isinstance(obj, (ImagePlaneBase, DetectorBase)):
             implane_max = np.max(obj.data)
-            exptime = from_currsys("!OBS.exptime")
+            #print("implane_max:", implane_max)
+            exptime = kwargs.get('exptime', from_currsys("!OBS.exptime"))
             if exptime is None:
                 exptime = from_currsys("!OBS.dit") * from_currsys("!OBS.ndit")
+            print("Requested exposure time: {:.3f} s".format(exptime))
             full_well = from_currsys(self.meta["full_well"])
             fill_frac = from_currsys(self.meta["fill_frac"])
             dit = fill_frac * full_well / implane_max
@@ -87,7 +94,8 @@ class AutoExposure(Effect):
                 # ..todo: turn into proper warning
 
             print("Exposure parameters:")
-            print("DIT: {:.3f} s     NDIT: {}".format(dit, ndit))
+            print("                DIT: {:.3f} s  NDIT: {}".format(dit, ndit))
+            print("Total exposure time: {:.3f} s".format(dit * ndit))
 
             rc.__currsys__['!OBS.dit'] = dit
             rc.__currsys__['!OBS.ndit'] = ndit

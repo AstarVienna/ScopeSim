@@ -183,6 +183,10 @@ class OpticsManager:
         return headers
 
     @property
+    def detector_array_effects(self):
+        return self.get_z_order_effects(900)
+
+    @property
     def detector_effects(self):
         return self.get_z_order_effects(800)
 
@@ -340,5 +344,3 @@ Summary of Effects in Optical Elements:
     def __str__(self):
         name = self.meta.get("name", self.meta.get("filename", "<empty>"))
         return '{}: "{}"'.format(type(self).__name__, name)
-
-
