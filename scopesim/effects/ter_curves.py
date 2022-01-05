@@ -293,6 +293,8 @@ class QuantumEfficiencyCurve(TERCurve):
         self.meta["z_order"] = [113, 513]
         self.meta["position"] = -1          # position in surface table
 
+
+
 class FilterCurve(TERCurve):
     """
     Other Parameters
@@ -552,3 +554,83 @@ class PupilTransmission(TERCurve):
                          transmission=[transmission, transmission],
                          emissivity=[0., 0.], **self.params)
 
+
+class ADCWheel(Effect):
+    """
+    This wheel holds a selection of predefined atmospheric dispersion
+    correctors.
+
+    Example
+    -------
+    ::
+       name : adc_wheel
+       class: ADCWheel
+       kwargs:
+           adc_names: []
+           filename_format: "TER_ADC_{}.dat"
+           current_adc: "const_90"
+    """
+    def __init__(self, **kwargs):
+        required_keys = ["adc_names", "filename_format", "current_adc"]
+        check_keys(kwargs, required_keys, action="error")
+
+        super().__init__(**kwargs)
+
+        params = {"z_order": [125, 225, 525],
+                  "path": "",
+                  "report_plot_include": False,
+                  "report_table_include": True,
+                  "report_table_rounding": 4}
+        self.meta.update(params)
+        self.meta.update(kwargs)
+
+        path = pth.join(self.meta["path"],
+                        from_currsys(self.meta["filename_format"]))
+        self.adcs = {}
+        for name in self.meta["adc_names"]:
+            kwargs["name"] = name
+            self.adcs[name] = TERCurve(filename=path.format(name),
+                                       **kwargs)
+
+        self.table = self.get_table()
+
+    def apply_to(self, obj, **kwargs):
+        '''Use apply_to of current adc'''
+        return self.current_adc.apply_to(obj, **kwargs)
+
+    def fov_grid(self, **kwargs):
+        return self.current_adc.fov_grid(**kwargs)
+
+    def change_adc(self, adcname=None):
+        """Change the current ADC"""
+        if not adcname or adcname in self.adcs.keys():
+            self.meta['current_adc'] = adcname
+        else:
+            raise ValueError("Unknown ADC requested: " + adcname)
+
+    @property
+    def current_adc(self):
+        '''Return the currently used ADC'''
+        curradc = from_currsys(self.meta['current_adc'])
+        if not curradc:
+            return False
+        return self.adcs[curradc]
+
+    @property
+    def display_name(self):
+        return f'{self.meta["name"]} : ' \
+               f'[{from_currsys(self.meta["current_adc"])}]'
+
+    def __getattr__(self, item):
+        return getattr(self.current_adc, item)
+
+    def get_table(self):
+        """Create a table of ADCs with maximimum througput"""
+        names = list(self.adcs.keys())
+        adcs = self.adcs.values()
+        print(adcs)
+        tmax = np.array([adc.data['transmission'].max() for adc in adcs])
+
+        tbl = Table(names=["name", "max_transmission"],
+                    data=[names, tmax])
+        return tbl
