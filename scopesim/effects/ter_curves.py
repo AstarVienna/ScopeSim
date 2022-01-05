@@ -598,13 +598,11 @@ class ADCWheel(Effect):
         '''Use apply_to of current adc'''
         return self.current_adc.apply_to(obj, **kwargs)
 
-    def fov_grid(self, **kwargs):
-        return self.current_adc.fov_grid(**kwargs)
-
     def change_adc(self, adcname=None):
         """Change the current ADC"""
         if not adcname or adcname in self.adcs.keys():
             self.meta['current_adc'] = adcname
+            self.include = adcname
         else:
             raise ValueError("Unknown ADC requested: " + adcname)
 
@@ -628,7 +626,6 @@ class ADCWheel(Effect):
         """Create a table of ADCs with maximimum througput"""
         names = list(self.adcs.keys())
         adcs = self.adcs.values()
-        print(adcs)
         tmax = np.array([adc.data['transmission'].max() for adc in adcs])
 
         tbl = Table(names=["name", "max_transmission"],
