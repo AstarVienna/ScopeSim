@@ -401,6 +401,7 @@ class SlitWheel(Effect):
         '''Change the current slit'''
         if not slitname or slitname in self.slits.keys():
             self.meta['current_slit'] = slitname
+            self.include = slitname
         else:
             raise ValueError("Unknown slit requested: " + slitname)
 

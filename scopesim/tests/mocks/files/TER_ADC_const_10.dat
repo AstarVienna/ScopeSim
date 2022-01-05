@@ -1,0 +1,16 @@
+# name : ADC spectral response
+# author : Oliver Czoske
+# source : Roy van Boekel
+# date_created : 2022-01-05
+# date_modified : 2022-01-05
+# status : simple estimate
+# type : adc:transmission
+# wavelength_unit : um
+# description : combined throughput of all surfaces of the ADC
+# changes :
+#
+  wavelength    transmission    reflection   emissivity
+  2.49          0               0            0
+  2.50          0.1             0            0
+  14.50         0.1             0            0
+  14.51         0               0            0
