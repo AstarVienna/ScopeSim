@@ -592,6 +592,11 @@ class DiscretePSF(PSF):
 
 
 class FieldConstantPSF(DiscretePSF):
+    """A PSF that is constant across the field.
+
+    For spectroscopy, the a wavelength-dependent PSF cube is built, where for each
+    wavelength the reference PSF is scaled proportional to wavelength.
+    """
     def __init__(self, **kwargs):
         # sub_pixel_flag and flux_accuracy are taken care of in PSF base class
         super().__init__(**kwargs)
@@ -615,7 +620,6 @@ class FieldConstantPSF(DiscretePSF):
 
     def get_kernel(self, fov):
         """Find nearest wavelength and build PSF kernel from file"""
-        print("fov.wavelength:", fov.wavelength)
         ii = pu.nearest_index(fov.wavelength, self._waveset)
         ext = self.kernel_indexes[ii]
         if ext != self.current_layer_id:
@@ -660,7 +664,6 @@ class FieldConstantPSF(DiscretePSF):
         lam = fov.hdu.header["CDELT3"] * (1 +  np.arange(fov.hdu.header["NAXIS3"])
                                           - fov.hdu.header["CRPIX3"]) \
                                           + fov.hdu.header["CRVAL3"]
-        print("make_psf_cube:", lam)
 
         # adapt the size of the output cube to the FOV's spatial shape
         nxpsf = min(512, 2 * (nxfov + 1))
@@ -703,8 +706,6 @@ class FieldConstantPSF(DiscretePSF):
             outcube[i,] = ipsf(xpsf, ypsf, grid=False)
         self.kernel = outcube.reshape((lam.shape[0], nypsf, nxpsf))
 
-        # ..todo: remove
-        fits.writeto("testpsfcube.fits", data=self.kernel, overwrite=True)
 
     def plot(self):
         return super().plot(PoorMansFOV())
