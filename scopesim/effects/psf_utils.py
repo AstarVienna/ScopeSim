@@ -267,3 +267,38 @@ def rotational_blur(image, angle):
         n_angles += 1
 
     return image_rot / n_angles
+
+def get_bkg_level(obj, bg_w):
+    """
+    Determine the background level of image or cube slices
+
+    Returns a scalar if obj is a 2d image or a vector if obj is a 3D cube (one
+    value for each plane).
+    The method for background determination is decided by self.meta["bkg_width"]:
+    If -1, the background is returned as zero (implying no background subtraction).
+    If 0, the background is estimated as the median of the entire image (or cube plane).
+    If positive, a region of size 2*bkg_width is disregarded when computing the median.
+    """
+
+    if obj.ndim == 2:
+        if bg_w < 0:
+            bkg_level = 0
+        else:
+            mask = bg_w * np.ones_like(obj, dtype=np.bool8)
+            if bg_w > 0:
+                mask[bg_w:-bg_w,bg_w:-bg_w] = False
+            bkg_level = np.ma.median(np.ma.masked_array(obj, mask=mask))
+
+    elif obj.ndim == 3:
+        if bg_w < 0:
+            bkg_level = np.array([0] * obj.shape[0])
+        else:
+            mask = bg_w * np.ones_like(obj, dtype=np.bool8)
+            if bg_w > 0:
+                mask[:, bg_w:-bg_w, bg_w:-bg_w] = False
+            bkg_level = np.ma.median(np.ma.masked_array(obj, mask=mask),
+                                     axis=(2, 1)).data
+
+    else:
+        raise ValueError("Unsupported dimension:", obj.ndim)
+    return bkg_level

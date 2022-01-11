@@ -82,7 +82,7 @@ class PSF(Effect):
                 image = obj.hdu.data.astype(float)
 
                 # subtract background level before convolving, re-add afterwards
-                bkg_level = self.get_bkg_level(image)
+                bkg_level = pu.get_bkg_level(image, self.meta["bkg_width"])
 
                 # do the convolution
                 mode = utils.from_currsys(self.meta["convolve_mode"])
@@ -93,6 +93,7 @@ class PSF(Effect):
                     kernel = kernel[None, :, :]
                     new_image = convolve(image - bkg_level, kernel, mode=mode)
                 elif kernel.ndim == 3:
+                    bkg_level = bkg_level[:, None, None]
                     new_image = np.zeros(image.shape)  # assumes mode="same"
                     for iplane in range(image.shape[0]):
                         new_image[iplane,] = convolve(image[iplane,] - bkg_level[iplane,],
@@ -110,39 +111,6 @@ class PSF(Effect):
 
         return obj
 
-    def get_bkg_level(self, obj):
-        """
-        Determine the background level of image or cube slices
-
-        Returns a scalar if obj is a 2d image or a vector if obj is a 3D cube (one value
-        for each plane).
-        The method for background determination is decided by self.meta["bkg_width"]:
-        If 0, the background is returned as zero (implying no background subtraction).
-        If -1, the background is estimated as the median of the entire image (or cube plane).
-        If positive, a region of size 2*bkg_width is disregarded when computing the median.
-        """
-
-        bg_w = self.meta["bkg_width"]
-        if obj.ndim == 2:
-            if bg_w == 0:
-                bkg_level = 0
-            else:
-                mask = np.ones_like(obj, dtype=np.bool8)
-                if bg_w > 0:
-                    mask[bg_w:-bg_w,bg_w:-bg_w] = False
-                bkg_level = np.median(obj[mask])
-        elif obj.ndim == 3:
-            if bg_w == 0:
-                bkg_level = np.array([0] * obj.shape[0])
-            else:
-                mask = np.ones_like(obj, dtype=np.bool8)
-                if bg_w > 0:
-                    mask[:, bg_w:-bg_w, bg_w:-bg_w] = False
-                bkg_level = np.median(np.ma.masked_array(obj, mask=mask),
-                                      axis=(2, 1)).data
-            bkg_level = bkg_level[:, None, None]
-
-        return bkg_level
 
     def fov_grid(self, which="waveset", **kwargs):
         waveset = []
