@@ -402,7 +402,7 @@ class FieldOfView(FieldOfViewBase):
         wave_max = self.meta["wave_max"]
 
         wave_unit = u.Unit(utils.from_currsys("!SIM.spectral.wave_unit"))
-        dwave = utils.from_currsys("!SIM.spectral.spectral_resolution")         # Not a quantity
+        dwave = utils.from_currsys("!SIM.spectral.spectral_bin_width")  # Not a quantity
         fov_waveset = np.arange(wave_min.value, wave_max.value, dwave) * wave_unit
         fov_waveset = fov_waveset.to(u.um)
 

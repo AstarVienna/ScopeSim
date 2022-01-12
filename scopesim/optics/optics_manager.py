@@ -229,7 +229,7 @@ class OpticsManager:
     def system_transmission(self):
 
         wave_unit = u.Unit(rc.__currsys__["!SIM.spectral.wave_unit"])
-        dwave = rc.__currsys__["!SIM.spectral.spectral_resolution"]
+        dwave = rc.__currsys__["!SIM.spectral.spectral_bin_width"]
         wave_min = rc.__currsys__["!SIM.spectral.wave_min"]
         wave_max = rc.__currsys__["!SIM.spectral.wave_max"]
         wave = np.arange(wave_min, wave_max, dwave)

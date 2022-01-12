@@ -183,7 +183,7 @@ class TestMakeCube:
 
     def test_makes_cube_from_other_cube_imagehdu(self):
         import scopesim as sim
-        sim.rc.__currsys__["!SIM.spectral.spectral_resolution"] = 0.01
+        sim.rc.__currsys__["!SIM.spectral.spectral_bin_width"] = 0.01
         src_cube = so._cube_source()            # 10x10" @ 0.2"/pix, [0.5, 2.5]m @ 0.02µm
         fov = _fov_197_202_um()
         fov.extract_from(src_cube)

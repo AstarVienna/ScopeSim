@@ -68,7 +68,7 @@ class TERCurve(Effect):
                   "wave_min": "!SIM.spectral.wave_min",
                   "wave_max": "!SIM.spectral.wave_max",
                   "wave_unit": "!SIM.spectral.wave_unit",
-                  "wave_bin": "!SIM.spectral.spectral_resolution",
+                  "wave_bin": "!SIM.spectral.spectral_bin_width",
                   "bg_cell_width": "!SIM.computing.bg_cell_width",
                   "report_plot_include": True,
                   "report_table_include": False}
