@@ -275,7 +275,6 @@ class SpectralTrace:
                             "negative pixels")
 
         image_hdu = fits.ImageHDU(header=img_header, data=image)
-        image_hdu.writeto("test_image.fits", overwrite=True)
         return image_hdu
 
 
