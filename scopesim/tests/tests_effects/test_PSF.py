@@ -76,33 +76,42 @@ class TestRotationBlur:
 
 
 class TestBkgLevel:
-    def test_bkg_width_zeri_on_2d_image(self):
-        img = np.random.rand(5, 5)
-        assert get_bkg_level(img, 0) == np.median(img)
-
     def test_bkg_width_negative_on_2d_image(self):
         img = np.random.rand(5, 5)
-        assert get_bkg_level(img, -1) == 0
+        assert get_bkg_level(img, -1) == np.median(img)
+
+    def test_bkg_width_zero_on_2d_image(self):
+        img = np.random.rand(5, 5)
+        assert get_bkg_level(img, 0) == 0
 
     def test_bkg_width_positive_on_2d_image(self):
-        img = np.random.rand(5, 5)
-        assert get_bkg_level(img, 1) == np.median(img[1:-1, 1:-1])
-        assert get_bkg_level(img, 2) == img[2, 2]
-
-    def test_bkg_width_zero_on_3d_cube(self):
-        cube = np.random.rand(5, 5, 5)
-        med = np.array([np.median(cube[i, :, :]) for i in np.arange(5)])
-        assert np.all(get_bkg_level(cube, 0) == med)
+        img = np.array([[1, 2, 2, 2, 1],
+                        [1, 2, 2, 2, 1],
+                        [1, 2, 3, 2, 1],
+                        [1, 2, 2, 2, 1],
+                        [1, 2, 2, 2, 1]])
+        assert get_bkg_level(img, 1) == 1
+        assert get_bkg_level(img, 2) == 2
 
     def test_bkg_width_negative_on_3d_cube(self):
         cube = np.random.rand(5, 5, 5)
+        med = np.array([np.median(cube[i, :, :]) for i in np.arange(5)])
+        assert np.all(get_bkg_level(cube, -1) == med)
+
+    def test_bkg_width_zero_on_3d_cube(self):
+        cube = np.random.rand(5, 5, 5)
         zeromed = np.zeros(cube.shape[0])
-        assert np.all(get_bkg_level(cube, -1) == zeromed)
+        assert np.all(get_bkg_level(cube, 0) == zeromed)
 
     def test_bkg_width_positive_on_3d_cube(self):
-        cube = np.random.rand(5, 5, 5)
-        med_1 = np.array([np.median(cube[i, 1:-1, 1:-1]) for i in range(5)])
-        med_2 = cube[:, 2, 2]
+        img = np.array([[1, 2, 2, 2, 1],
+                        [1, 2, 2, 2, 1],
+                        [1, 2, 3, 2, 1],
+                        [1, 2, 2, 2, 1],
+                        [1, 2, 2, 2, 1]])
+        cube = np.outer(np.arange(5), img).reshape(5, 5, 5)
+        med_1 = np.arange(5)
+        med_2 = 2 * np.arange(5)
         assert np.all(get_bkg_level(cube, +1) == med_1)
         assert np.all(get_bkg_level(cube, +2) == med_2)
 

@@ -275,27 +275,29 @@ def get_bkg_level(obj, bg_w):
     Returns a scalar if obj is a 2d image or a vector if obj is a 3D cube (one
     value for each plane).
     The method for background determination is decided by self.meta["bkg_width"]:
-    If -1, the background is returned as zero (implying no background subtraction).
-    If 0, the background is estimated as the median of the entire image (or cube plane).
-    If positive, a region of size 2*bkg_width is disregarded when computing the median.
+    If 0, the background is returned as zero (implying no background subtraction).
+    If -1, the background is estimated as the median of the entire image (or
+    cube plane).
+    If positive, the background is estimated as the median of a frame of width
+    `bkg_width` around the edges.
     """
 
     if obj.ndim == 2:
-        if bg_w < 0:
+        if bg_w == 0:
             bkg_level = 0
         else:
-            mask = bg_w * np.ones_like(obj, dtype=np.bool8)
+            mask = np.zeros_like(obj, dtype=np.bool8)
             if bg_w > 0:
-                mask[bg_w:-bg_w,bg_w:-bg_w] = False
+                mask[bg_w:-bg_w,bg_w:-bg_w] = True
             bkg_level = np.ma.median(np.ma.masked_array(obj, mask=mask))
 
     elif obj.ndim == 3:
-        if bg_w < 0:
+        if bg_w == 0:
             bkg_level = np.array([0] * obj.shape[0])
         else:
-            mask = bg_w * np.ones_like(obj, dtype=np.bool8)
+            mask = np.zeros_like(obj, dtype=np.bool8)
             if bg_w > 0:
-                mask[:, bg_w:-bg_w, bg_w:-bg_w] = False
+                mask[:, bg_w:-bg_w, bg_w:-bg_w] = True
             bkg_level = np.ma.median(np.ma.masked_array(obj, mask=mask),
                                      axis=(2, 1)).data
 
