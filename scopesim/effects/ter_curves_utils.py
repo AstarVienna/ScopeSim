@@ -276,6 +276,14 @@ def combine_two_spectra(spec_a, spec_b, action, wave_min, wave_max):
     wave = ([wave_min.value] + list(wave_val[mask]) + [wave_max.value]) * u.AA
     if "mult" in action.lower():
         spec_c = spec_a(wave) * spec_b(wave)
+        ## Diagnostic plots - not for general use
+        # from matplotlib import pyplot as plt
+        # plt.plot(wave, spec_a(wave), label="spec_a")
+        # plt.plot(wave, spec_b(wave), label="spec_b")
+        # plt.plot(wave, spec_c, label="spec_c")
+        # plt.xlim(2.9e4, 4.2e4)
+        # plt.legend()
+        # plt.show()
     elif "add" in action.lower():
         spec_c = spec_a(wave) + spec_b(wave)
 
