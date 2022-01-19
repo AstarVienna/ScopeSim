@@ -11,7 +11,8 @@ properties :
     wave_max : 20
     wave_unit : um
 
-    spectral_resolution : !!float 1E-4
+    spectral_bin_width : !!float 1E-4
+    spectral_resolution: 5000
     minimum_throughput : !!float 1E-6
     minimum_pixel_flux : 1
 
