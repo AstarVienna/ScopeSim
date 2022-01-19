@@ -671,7 +671,7 @@ class FieldConstantPSF(DiscretePSF):
             psfwcs.wcs.cdelt = [ref_pixel_scale * wave / refwave,
                                 ref_pixel_scale * wave / refwave]
             xpsf, ypsf = psfwcs.all_world2pix(xworld, yworld, 0)
-            outcube[i,] = ipsf(xpsf, ypsf, grid=False)
+            outcube[i,] = ipsf(xpsf, ypsf, grid=False) * (refwave / wave)**2
         self.kernel = outcube.reshape((lam.shape[0], nypsf, nxpsf))
 
 
