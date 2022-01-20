@@ -210,6 +210,7 @@ class SpectralTrace:
         avg_dlam_per_pix = (wave_max - wave_min) / sub_naxis2
         try:
             xilam = XiLamImage(fov, avg_dlam_per_pix)
+            self.xilam = xilam    # ..todo: remove
         except ValueError:
             print(" ---> ", self.meta['trace_id'], "gave ValueError")
 
@@ -527,7 +528,7 @@ class XiLamImage():
         # arrays of cube coordinates
         cube_xi = d_xi * np.arange(n_xi) + fov.meta['xi_min'].value
         cube_eta = d_eta * (np.arange(n_eta) - (n_eta - 1) / 2)
-        cube_lam = wcs_lam.all_pix2world(np.arange(n_lam), 0)[0]
+        cube_lam = wcs_lam.all_pix2world(np.arange(n_lam), 1)[0]
         cube_lam *= u.Unit(wcs_lam.wcs.cunit[0]).to(u.um)
 
         # Initialise the array to hold the xi-lambda image
