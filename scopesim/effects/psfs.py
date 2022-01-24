@@ -629,18 +629,19 @@ class FieldConstantPSF(DiscretePSF):
         fov_pixel_scale = fov.hdu.header["CDELT1"]
         fov_pixel_unit = fov.hdu.header["CUNIT1"]
 
-        lam = fov.hdu.header["CDELT3"] * (1 +  np.arange(fov.hdu.header["NAXIS3"])
+        lam = fov.hdu.header["CDELT3"] * (1 + np.arange(fov.hdu.header["NAXIS3"])
                                           - fov.hdu.header["CRPIX3"]) \
                                           + fov.hdu.header["CRVAL3"]
 
         # adapt the size of the output cube to the FOV's spatial shape
-        nxpsf = min(512, 2 * (nxfov + 1))
-        nypsf = min(512, 2 * (nyfov + 1))
+        nxpsf = min(512, 2 * nxfov + 1)
+        nypsf = min(512, 2 * nyfov + 1)
 
         # Some data from the psf file
         ext = self.current_layer_id
         hdr = self._file[ext].header
-        refwave = hdr["WAVELENG"]   # ..todo: generalise
+        refwave = hdr[self.meta["wave_key"]]
+
         if "CUNIT1" in hdr:
             unit_factor = u.Unit(hdr["CUNIT1"]).to(u.Unit(fov_pixel_unit))
         else:
@@ -654,26 +655,29 @@ class FieldConstantPSF(DiscretePSF):
 
         # We need linear interpolation to preserve positivity. Might think of
         # more elaborate positivity-preserving schemes.
-        ipsf = RectBivariateSpline(np.arange(nxin), np.arange(nyin), psf,
+        ipsf = RectBivariateSpline(np.arange(nyin), np.arange(nxin), psf,
                                    kx=1, ky=1)
 
         xcube, ycube = np.meshgrid(np.arange(nxpsf), np.arange(nypsf))
         cubewcs = WCS(naxis=2)
         cubewcs.wcs.ctype = ["LINEAR", "LINEAR"]
         cubewcs.wcs.crval = [0., 0.]
-        cubewcs.wcs.crpix = [(nxpsf + 1)/2, (nypsf + 1)/2]
+        cubewcs.wcs.crpix = [nxpsf // 2, nypsf // 2]
         cubewcs.wcs.cdelt = [fov_pixel_scale, fov_pixel_scale]
         cubewcs.wcs.cunit = [fov_pixel_unit, fov_pixel_unit]
 
-        xworld, yworld = cubewcs.all_pix2world(xcube, ycube, 0)
+        xworld, yworld = cubewcs.all_pix2world(xcube, ycube, 1)
         outcube = np.zeros((lam.shape[0], nypsf, nxpsf), dtype=np.float32)
         for i, wave in enumerate(lam):
-            psfwcs.wcs.cdelt = [ref_pixel_scale * wave / refwave,
-                                ref_pixel_scale * wave / refwave]
+            psf_wave_pixscale = ref_pixel_scale * wave / refwave
+            psfwcs.wcs.cdelt = [psf_wave_pixscale,
+                                psf_wave_pixscale]
             xpsf, ypsf = psfwcs.all_world2pix(xworld, yworld, 0)
-            outcube[i,] = ipsf(xpsf, ypsf, grid=False) * (refwave / wave)**2
-        self.kernel = outcube.reshape((lam.shape[0], nypsf, nxpsf))
+            outcube[i,] = (ipsf(ypsf, xpsf, grid=False)
+                           * fov_pixel_scale**2 / psf_wave_pixscale**2)
 
+        self.kernel = outcube.reshape((lam.shape[0], nypsf, nxpsf))
+        # fits.writeto("test_psfcube.fits", data=self.kernel, overwrite=True)
 
     def plot(self):
         return super().plot(PoorMansFOV())
