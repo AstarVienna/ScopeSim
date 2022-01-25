@@ -1019,3 +1019,15 @@ def write_report(text, filename=None, output=["rst"]):
             fname = os.path.join(*fname.parts[:-1], fname.stem + suffix)
             with open(fname, "w") as f:
                 f.write(out_text)
+
+
+def pretty_print_dict(dic, indent=0):
+    text = ""
+    for key, value in dic.items():
+        if isinstance(value, dict):
+            text += " " * indent + f"{str(key)}:\n"
+            text += pretty_print_dict(value, indent=indent + 2)
+        else:
+            text += " " * indent + f"{str(key)}: {str(value)}\n"
+
+    return text

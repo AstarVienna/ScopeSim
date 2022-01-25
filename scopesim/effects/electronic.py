@@ -26,7 +26,8 @@ from astropy.io import fits
 from .. import rc
 from . import Effect
 from ..base_classes import DetectorBase, ImagePlaneBase
-from ..utils import real_colname, from_currsys, check_keys, interp2
+from ..utils import from_currsys
+from .. import utils
 
 
 class AutoExposure(Effect):
@@ -67,7 +68,7 @@ class AutoExposure(Effect):
         self.meta.update(kwargs)
 
         required_keys = ['fill_frac', 'full_well', 'mindit']
-        check_keys(self.meta, required_keys, action="error")
+        utils.check_keys(self.meta, required_keys, action="error")
 
     def apply_to(self, obj, **kwargs):
         if isinstance(obj, (ImagePlaneBase, DetectorBase)):
@@ -103,6 +104,78 @@ class AutoExposure(Effect):
         return obj
 
 
+class DetectorModePropertiesSetter(Effect):
+    """
+    Sets mode specific curr_sys properties for different detector readout modes
+
+    A little class (DetectorModePropertiesSetter) that allows different "!DET"
+    properties to be set on the fly.
+
+    Parameters
+    ----------
+    mode_properties : dict
+        A dictionary containing the DET parameters to be changed for each mode
+        See below for an example yaml entry.
+
+    Examples
+    --------
+
+    Add the values for the different detector readout modes to all the relevant
+    detector yaml files. In this case the METIS HAWAII (L, M band) and GeoSnap
+    (N band) detectors: METIS_DET_IMG_LM.yaml , METIS_DET_IMG_N.yaml
+
+        - name: lm_detector_readout_parameters
+          class: DetectorModePropertiesSetter
+          kwargs:
+            mode_properties:
+              fast:
+                min_dit: 0.04
+                full_well: !!float 1e5
+                ron: 70
+              slow:
+                min_dit: 1.3
+                full_well: !!float 1e5
+                ron: 14
+
+    Add the OBS dict entry !OBS.detector_readout_mode to the properties section
+    of the mode_yamls descriptions in the default.yaml files.
+
+        mode_yamls:
+          - object: observation
+            alias: OBS
+            name: lss_l
+            yamls:
+              ...
+            properties:
+              ...
+              detector_readout_mode: slow
+
+    """
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        params = {"z_order": [499]}
+        self.meta.update(params)
+        self.meta.update(kwargs)
+
+        required_keys = ['mode_properties']
+        utils.check_keys(self.meta, required_keys, action="error")
+
+        self.mode_properties = kwargs['mode_properties']
+
+    def apply_to(self, obj, **kwargs):
+        if isinstance(obj, DetectorBase):
+            mode_name = from_currsys("!OBS.detector_readout_mode")
+            props_dict = self.mode_properties[mode_name]
+            for key, value in props_dict.items():
+                rc.__currsys__[key] = value
+
+        return obj
+
+    def list_modes(self):
+        return utils.pretty_print_dict(self.mode_properties)
+        
+
 class SummedExposure(Effect):
     """
     Simulates a summed stack of ``ndit`` exposures
@@ -115,7 +188,7 @@ class SummedExposure(Effect):
         self.meta.update(kwargs)
 
         required_keys = ["dit", "ndit"]
-        check_keys(self.meta, required_keys, action="error")
+        utils.check_keys(self.meta, required_keys, action="error")
 
     def apply_to(self, obj, **kwargs):
         if isinstance(obj, DetectorBase):
@@ -142,7 +215,7 @@ class PoorMansHxRGReadoutNoise(Effect):
         self.meta.update(kwargs)
 
         self.required_keys = ["noise_std", "n_channels", "ndit"]
-        check_keys(self.meta, self.required_keys, action="error")
+        utils.check_keys(self.meta, self.required_keys, action="error")
 
     def apply_to(self, det, **kwargs):
         if isinstance(det, DetectorBase):
@@ -185,7 +258,7 @@ class BasicReadoutNoise(Effect):
         self.meta.update(kwargs)
 
         self.required_keys = ["noise_std", "ndit"]
-        check_keys(self.meta, self.required_keys, action="error")
+        utils.check_keys(self.meta, self.required_keys, action="error")
 
     def apply_to(self, det, **kwargs):
         if isinstance(det, DetectorBase):
@@ -259,12 +332,12 @@ class DarkCurrent(Effect):
         self.meta["z_order"] = [830]
 
         required_keys = ["value", "dit", "ndit"]
-        check_keys(self.meta, required_keys, action="error")
+        utils.check_keys(self.meta, required_keys, action="error")
 
     def apply_to(self, obj, **kwargs):
         if isinstance(obj, DetectorBase):
             if isinstance(from_currsys(self.meta["value"]), dict):
-                dtcr_id = obj.meta[real_colname("id", obj.meta)]
+                dtcr_id = obj.meta[utils.real_colname("id", obj.meta)]
                 dark = from_currsys(self.meta["value"][dtcr_id])
             elif isinstance(from_currsys(self.meta["value"]), float):
                 dark = from_currsys(self.meta["value"])
@@ -302,7 +375,7 @@ class LinearityCurve(Effect):
         self.meta.update(kwargs)
 
         self.required_keys = ["ndit"]
-        check_keys(self.meta, self.required_keys, action="error")
+        utils.check_keys(self.meta, self.required_keys, action="error")
 
     def apply_to(self, det, **kwargs):
         if isinstance(det, DetectorBase):
@@ -365,7 +438,7 @@ class BinnedImage(Effect):
         self.meta["z_order"] = [870]
 
         self.required_keys = ["bin_size"]
-        check_keys(self.meta, self.required_keys, action="error")
+        utils.check_keys(self.meta, self.required_keys, action="error")
 
     def apply_to(self, det, **kwargs):
         if isinstance(det, DetectorBase):
