@@ -53,3 +53,10 @@ class TestApplyTo:
         obj = eff.apply_to(DetectorBase())
 
         assert isinstance(obj, DetectorBase)
+
+
+class TestListModes:
+    def test_it_prints(self):
+        eff = DetectorModePropertiesSetter(**kwargs_dict())
+        print("\n", eff.list_modes())
+        assert len(eff.list_modes()) > 0
