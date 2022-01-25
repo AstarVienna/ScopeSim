@@ -46,3 +46,10 @@ class TestApplyTo:
         rc.__currsys__["!OBS.detector_readout_mode"] = "slow"
         with pytest.raises(KeyError):
             eff.apply_to(DetectorBase())
+
+    def test_returns_object(self):
+        rc.__currsys__["!OBS.detector_readout_mode"] = "fast"
+        eff = DetectorModePropertiesSetter(**kwargs_dict())
+        obj = eff.apply_to(DetectorBase())
+
+        assert isinstance(obj, DetectorBase)

@@ -126,6 +126,8 @@ class DetectorModePropertiesSetter(Effect):
             for key, value in props_dict.items():
                 rc.__currsys__[key] = value
 
+        return obj
+
 
 class SummedExposure(Effect):
     """
