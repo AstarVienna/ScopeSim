@@ -103,6 +103,30 @@ class AutoExposure(Effect):
         return obj
 
 
+class DetectorModePropertiesSetter(Effect):
+    """
+    Sets mode specific curr_sys properties for different detector readout modes
+    """
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        params = {"z_order": [499]}
+        self.meta.update(params)
+        self.meta.update(kwargs)
+
+        required_keys = ['mode_properties']
+        check_keys(self.meta, required_keys, action="error")
+
+        self.mode_properties = kwargs['mode_properties']
+
+    def apply_to(self, obj, **kwargs):
+        if isinstance(obj, DetectorBase):
+            mode_name = from_currsys("!OBS.detector_readout_mode")
+            props_dict = self.mode_properties[mode_name]
+            for key, value in props_dict.items():
+                rc.__currsys__[key] = value
+
+
 class SummedExposure(Effect):
     """
     Simulates a summed stack of ``ndit`` exposures
