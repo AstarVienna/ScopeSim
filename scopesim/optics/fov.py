@@ -509,7 +509,7 @@ class FieldOfView(FieldOfViewBase):
         cdelt3 = np.diff(fov_waveset[:2])[0]
         canvas_cube_hdu.header.update({"CDELT3": cdelt3.to(u.um).value,
                                        "CRVAL3": fov_waveset[0].value,
-                                       "CRPIX3": 0,
+                                       "CRPIX3": 1,
                                        "CUNIT3": "um",
                                        "CTYPE3": "WAVE"})
         # ..todo: Add the log wavelength keyword here, if log scale is needed
