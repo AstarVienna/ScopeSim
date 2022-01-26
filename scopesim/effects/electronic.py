@@ -89,15 +89,6 @@ class DetectorModePropertiesSetter(Effect):
         utils.check_keys(self.meta, required_keys, action="error")
 
         self.mode_properties = kwargs['mode_properties']
-        #mode_name = kwargs.get('detector_readout_mode',
-        #                       from_currsys("!OBS.detector_readout_mode"))
-        #rc.__currsys__["!OBS.detector_readout_mode"] = mode_name
-        #if mode_name != "auto":
-        #    props_dict = self.mode_properties[mode_name]
-        #    self.meta['detector_readout_mode'] = mode_name
-        #    for key, value in props_dict.items():
-        #        print(key, value)
-        #        rc.__currsys__[key] = value
 
     def apply_to(self, obj, **kwargs):
         mode_name = kwargs.get('detector_readout_mode',
