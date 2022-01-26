@@ -2,6 +2,7 @@
 Electronic detector effects - related to detector readout
 
 Classes:
+- DetectorModePropertiesSetter - set parameters for readout mode
 - AutoExposure - determine DIT and NDIT automatically
 - SummedExposure - simulates a summed stack of ``ndit`` exposures
 - PoorMansHxRGReadoutNoise - simple readout noise for HAWAII detectors
@@ -28,6 +29,115 @@ from . import Effect
 from ..base_classes import DetectorBase, ImagePlaneBase
 from ..utils import from_currsys
 from .. import utils
+
+
+class DetectorModePropertiesSetter(Effect):
+    """
+    Sets mode specific curr_sys properties for different detector readout modes
+
+    A little class (DetectorModePropertiesSetter) that allows different "!DET"
+    properties to be set on the fly.
+
+    Parameters
+    ----------
+    mode_properties : dict
+        A dictionary containing the DET parameters to be changed for each mode
+        See below for an example yaml entry.
+
+    Examples
+    --------
+
+    Add the values for the different detector readout modes to all the relevant
+    detector yaml files. In this case the METIS HAWAII (L, M band) and GeoSnap
+    (N band) detectors: METIS_DET_IMG_LM.yaml , METIS_DET_IMG_N.yaml
+
+        - name: lm_detector_readout_parameters
+          class: DetectorModePropertiesSetter
+          kwargs:
+            auto_mode: true
+            mode_properties:
+              fast:
+                mindit: 0.04
+                full_well: !!float 1e5
+                ron: 70
+              slow:
+                mindit: 1.3
+                full_well: !!float 1e5
+                ron: 14
+
+    Add the OBS dict entry !OBS.detector_readout_mode to the properties section
+    of the mode_yamls descriptions in the default.yaml files.
+
+        mode_yamls:
+          - object: observation
+            alias: OBS
+            name: lss_l
+            yamls:
+              ...
+            properties:
+              ...
+              detector_readout_mode: slow
+
+    """
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        params = {"z_order": [299, 900]}
+        self.meta.update(params)
+        self.meta.update(kwargs)
+
+        required_keys = ['mode_properties']
+        utils.check_keys(self.meta, required_keys, action="error")
+
+        self.mode_properties = kwargs['mode_properties']
+
+    def apply_to(self, obj, **kwargs):
+        mode_name = kwargs.get('detector_readout_mode',
+                               from_currsys("!OBS.detector_readout_mode"))
+        if isinstance(obj, ImagePlaneBase) and mode_name == "auto":
+            mode_name = self.select_mode(obj, **kwargs)
+
+        print("Detector mode:", mode_name)
+        props_dict = self.mode_properties[mode_name]
+        rc.__currsys__["!OBS.detector_readout_mode"] = mode_name
+        for key, value in props_dict.items():
+            rc.__currsys__[key] = value
+
+        return obj
+
+    def list_modes(self):
+        """Return list of available detector modes"""
+        return utils.pretty_print_dict(self.mode_properties)
+
+    def select_mode(self, obj, **kwargs):
+        """Automatically select detector mode based on image plane peak value
+
+        Select the mode with lowest readnoise that does not saturate the detector.
+        When all modes saturate, select the mode with the lowest saturation level
+        (peak to full_well).
+        """
+        immax = np.max(obj.data)
+        fillfrac = kwargs.get("fill_frac",
+                              from_currsys("!OBS.auto_exposure.fill_frac"))
+
+        goodmodes = []
+        goodron = []
+        badmodes = []
+        satlevel = []
+        for modeid, modeprops in self.mode_properties.items():
+            mindit = modeprops["!DET.mindit"]
+            fullwell = modeprops["!DET.full_well"]
+            if immax * mindit < fillfrac * fullwell:
+                goodmodes.append(modeid)
+                goodron.append(modeprops["!DET.readout_noise"])
+            else:
+                badmodes.append(modeid)
+                satlevel.append(immax * mindit / fullwell)
+
+        if not goodmodes:
+            return badmodes[np.argmin(satlevel)]
+
+        return goodmodes[np.argmin(goodron)]
 
 
 class AutoExposure(Effect):
@@ -63,7 +173,7 @@ class AutoExposure(Effect):
         on the `ImagePlane`, mapped to the detector array.
         """
         super().__init__(**kwargs)
-        params = {"z_order": [901]}
+        params = {"z_order": [902]}
         self.meta.update(params)
         self.meta.update(kwargs)
 
@@ -73,13 +183,13 @@ class AutoExposure(Effect):
     def apply_to(self, obj, **kwargs):
         if isinstance(obj, (ImagePlaneBase, DetectorBase)):
             implane_max = np.max(obj.data)
-            #print("implane_max:", implane_max)
             exptime = kwargs.get('exptime', from_currsys("!OBS.exptime"))
             if exptime is None:
                 exptime = from_currsys("!OBS.dit") * from_currsys("!OBS.ndit")
             print("Requested exposure time: {:.3f} s".format(exptime))
             full_well = from_currsys(self.meta["full_well"])
-            fill_frac = from_currsys(self.meta["fill_frac"])
+            fill_frac = kwargs.get("fill_frac",
+                                   from_currsys(self.meta["fill_frac"]))
             dit = fill_frac * full_well / implane_max
 
             # np.ceil so that dit is at most what is required for fill_frac
@@ -103,78 +213,6 @@ class AutoExposure(Effect):
 
         return obj
 
-
-class DetectorModePropertiesSetter(Effect):
-    """
-    Sets mode specific curr_sys properties for different detector readout modes
-
-    A little class (DetectorModePropertiesSetter) that allows different "!DET"
-    properties to be set on the fly.
-
-    Parameters
-    ----------
-    mode_properties : dict
-        A dictionary containing the DET parameters to be changed for each mode
-        See below for an example yaml entry.
-
-    Examples
-    --------
-
-    Add the values for the different detector readout modes to all the relevant
-    detector yaml files. In this case the METIS HAWAII (L, M band) and GeoSnap
-    (N band) detectors: METIS_DET_IMG_LM.yaml , METIS_DET_IMG_N.yaml
-
-        - name: lm_detector_readout_parameters
-          class: DetectorModePropertiesSetter
-          kwargs:
-            mode_properties:
-              fast:
-                min_dit: 0.04
-                full_well: !!float 1e5
-                ron: 70
-              slow:
-                min_dit: 1.3
-                full_well: !!float 1e5
-                ron: 14
-
-    Add the OBS dict entry !OBS.detector_readout_mode to the properties section
-    of the mode_yamls descriptions in the default.yaml files.
-
-        mode_yamls:
-          - object: observation
-            alias: OBS
-            name: lss_l
-            yamls:
-              ...
-            properties:
-              ...
-              detector_readout_mode: slow
-
-    """
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        params = {"z_order": [499]}
-        self.meta.update(params)
-        self.meta.update(kwargs)
-
-        required_keys = ['mode_properties']
-        utils.check_keys(self.meta, required_keys, action="error")
-
-        self.mode_properties = kwargs['mode_properties']
-
-    def apply_to(self, obj, **kwargs):
-        if isinstance(obj, DetectorBase):
-            mode_name = from_currsys("!OBS.detector_readout_mode")
-            props_dict = self.mode_properties[mode_name]
-            for key, value in props_dict.items():
-                rc.__currsys__[key] = value
-
-        return obj
-
-    def list_modes(self):
-        return utils.pretty_print_dict(self.mode_properties)
-        
 
 class SummedExposure(Effect):
     """
@@ -251,6 +289,7 @@ class PoorMansHxRGReadoutNoise(Effect):
 
 
 class BasicReadoutNoise(Effect):
+    """Readout noise computed as: ron * sqrt(NDIT)"""
     def __init__(self, **kwargs):
         super(BasicReadoutNoise, self).__init__(**kwargs)
         self.meta["z_order"] = [811]
@@ -262,11 +301,13 @@ class BasicReadoutNoise(Effect):
 
     def apply_to(self, det, **kwargs):
         if isinstance(det, DetectorBase):
-            self.meta = from_currsys(self.meta)
-            if self.meta["random_seed"] is not None:
-                np.random.seed(self.meta["random_seed"])
+            ndit = from_currsys(self.meta["ndit"])
+            ron = from_currsys(self.meta["noise_std"])
+            noise_std = ron * np.sqrt(float(ndit))
 
-            noise_std = self.meta["noise_std"] * np.sqrt(float(self.meta["ndit"]))
+            random_seed = from_currsys(self.meta["random_seed"])
+            if random_seed is not None:
+                np.random.seed(random_seed)
             det._hdu.data += np.random.normal(loc=0, scale=noise_std,
                                               size=det._hdu.data.shape)
 
