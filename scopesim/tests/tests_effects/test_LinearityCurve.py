@@ -43,6 +43,12 @@ class TestInit:
         assert "incident" in lincurve.table.colnames
         assert "measured" in lincurve.table.colnames
 
+    def test_initialises_with_vectors(self):
+        lincurve = LinearityCurve(incident=[0, 50, 100],
+                                  measured=[0, 75, 100],
+                                  ndit=2)
+        assert "incident" in lincurve.meta
+        assert "measured" in lincurve.meta
 
 class TestApplyTo:
     @pytest.mark.parametrize("in_flux, out_flux", [(20, 10), (45, 52.5),

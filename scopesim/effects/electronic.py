@@ -54,7 +54,6 @@ class DetectorModePropertiesSetter(Effect):
         - name: lm_detector_readout_parameters
           class: DetectorModePropertiesSetter
           kwargs:
-            auto_mode: true
             mode_properties:
               fast:
                 mindit: 0.04
@@ -90,14 +89,24 @@ class DetectorModePropertiesSetter(Effect):
         utils.check_keys(self.meta, required_keys, action="error")
 
         self.mode_properties = kwargs['mode_properties']
+        #mode_name = kwargs.get('detector_readout_mode',
+        #                       from_currsys("!OBS.detector_readout_mode"))
+        #rc.__currsys__["!OBS.detector_readout_mode"] = mode_name
+        #if mode_name != "auto":
+        #    props_dict = self.mode_properties[mode_name]
+        #    self.meta['detector_readout_mode'] = mode_name
+        #    for key, value in props_dict.items():
+        #        print(key, value)
+        #        rc.__currsys__[key] = value
 
     def apply_to(self, obj, **kwargs):
         mode_name = kwargs.get('detector_readout_mode',
                                from_currsys("!OBS.detector_readout_mode"))
         if isinstance(obj, ImagePlaneBase) and mode_name == "auto":
             mode_name = self.select_mode(obj, **kwargs)
+            print("Detector mode set to", mode_name)
 
-        print("Detector mode:", mode_name)
+        self.meta['detector_readout_mode'] = mode_name
         props_dict = self.mode_properties[mode_name]
         rc.__currsys__["!OBS.detector_readout_mode"] = mode_name
         for key, value in props_dict.items():
@@ -407,8 +416,35 @@ class DarkCurrent(Effect):
 
 
 class LinearityCurve(Effect):
+    """
+    Detector linearity effect
+
+    The detector linearity curve is set in terms of `incident` flux (e/s) and `measured`
+    detector values (ADU).
+
+    Examples
+    --------
+
+    The effect can be instantiated in various ways.
+    - name: detector_linearity
+      class: LinearityCurve
+      kwargs:
+        file_name: FPA_linearity.dat
+
+    - name: detector_linearity
+      class: LinearityCurve
+      kwargs:
+        array_dict: {incident: [0, 77000, 999999999999],
+                     measured: [0, 77000, 77000]}
+
+    - name: detector_linearity
+      class: LinearityCurve
+      kwargs:
+        incident: [0, 77000, 99999999]
+        measured: [0, 77000, 77000]
+    """
     def __init__(self, **kwargs):
-        super(LinearityCurve, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         params = {"z_order": [840],
                   "report_plot_include": True,
                   "report_table_include": False}
@@ -418,15 +454,18 @@ class LinearityCurve(Effect):
         self.required_keys = ["ndit"]
         utils.check_keys(self.meta, self.required_keys, action="error")
 
-    def apply_to(self, det, **kwargs):
-        if isinstance(det, DetectorBase):
+    def apply_to(self, obj, **kwargs):
+        if isinstance(obj, DetectorBase):
             ndit = from_currsys(self.meta["ndit"])
-            incident = self.table["incident"] * ndit
-            measured = self.table["measured"] * ndit
+            if self.table is not None:
+                incident = self.table["incident"] * ndit
+                measured = self.table["measured"] * ndit
+            else:
+                incident = np.asarray(from_currsys(self.meta["incident"])) * ndit
+                measured = np.asarray(from_currsys(self.meta["measured"])) * ndit
+            obj._hdu.data = np.interp(obj._hdu.data, incident, measured)
 
-            det._hdu.data = np.interp(det._hdu.data, incident, measured)
-
-        return det
+        return obj
 
     def plot(self, **kwargs):
         plt.gcf().clf()
