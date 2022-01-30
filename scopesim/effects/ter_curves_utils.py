@@ -3,6 +3,7 @@ from astropy import units as u
 from astropy.table import Table
 from astropy.utils.data import download_file
 from astropy.io import ascii as ioascii
+from astropy.wcs import WCS
 from synphot import SpectralElement, SourceSpectrum, Empirical1D, Observation
 from synphot.units import PHOTLAM
 
@@ -245,6 +246,27 @@ def scale_spectrum(spectrum, filter_name, amplitude):
 
     return spectrum
 
+def apply_throughput_to_cube(cube, thru):
+    """
+    Apply throughput curve to a spectroscopic cube
+
+    Parameters
+    ----------
+    cube : ImageHDU
+         three-dimensional image, dimension 0 (in python convention) is the
+         spectral dimension. WCS is required.
+    thru : synphot.SpectralElement, synphot.SourceSpectrum
+
+    Returns
+    -------
+    cube : ImageHDU, header unchanged, data multiplied with wavelength-dependent
+         throughput
+    """
+    wcs = WCS(cube.header).spectral
+    wave_cube = wcs.all_pix2world(np.arange(cube.data.shape[0]), 0)[0]
+    wave_cube = (wave_cube * u.Unit(wcs.wcs.cunit[0])).to(u.AA)
+    cube.data *= thru(wave_cube).value[:, None, None]
+    return cube
 
 def combine_two_spectra(spec_a, spec_b, action, wave_min, wave_max):
     """

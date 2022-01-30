@@ -63,7 +63,7 @@ class Source(SourceBase):
     in memory as a single Source object.
 
     The spatial descriptions are kept in the ``<Source>.fields`` list,
-    while the spectral descriptions are in ``<Source>.spectra`` list.
+    while the spectral descriptions are in the ``<Source>.spectra`` list.
 
     The spatial description can be built from any combination of:
 
@@ -73,9 +73,8 @@ class Source(SourceBase):
     * on disk FITS files
     * on disk ASCII tables
 
-    while the spectral descriptions can be passed as either
-    ``synphot.SourceSpectrum`` objects, or a set of two equal length arrays
-    for wavelength and flux.
+    The spectral descriptions can be passed as either ``synphot.SourceSpectrum``
+    objects, or a set of two equal length arrays for wavelength and flux.
 
     .. hint:: Initialisation parameter combinations include:
 
@@ -148,10 +147,10 @@ class Source(SourceBase):
 
         self.bandpass = None
 
-        valid = validate_source_input(lam=lam, x=x, y=y, ref=ref, weight=weight,
-                                      spectra=spectra, table=table, cube=cube,
-                                      ext=ext, image_hdu=image_hdu, flux=flux,
-                                      filename=filename)
+        validate_source_input(lam=lam, x=x, y=y, ref=ref, weight=weight,
+                              spectra=spectra, table=table, cube=cube,
+                              ext=ext, image_hdu=image_hdu, flux=flux,
+                              filename=filename)
 
         if spectra is not None:
             spectra = convert_to_list_of_spectra(spectra, lam)
@@ -340,11 +339,11 @@ class Source(SourceBase):
         try:
             bunit = header['BUNIT']
             u.Unit(bunit)
-        except KeyError as e:
+        except KeyError:
             bunit = "erg / (s cm2 arcsec2)"
-            logging.warning(f"Keyword 'BUNIT' not found, setting to {bunit} by default")
-        except ValueError as e:
-            print("'BUNIT' keyword is malformed", e)
+            logging.warning("Keyword 'BUNIT' not found, setting to %s by default", bunit)
+        except ValueError as errcode:
+            print("'BUNIT' keyword is malformed:", errcode)
             raise
 
         if header["CTYPE3"].lower() not in ["freq", 'wave', "awav", 'wavelength']:
@@ -360,17 +359,20 @@ class Source(SourceBase):
 
     @property
     def table_fields(self):
+        """List of fields that are defined through tables"""
         fields = [field for field in self.fields if isinstance(field, Table)]
         return fields
 
     @property
     def image_fields(self):
+        """List of fields that are defined through two-dimensional images"""
         fields = [field for field in self.fields if
                   isinstance(field, fits.ImageHDU) and field.header["NAXIS"] == 2]
         return fields
 
     @property
     def cube_fields(self):
+        """List of fields that are defined through three-dimensional cubes"""
         fields = [field for field in self.fields if
                   isinstance(field, fits.ImageHDU) and field.header["NAXIS"] == 3]
         return fields
