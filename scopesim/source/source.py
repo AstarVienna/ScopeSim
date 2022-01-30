@@ -41,8 +41,10 @@ from astropy.table import Table, Column
 from astropy.io import ascii as ioascii
 from astropy.io import fits
 from astropy import units as u
+from astropy.wcs import WCS
 
 from synphot import SpectralElement, SourceSpectrum, Empirical1D
+from synphot.units import PHOTLAM
 
 from ..optics.image_plane import ImagePlane
 from ..optics import image_plane_utils as imp_utils
@@ -217,7 +219,6 @@ class Source(SourceBase):
         self.spectra += spectra
 
     def _from_imagehdu_and_spectra(self, image_hdu, spectra):
-
         if not image_hdu.header.get("BG_SRC"):
             image_hdu.header["CRVAL1"] = 0
             image_hdu.header["CRVAL2"] = 0
@@ -271,9 +272,9 @@ class Source(SourceBase):
         bunit = image_hdu.header.get("BUNIT")
         try:
             bunit = u.Unit(bunit)
-        except:
+        except ValueError:
             f"Astropy cannot parse BUNIT [{bunit}].\n" \
-            f"You can bypass this checkby passing an astropy Unit to the flux parameter:\n" \
+            f"You can bypass this check by passing an astropy Unit to the flux parameter:\n" \
             f">>> Source(image_hdu=..., flux=u.Unit(bunit), ...)"
 
         ang_i = -1
@@ -349,7 +350,17 @@ class Source(SourceBase):
         if header["CTYPE3"].lower() not in ["freq", 'wave', "awav", 'wavelength']:
             raise ValueError("Only ['FREQ','WAVE','AWAV', 'WAVELENGTH'] are supported")
 
-        target_cube = data
+        # Convert to PHOTLAM per arcsec2
+        # ..todo: this is not sufficiently general
+        wcs_spec = WCS(header).spectral
+        cube_wave = wcs_spec.all_pix2world(np.arange(data.shape[0]), 0)[0] * u.Unit(wcs_spec.wcs.cunit[0])
+        data = (data * u.Unit(bunit)).to(PHOTLAM, equivalencies=u.spectral_density(cube_wave[:, None, None]))
+
+        #Normalise to 1 arcsec2
+        pixarea = (header['CDELT1'] * u.Unit(header['CUNIT1']) *
+                   header['CDELT2'] * u.Unit(header['CUNIT2'])).to(u.arcsec**2)
+        data /= pixarea.value
+        target_cube = data.value
         target_hdr = header.copy()
         target_hdr["BUNIT"] = bunit
 
@@ -519,7 +530,8 @@ class Source(SourceBase):
                     self.fields += [field]
 
                 elif isinstance(field, (fits.ImageHDU, fits.PrimaryHDU)):
-                    if isinstance(field.header["SPEC_REF"], int):
+                    if ("SPEC_REF" in field.header and
+                        isinstance(field.header["SPEC_REF"], int)):
                         field.header["SPEC_REF"] += len(self.spectra)
                     self.fields += [field]
                 self.spectra += new_source.spectra
