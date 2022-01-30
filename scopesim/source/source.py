@@ -563,18 +563,18 @@ class Source(SourceBase):
 
     def __repr__(self):
         msg = ""
-        for ii in range(len(self.fields)):
-            if isinstance(self.fields[ii], Table):
-                tbl_len = len(self.fields[ii])
-                num_spec = set(self.fields[ii]["ref"])
-                msg += "[{}]: Table with {} rows, referencing spectra {} \n" \
-                       "".format(ii, tbl_len, num_spec)
-            elif isinstance(self.fields[ii], (fits.ImageHDU, fits.PrimaryHDU)):
-                im_size = self.fields[ii].data.shape if self.fields[ii].data is not None else "<empty>"
+        for ifld, fld in enumerate(self.fields):
+            if isinstance(fld, Table):
+                tbl_len = len(fld)
+                num_spec = set(fld["ref"])
+                msg += f"[{ifld}]: Table with {tbl_len} rows, referencing spectra {num_spec} \n"
+            elif isinstance(fld, (fits.ImageHDU, fits.PrimaryHDU)):
+                im_size = fld.data.shape if fld.data is not None else "<empty>"
                 num_spec = "-"
-                if self.fields[ii].header["SPEC_REF"] != "":
-                    num_spec = self.fields[ii].header["SPEC_REF"]
-                msg += "[{}]: ImageHDU with size {}, referencing spectrum {}" \
-                       "\n".format(ii, im_size, num_spec)
+                msg += f"[{ifld}]: ImageHDU with size {im_size}"
+                if "SPEC_REF" in self.fields[ifld].header:
+                    num_spec = self.fields[ifld].header["SPEC_REF"]
+                    msg += f", referencing spectrum {num_spec}"
+                msg += "\n"
 
         return msg
