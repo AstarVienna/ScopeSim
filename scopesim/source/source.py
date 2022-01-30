@@ -526,18 +526,28 @@ class Source(SourceBase):
                              "".format(type(new_source)))
 
     def plot(self):
+        """
+        Plot the location of source components
+
+        Source components instantiated from 2d or 3d ImageHDUs are represented by their
+        spatial footprint. Source components instantiated from tables are shown as points.
+        """
+        # pylint: disable=import-outside-toplevel
         import matplotlib.pyplot as plt
-        clrs = "rgbcymk" * (len(self.fields) // 7 + 1)
-        for c, field in zip(clrs, self.fields):
+
+        colours = "rgbcymk" * (len(self.fields) // 7 + 1)
+        for col, field in zip(colours, self.fields):
             if isinstance(field, Table):
-                plt.plot(field["x"], field["y"], c+".")
+                plt.plot(field["x"], field["y"], col+".")
             elif isinstance(field, (fits.ImageHDU, fits.PrimaryHDU)):
-                x, y = imp_utils.calc_footprint(field.header)
-                x *= 3600   # Because ImageHDUs are always in CUNIT=DEG
-                y *= 3600
-                x = list(x) + [x[0]]
-                y = list(y) + [y[0]]
-                plt.plot(x, y, c)
+                xpts, ypts = imp_utils.calc_footprint(field.header)
+                xpts *= 3600   # Because ImageHDUs are always in CUNIT=DEG
+                ypts *= 3600
+                xpts = list(xpts) + [xpts[0]]
+                ypts = list(ypts) + [ypts[0]]
+                plt.plot(xpts, ypts, col)
+                plt.xlabel("x [arcsec]")
+                plt.ylabel("y [arcsec]")
         plt.gca().set_aspect("equal")
 
     def make_copy(self):
