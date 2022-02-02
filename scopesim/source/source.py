@@ -359,7 +359,7 @@ class Source(SourceBase):
         #Normalise to 1 arcsec2
         pixarea = (header['CDELT1'] * u.Unit(header['CUNIT1']) *
                    header['CDELT2'] * u.Unit(header['CUNIT2'])).to(u.arcsec**2)
-        data /= pixarea.value
+        data /= pixarea.value    # cube is per arcsec2
         target_cube = data.value
         target_hdr = header.copy()
         target_hdr["BUNIT"] = bunit

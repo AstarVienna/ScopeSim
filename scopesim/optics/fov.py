@@ -428,25 +428,29 @@ class FieldOfView(FieldOfViewBase):
         for field in self.cube_fields:
             # Cube should be in PHOTLAM arcsec-2 for SpectralTrace mapping
             # Assumption is that ImageHDUs have units of PHOTLAM arcsec-2
-            # ..todo: Add a catch to get ImageHDU with BUNITs
             field_waveset = fu.get_cube_waveset(field.header,
                                                 return_quantity=True)
+
             # ..todo: Deal with this bounds_error in a more elegant way
             field_interp = interp1d(field_waveset.to(u.um).value,
                                     field.data, axis=0, kind="linear",
                                     bounds_error=False, fill_value=0)
-            field_data = field_interp(fov_waveset.value)
-            field_unit = field.header.get("BUNIT", "ph s-1 cm-2 AA-1")
-            eq = u.spectral_density(fov_waveset)
-            flux_scale_factor = u.Unit(field_unit).to("ph s-1 cm-2 AA-1",
-                                                      equivalencies=eq)
 
-            # OC [2021-12-14] add extra dimensions for layer-wise multiplication of the cube
-            field_data *= flux_scale_factor[:, None, None]
+            field_data = field_interp(fov_waveset.value)
+
+            # Pixel scale conversion
+            fov_pixarea = utils.from_currsys(self.meta["pixel_scale"]) ** 2
+            field_pixarea = (field.header['CDELT1']
+                             * field.header['CDELT2']
+                             * u.Unit(field.header['CUNIT1'])
+                             * u.Unit(field.header['CUNIT2'])).to(u.arcsec**2)
+            field_pixarea = field_pixarea.value
+            field_data *= field_pixarea / fov_pixarea
             field_hdu = fits.ImageHDU(data=field_data, header=field.header)
-            canvas_cube_hdu = imp_utils.add_imagehdu_to_imagehdu(field_hdu,
-                                                    canvas_cube_hdu,
-                                                    spline_order=spline_order)
+            canvas_cube_hdu = imp_utils.add_imagehdu_to_imagehdu(
+                field_hdu,
+                canvas_cube_hdu,
+                spline_order=spline_order)
 
         # 3. Find Image fields
         for field in self.image_fields:
