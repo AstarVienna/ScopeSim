@@ -358,7 +358,7 @@ class Source(SourceBase):
                      * u.Unit(wcs_spec.wcs.cunit[0]))
         data = data * u.Unit(bunit)
         data = data.to(PHOTLAM,
-                       equivalencies=u.spectral_density(cube_wave[:, None, None])))
+                       equivalencies=u.spectral_density(cube_wave[:, None, None]))
 
         #Normalise to 1 arcsec2
         pixarea = (header['CDELT1'] * u.Unit(header['CUNIT1']) *
