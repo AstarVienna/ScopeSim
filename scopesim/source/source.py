@@ -350,27 +350,36 @@ class Source(SourceBase):
         if header["CTYPE3"].lower() not in ["freq", 'wave', "awav", 'wavelength']:
             raise ValueError("Only ['FREQ','WAVE','AWAV', 'WAVELENGTH'] are supported")
 
-        ### Normalise cube sources -- ..todo: should this be done on the copy in observe?
-        # Convert to PHOTLAM per arcsec2
-        # ..todo: this is not sufficiently general
-        wcs_spec = WCS(header).spectral
-        cube_wave = (wcs_spec.all_pix2world(np.arange(data.shape[0]), 0)[0]
-                     * u.Unit(wcs_spec.wcs.cunit[0]))
-        data = data * u.Unit(bunit)
-        data = data.to(PHOTLAM,
-                       equivalencies=u.spectral_density(cube_wave[:, None, None]))
-
-        #Normalise to 1 arcsec2
-        pixarea = (header['CDELT1'] * u.Unit(header['CUNIT1']) *
-                   header['CDELT2'] * u.Unit(header['CUNIT2'])).to(u.arcsec**2)
-        data /= pixarea.value    # cube is per arcsec2
-        target_cube = data.value
+        target_cube = data
         target_hdr = header.copy()
         target_hdr["BUNIT"] = bunit
 
         cube_hdu = fits.ImageHDU(data=target_cube, header=target_hdr)
 
         self.fields += [cube_hdu]
+
+    def prepare_for_observation(self, params):
+        """
+        Convert source to internally used units
+        """
+        ### Normalise cube sources -- ..todo: should this be done on the copy in observe?
+        # Convert to PHOTLAM per arcsec2
+        # ..todo: this is not sufficiently general
+        for cube in self.cube_fields:
+            header, data = cube.header, cube.data
+            wcs_spec = WCS(header).spectral
+            cube_wave = (wcs_spec.all_pix2world(np.arange(data.shape[0]), 0)[0]
+                         * u.Unit(wcs_spec.wcs.cunit[0]))
+            data = data * u.Unit(header['BUNIT'])
+            data = data.to(PHOTLAM,
+                           equivalencies=u.spectral_density(cube_wave[:, None, None]))
+
+            ##Normalise to 1 arcsec2
+            pixarea = (header['CDELT1'] * u.Unit(header['CUNIT1']) *
+                       header['CDELT2'] * u.Unit(header['CUNIT2'])).to(u.arcsec**2)
+            cube.data = data / pixarea.value    # cube is per arcsec2
+
+
 
     @property
     def table_fields(self):

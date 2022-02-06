@@ -157,6 +157,8 @@ class OpticalTrain:
         # ..todo:: check if orig_source is a pointer, or a data array
         source = orig_source.make_copy()
 
+        source.prepare_for_observation(self.cmds)
+
         # [1D - transmission curves]
         for effect in self.optics_manager.source_effects:
             source = effect.apply_to(source)
