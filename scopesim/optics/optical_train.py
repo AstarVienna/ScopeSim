@@ -1,9 +1,11 @@
 from copy import deepcopy
 from shutil import copyfileobj
 import numpy as np
+from scipy.interpolate import interp1d
 from astropy.io import fits
 from astropy.wcs import WCS
 from astropy import units as u
+
 from synphot.units import PHOTLAM
 
 from .optics_manager import OpticsManager
@@ -14,6 +16,7 @@ from ..detector import DetectorArray
 from ..source.source import Source
 from ..utils import from_currsys
 from .. import rc
+from . import fov_utils as fu
 
 
 class OpticalTrain:
@@ -195,7 +198,13 @@ class OpticalTrain:
 
     def prepare_source(self, source):
         """
-        Convert source to internally used units
+        Prepare source for observation
+
+        The method is currently applied to cube fields only.
+        The source data are converted to internally used units (PHOTLAM).
+        The source data are interpolated to the waveset used by the FieldOfView. This is necessary
+        when the source data are sampled on a coarser grid than used internally, or if the source
+        data are sampled on irregular wavelengths.
         """
         ### Normalise cube sources -- ..todo: should this be done on the copy in observe?
         # Convert to PHOTLAM per arcsec2
@@ -210,11 +219,35 @@ class OpticalTrain:
                            equivalencies=u.spectral_density(cube_wave[:, None, None]))
 
             ##Normalise to 1 arcsec2
-            pixarea = (header['CDELT1'] * u.Unit(header['CUNIT1']) *
-                       header['CDELT2'] * u.Unit(header['CUNIT2'])).to(u.arcsec**2)
+            # ..todo: lower needed because "DEG" is not understood, this is ugly
+            pixarea = (header['CDELT1'] * u.Unit(header['CUNIT1'].lower()) *
+                       header['CDELT2'] * u.Unit(header['CUNIT2'].lower())).to(u.arcsec**2)
             cube.data = data / pixarea.value    # cube is per arcsec2
 
             # Put on fov wavegrid
+            # ..todo: This assumes that we have only one fov. Generalise?
+            fov = self.fov_manager.fovs[0]
+            wave_min = fov.meta["wave_min"]        # Quantity [um]
+            wave_max = fov.meta["wave_max"]
+
+            wave_unit = u.Unit(from_currsys("!SIM.spectral.wave_unit"))
+            dwave = from_currsys("!SIM.spectral.spectral_bin_width")  # Not a quantity
+            fov_waveset = np.arange(wave_min.value, wave_max.value, dwave) * wave_unit
+            fov_waveset = fov_waveset.to(u.um)
+
+            cube_waveset = fu.get_cube_waveset(header,
+                                               return_quantity=True)
+            # ..todo: Deal with this bounds_error in a more elegant way
+            cube_interp = interp1d(cube_waveset.to(u.um).value,
+                                   cube.data, axis=0, kind="linear",
+                                   bounds_error=False, fill_value=0)
+
+            cube.data = cube_interp(fov_waveset.value)
+            cube.header['CTYPE3'] = 'WAVE'
+            cube.header['CRPIX3'] = 1
+            cube.header['CRVAL3'] = wave_min.value
+            cube.header['CDELT3'] = dwave
+            cube.header['CUNIT3'] = wave_unit.name
 
         return source
 
