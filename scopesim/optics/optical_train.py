@@ -1,6 +1,10 @@
 from copy import deepcopy
 from shutil import copyfileobj
+import numpy as np
 from astropy.io import fits
+from astropy.wcs import WCS
+from astropy import units as u
+from synphot.units import PHOTLAM
 
 from .optics_manager import OpticsManager
 from .fov_manager import FOVManager
@@ -123,6 +127,7 @@ class OpticalTrain:
         self.detector_arrays = [DetectorArray(det_list, **kwargs)
                                 for det_list in opt_man.detector_setup_effects]
 
+
     def observe(self, orig_source, update=True, **kwargs):
         """
         Main controlling method for observing ``Source`` objects
@@ -157,7 +162,7 @@ class OpticalTrain:
         # ..todo:: check if orig_source is a pointer, or a data array
         source = orig_source.make_copy()
 
-        source.prepare_for_observation(self.cmds)
+        source = self.prepare_source(source)
 
         # [1D - transmission curves]
         for effect in self.optics_manager.source_effects:
@@ -186,6 +191,32 @@ class OpticalTrain:
                 self.image_planes[ii] = effect.apply_to(self.image_planes[ii])
 
         self._last_source = source
+
+
+    def prepare_source(self, source):
+        """
+        Convert source to internally used units
+        """
+        ### Normalise cube sources -- ..todo: should this be done on the copy in observe?
+        # Convert to PHOTLAM per arcsec2
+        # ..todo: this is not sufficiently general
+        for cube in source.cube_fields:
+            header, data = cube.header, cube.data
+            wcs_spec = WCS(header).spectral
+            cube_wave = (wcs_spec.all_pix2world(np.arange(data.shape[0]), 0)[0]
+                         * u.Unit(wcs_spec.wcs.cunit[0]))
+            data = data * u.Unit(header['BUNIT'])
+            data = data.to(PHOTLAM,
+                           equivalencies=u.spectral_density(cube_wave[:, None, None]))
+
+            ##Normalise to 1 arcsec2
+            pixarea = (header['CDELT1'] * u.Unit(header['CUNIT1']) *
+                       header['CDELT2'] * u.Unit(header['CUNIT2'])).to(u.arcsec**2)
+            cube.data = data / pixarea.value    # cube is per arcsec2
+
+            # Put on fov wavegrid
+
+        return source
 
     def readout(self, filename=None, **kwargs):
         """
