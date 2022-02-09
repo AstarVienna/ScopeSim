@@ -95,15 +95,15 @@ class TERCurve(Effect):
             wave_min = quantify(self.meta["wave_min"], u.um).to(u.AA)
             wave_max = quantify(self.meta["wave_max"], u.um).to(u.AA)
 
+            thru = self.throughput
+
             # apply transmission to source spectra
             for isp, spec in enumerate(obj.spectra):
-                thru = self.throughput
                 obj.spectra[isp] = combine_two_spectra(spec, thru, "multiply",
                                                        wave_min, wave_max)
 
             # apply transmission to cube fields
             for icube, cube in enumerate(obj.cube_fields):
-                thru = self.throughput
                 obj.cube_fields[icube] = apply_throughput_to_cube(cube, thru)
 
             # add the effect background to the source background field
