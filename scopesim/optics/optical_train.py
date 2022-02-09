@@ -206,7 +206,6 @@ class OpticalTrain:
         when the source data are sampled on a coarser grid than used internally, or if the source
         data are sampled on irregular wavelengths.
         """
-        ### Normalise cube sources -- ..todo: should this be done on the copy in observe?
         # Convert to PHOTLAM per arcsec2
         # ..todo: this is not sufficiently general
         for cube in source.cube_fields:
