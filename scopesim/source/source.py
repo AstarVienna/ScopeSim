@@ -277,30 +277,33 @@ class Source(SourceBase):
             f"You can bypass this check by passing an astropy Unit to the flux parameter:\n" \
             f">>> Source(image_hdu=..., flux=u.Unit(bunit), ...)"
 
-        ang_i = -1
-        phys_types = [base.physical_type for base in bunit.bases]
-        if "solid angle" in phys_types or "angle" in phys_types:
-            ang_i = np.argwhere([(pt == "solid angle" or pt == "angle")
-                                 for pt in phys_types])[0][0]
-            solid_angle = bunit.bases[ang_i] ** bunit.powers[ang_i]
-            scale_factor = solid_angle.to(u.arcsec**-2)
-
-        else:
-            hdr = image_hdu.header
-            pixel_area = hdr["CDELT1"] * u.Unit(hdr["CUNIT1"]) * \
-                         hdr["CDELT2"] * u.Unit(hdr["CUNIT2"])
-            scale_factor = (1 / pixel_area).to(u.arcsec**-2).value
-
-        image_hdu.data *= scale_factor
-        image_hdu.header["SOLIDANG"] = "arcsec-2"
-
-        flux_unit = u.Unit("")
-        for i in range(len(bunit.bases)):
-            if i != ang_i:
-                flux_unit *= (bunit.bases[i] ** bunit.powers[i])
-
-        value = 0 if flux_unit in [u.mag, u.ABmag] else 1
-        self._from_imagehdu_and_flux(image_hdu, value*flux_unit)
+        # ang_i = -1
+        # phys_types = [base.physical_type for base in bunit.bases]
+        # if "solid angle" in phys_types or "angle" in phys_types:
+        #     ang_i = np.argwhere([(pt == "solid angle" or pt == "angle")
+        #                          for pt in phys_types])[0][0]
+        #     solid_angle = bunit.bases[ang_i] ** bunit.powers[ang_i]
+        #     scale_factor = solid_angle.to(u.arcsec**-2)
+        #
+        # else:
+        #     hdr = image_hdu.header
+        #     pixel_area = hdr["CDELT1"] * u.Unit(hdr["CUNIT1"]) * \
+        #                  hdr["CDELT2"] * u.Unit(hdr["CUNIT2"])
+        #     scale_factor = (1 / pixel_area).to(u.arcsec**-2).value
+        #     print("scale_factor:", scale_factor)
+        #
+        # image_hdu.data *= scale_factor
+        # image_hdu.header["SOLIDANG"] = "arcsec-2"
+        #
+        # flux_unit = u.Unit("")
+        # for i in range(len(bunit.bases)):
+        #     if i != ang_i:
+        #         flux_unit *= (bunit.bases[i] ** bunit.powers[i])
+        #
+        # value = 0 if flux_unit in [u.mag, u.ABmag] else 1
+        # self._from_imagehdu_and_flux(image_hdu, value*flux_unit)
+        value = 0 if bunit in [u.mag, u.ABmag] else 1
+        self._from_imagehdu_and_flux(image_hdu, value * bunit)
 
     def _from_arrays(self, x, y, ref, weight, spectra):
         if weight is None:

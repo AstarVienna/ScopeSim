@@ -288,7 +288,9 @@ class FieldOfView(FieldOfViewBase):
 
         # 2. Find Cube fields
         for field in self.cube_fields:
-            image = np.sum(field.data, axis=0)
+            bin_width = (field.header['CDELT3'] * u.Unit(field.header['CUNIT3'])).to(u.Angstrom)
+            print(f"Bin width: {bin_width}")
+            image = np.sum(field.data, axis=0) * bin_width.value
             tmp_hdu = fits.ImageHDU(data=image, header=field.header)
             canvas_image_hdu = imp_utils.add_imagehdu_to_imagehdu(
                 tmp_hdu,
@@ -348,7 +350,7 @@ class FieldOfView(FieldOfViewBase):
 
         .. note:: ``self.make_cube()`` does NOT store anything in ``self.cube``
 
-            self.cube and self.make_cube() are deliberately keep seperately
+            self.cube and self.make_cube() are deliberately kept seperately
             so that self.cube will not be accidently overwritten by a rogue
             call from an Effect object.
 
