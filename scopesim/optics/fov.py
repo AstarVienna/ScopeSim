@@ -467,9 +467,15 @@ class FieldOfView(FieldOfViewBase):
         for field in self.image_fields:
             # Cube should be in PHOTLAM arcsec-2 for SpectralTrace mapping
             # Assumption is that ImageHDUs have units of PHOTLAM arcsec-2
+            # ImageHDUs have photons/second/pixel.
             # ..todo: Add a catch to get ImageHDU with BUNITs
             canvas_image_hdu = fits.ImageHDU(data=np.zeros((naxis2, naxis1)),
                                              header=self.header)
+            pixarea = (field.header['CDELT1'] * u.Unit(field.header['CUNIT1']) *
+                       field.header['CDELT2'] * u.Unit(field.header['CUNIT2'])).to(u.arcsec**2)
+
+            #field.data = field.data / pixarea.value
+            field.data = field.data / fov_pixarea
             canvas_image_hdu = imp_utils.add_imagehdu_to_imagehdu(field,
                                                     canvas_image_hdu,
                                                     spline_order=spline_order)
