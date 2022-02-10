@@ -222,6 +222,7 @@ class OpticalTrain:
             pixarea = (header['CDELT1'] * u.Unit(header['CUNIT1'].lower()) *
                        header['CDELT2'] * u.Unit(header['CUNIT2'].lower())).to(u.arcsec**2)
             cube.data = data / pixarea.value    # cube is per arcsec2
+            cube.header['BUNIT'] = 'PHOTLAM/arcsec2'    # ..todo: make this more explicit?
 
             # Put on fov wavegrid
             # ..todo: This assumes that we have only one fov. Generalise?

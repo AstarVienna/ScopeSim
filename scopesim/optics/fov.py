@@ -288,9 +288,17 @@ class FieldOfView(FieldOfViewBase):
 
         # 2. Find Cube fields
         for field in self.cube_fields:
-            bin_width = (field.header['CDELT3'] * u.Unit(field.header['CUNIT3'])).to(u.Angstrom)
-            print(f"Bin width: {bin_width}")
-            image = np.sum(field.data, axis=0) * bin_width.value
+            # cube_fields come in with units of photlam/arcsec2, need to convert to ph/s
+            # We need to the voxel volume (spectral and solid angle) for that.
+            spectral_bin_width = (field.header['CDELT3'] *
+                                  u.Unit(field.header['CUNIT3'])).to(u.Angstrom)
+            pixarea = (field.header['CDELT1'] * u.Unit(field.header['CUNIT1']) *
+                       field.header['CDELT2'] * u.Unit(field.header['CUNIT2'])).to(u.arcsec**2)
+
+            # First collapse to image, then convert units
+            image = np.sum(field.data, axis=0) * PHOTLAM/u.arcsec**2
+            image = (image * pixarea * area * spectral_bin_width).to(u.ph/u.s)
+
             tmp_hdu = fits.ImageHDU(data=image, header=field.header)
             canvas_image_hdu = imp_utils.add_imagehdu_to_imagehdu(
                 tmp_hdu,
