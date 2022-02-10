@@ -290,6 +290,7 @@ class FieldOfView(FieldOfViewBase):
         for field in self.cube_fields:
             # cube_fields come in with units of photlam/arcsec2, need to convert to ph/s
             # We need to the voxel volume (spectral and solid angle) for that.
+            # ..todo: implement branch for use_photlam is True
             spectral_bin_width = (field.header['CDELT3'] *
                                   u.Unit(field.header['CUNIT3'])).to(u.Angstrom)
             pixarea = (field.header['CDELT1'] * u.Unit(field.header['CUNIT1']) *
