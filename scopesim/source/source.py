@@ -332,13 +332,16 @@ class Source(SourceBase):
         if isinstance(cube, fits.HDUList):
             data = cube[ext].data
             header = cube[ext].header
+            wcs = WCS(cube[ext], fobj=cube)
         elif isinstance(cube, (fits.PrimaryHDU, fits.ImageHDU)):
             data = cube.data
             header = cube.header
+            wcs = WCS(cube)
         else:
             with fits.open(cube) as hdul:
                 data = hdul[ext].data
                 header = hdul[ext].header
+                wcs = WCS(cube)
 
         try:
             bunit = header['BUNIT']
@@ -350,14 +353,22 @@ class Source(SourceBase):
             print("'BUNIT' keyword is malformed:", errcode)
             raise
 
-        if header["CTYPE3"].lower() not in ["freq", 'wave', "awav", 'wavelength']:
-            raise ValueError("Only ['FREQ','WAVE','AWAV', 'WAVELENGTH'] are supported")
+        # Compute the wavelength vector. This will be attached to the cube_hdu
+        # as a new `wave` attribute.  This is not optimal coding practice.
+        wave = wcs.all_pix2world(header['CRPIX1'], header['CRPIX2'],
+                                 np.arange(data.shape[0]), 0)[-1]
+
+        wave = (wave * u.Unit(wcs.wcs.cunit[-1])).to(u.um)
+
+        # WCS keywords must be updated because astropy.wcs converts wavelengths to 'm'
+        header.update(wcs.to_header())
 
         target_cube = data
         target_hdr = header.copy()
         target_hdr["BUNIT"] = bunit
 
         cube_hdu = fits.ImageHDU(data=target_cube, header=target_hdr)
+        cube_hdu.wave = wave          # ..todo: review wave attribute, bad practice
 
         self.fields += [cube_hdu]
 
