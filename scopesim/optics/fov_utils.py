@@ -296,8 +296,10 @@ def extract_area_from_imagehdu(imagehdu, fov_volume):
 
     xp, yp = imp_utils.val2pix(hdr, np.array([x0s, x1s]), np.array([y0s, y1s]))
     (x0p, x1p), (y0p, y1p) = np.round(xp).astype(int), np.round(yp).astype(int)
-    if x0p == x1p: x1p += 1
-    if y0p == y1p: y1p += 1
+    if x0p == x1p:
+        x1p += 1
+    if y0p == y1p:
+        y1p += 1
 
     new_hdr = imp_utils.header_from_list_of_xy([x0s, x1s], [y0s, y1s],
                                                pixel_scale=hdr["CDELT1"])
