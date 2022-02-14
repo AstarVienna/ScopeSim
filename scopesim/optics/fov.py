@@ -101,15 +101,14 @@ class FieldOfView(FieldOfViewBase):
 
         spec_refs = []
         volume = self.volume()
-        for i in range(len(fields_in_fov)):
-            fld = fields_in_fov[i]
+        for ifld, fld in enumerate(fields_in_fov):
             if isinstance(fld, Table):
-                fields_in_fov[i] = fu.extract_area_from_table(fld, volume)
-                spec_refs += list(np.unique(fields_in_fov[i] ["ref"]))
+                fields_in_fov[ifld] = fu.extract_area_from_table(fld, volume)
+                spec_refs += list(np.unique(fields_in_fov[ifld] ["ref"]))
 
             elif isinstance(fld, fits.ImageHDU):
                 if fld.header["NAXIS"] in (2, 3):
-                    fields_in_fov[i] = fu.extract_area_from_imagehdu(fld, volume)
+                    fields_in_fov[ifld] = fu.extract_area_from_imagehdu(fld, volume)
                 if fld.header["NAXIS"] == 2 or fld.header.get("BG_SRC"):
                     ref = fld.header.get("SPEC_REF")
                     if ref is not None:

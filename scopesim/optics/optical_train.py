@@ -220,9 +220,9 @@ class OpticalTrain:
             inunit = u.Unit(header['BUNIT'])
             data = data.astype(np.float32) * inunit
             factor = 1
-            for un, power in zip(inunit.bases, inunit.powers):
-                if (un**power).is_equivalent(u.arcsec**(-2)):
-                    conversion =(un**power).to(u.arcsec**(-2)) / un**power
+            for base, power in zip(inunit.bases, inunit.powers):
+                if (base**power).is_equivalent(u.arcsec**(-2)):
+                    conversion =(base**power).to(u.arcsec**(-2)) / base**power
                     data *= conversion
                     factor = u.arcsec**(-2)
 
@@ -256,20 +256,24 @@ class OpticalTrain:
             dwave = from_currsys("!SIM.spectral.spectral_bin_width")  # Not a quantity
             fov_waveset = np.arange(wave_min.value, wave_max.value, dwave) * wave_unit
             fov_waveset = fov_waveset.to(u.um)
-            print(f"Interpolating from {data.shape} to {fov_waveset.shape}")
-            cube.data = np.zeros((fov_waveset.shape[0], data.shape[1], data.shape[2]),
-                                 dtype=np.float32)
-            for j in range(data.shape[1]):
-                cube_interp = interp1d(wave.to(u.um).value, data[:, j, :], axis=0, kind="linear",
-                                       bounds_error=False, fill_value=0)
-                cube.data[:, j, :] = cube_interp(fov_waveset.value)
-            print("Interpolation done")
 
+            # Interpolate into new data cube.
+            # This is done layer by layer for memory reasons.
+            new_data = np.zeros((fov_waveset.shape[0], data.shape[1], data.shape[2]),
+                                dtype=np.float32)
+            for j in range(data.shape[1]):
+                cube_interp = interp1d(wave.to(u.um).value, data[:, j, :],
+                                       axis=0, kind="linear",
+                                       bounds_error=False, fill_value=0)
+                new_data[:, j, :] = cube_interp(fov_waveset.value)
+
+            cube.data = new_data
             cube.header['CTYPE3'] = 'WAVE'
             cube.header['CRPIX3'] = 1
             cube.header['CRVAL3'] = wave_min.value
             cube.header['CDELT3'] = dwave
             cube.header['CUNIT3'] = wave_unit.name
+
         return source
 
     def readout(self, filename=None, **kwargs):
