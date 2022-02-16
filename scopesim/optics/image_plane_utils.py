@@ -683,8 +683,8 @@ def add_imagehdu_to_imagehdu(image_hdu, canvas_hdu, spline_order=1,
                                 wcs_suffix=wcs_suffix, spline_order=spline_order,
                                 conserve_flux=conserve_flux)
 
-    xcen_im = new_hdu.header["NAXIS1"] // 2
-    ycen_im = new_hdu.header["NAXIS2"] // 2
+    xcen_im = (new_hdu.header["NAXIS1"] - 1) / 2 #// 2
+    ycen_im = (new_hdu.header["NAXIS2"] - 1) / 2 #// 2
 
     xsky0, ysky0 = pix2val(new_hdu.header, xcen_im, ycen_im, wcs_suffix)
     xpix0, ypix0 = val2pix(canvas_hdu.header, xsky0, ysky0, wcs_suffix)
@@ -692,7 +692,8 @@ def add_imagehdu_to_imagehdu(image_hdu, canvas_hdu, spline_order=1,
     # again, I need to add this transpose operation - WHY????
     # Image plane tests need the transpose operation, but FOV broadcast tests don't. Weird
     canvas_hdu.data = overlay_image(new_hdu.data, canvas_hdu.data,
-                                    coords=(xpix0, ypix0))
+                                    coords=(xpix0+1, ypix0+1))
+                                    #coords=(xpix0, ypix0))
 
     return canvas_hdu
 

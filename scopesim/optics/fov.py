@@ -101,15 +101,14 @@ class FieldOfView(FieldOfViewBase):
 
         spec_refs = []
         volume = self.volume()
-        for i in range(len(fields_in_fov)):
-            fld = fields_in_fov[i]
+        for ifld, fld in enumerate(fields_in_fov):
             if isinstance(fld, Table):
-                fields_in_fov[i] = fu.extract_area_from_table(fld, volume)
-                spec_refs += list(np.unique(fields_in_fov[i] ["ref"]))
+                fields_in_fov[ifld] = fu.extract_area_from_table(fld, volume)
+                spec_refs += list(np.unique(fields_in_fov[ifld] ["ref"]))
 
             elif isinstance(fld, fits.ImageHDU):
                 if fld.header["NAXIS"] in (2, 3):
-                    fields_in_fov[i] = fu.extract_area_from_imagehdu(fld, volume)
+                    fields_in_fov[ifld] = fu.extract_area_from_imagehdu(fld, volume)
                 if fld.header["NAXIS"] == 2 or fld.header.get("BG_SRC"):
                     ref = fld.header.get("SPEC_REF")
                     if ref is not None:
@@ -288,7 +287,18 @@ class FieldOfView(FieldOfViewBase):
 
         # 2. Find Cube fields
         for field in self.cube_fields:
-            image = np.sum(field.data, axis=0)
+            # cube_fields come in with units of photlam/arcsec2, need to convert to ph/s
+            # We need to the voxel volume (spectral and solid angle) for that.
+            # ..todo: implement branch for use_photlam is True
+            spectral_bin_width = (field.header['CDELT3'] *
+                                  u.Unit(field.header['CUNIT3'])).to(u.Angstrom)
+            pixarea = (field.header['CDELT1'] * u.Unit(field.header['CUNIT1']) *
+                       field.header['CDELT2'] * u.Unit(field.header['CUNIT2'])).to(u.arcsec**2)
+
+            # First collapse to image, then convert units
+            image = np.sum(field.data, axis=0) * PHOTLAM/u.arcsec**2
+            image = (image * pixarea * area * spectral_bin_width).to(u.ph/u.s)
+
             tmp_hdu = fits.ImageHDU(data=image, header=field.header)
             canvas_image_hdu = imp_utils.add_imagehdu_to_imagehdu(
                 tmp_hdu,
@@ -348,7 +358,7 @@ class FieldOfView(FieldOfViewBase):
 
         .. note:: ``self.make_cube()`` does NOT store anything in ``self.cube``
 
-            self.cube and self.make_cube() are deliberately keep seperately
+            self.cube and self.make_cube() are deliberately kept seperately
             so that self.cube will not be accidently overwritten by a rogue
             call from an Effect object.
 
@@ -428,33 +438,43 @@ class FieldOfView(FieldOfViewBase):
         for field in self.cube_fields:
             # Cube should be in PHOTLAM arcsec-2 for SpectralTrace mapping
             # Assumption is that ImageHDUs have units of PHOTLAM arcsec-2
-            # ..todo: Add a catch to get ImageHDU with BUNITs
             field_waveset = fu.get_cube_waveset(field.header,
                                                 return_quantity=True)
+
             # ..todo: Deal with this bounds_error in a more elegant way
             field_interp = interp1d(field_waveset.to(u.um).value,
                                     field.data, axis=0, kind="linear",
                                     bounds_error=False, fill_value=0)
-            field_data = field_interp(fov_waveset.value)
-            field_unit = field.header.get("BUNIT", "ph s-1 cm-2 AA-1")
-            eq = u.spectral_density(fov_waveset)
-            flux_scale_factor = u.Unit(field_unit).to("ph s-1 cm-2 AA-1",
-                                                      equivalencies=eq)
 
-            # OC [2021-12-14] add extra dimensions for layer-wise multiplication of the cube
-            field_data *= flux_scale_factor[:, None, None]
+            field_data = field_interp(fov_waveset.value)
+
+            # Pixel scale conversion
+            fov_pixarea = utils.from_currsys(self.meta["pixel_scale"]) ** 2
+            field_pixarea = (field.header['CDELT1']
+                             * field.header['CDELT2']
+                             * u.Unit(field.header['CUNIT1'])
+                             * u.Unit(field.header['CUNIT2'])).to(u.arcsec**2)
+            field_pixarea = field_pixarea.value
+            field_data *= field_pixarea / fov_pixarea
             field_hdu = fits.ImageHDU(data=field_data, header=field.header)
-            canvas_cube_hdu = imp_utils.add_imagehdu_to_imagehdu(field_hdu,
-                                                    canvas_cube_hdu,
-                                                    spline_order=spline_order)
+            canvas_cube_hdu = imp_utils.add_imagehdu_to_imagehdu(
+                field_hdu,
+                canvas_cube_hdu,
+                spline_order=spline_order)
 
         # 3. Find Image fields
         for field in self.image_fields:
             # Cube should be in PHOTLAM arcsec-2 for SpectralTrace mapping
             # Assumption is that ImageHDUs have units of PHOTLAM arcsec-2
+            # ImageHDUs have photons/second/pixel.
             # ..todo: Add a catch to get ImageHDU with BUNITs
             canvas_image_hdu = fits.ImageHDU(data=np.zeros((naxis2, naxis1)),
                                              header=self.header)
+            pixarea = (field.header['CDELT1'] * u.Unit(field.header['CUNIT1']) *
+                       field.header['CDELT2'] * u.Unit(field.header['CUNIT2'])).to(u.arcsec**2)
+
+            #field.data = field.data / pixarea.value
+            field.data = field.data / fov_pixarea
             canvas_image_hdu = imp_utils.add_imagehdu_to_imagehdu(field,
                                                     canvas_image_hdu,
                                                     spline_order=spline_order)

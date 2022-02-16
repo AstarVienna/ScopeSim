@@ -10,7 +10,8 @@ from astropy import units as u
 from synphot import SourceSpectrum
 from synphot.units import PHOTLAM
 
-from .ter_curves_utils import combine_two_spectra, add_edge_zeros, download_svo_filter
+from .ter_curves_utils import combine_two_spectra, apply_throughput_to_cube
+from .ter_curves_utils import add_edge_zeros, download_svo_filter
 from .effects import Effect
 from ..optics.surface import SpectralSurface
 from ..source.source_utils import make_imagehdu_from_table
@@ -94,11 +95,16 @@ class TERCurve(Effect):
             wave_min = quantify(self.meta["wave_min"], u.um).to(u.AA)
             wave_max = quantify(self.meta["wave_max"], u.um).to(u.AA)
 
+            thru = self.throughput
+
             # apply transmission to source spectra
-            for ii, spec in enumerate(obj.spectra):
-                thru = self.throughput
-                obj.spectra[ii] = combine_two_spectra(spec, thru, "multiply",
-                                                      wave_min, wave_max)
+            for isp, spec in enumerate(obj.spectra):
+                obj.spectra[isp] = combine_two_spectra(spec, thru, "multiply",
+                                                       wave_min, wave_max)
+
+            # apply transmission to cube fields
+            for icube, cube in enumerate(obj.cube_fields):
+                obj.cube_fields[icube] = apply_throughput_to_cube(cube, thru)
 
             # add the effect background to the source background field
             if self.background_source is not None:

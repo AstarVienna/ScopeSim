@@ -41,8 +41,10 @@ from astropy.table import Table, Column
 from astropy.io import ascii as ioascii
 from astropy.io import fits
 from astropy import units as u
+from astropy.wcs import WCS
 
 from synphot import SpectralElement, SourceSpectrum, Empirical1D
+from synphot.units import PHOTLAM
 
 from ..optics.image_plane import ImagePlane
 from ..optics import image_plane_utils as imp_utils
@@ -63,7 +65,7 @@ class Source(SourceBase):
     in memory as a single Source object.
 
     The spatial descriptions are kept in the ``<Source>.fields`` list,
-    while the spectral descriptions are in ``<Source>.spectra`` list.
+    while the spectral descriptions are in the ``<Source>.spectra`` list.
 
     The spatial description can be built from any combination of:
 
@@ -73,9 +75,8 @@ class Source(SourceBase):
     * on disk FITS files
     * on disk ASCII tables
 
-    while the spectral descriptions can be passed as either
-    ``synphot.SourceSpectrum`` objects, or a set of two equal length arrays
-    for wavelength and flux.
+    The spectral descriptions can be passed as either ``synphot.SourceSpectrum``
+    objects, or a set of two equal length arrays for wavelength and flux.
 
     .. hint:: Initialisation parameter combinations include:
 
@@ -148,10 +149,10 @@ class Source(SourceBase):
 
         self.bandpass = None
 
-        valid = validate_source_input(lam=lam, x=x, y=y, ref=ref, weight=weight,
-                                      spectra=spectra, table=table, cube=cube,
-                                      ext=ext, image_hdu=image_hdu, flux=flux,
-                                      filename=filename)
+        validate_source_input(lam=lam, x=x, y=y, ref=ref, weight=weight,
+                              spectra=spectra, table=table, cube=cube,
+                              ext=ext, image_hdu=image_hdu, flux=flux,
+                              filename=filename)
 
         if spectra is not None:
             spectra = convert_to_list_of_spectra(spectra, lam)
@@ -218,7 +219,6 @@ class Source(SourceBase):
         self.spectra += spectra
 
     def _from_imagehdu_and_spectra(self, image_hdu, spectra):
-
         if not image_hdu.header.get("BG_SRC"):
             image_hdu.header["CRVAL1"] = 0
             image_hdu.header["CRVAL2"] = 0
@@ -272,35 +272,13 @@ class Source(SourceBase):
         bunit = image_hdu.header.get("BUNIT")
         try:
             bunit = u.Unit(bunit)
-        except:
+        except ValueError:
             f"Astropy cannot parse BUNIT [{bunit}].\n" \
-            f"You can bypass this checkby passing an astropy Unit to the flux parameter:\n" \
+            f"You can bypass this check by passing an astropy Unit to the flux parameter:\n" \
             f">>> Source(image_hdu=..., flux=u.Unit(bunit), ...)"
 
-        ang_i = -1
-        phys_types = [base.physical_type for base in bunit.bases]
-        if "solid angle" in phys_types or "angle" in phys_types:
-            ang_i = np.argwhere([(pt == "solid angle" or pt == "angle")
-                                 for pt in phys_types])[0][0]
-            solid_angle = bunit.bases[ang_i] ** bunit.powers[ang_i]
-            scale_factor = solid_angle.to(u.arcsec**-2)
-
-        else:
-            hdr = image_hdu.header
-            pixel_area = hdr["CDELT1"] * u.Unit(hdr["CUNIT1"]) * \
-                         hdr["CDELT2"] * u.Unit(hdr["CUNIT2"])
-            scale_factor = (1 / pixel_area).to(u.arcsec**-2).value
-
-        image_hdu.data *= scale_factor
-        image_hdu.header["SOLIDANG"] = "arcsec-2"
-
-        flux_unit = u.Unit("")
-        for i in range(len(bunit.bases)):
-            if i != ang_i:
-                flux_unit *= (bunit.bases[i] ** bunit.powers[i])
-
-        value = 0 if flux_unit in [u.mag, u.ABmag] else 1
-        self._from_imagehdu_and_flux(image_hdu, value*flux_unit)
+        value = 0 if bunit in [u.mag, u.ABmag] else 1
+        self._from_imagehdu_and_flux(image_hdu, value * bunit)
 
     def _from_arrays(self, x, y, ref, weight, spectra):
         if weight is None:
@@ -329,48 +307,62 @@ class Source(SourceBase):
         if isinstance(cube, fits.HDUList):
             data = cube[ext].data
             header = cube[ext].header
+            wcs = WCS(cube[ext], fobj=cube)
         elif isinstance(cube, (fits.PrimaryHDU, fits.ImageHDU)):
             data = cube.data
             header = cube.header
+            wcs = WCS(cube)
         else:
             with fits.open(cube) as hdul:
                 data = hdul[ext].data
                 header = hdul[ext].header
+                wcs = WCS(cube)
 
         try:
             bunit = header['BUNIT']
             u.Unit(bunit)
-        except KeyError as e:
+        except KeyError:
             bunit = "erg / (s cm2 arcsec2)"
-            logging.warning(f"Keyword 'BUNIT' not found, setting to {bunit} by default")
-        except ValueError as e:
-            print("'BUNIT' keyword is malformed", e)
+            logging.warning("Keyword 'BUNIT' not found, setting to %s by default", bunit)
+        except ValueError as errcode:
+            print("'BUNIT' keyword is malformed:", errcode)
             raise
 
-        if header["CTYPE3"].lower() not in ["freq", 'wave', "awav", 'wavelength']:
-            raise ValueError("Only ['FREQ','WAVE','AWAV', 'WAVELENGTH'] are supported")
+        # Compute the wavelength vector. This will be attached to the cube_hdu
+        # as a new `wave` attribute.  This is not optimal coding practice.
+        wave = wcs.all_pix2world(header['CRPIX1'], header['CRPIX2'],
+                                 np.arange(data.shape[0]), 0)[-1]
+
+        wave = (wave * u.Unit(wcs.wcs.cunit[-1])).to(u.um)
+
+        # WCS keywords must be updated because astropy.wcs converts wavelengths to 'm'
+        header.update(wcs.to_header())
 
         target_cube = data
         target_hdr = header.copy()
         target_hdr["BUNIT"] = bunit
 
         cube_hdu = fits.ImageHDU(data=target_cube, header=target_hdr)
+        cube_hdu.wave = wave          # ..todo: review wave attribute, bad practice
 
         self.fields += [cube_hdu]
 
     @property
     def table_fields(self):
+        """List of fields that are defined through tables"""
         fields = [field for field in self.fields if isinstance(field, Table)]
         return fields
 
     @property
     def image_fields(self):
+        """List of fields that are defined through two-dimensional images"""
         fields = [field for field in self.fields if
                   isinstance(field, fits.ImageHDU) and field.header["NAXIS"] == 2]
         return fields
 
     @property
     def cube_fields(self):
+        """List of fields that are defined through three-dimensional cubes"""
         fields = [field for field in self.fields if
                   isinstance(field, fits.ImageHDU) and field.header["NAXIS"] == 3]
         return fields
@@ -517,7 +509,8 @@ class Source(SourceBase):
                     self.fields += [field]
 
                 elif isinstance(field, (fits.ImageHDU, fits.PrimaryHDU)):
-                    if isinstance(field.header["SPEC_REF"], int):
+                    if ("SPEC_REF" in field.header and
+                        isinstance(field.header["SPEC_REF"], int)):
                         field.header["SPEC_REF"] += len(self.spectra)
                     self.fields += [field]
                 self.spectra += new_source.spectra
@@ -526,18 +519,28 @@ class Source(SourceBase):
                              "".format(type(new_source)))
 
     def plot(self):
+        """
+        Plot the location of source components
+
+        Source components instantiated from 2d or 3d ImageHDUs are represented by their
+        spatial footprint. Source components instantiated from tables are shown as points.
+        """
+        # pylint: disable=import-outside-toplevel
         import matplotlib.pyplot as plt
-        clrs = "rgbcymk" * (len(self.fields) // 7 + 1)
-        for c, field in zip(clrs, self.fields):
+
+        colours = "rgbcymk" * (len(self.fields) // 7 + 1)
+        for col, field in zip(colours, self.fields):
             if isinstance(field, Table):
-                plt.plot(field["x"], field["y"], c+".")
+                plt.plot(field["x"], field["y"], col+".")
             elif isinstance(field, (fits.ImageHDU, fits.PrimaryHDU)):
-                x, y = imp_utils.calc_footprint(field.header)
-                x *= 3600   # Because ImageHDUs are always in CUNIT=DEG
-                y *= 3600
-                x = list(x) + [x[0]]
-                y = list(y) + [y[0]]
-                plt.plot(x, y, c)
+                xpts, ypts = imp_utils.calc_footprint(field.header)
+                xpts *= 3600   # Because ImageHDUs are always in CUNIT=DEG
+                ypts *= 3600
+                xpts = list(xpts) + [xpts[0]]
+                ypts = list(ypts) + [ypts[0]]
+                plt.plot(xpts, ypts, col)
+                plt.xlabel("x [arcsec]")
+                plt.ylabel("y [arcsec]")
         plt.gca().set_aspect("equal")
 
     def make_copy(self):
@@ -563,18 +566,18 @@ class Source(SourceBase):
 
     def __repr__(self):
         msg = ""
-        for ii in range(len(self.fields)):
-            if isinstance(self.fields[ii], Table):
-                tbl_len = len(self.fields[ii])
-                num_spec = set(self.fields[ii]["ref"])
-                msg += "[{}]: Table with {} rows, referencing spectra {} \n" \
-                       "".format(ii, tbl_len, num_spec)
-            elif isinstance(self.fields[ii], (fits.ImageHDU, fits.PrimaryHDU)):
-                im_size = self.fields[ii].data.shape if self.fields[ii].data is not None else "<empty>"
+        for ifld, fld in enumerate(self.fields):
+            if isinstance(fld, Table):
+                tbl_len = len(fld)
+                num_spec = set(fld["ref"])
+                msg += f"[{ifld}]: Table with {tbl_len} rows, referencing spectra {num_spec} \n"
+            elif isinstance(fld, (fits.ImageHDU, fits.PrimaryHDU)):
+                im_size = fld.data.shape if fld.data is not None else "<empty>"
                 num_spec = "-"
-                if self.fields[ii].header["SPEC_REF"] != "":
-                    num_spec = self.fields[ii].header["SPEC_REF"]
-                msg += "[{}]: ImageHDU with size {}, referencing spectrum {}" \
-                       "\n".format(ii, im_size, num_spec)
+                msg += f"[{ifld}]: ImageHDU with size {im_size}"
+                if "SPEC_REF" in self.fields[ifld].header:
+                    num_spec = self.fields[ifld].header["SPEC_REF"]
+                    msg += f", referencing spectrum {num_spec}"
+                msg += "\n"
 
         return msg
