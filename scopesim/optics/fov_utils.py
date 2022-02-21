@@ -364,6 +364,19 @@ def extract_area_from_imagehdu(imagehdu, fov_volume):
 
 
 def get_cube_waveset(hdr, return_quantity=False):
+    """
+    Returns the waveset from the Header of a cube ImageHDU
+
+    Parameters
+    ----------
+    hdr : fits.Header
+    return_quantity : bool
+
+    Returns
+    -------
+    hdu_waves : array-like
+
+    """
     wval, wdel, wpix, wlen, = [hdr[kw] for kw in ["CRVAL3", "CDELT3",
                                                   "CRPIX3", "NAXIS3"]]
     # ASSUMPTION - cube wavelength is in regularly spaced units of um

@@ -11,6 +11,8 @@ from scopesim.tests.mocks.py_objects import source_objects as so
 from scopesim.optics.fov import FieldOfView
 from scopesim.optics.fov_utils import get_cube_waveset
 
+import scopesim as sim
+sim.rc.__currsys__["!SIM.spectral.spectral_bin_width"] = 0.001
 
 PLOTS = False
 
@@ -31,13 +33,21 @@ def _fov_197_202_um():
     return fov
 
 
+def cube_unit_scaling(in_cube, out_cube):
+    in_bunit = in_cube.header["BUNIT"]
+    out_bunit = out_cube.header["BUNIT"]
+    scale_factor = u.Unit(in_bunit).to(u.Unit(out_bunit))
+
+    return scale_factor
+
+
 class TestInit:
     def test_initialises_with_nothing_raise_error(self):
         with pytest.raises(TypeError):
             FieldOfView()
 
     def test_throws_error_if_no_wcs_in_header(self):
-        with pytest.raises(ValueError):
+        with pytest.raises(KeyError):
             FieldOfView(fits.Header(), (1, 2) * u.um, area=1*u.m**2)
 
     def test_initialises_with_header_and_waverange(self):
@@ -149,13 +159,15 @@ class TestMakeCube:
 
         cube = fov.make_cube_hdu()
 
+        from scopesim.optics.fov_utils import get_cube_waveset
+        waveset = get_cube_waveset(cube.header)
         in_sum = 0
-        waveset = fov.spectra[0].waveset
         for x, y, ref, weight in src_table.fields[0]:
-            flux = src_table.spectra[ref](waveset).to(u.ph/u.s/u.m**2/u.um).value
+            flux = src_table.spectra[ref](waveset)
             in_sum += np.sum(flux) * weight
 
-        out_sum = np.sum(cube.data)
+        scale_factor = 1
+        out_sum = np.sum(cube.data) * scale_factor
 
         assert out_sum == approx(in_sum, rel=0.01)
 
@@ -182,8 +194,7 @@ class TestMakeCube:
             plt.show()
 
     def test_makes_cube_from_other_cube_imagehdu(self):
-        import scopesim as sim
-        sim.rc.__currsys__["!SIM.spectral.spectral_bin_width"] = 0.01
+
         src_cube = so._cube_source()            # 10x10" @ 0.2"/pix, [0.5, 2.5]m @ 0.02µm
         fov = _fov_197_202_um()
         fov.extract_from(src_cube)
@@ -192,8 +203,8 @@ class TestMakeCube:
 
         # layer 74 to 77 are extracted by FOV
         in_sum = np.sum(src_cube.fields[0].data[74:77, :, :])
-
-        out_sum = np.sum(cube.data)
+        scale_factor = cube_unit_scaling(src_cube.fields[0], cube)
+        out_sum = np.sum(cube.data) * scale_factor
 
         assert out_sum == approx(in_sum)
 
@@ -211,8 +222,8 @@ class TestMakeCube:
         # layer 74 to 77 are extracted by FOV
         bin_widths = np.array([0.01, 0.02, 0.01])[:, None, None] * 1e4      # um -> AA
         in_sum = 2 * np.sum(src_cube.fields[0].data[74:77, :, :] * bin_widths)
-
-        out_sum = np.sum(cube.data)
+        scale_factor = cube_unit_scaling(src_cube.fields[0], cube)
+        out_sum = np.sum(cube.data) * scale_factor
 
         assert out_sum == approx(in_sum, rel=1e-3)
 

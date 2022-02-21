@@ -44,7 +44,7 @@ class FieldOfView(FieldOfViewBase):
                      "wave_bin_type": "linear",
 
                      "area": 0 * u.m**2,
-                     "pixel_scale": "!INST.pixel_scale",
+                     "pixel_scale": 0 * u.arcsec,
                      "sub_pixel": "!SIM.sub_pixel.flag",
                      "distortion": {"scale": [1, 1],
                                     "offset": [0, 0],
@@ -56,6 +56,13 @@ class FieldOfView(FieldOfViewBase):
                      "aperture_id": None,
                      }
         self.meta.update(kwargs)
+
+        # !INST.pixel_scale gets passed via fov_manager into FOV via the
+        # header parameter. It doesn't need an explicit call in meta to
+        # !INST.pixel_scale. In fact in probably doesn't need to be in meta at all
+        # ..todo: get rid of pixel_scale from meta
+        pixel_scale = (header["CDELT1"] * u.Unit(header["CUNIT1"])).to(u.arcsec)
+        self.meta["pixel_scale"] = pixel_scale
 
         if not any([utils.has_needed_keywords(header, s) for s in ["", "S"]]):
             raise ValueError("header must contain a valid sky-plane WCS: {}"
@@ -216,7 +223,7 @@ class FieldOfView(FieldOfViewBase):
 
         for field in self.background_fields:
             bg_solid_angle = u.Unit(field.header["SOLIDANG"]).to(u.arcsec**-2)
-            pixel_area = utils.from_currsys(self.meta["pixel_scale"]) ** 2
+            pixel_area = self.meta["pixel_scale"].value ** 2
             area_factor = pixel_area * bg_solid_angle       # arcsec**2 * arcsec**-2
 
             ref = field.header["SPEC_REF"]
@@ -340,7 +347,7 @@ class FieldOfView(FieldOfViewBase):
         # 4. Find Background fields
         for field in self.background_fields:
             bg_solid_angle = u.Unit(field.header["SOLIDANG"]).to(u.arcsec**-2)
-            pixel_area = utils.from_currsys(self.meta["pixel_scale"]) ** 2
+            pixel_area = self.meta["pixel_scale"].value ** 2
             area_factor = pixel_area * bg_solid_angle       # arcsec**2 * arcsec**-2
 
             flux = fluxes[field.header["SPEC_REF"]] * area_factor
@@ -424,8 +431,7 @@ class FieldOfView(FieldOfViewBase):
         #     wmin, wmax = wave_min.to(u.um).value, wave_max.to(u.um).value
         #     fov_waveset = np.logspace(wmin, wmax, wave_bin_n)
 
-        specs = {ref: spec(fov_waveset)                     # PHOTLAM = ph/s/cm2/AA
-                 for ref, spec in self.spectra.items()}
+        specs = {ref: spec(fov_waveset) for ref, spec in self.spectra.items()}  # PHOTLAM = ph/s/cm2/AA
 
         # make canvas cube based on waveset of largest cube and NAXIS1,2 from fov.header
         naxis1, naxis2 = self.header["NAXIS1"], self.header["NAXIS2"]
@@ -433,6 +439,8 @@ class FieldOfView(FieldOfViewBase):
         canvas_cube_hdu = fits.ImageHDU(data=np.zeros((naxis3, naxis2, naxis1)),
                                         header=self.header)
         canvas_cube_hdu.header["BUNIT"] = "ph s-1 cm-2 AA-1"
+
+        fov_pixarea = self.meta["pixel_scale"].value ** 2
 
         # 2. Add Cube fields
         for field in self.cube_fields:
@@ -449,7 +457,7 @@ class FieldOfView(FieldOfViewBase):
             field_data = field_interp(fov_waveset.value)
 
             # Pixel scale conversion
-            fov_pixarea = utils.from_currsys(self.meta["pixel_scale"]) ** 2
+
             field_pixarea = (field.header['CDELT1']
                              * field.header['CDELT2']
                              * u.Unit(field.header['CUNIT1'])
@@ -487,7 +495,7 @@ class FieldOfView(FieldOfViewBase):
             # Cube should be in PHOTLAM arcsec-2 for SpectralTrace mapping
             # Point sources are in PHOTLAM per pixel
             # Point sources need to be scaled up by inverse pixel_area
-            pixel_area = utils.from_currsys(self.meta["pixel_scale"]) ** 2
+            pixel_area = self.meta["pixel_scale"].value ** 2
             for row in field:
                 xsky, ysky = row["x"], row["y"]
                 ref, weight = row["ref"], row["weight"]
@@ -506,7 +514,7 @@ class FieldOfView(FieldOfViewBase):
         # 5. Add Background fields
         for field in self.background_fields:
             # bg_solid_angle = u.Unit(field.header["SOLIDANG"]).to(u.arcsec**-2)  # float [arcsec-2]
-            # pixel_area = utils.from_currsys(self.meta["pixel_scale"]) ** 2      # float [arcsec2]
+            # pixel_area = self.meta["pixel_scale"].value ** 2      # float [arcsec2]
             # area_factor = pixel_area * bg_solid_angle                           # float [arcsec2 * arcsec-2]
 
             # Cube should be in PHOTLAM arcsec-2 for SpectralTrace mapping
@@ -531,7 +539,8 @@ class FieldOfView(FieldOfViewBase):
                                        "CRVAL3": fov_waveset[0].value,
                                        "CRPIX3": 1,
                                        "CUNIT3": "um",
-                                       "CTYPE3": "WAVE"})
+                                       "CTYPE3": "WAVE",
+                                       "BUNIT" : "ph s-1 um-1 arcsec-2"})
         # ..todo: Add the log wavelength keyword here, if log scale is needed
 
         cube_hdu = canvas_cube_hdu      # [ph s-1 AA-1 (arcsec-2)]

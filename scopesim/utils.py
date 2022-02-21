@@ -957,12 +957,20 @@ def from_currsys(item):
         if item in rc.__currsys__:
             item = rc.__currsys__[item]
         else:
-            raise ValueError("{} was not found in rc.__currsys__".format(item))
+            raise ValueError(f"{item} was not found in rc.__currsys__")
 
     if isinstance(item, str) and item.lower() == "none":
         item = None
 
     return item
+
+
+def set_currsys(key, val):
+    if key in rc.__currsys__:
+        rc.__currsys__[key] = val
+    else:
+        raise ValueError(f"{item} was not found in rc.__currsys__")
+
 
 
 def check_keys(input_dict, required_keys, action="error", all_any="all"):
