@@ -485,7 +485,8 @@ class FilterWheel(Effect):
 
     @property
     def display_name(self):
-        return f'{self.meta["name"]} : [{self.meta["current_filter"]}]'
+        return f'{self.meta["name"]} : ' \
+               f'[{from_currsys(self.meta["current_filter"])}]'
 
     def __getattr__(self, item):
         return getattr(self.current_filter, item)
