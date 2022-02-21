@@ -302,7 +302,13 @@ Meta-data
 
     def __repr__(self):
         name = self.meta.get("name", self.meta.get("filename", "<empty>"))
-        return '{}: "{}"'.format(type(self).__name__, name)
+        text = f'{type(self).__name__}: "{name}"'
+
+        desc = self.meta.get("description")
+        if desc is not None:
+            text += f"\nDescription: {desc}"
+
+        return text
 
     def __str__(self):
         return self.__repr__()
