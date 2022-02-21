@@ -51,7 +51,7 @@ extensions = [
     'sphinx.ext.coverage',
     'sphinx.ext.mathjax',
     'sphinx.ext.viewcode',
-    'jupyter_sphinx.execute',
+    # 'jupyter_sphinx.execute',
     'numpydoc',
     'sphinxcontrib.apidoc',
     'matplotlib.sphinxext.plot_directive',

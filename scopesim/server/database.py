@@ -3,7 +3,7 @@ import os
 import zipfile
 from urllib3.exceptions import HTTPError
 import glob
-import warnings
+import logging
 
 import requests
 import bs4
@@ -61,7 +61,7 @@ def get_server_elements(url, unique_str="/"):
     except:
         raise ValueError("URL returned error: {}".format(url))
 
-    soup = bs4.BeautifulSoup(result)
+    soup = bs4.BeautifulSoup(result, features="lxml")
     paths = soup.findAll("a", href=True)
     paths = [tmp.string for tmp in paths if tmp.string is not None and unique_str in tmp.string]
 
@@ -167,7 +167,7 @@ def download_package(pkg_path, save_dir=None, url=None, from_cache=None):
 
     elif isinstance(pkg_path, str):
         if pkg_path[-4:] != ".zip":
-            warnings.warn("Appended '.zip' to {}".format(pkg_path))
+            logging.warning("Appended '.zip' to {}".format(pkg_path))
             pkg_path += ".zip"
 
         if url is None:

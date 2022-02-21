@@ -27,7 +27,6 @@
 # DetectorList, or ApertureMask, plus any shift from
 #   AtmosphericDispersion
 
-from astropy.table import Table
 from . import fov_manager_utils as fmu
 from ..effects.effects_utils import is_spectroscope
 from ..utils import from_currsys
@@ -77,15 +76,20 @@ class FOVManager:
 
         """
 
-        self.table = Table(names=["wave_min", "wave_max", 
-                                  "sky_left", "sky_right", 
-                                  "sky_top", "sky_bottom",
-                                  "det_left", "det_right",
-                                  "det_top", "det_bottom",
-                                  "pixel_scale", "plate_scale",
-                                  "sky_rotation", "det_rotation"])
+        self.meta = from_currsys(self.meta)
+        fov_meta_keys = ["area", "sub_pixel"]
+        fov_meta = {key: self.meta[key] for key in fov_meta_keys}
 
-        fovs = []
+        if is_spectroscope(self.effects):
+            headers = fmu.get_spectroscopy_headers(self.effects, **self.meta)
+            shifts = fmu.get_3d_shifts(self.effects, **self.meta)
+            fovs = fmu.get_spectroscopy_fovs(headers, shifts, self.effects,
+                                             **fov_meta)
+        else:
+            headers = fmu.get_imaging_headers(self.effects, **self.meta)
+            waveset = fmu.get_imaging_waveset(self.effects, **self.meta)
+            shifts = fmu.get_3d_shifts(self.effects, **self.meta)
+            fovs = fmu.get_imaging_fovs(headers, waveset, shifts, **fov_meta)
 
         return fovs
 

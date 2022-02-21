@@ -95,14 +95,19 @@ def make_trace_table(sl, wl, xl, yl, pixel_size=0.015 * u.mm):
     -------
 
     """
-    tbl = Table(data=[w * u.um for w in wl] +
-                     [s * u.arcsec for s in sl] +
-                     [x * pixel_size for x in xl] +
-                     [y * pixel_size for y in yl],
-                names=["wavelength"] + \
-                      ["s" + str(i) for i in range(len(sl))] + \
-                      ["x" + str(i) for i in range(len(xl))] + \
-                      ["y" + str(i) for i in range(len(yl))])
+    sl = np.asarray(sl)
+    xl = np.asarray(xl)
+    yl = np.asarray(yl)
+    xn, yn = xl.shape
+    wl = np.column_stack([wl] * min(xn, yn))
+    if yn < xn:
+        wl = wl.T
+
+    tbl = Table(data=[wl.flatten() * u.um,
+                      sl.flatten() * u.arcsec,
+                      xl.flatten() * pixel_size,
+                      yl.flatten() * pixel_size],
+                names=["wavelength", "s", "x", "y"])
 
     return tbl
 
@@ -195,7 +200,7 @@ def id_table(traces_ids, descriptions=None):
     Parameters
     ----------
     traces_ids : list
-        List of indexes of Traces that should be included in the FIS file
+        List of indexes of Traces that should be included in the FITS file
     descriptions : list of str, optional
         Default is None. If alternative descriptions are required
 
@@ -307,7 +312,3 @@ def make_trace_hdulist(trace_ids=None, traces=None):
 
 def make_sky_header(smin=-1.5, smax=1.5):
     pass
-
-
-
-

@@ -8,6 +8,7 @@ from astropy.wcs import WCS
 from matplotlib import pyplot as plt
 
 from scopesim.effects.spectral_trace_list import SpectralTraceList
+from scopesim.optics.fov_manager import FovVolumeList
 from scopesim.tests.mocks.py_objects import trace_list_objects as tlo
 from scopesim.tests.mocks.py_objects import header_objects as ho
 from scopesim.base_classes import PoorMansHeader
@@ -47,8 +48,8 @@ class TestInit:
         assert spt.get_data(2, fits.BinTableHDU)
 
     def test_initialises_with_filename(self):
-        spt = SpectralTraceList(filename="TRACE_15arcsec.fits",
-                                wave_colname="lam", s_colname="xi")
+        spt = SpectralTraceList(filename="TRACE_MICADO.fits",
+                                wave_colname="wavelength", s_colname="xi")
         assert isinstance(spt, SpectralTraceList)
 
 
@@ -108,6 +109,17 @@ class TestGetFOVHeaders:
             plt.show()
 
 
+# class TestApplyTo:
+#     def test_fov_setup_base_returns_only_extracted_fov_limits(self):
+#         fname = r"F:\Work\irdb\MICADO\TRACE_MICADO.fits"
+#         spt = SpectralTraceList(filename=fname, s_colname='xi')
+#
+#         fvl = FovVolumeList()
+#         fvl = spt.apply_to(fvl)
+#
+#         assert len(fvl) == 17
+
+
 ################################################################################
 
 
@@ -152,5 +164,3 @@ def test_set_pc_matrix(rotation_ang=0, shear_ang=10):
         plt.plot(xd, yd, "o-")
         plt.plot(xs, ys, "o-")
         plt.show()
-
-

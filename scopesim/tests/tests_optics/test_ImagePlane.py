@@ -400,7 +400,7 @@ class TestAddImageHDUToImageHDU:
         canvas_hdu = imp_utils.add_imagehdu_to_imagehdu(image_hdu_square, canvas_hdu)
 
         flux = np.sum(im_hdu.data) + np.sum(image_hdu_square.data)
-        assert np.sum(canvas_hdu.data) == approx(flux)
+        assert np.sum(canvas_hdu.data) == approx(flux, rel=1e-2)
 
         if PLOTS:
             for im in [im_hdu, image_hdu_square]:
@@ -933,5 +933,8 @@ class TestImagePlaneAdd:
         implane = opt_imp.ImagePlane(hdr)
         implane.add(tbl)
         implane.add(image_hdu_rect)
-        assert np.isclose(np.sum(implane.data),
-                          np.sum(flux.value) + np.sum(image_hdu_rect.data))
+        out_sum = np.sum(implane.data)
+        in_sum = np.sum(flux.value) + np.sum(image_hdu_rect.data)
+
+        assert out_sum == approx(in_sum, rel=1e-3)
+

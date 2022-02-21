@@ -11,7 +11,8 @@ properties :
     wave_max : 20
     wave_unit : um
 
-    spectral_resolution : !!float 1E-4
+    spectral_bin_width : !!float 1E-4
+    spectral_resolution: 5000
     minimum_throughput : !!float 1E-6
     minimum_pixel_flux : 1
 
@@ -29,12 +30,14 @@ properties :
     spline_order : 1
     flux_accuracy : !!float 1E-3
     preload_field_of_views : False
+    bg_cell_width: 60         # arcsec
 
   file :
     local_packages_path : "./inst_pkgs/"
     server_base_url : "https://www.univie.ac.at/simcado/InstPkgSvr/"
     use_cached_downloads : "update"
     search_path : ["./inst_pkgs/", "./"]
+    error_on_missing_file : False
 
   reports :
     # for our own statistics, we track exclusively your institute's ip address
@@ -47,6 +50,14 @@ properties :
     image_path: "./reports/images/"
     image_format: "png"
     preamble_file: None
+
+  logging :
+    log_to_file: False
+    log_to_console: False
+    file_path: ".scopesim.log"
+    file_open_mode: "w"   # w - overwrite, a - append
+    file_level: "DEBUG"            # DEBUG INFO WARNING ERROR CRITICAL
+    console_level: "CRITICAL"      # DEBUG INFO WARNING ERROR CRITICAL
 
   tests :
     # overridden in tests/__init__.py
@@ -87,3 +98,4 @@ alias : INST
 properties :
   pixel_scale : 0     # ["/pix]
   plate_scale : 0     # ["/mm]
+  decouple_detector_from_sky_headers : False

@@ -84,7 +84,7 @@ import os
 import sys
 from datetime import datetime
 
-import warnings
+import logging
 from copy import deepcopy
 
 import multiprocessing as mp
@@ -407,7 +407,7 @@ class Detector(object):
                 except NameError:   # any other exceptions possible?
                     pass
                 except ValueError:
-                    warnings.warn("ValueError - Couldn't add keyword: "+key)
+                    logging.warning("ValueError - Couldn't add keyword: "+key)
             hdulist.append(thishdu)
 
         if to_disk:
@@ -460,7 +460,7 @@ class Detector(object):
         try:
             hdu.writeto(filename, clobber=True, checksum=True)
         except OSError:
-            warnings.warn(filename+" exists and is busy. OS won't let me write")
+            logging.warning(filename+" exists and is busy. OS won't let me write")
 
 
 ################################################################################
@@ -697,7 +697,7 @@ class Chip(object):
             bg_photons = emission
         else:
             bg_photons = 0
-            warnings.warn("type(emission) invalid. No background added")
+            logging.warning("type(emission) invalid. No background added")
 
         if output is True:
             return bg_photons * np.ones(self.array.shape, dtype=np.float32)

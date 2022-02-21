@@ -5,7 +5,8 @@ import math
 import os
 from pathlib import Path
 import sys
-import warnings
+import logging
+import logging
 from collections import OrderedDict
 from docutils.core import publish_string
 from copy import deepcopy
@@ -172,6 +173,12 @@ def nearest(arr, val):
 
     return np.argmin(abs(arr - val))
 
+def power_vector(val, degree):
+    """Return the vector of powers of val up to a degree"""
+    if degree < 0 or not isinstance(degree, int):
+        raise ValueError("degree must be a positive integer")
+
+    return np.array([val**exp for exp in range(degree + 1)])
 
 def deriv_polynomial2d(poly):
     """Derivatives (gradient) of a Polynomial2D model
@@ -429,6 +436,56 @@ def angle_in_arcseconds(distance, width):
     return np.arctan2(width, distance) * u.rad.to(u.arcsec)
 
 
+def setup_loggers(**kwargs):
+    """
+    Sets up both console and file loggers.
+
+    Acceptable parameters are the same as the ``!SIM.logging'' sub dictionary
+
+    """
+    logd = rc.__currsys__["!SIM.logging"]
+    logd.update(kwargs)
+
+    logger = logging.getLogger()
+    hdlr_names = [hdlr.name for hdlr in logger.handlers]
+
+    if logd["log_to_file"] and "scopesim_file_logger" not in hdlr_names:
+        f_handler = logging.FileHandler(logd["file_path"],
+                                        logd["file_open_mode"])
+        f_handler.name = "scopesim_file_logger"
+        f_handler.setLevel(logd["file_level"])
+        logger.addHandler(f_handler)
+
+    if logd["log_to_console"] and "scopesim_console_logger" not in hdlr_names:
+        s_handler = logging.StreamHandler(sys.stdout)
+        s_handler.name = "scopesim_console_logger"
+        s_handler.setLevel(logd["console_level"])
+        logger.addHandler(s_handler)
+
+
+def set_logger_level(which="console", level="ERROR"):
+    """
+    Sets the level of logging for either the console or file logger
+
+    Parameters
+    ----------
+    which : str
+        ["console", "file"]
+    level : str
+        ["ON", "OFF", "DEBUG", "INFO", "WARN", "ERROR", "CRITICAL"]
+
+    """
+
+
+    hdlr_name = f"scopesim_{which}_logger"
+    level = {"ON": "INFO", "OFF": "CRITICAL"}.get(level.upper(), level)
+    logger = logging.getLogger()
+    logger.setLevel(level)
+    for hdlr in logger.handlers:
+        if hdlr.name == hdlr_name:
+            hdlr.setLevel(level)
+
+
 def bug_report():
     """Get versions of dependencies for inclusion in bug report"""
 
@@ -438,7 +495,7 @@ def bug_report():
         import_module = __import__
 
     packages = ["scopesim", "numpy", "scipy", "astropy", "matplotlib",
-                "synphot", "requests", "bs4", "yaml"]
+                "synphot", "skycalc_ipy", "requests", "bs4", "yaml"]
 
     # Check Python version
     print("Python:\n", sys.version)
@@ -451,6 +508,8 @@ def bug_report():
             print(package_name, ": ", pkg.__version__)
         except ImportError:
             print(package_name, "could not be loaded.")
+        except AttributeError:
+            print(package_name, ": version number not available")
 
     # Check operating system
     import platform
@@ -506,8 +565,15 @@ def find_file(filename, path=None, silent=False):
             continue
 
     # no file found
+    msg = f"File cannot be found: {filename}"
+    logging.error(msg)
+
     if not silent:
-        print("File cannot be found: " + filename)
+        print(msg)
+
+    if from_currsys("!SIM.file.error_on_missing_file") is True:
+        raise ValueError(msg)
+
     return None
 
 
@@ -550,16 +616,16 @@ def convert_table_comments_to_dict(tbl):
             comments_str = "\n".join(tbl.meta["comments"])
             comments_dict = yaml.full_load(comments_str)
         except:
-            warnings.warn("Couldn't convert <table>.meta['comments'] to dict")
+            logging.warning("Couldn't convert <table>.meta['comments'] to dict")
             comments_dict = tbl.meta["comments"]
     elif "COMMENT" in tbl.meta:
         try:
             comments_dict = yaml.full_load("\n".join(tbl.meta["COMMENT"]))
         except:
-            warnings.warn("Couldn't convert <table>.meta['COMMENT'] to dict")
+            logging.warning("Couldn't convert <table>.meta['COMMENT'] to dict")
             comments_dict = tbl.meta["COMMENT"]
     else:
-        warnings.warn("No comments in table")
+        logging.warning("No comments in table")
 
     return comments_dict
 
@@ -591,7 +657,7 @@ def real_colname(name, colnames, silent=True):
     if len(real_name) == 0:
         real_name = None
         if not silent:
-            warnings.warn("None of {} were found in {}".format(names, colnames))
+            logging.warning("None of {} were found in {}".format(names, colnames))
     else:
         real_name = real_name[0]
 
@@ -675,8 +741,12 @@ def quantify(item, unit):
     if isinstance(item, u.Quantity):
         quant = item.to(u.Unit(unit))
     else:
-        quant = item * u.Unit(unit)
+        if isinstance(item, (np.ndarray, list, tuple)) and np.size(item) > 1000:
+            quant = item << u.Unit(unit)
+        else:
+            quant = item * u.Unit(unit)
     return quant
+
 
 
 def extract_type_from_unit(unit, unit_type):
@@ -760,7 +830,10 @@ def get_fits_type(filename):
 def quantity_from_table(colname, table, default_unit=""):
     col = table[colname]
     if col.unit is not None:
-        col = col.data * col.unit
+        if len(col) < 1000:
+            col = col.data * col.unit
+        else:
+            col = col.data << col.unit
     else:
         colname_u = colname + "_unit"
         if colname_u in table.meta:
@@ -768,10 +841,13 @@ def quantity_from_table(colname, table, default_unit=""):
         else:
             com_tbl = convert_table_comments_to_dict(table)
             if colname_u in com_tbl:
-                col = col * u.Unit(com_tbl[colname_u])
+                if len(col) < 1000:
+                    col = col * u.Unit(com_tbl[colname_u])
+                else:
+                    col = col << u.Unit(com_tbl[colname_u])
             else:
                 col = col * u.Unit(default_unit)
-                warnings.warn(
+                logging.warning(
                     "{}_unit was not found in table.meta: {}. Default to: {}"
                     "".format(colname, table.meta, default_unit))
 
@@ -793,7 +869,7 @@ def unit_from_table(colname, table, default_unit=""):
         if colname_u in com_tbl:
             unit = u.Unit(com_tbl[colname_u])
         else:
-            warnings.warn("{}_unit was not found in table.meta: {}. "
+            logging.warning("{}_unit was not found in table.meta: {}. "
                           "Default to: {}"
                           "".format(colname, table.meta, default_unit))
             unit = u.Unit(default_unit)
@@ -862,9 +938,10 @@ def from_currsys(item):
     if isinstance(item, Table):
         tbl_dict = {col: item[col].data for col in item.colnames}
         tbl_dict = from_currsys(tbl_dict)
-        item = Table(data=[tbl_dict[key] for key in tbl_dict],
-                     names=tbl_dict.keys(),
-                     meta=item.meta)
+        item_meta = item.meta
+        item = Table(data=list(tbl_dict.values()),
+                     names=list(tbl_dict.keys()))
+        item.meta = item_meta
 
     if isinstance(item, np.ndarray) and not isinstance(item, u.Quantity):
         item = np.array([from_currsys(x) for x in item])
@@ -907,7 +984,7 @@ def check_keys(input_dict, required_keys, action="error", all_any="all"):
                              "from input_dict: \n{} \n{}"
                              "".format(required_keys, input_dict.keys()))
         elif "warn" in action:
-            warnings.warn("One or more of the following keys missing "
+            logging.warning("One or more of the following keys missing "
                           "from input_dict: \n{} \n{}"
                           "".format(required_keys, input_dict.keys()))
 
@@ -942,3 +1019,15 @@ def write_report(text, filename=None, output=["rst"]):
             fname = os.path.join(*fname.parts[:-1], fname.stem + suffix)
             with open(fname, "w") as f:
                 f.write(out_text)
+
+
+def pretty_print_dict(dic, indent=0):
+    text = ""
+    for key, value in dic.items():
+        if isinstance(value, dict):
+            text += " " * indent + f"{str(key)}:\n"
+            text += pretty_print_dict(value, indent=indent + 2)
+        else:
+            text += " " * indent + f"{str(key)}: {str(value)}\n"
+
+    return text

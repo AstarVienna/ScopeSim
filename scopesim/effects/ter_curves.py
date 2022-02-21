@@ -1,7 +1,7 @@
 import numpy as np
 from astropy import units as u
 from os import path as pth
-import warnings
+import logging
 
 from astropy.io import fits
 from astropy.table import Table
@@ -10,12 +10,13 @@ from astropy import units as u
 from synphot import SourceSpectrum
 from synphot.units import PHOTLAM
 
-from .ter_curves_utils import combine_two_spectra, add_edge_zeros, download_svo_filter
+from .ter_curves_utils import combine_two_spectra, apply_throughput_to_cube
+from .ter_curves_utils import add_edge_zeros, download_svo_filter
 from .effects import Effect
 from ..optics.surface import SpectralSurface
 from ..source.source_utils import make_imagehdu_from_table
 from ..source.source import Source
-from ..base_classes import SourceBase
+from ..base_classes import SourceBase, FOVSetupBase
 from ..utils import from_currsys, quantify, check_keys
 
 
@@ -68,7 +69,8 @@ class TERCurve(Effect):
                   "wave_min": "!SIM.spectral.wave_min",
                   "wave_max": "!SIM.spectral.wave_max",
                   "wave_unit": "!SIM.spectral.wave_unit",
-                  "wave_bin": "!SIM.spectral.spectral_resolution",
+                  "wave_bin": "!SIM.spectral.spectral_bin_width",
+                  "bg_cell_width": "!SIM.computing.bg_cell_width",
                   "report_plot_include": True,
                   "report_table_include": False}
         self.meta.update(params)
@@ -87,21 +89,36 @@ class TERCurve(Effect):
 
     # ####### added in new branch
 
-    def apply_to(self, obj):
+    def apply_to(self, obj, **kwargs):
         if isinstance(obj, SourceBase):
             self.meta = from_currsys(self.meta)
             wave_min = quantify(self.meta["wave_min"], u.um).to(u.AA)
             wave_max = quantify(self.meta["wave_max"], u.um).to(u.AA)
 
+            thru = self.throughput
+
             # apply transmission to source spectra
-            for ii, spec in enumerate(obj.spectra):
-                thru = self.throughput
-                obj.spectra[ii] = combine_two_spectra(spec, thru, "multiply",
-                                                      wave_min, wave_max)
+            for isp, spec in enumerate(obj.spectra):
+                obj.spectra[isp] = combine_two_spectra(spec, thru, "multiply",
+                                                       wave_min, wave_max)
+
+            # apply transmission to cube fields
+            for icube, cube in enumerate(obj.cube_fields):
+                obj.cube_fields[icube] = apply_throughput_to_cube(cube, thru)
 
             # add the effect background to the source background field
             if self.background_source is not None:
                 obj.append(self.background_source)
+
+        if isinstance(obj, FOVSetupBase):
+            wave = self.surface.throughput.waveset
+            thru = self.surface.throughput(wave)
+            valid_waves = np.argwhere(thru > 0)
+            wave_min = wave[max(0, valid_waves[0][0] - 1)]
+            wave_max = wave[min(len(wave) - 1, valid_waves[-1][0] + 1)]
+
+            obj.shrink("wave", [wave_min.to(u.um).value,
+                                wave_max.to(u.um).value])
 
         return obj
 
@@ -118,10 +135,17 @@ class TERCurve(Effect):
         if self._background_source is None:
             # add a single pixel ImageHDU for the extended background with a
             # size of 1 degree
+            bg_cell_width = from_currsys(self.meta["bg_cell_width"])
             flux = self.emission
-            bg_hdu = make_imagehdu_from_table([0], [0], [1], 1 * u.deg)
-            bg_hdu.header["BG_SRC"] = True
-            bg_hdu.header["BG_SURF"] = self.meta.get("name", "<untitled>")
+            bg_hdu = fits.ImageHDU()
+            bg_hdu.header.update({"BG_SRC": True,
+                                  "BG_SURF": self.display_name,
+                                  "CUNIT1": "ARCSEC",
+                                  "CUNIT2": "ARCSEC",
+                                  "CDELT1": 0,
+                                  "CDELT2": 0,
+                                  "BUNIT": "PHOTLAM arcsec-2",
+                                  "SOLIDANG": "arcsec-2"})
             self._background_source = Source(image_hdu=bg_hdu, spectra=flux)
 
         return self._background_source
@@ -253,17 +277,12 @@ class SkycalcTERCurve(AtmosphericTERCurve):
         conn_kwargs = from_currsys(conn_kwargs)
         self.skycalc_conn.values.update(conn_kwargs)
 
-        local_path = from_currsys("!SIM.file.local_packages_path")
-        filename = pth.join(local_path, "skycalc_temp.fits")
         try:
-            tbl = self.skycalc_conn.get_sky_spectrum(return_type="table",
-                                                     filename=filename)
+            tbl = self.skycalc_conn.get_sky_spectrum(return_type="table")
         except:
-            warnings.warn("Could not connect to skycalc server")
-            if pth.exists(filename):
-                pass
-            else:
-                raise ValueError("No local copy exists: {}".format(filename))
+            msg = "Could not connect to skycalc server"
+            logging.exception(msg)
+            raise ValueError(msg)
 
         for i, colname in enumerate(["wavelength", "transmission", "emission"]):
             tbl.columns[i].name = colname
@@ -279,6 +298,7 @@ class QuantumEfficiencyCurve(TERCurve):
         self.meta["action"] = "transmission"
         self.meta["z_order"] = [113, 513]
         self.meta["position"] = -1          # position in surface table
+
 
 
 class FilterCurve(TERCurve):
@@ -445,9 +465,9 @@ class FilterWheel(Effect):
         self.table = self.get_table()
 
 
-    def apply_to(self, obj):
+    def apply_to(self, obj, **kwargs):
         '''Use apply_to of current filter'''
-        return self.current_filter.apply_to(obj)
+        return self.current_filter.apply_to(obj, **kwargs)
 
     def fov_grid(self, which="waveset", **kwargs):
         return self.current_filter.fov_grid(which=which, **kwargs)
@@ -462,6 +482,10 @@ class FilterWheel(Effect):
     @property
     def current_filter(self):
         return self.filters[from_currsys(self.meta["current_filter"])]
+
+    @property
+    def display_name(self):
+        return f'{self.meta["name"]} : [{self.meta["current_filter"]}]'
 
     def __getattr__(self, item):
         return getattr(self.current_filter, item)
@@ -536,3 +560,80 @@ class PupilTransmission(TERCurve):
                          transmission=[transmission, transmission],
                          emissivity=[0., 0.], **self.params)
 
+
+class ADCWheel(Effect):
+    """
+    This wheel holds a selection of predefined atmospheric dispersion
+    correctors.
+
+    Example
+    -------
+    ::
+       name : adc_wheel
+       class: ADCWheel
+       kwargs:
+           adc_names: []
+           filename_format: "TER_ADC_{}.dat"
+           current_adc: "const_90"
+    """
+    def __init__(self, **kwargs):
+        required_keys = ["adc_names", "filename_format", "current_adc"]
+        check_keys(kwargs, required_keys, action="error")
+
+        super().__init__(**kwargs)
+
+        params = {"z_order": [125, 225, 525],
+                  "path": "",
+                  "report_plot_include": False,
+                  "report_table_include": True,
+                  "report_table_rounding": 4}
+        self.meta.update(params)
+        self.meta.update(kwargs)
+
+        path = pth.join(self.meta["path"],
+                        from_currsys(self.meta["filename_format"]))
+        self.adcs = {}
+        for name in self.meta["adc_names"]:
+            kwargs["name"] = name
+            self.adcs[name] = TERCurve(filename=path.format(name),
+                                       **kwargs)
+
+        self.table = self.get_table()
+
+    def apply_to(self, obj, **kwargs):
+        '''Use apply_to of current adc'''
+        return self.current_adc.apply_to(obj, **kwargs)
+
+    def change_adc(self, adcname=None):
+        """Change the current ADC"""
+        if not adcname or adcname in self.adcs.keys():
+            self.meta['current_adc'] = adcname
+            self.include = adcname
+        else:
+            raise ValueError("Unknown ADC requested: " + adcname)
+
+    @property
+    def current_adc(self):
+        '''Return the currently used ADC'''
+        curradc = from_currsys(self.meta['current_adc'])
+        if not curradc:
+            return False
+        return self.adcs[curradc]
+
+    @property
+    def display_name(self):
+        return f'{self.meta["name"]} : ' \
+               f'[{from_currsys(self.meta["current_adc"])}]'
+
+    def __getattr__(self, item):
+        return getattr(self.current_adc, item)
+
+    def get_table(self):
+        """Create a table of ADCs with maximimum througput"""
+        names = list(self.adcs.keys())
+        adcs = self.adcs.values()
+        tmax = np.array([adc.data['transmission'].max() for adc in adcs])
+
+        tbl = Table(names=["name", "max_transmission"],
+                    data=[names, tmax])
+        return tbl

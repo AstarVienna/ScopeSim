@@ -1,4 +1,4 @@
-import warnings
+import logging
 
 
 class SystemDict(object):
@@ -89,12 +89,12 @@ def recursive_update(old_dict, new_dict):
                         old_dict[key] = recursive_update(old_dict[key],
                                                          new_dict[key])
                     else:
-                        warnings.warn("Overwriting dict: {} with non-dict: {}"
+                        logging.warning("Overwriting dict: {} with non-dict: {}"
                                       "".format(old_dict[key], new_dict[key]))
                         old_dict[key] = new_dict[key]
                 else:
                     if isinstance(new_dict[key], dict):
-                        warnings.warn("Overwriting non-dict: {} with dict: {}"
+                        logging.warning("Overwriting non-dict: {} with dict: {}"
                                       "".format(old_dict[key], new_dict[key]))
                     old_dict[key] = new_dict[key]
             else:

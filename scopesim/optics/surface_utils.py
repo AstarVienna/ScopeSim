@@ -1,4 +1,4 @@
-import warnings
+import logging
 
 import numpy as np
 from astropy import units as u
@@ -14,7 +14,7 @@ def make_emission_from_emissivity(temp, emiss_src_spec):
     Parameters
     ----------
     temp : float, Quantity
-        [deg_C] If float, then must be in degrees Celsius
+        [Kelvin] If float, then must be in Kelvin
     emiss_src_spec : synphot.SpectralElement
         An emissivity response curve in the range [0..1]
 
@@ -25,17 +25,17 @@ def make_emission_from_emissivity(temp, emiss_src_spec):
     """
 
     if isinstance(temp, u.Quantity):
-        temp = temp.to(u.deg_C)
+        temp = temp.to(u.Kelvin, equivalencies=u.temperature()).value
 
     if emiss_src_spec is None:
-        warnings.warn("Either emission or emissivity must be set")
+        logging.warning("Either emission or emissivity must be set")
         flux = None
     else:
         flux = SourceSpectrum(BlackBody1D, temperature=temp)
         flux.meta["solid_angle"] = u.sr**-1
         flux = flux * emiss_src_spec
         flux.meta["history"] = ["Created from Blackbody curve. Units are to be"
-                                "understood as per steradian"]
+                                " understood as per steradian"]
 
     return flux
 
@@ -65,7 +65,7 @@ def make_emission_from_array(flux, wave, meta):
         if "emission_unit" in meta:
             flux = quantify(flux, meta["emission_unit"])
         else:
-            warnings.warn("emission_unit must be set in self.meta, "
+            logging.warning("emission_unit must be set in self.meta, "
                           "or emission must be an astropy.Quantity")
             flux = None
 
@@ -83,7 +83,7 @@ def make_emission_from_array(flux, wave, meta):
         flux.meta["history"] = ["Created from emission array with units {}"
                                 "".format(orig_unit)]
     else:
-        warnings.warn("wavelength and emission must be "
+        logging.warning("wavelength and emission must be "
                       "astropy.Quantity py_objects")
         flux = None
 

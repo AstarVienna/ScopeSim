@@ -55,7 +55,7 @@ def setup_package():
                             "requests>=2.20",
                             "beautifulsoup4>=4.4",
                             "synphot>=0.1.3",
-                            "skycalc_ipy",
+                            "skycalc_ipy>=0.1.3",
                             "anisocado",
                             ],
           classifiers=["Programming Language :: Python :: 3",

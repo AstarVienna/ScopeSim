@@ -1,11 +1,217 @@
+"""
+Electronic detector effects - related to detector readout
+
+Classes:
+- DetectorModePropertiesSetter - set parameters for readout mode
+- AutoExposure - determine DIT and NDIT automatically
+- SummedExposure - simulates a summed stack of ``ndit`` exposures
+- PoorMansHxRGReadoutNoise - simple readout noise for HAWAII detectors
+- BasicReadoutNoise - readout noise
+- ShotNoise - realisation of Poissonian photon noise
+- DarkCurrent - add dark current
+- LinearityCurve - apply detector (non-)linearity and saturation
+- ReferencePixelBorder
+- BinnedImage
+
+Functions:
+- make_ron_frame
+- pseudo_random_field
+"""
+import logging
+
 import numpy as np
+import matplotlib.pyplot as plt
 
 from astropy.io import fits
 
 from .. import rc
 from . import Effect
 from ..base_classes import DetectorBase, ImagePlaneBase
-from ..utils import real_colname, from_currsys, check_keys, interp2
+from ..utils import from_currsys
+from .. import utils
+
+
+class DetectorModePropertiesSetter(Effect):
+    """
+    Sets mode specific curr_sys properties for different detector readout modes
+
+    A little class (DetectorModePropertiesSetter) that allows different "!DET"
+    properties to be set on the fly.
+
+    Parameters
+    ----------
+    mode_properties : dict
+        A dictionary containing the DET parameters to be changed for each mode
+        See below for an example yaml entry.
+
+    Examples
+    --------
+
+    Add the values for the different detector readout modes to all the relevant
+    detector yaml files. In this case the METIS HAWAII (L, M band) and GeoSnap
+    (N band) detectors: METIS_DET_IMG_LM.yaml , METIS_DET_IMG_N.yaml
+
+        - name: lm_detector_readout_parameters
+          class: DetectorModePropertiesSetter
+          kwargs:
+            mode_properties:
+              fast:
+                mindit: 0.04
+                full_well: !!float 1e5
+                ron: 70
+              slow:
+                mindit: 1.3
+                full_well: !!float 1e5
+                ron: 14
+
+    Add the OBS dict entry !OBS.detector_readout_mode to the properties section
+    of the mode_yamls descriptions in the default.yaml files.
+
+        mode_yamls:
+          - object: observation
+            alias: OBS
+            name: lss_l
+            yamls:
+              ...
+            properties:
+              ...
+              detector_readout_mode: slow
+
+    """
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        params = {"z_order": [299, 900]}
+        self.meta.update(params)
+        self.meta.update(kwargs)
+
+        required_keys = ['mode_properties']
+        utils.check_keys(self.meta, required_keys, action="error")
+
+        self.mode_properties = kwargs['mode_properties']
+
+    def apply_to(self, obj, **kwargs):
+        mode_name = kwargs.get('detector_readout_mode',
+                               from_currsys("!OBS.detector_readout_mode"))
+        if isinstance(obj, ImagePlaneBase) and mode_name == "auto":
+            mode_name = self.select_mode(obj, **kwargs)
+            print("Detector mode set to", mode_name)
+
+        self.meta['detector_readout_mode'] = mode_name
+        props_dict = self.mode_properties[mode_name]
+        rc.__currsys__["!OBS.detector_readout_mode"] = mode_name
+        for key, value in props_dict.items():
+            rc.__currsys__[key] = value
+
+        return obj
+
+    def list_modes(self):
+        """Return list of available detector modes"""
+        return utils.pretty_print_dict(self.mode_properties)
+
+    def select_mode(self, obj, **kwargs):
+        """Automatically select detector mode based on image plane peak value
+
+        Select the mode with lowest readnoise that does not saturate the detector.
+        When all modes saturate, select the mode with the lowest saturation level
+        (peak to full_well).
+        """
+        immax = np.max(obj.data)
+        fillfrac = kwargs.get("fill_frac",
+                              from_currsys("!OBS.auto_exposure.fill_frac"))
+
+        goodmodes = []
+        goodron = []
+        badmodes = []
+        satlevel = []
+        for modeid, modeprops in self.mode_properties.items():
+            mindit = modeprops["!DET.mindit"]
+            fullwell = modeprops["!DET.full_well"]
+            if immax * mindit < fillfrac * fullwell:
+                goodmodes.append(modeid)
+                goodron.append(modeprops["!DET.readout_noise"])
+            else:
+                badmodes.append(modeid)
+                satlevel.append(immax * mindit / fullwell)
+
+        if not goodmodes:
+            return badmodes[np.argmin(satlevel)]
+
+        return goodmodes[np.argmin(goodron)]
+
+
+class AutoExposure(Effect):
+    """
+    Determine DIT and NDIT automatically from ImagePlane
+
+    DIT is determined such that the maximum value in the incident photon flux
+    (including astronomical source, sky and thermal backgrounds) fills
+    the full well of the detector (``!DET.full_well``) to a given fraction
+    (``!OBS.autoexposure.fill_frac``). NDIT is determined such that
+    ``DIT`` * ``NDIT`` results in the requested exposure time.
+
+    The requested exposure time is taken from ``!OBS.exptime``.
+
+    The effects sets the parameters `!OBS.dit` and `!OBS.ndit`.
+
+    Example yaml entry
+    ------------------
+    The parameters `!OBS.exptime`, `!DET.full_well` and `!DET.mindit` should
+    be defined as properties in the respective subsections.
+    ::
+       name: auto_exposure
+       description: automatic determination of DIT and NDIT
+       class: AutoExposure
+       include: True
+       kwargs:
+           fill_frac: "!OBS.auto_exposure.fill_frac"
+
+    """
+    def __init__(self, **kwargs):
+        """
+        The effect is the first detector effect, hence essentially operates
+        on the `ImagePlane`, mapped to the detector array.
+        """
+        super().__init__(**kwargs)
+        params = {"z_order": [902]}
+        self.meta.update(params)
+        self.meta.update(kwargs)
+
+        required_keys = ['fill_frac', 'full_well', 'mindit']
+        utils.check_keys(self.meta, required_keys, action="error")
+
+    def apply_to(self, obj, **kwargs):
+        if isinstance(obj, (ImagePlaneBase, DetectorBase)):
+            implane_max = np.max(obj.data)
+            exptime = kwargs.get('exptime', from_currsys("!OBS.exptime"))
+            if exptime is None:
+                exptime = from_currsys("!OBS.dit") * from_currsys("!OBS.ndit")
+            print("Requested exposure time: {:.3f} s".format(exptime))
+            full_well = from_currsys(self.meta["full_well"])
+            fill_frac = kwargs.get("fill_frac",
+                                   from_currsys(self.meta["fill_frac"]))
+            dit = fill_frac * full_well / implane_max
+
+            # np.ceil so that dit is at most what is required for fill_frac
+            ndit = int(np.ceil(exptime / dit))
+            dit = exptime / ndit
+
+            # dit must be at least mindit, this might lead to saturation
+            # ndit changed so that exptime is not exceeded (hence np.floor)
+            if dit < from_currsys(self.meta["mindit"]):
+                dit = from_currsys(self.meta["mindit"])
+                ndit = int(np.floor(exptime / dit))
+                print("Warning: The detector will be saturated!")
+                # ..todo: turn into proper warning
+
+            print("Exposure parameters:")
+            print("                DIT: {:.3f} s  NDIT: {}".format(dit, ndit))
+            print("Total exposure time: {:.3f} s".format(dit * ndit))
+
+            rc.__currsys__['!OBS.dit'] = dit
+            rc.__currsys__['!OBS.ndit'] = ndit
+
+        return obj
 
 
 class SummedExposure(Effect):
@@ -20,9 +226,9 @@ class SummedExposure(Effect):
         self.meta.update(kwargs)
 
         required_keys = ["dit", "ndit"]
-        check_keys(self.meta, required_keys, action="error")
+        utils.check_keys(self.meta, required_keys, action="error")
 
-    def apply_to(self, obj):
+    def apply_to(self, obj, **kwargs):
         if isinstance(obj, DetectorBase):
             dit = from_currsys(self.meta["dit"])
             ndit = from_currsys(self.meta["ndit"])
@@ -47,9 +253,9 @@ class PoorMansHxRGReadoutNoise(Effect):
         self.meta.update(kwargs)
 
         self.required_keys = ["noise_std", "n_channels", "ndit"]
-        check_keys(self.meta, self.required_keys, action="error")
+        utils.check_keys(self.meta, self.required_keys, action="error")
 
-    def apply_to(self, det):
+    def apply_to(self, det, **kwargs):
         if isinstance(det, DetectorBase):
             self.meta["random_seed"] = from_currsys(self.meta["random_seed"])
             if self.meta["random_seed"] is not None:
@@ -74,17 +280,16 @@ class PoorMansHxRGReadoutNoise(Effect):
         return det
 
     def plot(self, det, new_figure=False, **kwargs):
-        import matplotlib.pyplot as plt
         dtcr = self.apply_to(det)
         plt.imshow(dtcr.data, origin="lower")
 
     def plot_hist(self, det, **kwargs):
-        import matplotlib.pyplot as plt
         dtcr = self.apply_to(det)
         plt.hist(dtcr.data.flatten())
 
 
 class BasicReadoutNoise(Effect):
+    """Readout noise computed as: ron * sqrt(NDIT)"""
     def __init__(self, **kwargs):
         super(BasicReadoutNoise, self).__init__(**kwargs)
         self.meta["z_order"] = [811]
@@ -92,27 +297,27 @@ class BasicReadoutNoise(Effect):
         self.meta.update(kwargs)
 
         self.required_keys = ["noise_std", "ndit"]
-        check_keys(self.meta, self.required_keys, action="error")
+        utils.check_keys(self.meta, self.required_keys, action="error")
 
-    def apply_to(self, det):
+    def apply_to(self, det, **kwargs):
         if isinstance(det, DetectorBase):
-            self.meta = from_currsys(self.meta)
-            if self.meta["random_seed"] is not None:
-                np.random.seed(self.meta["random_seed"])
+            ndit = from_currsys(self.meta["ndit"])
+            ron = from_currsys(self.meta["noise_std"])
+            noise_std = ron * np.sqrt(float(ndit))
 
-            noise_std = self.meta["noise_std"] * np.sqrt(float(self.meta["ndit"]))
+            random_seed = from_currsys(self.meta["random_seed"])
+            if random_seed is not None:
+                np.random.seed(random_seed)
             det._hdu.data += np.random.normal(loc=0, scale=noise_std,
                                               size=det._hdu.data.shape)
 
         return det
 
     def plot(self, det):
-        import matplotlib.pyplot as plt
         dtcr = self.apply_to(det)
         plt.imshow(dtcr.data)
 
     def plot_hist(self, det, **kwargs):
-        import matplotlib.pyplot as plt
         dtcr = self.apply_to(det)
         plt.hist(dtcr.data.flatten())
 
@@ -124,18 +329,22 @@ class ShotNoise(Effect):
         self.meta["random_seed"] = "!SIM.random.seed"
         self.meta.update(kwargs)
 
-    def apply_to(self, det):
+    def apply_to(self, det, **kwargs):
         if isinstance(det, DetectorBase):
             self.meta["random_seed"] = from_currsys(self.meta["random_seed"])
             if self.meta["random_seed"] is not None:
                 np.random.seed(self.meta["random_seed"])
 
             # ! poisson(x) === normal(mu=x, sigma=x**0.5)
-            # Windows has a porblem with generating poisson values above 2**30
+            # Windows has a problem with generating poisson values above 2**30
             # Above ~100 counts the poisson and normal distribution are
             # basically the same. For large arrays the normal distribution
             # takes only 60% as long as the poisson distribution
             data = det._hdu.data
+            if np.any(data > 0):
+                logging.warning("Effect ShotNoise:", np.sum(data < 0),
+                                "negative pixels")
+
             below = data < 2**20
             above = np.invert(below)
             data[below] = np.random.poisson(data[below]).astype(float)
@@ -147,12 +356,10 @@ class ShotNoise(Effect):
         return det
 
     def plot(self, det):
-        import matplotlib.pyplot as plt
         dtcr = self.apply_to(det)
         plt.imshow(dtcr.data)
 
     def plot_hist(self, det, **kwargs):
-        import matplotlib.pyplot as plt
         dtcr = self.apply_to(det)
         plt.hist(dtcr.data.flatten())
 
@@ -166,15 +373,15 @@ class DarkCurrent(Effect):
         self.meta["z_order"] = [830]
 
         required_keys = ["value", "dit", "ndit"]
-        check_keys(self.meta, required_keys, action="error")
+        utils.check_keys(self.meta, required_keys, action="error")
 
-    def apply_to(self, obj):
+    def apply_to(self, obj, **kwargs):
         if isinstance(obj, DetectorBase):
-            if isinstance(self.meta["value"], dict):
-                dtcr_id = obj.meta[real_colname("id", obj.meta)]
-                dark = self.meta["value"][dtcr_id]
-            elif isinstance(self.meta["value"], float):
-                dark = self.meta["value"]
+            if isinstance(from_currsys(self.meta["value"]), dict):
+                dtcr_id = obj.meta[utils.real_colname("id", obj.meta)]
+                dark = from_currsys(self.meta["value"][dtcr_id])
+            elif isinstance(from_currsys(self.meta["value"]), float):
+                dark = from_currsys(self.meta["value"])
             else:
                 raise ValueError("<DarkCurrent>.meta['value'] must be either"
                                  "dict or float: {}".format(self.meta["value"]))
@@ -187,7 +394,6 @@ class DarkCurrent(Effect):
         return obj
 
     def plot(self, det, **kwargs):
-        import matplotlib.pyplot as plt
         dit = from_currsys(self.meta["dit"])
         ndit = from_currsys(self.meta["ndit"])
         total_time = dit * ndit
@@ -201,8 +407,35 @@ class DarkCurrent(Effect):
 
 
 class LinearityCurve(Effect):
+    """
+    Detector linearity effect
+
+    The detector linearity curve is set in terms of `incident` flux (e/s) and `measured`
+    detector values (ADU).
+
+    Examples
+    --------
+
+    The effect can be instantiated in various ways.
+    - name: detector_linearity
+      class: LinearityCurve
+      kwargs:
+        file_name: FPA_linearity.dat
+
+    - name: detector_linearity
+      class: LinearityCurve
+      kwargs:
+        array_dict: {incident: [0, 77000, 999999999999],
+                     measured: [0, 77000, 77000]}
+
+    - name: detector_linearity
+      class: LinearityCurve
+      kwargs:
+        incident: [0, 77000, 99999999]
+        measured: [0, 77000, 77000]
+    """
     def __init__(self, **kwargs):
-        super(LinearityCurve, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         params = {"z_order": [840],
                   "report_plot_include": True,
                   "report_table_include": False}
@@ -210,20 +443,22 @@ class LinearityCurve(Effect):
         self.meta.update(kwargs)
 
         self.required_keys = ["ndit"]
-        check_keys(self.meta, self.required_keys, action="error")
+        utils.check_keys(self.meta, self.required_keys, action="error")
 
-    def apply_to(self, det):
-        if isinstance(det, DetectorBase):
+    def apply_to(self, obj, **kwargs):
+        if isinstance(obj, DetectorBase):
             ndit = from_currsys(self.meta["ndit"])
-            incident = self.table["incident"] * ndit
-            measured = self.table["measured"] * ndit
+            if self.table is not None:
+                incident = self.table["incident"] * ndit
+                measured = self.table["measured"] * ndit
+            else:
+                incident = np.asarray(from_currsys(self.meta["incident"])) * ndit
+                measured = np.asarray(from_currsys(self.meta["measured"])) * ndit
+            obj._hdu.data = np.interp(obj._hdu.data, incident, measured)
 
-            det._hdu.data = np.interp(det._hdu.data, incident, measured)
-
-        return det
+        return obj
 
     def plot(self, **kwargs):
-        import matplotlib.pyplot as plt
         plt.gcf().clf()
 
         ndit = from_currsys(self.meta["ndit"])
@@ -248,7 +483,8 @@ class ReferencePixelBorder(Effect):
         self.meta.update(widths)
         self.meta.update(kwargs)
 
-    def apply_to(self, implane):
+    def apply_to(self, implane, **kwargs):
+        # .. todo: should this be ImagePlaneBase here?
         if isinstance(implane, ImagePlaneBase):
             if self.meta["top"] > 0:
                 implane.hdu.data[:, -self.meta["top"]:] = 0
@@ -262,8 +498,6 @@ class ReferencePixelBorder(Effect):
         return implane
 
     def plot(self, implane, **kwargs):
-        import matplotlib.pyplot as plt
-
         implane = self.apply_to(implane)
         plt.imshow(implane.data, origin="bottom", **kwargs)
         plt.show()
@@ -275,9 +509,9 @@ class BinnedImage(Effect):
         self.meta["z_order"] = [870]
 
         self.required_keys = ["bin_size"]
-        check_keys(self.meta, self.required_keys, action="error")
+        utils.check_keys(self.meta, self.required_keys, action="error")
 
-    def apply_to(self, det):
+    def apply_to(self, det, **kwargs):
         if isinstance(det, DetectorBase):
             bs = from_currsys(self.meta["bin_size"])
             image = det._hdu.data

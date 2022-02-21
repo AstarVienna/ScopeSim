@@ -14,7 +14,7 @@ ScopeSim_ is on pip::
 
     pip install scopesim_templates
 
-.. note:: ScopeSim only supports python 3.5 and above
+.. note:: ScopeSim only supports python 3.6 and above
 
 .. toctree::
     :maxdepth: 2
@@ -27,6 +27,8 @@ ScopeSim_ is on pip::
     interfaces/index
     architecture/index
     Reference API <reference/modules>
+
+
 
 
 Getting started

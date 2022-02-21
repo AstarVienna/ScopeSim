@@ -3,13 +3,16 @@ from os import path as pth
 import numpy as np
 from astropy import units as u
 from astropy.table import Table
+from astropy.utils.decorators import deprecated_renamed_argument
 
-from synphot import SourceSpectrum, ConstFlux1D
+from synphot import SourceSpectrum, ConstFlux1D, Empirical1D
 from synphot.units import PHOTLAM
 
 from scopesim.rc import __pkg_dir__
 from .source import Source
 from .. import rc
+
+__all__ = ["empty_sky", "star", "star_field"]
 
 
 def empty_sky(flux=0):
@@ -25,9 +28,52 @@ def empty_sky(flux=0):
                  x=[0], y=[0], ref=[0], weight=[1])
     return sky
 
+@deprecated_renamed_argument('mag', 'flux', '0.1.5')
+def star(x=0, y=0, flux=0):
+    """
+    Source object for a single star in either vega, AB magnitudes, or Jansky
 
-def star_field(n, mmin, mmax, width, height=None, photometric_system="vega",
-               use_grid=False):
+    The star is associated with the reference spectrum for each photometric
+    system, therefore a reference wavelength or filter does not need to be given
+
+    Parameters
+    ----------
+    x, y : float
+        [arcsec] position from centre of field of view
+    flux : float
+        [vega mag, AB mag, Jy] Stellar brightness
+
+    Returns
+    -------
+    src : Source
+        A source object with a single entry table field and a reference spectrum
+
+    """
+
+    mag_unit = u.mag
+    spec_template = vega_spectrum
+    if isinstance(flux, u.Quantity):
+        if flux.unit.physical_type == "spectral flux density":  # ABmag and Jy
+            mag_unit = u.ABmag
+            spec_template = ab_spectrum
+            flux = flux.to(u.ABmag)
+        flux = flux.value
+
+    spec = spec_template()
+
+    w = 10**(-0.4 * flux)
+    ref = 0
+
+    tbl = Table(data=[[x], [y], [w], [ref], [flux]],
+                names=["x", "y", "weight", "ref", "mag"],
+                units=[u.arcsec, u.arcsec, None, None, mag_unit])
+    tbl.meta["photometric_system"] = "vega" if mag_unit == u.mag else "ab"
+    src = Source(spectra=spec, table=tbl)
+
+    return src
+
+
+def star_field(n, mmin, mmax, width, height=None, use_grid=False):
     """
     Creates a super basic field of stars with random positions and brightnesses
 
@@ -36,17 +82,15 @@ def star_field(n, mmin, mmax, width, height=None, photometric_system="vega",
     n : int
         number of stars
 
-    mmin, mmax : float
-        [mag] minimum and maximum magnitudes of the population
+    mmin, mmax : float, astropy.Quantity
+        [mag, ABmag, Jy] min and max magnitudes/fluxes of the population stars.
+        If floats, then assumed Quantity is vega magnitudes
 
     width : float
         [arcsec] width of region to put stars in
 
     height : float, optional
         [arcsec] if None, then height=width
-
-    photometric_system : str, optional
-        [vega, AB]
 
     use_grid : bool, optional
         Place stars randomly or on a grid
@@ -66,10 +110,16 @@ def star_field(n, mmin, mmax, width, height=None, photometric_system="vega",
     if height is None:
         height = width
 
-    if photometric_system.lower() == "ab":
-        spec = ab_spectrum()
-    else:
-        spec = vega_spectrum()
+    mag_unit = u.mag
+    spec_template = vega_spectrum
+    if isinstance(mmin, u.Quantity):
+        if mmin.unit.physical_type == "spectral flux density":  # ABmag and Jy
+            mag_unit = u.ABmag
+            spec_template = ab_spectrum
+            mmin, mmax = mmin.to(u.ABmag), mmax.to(u.ABmag)
+        mmin, mmax = mmin.value, mmax.value
+
+    spec = spec_template()
 
     if rc.__config__["!SIM.random.seed"] is not None:
         np.random.seed(rc.__config__["!SIM.random.seed"])
@@ -89,8 +139,9 @@ def star_field(n, mmin, mmax, width, height=None, photometric_system="vega",
     ref = np.zeros(n, dtype=int)
 
     tbl = Table(data=[x, y, w, ref, mags],
-                names=["x", "y", "weight", "ref", "mag"])
-    tbl.meta["photometric_system"] = photometric_system
+                names=["x", "y", "weight", "ref", "mag"],
+                units=[u.arcsec, u.arcsec, None, None, mag_unit])
+    tbl.meta["photometric_system"] = "vega" if mag_unit == u.mag else "ab"
     stars = Source(spectra=spec, table=tbl)
 
     return stars
@@ -103,8 +154,18 @@ def vega_spectrum(mag=0):
 
 
 def st_spectrum(mag=0):
-    return SourceSpectrum(ConstFlux1D, amplitude=mag*u.STmag)
+    # ..todo: the waves vector is a bit random, in particular its length, but sets the resolution of
+    #         the final spectrum in scopesim. Can this be make more general?
+    waves = np.geomspace(100, 300000, 50000)
+    sp = ConstFlux1D(amplitude=mag*u.STmag)
+
+    return SourceSpectrum(Empirical1D, points=waves, lookup_table=sp(waves))
 
 
 def ab_spectrum(mag=0):
-    return SourceSpectrum(ConstFlux1D, amplitude=mag*u.ABmag)
+    # ..todo: the waves vector is a bit random, in particular its length, but sets the resolution of
+    #         the final spectrum in scopesim. Can this be make more general?
+    waves = np.geomspace(100, 300000, 50000)
+    sp = ConstFlux1D(amplitude=mag * u.ABmag)
+
+    return SourceSpectrum(Empirical1D, points=waves, lookup_table=sp(waves))

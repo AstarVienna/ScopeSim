@@ -171,8 +171,8 @@ SurfaceLists
 * 744 Vibration
 * 761 Vignetting            !!! Write
 * 762 Distortion            !!! Write
-* 763 Chopping              !!! Write
 * 780 ReferencePixelBorder
+* 790 AutoDitty
 
 
 800..899 apply-to(Detector)
@@ -186,6 +186,7 @@ Noises
 * 812 HawaiiReadNoise       !!! Write
 * 813 AquariusReadNoise     !!! Write
 * 820 ShotNoise
+* 863 Chopping              !!! Write
 
 Extra flux
 

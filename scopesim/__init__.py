@@ -3,6 +3,8 @@
 ################################################################################
 #                            TURN OFF WARNINGS                                 #
 ################################################################################
+import sys
+import logging
 import warnings
 import yaml
 from astropy.utils.exceptions import AstropyWarning
@@ -18,6 +20,15 @@ yaml.warnings({'YAMLLoadWarning': False})
 ################################################################################
 
 from . import rc
+
+
+
+################################################################################
+#                         SET BASIC LOGGING LEVEL                              #
+################################################################################
+
+root = logging.getLogger()
+root.setLevel("CRITICAL")
 
 ################################################################################
 #                         IMPORT PACKAGE MODULES                               #
@@ -41,7 +52,6 @@ from .commands.user_commands import UserCommands
 from .source.source import Source
 
 from .server.database import list_packages, download_package
-
 
 ################################################################################
 #                          VERSION INFORMATION                                 #

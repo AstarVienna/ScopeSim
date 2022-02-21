@@ -140,7 +140,7 @@ class TestRadiometryTableGetEmission:
         if float(synphot_version()) < 0.2:
             assert emiss.model.n_submodels() == 9
         else:
-            assert emiss.model.n_submodels == 9
+            assert emiss.model.n_submodels == 7
 
     def test_return_none_for_empty_radiometry_table(self):
         rt = opt_rad.RadiometryTable()

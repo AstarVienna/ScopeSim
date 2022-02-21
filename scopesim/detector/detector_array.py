@@ -1,4 +1,4 @@
-import warnings
+import logging
 
 from astropy.io import fits
 
@@ -14,11 +14,12 @@ class DetectorArray:
         self.meta = {}
         self.meta.update(kwargs)
         self.detector_list = detector_list
-        self.effects = []
+        self.array_effects = []
+        self.dtcr_effects = []
         self.detectors = []
         self.latest_exposure = None
 
-    def readout(self, image_planes, effects=[], **kwargs):
+    def readout(self, image_planes, array_effects=[], dtcr_effects=[], **kwargs):
         """
         Read out the detector array into a FITS file
 
@@ -27,8 +28,11 @@ class DetectorArray:
         image_planes : list of ImagePlane objects
             The correct image plane is automatically chosen from the list
 
-        effects : list of Effect objects
-            A list of detector related effects
+        array_effects : list of Effect objects
+            A list of effects related to the detector array
+
+        dtcr_effects : list of Effect objects
+            A list of effects related to the detectors
 
         Returns
         -------
@@ -50,13 +54,18 @@ class DetectorArray:
         # - add ImageHDUs
         # - add ASCIITableHDU with Effects meta data in final table extension
 
-        self.effects = effects
+        self.array_effects = array_effects
+        self.dtcr_effects = dtcr_effects
         self.meta.update(kwargs)
 
         # 0. Get the image plane that corresponds to this detector array
         image_plane_id = self.detector_list.meta["image_plane_id"]
         image_plane = [implane for implane in image_planes if
                        implane.id == image_plane_id][0]
+
+        # 0a. Apply detector array effects (apply to the entire image plane)
+        for effect in self.array_effects:
+            image_plane = effect.apply_to(image_plane, **self.meta)
 
         # 1. make a series of Detectors for each row in a DetectorList object
         self.detectors = [Detector(hdr, **self.meta)
@@ -67,7 +76,7 @@ class DetectorArray:
             detector.extract_from(image_plane)
 
             # 3. apply all effects (to all Detectors)
-            for effect in self.effects:
+            for effect in self.dtcr_effects:
                 detector = effect.apply_to(detector)
 
             # 4. add necessary header keywords
@@ -75,7 +84,7 @@ class DetectorArray:
 
         # 5. Generate a HDUList with the ImageHDUs and any extras:
         pri_hdu = make_primary_hdu(self.meta)
-        effects_hdu = make_effects_hdu(self.effects)
+        effects_hdu = make_effects_hdu(self.array_effects + self.dtcr_effects)
 
         hdu_list = fits.HDUList([pri_hdu] +
                                 [dtcr.hdu for dtcr in self.detectors] +
@@ -102,7 +111,7 @@ def make_effects_hdu(effects):
 #     detector_lists = get_all_effects(effects, efs.DetectorList)
 #
 #     if len(detector_lists) != 1:
-#         warnings.warn("None or more than one DetectorList found. Using the"
+#         logging.warning("None or more than one DetectorList found. Using the"
 #                       " first instance.{}".format(detector_lists))
 #
 #     return detector_lists[0]
