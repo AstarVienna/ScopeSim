@@ -1,9 +1,11 @@
+"""
+Functions to download instrument packages and example data
+"""
 import shutil
 import os
 import zipfile
-from urllib3.exceptions import HTTPError
-import glob
 import logging
+from urllib3.exceptions import HTTPError
 
 import requests
 import bs4
@@ -46,7 +48,7 @@ def get_server_elements(url, unique_str="/"):
     url : str
         The URL of the IRDB HTTP server.
 
-    unique_str : str
+    unique_str : str, list
         A unique string to look for in the beautiful HTML soup:
         "/" for directories this, ".zip" for packages
 
@@ -56,16 +58,21 @@ def get_server_elements(url, unique_str="/"):
         List of paths containing in ``url`` which contain ``unique_str``
 
     """
+    if isinstance(unique_str, str):
+        unique_str = [unique_str]
+
     try:
         result = requests.get(url).content
-    except:
-        raise ValueError("URL returned error: {}".format(url))
+    except Exception as error:
+        raise ValueError(f"URL returned error: {url}") from error
 
     soup = bs4.BeautifulSoup(result, features="lxml")
     paths = soup.findAll("a", href=True)
-    paths = [tmp.string for tmp in paths if tmp.string is not None and unique_str in tmp.string]
-
-    return paths
+    select_paths = []
+    for the_str in unique_str:
+        select_paths += [tmp.string for tmp in paths
+                         if tmp.string is not None and the_str in tmp.string]
+    return select_paths
 
 
 def list_packages(location="all", url=None, local_dir=None,
@@ -103,7 +110,7 @@ def list_packages(location="all", url=None, local_dir=None,
     """
 
     def print_package_list(the_pkgs, loc=""):
-        print("\nPackages saved {}".format(loc) + "\n" + "=" * (len(loc) + 15))
+        print(f"\nPackages saved {loc}\n" + "=" * (len(loc) + 15))
         for pkg in the_pkgs:
             print(pkg)
 
@@ -117,7 +124,7 @@ def list_packages(location="all", url=None, local_dir=None,
     if location.lower() in ["local", "all"]:
         local_pkgs = get_local_packages(local_dir)
         if not silent:
-            print_package_list(local_pkgs, "locally: {}".format(local_dir))
+            print_package_list(local_pkgs, f"locally: {local_dir}")
             return_pkgs_list += local_pkgs
 
     if location.lower() in ["server", "all"]:
@@ -127,12 +134,13 @@ def list_packages(location="all", url=None, local_dir=None,
             pkgs = get_server_elements(url + folder, ".zip")
             server_pkgs += [folder + pkg for pkg in pkgs]
         if not silent:
-            print_package_list(server_pkgs, "on the server: {}".format(url))
+            print_package_list(server_pkgs, f"on the server: {url}")
             return_pkgs_list += server_pkgs
 
     if return_pkgs:
         return return_pkgs_list
 
+    return None
 
 def download_package(pkg_path, save_dir=None, url=None, from_cache=None):
     """
@@ -167,7 +175,7 @@ def download_package(pkg_path, save_dir=None, url=None, from_cache=None):
 
     elif isinstance(pkg_path, str):
         if pkg_path[-4:] != ".zip":
-            logging.warning("Appended '.zip' to {}".format(pkg_path))
+            logging.warning("Appended '.zip' to %s", pkg_path)
             pkg_path += ".zip"
 
         if url is None:
@@ -189,7 +197,105 @@ def download_package(pkg_path, save_dir=None, url=None, from_cache=None):
                 zip_ref.extractall(save_dir)
 
         except HTTPError:
-            ValueError("Unable to find file: {}".format(url + pkg_path))
+            ValueError(f"Unable to find file: {url + pkg_path}")
+
+        save_path = os.path.abspath(save_path)
+
+    return save_path
+
+def list_example_data(url=None, return_files=False, silent=False):
+    """
+    List all example files found under ``url``
+
+    Parameters
+    ----------
+    url : str
+        The URL of the database HTTP server. If left as None, defaults to the
+        value in scopesim.rc.__config__["!SIM.file.server_base_url"]
+
+    return_files : bool
+        If True, returns a list of file names
+
+    silent : bool
+        If True, does not print the list of file names
+
+    Returns
+    -------
+    all_files : list of str
+        A list of paths to the example files relative to ``url``.
+        The full string should be passed to ``download_example_data``.
+    """
+
+    def print_file_list(the_files, loc=""):
+        print(f"\nFiles saved {loc}\n" + "=" * (len(loc) + 12))
+        for _file in the_files:
+            print(_file)
+
+    if url is None:
+        url = rc.__config__["!SIM.file.server_base_url"]
+
+    return_file_list = []
+    server_files = []
+    folders = get_server_elements(url, "example_data")
+    for folder in folders:
+        files = get_server_elements(url + folder, ("fits", "txt", "dat"))
+        server_files += files
+    if not silent:
+        print_file_list(server_files, f"on the server: {url + 'example_data/'}")
+        return_file_list += server_files
+
+    if return_files:
+        return return_file_list
+
+    return None
+
+def download_example_data(file_path, save_dir=None, url=None, from_cache=None):
+    """
+    Downloads example fits files to the local disk
+
+    Parameters
+    ----------
+    file_path : str, list
+        Name(s) of FITS file(s) as given by ``list_example_data()``
+
+    save_dir : str
+        The place on the local disk where the downloaded files are to be saved.
+        If left as None, defaults to the current working directory.
+
+    url : str
+        The URL of the database HTTP server. If left as None, defaults to the
+        value in scopesim.rc.__config__["!SIM.file.server_base_url"]
+
+    from_cache : bool
+        Use the cached versions of the files. If None, defaults to the RC
+        value: ``!SIM.file.use_cached_downloads``
+
+    Returns
+    -------
+    save_path : str
+        The absolute path to the saved files
+    """
+    if isinstance(file_path, (list, tuple)):
+        save_path = [download_example_data(thefile, save_dir, url)
+                     for thefile in file_path]
+    elif isinstance(file_path, str):
+
+        if url is None:
+            url = rc.__config__["!SIM.file.server_base_url"]
+        if save_dir is None:
+            save_dir = os.getcwd()
+        if not os.path.exists(save_dir):
+            os.mkdir(save_dir)
+
+        try:
+            if from_cache is None:
+                from_cache = rc.__config__["!SIM.file.use_cached_downloads"]
+            cache_path = download_file(url + "example_data/" + file_path,
+                                       cache=from_cache)
+            save_path = os.path.join(save_dir, os.path.basename(file_path))
+            file_path = shutil.copy2(cache_path, save_path)
+        except HTTPError:
+            ValueError(f"Unable to find file: {url + 'example_data/' + file_path}")
 
         save_path = os.path.abspath(save_path)
 
