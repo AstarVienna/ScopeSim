@@ -1,15 +1,16 @@
-version = '0.2.0'
-date    = '2022-02-17 08:30:00 GMT'
+version = '0.3.0'
+date    = '2022-02-22 16:30:00 GMT'
 yaml_descriptions = """
-- version : 0.2.0
-  date : 2022-02-17
+- version : 0.3.0
+  date : 2022-02-22
   comment : Version released for the METIS science team
-  changes : 
+  changes :
   - release of new spectroscopy effect SpectalTraceList
   - moved individual spectral trace code to utils file
-  - rewritten FovManager class 
+  - rewritten FovManager class
   - added make_cube, make_image, make_spectrum to FieldOfView class
   - removed fov_grid from Effects
-  - added new detector array z_order section (900-class effects)  
-
+  - added new detector array z_order section (900-class effects)
+  - wavelength-dependent PSF in spectroscopic modes
+  - proper handling of cube sources
 """
