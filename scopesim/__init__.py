@@ -51,7 +51,9 @@ from .optics.optical_train import OpticalTrain
 from .commands.user_commands import UserCommands
 from .source.source import Source
 
-from .server.database import list_packages, download_package
+from .server.database import (list_packages, download_package,
+                              list_example_data,
+                              download_example_data)
 
 ################################################################################
 #                          VERSION INFORMATION                                 #
