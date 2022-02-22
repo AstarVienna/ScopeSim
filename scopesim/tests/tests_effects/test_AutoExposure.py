@@ -121,5 +121,20 @@ class TestAutoExposure:
         dit_2 = from_currsys("!OBS.dit")
         ndit_2 = from_currsys("!OBS.ndit")
 
-        assert dit_1 == dit_1
+        assert dit_1 == dit_2
         assert ndit_1 == ndit_2
+
+    def test_exptime_at_least_mindit(self, imageplane):
+        exptime = 1
+        mindit = 1.3     # requested exptime smaller than mindit
+        autoexposure = AutoExposure(fill_frac = 0.75,
+                                    full_well = 1e5,
+                                    mindit=mindit)
+        rc.__currsys__ = UserCommands(properties={"!OBS.exptime": exptime,
+                                                  "!OBS.dit": None,
+                                                  "!OBS.ndit": None})
+        autoexposure.apply_to(imageplane)
+        dit = from_currsys("!OBS.dit")
+        ndit = from_currsys("!OBS.ndit")
+        assert dit == mindit
+        assert ndit == 1

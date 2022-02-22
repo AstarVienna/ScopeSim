@@ -184,9 +184,16 @@ class AutoExposure(Effect):
         if isinstance(obj, (ImagePlaneBase, DetectorBase)):
             implane_max = np.max(obj.data)
             exptime = kwargs.get('exptime', from_currsys("!OBS.exptime"))
+            mindit = from_currsys(self.meta["mindit"])
+
             if exptime is None:
                 exptime = from_currsys("!OBS.dit") * from_currsys("!OBS.ndit")
-            print("Requested exposure time: {:.3f} s".format(exptime))
+            print(f"Requested exposure time: {exptime:.3f} s")
+
+            if exptime < mindit:
+                print(f"    increased to MINDIT: {mindit:.3f} s")
+                exptime = mindit
+
             full_well = from_currsys(self.meta["full_well"])
             fill_frac = kwargs.get("fill_frac",
                                    from_currsys(self.meta["fill_frac"]))
@@ -205,8 +212,8 @@ class AutoExposure(Effect):
                 # ..todo: turn into proper warning
 
             print("Exposure parameters:")
-            print("                DIT: {:.3f} s  NDIT: {}".format(dit, ndit))
-            print("Total exposure time: {:.3f} s".format(dit * ndit))
+            print(f"                DIT: {dit:.3f} s  NDIT: {ndit}")
+            print(f"Total exposure time: {dit * ndit:.3f} s")
 
             rc.__currsys__['!OBS.dit'] = dit
             rc.__currsys__['!OBS.ndit'] = ndit
