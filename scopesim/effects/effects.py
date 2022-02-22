@@ -123,19 +123,19 @@ class Effect(DataContainer):
                            "table"]:
                 meta_str += "    {} : {}\n".format(key.rjust(max_key_len),
                                                    self.meta[key])
-    
+
         return meta_str
 
     def report(self, filename=None, output="rst", rst_title_chars="*+",
                **kwargs):
         """
         For Effect objects, generates a report based on the data and meta-data
-    
+
         This is to aid in the automation of the documentation process of the
         instrument packages in the IRDB.
-    
+
         .. note:: If the Effect can generate a plot, this will be saved to disc
-    
+
         Parameters
         ----------
         filename : str, optional
@@ -169,36 +169,36 @@ class Effect(DataContainer):
         -------
         rst_str : str
             The full reStructureText string
-    
+
         Notes
         -----
-    
+
         The format of the RST output is as follows::
-    
+
             <ClassType>: <effect name>
             **************************
             File Description: <description for file meta data>
             Class Description: <description from class docstring>
-            Changes: <list of changes from file meta data> 
-    
+            Changes: <list of changes from file meta data>
+
             Data
             ++++
             .. figure:: <Figure_name>.png
                 If the <Effect> object contains a ``.plot()`` function, add
                 plot and write it to disc
             Figure caption
-    
+
             Table caption
             Table
                 If the <Effect> object contains a ``.table()`` function, add
                 a pprint version of the table
-    
+
             Meta-data
             +++++++++
             ::
                 A code block print out of the ``.meta`` dictionary
-    
-    
+
+
         """
         changes = self.meta.get("changes", [])
         changes_str = "- " + "\n- ".join([str(entry) for entry in changes])
@@ -273,7 +273,7 @@ Data
 """.format(fname,
            "fig:" + params.get("name", "<unknown Effect>"),
            params["report_plot_caption"])
-    
+
         if params["report_table_include"]:
             rst_str += """
 .. table::
@@ -295,20 +295,27 @@ Meta-data
 {}
 """.format(rst_title_chars[1] * 9,
            self.meta_string)
-    
+
         write_report(rst_str, filename, output)
 
         return rst_str
 
-    def __repr__(self):
+    def info(self):
+        """
+        Prints basic information on the effect, notably the description
+        """
         name = self.meta.get("name", self.meta.get("filename", "<empty>"))
         text = f'{type(self).__name__}: "{name}"'
 
         desc = self.meta.get("description")
         if desc is not None:
-            text += f"\nDescription: {desc}"
+             text += f"\nDescription: {desc}"
 
-        return text
+        print(text)
+
+    def __repr__(self):
+        name = self.meta.get("name", self.meta.get("filename", "<empty>"))
+        return f'{type(self).__name__}: "{name}"'
 
     def __str__(self):
         return self.__repr__()
