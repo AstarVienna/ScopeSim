@@ -1,4 +1,5 @@
 import os
+import sys
 from copy import deepcopy
 from shutil import copyfileobj
 
@@ -304,7 +305,13 @@ class OpticalTrain:
             hdul = detector_array.readout(self.image_planes, array_effects,
                                          dtcr_effects, **kwargs)
 
-            hdul = self.write_header(hdul)
+            try:
+                hdul = self.write_header(hdul)
+            except Exception as error:
+                print("\nWarning: header update failed, data will be saved with incomplete header.")
+                print("Reason: ", sys.exc_info()[0], error)
+                print("")
+
             if filename is not None and isinstance(filename, str):
                 fname = filename
                 if len(self.detector_arrays) > 1:
@@ -317,7 +324,7 @@ class OpticalTrain:
 
     def write_header(self, hdulist):
         """Writes meaningful header to simulation product"""
-
+        hdulist[3].header
         # Primary hdu
         pheader = hdulist[0].header
         pheader['DATE'] = datetime.now().isoformat(timespec='seconds')
