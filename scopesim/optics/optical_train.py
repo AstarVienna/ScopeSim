@@ -1,5 +1,8 @@
 from copy import deepcopy
 from shutil import copyfileobj
+
+from datetime import datetime
+
 import numpy as np
 from scipy.interpolate import interp1d
 from astropy.io import fits
@@ -15,6 +18,7 @@ from ..commands.user_commands import UserCommands
 from ..detector import DetectorArray
 from ..source.source import Source
 from ..utils import from_currsys
+from ..version import version
 from .. import rc
 from . import fov_utils as fu
 
@@ -292,22 +296,50 @@ class OpticalTrain:
 
         """
 
-        hdus = []
+        hduls = []
         for i, detector_array in enumerate(self.detector_arrays):
             array_effects = self.optics_manager.detector_array_effects
             dtcr_effects = self.optics_manager.detector_effects
-            hdu = detector_array.readout(self.image_planes, array_effects,
+            hdul = detector_array.readout(self.image_planes, array_effects,
                                          dtcr_effects, **kwargs)
 
+            hdul = self.write_header(hdul)
             if filename is not None and isinstance(filename, str):
                 fname = filename
                 if len(self.detector_arrays) > 1:
                     fname = str(i) + "_" + filename
-                hdu.writeto(fname, overwrite=True)
+                hdul.writeto(fname, overwrite=True)
 
-            hdus += [hdu]
+            hduls += [hdul]
 
-        return hdus
+        return hduls
+
+    def write_header(self, hdulist):
+        """Writes meaningful header to simulation product"""
+        print(hdulist)
+        # Primary hdul
+        pheader = hdulist[0].header
+        pheader['DATE'] = datetime.now().isoformat(timespec='seconds')
+        pheader['ORIGIN'] = 'Scopesim ' + version
+
+        # Source information taken from first only.
+        # ..todo: What if source is a composite?
+        srcfield = self._last_source.fields[0]
+        if type(srcfield).__name__ == "Table":
+            pheader['SOURCE'] = "Table"
+        elif type(srcfield).__name__ == "ImageHDU":
+            if 'BG_SURF' in srcfield.header:
+                pheader['SOURCE'] = srcfield.header['BG_SURF']
+            else:
+                try:
+                    pheader['SOURCE'] = srcfield.header['FILENAME']
+                except KeyError:
+                    pheader['SOURCE'] = "ImageHDU"
+
+        # hdulist[0].header = pheader
+        # Image hdul   ..todo: currently only one, update for detector arrays
+
+        return hdulist
 
     def set_focus(self, **kwargs):
         self.cmds.update(**kwargs)

@@ -32,6 +32,7 @@
 # [WCS = CRPIXn, CRVALn = (0,0), CTYPEn, CDn_m, NAXISn, CUNITn
 """
 
+import os
 import pickle
 import logging
 from copy import deepcopy
@@ -192,6 +193,7 @@ class Source(SourceBase):
             fits_type = utils.get_fits_type(filename)
             data = fits.getdata(filename)
             hdr = fits.getheader(filename)
+            hdr['FILENAME'] = os.path.basename(filename)
             if fits_type == "image":
                 image = fits.ImageHDU(data=data, header=hdr)
                 if spectra is not None:
@@ -222,8 +224,8 @@ class Source(SourceBase):
         if not image_hdu.header.get("BG_SRC"):
             image_hdu.header["CRVAL1"] = 0
             image_hdu.header["CRVAL2"] = 0
-            image_hdu.header["CRPIX1"] = image_hdu.header["NAXIS1"] / 2
-            image_hdu.header["CRPIX2"] = image_hdu.header["NAXIS2"] / 2
+            image_hdu.header["CRPIX1"] = (image_hdu.header["NAXIS1"] + 1) / 2
+            image_hdu.header["CRPIX2"] = (image_hdu.header["NAXIS2"] + 1) / 2
             # .. todo:: find where the actual problem is with negative CDELTs
             # .. todo:: --> abs(pixel_scale) in header_from_list_of_xy
             if image_hdu.header["CDELT1"] < 0:
@@ -243,7 +245,7 @@ class Source(SourceBase):
         else:
             image_hdu.header["SPEC_REF"] = ""
             logging.warning("No spectrum was provided. SPEC_REF set to ''. "
-                          "This could cause problems later")
+                            "This could cause problems later")
             raise NotImplementedError
 
         for i in [1, 2]:
@@ -316,6 +318,7 @@ class Source(SourceBase):
             with fits.open(cube) as hdul:
                 data = hdul[ext].data
                 header = hdul[ext].header
+                header['FILENAME'] = os.path.basename(cube)
                 wcs = WCS(cube)
 
         try:
