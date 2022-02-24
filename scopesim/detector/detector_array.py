@@ -84,17 +84,20 @@ class DetectorArray:
 
         # 5. Generate a HDUList with the ImageHDUs and any extras:
         pri_hdu = make_primary_hdu(self.meta)
-        effects_hdu = make_effects_hdu(self.array_effects + self.dtcr_effects)
 
-        hdu_list = fits.HDUList([pri_hdu] +
-                                [dtcr.hdu for dtcr in self.detectors] +
-                                [effects_hdu])
+        # ..todo: effects_hdu unnecessary as long as make_effects_hdu does not do anything
+        # effects_hdu = make_effects_hdu(self.array_effects + self.dtcr_effects)
+
+        hdu_list = fits.HDUList([pri_hdu]
+                                + [dtcr.hdu for dtcr in self.detectors])
+                                # + [effects_hdu])
         self.latest_exposure = hdu_list
 
         return self.latest_exposure
 
 
 def make_primary_hdu(meta):
+    """Create the primary header from meta data"""
     new_meta = utils.stringify_dict(meta)
     prihdu = fits.PrimaryHDU()
     prihdu.header.update(new_meta)
