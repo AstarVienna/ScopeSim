@@ -324,7 +324,7 @@ class OpticalTrain:
 
     def write_header(self, hdulist):
         """Writes meaningful header to simulation product"""
-        hdulist[3].header
+
         # Primary hdu
         pheader = hdulist[0].header
         pheader['DATE'] = datetime.now().isoformat(timespec='seconds')
