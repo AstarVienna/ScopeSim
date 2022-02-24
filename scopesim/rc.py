@@ -19,5 +19,5 @@ __currsys__ = __config__
 __search_path__ = [__config__["!SIM.file.local_packages_path"],
                    __pkg_dir__] + __config__["!SIM.file.search_path"]
 
-if os.environ.get("READTHEDOCS") == "True":
+if os.environ.get("READTHEDOCS") == "True" or "F:" in os.getcwd():
     __search_path__ = ["../", "../../", "../../../"] + __search_path__
