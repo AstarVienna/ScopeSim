@@ -596,9 +596,11 @@ class FieldOfView(FieldOfViewBase):
                                            return_quantity=True)
         elif len(self.spectra) > 0:
             wavesets = [spec.waveset for spec in self.spectra.values()]
-            _waveset = np.unique(np.concatenate(wavesets))
+            _waveset = np.concatenate(wavesets)
         else:
             _waveset = self.waverange * u.um
+
+        _waveset = np.unique(_waveset)
 
         return _waveset.to(u.um)
 
