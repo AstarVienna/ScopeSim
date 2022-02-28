@@ -1,4 +1,4 @@
-import warnings
+import logging
 from inspect import isclass
 
 import numpy as np
@@ -10,7 +10,7 @@ from .optical_element import OpticalElement
 from .. import effects as efs
 from ..effects.effects_utils import is_spectroscope
 from ..effects.effects_utils import combine_surface_effects
-from ..utils import write_report
+from ..utils import write_report, from_currsys
 from ..reports.rst_utils import table_to_rst
 from .. import rc
 
@@ -183,6 +183,10 @@ class OpticsManager:
         return headers
 
     @property
+    def detector_array_effects(self):
+        return self.get_z_order_effects(900)
+
+    @property
     def detector_effects(self):
         return self.get_z_order_effects(800)
 
@@ -225,7 +229,7 @@ class OpticsManager:
     def system_transmission(self):
 
         wave_unit = u.Unit(rc.__currsys__["!SIM.spectral.wave_unit"])
-        dwave = rc.__currsys__["!SIM.spectral.spectral_resolution"]
+        dwave = rc.__currsys__["!SIM.spectral.spectral_bin_width"]
         wave_min = rc.__currsys__["!SIM.spectral.wave_min"]
         wave_max = rc.__currsys__["!SIM.spectral.wave_max"]
         wave = np.arange(wave_min, wave_max, dwave)
@@ -260,13 +264,14 @@ class OpticsManager:
 
         elements = [opt_el.meta["name"] for opt_el in self.optical_elements
                     for eff in opt_el.effects]
-        names = [eff.meta["name"] for eff in all_effs]
+        names = [eff.display_name for eff in all_effs]
         classes = [eff.__class__.__name__ for eff in all_effs]
         included = [eff.meta["include"] for eff in all_effs]
         z_orders = [eff.meta["z_order"] for eff in all_effs]
 
-        colnames = ["element", "name", "class", "included", "z_orders"]
-        data = [elements, names, classes, included, z_orders]
+        colnames = ["element", "name", "class", "included"]     #, "z_orders"
+        data = [elements, names, classes, included]             #, z_orders
+        data = from_currsys(data)
         tbl = Table(names=colnames, data=data, copy=False)
 
         return tbl
@@ -314,13 +319,15 @@ Summary of Effects in Optical Elements:
 
         if isinstance(obj, list) and len(obj) == 1:
             obj = obj[0]
+        elif isinstance(obj, list) and len(obj) == 0:
+            raise ValueError(f"Cannot find object: {item}")
 
         return obj
 
     def __setitem__(self, key, value):
         obj = self.__getitem__(key)
         if isinstance(obj, list) and len(obj) > 1:
-            warnings.warn("{} does not return a singular object:\n {}"
+            logging.warning("{} does not return a singular object:\n {}"
                           "".format(key, obj))
         elif isinstance(obj, efs.Effect) and isinstance(value, dict):
             obj.meta.update(value)
@@ -337,5 +344,3 @@ Summary of Effects in Optical Elements:
     def __str__(self):
         name = self.meta.get("name", self.meta.get("filename", "<empty>"))
         return '{}: "{}"'.format(type(self).__name__, name)
-
-

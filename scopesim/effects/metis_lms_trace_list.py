@@ -92,7 +92,7 @@ class MetisLMSSpectralTrace(SpectralTrace):
         self.meta['description'] = "Slice " + str(spslice + 1)
         self.meta.update(params)
 
-    def fov_grid(self, fov_manager):
+    def fov_grid(self):
         """
         Provide information on the source space volume required by the effect
 

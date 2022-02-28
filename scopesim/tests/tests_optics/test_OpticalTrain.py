@@ -124,7 +124,7 @@ class TestObserve:
         opt.observe(tbl_src)
 
         if PLOTS:
-            plt.imshow(opt.image_plane.image.T, origin="lower", norm=LogNorm())
+            plt.imshow(opt.image_planes[0].image.T, origin="lower", norm=LogNorm())
             plt.show()
 
     def test_observe_works_for_image(self, cmds, im_src):
@@ -132,7 +132,7 @@ class TestObserve:
         opt.observe(im_src)
 
         if PLOTS:
-            plt.imshow(opt.image_plane.image.T, origin="lower", norm=LogNorm())
+            plt.imshow(opt.image_planes[0].image.T, origin="lower", norm=LogNorm())
             plt.show()
 
     def test_observe_works_for_source_distributed_over_several_fovs(self, cmds,
@@ -200,6 +200,18 @@ class TestObserve:
             plt.colorbar()
             plt.show()
 
+    def test_works_with_a_pointer_to_fits_imagehdu(self, cmds):
+        # Basically just checking to make sure observe doesn't throw an error
+        # when passed a Source object with a file pointer ImageHDU
+        fits_src = src_objs._fits_image_source()
+        array_src = src_objs._image_source()
+
+        src = fits_src + array_src
+        opt = OpticalTrain(cmds)
+        opt.observe(src)
+
+        assert np.sum(opt.image_planes[0].data) > 0
+
 
 @pytest.mark.usefixtures("unity_cmds", "unity_src")
 class TestReadout:
@@ -237,9 +249,9 @@ class TestGetItems:
     def test_effect_returned_for_unique_name(self, simplecado_opt):
         assert isinstance(simplecado_opt["test_detector_list"], Effect)
 
-    def test_returns_nothing_for_bogus_string(self, simplecado_opt):
-        assert isinstance(simplecado_opt["bogus"], list)
-        assert len(simplecado_opt["bogus"]) == 0
+    def test_raises_error_for_bogus_string(self, simplecado_opt):
+        with pytest.raises(ValueError):
+            simplecado_opt["bogus"]
 
     def test_list_of_effects_returned_for_effect_class(self, simplecado_opt):
         effects = simplecado_opt[DetectorList]

@@ -1,0 +1,93 @@
+{
+    "@context": "https://doi.org/10.5063/schema/codemeta-2.0",
+    "@type": "SoftwareSourceCode",
+    "license": "https://spdx.org/licenses/GPL-3.0",
+    "codeRepository": "https://github.com/AstarVienna/ScopeSim.git",
+    "dateCreated": "2018-04-25",
+    "datePublished": "2019-11-21",
+    "dateModified": "2021-06-10",
+    "downloadUrl": "https://pypi.org/project/ScopeSim/",
+    "issueTracker": "https://github.com/AstarVienna/ScopeSim/issues",
+    "name": "ScopeSim",
+    "version": "0.1.1",
+    "identifier": "10.1117/12.2559784",
+    "description": "An attempt at creating a common pythonic framework for visual and infrared telescope instrument data simulators.",
+    "applicationCategory": "Astronomy",
+    "funding": "IS538004",
+    "developmentStatus": "active",
+    "isPartOf": "https://astarvienna.github.io/",
+    "referencePublication": "https://doi.org/10.1117/12.2559784",
+    "funder": {
+        "@type": "Organization",
+        "name": "Austrian Government, University of Vienna"
+    },
+    "keywords": [
+        "Instruments",
+        "Telescopes",
+        "Simulators",
+        "ELT",
+        "Visual",
+        "Infrared"
+    ],
+    "programmingLanguage": [
+        "Python 3"
+    ],
+    "operatingSystem": [
+        "Linux",
+        "Windows",
+        "macOS"
+    ],
+    "softwareRequirements": [
+        "Python 3.5+"
+    ],
+    "relatedLink": [
+        "https://github.com/AstarVienna/ScopeSim",
+        "https://astarvienna.github.io/"
+    ],
+    "author": [
+        {
+            "@type": "Person",
+            "@id": "https://orcid.org/0000-0003-0441-9784",
+            "givenName": "Kieran",
+            "familyName": "Leschinski",
+            "email": "kieran.leschinski@univie.ac.at",
+            "affiliation": {
+                "@type": "Organization",
+                "name": "Department of Astrophysics, University of Vienna"
+            }
+        },
+        {
+            "@type": "Person",
+            "@id": "https://orcid.org/0000-0003-3127-5341 ",
+            "givenName": "Oliver ",
+            "familyName": "Czoske",
+            "email": "oliver.czoske@univie.ac.at",
+            "affiliation": {
+                "@type": "Organization",
+                "name": "Department of Astrophysics, University of Vienna"
+            }
+        },
+        {
+            "@type": "Person",
+            "@id": "https://orcid.org/0000-0001-8001-0089",
+            "givenName": "Hugo",
+            "familyName": "Buddelmeijer",
+            "email": "buddel@astro.rug.nl",
+            "affiliation": {
+                "@type": "Organization",
+                "name": "OmegaCEN, Kapteyn Astronomical Institute, University of Groningen"
+            }
+        },
+        {
+            "@type": "Person",
+            "@id": "https://orcid.org/0000-0001-5027-557X",
+            "givenName": "Miguel",
+            "familyName": "Verdugo",
+            "email": "miguel.verdugo@univie.ac.at",
+            "affiliation": {
+                "@type": "Organization",
+                "name": "Department of Astrophysics, University of Vienna"
+            }
+        }
+    ]
+}

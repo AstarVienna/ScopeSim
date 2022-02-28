@@ -3,10 +3,11 @@ from astropy import units as u
 from astropy.table import Table
 from astropy.utils.data import download_file
 from astropy.io import ascii as ioascii
+from astropy.wcs import WCS
 from synphot import SpectralElement, SourceSpectrum, Empirical1D, Observation
 from synphot.units import PHOTLAM
 
-from ..source.source_templates import vega_spectrum, st_spectrum, \
+from scopesim.source.source_templates import vega_spectrum, st_spectrum, \
     ab_spectrum
 from ..utils import find_file, quantity_from_table, from_currsys
 
@@ -77,9 +78,8 @@ def download_svo_filter(filter_name, return_style="synphot"):
         Astronomical filter object.
 
     """
-    path = download_file('http://svo2.cab.inta-csic.es/'
-                         'theory/fps3/fps.php?ID={}'.format(filter_name),
-                         cache=True)
+    url = f"http://svo2.cab.inta-csic.es/theory/fps3/fps.php?ID={filter_name}"
+    path = download_file(url, cache=True)
 
     tbl = Table.read(path, format='votable')
     wave = u.Quantity(tbl['Wavelength'].data.data, u.Angstrom, copy=False)
@@ -207,9 +207,10 @@ def scale_spectrum(spectrum, filter_name, amplitude):
     --------
     ::
 
+        >>> from scopesim.source.source_templates import vega_spectrum
         >>> from scopesim.effects.ter_curves_utils as ter_utils
         >>>
-        >>> spec = ter_utils.vega_spectrum()
+        >>> spec = vega_spectrum()
         >>> vega_185 = ter_utils.scale_spectrum(spec, "Ks", -1.85 * u.mag)
         >>> ab_0 = ter_utils.scale_spectrum(spec, "Ks", 0 * u.ABmag)
         >>> jy_3630 = ter_utils.scale_spectrum(spec, "Ks", 3630 * u.Jy)
@@ -231,8 +232,8 @@ def scale_spectrum(spectrum, filter_name, amplitude):
             ref_spec = vega_spectrum(amplitude.value)
 
         else:
-            raise ValueError("Units of amplitude must be one of "
-                             "[u.mag, u.ABmag, u.STmag]: {}".format(amplitude))
+            raise ValueError(f"Units of amplitude must be one of "
+                             f"[u.mag, u.ABmag, u.STmag, u.Jy]: {amplitude}")
     else:
         ref_spec = vega_spectrum(amplitude)
 
@@ -245,6 +246,27 @@ def scale_spectrum(spectrum, filter_name, amplitude):
 
     return spectrum
 
+def apply_throughput_to_cube(cube, thru):
+    """
+    Apply throughput curve to a spectroscopic cube
+
+    Parameters
+    ----------
+    cube : ImageHDU
+         three-dimensional image, dimension 0 (in python convention) is the
+         spectral dimension. WCS is required.
+    thru : synphot.SpectralElement, synphot.SourceSpectrum
+
+    Returns
+    -------
+    cube : ImageHDU, header unchanged, data multiplied with wavelength-dependent
+         throughput
+    """
+    wcs = WCS(cube.header).spectral
+    wave_cube = wcs.all_pix2world(np.arange(cube.data.shape[0]), 0)[0]
+    wave_cube = (wave_cube * u.Unit(wcs.wcs.cunit[0])).to(u.AA)
+    cube.data *= thru(wave_cube).value[:, None, None]
+    return cube
 
 def combine_two_spectra(spec_a, spec_b, action, wave_min, wave_max):
     """
@@ -267,13 +289,23 @@ def combine_two_spectra(spec_a, spec_b, action, wave_min, wave_max):
     new_source : synphot.SourceSpectrum
 
     """
-
-    wave_val = spec_a.waveset.value
+    if spec_a.waveset is None:
+        wave_val = spec_b.waveset.value
+    else:
+        wave_val = spec_a.waveset.value
     mask = (wave_val > wave_min.value) * (wave_val < wave_max.value)
 
     wave = ([wave_min.value] + list(wave_val[mask]) + [wave_max.value]) * u.AA
     if "mult" in action.lower():
         spec_c = spec_a(wave) * spec_b(wave)
+        ## Diagnostic plots - not for general use
+        # from matplotlib import pyplot as plt
+        # plt.plot(wave, spec_a(wave), label="spec_a")
+        # plt.plot(wave, spec_b(wave), label="spec_b")
+        # plt.plot(wave, spec_c, label="spec_c")
+        # plt.xlim(2.9e4, 4.2e4)
+        # plt.legend()
+        # plt.show()
     elif "add" in action.lower():
         spec_c = spec_a(wave) + spec_b(wave)
 

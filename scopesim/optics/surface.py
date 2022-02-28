@@ -1,5 +1,5 @@
 import os
-import warnings
+import logging
 
 import numpy as np
 
@@ -32,6 +32,8 @@ class SpectralSurface:
     Alternatively kwargs for the above mentioned quantities can be passed as
     arrays. If they are not Quantities, then a unit should also be passed with
     the <array_name>_unit syntax (i.e. emission_unit or wavelength_unit)
+
+    If temperature is not given as a Quantity, it defaults to degrees Celsius.
 
     """
     def __init__(self, filename=None, **kwargs):
@@ -98,7 +100,8 @@ class SpectralSurface:
         """
         Looks for an emission array in self.meta. If it doesn't find this, it
         defaults to creating a blackbody and multiplies this by the emissivity.
-        Assumption is that self.meta["temperature"] is in deg_C
+        Assumption is that self.meta["temperature"] is in deg_C, unless it is
+        a u.Quantity with attached temperature unit.
         Return units are in PHOTLAM arcsec^-2, even though arcsec^-2 is not
         given
         """
@@ -109,9 +112,12 @@ class SpectralSurface:
             flux = make_emission_from_array(flux, wave, meta=self.meta)
         elif "temperature" in self.meta:
             emiss = self.emissivity                     # SpectralElement [0..1]
-            temp = quantify(from_currsys(self.meta["temperature"]), u.deg_C)
-            temp = temp.value + 273.
+            temp = from_currsys(self.meta["temperature"])
+            if not isinstance(temp, u.Quantity):
+                temp = quantify(temp, u.deg_C)
+            temp = temp.to(u.Kelvin, equivalencies=u.temperature())
             flux = make_emission_from_emissivity(temp, emiss)
+            flux.meta["temperature"] = temp
         else:
             flux = None
 
@@ -165,6 +171,7 @@ class SpectralSurface:
         ----------
         ter_property : str
             ``transmission``, ``emissivity``, ``reflection``
+        fmt : str
 
         Returns
         -------
@@ -188,7 +195,7 @@ class SpectralSurface:
             response_curve = value_arr
         else:
             response_curve = None
-            warnings.warn("Both wavelength and {} must be set"
+            logging.warning("Both wavelength and {} must be set"
                           "".format(ter_property))
 
         return response_curve
@@ -249,8 +256,8 @@ class SpectralSurface:
         elif colname in self.table.colnames:
             val = self.table[colname].data
         else:
-            warnings.warn("{} not found in either '.meta' or '.table'"
-                          "".format(colname))
+            logging.warning(f"{colname} not found in either '.meta' or '.table': "
+                          f"[{self.meta.get('name', self.meta['filename'])}]")
             return None
 
         col_units = colname+"_unit"

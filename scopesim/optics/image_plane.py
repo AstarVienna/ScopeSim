@@ -58,7 +58,7 @@ class ImagePlane(ImagePlaneBase):
         image = np.zeros((header["NAXIS2"]+1, header["NAXIS1"]+1))
         self.hdu = fits.ImageHDU(data=image, header=header)
 
-    def add(self, hdus_or_tables, sub_pixel=None, order=None, wcs_suffix=""):
+    def add(self, hdus_or_tables, sub_pixel=None, spline_order=None, wcs_suffix=""):
         """
         Add a projection of an image or table files to the canvas
 
@@ -90,9 +90,9 @@ class ImagePlane(ImagePlaneBase):
             sub-pixel shifts or not. Accounting for sub-pixel shifts is approx.
             5x slower.
 
-        order : int, optional
-            Default is 1. Order of spline interpolations used in
-            ``scipy.ndimage`` functions ``zoom`` and ``rotate``.
+        spline_order : int, optional
+            Order of spline interpolations used in ``scipy.ndimage`` functions
+            ``zoom`` and ``rotate``.
 
         wcs_suffix : str, optional
             Default "". For sky coords - "" or "S", Detector coords - "D"
@@ -100,12 +100,12 @@ class ImagePlane(ImagePlaneBase):
         """
         if sub_pixel is None:
             sub_pixel = utils.from_currsys("!SIM.sub_pixel.flag")
-        if order is None:
-            order = utils.from_currsys("!SIM.computing.spline_order")
+        if spline_order is None:
+            spline_order = utils.from_currsys("!SIM.computing.spline_order")
 
         if isinstance(hdus_or_tables, (list, tuple)):
             for hdu_or_table in hdus_or_tables:
-                self.add(hdu_or_table, sub_pixel, order, wcs_suffix)
+                self.add(hdu_or_table, sub_pixel, spline_order, wcs_suffix)
         else:
             if isinstance(hdus_or_tables, Table):
                 self.hdu.header["COMMENT"] = "Adding files from table"
@@ -114,7 +114,7 @@ class ImagePlane(ImagePlaneBase):
             elif isinstance(hdus_or_tables, fits.ImageHDU):
                 self.hdu.header["COMMENT"] = "Adding files from table"
                 self.hdu = add_imagehdu_to_imagehdu(hdus_or_tables, self.hdu,
-                                                    order, wcs_suffix)
+                                                    spline_order, wcs_suffix)
 
     @property
     def header(self):
@@ -123,6 +123,10 @@ class ImagePlane(ImagePlaneBase):
     @property
     def data(self):
         return self.hdu.data
+
+    @data.setter
+    def data(self, new_data):
+        self.hdu.data = new_data
 
     @property
     def image(self):

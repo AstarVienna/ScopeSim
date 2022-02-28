@@ -109,12 +109,25 @@ def make_strehl_map_from_table(tbl, pixel_scale=1*u.arcsec):
     return map_hdu
 
 
-def rescale_kernel(image, scale_factor, order=None):
-    if order is None:
-        order = rc.__currsys__["!SIM.computing.spline_order"]
+def rescale_kernel(image, scale_factor, spline_order=None):
+    if spline_order is None:
+        spline_order = utils.from_currsys("!SIM.computing.spline_order")
     sum_image = np.sum(image)
-    image = zoom(image, scale_factor, order=order)
+    image = zoom(image, scale_factor, order=spline_order)
     image = np.nan_to_num(image, copy=False)        # numpy version >=1.13
+
+    # Re-centre kernel
+    im_shape = image.shape
+    dy, dx = np.divmod(np.argmax(image), im_shape[1]) - np.array(im_shape) // 2
+    if dy > 0:
+        image = image[2*dy:, :]
+    elif dy < 0:
+        image = image[:2*abs(dy), :]
+    if dx > 0:
+        image = image[:, 2*dx:]
+    elif dx < 0:
+        image = image[:, 2*abs(dx):]
+
     sum_new_image = np.sum(image)
     image *= sum_image / sum_new_image
 
@@ -138,7 +151,7 @@ def get_strehl_cutout(fov_header, strehl_imagehdu):
     image = np.zeros((fov_header["NAXIS2"], fov_header["NAXIS1"]))
     canvas_hdu = fits.ImageHDU(header=fov_header, data=image)
     canvas_hdu = imp_utils.add_imagehdu_to_imagehdu(strehl_imagehdu,
-                                                    canvas_hdu, order=0,
+                                                    canvas_hdu, spline_order=0,
                                                     conserve_flux=False)
     canvas_hdu.data = canvas_hdu.data.astype(int)
 
@@ -168,9 +181,9 @@ def get_psf_wave_exts(hdu_list, wave_key="WAVE0"):
         raise ValueError("psf_effect must be a PSF object: {}"
                          "".format(type(hdu_list)))
 
-    tmp = np.array(
-        [[ii, hdu.header[wave_key]] for ii, hdu in enumerate(hdu_list)
-         if wave_key in hdu.header and hdu.data is not None])
+    tmp = np.array([[ii, hdu.header[wave_key]]
+                    for ii, hdu in enumerate(hdu_list)
+                    if wave_key in hdu.header and hdu.data is not None])
     wave_ext = tmp[:, 0].astype(int)
     wave_set = tmp[:, 1]
 
@@ -254,3 +267,40 @@ def rotational_blur(image, angle):
         n_angles += 1
 
     return image_rot / n_angles
+
+def get_bkg_level(obj, bg_w):
+    """
+    Determine the background level of image or cube slices
+
+    Returns a scalar if obj is a 2d image or a vector if obj is a 3D cube (one
+    value for each plane).
+    The method for background determination is decided by self.meta["bkg_width"]:
+    If 0, the background is returned as zero (implying no background subtraction).
+    If -1, the background is estimated as the median of the entire image (or
+    cube plane).
+    If positive, the background is estimated as the median of a frame of width
+    `bkg_width` around the edges.
+    """
+
+    if obj.ndim == 2:
+        if bg_w == 0:
+            bkg_level = 0
+        else:
+            mask = np.zeros_like(obj, dtype=np.bool8)
+            if bg_w > 0:
+                mask[bg_w:-bg_w,bg_w:-bg_w] = True
+            bkg_level = np.ma.median(np.ma.masked_array(obj, mask=mask))
+
+    elif obj.ndim == 3:
+        if bg_w == 0:
+            bkg_level = np.array([0] * obj.shape[0])
+        else:
+            mask = np.zeros_like(obj, dtype=np.bool8)
+            if bg_w > 0:
+                mask[:, bg_w:-bg_w, bg_w:-bg_w] = True
+            bkg_level = np.ma.median(np.ma.masked_array(obj, mask=mask),
+                                     axis=(2, 1)).data
+
+    else:
+        raise ValueError("Unsupported dimension:", obj.ndim)
+    return bkg_level

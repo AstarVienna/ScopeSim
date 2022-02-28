@@ -16,7 +16,7 @@ class Shift3D(Effect):
         self.meta.update(params)
         self.meta.update(kwargs)
 
-    def apply_to(self, obj):
+    def apply_to(self, obj, **kwargs):
         return obj
 
     def fov_grid(self, which="shifts", **kwargs):
@@ -178,7 +178,7 @@ class AtmosphericDispersionCorrection(Shift3D):
         if self.table is None:
             self.table = self.get_table()
 
-    def apply_to(self, fov):
+    def apply_to(self, fov, **kwargs):
         # .. todo:: Currently applying shift with pixel_scale to CRPIX-D
         # .. todo:: Change this to be applying to CRVAL-D using plate_scale
         # get mid wavelength of fov
@@ -210,8 +210,8 @@ class AtmosphericDispersionCorrection(Shift3D):
             dy_pix = shift_rel_pixel * np.cos(np.deg2rad(pup_ang))
             dx_pix = shift_rel_pixel * np.sin(np.deg2rad(pup_ang))
 
-            fov.hdu.header["CRPIX1D"] += dx_pix
-            fov.hdu.header["CRPIX2D"] += dy_pix
+            fov.header["CRPIX1D"] += dx_pix
+            fov.header["CRPIX2D"] += dy_pix
 
         return fov
 

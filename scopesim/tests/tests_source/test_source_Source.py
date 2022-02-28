@@ -24,6 +24,8 @@ from scopesim.source.source import Source
 from scopesim.optics.image_plane import ImagePlane
 from scopesim.utils import convert_table_comments_to_dict
 
+from scopesim.tests.mocks.py_objects import source_objects as so
+
 import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm
 
@@ -151,13 +153,32 @@ class TestSourceInit:
         src = Source(image_hdu=input_hdulist[0], spectra=input_spectra)
         assert isinstance(src, Source)
         assert isinstance(src.spectra[0], SourceSpectrum)
-        assert isinstance(src.fields[0], fits.PrimaryHDU)
+        assert isinstance(src.fields[0], fits.ImageHDU)
 
-    def test_initialises_with_image_and_0_spectra(self, input_hdulist):
-        with pytest.raises(NotImplementedError):
-            src = Source(image_hdu=input_hdulist[0])
-            # assert len(st.spectra) == 0
-            # assert st.fields[0].header["SPEC_REF"] == ""
+    def test_initialises_with_image_and_flux(self, input_hdulist):
+        src = Source(image_hdu=input_hdulist[0], flux=20*u.ABmag)
+        assert isinstance(src, Source)
+        assert isinstance(src.spectra[0], SourceSpectrum)
+        assert isinstance(src.fields[0], fits.ImageHDU)
+
+    def test_initialises_with_only_image(self, input_hdulist):
+        input_hdulist[0].header["BUNIT"] = "ph s-1 cm-2 AA-1"
+        src = Source(image_hdu=input_hdulist[0])
+        assert len(src.spectra) == 1
+        assert src.fields[0].header["SPEC_REF"] == 0
+
+    def test_initialises_with_only_imagehdu_and_arcsec2(self):
+        hdu = fits.ImageHDU(data=np.ones([3, 3]))
+        hdu.header["BUNIT"] = "Jy/arcsec2"
+        hdu.header["CDELT1"] = 0.1
+        hdu.header["CUNIT1"] = "arcsec"
+        hdu.header["CDELT2"] = 0.1
+        hdu.header["CUNIT2"] = "arcsec"
+        src = Source(image_hdu=hdu)
+
+        assert isinstance(src, Source)
+        assert isinstance(src.spectra[0], SourceSpectrum)
+        assert isinstance(src.fields[0], fits.ImageHDU)
 
     @pytest.mark.parametrize("ii, dtype",
                              [(0, fits.ImageHDU),
@@ -205,6 +226,20 @@ class TestSourceAddition:
         new_source = table_source + image_source
         assert new_source.fields[1].header["SPEC_REF"] == ""
 
+    def test_fits_image_and_array_image_are_added_correctly(self):
+        img_src = so._image_source()
+        fits_src = so._fits_image_source()
+
+        img_fits_src = img_src + fits_src
+        fits_img_src = fits_src + img_src
+
+        assert len(img_src.fields) == 1
+        assert len(fits_src.fields) == 1
+        assert len(img_fits_src.fields) == 2
+        assert len(fits_img_src.fields) == 2
+        assert np.all(fits_img_src.fields[0].data == fits_src.fields[0].data)
+        assert img_fits_src.fields[0] is not img_src.fields[0]
+
 
 @pytest.mark.usefixtures("table_source", "image_source")
 class TestSourceImageInRange:
@@ -230,24 +265,19 @@ class TestSourceImageInRange:
 
     def test_combines_more_that_one_field_into_image(self, image_source,
                                                      table_source):
-        tbl = table_source.fields[0]
         ph = table_source.photons_in_range(1 * u.um, 2 * u.um)
+        tbl = table_source.fields[0]
         tbl_sum = u.Quantity([ph[tbl["ref"][ii]] * tbl["weight"][ii]
                               for ii in range(len(tbl))])
         tbl_sum = np.sum(tbl_sum.value)
 
-        im_src2 = deepcopy(image_source)
-        im_src2.fields[0].header["CRVAL1"] -= 10*u.arcsec.to(u.deg)
-        im_src2.fields[0].header["CRVAL2"] -= 5*u.arcsec.to(u.deg)
-        ph = image_source.photons_in_range(1 * u.um, 2 * u.um)[0].value
-        im_sum = np.sum(im_src2.fields[0].data) * ph
+        ph = image_source.photons_in_range(1 * u.um, 2 * u.um)[0]
+        im_sum = np.sum(image_source.fields[0].data) * ph.value
 
-        image_source.fields[0].header["CRVAL1"] += 12*u.arcsec.to(u.deg)
-
-        comb_src = image_source + table_source + im_src2
+        comb_src = image_source
         im_plane = comb_src.image_in_range(1*u.um, 2*u.um, 0.3*u.arcsec)
 
-        assert np.sum(im_plane.image) == approx(2*im_sum + tbl_sum)
+        assert np.sum(im_plane.image) == approx(im_sum)
 
         if PLOTS:
             plt.imshow(im_plane.image.T, origin="lower", norm=LogNorm())

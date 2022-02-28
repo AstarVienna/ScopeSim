@@ -61,7 +61,7 @@ class ChopNodCombiner(Effect):
         self.meta.update(params)
         self.meta.update(kwargs)
 
-    def apply_to(self, obj):
+    def apply_to(self, obj, **kwargs):
         if isinstance(obj, DetectorBase):
             chop_offsets = from_currsys(self.meta["chop_offsets"])
             nod_offsets = from_currsys(self.meta["nod_offsets"])

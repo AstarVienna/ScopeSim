@@ -5,9 +5,8 @@ This module contains
    - utility functions for use with spectral traces
 """
 
-import warnings
+import logging
 
-import re
 import numpy as np
 
 from scipy.interpolate import RectBivariateSpline
@@ -22,7 +21,7 @@ from astropy.wcs import WCS
 from astropy.modeling.models import Polynomial2D
 
 from ..optics import image_plane_utils as imp_utils
-from ..utils import deriv_polynomial2d, interp2, check_keys, \
+from ..utils import deriv_polynomial2d, power_vector, interp2, check_keys,\
     from_currsys, quantify
 
 
@@ -64,7 +63,7 @@ class SpectralTrace:
         if isinstance(trace_tbl, (fits.BinTableHDU, fits.TableHDU)):
             self.table = Table.read(trace_tbl)
             try:
-                self.meta["description"] = trace_tbl.header['EXTNAME']
+                self.meta["trace_id"] = trace_tbl.header['EXTNAME']
             except KeyError:
                 pass
         elif isinstance(trace_tbl, Table):
@@ -74,10 +73,10 @@ class SpectralTrace:
                              "fits.TableHDU, astropy.Table): {}"
                              "".format(type(trace_tbl)))
 
-        # Interpolation functions   ..todo: equivalent for LMS
+        # Interpolation functions
         self.compute_interpolation_functions()
 
-    def fov_grid(self, fov_manager):
+    def fov_grid(self):
         """
         Provide information on the source space volume required by the effect
 
@@ -87,12 +86,15 @@ class SpectralTrace:
         Spatial limits are determined by the `ApertureMask` effect
         and are not returned here.
         """
+        trace_id = self.meta['trace_id']
+        aperture_id = self.meta['aperture_id']
         lam_arr = self.table[self.meta['wave_colname']]
 
         wave_max = np.max(lam_arr)
         wave_min = np.min(lam_arr)
 
-        return {'wave_min': wave_min, 'wave_max': wave_max}
+        return {'wave_min': wave_min, 'wave_max': wave_max,
+                'trace_id': trace_id, 'aperture_id': aperture_id}
 
     def compute_interpolation_functions(self):
         """
@@ -136,24 +138,29 @@ class SpectralTrace:
 
         # Initialise the image based on the footprint of the spectral
         # trace and the focal plane WCS
-        wave_min = fov.meta['wave_min'].value
-        wave_max = fov.meta['wave_max'].value
-        xi_min = fov.meta['xi_min'].value
-        xi_max = fov.meta['xi_max'].value
+        wave_min = fov.meta['wave_min'].value       # [um]
+        wave_max = fov.meta['wave_max'].value       # [um]
+        xi_min = fov.meta['xi_min'].value           # [arcsec]
+        xi_max = fov.meta['xi_max'].value           # [arcsec]
         xlim_mm, ylim_mm = self.footprint(wave_min=wave_min, wave_max=wave_max,
                                           xi_min=xi_min, xi_max=xi_max)
 
         if xlim_mm is None:
             return None
 
+        fov_header = fov.header
+        det_header = fov.detector_header
+
         # WCSD from the FieldOfView - this is the full detector plane
-        fpa_wcsd = WCS(fov.header, key='D')
-        naxis1, naxis2 = fov.header['NAXIS1'], fov.header['NAXIS2']
-        pixsize = fov.header['CDELT1D'] * u.Unit(fov.header['CUNIT1D'])
+        fpa_wcs = WCS(fov_header, key='D')
+        naxis1, naxis2 = fov_header['NAXIS1'], fov_header['NAXIS2']
+        pixsize = fov_header['CDELT1D'] * u.Unit(fov_header['CUNIT1D'])
         pixsize = pixsize.to(u.mm).value
-        pixscale = fov.header['CDELT1'] * u.Unit(fov.header['CUNIT1'])
+        pixscale = fov_header['CDELT1'] * u.Unit(fov_header['CUNIT1'])
         pixscale = pixscale.to(u.arcsec).value
 
+        fpa_wcsd = WCS(det_header, key='D')
+        naxis1d, naxis2d = det_header['NAXIS1'], det_header['NAXIS2']
         xlim_px, ylim_px = fpa_wcsd.all_world2pix(xlim_mm, ylim_mm, 0)
         xmin = np.floor(xlim_px.min()).astype(int)
         xmax = np.ceil(xlim_px.max()).astype(int)
@@ -161,30 +168,23 @@ class SpectralTrace:
         ymax = np.ceil(ylim_px.max()).astype(int)
 
         ## Check if spectral trace footprint is outside FoV
-        if xmax < 0 or xmin > naxis1 or ymax < 0 or ymin > naxis2:
-            warnings.warn("Spectral trace footprint is outside FoV")
+        if xmax < 0 or xmin > naxis1d or ymax < 0 or ymin > naxis2d:
+            logging.warning("Spectral trace footprint is outside FoV")
             return None
 
         # Only work on parts within the FoV
         xmin = max(xmin, 0)
-        xmax = min(xmax, naxis1)
+        xmax = min(xmax, naxis1d)
         ymin = max(ymin, 0)
-        ymax = min(ymax, naxis2)
+        ymax = min(ymax, naxis2d)
 
         # Create header for the subimage - I think this only needs the DET one,
         # but we'll do both. The WCSs are initialised from the full fpa WCS and
         # then shifted accordingly.
-        sub_wcs = WCS(fov.header, key=" ")
-        sub_wcs.wcs.crpix -= np.array([xmin, ymin])
-        det_wcs = WCS(fov.header, key="D")
+        # sub_wcs = WCS(fov_header, key=" ")
+        # sub_wcs.wcs.crpix -= np.array([xmin, ymin])
+        det_wcs = WCS(det_header, key="D")
         det_wcs.wcs.crpix -= np.array([xmin, ymin])
-
-        img_header = sub_wcs.to_header()
-        img_header.update(det_wcs.to_header())
-        img_header["XMIN"] = xmin
-        img_header["XMAX"] = xmax
-        img_header["YMIN"] = ymin
-        img_header["YMAX"] = ymax
 
         sub_naxis1 = xmax - xmin
         sub_naxis2 = ymax - ymin
@@ -203,8 +203,9 @@ class SpectralTrace:
         avg_dlam_per_pix = (wave_max - wave_min) / sub_naxis2
         try:
             xilam = XiLamImage(fov, avg_dlam_per_pix)
+            self.xilam = xilam    # ..todo: remove
         except ValueError:
-            print(" ---> " + self.description + "gave ValueError")
+            print(" ---> ", self.meta['trace_id'], "gave ValueError")
 
         npix_xi, npix_lam = xilam.npix_xi, xilam.npix_lam
         xilam_wcs = xilam.wcs
@@ -221,11 +222,15 @@ class SpectralTrace:
         xi_fpa = self.xy2xi(ximg_fpa, yimg_fpa).astype(np.float32)
         lam_fpa = self.xy2lam(ximg_fpa, yimg_fpa).astype(np.float32)
 
-        # mask everything outside the slit
+        # mask everything outside the wavelength range
         mask = (xi_fpa >= xi_min) & (xi_fpa <= xi_max)
         xi_fpa *= mask
         lam_fpa *= mask
 
+        # mask everything outside the wavelength range
+        # mask = (lam_fpa >= wave_min) & (lam_fpa <= wave_max)
+        # xi_fpa *= mask
+        # lam_fpa *= mask
 
         # Convert to pixel images
         # These are the pixel coordinates in the image corresponding to
@@ -242,16 +247,29 @@ class SpectralTrace:
                   * (j_img >= 0) * (j_img < npix_xi))
 
         # do the actual interpolation
-        image = (xilam.interp(xi_fpa, lam_fpa, grid=False)
-                 * ijmask)
+        # image is in [ph/s/um/arcsec]
+        image = xilam.interp(xi_fpa, lam_fpa, grid=False) * ijmask
 
         # Scale to ph / s / pixel
         dlam_by_dx, dlam_by_dy = self.xy2lam.gradient()
-        dlam_per_pix = pixsize * np.sqrt(dlam_by_dx(ximg_fpa, yimg_fpa)**2
-                                         + dlam_by_dy(ximg_fpa, yimg_fpa)**2)
-        image *= pixscale * dlam_per_pix
+        dlam_per_pix = pixsize * np.sqrt(dlam_by_dx(ximg_fpa, yimg_fpa)**2 +
+                                         dlam_by_dy(ximg_fpa, yimg_fpa)**2)
+        image *= pixscale * dlam_per_pix        # [arcsec/pix] * [um/pix]
 
-        return fits.ImageHDU(header=img_header, data=image)
+        # img_header = sub_wcs.to_header()
+        # img_header.update(det_wcs.to_header())
+        img_header = det_wcs.to_header()
+        img_header["XMIN"] = xmin
+        img_header["XMAX"] = xmax
+        img_header["YMIN"] = ymin
+        img_header["YMAX"] = ymax
+
+        if np.any(image < 0):
+            logging.warning("map_spectra_to_focal_plane:", np.sum(image < 0),
+                            "negative pixels")
+
+        image_hdu = fits.ImageHDU(header=img_header, data=image)
+        return image_hdu
 
     def footprint(self, wave_min=None, wave_max=None, xi_min=None, xi_max=None):
         '''
@@ -273,8 +291,12 @@ class SpectralTrace:
         ## range of the spectral trace
         ## This is only relevant if the trace is given by a table of reference
         ## points. Otherwise (METIS LMS!) we assume that the range is valid.
-        if 'wave_colname' in self.meta:
+        if ('wave_colname' in self.meta and
+            self.meta['wave_colname'] in self.table.colnames):
             # Here, the parameters are obtained from a table of reference points
+            print("wave_colname")
+            print(self.meta['wave_colname'])
+            print(self.table)
             wave_unit = self.table[self.meta['wave_colname']].unit
             wave_val = quantify(self.table[self.meta['wave_colname']].data,
                                 wave_unit)
@@ -379,7 +401,7 @@ class SpectralTrace:
     def __repr__(self):
         msg = '<SpectralTrace> "{}" : [{}, {}]um : Ext {} : Aperture {} : ' \
               'ImagePlane {}' \
-              ''.format(self.meta["description"],
+              ''.format(self.meta["trace_id"],
                         round(self.wave_min, 4), round(self.wave_max, 4),
                         self.meta["extension_id"], self.meta["aperture_id"],
                         self.meta["image_plane_id"])
@@ -396,12 +418,6 @@ class XiLamImage():
     """
 
     def __init__(self, fov, dlam_per_pix):
-
-        # Slit dimensions: oversample with respect to detector pixel scale
-
-        # Compute size of xi-lambda image: npix_xi, npix_lam
-
-
         # ..todo: we assume that we always have a cube. We use SpecCADO's
         #         add_cube_layer method
 
@@ -422,7 +438,7 @@ class XiLamImage():
         # arrays of cube coordinates
         cube_xi = d_xi * np.arange(n_xi) + fov.meta['xi_min'].value
         cube_eta = d_eta * (np.arange(n_eta) - (n_eta - 1) / 2)
-        cube_lam = wcs_lam.all_pix2world(np.arange(n_lam), 0)[0]
+        cube_lam = wcs_lam.all_pix2world(np.arange(n_lam), 1)[0]
         cube_lam *= u.Unit(wcs_lam.wcs.cunit[0]).to(u.um)
 
         # Initialise the array to hold the xi-lambda image
@@ -440,6 +456,8 @@ class XiLamImage():
                 plane = fov.cube.data[:, i, :].T
                 plane_interp = RectBivariateSpline(cube_xi, cube_lam, plane)
                 self.image += plane_interp(cube_xi, lam0)
+
+        self.image *= d_eta     # ph/s/um/arcsec2 --> ph/s/um/arcsec
 
         # WCS for the xi-lambda image, i.e. the rectified 2D spectrum
         # Default WCS with xi in arcsec
@@ -465,7 +483,18 @@ class XiLamImage():
         self.xi = self.wcs.all_pix2world(self.lam[0], np.arange(n_xi), 0)[1]
         self.npix_xi = n_xi
         self.npix_lam = n_lam
-        self.interp = RectBivariateSpline(self.xi, self.lam, self.image)
+        # ..todo: cubic spline introduces negative values, linear does not.
+        #  Alternative might be to cubic-spline interpolate on sqrt(image),
+        #  with subsequent squaring of the result. This would require
+        #  wrapping RectBivariateSpline in a new (sub)class.
+        spline_order = (1, 1)
+        self.interp = RectBivariateSpline(self.xi, self.lam, self.image,
+                                          kx=spline_order[0],
+                                          ky=spline_order[1])
+        # This is not executed. ..todo: define a switch?
+        if False:
+            fits.writeto("test_xilam.fits", data=self.image,
+                         header=self.wcs.to_header(), overwrite=True)
 
 
 class Transform2D():
@@ -632,15 +661,6 @@ def fit2matrix(fit):
                 pass
     return mat
 
-
-def power_vector(val, degree):
-    """Return the vector of powers of val up to a degree"""
-    if degree < 0 or not isinstance(degree, int):
-        raise ValueError("degree must be a positive integer")
-
-    return np.array([val**exp for exp in range(degree + 1)])
-
-
 # ..todo: should the next three functions be combined and return a dictionary of fits?
 def xilam2xy_fit(layout, params):
     """
@@ -666,9 +686,8 @@ def xilam2xy_fit(layout, params):
     pinit_y = Polynomial2D(degree=4)
     fitter = fitting.LinearLSQFitter()
     xilam2x = fitter(pinit_x, xi_arr, lam_arr, x_arr)
-    #xilam2x.name = 'xilam2x'
     xilam2y = fitter(pinit_y, xi_arr, lam_arr, y_arr)
-    #xilam2y.name = 'xilam2y'
+
     return xilam2x, xilam2y
 
 def xy2xilam_fit(layout, params):
@@ -683,21 +702,12 @@ def xy2xilam_fit(layout, params):
     x_arr = layout[params['x_colname']]
     y_arr = layout[params['y_colname']]
 
-    # # Filter the lists: remove any points with x==0
-    # # ..todo: this may not be necessary after sanitising the table
-    # good = x != 0
-    # xi = xi[good]
-    # lam = lam[good]
-    # x = x[good]
-    # y = y[good]
-
     pinit_xi = Polynomial2D(degree=4)
     pinit_lam = Polynomial2D(degree=4)
     fitter = fitting.LinearLSQFitter()
     xy2xi = fitter(pinit_xi, x_arr, y_arr, xi_arr)
-    #xy2xi.name = 'xy2xi'
     xy2lam = fitter(pinit_lam, x_arr, y_arr, lam_arr)
-    #xy2lam.name = 'xy2lam'
+
     return xy2xi, xy2lam
 
 
@@ -715,51 +725,13 @@ def _xiy2xlam_fit(layout, params):
     x_arr = layout[params['x_colname']]
     y_arr = layout[params['y_colname']]
 
-    # # Filter the lists: remove any points with x==0
-    # # ..todo: this may not be necessary after sanitising the table
-    # good = x != 0
-    # xi = xi[good]
-    # lam = lam[good]
-    # x = x[good]
-    # y = y[good]
-
     pinit_x = Polynomial2D(degree=4)
     pinit_lam = Polynomial2D(degree=4)
     fitter = fitting.LinearLSQFitter()
     xiy2x = fitter(pinit_x, xi_arr, y_arr, x_arr)
-    #xy2xi.name = 'xy2xi'
     xiy2lam = fitter(pinit_lam, xi_arr, y_arr, lam_arr)
-    #xy2lam.name = 'xy2lam'
     return xiy2x, xiy2lam
 
-
-def deriv_polynomial2d(poly):
-    '''Derivatives (gradient) of a Polynomial2D model
-
-    Parameters
-    ----------
-    poly : astropy.modeling.models.Polynomial2D
-
-    Output
-    ------
-    gradient : tuple of Polynomial2d
-    '''
-    degree = poly.degree
-    dpoly_dx = Polynomial2D(degree=degree - 1)
-    dpoly_dy = Polynomial2D(degree=degree - 1)
-    regexp = re.compile(r'c(\d+)_(\d+)')
-    for pname in poly.param_names:
-        # analyse the name
-        match = regexp.match(pname)
-        i = int(match.group(1))
-        j = int(match.group(2))
-        cij = getattr(poly, pname)
-        pname_x = "c%d_%d" % (i-1, j)
-        pname_y = "c%d_%d" % (i, j-1)
-        setattr(dpoly_dx, pname_x, i * cij)
-        setattr(dpoly_dy, pname_y, j * cij)
-
-    return dpoly_dx, dpoly_dy
 
 # ..todo: Check whether the following functions are actually used
 def rolling_median(x, n):
@@ -833,13 +805,13 @@ def sanitize_table(tbl, invalid_value, wave_colname, x_colname, y_colname,
             continue
 
         if sum(valid) == 0:
-            warnings.warn("--- Extension {} ---"
-                          "All points in {} or {} were invalid. \n"
-                          "THESE COLUMNS HAVE BEEN REMOVED FROM THE TABLE \n"
-                          "invalid_value = {} \n"
-                          "wave = {} \nx = {} \ny = {}"
-                          "".format(ext_id, x_col, y_col, invalid_value,
-                                    wave, x, y))
+            logging.warning("--- Extension {} ---"
+                            "All points in {} or {} were invalid. \n"
+                            "THESE COLUMNS HAVE BEEN REMOVED FROM THE TABLE \n"
+                            "invalid_value = {} \n"
+                            "wave = {} \nx = {} \ny = {}"
+                            "".format(ext_id, x_col, y_col, invalid_value,
+                                      wave, x, y))
             tbl.remove_columns([x_col, y_col])
             continue
 

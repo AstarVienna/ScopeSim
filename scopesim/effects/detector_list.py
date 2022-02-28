@@ -1,7 +1,10 @@
+import logging
+
 import numpy as np
 from astropy import units as u
 from astropy.table import Table
 
+from ..base_classes import FOVSetupBase
 from .effects import Effect
 from .apertures import ApertureMask
 from .. import utils
@@ -48,8 +51,25 @@ class DetectorList(Effect):
             self.meta["x_size_unit"] = self.meta["xhw_unit"]
             self.meta["y_size_unit"] = self.meta["yhw_unit"]
 
+    def apply_to(self, obj, **kwargs):
+        if isinstance(obj, FOVSetupBase):
+
+            hdr = self.image_plane_header
+            x_mm, y_mm = calc_footprint(hdr, "D")
+            pixel_size = hdr["CDELT1D"]              # mm
+            pixel_scale = (kwargs.get("pixel_scale", self.meta["pixel_scale"]))   # ["]
+            pixel_scale = utils.from_currsys(pixel_scale)
+            x_sky = x_mm * pixel_scale / pixel_size  # x["] = x[mm] * ["] / [mm]
+            y_sky = y_mm * pixel_scale / pixel_size  # y["] = y[mm] * ["] / [mm]
+
+            obj.shrink(axis=["x", "y"], values=([min(x_sky), max(x_sky)],
+                                                [min(y_sky), max(y_sky)]))
+
+        return obj
+
     def fov_grid(self, which="edges", **kwargs):
         """Returns an ApertureMask object. kwargs are "pixel_scale" [arcsec]"""
+        logging.warning("DetectorList.fov_grid will be depreciated in v1.0")
         aperture_mask = None
         if which == "edges":
             self.meta.update(kwargs)

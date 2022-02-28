@@ -1,3 +1,5 @@
+import os
+
 import numpy as np
 from astropy import units as u, wcs
 from astropy.io import fits
@@ -6,10 +8,16 @@ from synphot import SourceSpectrum, Empirical1D
 
 from scopesim.source.source import Source
 from scopesim.source.source_templates import vega_spectrum
+from scopesim import rc
+
+FILES_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),
+                                          "../files/"))
+if FILES_PATH not in rc.__search_path__:
+    rc.__search_path__ += [FILES_PATH]
 
 
 def _table_source():
-    n = 100
+    n = 101
     unit = u.Unit("ph s-1 m-2 um-1")
     wave = np.linspace(0.5, 2.5, n) * u.um
     specs = [SourceSpectrum(Empirical1D, points=wave,
@@ -44,7 +52,7 @@ def _image_source(dx=0, dy=0, angle=0, weight=1):
     -------
 
     """
-    n = 50
+    n = 101
     unit = u.Unit("ph s-1 m-2 um-1")
     wave = np.linspace(0.5, 2.5, n) * u.um
     specs = [SourceSpectrum(Empirical1D, points=wave,
@@ -79,7 +87,36 @@ def _image_source(dx=0, dy=0, angle=0, weight=1):
     return im_source
 
 
+def _fits_image_source():
+    n = 50
+    unit = u.Unit("ph s-1 m-2 um-1")
+    wave = np.linspace(0.5, 2.5, n) * u.um
+    specs = [SourceSpectrum(Empirical1D, points=wave,
+                            lookup_table=np.linspace(0, 4, n) * unit)]
+
+    hdulist = fits.open(os.path.join(FILES_PATH, "test_image.fits"))
+    fits_src = Source(image_hdu=hdulist[0], spectra=specs)
+
+    return fits_src
+
+
 def _cube_source(**kwargs):
+    """
+    An image with 3 point sources on a random BG
+
+    Parameters
+    ----------
+    dx, dy : float
+        [arcsec] Offset from optical axis
+    angle : float
+        [deg]
+    weight : float
+
+    Returns
+    -------
+
+    """
+
     n = 101
     im_src = _image_source(**kwargs)
     data = im_src.fields[0].data
@@ -89,7 +126,8 @@ def _cube_source(**kwargs):
     im_src.spectra = []
 
     cube_hdr_dict = {"CUNIT3": "um", "CTYPE3": "WAVE", "CDELT3": 0.02,
-                     "CRVAL3": 1.5, "CRPIX3": 50, "SPEC_REF": None}
+                     "CRVAL3": 1.5, "CRPIX3": 50, "SPEC_REF": None,
+                     "BUNIT": "ph s-1 m-2 um-1"}
 
     im_src.fields[0].header.update(cube_hdr_dict)
 

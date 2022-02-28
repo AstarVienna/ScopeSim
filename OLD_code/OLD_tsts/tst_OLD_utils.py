@@ -2,7 +2,7 @@
 Testing the functions behind a UserCommands object
 """
 import pytest
-import warnings
+import logging
 import os
 
 from scopesim import rc
@@ -24,7 +24,7 @@ class TestParseConfig:
         invalid_lines = ["One point twenty-one Jigawatts!"]
         dic = cmd_utils.lines_to_dict(invalid_lines)
 
-        warnings.warn("Bogus data passes silently through parse_config()")
+        logging.warning("Bogus data passes silently through parse_config()")
         pass
 
     def test_raises_exception_if_input_is_not_list(self):

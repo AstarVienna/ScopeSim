@@ -1,5 +1,5 @@
 import os
-import warnings
+import logging
 import copy
 
 import yaml
@@ -72,7 +72,7 @@ class UserCommands:
                 _yaml_dicts += [yaml_obj]
             elif isinstance(yaml_obj, str):
                 with open(find_file(yaml_obj)) as f:
-                    _yaml_dicts += [dic for dic in yaml.load_all(f)]
+                    _yaml_dicts += [dic for dic in yaml.full_load_all(f)]
 
         self._yaml_dicts = _yaml_dicts
         return self._yaml_dicts
@@ -85,7 +85,7 @@ class UserCommands:
 
     def __setitem__(self, key, val):
         if key not in self.cmds:
-            warnings.warn("{} not in self.keys. Ignoring.".format(key))
+            logging.warning("{} not in self.keys. Ignoring.".format(key))
             return None
 
         self.cmds[key] = cutils.str_to_python_type(val)

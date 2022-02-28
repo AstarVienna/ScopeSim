@@ -1,6 +1,8 @@
 '''Effects related to field masks, including spectroscopic slits'''
 from os import path as pth
 from copy import deepcopy
+import logging
+
 import numpy as np
 from matplotlib.path import Path
 from astropy.io import fits
@@ -9,6 +11,7 @@ from astropy.table import Table
 
 from .effects import Effect
 from ..optics import image_plane_utils as imp_utils
+from ..base_classes import FOVSetupBase
 
 from ..utils import quantify, quantity_from_table, from_currsys, check_keys
 
@@ -101,8 +104,22 @@ class ApertureMask(Effect):
         self.required_keys = ["filename", "table", "array_dict"]
         check_keys(kwargs, self.required_keys, "warning", all_any="any")
 
+    def apply_to(self, obj, **kwargs):
+        if isinstance(obj, FOVSetupBase):
+            x = quantity_from_table("x", self.table, u.arcsec).to(u.arcsec).value
+            y = quantity_from_table("y", self.table, u.arcsec).to(u.arcsec).value
+            obj.shrink(["x", "y"], ([min(x), max(x)], [min(y), max(y)]))
+
+            # ..todo: HUGE HACK - Get rid of this!
+            for vol in obj.volumes:
+                vol["meta"]["xi_min"] = min(x) * u.arcsec
+                vol["meta"]["xi_max"] = max(x) * u.arcsec
+
+        return obj
+
     def fov_grid(self, which="edges", **kwargs):
         """ Returns a header with the sky coordinates """
+        logging.warning("DetectorList.fov_grid will be depreciated in v1.0")
         if which == "edges":
             self.meta.update(kwargs)
             return self.header
@@ -372,9 +389,9 @@ class SlitWheel(Effect):
         self.table = self.get_table()
 
 
-    def apply_to(self, obj):
+    def apply_to(self, obj, **kwargs):
         '''Use apply_to of current_slit'''
-        return self.current_slit.apply_to(obj)
+        return self.current_slit.apply_to(obj, **kwargs)
 
 
     def fov_grid(self, which="edges", **kwargs):
@@ -382,15 +399,25 @@ class SlitWheel(Effect):
 
     def change_slit(self, slitname=None):
         '''Change the current slit'''
-        if slitname in self.slits.keys():
+        if not slitname or slitname in self.slits.keys():
             self.meta['current_slit'] = slitname
+            self.include = slitname
         else:
             raise ValueError("Unknown slit requested: " + slitname)
 
     @property
     def current_slit(self):
         '''Return the currently used slit'''
-        return self.slits[from_currsys(self.meta["current_slit"])]
+        currslit = from_currsys(self.meta["current_slit"])
+        if not currslit:
+            return False
+        return self.slits[currslit]
+
+    @property
+    def display_name(self):
+        return f'{self.meta["name"]} : ' \
+               f'[{from_currsys(self.meta["current_slit"])}]'
+
 
     def __getattr__(self, item):
         return getattr(self.current_slit, item)
@@ -406,9 +433,9 @@ class SlitWheel(Effect):
                          .to(u.mas) for slit in slits])
         xmin = np.array([slit.data['x'].min() * u.Unit(slit.meta['x_unit'])
                          .to(u.mas) for slit in slits])
-        ymax = np.array([slit.data['y'].max() * u.Unit(slit.meta['x_unit'])
+        ymax = np.array([slit.data['y'].max() * u.Unit(slit.meta['y_unit'])
                          .to(u.mas) for slit in slits])
-        ymin = np.array([slit.data['y'].min() * u.Unit(slit.meta['x_unit'])
+        ymin = np.array([slit.data['y'].min() * u.Unit(slit.meta['y_unit'])
                          .to(u.mas) for slit in slits])
         xmax = quantify(xmax, u.mas)
         xmin = quantify(xmin, u.mas)

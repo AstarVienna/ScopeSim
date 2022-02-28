@@ -16,7 +16,7 @@ import os
 import requests
 import datetime as dt
 import zipfile as zf
-import warnings
+import logging
 
 from numpy import where as npwhere
 from astropy.table import Table, Row, vstack
@@ -247,7 +247,7 @@ def get_server_text(path=None):
         server_db_text = requests.get(path).text
         server_db_text = server_db_text.replace("\r", "")
     except:
-        warnings.warn("Connection could not be established to "
+        logging.warning("Connection could not be established to "
                       "{}".format(_svr_inst_db()))
         server_db_text = None
 

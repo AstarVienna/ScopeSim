@@ -14,7 +14,7 @@ from .effects import Effect
 from .spectral_trace_list_utils import SpectralTrace
 from ..utils import from_currsys, check_keys, interp2
 from ..optics.image_plane_utils import header_from_list_of_xy
-
+from ..base_classes import FieldOfViewBase, FOVSetupBase
 
 class SpectralTraceList(Effect):
     """
@@ -92,15 +92,23 @@ class SpectralTraceList(Effect):
         if "hdulist" in kwargs and isinstance(kwargs["hdulist"], fits.HDUList):
             self._file = kwargs["hdulist"]
 
-        # Parameters that are useful for all subclasses
-        params= {"z_order": [70, 270],
-                 "pixel_scale": "!INST.pixel_scale",  # [arcsec / pix]}
-                 "plate_scale": "!INST.plate_scale",  # [arcsec / mm]
-                 "wave_min": "!SIM.spectral.wave_min",  # [um]
-                 "wave_mid": "!SIM.spectral.wave_mid",  # [um]
-                 "wave_max": "!SIM.spectral.wave_max",  # [um]
-                 "report_plot_include": True,
-                 "report_table_include": False}
+        params = {"z_order": [70, 270, 670],
+                  "pixel_scale": "!INST.pixel_scale",  # [arcsec / pix]}
+                  "plate_scale": "!INST.plate_scale",  # [arcsec / mm]
+                  "wave_min": "!SIM.spectral.wave_min",  # [um]
+                  "wave_mid": "!SIM.spectral.wave_mid",  # [um]
+                  "wave_max": "!SIM.spectral.wave_max",  # [um]
+                  "x_colname": "x",
+                  "y_colname": "y",
+                  "s_colname": "s",
+                  "wave_colname": "wavelength",
+                  "col_number_start": 0,
+                  "center_on_wave_mid": False,
+                  "dwave": 0.002,  # [um] for finding the best fit dispersion
+                  "invalid_value": None,  # for dodgy trace file values
+                  "report_plot_include": True,
+                  "report_table_include": False,
+                  }
         self.meta.update(params)
 
         # Parameters that are specific to the subclass
@@ -122,43 +130,49 @@ class SpectralTraceList(Effect):
             params = {col: row[col] for col in row.colnames}
             params.update(self.meta)
             hdu = self._file[row["extension_id"]]
-
-            if self.meta["center_on_wave_mid"]:
-                wave_mid = from_currsys(self.meta["wave_mid"])
-                waves = hdu.data[self.meta["wave_colname"]]
-                i_mid = int(interp2(wave_mid, waves, np.arange(len(waves))))
-                row = np.array(hdu.data[i_mid])
-                for colname in ["s_colname", "x_colname", "y_colname"]:
-                    mask = [self.meta[colname] in name for name in hdu.columns.names]
-                    av = np.average(row[mask])
-                    for cn in np.array(hdu.columns.names)[mask]:
-                        hdu.data[cn] -= av
-
-            # ..todo: add in re-centre on wave_mid here
             spec_traces[row["description"]] = SpectralTrace(hdu, **params)
 
         self.spectral_traces = spec_traces
 
-    def apply_to(self, fov):
-        '''Apply the effect to the FieldOfView'''
-        trace_id = fov.meta['trace_id']
-        spt = self.spectral_traces[trace_id]
-        fov._image = spt.map_spectra_to_focal_plane(fov)
+    def apply_to(self, obj, **kwargs):
+        '''
+        Interface between FieldOfView and SpectralTraceList
 
-        return fov
+        This is called twice:
+        1. During setup of the required FieldOfView objects, the
+        SpectralTraceList is asked for the source space volumes that
+        it requires (spatial limits and wavelength limits).
+        2. During "observation" the method is passed a single FieldOfView
+        object and applies the mapping to the image plane to it.
+        The FieldOfView object is associated to one SpectralTrace from the
+        list, identified by meta['trace_id'].
+        '''
+        if isinstance(obj, FOVSetupBase):
+            volumes = [self.spectral_traces[key].fov_grid()
+                       for key in self.spectral_traces]
+            new_vols_list = []
+            for vol in volumes:
+                edges = [vol["wave_min"], vol["wave_max"]]
+                extracted_vols = obj.extract(axes=["wave"], edges=([edges]))
+                for ex_vol in extracted_vols:
+                    ex_vol["meta"].update(vol)
+                    ex_vol["meta"].pop("wave_min")
+                    ex_vol["meta"].pop("wave_max")
+                new_vols_list += extracted_vols
 
-    def fov_grid(self, fov_manager):
-        """
-        Provide information on the source space volume required by the effect
+            obj.volumes = new_vols_list
 
-        Returns
-        -------
-        A list of dictionaries with entries `wave_min`, `wave_max`, `x_min`,
-        `x_max`, `y_min`, `y_max`. The dictionaries are created by the
-        correspondin method for the individual `SpectralTrace`.
-        """
-        return [self.spectral_traces[key].fov_grid(fov_manager)
-                for key in self.spectral_traces]
+        if isinstance(obj, FieldOfViewBase):
+            if obj.hdu is not None and obj.hdu.header["NAXIS"] == 3:
+                obj.cube = obj.hdu
+            elif obj.hdu is None and obj.cube is None:
+                obj.cube = obj.make_cube_hdu()
+
+            trace_id = obj.meta['trace_id']
+            spt = self.spectral_traces[trace_id]
+            obj.hdu = spt.map_spectra_to_focal_plane(obj)
+
+        return obj
 
     def get_waveset(self, pixel_size=None):
         if pixel_size is None:
@@ -179,16 +193,17 @@ class SpectralTraceList(Effect):
 
     @property
     def footprint(self):
-        xs, ys = [], []
-        for spt in self.spectral_traces:
-            xi, yi = spt.footprint
-            xs += xi
-            ys += yi
+        """Return the footprint of the entire SpectralTraceList"""
+        xfoot, yfoot = [], []
+        for spt in self.spectral_traces.values():
+            xtrace, ytrace = spt.footprint()
+            xfoot += xtrace
+            yfoot += ytrace
 
-        xs = [np.min(xs), np.max(xs), np.max(xs), np.min(xs)]
-        ys = [np.min(ys), np.min(ys), np.max(ys), np.max(ys)]
+        xfoot = [np.min(xfoot), np.max(xfoot), np.max(xfoot), np.min(xfoot)]
+        yfoot = [np.min(yfoot), np.min(yfoot), np.max(yfoot), np.max(yfoot)]
 
-        return xs, ys
+        return xfoot, yfoot
 
     @property
     def image_plane_header(self):

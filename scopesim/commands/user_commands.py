@@ -1,5 +1,5 @@
 import os
-import warnings
+import logging
 import copy
 
 import numpy as np
@@ -86,7 +86,7 @@ class UserCommands:
     --------
     Here we use a combination of the main parameters: ``packages``, ``yamls``,
     and ``properties``. When not using the ``use_instrument`` key, ``packages``
-    and ``yamls`` must be specified, otherwise scopesim will not know which
+    and ``yamls`` must be specified, otherwise scopesim will not know
     where to look for yaml files (only relevant if reading in yaml files)::
 
         >>> from scopesim.server.database import download_package
@@ -172,7 +172,7 @@ class UserCommands:
                         if yaml_input == "default.yaml":
                             self.default_yamls = yaml_dict
                     else:
-                        warnings.warn("{} could not be found".format(yaml_input))
+                        logging.warning("{} could not be found".format(yaml_input))
 
                 elif isinstance(yaml_input, dict):
                     self.cmds.update(yaml_input)
@@ -297,7 +297,7 @@ def add_packages_to_rc_search(local_path, package_list):
         if not os.path.exists(pkg_dir):
             # todo: keep here, but add test for this by downloading test_package
             # raise ValueError("Package could not be found: {}".format(pkg_dir))
-            warnings.warn("Package could not be found: {}".format(pkg_dir))
+            logging.warning("Package could not be found: {}".format(pkg_dir))
 
         if pkg_dir in rc.__search_path__:
             # if package is already in search_path, move it to the first place
@@ -325,7 +325,7 @@ def load_yaml_dicts(filename):
 
     yaml_dicts = []
     with open(filename) as f:
-        yaml_dicts += [dic for dic in yaml.load_all(f)]
+        yaml_dicts += [dic for dic in yaml.full_load_all(f)]
 
     return yaml_dicts
 

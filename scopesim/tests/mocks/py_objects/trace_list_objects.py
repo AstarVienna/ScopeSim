@@ -200,7 +200,7 @@ def id_table(traces_ids, descriptions=None):
     Parameters
     ----------
     traces_ids : list
-        List of indexes of Traces that should be included in the FIS file
+        List of indexes of Traces that should be included in the FITS file
     descriptions : list of str, optional
         Default is None. If alternative descriptions are required
 

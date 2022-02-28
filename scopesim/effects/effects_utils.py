@@ -33,7 +33,7 @@ def combine_surface_effects(surface_effects):
     surflist_list = [eff for eff in surface_effects
                      if isinstance(eff, efs.SurfaceList)]
     surf_list = [eff for eff in surface_effects
-                 if isinstance(eff, efs.TERCurve)
+                 if isinstance(eff, (efs.TERCurve, efs.FilterWheel))
                  and not isinstance(eff, efs.SurfaceList)]
 
     if len(surflist_list) == 0:
