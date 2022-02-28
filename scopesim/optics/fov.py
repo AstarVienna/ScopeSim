@@ -150,7 +150,7 @@ class FieldOfView(FieldOfViewBase):
         return self.hdu
 
     def flatten(self):
-        if self.hdu.header["NAXIS"] == 3:
+        if self.hdu and self.hdu.header["NAXIS"] == 3:
             image = np.sum(self.hdu.data, axis=0)
             self.hdu.data = image
 
@@ -269,7 +269,7 @@ class FieldOfView(FieldOfViewBase):
         spline_order = utils.from_currsys("!SIM.computing.spline_order")
 
         # 1. Make waveset and canvas image
-        fov_waveset = self.waveset
+        fov_waveset = np.unique(self.waveset)
         bin_widths = np.diff(fov_waveset)       # u.um
         bin_widths = 0.5 * (np.r_[0, bin_widths] + np.r_[bin_widths, 0])
         area = utils.from_currsys(self.meta["area"])    # u.m2
