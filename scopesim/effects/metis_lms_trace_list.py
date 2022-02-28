@@ -4,6 +4,7 @@ import numpy as np
 from astropy.io import fits
 from astropy.io import ascii as ioascii
 from astropy.table import Table
+from astropy.wcs import WCS
 
 from ..utils import from_currsys
 from .spectral_trace_list import SpectralTraceList
@@ -50,7 +51,7 @@ class MetisLMSSpectralTraceList(SpectralTraceList):
         self.meta['order'] = tempres['Ord']
         self.meta['angle'] = tempres['Angle']
 
-        spec_traces = dict()
+        spec_traces = {}
         for sli in np.arange(self.meta['nslice']):
             slicename = "Slice " + str(sli + 1)
             spec_traces[slicename] = MetisLMSSpectralTrace(
@@ -67,6 +68,7 @@ class MetisLMSSpectralTraceList(SpectralTraceList):
         grat_spacing = self.meta['grat_spacing']
         wcal = self._file['WCAL'].data
         return echelle_setting(lam, grat_spacing, wcal)
+
 
 
 class MetisLMSSpectralTrace(SpectralTrace):
@@ -112,6 +114,25 @@ class MetisLMSSpectralTrace(SpectralTrace):
         return {"x_min": x_min, "x_max": x_max,
                 "y_min": y_min, "y_max": y_max}
 
+    def get_waverange(self, header):
+        """Determine wavelength range that sptlist covers on image plane"""
+        wcsd = WCS(header, key='D')
+        naxis1, naxis2 = header['NAXIS1'], header['NAXIS2']
+        lam0 = self.wavelen
+
+        lammin = []
+        lammax = []
+        for trace_id in self.spectral_traces:
+            spt = self.spectral_traces[trace_id]
+            ymid = spt.xilam2y(0, lam0, pretransform_y=spt.lam2phase)[0]
+            xmin, xmax = wcsd.all_pix2world([1, naxis1],
+                                            [naxis2 / 2, naxis2 / 2], 1)[0]
+            waverange = spt.xy2lam(np.array([xmin, xmax]), np.array([ymid, ymid]),
+                                   grid=False, postransform=spt.phase2lam)
+            lammin.append(waverange.min())
+            lammax.append(waverange.max())
+
+            return min(lammin), max(lammax)
 
     def compute_interpolation_functions(self):
         """
