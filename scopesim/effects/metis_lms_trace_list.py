@@ -6,7 +6,7 @@ from astropy.io import ascii as ioascii
 from astropy.table import Table
 from astropy.wcs import WCS
 
-from ..utils import from_currsys
+from ..utils import from_currsys, find_file
 from .spectral_trace_list import SpectralTraceList
 from .spectral_trace_list_utils import SpectralTrace
 from .spectral_trace_list_utils import Transform2D
@@ -92,9 +92,11 @@ class MetisLMSSpectralTrace(SpectralTrace):
         super().__init__(polyhdu, **params)
         self._file = hdulist
         self.meta['description'] = "Slice " + str(spslice + 1)
+        print(self.meta['trace_id'])
+        #self.meta['trace_id'] = f"Slice {spslice + 1}"
         self.meta.update(params)
 
-    def fov_grid(self, **kwargs):
+    def fov_grid(self):
         """
         Provide information on the source space volume required by the effect
 
@@ -105,14 +107,19 @@ class MetisLMSSpectralTrace(SpectralTrace):
         arcsec.
         """
 
-        det_mm_lims = kwargs["det_limits"]
-        wave_min, wave_max = self.get_waverange(det_mm_lims)
-
         aperture = self._file['Aperture list'].data[self.meta['slice']]
         x_min = aperture['left']
         x_max = aperture['right']
         y_min = aperture['bottom']
         y_max = aperture['top']
+
+        layout = ioascii.read(find_file("!DET.layout.file_name"))
+        det_lims = {}
+        det_lims['xd_min'] = min(layout['x_cen'] - layout['xhw'])
+        det_lims['xd_max'] = max(layout['x_cen'] + layout['xhw'])
+        det_lims['yd_min'] = min(layout['y_cen'] - layout['yhw'])
+        det_lims['yd_max'] = max(layout['y_cen'] + layout['yhw'])
+        wave_min, wave_max = self.get_waverange(det_lims)
 
         return {"x_min": x_min, "x_max": x_max,
                 "y_min": y_min, "y_max": y_max,
@@ -120,7 +127,6 @@ class MetisLMSSpectralTrace(SpectralTrace):
 
     def get_waverange(self, det_mm_lims):
         """Determine wavelength range that spectral trace covers on image plane"""
-
         xmin = det_mm_lims['xd_min']
         xmax = det_mm_lims['xd_max']
         ymid = 0.5 * (det_mm_lims['yd_min'] + det_mm_lims['yd_max'])
