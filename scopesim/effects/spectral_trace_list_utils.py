@@ -76,7 +76,7 @@ class SpectralTrace:
         # Interpolation functions
         self.compute_interpolation_functions()
 
-    def fov_grid(self):
+    def fov_grid(self, **kwargs):
         """
         Provide information on the source space volume required by the effect
 

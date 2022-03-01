@@ -148,7 +148,8 @@ class SpectralTraceList(Effect):
         list, identified by meta['trace_id'].
         '''
         if isinstance(obj, FOVSetupBase):
-            volumes = [self.spectral_traces[key].fov_grid()
+            det_limits = obj.detector_limits     # [mm] limits of detector array
+            volumes = [self.spectral_traces[key].fov_grid(det_limits=det_limits)
                        for key in self.spectral_traces]
             new_vols_list = []
             for vol in volumes:
