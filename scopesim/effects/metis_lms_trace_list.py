@@ -106,7 +106,7 @@ class MetisLMSSpectralTrace(SpectralTrace):
         """
 
         det_mm_lims = kwargs["det_limits"]
-        wave_min, wave_max = self.get_waverange()
+        wave_min, wave_max = self.get_waverange(det_mm_lims)
 
         aperture = self._file['Aperture list'].data[self.meta['slice']]
         x_min = aperture['left']
@@ -114,38 +114,21 @@ class MetisLMSSpectralTrace(SpectralTrace):
         y_min = aperture['bottom']
         y_max = aperture['top']
 
-        # ..todo: compute wave_min and wave_max
         return {"x_min": x_min, "x_max": x_max,
-                "y_min": y_min, "y_max": y_max}
+                "y_min": y_min, "y_max": y_max,
+                "wave_min": wave_min, "wave_max": wave_max}
 
     def get_waverange(self, det_mm_lims):
-        """Determine wavelength range that sptlist covers on image plane"""
+        """Determine wavelength range that spectral trace covers on image plane"""
 
-        # Format from FovVolumeList.detector_limits
-        # self.detector_limits = {"xd_min": 0,
-        #                         "xd_max": 0,
-        #                         "yd_min": 0,
-        #                         "yd_max": 0}
+        xmin = det_mm_lims['xd_min']
+        xmax = det_mm_lims['xd_max']
+        ymid = 0.5 * (det_mm_lims['yd_min'] + det_mm_lims['yd_max'])
 
-        wcsd = WCS(header, key='D')
-        naxis1, naxis2 = header['NAXIS1'], header['NAXIS2']
-        lam0 = self.wavelen
+        waverange = self.xy2lam(np.array([xmin, xmax]), np.array([ymid, ymid]),
+                                grid=False, postransform=self.phase2lam)
 
-        lammin = []
-        lammax = []
-        for trace_id in self.spectral_traces:
-            spt = self.spectral_traces[trace_id]
-            ymid = spt.xilam2y(0, lam0, pretransform_y=spt.lam2phase)[0]
-
-            # .. todo: pull xmin, xmax out of det_mm_lims
-            xmin, xmax = wcsd.all_pix2world([1, naxis1],
-                                            [naxis2 / 2, naxis2 / 2], 1)[0]
-            waverange = spt.xy2lam(np.array([xmin, xmax]), np.array([ymid, ymid]),
-                                   grid=False, postransform=spt.phase2lam)
-            lammin.append(waverange.min())
-            lammax.append(waverange.max())
-
-            return min(lammin), max(lammax)
+        return waverange.min(), waverange.max()
 
     def compute_interpolation_functions(self):
         """
