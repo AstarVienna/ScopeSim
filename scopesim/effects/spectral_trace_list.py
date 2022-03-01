@@ -76,8 +76,18 @@ class SpectralTraceList(Effect):
     - y : float : [mm] : y position of aperture image on focal plane
 
     """
+    _class_params = {"x_colname": "x",
+                     "y_colname": "y",
+                     "s_colname": "s",
+                     "wave_colname": "wavelength",
+                     "col_number_start": 0,
+                     "center_on_wave_mid": False,
+                     "dwave": 0.002,  # [um] for finding the best fit dispersion
+                     "invalid_value": None,  # for dodgy trace file values
+                     }
+
     def __init__(self, **kwargs):
-        super(SpectralTraceList, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
         if "hdulist" in kwargs and isinstance(kwargs["hdulist"], fits.HDUList):
             self._file = kwargs["hdulist"]
@@ -100,16 +110,21 @@ class SpectralTraceList(Effect):
                   "report_table_include": False,
                   }
         self.meta.update(params)
+
+        # Parameters that are specific to the subclass
+        self.meta.update(self._class_params)
         self.meta.update(kwargs)
 
         if self._file is not None:
-            self.ext_data = self._file[0].header["EDATA"]
-            self.ext_cat = self._file[0].header["ECAT"]
-            self.catalog = Table(self._file[self.ext_cat].data)
-            self.spectral_traces = self.make_spectral_traces()
+            self.make_spectral_traces()
+
 
     def make_spectral_traces(self):
         '''Returns a dictionary of spectral traces read in from a file'''
+        self.ext_data = self._file[0].header["EDATA"]
+        self.ext_cat = self._file[0].header["ECAT"]
+        self.catalog = Table(self._file[self.ext_cat].data)
+
         spec_traces = {}
         for row in self.catalog:
             params = {col: row[col] for col in row.colnames}
@@ -117,7 +132,7 @@ class SpectralTraceList(Effect):
             hdu = self._file[row["extension_id"]]
             spec_traces[row["description"]] = SpectralTrace(hdu, **params)
 
-        return spec_traces
+        self.spectral_traces = spec_traces
 
     def apply_to(self, obj, **kwargs):
         '''
@@ -205,11 +220,11 @@ class SpectralTraceList(Effect):
             wave_max = from_currsys("!SIM.spectral.wave_max")
 
         from matplotlib import pyplot as plt
-        plt.figure(figsize=(12, 12))
+        plt.figure(figsize=(8, 8))
 
         if self.spectral_traces is not None:
             clrs = "rgbcymk" * (1 + len(self.spectral_traces) // 7)
-            for spt, c in zip(self.spectral_traces, clrs):
+            for spt, c in zip(self.spectral_traces.values(), clrs):
                 spt.plot(wave_min, wave_max, c=c)
 
         return plt.gcf()
