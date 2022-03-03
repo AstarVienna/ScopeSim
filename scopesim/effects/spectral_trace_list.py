@@ -153,12 +153,17 @@ class SpectralTraceList(Effect):
             new_vols_list = []
             for vol in volumes:
                 wave_edges = [vol["wave_min"], vol["wave_max"]]
-                x_edges = [vol["x_min"], vol["x_max"]]
-                y_edges = [vol["y_min"], vol["y_max"]]
-                extracted_vols = obj.extract(axes=["wave", "x", "y"],
-                                             edges=(wave_edges,
-                                                    x_edges,
-                                                    y_edges))
+                if "x_min" in vol:
+                    x_edges = [vol["x_min"], vol["x_max"]]
+                    y_edges = [vol["y_min"], vol["y_max"]]
+                    extracted_vols = obj.extract(axes=["wave", "x", "y"],
+                                                 edges=(wave_edges,
+                                                        x_edges,
+                                                        y_edges))
+                else:
+                    extracted_vols = obj.extract(axes=["wave"],
+                                                 edges=([wave_edges]))
+
                 for ex_vol in extracted_vols:
                     ex_vol["meta"].update(vol)
                     ex_vol["meta"].pop("wave_min")
