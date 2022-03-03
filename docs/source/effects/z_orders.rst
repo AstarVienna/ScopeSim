@@ -150,6 +150,11 @@ SurfaceLists
 * 520 SurfaceList
 * 524 FilterWheel
 
+AffineTransforms
+
+* 530 RotatePupil
+* 531 ShiftPupil
+
 
 600..699 apply-to(FieldOfView)
 ------------------------------

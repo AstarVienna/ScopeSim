@@ -494,8 +494,23 @@ class Source(SourceBase):
                 self.fields[ii].header["CRVAL1"] += dx.value
                 self.fields[ii].header["CRVAL2"] += dy.value
 
-    def rotate(self, angle, offset=None, layers=None):
-        pass
+    def rotate(self, angle, layers=None):
+        # Assume field rotation is a combination of shift and rotate.
+        # Therefore self.rotate is always around the optical axis (0,0)
+
+        # make rotation_matrix
+
+        for field in self.fields:
+            if isinstance(field, (fits.ImageHDU, fits.PrimaryHDU)):
+                # check for NAXIS=2,3
+                # rotate around the centre of the (NAXIS1, NAXIS2) plane
+                # allow image size to increase, update CRPIXn
+                # update CRVALn rotation_matrix cos(ang), sin(ang)
+                pass
+
+            if isinstance(field, Table):
+                # update x, y by rotation_matrix cos(ang), sin(ang)
+                pass
 
     def add_bandpass(self, bandpass):
         if not isinstance(bandpass, SpectralElement):

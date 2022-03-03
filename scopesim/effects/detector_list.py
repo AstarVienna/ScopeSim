@@ -17,15 +17,54 @@ class DetectorList(Effect):
     """
     A description of detector positions and properties
 
+    The detector array description must contain a table with the following
+    columns::
+
+        id: detector numbering scheme
+        x_cen: [mm] the centre of each detector
+        y_cen: [mm]
+        x_size: [mm] the size of each detector
+        y_size: [mm]
+        pixel_size: [mm]
+        angle: [deg]
+        gain: [e-/adu] the gain of the
+
+    The column units must be contained in the meta data (either in the ascii
+    file header or in the yaml kwargs) using the following format:
+    ``<col_name>_unit: <unit>``. See below for examples.
+
     Examples
     --------
-    ::
+    If the detector description is in a seperate file::
 
         - name : full_detector
           class : DetectorList
           kwargs :
             filename : "FPA_array_layout.dat"
             active_detectors : [1, 5]
+
+    Using an inline detector description::
+
+        - name: detector array list
+          class: DetectorList
+          kwargs:
+            array_dict:
+              id: [1]
+              x_cen: [0]
+              y_cen: [0]
+              x_size: [16]
+              y_size: [16]
+              pixel_size: [1.]
+              angle: [0.]
+              gain: [1.0]
+            x_cen_unit : mm
+            y_cen_unit : mm
+            x_size_unit : mm
+            y_size_unit : mm
+            pixel_size_unit : mm
+            angle_unit : deg
+            gain_unit : electron/adu
+
 
     """
 
