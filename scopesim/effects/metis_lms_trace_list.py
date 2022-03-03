@@ -5,8 +5,9 @@ from astropy.io import fits
 from astropy.io import ascii as ioascii
 from astropy.table import Table
 from astropy.wcs import WCS
+from astropy import units as u
 
-from ..utils import from_currsys, find_file
+from ..utils import from_currsys, find_file, quantify
 from .spectral_trace_list import SpectralTraceList
 from .spectral_trace_list_utils import SpectralTrace
 from .spectral_trace_list_utils import Transform2D
@@ -92,9 +93,10 @@ class MetisLMSSpectralTrace(SpectralTrace):
         super().__init__(polyhdu, **params)
         self._file = hdulist
         self.meta['description'] = "Slice " + str(spslice + 1)
-        print(self.meta['trace_id'])
-        #self.meta['trace_id'] = f"Slice {spslice + 1}"
+        print(self.meta['trace_id']) # ..todo: for some reason, this is at "Polynomial coefficients"
+        self.meta['trace_id'] = f"Slice {spslice + 1}"
         self.meta.update(params)
+        print(self.meta['trace_id'])
 
     def fov_grid(self):
         """
@@ -112,6 +114,7 @@ class MetisLMSSpectralTrace(SpectralTrace):
         x_max = aperture['right']
         y_min = aperture['bottom']
         y_max = aperture['top']
+        trace_id = self.meta['trace_id']
 
         layout = ioascii.read(find_file("!DET.layout.file_name"))
         det_lims = {}
@@ -121,9 +124,15 @@ class MetisLMSSpectralTrace(SpectralTrace):
         det_lims['yd_max'] = max(layout['y_cen'] + layout['yhw'])
         wave_min, wave_max = self.get_waverange(det_lims)
 
+        # ..todo: just a hack - xi and x are the same except xi is a quantity
+        xi_min = quantify(x_min, u.arcsec)
+        xi_max = quantify(x_max, u.arcsec)
+
         return {"x_min": x_min, "x_max": x_max,
                 "y_min": y_min, "y_max": y_max,
-                "wave_min": wave_min, "wave_max": wave_max}
+                "xi_min": xi_min, "xi_max": xi_max,
+                "wave_min": wave_min, "wave_max": wave_max,
+                "trace_id": trace_id}
 
     def get_waverange(self, det_mm_lims):
         """Determine wavelength range that spectral trace covers on image plane"""
