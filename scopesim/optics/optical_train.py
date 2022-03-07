@@ -391,7 +391,6 @@ class OpticalTrain:
                 iheader['DARK'] = from_currsys("!DET.dark_current"), "[e/s]"
 
         ifilter = 1   # Counts filter wheels
-        islit = 1     # Counts slit wheels
         isurface = 1  # Counts surface lists
         for eff in self.optics_manager.source_effects:
             efftype = type(eff).__name__
@@ -405,9 +404,8 @@ class OpticalTrain:
                 ifilter += 1
 
             if efftype == "SlitWheel" and eff.include:
-                iheader[f'SLIT{islit}'] = (eff.current_slit.meta['name'],
-                                           eff.meta['name'])
-                islit += 1
+                iheader['SLIT'] = (eff.current_slit.meta['name'],
+                                   eff.meta['name'])
 
             if efftype == "PupilTransmission" and eff.include:
                 iheader['PUPTRANS'] = (from_currsys("!OBS.pupil_transmission"),
