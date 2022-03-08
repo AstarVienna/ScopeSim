@@ -1,21 +1,24 @@
 numpy>=1.16
 scipy
-matplotlib==3.0.3
+matplotlib
 astropy
 
 docutils
 requests
 beautifulsoup4
 pyyaml
+pysftp
 
 synphot
 skycalc_ipy
 anisocado
 scopesim_templates
 
+sphinx>=4.3.0
+sphinx-rtd-theme>=0.5.1
 jupyter_sphinx==0.2.3
-numpydoc
 sphinxcontrib-apidoc
-sphinx==2.4
+nbsphinx
+numpydoc
 
 # See https://github.com/sphinx-doc/sphinx/issues/7659 for why sphinx==2.4

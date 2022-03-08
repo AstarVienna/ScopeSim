@@ -10,6 +10,7 @@ docutils
 requests
 beautifulsoup4
 pyyaml
+pysftp
 
 synphot
 skycalc_ipy

@@ -38,10 +38,9 @@ Each use-case should ideally be a maximum of
 but simply a guideline to avoid introducing too much at once.
 Import statements, setup code, etc **do not** count towards the 5 lines.
 
-To add a 5-liner, add your code to a Sphinx-friendly `ReStructuredText (.rst)
-file <https://docutils.sourceforge.io/docs/user/rst/quickref.html>`_.
-The full code goes in a ``TL;DR`` "overview" section. If needed, please explain
-what the code does in the ``Explanation`` section::
+To add a 5-liner, add your code to an ipython notebook (.ipynb).
+The full code goes in a ``TL;DR`` "overview" section. 
+If needed, please explain what the code does in the ``Explanation`` section::
 
     TL;DR
     -----
@@ -50,17 +49,6 @@ what the code does in the ``Explanation`` section::
     Explanation
     -----------
     a short explanation of what the scopesim code does
-
-Code snippets are included inside a ``jupyter_execute`` tag. This code is run
-in a jupyter-notebook environment and the output is also displayed::
-
-    .. jupyter-execute::
-
-       print("Hello World!")
-
-.. jupyter-execute::
-
-   print("Hello World!")
 
 To display plots with matplotlib, make sure to include the command
 ``%matplotlib inline`` after ``import matplotlib``.
