@@ -21,14 +21,7 @@ ScopeSim_ is on pip::
     :caption: Contents:
 
     use_examples/index
-    sources/index
-    effects/index
-    faqs/index
-    interfaces/index
-    architecture/index
     Reference API <reference/modules>
-
-
 
 
 Getting started
@@ -43,7 +36,8 @@ A basic simulation of ELT/MICADO image would look something like this::
                                "telescopes/ELT",
                                "instruments/MICADO"])
     cmd = scopesim.UserCommands(use_instrument="MICADO",
-                                properties={"!OBS.dit": 60, "!OBS.ndit": 10,
+                                properties={"!OBS.dit": 60,
+                                            "!OBS.ndit": 10,
                                             "!INST.filter_name": "Ks"})
     opt = scopesim.OpticalTrain(cmd)
 
@@ -101,7 +95,7 @@ Main Package        Support Packages            Notes
 =================== =========================== ====================================
 MICADO              Armazones, ELT, MAORY       Spectroscopy in Beta stage
 MICADO_Sci          As above
-METIS               Armazones, ELT              Only Imaging
+METIS               Armazones, ELT              Imageing and Long-Slit Spectroscopy
 HAWKI               Paranal, VLT
 WFC3                HST                         Only NIR mode
 LFOA                                            Leopold-Figl 1.5m telescope
@@ -125,21 +119,31 @@ The ScopeSim python ecosystem
 
 There are several packages in the ScopeSim_ ecosystem to be aware of:
 
+.. image:: _static/logos/all_AstarV.png
+    :width: 700 px
+    :alt: Welcome to the ScopeSim Documentation!
+    :align: center
+
 * ScopeSim_: The engine behind the whole simulator
 * `ScopeSim Templates`_: A series of helper function to generate on-sky targets
+* `SpeXtra`_: A pythonic interface to many common astronomical spectra libraries
 * Pyckles_: Pythonic access to the Pickles (1998) spectral library and
   Brown (2014) spectral library
 * IRDB_: The Instrument Reference Database, where the instrument packages are
   stored
 * AnisoCADO_: For making SCAO PSF cubes that readable by ScopeSim
 * skycalc_ipy_: Connects to ESOs SkyCalc server to get atmospheric spectra
+* `How Many Photons`_: A simple package for quickly calculating the number of
+  photons within a given astronomical filter
 
 .. _ScopeSim:    https://scopesim.readthedocs.io/en/latest/
 .. _`ScopeSim Templates`: https://scopesim-templates.readthedocs.io/en/latest/
 .. _IRDB:        https://github.com/astronomyk/irdb
 .. _AnisoCADO:   https://anisocado.readthedocs.io/en/latest/
 .. _skycalc_ipy: https://skycalc-ipy.readthedocs.io/en/latest/
+.. _SpeXtra:     https://spextra.readthedocs.io/en/latest/
 .. _Pyckles:     https://scopesim-templates.readthedocs.io/en/latest/
+.. _`How Many Photons`:  https://github.com/AstarVienna/HowManyBloodyPhotons/
 
 
 .. note:: Much more information on these packages will be coming very soon!

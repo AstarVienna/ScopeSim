@@ -269,7 +269,7 @@ class FieldOfView(FieldOfViewBase):
         spline_order = utils.from_currsys("!SIM.computing.spline_order")
 
         # 1. Make waveset and canvas image
-        fov_waveset = self.waveset
+        fov_waveset = np.unique(self.waveset)
         bin_widths = np.diff(fov_waveset)       # u.um
         bin_widths = 0.5 * (np.r_[0, bin_widths] + np.r_[bin_widths, 0])
         area = utils.from_currsys(self.meta["area"])    # u.m2
@@ -335,7 +335,11 @@ class FieldOfView(FieldOfViewBase):
                 y = np.array(ypix + 0.5).astype(int)     # quickest way to round
                 f = np.array([fluxes[ref] for ref in field["ref"]])
                 weight = np.array(field["weight"])
-                canvas_image_hdu.data[y, x] += f * weight
+
+                # Mask out any stars that were pushed out of the fov by rounding
+                m = (x < canvas_image_hdu.data.shape[1]) * \
+                    (y < canvas_image_hdu.data.shape[0])
+                canvas_image_hdu.data[y[m], x[m]] += f[m] * weight[m]
 
         # 4. Find Background fields
         for field in self.background_fields:
