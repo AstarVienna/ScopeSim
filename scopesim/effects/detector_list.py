@@ -94,8 +94,9 @@ class DetectorList(Effect):
         x_unit = utils.unit_from_table("x_cen", tbl, u.mm)
         y_unit = utils.unit_from_table("y_cen", tbl, u.mm)
 
-        xcen, ycen = tbl["x_cen"], tbl["y_cen"]
-        dx, dy = 0.5 * tbl["x_size"], 0.5 * tbl["y_size"]
+        xcen = tbl["x_cen"].data.astype(float)
+        ycen = tbl["y_cen"].data.astype(float)
+        dx, dy = 0.5 * float(tbl["x_size"]), 0.5 * float(tbl["y_size"])
 
         scale_factor = 1
         if x_unit.name == "pix":
@@ -139,8 +140,8 @@ class DetectorList(Effect):
         hdrs = []
         for row in tbl:
             pixel_size = row["pixel_size"]
-            xcen, ycen = row["x_cen"], row["y_cen"]
-            dx, dy = 0.5 * row["x_size"], 0.5 * row["y_size"]
+            xcen, ycen = float(row["x_cen"]), float(row["y_cen"])
+            dx, dy = 0.5 * float(row["x_size"]), 0.5 * float(row["y_size"])
 
             if "pix" in self.meta["x_cen_unit"]:
                 xcen, ycen = xcen * pixel_size, ycen * pixel_size

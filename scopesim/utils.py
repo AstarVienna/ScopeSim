@@ -955,6 +955,8 @@ def from_currsys(item):
 
     if isinstance(item, str) and len(item) and item[0] == "!":
         if item in rc.__currsys__:
+            if "!DET" in item:
+                pass
             item = rc.__currsys__[item]
         else:
             raise ValueError("{} was not found in rc.__currsys__".format(item))
