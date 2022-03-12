@@ -99,6 +99,52 @@ def download_svo_filter(filter_name, return_style="synphot"):
     return filt
 
 
+def download_svo_filter_list(observatory, instrument, short_names=False,
+                             include=None, exclude=None):
+    """
+    Query the SVO service for a list of filter names for an instrument
+
+    Parameters
+    ----------
+    observatory : str
+        Name of the observatory as available on the spanish VO filter service
+        e.g: ``Paranal/HAWKI.Ks`` --> Paranal
+
+    instrument : str
+        Name of the instrument. Be careful of hyphens etc. E.g. "HAWK-I"
+
+    short_names : bool
+        Default False. If True, the full SVO names (obs/inst.filt) are split to
+        only return the (filt) part of the name
+
+    include, exclude: str
+        Each a string sequence for excluding or including specific filters
+        E.g. GTC/OSIRIS has curves for ``sdss_g`` and ``sdss_g_filter``.
+        We can force the inclusion of only the filter curves by setting
+        ``include="_filter"``.
+
+    Returns
+    -------
+    names : list
+        A list of filter names
+
+    """
+    base_url = f"http://svo2.cab.inta-csic.es/theory/fps3/fps.php?"
+    url = base_url + f"Facility={observatory}&Instrument={instrument}"
+    path = download_file(url, cache=True)
+
+    tbl = Table.read(path, format='votable')
+    names = list(tbl["filterID"])
+    if short_names:
+        names = [name.split(".")[-1] for name in names]
+    if include is not None:
+        names = [name for name in names if include in name]
+    if exclude is not None:
+        names = [name for name in names if exclude not in name]
+
+    return names
+
+
 def get_filter(filter_name):
     # first check locally
     # check generics

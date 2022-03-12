@@ -117,3 +117,40 @@ class TestFilterWheelInit:
         if PLOTS:
             fwheel.plot()
             plt.show()
+
+
+class TestSpanishVOFilterWheelInit:
+    def test_throws_exception_on_empty_input(self):
+        with pytest.raises(ValueError):
+            tc.SpanishVOFilterWheel()
+
+    @pytest.mark.parametrize("observatory, instrument, default_filter",
+                             [("GTC", "OSIRIS", "sdss_r_filter"),
+                              ("JWST", "MIRI", "F2300C")])
+    def test_returns_filter_as_wanted(self, observatory, instrument,
+                                      default_filter):
+        filt_wheel = tc.SpanishVOFilterWheel(observatory=observatory,
+                                             instrument=instrument,
+                                             current_filter=default_filter,
+                                             name="test_svo_wheel")
+
+        assert isinstance(filt_wheel, tc.FilterWheel)
+        assert default_filter in filt_wheel.filters
+
+    def test_returns_filters_with_include_str(self):
+        filt_wheel = tc.SpanishVOFilterWheel(observatory="GTC",
+                                             instrument="OSIRIS",
+                                             current_filter="sdss_r_filter",
+                                             name="test_svo_wheel",
+                                             include_str="_filter")
+
+        assert np.all(["_filter" in name for name in filt_wheel.filters])
+
+    def test_returns_filters_with_exclude_str(self):
+        filt_wheel = tc.SpanishVOFilterWheel(observatory="GTC",
+                                             instrument="OSIRIS",
+                                             current_filter="sdss_r_filter",
+                                             name="test_svo_wheel",
+                                             exclude_str="_filter")
+
+        assert np.all(["_filter" not in name for name in filt_wheel.filters])

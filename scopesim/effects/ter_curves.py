@@ -11,7 +11,8 @@ from synphot import SourceSpectrum
 from synphot.units import PHOTLAM
 
 from .ter_curves_utils import combine_two_spectra, apply_throughput_to_cube
-from .ter_curves_utils import add_edge_zeros, download_svo_filter
+from .ter_curves_utils import download_svo_filter, download_svo_filter_list
+from .ter_curves_utils import add_edge_zeros
 from .effects import Effect
 from ..optics.surface import SpectralSurface
 from ..source.source_utils import make_imagehdu_from_table
@@ -343,7 +344,8 @@ class FilterCurve(TERCurve):
         params = {"minimum_throughput": "!SIM.spectral.minimum_throughput",
                   "action": "transmission",
                   "position": -1,               # position in surface table
-                  "wing_flux_level": None}
+                  "wing_flux_level": None,
+                  "name": "untitled filter"}
         self.meta.update(params)
         self.meta["z_order"] = [114, 214, 514]
         self.meta.update(kwargs)
@@ -414,12 +416,24 @@ class DownloadableFilterCurve(FilterCurve):
 
 
 class SpanishVOFilterCurve(FilterCurve):
+    """
+    Pulls a filter transmission curve down from the Spanish VO filter service
+
+    Parameters
+    ----------
+    observatory : str
+    instrument : str
+    filter_name : str
+
+    """
     def __init__(self, **kwargs):
         required_keys = ["observatory", "instrument", "filter_name"]
         check_keys(kwargs, required_keys, action="error")
         filt_str = "{}/{}.{}".format(kwargs["observatory"],
                                      kwargs["instrument"],
                                      kwargs["filter_name"])
+        kwargs["name"] = kwargs["filter_name"]
+        kwargs["svo_id"] = filt_str
         tbl = download_svo_filter(filt_str, return_style="table")
         super(SpanishVOFilterCurve, self).__init__(table=tbl, **kwargs)
 
@@ -532,6 +546,77 @@ class FilterWheel(Effect):
                     data=[names, centres, widths, blue, red])
 
         return tbl
+
+
+class SpanishVOFilterWheel(FilterWheel):
+    """
+    A FilterWheel that loads all the filters from the Spanish VO service
+
+    .. warning::
+       This use ``astropy.download_file(..., cache=True)``.
+
+    The filter transmission curves probably won't change, but if you notice
+    discrepancies, try clearing the astopy cache::
+
+        >> from astropy.utils.data import clear_download_cache
+        >> clear_download_cache()
+
+    Parameters
+    ----------
+    observatory : str
+    instrument : str
+    current_filter : str
+        Default filter name
+    include_str, exclude_str : str
+        String sequences that can be used to include or exclude filter names
+        which contain a certain string.
+        E.g. GTC/OSIRIS has curves for ``sdss_g`` and ``sdss_g_filter``.
+        We can force the inclusion of only the filter curves by setting
+        ``list_include_str: "_filter"``.
+
+
+    Examples
+    --------
+    ::
+
+        name: svo_filter_wheel
+        class: SpanishVOFilterWheel
+        kwargs:
+            observatory: "GTC"
+            instrument: "OSIRIS"
+            current_filter: "sdss_r_filter"
+            include_str: "_filter"
+
+    """
+    def __init__(self, **kwargs):
+        required_keys = ["observatory", "instrument", "current_filter"]
+        check_keys(kwargs, required_keys, action="error")
+
+        # Call Effect.init, *NOT* FilterWheel.init
+        super(FilterWheel, self).__init__(**kwargs)
+
+        params = {"z_order": [124, 224, 524],
+                  "report_plot_include": True,
+                  "report_table_include": True,
+                  "report_table_rounding": 4,
+                  "include_str": None,         # passed to
+                  "exclude_str": None,
+                  }
+        self.meta.update(params)
+        self.meta.update(kwargs)
+
+        obs, inst = self.meta["observatory"], self.meta["instrument"]
+        inc, exc =  self.meta["include_str"], self.meta["exclude_str"]
+        filter_names = download_svo_filter_list(obs, inst, short_names=True,
+                                                include=inc, exclude=exc)
+
+        self.meta["filter_names"] = filter_names
+        self.filters = {name: SpanishVOFilterCurve(observatory=obs,
+                                                   instrument=inst,
+                                                   filter_name=name)
+                        for name in filter_names}
+
+        self.table = self.get_table()
 
 
 class PupilTransmission(TERCurve):
