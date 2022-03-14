@@ -11,6 +11,7 @@ from ..utils import from_currsys, find_file, quantify
 from .spectral_trace_list import SpectralTraceList
 from .spectral_trace_list_utils import SpectralTrace
 from .spectral_trace_list_utils import Transform2D
+from .apertures import ApertureMask
 
 
 class MetisLMSSpectralTraceList(SpectralTraceList):
@@ -93,10 +94,8 @@ class MetisLMSSpectralTrace(SpectralTrace):
         super().__init__(polyhdu, **params)
         self._file = hdulist
         self.meta['description'] = "Slice " + str(spslice + 1)
-        print(self.meta['trace_id']) # ..todo: for some reason, this is at "Polynomial coefficients"
         self.meta['trace_id'] = f"Slice {spslice + 1}"
         self.meta.update(params)
-        print(self.meta['trace_id'])
 
     def fov_grid(self):
         """
@@ -322,3 +321,25 @@ def echelle_setting(wavelength, grat_spacing, wcal_def):
     phase = wavelength * order / (2 * grat_spacing)
 
     return {"Ord": order, "Angle": angle, "Phase": phase}
+
+
+
+class MetisLMSImageSlicer(ApertureMask):
+    """
+    Treats the METIS LMS image slicer as an aperture mask effect. This helps
+    in building a FieldOfView object that combines the spatial field of the slicer
+    with the spectral range covered by the LMS setting.
+
+    The effect differs from its parent class `ApertureMask` in the initialisation
+    from the `Aperture List` extension of the trace file `!OBS.trace_file`.
+    """
+    def __init__(self, filename, ext_id="Aperture List", **kwargs):
+        filename = from_currsys(filename)
+        ap_list = fits.getdata(filename, extname=ext_id)
+        xmin, xmax = ap_list['left'].min(), ap_list['right'].max()
+        ymin, ymax = ap_list['bottom'].min(), ap_list['top'].max()
+        slicer_dict = {"x": [xmin, xmax, xmax, xmin],
+                      "y": [ymin, ymin, ymax, ymax]}
+
+        super().__init__(array_dict=slicer_dict, id="LMS slicer",
+                         conserve_image=True, **kwargs)
