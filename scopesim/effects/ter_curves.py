@@ -495,7 +495,11 @@ class FilterWheel(Effect):
 
     @property
     def current_filter(self):
-        return self.filters[from_currsys(self.meta["current_filter"])]
+        filter_eff = None
+        filt_name = from_currsys(self.meta["current_filter"])
+        if filt_name is not None:
+            filter_eff = self.filters[filt_name]
+        return filter_eff
 
     @property
     def display_name(self):
@@ -574,11 +578,9 @@ class SpanishVOFilterWheel(FilterWheel):
         We can force the inclusion of only the filter curves by setting
         ``list_include_str: "_filter"``.
 
-
     Examples
     --------
     ::
-
         name: svo_filter_wheel
         class: SpanishVOFilterWheel
         kwargs:
@@ -592,7 +594,7 @@ class SpanishVOFilterWheel(FilterWheel):
         required_keys = ["observatory", "instrument", "current_filter"]
         check_keys(kwargs, required_keys, action="error")
 
-        # Call Effect.init, *NOT* FilterWheel.init
+        # Call Effect.init, *NOT* FilterWheel.init --> different required_keys
         super(FilterWheel, self).__init__(**kwargs)
 
         params = {"z_order": [124, 224, 524],

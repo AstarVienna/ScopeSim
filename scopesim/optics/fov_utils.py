@@ -159,7 +159,7 @@ def combine_imagehdu_fields(fov_header, src, fields_indexes, wave_min, wave_max,
     canvas_hdu = fits.ImageHDU(header=fov_header, data=image)
     spline_order = utils.from_currsys("!SIM.computing.spline_order")
     pixel_area = fov_header["CDELT1"] * fov_header["CDELT2"] * \
-                 u.Unit(fov_header["CUNIT1"]).to(u.arcsec) ** 2
+                 u.Unit(fov_header["CUNIT1"].lower()).to(u.arcsec) ** 2
 
     for ii in fields_indexes:
         field = src.fields[ii]
@@ -438,8 +438,8 @@ def make_cube_from_table(table, spectra, waveset, fov_header, sub_pixel=False):
     crpix1, crpix2 = fov_header["CRPIX1"], fov_header["CRPIX2"]
     cunit1, cunit2 = fov_header["CUNIT1"], fov_header["CUNIT2"]
 
-    xps = (table["x"].to(cunit1).value - crval1) / cdelt1 + crpix1
-    yps = (table["y"].to(cunit2).value - crval2) / cdelt2 + crpix2
+    xps = (table["x"].to(cunit1.lower()).value - crval1) / cdelt1 + crpix1
+    yps = (table["y"].to(cunit2.lower()).value - crval2) / cdelt2 + crpix2
     refs, weights = table["ref"], table["weight"]
 
     for xp, yp, ref, weight in zip(xps, yps, refs, weights):

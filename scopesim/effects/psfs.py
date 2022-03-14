@@ -603,7 +603,7 @@ class FieldConstantPSF(DiscretePSF):
 
                 # compare kernel and fov pixel scales, rescale if needed
                 if "CUNIT1" in hdr:
-                    unit_factor = u.Unit(hdr["CUNIT1"]).to(u.deg)
+                    unit_factor = u.Unit(hdr["CUNIT1"].lower()).to(u.deg)
                 else:
                     unit_factor = 1
 
@@ -627,7 +627,7 @@ class FieldConstantPSF(DiscretePSF):
         # Some data from the fov
         nxfov, nyfov = fov.hdu.header["NAXIS1"], fov.hdu.header["NAXIS2"]
         fov_pixel_scale = fov.hdu.header["CDELT1"]
-        fov_pixel_unit = fov.hdu.header["CUNIT1"]
+        fov_pixel_unit = fov.hdu.header["CUNIT1"].lower()
 
         lam = fov.hdu.header["CDELT3"] * (1 + np.arange(fov.hdu.header["NAXIS3"])
                                           - fov.hdu.header["CRPIX3"]) \
@@ -643,7 +643,7 @@ class FieldConstantPSF(DiscretePSF):
         refwave = hdr[self.meta["wave_key"]]
 
         if "CUNIT1" in hdr:
-            unit_factor = u.Unit(hdr["CUNIT1"]).to(u.Unit(fov_pixel_unit))
+            unit_factor = u.Unit(hdr["CUNIT1"].lower()).to(u.Unit(fov_pixel_unit))
         else:
             unit_factor = 1
         ref_pixel_scale = hdr["CDELT1"] * unit_factor
