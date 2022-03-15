@@ -84,6 +84,14 @@ class TestSpanishVOFilterCurveInit:
                                        filter_name=filt_name)
         assert isinstance(filt, tc.FilterCurve)
 
+    def test_returns_unity_transmission_for_wrong_name(self):
+        filt = tc.SpanishVOFilterCurve(observatory=None,
+                                       instrument=None,
+                                       filter_name=None,
+                                       error_on_wrong_name=False)
+        assert isinstance(filt, tc.FilterCurve)
+        assert np.all([t == 1 for t in filt.data["transmission"]])
+
 
 @pytest.fixture(name="fwheel", scope="class")
 def _filter_wheel():

@@ -1,3 +1,5 @@
+import logging
+
 import numpy as np
 from astropy import units as u
 from astropy.table import Table
@@ -52,7 +54,8 @@ def get_filter_effective_wavelength(filter_name):
     return eff_wave
 
 
-def download_svo_filter(filter_name, return_style="synphot"):
+def download_svo_filter(filter_name, return_style="synphot",
+                        error_on_wrong_name=True):
     """
     Query the SVO service for the true transmittance for a given filter
 
@@ -60,7 +63,7 @@ def download_svo_filter(filter_name, return_style="synphot"):
 
     Parameters
     ----------
-    filt : str
+    filter_name : str
         Name of the filter as available on the spanish VO filter service
         e.g: ``Paranal/HAWKI.Ks``
 
@@ -72,6 +75,9 @@ def download_svo_filter(filter_name, return_style="synphot"):
         - array: np.ndarray [wave, trans], where wave is in Angstrom
         - vo_table : astropy.table.Table - original output from SVO service
 
+    error_on_wrong_name : bool
+        Default True. Raises an exception if filter_name is as incorrect SVO ID
+
     Returns
     -------
     filt_curve : See return_style
@@ -81,9 +87,19 @@ def download_svo_filter(filter_name, return_style="synphot"):
     url = f"http://svo2.cab.inta-csic.es/theory/fps3/fps.php?ID={filter_name}"
     path = download_file(url, cache=True)
 
-    tbl = Table.read(path, format='votable')
-    wave = u.Quantity(tbl['Wavelength'].data.data, u.Angstrom, copy=False)
-    trans = tbl['Transmission'].data.data
+    try:
+        tbl = Table.read(path, format='votable')
+        wave = u.Quantity(tbl['Wavelength'].data.data, u.Angstrom, copy=False)
+        trans = tbl['Transmission'].data.data
+    except:
+        if error_on_wrong_name:
+            raise ValueError(f"{filter_name} is an incorrect SVO identiier")
+        else:
+            logging.warning(f"{filter_name} was not found in the SVO. "
+                            f"Defaulting to a unity transmission curve.")
+            wave = [3e3, 3e5] << u.Angstrom
+            trans = np.array([1., 1.])
+
     if return_style == "synphot":
         filt = SpectralElement(Empirical1D, points=wave, lookup_table=trans)
     elif return_style == "table":

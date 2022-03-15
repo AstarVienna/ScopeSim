@@ -434,7 +434,10 @@ class SpanishVOFilterCurve(FilterCurve):
                                      kwargs["filter_name"])
         kwargs["name"] = kwargs["filter_name"]
         kwargs["svo_id"] = filt_str
-        tbl = download_svo_filter(filt_str, return_style="table")
+
+        raise_error = kwargs.get("error_on_wrong_name", True)
+        tbl = download_svo_filter(filt_str, return_style="table",
+                                  error_on_wrong_name=raise_error)
         super(SpanishVOFilterCurve, self).__init__(table=tbl, **kwargs)
 
 
@@ -568,9 +571,12 @@ class SpanishVOFilterWheel(FilterWheel):
     Parameters
     ----------
     observatory : str
+
     instrument : str
+
     current_filter : str
         Default filter name
+
     include_str, exclude_str : str
         String sequences that can be used to include or exclude filter names
         which contain a certain string.
@@ -615,7 +621,8 @@ class SpanishVOFilterWheel(FilterWheel):
         self.meta["filter_names"] = filter_names
         self.filters = {name: SpanishVOFilterCurve(observatory=obs,
                                                    instrument=inst,
-                                                   filter_name=name)
+                                                   filter_name=name,
+                                                   error_on_wrong_name=False)
                         for name in filter_names}
 
         self.table = self.get_table()
