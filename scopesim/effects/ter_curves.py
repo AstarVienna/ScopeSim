@@ -621,9 +621,12 @@ class SpanishVOFilterWheel(FilterWheel):
         self.meta["filter_names"] = filter_names
         self.filters = {name: SpanishVOFilterCurve(observatory=obs,
                                                    instrument=inst,
-                                                   filter_name=name,
-                                                   error_on_wrong_name=False)
+                                                   filter_name=name)
                         for name in filter_names}
+        self.filters["open"] = FilterCurve(array_dict={"wavelength": [0.3, 3.0],
+                                                       "transmission": [1., 1.]},
+                                           wavelength_unit="um",
+                                           name="unity transmission")
 
         self.table = self.get_table()
 

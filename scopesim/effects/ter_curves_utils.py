@@ -95,7 +95,7 @@ def download_svo_filter(filter_name, return_style="synphot",
         if error_on_wrong_name:
             raise ValueError(f"{filter_name} is an incorrect SVO identiier")
         else:
-            logging.warning(f"{filter_name} was not found in the SVO. "
+            logging.warning(f"'{filter_name}' was not found in the SVO. "
                             f"Defaulting to a unity transmission curve.")
             wave = [3e3, 3e5] << u.Angstrom
             trans = np.array([1., 1.])

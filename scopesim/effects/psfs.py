@@ -89,10 +89,11 @@ class PSF(Effect):
 
                 if image.ndim == 2 and kernel.ndim == 2:
                     new_image = convolve(image - bkg_level, kernel, mode=mode)
-                elif kernel.ndim == 2:
+                elif image.ndim == 3 and kernel.ndim == 2:
                     kernel = kernel[None, :, :]
+                    bkg_level = bkg_level[:, None, None]
                     new_image = convolve(image - bkg_level, kernel, mode=mode)
-                elif kernel.ndim == 3:
+                elif image.ndim == 3 and kernel.ndim == 3:
                     bkg_level = bkg_level[:, None, None]
                     new_image = np.zeros(image.shape)  # assumes mode="same"
                     for iplane in range(image.shape[0]):
@@ -266,23 +267,30 @@ class NonCommonPathAberration(AnalyticalPSF):
 class SeeingPSF(AnalyticalPSF):
     """
     Currently only returns gaussian kernel with a ``fwhm`` [arcsec]
+
+    Parameters
+    ----------
+    fwhm : flaot
+        [arcsec]
+
     """
     def __init__(self, fwhm=1.5, **kwargs):
         super().__init__(**kwargs)
+
         self.meta["fwhm"] = fwhm
         self.meta["z_order"] = [242, 642]
 
-    def fov_grid(self, which="waveset", **kwargs):
-        wavelengths = []
-        if which == "waveset" and \
-                "waverange" in kwargs and \
-                "pixel_scale" in kwargs:
-            waverange = utils.quantify(kwargs["waverange"], u.um)
-            wavelengths = waverange
-            # ..todo: return something useful
-
-        # .. todo: check that this is actually correct
-        return wavelengths
+    # def fov_grid(self, which="waveset", **kwargs):
+    #     wavelengths = []
+    #     if which == "waveset" and \
+    #             "waverange" in kwargs and \
+    #             "pixel_scale" in kwargs:
+    #         waverange = utils.quantify(kwargs["waverange"], u.um)
+    #         wavelengths = waverange
+    #         # ..todo: return something useful
+    #
+    #     # .. todo: check that this is actually correct
+    #     return wavelengths
 
     def get_kernel(self, fov):
         # called by .apply_to() from the base PSF class
@@ -292,7 +300,7 @@ class SeeingPSF(AnalyticalPSF):
         wave = fov.wavelength
 
         # add in the conversion to fwhm from seeing and wavelength here
-        fwhm = self.meta["fwhm"] * u.arcsec / pixel_scale
+        fwhm = utils.from_currsys(self.meta["fwhm"]) * u.arcsec / pixel_scale
 
         sigma = fwhm.value / 2.35
         kernel = Gaussian2DKernel(sigma, mode="center").array
