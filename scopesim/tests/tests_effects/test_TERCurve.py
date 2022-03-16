@@ -56,6 +56,18 @@ class TestTERCurvePlot:
             plt.show()
 
 
+class TestTopHatFilter:
+    def test_throws_error_for_wrong_keywords(self):
+        with pytest.raises(ValueError):
+            tc.TopHatFilterCurve()
+
+    def test_has_correct_profile(self):
+        filt = tc.TopHatFilterCurve(transmission=0.9, wing_transmission=0.01,
+                                    blue_cutoff=1., red_cutoff=2.)
+        assert filt.throughput(1.*u.um).value == 0.9
+        assert filt.throughput(0.998*u.um).value == 0.01
+
+
 class TestDownloadableFilterCurveInit:
     def test_throws_error_if_no_keys_passed(self):
         with pytest.raises(ValueError):
@@ -162,3 +174,23 @@ class TestSpanishVOFilterWheelInit:
                                              exclude_str="_filter")
 
         assert np.all(["_filter" not in name for name in filt_wheel.filters])
+
+
+class TestTopHatFilterList:
+    def test_throws_exception_on_empty_input(self):
+        with pytest.raises(ValueError):
+            tc.TopHatFilterWheel()
+
+    def test_initialises_with_correct_input(self):
+        filt_wheel = tc.TopHatFilterWheel(name="test_tophat_filter_wheel",
+                                          current_filter="K",
+                                          filter_names=["J", "H", "K"],
+                                          transmissions=[0.9, 0.95, 0.85],
+                                          wing_transmissions=[0., 0., 0.001],
+                                          blue_cutoffs=[1.15, 1.45, 1.9],
+                                          red_cutoffs=[1.35, 1.8, 2.4])
+
+        assert isinstance(filt_wheel, tc.TopHatFilterWheel)
+        assert filt_wheel.filters["J"].throughput(1.15*u.um) == 0.9
+        assert filt_wheel.filters["J"].throughput(1.13*u.um) == 0.
+        assert filt_wheel.meta["current_filter"] == "K"

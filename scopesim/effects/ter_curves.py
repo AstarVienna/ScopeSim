@@ -406,6 +406,56 @@ class FilterCurve(TERCurve):
         return self.centre
 
 
+class TopHatFilterCurve(FilterCurve):
+    """
+    A simple Top-Hat filter profile
+
+    Parameters
+    ----------
+    transmission : float
+        [0..1] Peak transmission of filter
+
+    blue_cutoff, red_cutoff : float
+        [um] Blue and Red cutoff wavelengths
+
+    wing_transmission : float, optional
+        [0..1] Default 0. Wing transmission of filter outside the cutoff range
+
+    Examples
+    --------
+    ::
+        name: J_band_tophat
+        class: TopHatFilterCurve
+        kwargs:
+            transmission : 0.9
+            wing_transmission : 0.001
+            blue_cutoff : 1.15
+            red_cutoff : 1.35
+
+
+    """
+    def __init__(self, **kwargs):
+        required_keys = ["transmission", "blue_cutoff", "red_cutoff"]
+        check_keys(kwargs, required_keys, action="error")
+
+        wave_min = from_currsys("!SIM.spectral.wave_min")
+        wave_max = from_currsys("!SIM.spectral.wave_max")
+        blue = kwargs["blue_cutoff"]
+        red = kwargs["red_cutoff"]
+        peak = kwargs["transmission"]
+        wing = kwargs.get("wing_transmission", 0)
+        
+        waveset = [wave_min, 0.999*blue, blue, red, red*1.001, wave_max]
+        transmission = [wing, wing, peak, peak, wing, wing]
+        
+        tbl = Table(names=["wavelength", "transmission"],
+                    data=[waveset, transmission])
+        super(TopHatFilterCurve, self).__init__(table=tbl,
+                                                wavelength_unit="um",
+                                                action="transmission")
+        self.meta.update(kwargs)
+
+
 class DownloadableFilterCurve(FilterCurve):
     def __init__(self, **kwargs):
         required_keys = ["filter_name", "filename_format"]
@@ -424,6 +474,16 @@ class SpanishVOFilterCurve(FilterCurve):
     observatory : str
     instrument : str
     filter_name : str
+
+    Examples
+    --------
+    ::
+        name: HAWKI-Ks
+        class: SpanishVOFilterCurve
+        kwargs:
+            observatory : Paranal
+            instrument : HAWKI
+            filter_name : Ks
 
     """
     def __init__(self, **kwargs):
@@ -448,7 +508,6 @@ class FilterWheel(Effect):
     Examples
     --------
     ::
-
         name: filter_wheel
         class: FilterWheel
         kwargs:
@@ -553,6 +612,73 @@ class FilterWheel(Effect):
                     data=[names, centres, widths, blue, red])
 
         return tbl
+
+
+
+class TopHatFilterWheel(FilterWheel):
+    """
+    A selection of top-hat filter curves as defined in the input lists
+
+    Parameters
+    ----------
+    filter_names: list of string
+
+    transmissions: list of floats
+        [0..1] Peak transmissions inside the cuttoff limits
+
+    wing_transmissions: list of floats
+        [0..1] Wing transmissions outside the cuttoff limits
+
+    blue_cutoffs: list of floats
+        [um]
+
+    red_cutoffs: list of floats
+        [um]
+
+    current_filter: str, optional
+        Name of current filter at initialisation. If no name is given, the
+        first entry in ``filter_names`` is used by default.
+
+    Examples
+    --------
+    ::
+        name: top_hat_filter_wheel
+        class: TopHatFilterWheel
+        kwargs:
+            filter_names: ["J", "H", "K"]
+            transmissions: [0.9, 0.95, 0.85]
+            wing_transmissions: [0., 0., 0.001]
+            blue_cutoffs: [1.15, 1.45, 1.9]
+            red_cutoffs: [1.35, 1.8, 2.4]
+            current_filter: "K"
+
+    """
+    def __init__(self, **kwargs):
+        required_keys = ["filter_names", "transmissions", "wing_transmissions",
+                         "blue_cutoffs", "red_cutoffs"]
+        check_keys(kwargs, required_keys, action="error")
+
+        super(FilterWheel, self).__init__(**kwargs)
+
+        params = {"z_order": [124, 224, 524],
+                  "report_plot_include": True,
+                  "report_table_include": True,
+                  "report_table_rounding": 4,
+                  "current_filter": kwargs.get("current_filter",
+                                               kwargs["filter_names"][0])
+                  }
+        self.meta.update(params)
+        self.meta.update(kwargs)
+
+        self.filters = {}
+        for i in range(len(self.meta["filter_names"])):
+            name = self.meta["filter_names"][i]
+            effect_kwargs = {"name": name,
+                             "transmission": self.meta["transmissions"][i],
+                             "wing_transmission": self.meta["wing_transmissions"][i],
+                             "blue_cutoff": self.meta["blue_cutoffs"][i],
+                             "red_cutoff": self.meta["red_cutoffs"][i]}
+            self.filters[name] = TopHatFilterCurve(**effect_kwargs)
 
 
 class SpanishVOFilterWheel(FilterWheel):
