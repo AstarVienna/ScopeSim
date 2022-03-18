@@ -11,7 +11,8 @@ from synphot import SourceSpectrum
 from synphot.units import PHOTLAM
 
 from .ter_curves_utils import combine_two_spectra, apply_throughput_to_cube
-from .ter_curves_utils import add_edge_zeros, download_svo_filter
+from .ter_curves_utils import download_svo_filter, download_svo_filter_list
+from .ter_curves_utils import add_edge_zeros
 from .effects import Effect
 from ..optics.surface import SpectralSurface
 from ..source.source_utils import make_imagehdu_from_table
@@ -343,7 +344,8 @@ class FilterCurve(TERCurve):
         params = {"minimum_throughput": "!SIM.spectral.minimum_throughput",
                   "action": "transmission",
                   "position": -1,               # position in surface table
-                  "wing_flux_level": None}
+                  "wing_flux_level": None,
+                  "name": "untitled filter"}
         self.meta.update(params)
         self.meta["z_order"] = [114, 214, 514]
         self.meta.update(kwargs)
@@ -404,6 +406,56 @@ class FilterCurve(TERCurve):
         return self.centre
 
 
+class TopHatFilterCurve(FilterCurve):
+    """
+    A simple Top-Hat filter profile
+
+    Parameters
+    ----------
+    transmission : float
+        [0..1] Peak transmission of filter
+
+    blue_cutoff, red_cutoff : float
+        [um] Blue and Red cutoff wavelengths
+
+    wing_transmission : float, optional
+        [0..1] Default 0. Wing transmission of filter outside the cutoff range
+
+    Examples
+    --------
+    ::
+        name: J_band_tophat
+        class: TopHatFilterCurve
+        kwargs:
+            transmission : 0.9
+            wing_transmission : 0.001
+            blue_cutoff : 1.15
+            red_cutoff : 1.35
+
+
+    """
+    def __init__(self, **kwargs):
+        required_keys = ["transmission", "blue_cutoff", "red_cutoff"]
+        check_keys(kwargs, required_keys, action="error")
+
+        wave_min = from_currsys("!SIM.spectral.wave_min")
+        wave_max = from_currsys("!SIM.spectral.wave_max")
+        blue = kwargs["blue_cutoff"]
+        red = kwargs["red_cutoff"]
+        peak = kwargs["transmission"]
+        wing = kwargs.get("wing_transmission", 0)
+        
+        waveset = [wave_min, 0.999*blue, blue, red, red*1.001, wave_max]
+        transmission = [wing, wing, peak, peak, wing, wing]
+        
+        tbl = Table(names=["wavelength", "transmission"],
+                    data=[waveset, transmission])
+        super(TopHatFilterCurve, self).__init__(table=tbl,
+                                                wavelength_unit="um",
+                                                action="transmission")
+        self.meta.update(kwargs)
+
+
 class DownloadableFilterCurve(FilterCurve):
     def __init__(self, **kwargs):
         required_keys = ["filter_name", "filename_format"]
@@ -414,13 +466,38 @@ class DownloadableFilterCurve(FilterCurve):
 
 
 class SpanishVOFilterCurve(FilterCurve):
+    """
+    Pulls a filter transmission curve down from the Spanish VO filter service
+
+    Parameters
+    ----------
+    observatory : str
+    instrument : str
+    filter_name : str
+
+    Examples
+    --------
+    ::
+        name: HAWKI-Ks
+        class: SpanishVOFilterCurve
+        kwargs:
+            observatory : Paranal
+            instrument : HAWKI
+            filter_name : Ks
+
+    """
     def __init__(self, **kwargs):
         required_keys = ["observatory", "instrument", "filter_name"]
         check_keys(kwargs, required_keys, action="error")
         filt_str = "{}/{}.{}".format(kwargs["observatory"],
                                      kwargs["instrument"],
                                      kwargs["filter_name"])
-        tbl = download_svo_filter(filt_str, return_style="table")
+        kwargs["name"] = kwargs["filter_name"]
+        kwargs["svo_id"] = filt_str
+
+        raise_error = kwargs.get("error_on_wrong_name", True)
+        tbl = download_svo_filter(filt_str, return_style="table",
+                                  error_on_wrong_name=raise_error)
         super(SpanishVOFilterCurve, self).__init__(table=tbl, **kwargs)
 
 
@@ -431,7 +508,6 @@ class FilterWheel(Effect):
     Examples
     --------
     ::
-
         name: filter_wheel
         class: FilterWheel
         kwargs:
@@ -481,7 +557,11 @@ class FilterWheel(Effect):
 
     @property
     def current_filter(self):
-        return self.filters[from_currsys(self.meta["current_filter"])]
+        filter_eff = None
+        filt_name = from_currsys(self.meta["current_filter"])
+        if filt_name is not None:
+            filter_eff = self.filters[filt_name]
+        return filter_eff
 
     @property
     def display_name(self):
@@ -532,6 +612,149 @@ class FilterWheel(Effect):
                     data=[names, centres, widths, blue, red])
 
         return tbl
+
+
+
+class TopHatFilterWheel(FilterWheel):
+    """
+    A selection of top-hat filter curves as defined in the input lists
+
+    Parameters
+    ----------
+    filter_names: list of string
+
+    transmissions: list of floats
+        [0..1] Peak transmissions inside the cuttoff limits
+
+    wing_transmissions: list of floats
+        [0..1] Wing transmissions outside the cuttoff limits
+
+    blue_cutoffs: list of floats
+        [um]
+
+    red_cutoffs: list of floats
+        [um]
+
+    current_filter: str, optional
+        Name of current filter at initialisation. If no name is given, the
+        first entry in ``filter_names`` is used by default.
+
+    Examples
+    --------
+    ::
+        name: top_hat_filter_wheel
+        class: TopHatFilterWheel
+        kwargs:
+            filter_names: ["J", "H", "K"]
+            transmissions: [0.9, 0.95, 0.85]
+            wing_transmissions: [0., 0., 0.001]
+            blue_cutoffs: [1.15, 1.45, 1.9]
+            red_cutoffs: [1.35, 1.8, 2.4]
+            current_filter: "K"
+
+    """
+    def __init__(self, **kwargs):
+        required_keys = ["filter_names", "transmissions", "wing_transmissions",
+                         "blue_cutoffs", "red_cutoffs"]
+        check_keys(kwargs, required_keys, action="error")
+
+        super(FilterWheel, self).__init__(**kwargs)
+
+        params = {"z_order": [124, 224, 524],
+                  "report_plot_include": True,
+                  "report_table_include": True,
+                  "report_table_rounding": 4,
+                  "current_filter": kwargs.get("current_filter",
+                                               kwargs["filter_names"][0])
+                  }
+        self.meta.update(params)
+        self.meta.update(kwargs)
+
+        self.filters = {}
+        for i in range(len(self.meta["filter_names"])):
+            name = self.meta["filter_names"][i]
+            effect_kwargs = {"name": name,
+                             "transmission": self.meta["transmissions"][i],
+                             "wing_transmission": self.meta["wing_transmissions"][i],
+                             "blue_cutoff": self.meta["blue_cutoffs"][i],
+                             "red_cutoff": self.meta["red_cutoffs"][i]}
+            self.filters[name] = TopHatFilterCurve(**effect_kwargs)
+
+
+class SpanishVOFilterWheel(FilterWheel):
+    """
+    A FilterWheel that loads all the filters from the Spanish VO service
+
+    .. warning::
+       This use ``astropy.download_file(..., cache=True)``.
+
+    The filter transmission curves probably won't change, but if you notice
+    discrepancies, try clearing the astopy cache::
+
+        >> from astropy.utils.data import clear_download_cache
+        >> clear_download_cache()
+
+    Parameters
+    ----------
+    observatory : str
+
+    instrument : str
+
+    current_filter : str
+        Default filter name
+
+    include_str, exclude_str : str
+        String sequences that can be used to include or exclude filter names
+        which contain a certain string.
+        E.g. GTC/OSIRIS has curves for ``sdss_g`` and ``sdss_g_filter``.
+        We can force the inclusion of only the filter curves by setting
+        ``list_include_str: "_filter"``.
+
+    Examples
+    --------
+    ::
+        name: svo_filter_wheel
+        class: SpanishVOFilterWheel
+        kwargs:
+            observatory: "GTC"
+            instrument: "OSIRIS"
+            current_filter: "sdss_r_filter"
+            include_str: "_filter"
+
+    """
+    def __init__(self, **kwargs):
+        required_keys = ["observatory", "instrument", "current_filter"]
+        check_keys(kwargs, required_keys, action="error")
+
+        # Call Effect.init, *NOT* FilterWheel.init --> different required_keys
+        super(FilterWheel, self).__init__(**kwargs)
+
+        params = {"z_order": [124, 224, 524],
+                  "report_plot_include": True,
+                  "report_table_include": True,
+                  "report_table_rounding": 4,
+                  "include_str": None,         # passed to
+                  "exclude_str": None,
+                  }
+        self.meta.update(params)
+        self.meta.update(kwargs)
+
+        obs, inst = self.meta["observatory"], self.meta["instrument"]
+        inc, exc =  self.meta["include_str"], self.meta["exclude_str"]
+        filter_names = download_svo_filter_list(obs, inst, short_names=True,
+                                                include=inc, exclude=exc)
+
+        self.meta["filter_names"] = filter_names
+        self.filters = {name: SpanishVOFilterCurve(observatory=obs,
+                                                   instrument=inst,
+                                                   filter_name=name)
+                        for name in filter_names}
+        self.filters["open"] = FilterCurve(array_dict={"wavelength": [0.3, 3.0],
+                                                       "transmission": [1., 1.]},
+                                           wavelength_unit="um",
+                                           name="unity transmission")
+
+        self.table = self.get_table()
 
 
 class PupilTransmission(TERCurve):

@@ -198,6 +198,7 @@ class OpticalTrain:
             for ii in range(len(self.image_planes)):
                 self.image_planes[ii] = effect.apply_to(self.image_planes[ii])
 
+        self._last_fovs = fovs
         self._last_source = source
 
 

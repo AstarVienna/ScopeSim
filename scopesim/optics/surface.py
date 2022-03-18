@@ -256,7 +256,7 @@ class SpectralSurface:
         elif colname in self.table.colnames:
             val = self.table[colname].data
         else:
-            logging.warning(f"{colname} not found in either '.meta' or '.table': "
+            logging.info(f"{colname} not found in either '.meta' or '.table': "
                           f"[{self.meta.get('name', self.meta['filename'])}]")
             return None
 
