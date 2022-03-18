@@ -28,13 +28,23 @@ from . import rc
 ################################################################################
 
 root = logging.getLogger()
-root.setLevel(logging.WARNING)
+root.setLevel("DEBUG")            # DEBUG
 
-handler = logging.StreamHandler(sys.stdout)
-handler.setLevel(logging.DEBUG)
-formatter = logging.Formatter('%(levelname)s - %(message)s')
-handler.setFormatter(formatter)
-root.addHandler(handler)
+if rc.__config__["!SIM.logging.log_to_file"] is True:
+    file_path = rc.__config__["!SIM.logging.file_path"]
+    write_mode = rc.__config__["!SIM.logging.file_open_mode"]
+    file_handler = logging.FileHandler(file_path, write_mode)
+    file_handler.setLevel(rc.__config__["!SIM.logging.file_level"])  # DEBUG
+    formatter = logging.Formatter('%(levelname)s - %(message)s')
+    file_handler.setFormatter(formatter)
+    root.addHandler(file_handler)
+
+if rc.__config__["!SIM.logging.log_to_console"] is True:
+    stdout_handler = logging.StreamHandler(sys.stdout)
+    stdout_handler.setLevel(rc.__config__["!SIM.logging.console_level"])  # WARNING
+    formatter = logging.Formatter('%(levelname)s - %(message)s')
+    stdout_handler.setFormatter(formatter)
+    root.addHandler(stdout_handler)
 
 
 ################################################################################

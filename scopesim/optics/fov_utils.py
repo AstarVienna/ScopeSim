@@ -393,11 +393,11 @@ def extract_range_from_spectrum(spectrum, waverange):
     mask = (spec_waveset > wave_min) * (spec_waveset < wave_max)
 
     if sum(mask) == 0:
-        logging.warning(f"Waverange does not overlap with Spectrum waveset: "
+        logging.info(f"Waverange does not overlap with Spectrum waveset: "
                       f"{[wave_min, wave_max]} <> {spec_waveset} "
                       f"for spectrum {spectrum}")
     if wave_min < min(spec_waveset) or wave_max > max(spec_waveset):
-        logging.warning(f"Waverange only partially overlaps with Spectrum waveset: "
+        logging.info(f"Waverange only partially overlaps with Spectrum waveset: "
                       f"{[wave_min, wave_max]} <> {spec_waveset} "
                       f"for spectrum {spectrum}")
 
