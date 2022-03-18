@@ -50,7 +50,7 @@ A basic simulation of ELT/MICADO image would look something like this::
 
     src = scopesim_templates.stellar.clusters.cluster()
     opt.observe(src)
-    opt.readout().writeto("my_image.fits")
+    opt.readout(filename="my_image.fits")
 
 Let's break this down a bit.
 
