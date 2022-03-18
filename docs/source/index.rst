@@ -44,10 +44,11 @@ A basic simulation of ELT/MICADO image would look something like this::
                                "instruments/MICADO"])
     cmd = scopesim.UserCommands(use_instrument="MICADO",
                                 properties={"!OBS.dit": 60, "!OBS.ndit": 10,
-                                            "!INST.filter_name": "Ks"})
+                                            "!OBS.filter_name_fw1": "open",
+                                            "!OBS.filter_name_fw2": "Ks"})
     opt = scopesim.OpticalTrain(cmd)
 
-    src = scopesim_templates.basic.stars.cluster()
+    src = scopesim_templates.stellar.clusters.cluster()
     opt.observe(src)
     opt.readout().writeto("my_image.fits")
 
@@ -81,7 +82,8 @@ describe the model of the optical train and the how we want to observe::
 
     scopesim.UserCommands(use_instrument="MICADO",
                           properties={"!OBS.dit": 60, "!OBS.ndit": 10,
-                                      "!INST.filter_name": "Ks"})
+                                      "!OBS.filter_name_fw1": "open",
+                                      "!OBS.filter_name_fw2": "Ks"})
 
 We start of by specifying which instrument we want to load with
 ``use_instrument=``. Next we pass a dictionary of keyword-value pairs
