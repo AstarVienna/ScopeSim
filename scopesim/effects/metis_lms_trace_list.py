@@ -1,5 +1,7 @@
 """SpectralTraceList and SpectralTrace for the METIS LM spectrograph"""
+from copy import deepcopy
 import numpy as np
+from scipy.interpolate import RectBivariateSpline
 
 from astropy.io import fits
 from astropy.io import ascii as ioascii
@@ -12,7 +14,8 @@ from .spectral_trace_list import SpectralTraceList
 from .spectral_trace_list_utils import SpectralTrace
 from .spectral_trace_list_utils import Transform2D
 from .apertures import ApertureMask
-
+from ..base_classes import FieldOfViewBase, FOVSetupBase
+from ..optics.fov import FieldOfView
 
 class MetisLMSSpectralTraceList(SpectralTraceList):
     """
@@ -36,12 +39,110 @@ class MetisLMSSpectralTraceList(SpectralTraceList):
 
         # field of view of the instrument
         # ..todo: get this from aperture list
-        self.view = np.array([self.meta['naxis1'] * self.meta['pixscale'],
-                              self.meta['nslice'] * self.meta['slicewidth']])
+
+        self.slicelist = self._file["Aperture List"].data
+        #self.view = np.array([self.meta['naxis1'] * self.meta['pixscale'],
+        #                      self.meta['nslice'] * self.meta['slicewidth']])
+        self.view = np.array([self.slicelist['right'].max() -
+                              self.slicelist['left'].min(),
+                              self.slicelist['top'].max() -
+                              self.slicelist['bottom'].min()])
+
+        #for sli, spt in enumerate(self.spectral_traces.values()):
+        #    spt.meta['xmin'] = self.slicelist['left'][sli]
+        #    spt.meta['xmax'] = self.slicelist['right'][sli]
+        #    spt.meta['ymin'] = self.slicelist['bottom'][sli]
+        #    spt.meta['ymax'] = self.slicelist['top'][sli]
 
         #if self._file is not None:
         #    print(self._file)
         #    self.make_spectral_traces()
+
+    def apply_to(self, obj, **kwargs):
+        """
+        overrides SpectralTraceList.apply_to()
+        """
+        if isinstance(obj, FOVSetupBase):
+            print("lms_trace_list.apply_to(): setup", type(obj))
+            # Create a single volume that covers the aperture and
+            # the maximum wavelength range of LMS
+            volumes = [self.spectral_traces[key].fov_grid()
+                       for key in self.spectral_traces]
+            wave_min = min([vol["wave_min"] for vol in volumes])
+            wave_max = max([vol["wave_max"] for vol in volumes])
+            extracted_vols = obj.extract(axes=["wave"],
+                                         edges=([[wave_min, wave_max]]))
+            obj.volumes = extracted_vols
+
+        if isinstance(obj, FieldOfViewBase):
+            print("lms_trace_list.apply_to(): apply", type(obj))
+            print(obj)
+            # Application to field of view
+            if obj.hdu is not None and obj.hdu.header['NAXIS'] == 3:
+                print("lms: taking cube from hdu")
+                obj.cube = obj.hdu
+            elif obj.hdu is None and obj.cube is None:
+                print("lms: making cube")
+                obj.cube = obj.make_cube_hdu()
+
+            fovcube = obj.cube.data
+            n_z, n_y, n_x = fovcube.shape
+            fovwcs = WCS(obj.cube.header)
+            # Make this linear to avoid jump at RA 0 deg
+            fovwcs.wcs.ctype = ['LINEAR', 'LINEAR', fovwcs.wcs.ctype[2]]
+            ny_slice = 5    # ..todo: make this a parameter?
+
+            fovimage = np.zeros((obj.detector_header['NAXIS2'],
+                                 obj.detector_header['NAXIS1']),
+                                dtype=np.float32)
+            for sptid, spt in self.spectral_traces.items():
+                print(sptid, spt)
+                ymin = spt.meta['fov']['y_min']
+                ymax = spt.meta['fov']['y_max']
+                print(f"Slice {sptid}: {ymin:.4f}   {ymax:.4f}")
+
+                slicewcs = deepcopy(fovwcs)
+
+                slicewcs.wcs.ctype = ['LINEAR', 'LINEAR', slicewcs.wcs.ctype[2]]
+                slicewcs.wcs.crpix[1] = 2.
+                slicewcs.wcs.crval[1] = (ymin + ymax) / 2 / 3600
+                slicewcs.wcs.cdelt[1] = (ymax - ymin) / ny_slice / 3600
+
+                slicecube = np.zeros((n_z, ny_slice, n_x))
+                for islice in range(n_z):
+                    ifov = RectBivariateSpline(np.arange(n_y),
+                                               np.arange(n_x),
+                                               fovcube[islice], kx=1, ky=1)
+                    xslice, yslice = np.meshgrid(np.arange(n_x),
+                                                 np.arange(ny_slice))
+                    xworld, yworld = slicewcs.sub(2).all_pix2world(xslice,
+                                                                   yslice, 0)
+                    xfov, yfov = fovwcs.sub(2).all_world2pix(xworld, yworld, 0)
+                    slicecube[islice] = ifov(yfov, xfov, grid=False)
+
+                slicefov = FieldOfView(obj.header,
+                                       [obj.meta['wave_min'], obj.meta['wave_max']])
+                slicefov.detector_header = obj.detector_header
+                slicefov.meta['xi_min'] = obj.meta['xi_min']
+                slicefov.meta['xi_max'] = obj.meta['xi_max']
+                slicefov.meta['trace_id'] = sptid
+                slicefov.cube = fits.ImageHDU(header=slicewcs.to_header(),
+                                              data=slicecube)
+                print(slicefov)
+                slicefov.hdu = spt.map_spectra_to_focal_plane(slicefov)
+
+                sxmin = slicefov.hdu.header['XMIN']
+                sxmax = slicefov.hdu.header['XMAX']
+                symin = slicefov.hdu.header['YMIN']
+                symax = slicefov.hdu.header['YMAX']
+                print(f"fovimage: {fovimage.shape}")
+                print(f"slicefov: {slicefov.hdu.data.shape}")
+                print(symin, symax, sxmin, sxmax)
+                fovimage[symin:symax, sxmin:sxmax] += slicefov.hdu.data
+
+            obj.hdu = fits.ImageHDU(data=fovimage, header=obj.detector_header)
+
+        return obj
 
     def make_spectral_traces(self):
         """
@@ -92,10 +193,13 @@ class MetisLMSSpectralTrace(SpectralTrace):
         params['aperture_id'] = spslice
         params['slice'] = spslice
         super().__init__(polyhdu, **params)
+
         self._file = hdulist
         self.meta['description'] = "Slice " + str(spslice + 1)
         self.meta['trace_id'] = f"Slice {spslice + 1}"
         self.meta.update(params)
+        # Provisional:
+        self.meta['fov'] = self.fov_grid()
 
     def fov_grid(self):
         """

@@ -148,6 +148,8 @@ class SpectralTraceList(Effect):
         list, identified by meta['trace_id'].
         '''
         if isinstance(obj, FOVSetupBase):
+            print("lss_trace_list.apply_to() setup:", type(obj))
+            # Setup of FieldOfView object
             volumes = [self.spectral_traces[key].fov_grid()
                        for key in self.spectral_traces]
             new_vols_list = []
@@ -173,11 +175,20 @@ class SpectralTraceList(Effect):
             obj.volumes = new_vols_list
 
         if isinstance(obj, FieldOfViewBase):
+            print("lss_trace_list.apply_to() apply:", type(obj))
+            print(obj)
+            # Application to field of view
             if obj.hdu is not None and obj.hdu.header["NAXIS"] == 3:
+                print("lss: taking cube from hdu")
                 obj.cube = obj.hdu
             elif obj.hdu is None and obj.cube is None:
+                print("lss: making cube")
                 obj.cube = obj.make_cube_hdu()
 
+            # ..todo: obj will be changed to a single one covering the full field of view
+            # covered by the image slicer (28 slices for LMS; for LSS still only a single slit)
+            # We need a loop over spectral_traces that chops up obj into the single-slice fov before
+            # calling map_spectra...
             trace_id = obj.meta['trace_id']
             spt = self.spectral_traces[trace_id]
             obj.hdu = spt.map_spectra_to_focal_plane(obj)

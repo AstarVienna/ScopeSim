@@ -136,7 +136,7 @@ class FieldOfView(FieldOfViewBase):
         """
         if sub_pixel is not None:
             self.meta["sub_pixel"] = sub_pixel
-
+        print("view:", hdu_type)
         if hdu_type == "image":
             use_photlam = False if use_photlam is None else use_photlam
             self.hdu = self.make_image_hdu(use_photlam=use_photlam)

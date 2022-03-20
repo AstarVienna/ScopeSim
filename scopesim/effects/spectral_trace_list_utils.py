@@ -146,6 +146,7 @@ class SpectralTrace:
                                           xi_min=xi_min, xi_max=xi_max)
 
         if xlim_mm is None:
+            print("xlim_mm is None")
             return None
 
         fov_header = fov.header
@@ -161,6 +162,7 @@ class SpectralTrace:
 
         fpa_wcsd = WCS(det_header, key='D')
         naxis1d, naxis2d = det_header['NAXIS1'], det_header['NAXIS2']
+        print(naxis1d, naxis2d)
         xlim_px, ylim_px = fpa_wcsd.all_world2pix(xlim_mm, ylim_mm, 0)
         xmin = np.floor(xlim_px.min()).astype(int)
         xmax = np.ceil(xlim_px.max()).astype(int)
@@ -168,6 +170,9 @@ class SpectralTrace:
         ymax = np.ceil(ylim_px.max()).astype(int)
 
         ## Check if spectral trace footprint is outside FoV
+        print("Spectral trace footprint is outside FoV:")
+        print(f"xmax: {xmax}   xmin: {xmin}  ymax: {ymax}  ymin: {ymin}")
+        print(f"naxis1d: {naxis1d}   naxis2d: {naxis2d}")
         if xmax < 0 or xmin > naxis1d or ymax < 0 or ymin > naxis2d:
             logging.warning("Spectral trace footprint is outside FoV")
             return None
