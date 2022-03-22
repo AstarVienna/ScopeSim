@@ -92,7 +92,6 @@ class SpectralTraceList(Effect):
                   "y_colname": "y",
                   "s_colname": "s",
                   "wave_colname": "wavelength",
-                  "col_number_start": 0,
                   "center_on_wave_mid": False,
                   "dwave": 0.002,  # [um] for finding the best fit dispersion
                   "invalid_value": None,  # for dodgy trace file values

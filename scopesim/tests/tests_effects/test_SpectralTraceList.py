@@ -85,8 +85,6 @@ class TestGetFOVHeaders:
         spt = SpectralTraceList(filename="TRACE_15arcsec.fits",
                                 s_colname="xi",
                                 wave_colname="lam",
-                                col_number_start=1,
-                                invalid_value=0.,
                                 spline_order=1)
         params = {"wave_min": wave_min, "wave_max": wave_max,
                   "pixel_scale": 0.004, "plate_scale": 0.266666667}
