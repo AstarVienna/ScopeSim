@@ -348,9 +348,11 @@ class ShotNoise(Effect):
             # basically the same. For large arrays the normal distribution
             # takes only 60% as long as the poisson distribution
             data = det._hdu.data
-            if np.any(data > 0):
-                logging.warning("Effect ShotNoise:", np.sum(data < 0),
-                                "negative pixels")
+
+            # Check if there are negative values in the data
+            negvals = np.sum(data < 0)
+            if negvals:
+                logging.warning(f"Effect ShotNoise: {negvals} negative pixels")
 
             below = data < 2**20
             above = np.invert(below)
