@@ -158,8 +158,10 @@ class DetectorList(Effect):
                 hdr["PC2_2"] = cang
 
             # hdr["GAIN"] = row["gain"]
-            # if "id" in row:
-            #     hdr["ID"] = row["id"]
+            if "id" in row:
+                hdr["DET_ID"] = row["id"]
+                hdr["EXTNAME"] = f'DET_{row["id"]}'
+
             row_dict = {col: row[col] for col in row.colnames}
             hdr.update(row_dict)
             hdrs += [hdr]
