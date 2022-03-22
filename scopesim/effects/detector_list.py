@@ -91,14 +91,14 @@ class DetectorList(Effect):
     def image_plane_header(self):
         tbl = self.active_table
         pixel_size = np.min(utils.quantity_from_table("pixel_size", tbl, u.mm))
-        x_unit = utils.unit_from_table("x_cen", tbl, u.mm)
-        y_unit = utils.unit_from_table("y_cen", tbl, u.mm)
+        x_unit = utils.unit_from_table("x_size", tbl, u.mm)
+        y_unit = utils.unit_from_table("y_size", tbl, u.mm)
 
         xcen, ycen = tbl["x_cen"], tbl["y_cen"]
         dx, dy = 0.5 * tbl["x_size"], 0.5 * tbl["y_size"]
 
         scale_factor = 1
-        if x_unit.name == "pix":
+        if "pix" in x_unit.name:
             scale_factor = pixel_size / u.pix
 
         x_det_min = np.min(xcen - dx) * x_unit * scale_factor

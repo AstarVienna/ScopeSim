@@ -111,7 +111,7 @@ class Effect(DataContainer):
 
     @property
     def display_name(self):
-        return self.meta["name"]
+        return self.meta.get("name", self.meta.get("filename", "<empty>"))
 
     @property
     def meta_string(self):
@@ -314,8 +314,7 @@ Meta-data
         print(text)
 
     def __repr__(self):
-        name = self.meta.get("name", self.meta.get("filename", "<empty>"))
-        return f'{type(self).__name__}: "{name}"'
+        return f'{type(self).__name__}: "{self.display_name}"'
 
     def __str__(self):
         return self.__repr__()

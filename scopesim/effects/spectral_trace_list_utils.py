@@ -44,12 +44,10 @@ class SpectralTrace:
                      "y_colname": "y",
                      "s_colname": "s",
                      "wave_colname": "wavelength",
-                     "col_number_start": 0,
                      "dwave": 0.002,
                      "aperture_id": 0,
                      "image_plane_id": 0,
                      "extension_id": 2,
-                     "invalid_value": None,
                      "spline_order": 4,
                      "pixel_size": None,
                      "description": "<no description>"}
@@ -57,10 +55,7 @@ class SpectralTrace:
 
         if isinstance(trace_tbl, (fits.BinTableHDU, fits.TableHDU)):
             self.table = Table.read(trace_tbl)
-            try:
-                self.meta["trace_id"] = trace_tbl.header['EXTNAME']
-            except KeyError:
-                pass
+            self.meta["trace_id"] = trace_tbl.header.get('EXTNAME', "<unknown trace id>")
         elif isinstance(trace_tbl, Table):
             self.table = trace_tbl
         else:
@@ -68,21 +63,8 @@ class SpectralTrace:
                              "fits.TableHDU, astropy.Table): {}"
                              "".format(type(trace_tbl)))
 
-        if self.meta["invalid_value"] is not None:
-            self.table = sanitize_table(
-                self.table,
-                invalid_value=self.meta["invalid_value"],
-                wave_colname=self.meta["wave_colname"],
-                x_colname=self.meta["x_colname"],
-                y_colname=self.meta["y_colname"],
-                spline_order=self.meta["spline_order"],
-                ext_id=self.meta["extension_id"])
         # ..todo: Should that be made np.unique?
-        self.waves = self.table[self.meta["wave_colname"]]
-        #..todo: this turns out as 1 in simplified layout. Remove?
-        self.n_traces = len([col for col in self.table.colnames
-                             if self.meta["y_colname"] in col])
-
+        self.waves = np.unique(self.table[self.meta["wave_colname"]])
         self.wave_min = quantify(np.min(self.waves), u.um).value
         self.wave_max = quantify(np.max(self.waves), u.um).value
 
@@ -272,8 +254,8 @@ class SpectralTrace:
         img_header["YMAX"] = ymax
 
         if np.any(image < 0):
-            logging.warning("map_spectra_to_focal_plane:", np.sum(image < 0),
-                            "negative pixels")
+            logging.warning("map_spectra_to_focal_plane: {} negative pixels"
+                            "".format(np.sum(image < 0)))
 
         image_hdu = fits.ImageHDU(header=img_header, data=image)
         return image_hdu
@@ -957,44 +939,44 @@ def get_affine_parameters(coords):
     return rotations, shears
 
 
-def sanitize_table(tbl, invalid_value, wave_colname, x_colname, y_colname,
-                   spline_order=4, ext_id=None):
-
-    y_colnames = [col for col in tbl.colnames if y_colname in col]
-    x_colnames = [col.replace(y_colname, x_colname) for col in y_colnames]
-
-    for x_col, y_col in zip(x_colnames, y_colnames):
-        wave = tbl[wave_colname].data
-        x = tbl[x_col].data
-        y = tbl[y_col].data
-
-        valid = (x != invalid_value) * (y != invalid_value)
-        invalid = np.invert(valid)
-        if sum(invalid) == 0:
-            continue
-
-        if sum(valid) == 0:
-            logging.warning("--- Extension {} ---"
-                            "All points in {} or {} were invalid. \n"
-                            "THESE COLUMNS HAVE BEEN REMOVED FROM THE TABLE \n"
-                            "invalid_value = {} \n"
-                            "wave = {} \nx = {} \ny = {}"
-                            "".format(ext_id, x_col, y_col, invalid_value,
-                                      wave, x, y))
-            tbl.remove_columns([x_col, y_col])
-            continue
-
-        k = spline_order
-        if wave[-1] > wave[0]:
-            xnew = InterpolatedUnivariateSpline(wave[valid], x[valid], k=k)
-            ynew = InterpolatedUnivariateSpline(wave[valid], y[valid], k=k)
-        else:
-            xnew = InterpolatedUnivariateSpline(wave[valid][::-1],
-                                                x[valid][::-1], k=k)
-            ynew = InterpolatedUnivariateSpline(wave[valid][::-1],
-                                                y[valid][::-1], k=k)
-
-        tbl[x_col][invalid] = xnew(wave[invalid])
-        tbl[y_col][invalid] = ynew(wave[invalid])
-
-    return tbl
+# def sanitize_table(tbl, invalid_value, wave_colname, x_colname, y_colname,
+#                    spline_order=4, ext_id=None):
+#
+#     y_colnames = [col for col in tbl.colnames if y_colname in col]
+#     x_colnames = [col.replace(y_colname, x_colname) for col in y_colnames]
+#
+#     for x_col, y_col in zip(x_colnames, y_colnames):
+#         wave = tbl[wave_colname].data
+#         x = tbl[x_col].data
+#         y = tbl[y_col].data
+#
+#         valid = (x != invalid_value) * (y != invalid_value)
+#         invalid = np.invert(valid)
+#         if sum(invalid) == 0:
+#             continue
+#
+#         if sum(valid) == 0:
+#             logging.warning("--- Extension {} ---"
+#                             "All points in {} or {} were invalid. \n"
+#                             "THESE COLUMNS HAVE BEEN REMOVED FROM THE TABLE \n"
+#                             "invalid_value = {} \n"
+#                             "wave = {} \nx = {} \ny = {}"
+#                             "".format(ext_id, x_col, y_col, invalid_value,
+#                                       wave, x, y))
+#             tbl.remove_columns([x_col, y_col])
+#             continue
+#
+#         k = spline_order
+#         if wave[-1] > wave[0]:
+#             xnew = InterpolatedUnivariateSpline(wave[valid], x[valid], k=k)
+#             ynew = InterpolatedUnivariateSpline(wave[valid], y[valid], k=k)
+#         else:
+#             xnew = InterpolatedUnivariateSpline(wave[valid][::-1],
+#                                                 x[valid][::-1], k=k)
+#             ynew = InterpolatedUnivariateSpline(wave[valid][::-1],
+#                                                 y[valid][::-1], k=k)
+#
+#         tbl[x_col][invalid] = xnew(wave[invalid])
+#         tbl[y_col][invalid] = ynew(wave[invalid])
+#
+#     return tbl
