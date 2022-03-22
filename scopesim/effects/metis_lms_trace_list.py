@@ -63,7 +63,6 @@ class MetisLMSSpectralTraceList(SpectralTraceList):
         overrides SpectralTraceList.apply_to()
         """
         if isinstance(obj, FOVSetupBase):
-            print("lms_trace_list.apply_to(): setup", type(obj))
             # Create a single volume that covers the aperture and
             # the maximum wavelength range of LMS
             volumes = [self.spectral_traces[key].fov_grid()
@@ -75,22 +74,19 @@ class MetisLMSSpectralTraceList(SpectralTraceList):
             obj.volumes = extracted_vols
 
         if isinstance(obj, FieldOfViewBase):
-            print("lms_trace_list.apply_to(): apply", type(obj))
-            print(obj)
             # Application to field of view
             if obj.hdu is not None and obj.hdu.header['NAXIS'] == 3:
-                print("lms: taking cube from hdu")
                 obj.cube = obj.hdu
             elif obj.hdu is None and obj.cube is None:
-                print("lms: making cube")
                 obj.cube = obj.make_cube_hdu()
 
             fovcube = obj.cube.data
             n_z, n_y, n_x = fovcube.shape
+            print(f"FOV has {n_z} slices of {n_x} x {n_y}")
             fovwcs = WCS(obj.cube.header)
             # Make this linear to avoid jump at RA 0 deg
             fovwcs.wcs.ctype = ['LINEAR', 'LINEAR', fovwcs.wcs.ctype[2]]
-            ny_slice = 5    # ..todo: make this a parameter?
+            ny_slice = 5  # 9   # ..todo: make this a parameter?
 
             fovimage = np.zeros((obj.detector_header['NAXIS2'],
                                  obj.detector_header['NAXIS1']),
@@ -104,7 +100,7 @@ class MetisLMSSpectralTraceList(SpectralTraceList):
                 slicewcs = deepcopy(fovwcs)
 
                 slicewcs.wcs.ctype = ['LINEAR', 'LINEAR', slicewcs.wcs.ctype[2]]
-                slicewcs.wcs.crpix[1] = 2.
+                slicewcs.wcs.crpix[1] = (ny_slice + 1) / 2
                 slicewcs.wcs.crval[1] = (ymin + ymax) / 2 / 3600
                 slicewcs.wcs.cdelt[1] = (ymax - ymin) / ny_slice / 3600
 
@@ -370,7 +366,7 @@ class MetisLMSSpectralTrace(SpectralTrace):
     def __repr__(self):
         msg = '<MetisLMSSpectralTrace> "{}" : {} um : Order {} : Angle {}'\
             ''.format(self.meta["description"],
-                      self.meta["wavelen"],
+                      from_currsys(self.meta["wavelen"]),
                       self.meta["order"],
                       self.meta["angle"])
         return msg
