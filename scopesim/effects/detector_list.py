@@ -17,18 +17,69 @@ class DetectorList(Effect):
     """
     A description of detector positions and properties
 
+    The list of detectors must have the following table columns
+    ::
+        id   x_cen   y_cen  x_size  y_size  pixel_size  angle    gain
+
+    The units for each column (except ``id``) must be given in the meta data
+    using the format ``<colname>_unit``. E.g. ``x_size_unit``.
+    See examples below.
+
+    .. note::
+       Currently only the units specified below are accepted.
+
+       For ``x(y)_size_unit``, acceptable units are ``mm``, ``pixel``
+
     Examples
     --------
+    With the ``array_dict`` feature
     ::
+        -   name: single_detector
+            class: DetectorList
+            kwargs:
+                image_plane_id : 0
+                array_dict:
+                    id: [1]
+                    x_cen: [0.]
+                    y_cen: [0.]
+                    x_size: [5.12]
+                    y_size: [5.12]
+                    pixel_size: [0.01]
+                    angle: [0.]
+                    gain: [1.0]
+                x_cen_unit: mm
+                y_cen_unit: mm
+                x_size_unit: mm
+                y_size_unit: mm
+                pixel_size_unit: mm
+                angle_unit: deg
+                gain_unit: electron/adu
 
-        - name : full_detector
+
+    Or referring to a table contained in a seperate ASCII file
+    ::
+        - name : full_detector_array
           class : DetectorList
           kwargs :
-            filename : "FPA_array_layout.dat"
-            active_detectors : [1, 5]
+            filename : "detecotr_list.dat"
+            active_detectors : [1, 3]
+
+    where the file detecotr_list.dat contains the following information
+    ::
+        # x_cen_unit : mm
+        # y_cen_unit : mm
+        # x_size_unit : pix
+        # y_size_unit : pix
+        # pixel_size_unit : mm
+        # angle_unit : deg
+        # gain_unit : electron/adu
+        #
+        id   x_cen   y_cen  x_size  y_size  pixel_size  angle    gain
+        1   -63.94    0.00    4096    4096       0.015    0.0     1.0
+        2     0.00    0.00    4096    4096       0.015   90.0     1.0
+        3    63.94    0.00    4096    4096       0.015  180.0     1.0
 
     """
-
     def __init__(self, **kwargs):
         super(DetectorList, self).__init__(**kwargs)
         params = {"z_order": [90, 290, 390, 490],
