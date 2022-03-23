@@ -86,7 +86,7 @@ class MetisLMSSpectralTraceList(SpectralTraceList):
             fovwcs = WCS(obj.cube.header)
             # Make this linear to avoid jump at RA 0 deg
             fovwcs.wcs.ctype = ['LINEAR', 'LINEAR', fovwcs.wcs.ctype[2]]
-            ny_slice = 5  # 9   # ..todo: make this a parameter?
+            ny_slice = self.meta['slice_samples']
 
             fovimage = np.zeros((obj.detector_header['NAXIS2'],
                                  obj.detector_header['NAXIS1']),
@@ -102,7 +102,12 @@ class MetisLMSSpectralTraceList(SpectralTraceList):
                 slicewcs.wcs.ctype = ['LINEAR', 'LINEAR', slicewcs.wcs.ctype[2]]
                 slicewcs.wcs.crpix[1] = (ny_slice + 1) / 2
                 slicewcs.wcs.crval[1] = (ymin + ymax) / 2 / 3600
+                #slicewcs.wcs.crval[1] = 0.
                 slicewcs.wcs.cdelt[1] = (ymax - ymin) / ny_slice / 3600
+
+                print(f"CRPIX2: {slicewcs.wcs.crpix[1]}")
+                print(f"CRVAL2: {slicewcs.wcs.crval[1]}")
+                print(f"CDELT2: {slicewcs.wcs.cdelt[1]}")
 
                 slicecube = np.zeros((n_z, ny_slice, n_x))
                 for islice in range(n_z):
@@ -125,6 +130,7 @@ class MetisLMSSpectralTraceList(SpectralTraceList):
                 slicefov.cube = fits.ImageHDU(header=slicewcs.to_header(),
                                               data=slicecube)
                 print(slicefov)
+                #slicefov.cube.writeto(f"slicefov_{sptid}.fits")
                 slicefov.hdu = spt.map_spectra_to_focal_plane(slicefov)
 
                 sxmin = slicefov.hdu.header['XMIN']

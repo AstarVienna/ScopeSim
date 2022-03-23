@@ -425,7 +425,7 @@ class XiLamImage():
     def __init__(self, fov, dlam_per_pix):
         # ..todo: we assume that we always have a cube. We use SpecCADO's
         #         add_cube_layer method
-
+        print("XiLamImage: ", dlam_per_pix)
         cube_wcs = WCS(fov.cube.header, key=' ')
         wcs_lam = cube_wcs.sub([3])
 
@@ -436,9 +436,12 @@ class XiLamImage():
         d_lam = fov.cube.header['CDELT3']
         d_lam *= u.Unit(fov.cube.header['CUNIT3']).to(u.um)
 
+        print("XiLamImage: ", d_xi, d_eta, d_lam)
+
         # This is based on the cube shape and assumes that the cube's spatial
         # dimensions are set by the slit aperture
         (n_lam, n_eta, n_xi) = fov.cube.data.shape
+        print("XiLamImage: ", n_xi, n_eta, n_lam)
 
         # arrays of cube coordinates
         cube_xi = d_xi * np.arange(n_xi) + fov.meta['xi_min'].value
@@ -497,7 +500,7 @@ class XiLamImage():
                                           kx=spline_order[0],
                                           ky=spline_order[1])
         # This is not executed. ..todo: define a switch?
-        if False:
+        if True:
             fits.writeto("test_xilam.fits", data=self.image,
                          header=self.wcs.to_header(), overwrite=True)
 
