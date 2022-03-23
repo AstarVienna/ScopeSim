@@ -331,6 +331,7 @@ class FieldOfView(FieldOfViewBase):
                     for x, y, f in zip(xs, ys, fracs):
                         canvas_image_hdu.data[y, x] += fluxes[ref] * weight * f
             else:
+                # Note: these had x/ypix+0.5 until a06ab75
                 x = np.array(xpix).astype(int)
                 y = np.array(ypix).astype(int)     # quickest way to round
                 f = np.array([fluxes[ref] for ref in field["ref"]])
