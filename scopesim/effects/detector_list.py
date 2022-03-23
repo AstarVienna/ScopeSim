@@ -47,8 +47,9 @@ class DetectorList(Effect):
                 if col in self.table.colnames:
                     self.table[col] = self.table[col] * mult_cols[col]
                     self.table.rename_column(col, new_colnames[col])
-        if "xhw_unit" in self.meta or "yhw_unit" in self.meta:
+        if not "x_size_unit" in self.meta and "xhw_unit" in self.meta:
             self.meta["x_size_unit"] = self.meta["xhw_unit"]
+        if not "y_size_unit" in self.meta and "yhw_unit" in self.meta:
             self.meta["y_size_unit"] = self.meta["yhw_unit"]
 
     def apply_to(self, obj, **kwargs):
@@ -97,14 +98,16 @@ class DetectorList(Effect):
         xcen, ycen = tbl["x_cen"], tbl["y_cen"]
         dx, dy = 0.5 * tbl["x_size"], 0.5 * tbl["y_size"]
 
-        scale_factor = 1
+        scale_unit = 1        # either unitless to retain
         if "pix" in x_unit.name:
-            scale_factor = pixel_size / u.pix
+            scale_unit = u.mm / u.pix
+            dx *= pixel_size.value
+            dy *= pixel_size.value
 
-        x_det_min = np.min(xcen - dx) * x_unit * scale_factor
-        x_det_max = np.max(xcen + dx) * x_unit * scale_factor
-        y_det_min = np.min(ycen - dy) * y_unit * scale_factor
-        y_det_max = np.max(ycen + dy) * y_unit * scale_factor
+        x_det_min = np.min(xcen - dx) * x_unit * scale_unit
+        x_det_max = np.max(xcen + dx) * x_unit * scale_unit
+        y_det_min = np.min(ycen - dy) * y_unit * scale_unit
+        y_det_max = np.max(ycen + dy) * y_unit * scale_unit
 
         x_det = [x_det_min.to(u.mm).value, x_det_max.to(u.mm).value]
         y_det = [y_det_min.to(u.mm).value, y_det_max.to(u.mm).value]
