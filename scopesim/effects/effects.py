@@ -323,7 +323,11 @@ Meta-data
         if isinstance(item, str) and item[0] == "#":
             if len(item) > 1:
                 if item[-1] == "!":
-                    value = from_currsys(self.meta[item[1:-1]])
+                    key = item[1:-1]
+                    if len(key) > 0:
+                        value = from_currsys(self.meta[key])
+                    else:
+                        value = from_currsys(self.meta)
                 else:
                     value = self.meta[item[1:]]
             else:
