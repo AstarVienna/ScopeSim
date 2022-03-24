@@ -204,7 +204,9 @@ class SpectralTraceList(Effect):
             wave_max = from_currsys("!SIM.spectral.wave_max")
 
         from matplotlib import pyplot as plt
-        plt.figure(figsize=(12, 12))
+        from matplotlib._pylab_helpers import Gcf
+        if len(Gcf.figs()) == 0:
+            plt.figure(figsize=(12, 12))
 
         if self.spectral_traces is not None:
             clrs = "rgbcymk" * (1 + len(self.spectral_traces) // 7)
