@@ -5,6 +5,7 @@ import pytest
 from astropy.io import fits
 
 from scopesim.optics import optics_manager as opt_mgr
+from scopesim.optics.optical_element import OpticalElement
 from scopesim.effects import Effect
 
 from scopesim.tests.mocks.py_objects.yaml_objects import\
@@ -61,3 +62,37 @@ class TestOpticsManagerImagePlaneHeader:
         opt_man.meta["SIM_PIXEL_SCALE"] = 0.004
         print(opt_man)
         assert isinstance(opt_man.image_plane_headers[0], fits.Header)
+
+
+@pytest.mark.usefixtures("detector_yaml_dict", "inst_yaml_dict")
+class TestGetItem:
+    def test_returns_optical_element(self, detector_yaml_dict):
+        opt_man = opt_mgr.OpticsManager([detector_yaml_dict])
+        assert isinstance(opt_man["micado_detector_array"], OpticalElement)
+
+    def test_returns_effect(self, detector_yaml_dict):
+        opt_man = opt_mgr.OpticsManager([detector_yaml_dict])
+        assert isinstance(opt_man["detector_qe_curve"], Effect)
+
+    def test_raise_error_for_wrong_name(self, detector_yaml_dict):
+        opt_man = opt_mgr.OpticsManager([detector_yaml_dict])
+        with pytest.raises(ValueError):
+            opt_man["knut_dietrich"]
+
+    def test_returns_value_from_simple_hash_string(self, detector_yaml_dict):
+        opt_man = opt_mgr.OpticsManager([detector_yaml_dict])
+        value = opt_man["#detector_qe_curve.filename"]
+        assert value == "TER_blank.dat"
+
+    def test_returns_value_from_full_hash_string(self, detector_yaml_dict):
+        opt_man = opt_mgr.OpticsManager([detector_yaml_dict])
+        value = opt_man["#micado_detector_array.detector_qe_curve.filename"]
+        assert value == "TER_blank.dat"
+
+    @pytest.mark.parametrize("key", [("detector_qe_curve.filename"),
+                                     ("#detector_qe_curve")])
+    def test_errors_on_wrong_hash_strings(self, detector_yaml_dict, key):
+        opt_man = opt_mgr.OpticsManager([detector_yaml_dict])
+        with pytest.raises(ValueError):
+            opt_man[key]
+

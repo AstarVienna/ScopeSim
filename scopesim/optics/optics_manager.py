@@ -312,10 +312,22 @@ Summary of Effects in Optical Elements:
         elif isinstance(item, int):
             obj = self.optical_elements[item]
         elif isinstance(item, str):
-            obj = [opt_el for opt_el in self.optical_elements
-                   if opt_el.meta["name"] == item]
-            for opt_el in self.optical_elements:
-                obj += opt_el[item]
+            # check for hash-string for getting Effect.meta values
+            if item[0] == "#" and "." in item:
+                opt_el_name = item.replace("#", "").split(".")[0]
+                new_item = item.replace(f"{opt_el_name}.", "")
+                obj = self[opt_el_name][new_item]
+            else:
+                # get all optical elements that match "item"
+                obj = [opt_el for opt_el in self.optical_elements
+                       if opt_el.meta["name"] == item]
+
+                # add all effects that match "item"
+                for opt_el in self.optical_elements:
+                    effs = opt_el[item]
+                    if not isinstance(effs, list):
+                        effs = [effs]
+                    obj += effs
 
         if isinstance(obj, list) and len(obj) == 1:
             obj = obj[0]
@@ -333,14 +345,14 @@ Summary of Effects in Optical Elements:
             obj.meta.update(value)
 
     def __repr__(self):
-        msg = "\nOpticsManager contains {} OpticalElements \n" \
-              "".format(len(self.optical_elements))
+        msg = f"\nOpticsManager contains {len(self.optical_elements)} " \
+              f"OpticalElements \n"
         for ii, opt_el in enumerate(self.optical_elements):
-            msg += '[{}] "{}" contains {} effects \n' \
-                   ''.format(ii, opt_el.meta["name"], len(opt_el.effects))
+            msg += f'[{ii}] "{opt_el.meta["name"]}" contains ' \
+                   f'{len(opt_el.effects)} effects \n'
 
         return msg
 
     def __str__(self):
         name = self.meta.get("name", self.meta.get("filename", "<empty>"))
-        return '{}: "{}"'.format(type(self).__name__, name)
+        return f'{type(self).__name__}: "{name}"'
