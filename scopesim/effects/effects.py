@@ -318,3 +318,21 @@ Meta-data
 
     def __str__(self):
         return self.__repr__()
+
+    def __getitem__(self, item):
+        if isinstance(item, str) and item[0] == "#":
+            if len(item) > 1:
+                if item[-1] == "!":
+                    key = item[1:-1]
+                    if len(key) > 0:
+                        value = from_currsys(self.meta[key])
+                    else:
+                        value = from_currsys(self.meta)
+                else:
+                    value = self.meta[item[1:]]
+            else:
+                value = self.meta
+        else:
+            raise ValueError(f"__getitem__ calls must start with '#': {item}")
+
+        return value
