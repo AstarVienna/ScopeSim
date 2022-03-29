@@ -2,7 +2,7 @@ import yaml
 import numpy as np
 from astropy.io import fits
 from . import Effect
-from ..utils import check_keys
+from ..utils import check_keys, from_currsys
 
 
 class ExtraFitsKeywords(Effect):
@@ -209,6 +209,9 @@ def flatten_dict(dic, base_str="", flat_dict={}, resolve=False):
         if isinstance(val, dict):
             flatten_dict(val, new_str, flat_dict, resolve)
         else:
-            flat_dict[new_str[:-1]] = val
+            new_str = new_str[:-1]
+            flat_dict[new_str] = val
+            if resolve:
+                flat_dict[new_str] = from_currsys(flat_dict[new_str])
 
     return flat_dict
