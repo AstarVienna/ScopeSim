@@ -162,7 +162,6 @@ class SpectralTrace:
 
         fpa_wcsd = WCS(det_header, key='D')
         naxis1d, naxis2d = det_header['NAXIS1'], det_header['NAXIS2']
-        print(naxis1d, naxis2d)
         xlim_px, ylim_px = fpa_wcsd.all_world2pix(xlim_mm, ylim_mm, 0)
         xmin = np.floor(xlim_px.min()).astype(int)
         xmax = np.ceil(xlim_px.max()).astype(int)
@@ -170,9 +169,6 @@ class SpectralTrace:
         ymax = np.ceil(ylim_px.max()).astype(int)
 
         ## Check if spectral trace footprint is outside FoV
-        print("Spectral trace footprint is outside FoV:")
-        print(f"xmax: {xmax}   xmin: {xmin}  ymax: {ymax}  ymin: {ymin}")
-        print(f"naxis1d: {naxis1d}   naxis2d: {naxis2d}")
         if xmax < 0 or xmin > naxis1d or ymax < 0 or ymin > naxis2d:
             logging.warning("Spectral trace footprint is outside FoV")
             return None
@@ -203,9 +199,20 @@ class SpectralTrace:
         xmax_mm, ymax_mm = fpa_wcsd.all_pix2world(xmax, ymax, 0)
 
         # wavelength step per detector pixel at centre of slice
-        # ..todo: I try the average here, but is that correct? The pixel
-        #         edges may not correspond precisely to wave limits
-        avg_dlam_per_pix = (wave_max - wave_min) / sub_naxis2
+        # ..todo: - currently using average dlam_per_pix. This should
+        #           be okay if there is not strong anamorphism. Below, we
+        #           compute an image of abs(dlam_per_pix) in the focal plane.
+        #           XiLamImage would need that as an image of xi/lam, which should
+        #           be possible but too much for the time being.
+        #         - The dispersion direction is selected by the direction of the
+        #           gradient of lam(x, y). This works if the lam-axis is well
+        #           aligned with x or y. Needs to be tested for MICADO.
+        dlam_by_dx, dlam_by_dy = self.xy2lam.gradient()
+        if np.abs(dlam_by_dx(0, 0)) > np.abs(dlam_by_dy(0, 0)):
+            avg_dlam_per_pix = (wave_max - wave_min) / sub_naxis1
+        else:
+            avg_dlam_per_pix = (wave_max - wave_min) / sub_naxis2
+
         try:
             xilam = XiLamImage(fov, avg_dlam_per_pix)
             self.xilam = xilam    # ..todo: remove
@@ -256,7 +263,6 @@ class SpectralTrace:
         image = xilam.interp(xi_fpa, lam_fpa, grid=False) * ijmask
 
         # Scale to ph / s / pixel
-        dlam_by_dx, dlam_by_dy = self.xy2lam.gradient()
         dlam_per_pix = pixsize * np.sqrt(dlam_by_dx(ximg_fpa, yimg_fpa)**2 +
                                          dlam_by_dy(ximg_fpa, yimg_fpa)**2)
         image *= pixscale * dlam_per_pix        # [arcsec/pix] * [um/pix]
@@ -299,9 +305,6 @@ class SpectralTrace:
         if ('wave_colname' in self.meta and
             self.meta['wave_colname'] in self.table.colnames):
             # Here, the parameters are obtained from a table of reference points
-            print("wave_colname")
-            print(self.meta['wave_colname'])
-            print(self.table)
             wave_unit = self.table[self.meta['wave_colname']].unit
             wave_val = quantify(self.table[self.meta['wave_colname']].data,
                                 wave_unit)
@@ -425,7 +428,6 @@ class XiLamImage():
     def __init__(self, fov, dlam_per_pix):
         # ..todo: we assume that we always have a cube. We use SpecCADO's
         #         add_cube_layer method
-        print("XiLamImage: ", dlam_per_pix)
         cube_wcs = WCS(fov.cube.header, key=' ')
         wcs_lam = cube_wcs.sub([3])
 
@@ -436,12 +438,9 @@ class XiLamImage():
         d_lam = fov.cube.header['CDELT3']
         d_lam *= u.Unit(fov.cube.header['CUNIT3']).to(u.um)
 
-        print("XiLamImage: ", d_xi, d_eta, d_lam)
-
         # This is based on the cube shape and assumes that the cube's spatial
         # dimensions are set by the slit aperture
         (n_lam, n_eta, n_xi) = fov.cube.data.shape
-        print("XiLamImage: ", n_xi, n_eta, n_lam)
 
         # arrays of cube coordinates
         cube_xi = d_xi * np.arange(n_xi) + fov.meta['xi_min'].value

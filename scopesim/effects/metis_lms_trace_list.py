@@ -82,20 +82,17 @@ class MetisLMSSpectralTraceList(SpectralTraceList):
 
             fovcube = obj.cube.data
             n_z, n_y, n_x = fovcube.shape
-            print(f"FOV has {n_z} slices of {n_x} x {n_y}")
             fovwcs = WCS(obj.cube.header)
             # Make this linear to avoid jump at RA 0 deg
             fovwcs.wcs.ctype = ['LINEAR', 'LINEAR', fovwcs.wcs.ctype[2]]
-            ny_slice = self.meta['slice_samples']
+            ny_slice = self.meta['slice_samples'] #
 
             fovimage = np.zeros((obj.detector_header['NAXIS2'],
                                  obj.detector_header['NAXIS1']),
                                 dtype=np.float32)
             for sptid, spt in self.spectral_traces.items():
-                print(sptid, spt)
                 ymin = spt.meta['fov']['y_min']
                 ymax = spt.meta['fov']['y_max']
-                print(f"Slice {sptid}: {ymin:.4f}   {ymax:.4f}")
 
                 slicewcs = deepcopy(fovwcs)
 
@@ -104,10 +101,6 @@ class MetisLMSSpectralTraceList(SpectralTraceList):
                 slicewcs.wcs.crval[1] = (ymin + ymax) / 2 / 3600
                 #slicewcs.wcs.crval[1] = 0.
                 slicewcs.wcs.cdelt[1] = (ymax - ymin) / ny_slice / 3600
-
-                print(f"CRPIX2: {slicewcs.wcs.crpix[1]}")
-                print(f"CRVAL2: {slicewcs.wcs.crval[1]}")
-                print(f"CDELT2: {slicewcs.wcs.cdelt[1]}")
 
                 slicecube = np.zeros((n_z, ny_slice, n_x))
                 for islice in range(n_z):
@@ -129,7 +122,6 @@ class MetisLMSSpectralTraceList(SpectralTraceList):
                 slicefov.meta['trace_id'] = sptid
                 slicefov.cube = fits.ImageHDU(header=slicewcs.to_header(),
                                               data=slicecube)
-                print(slicefov)
                 #slicefov.cube.writeto(f"slicefov_{sptid}.fits")
                 slicefov.hdu = spt.map_spectra_to_focal_plane(slicefov)
 
@@ -137,9 +129,6 @@ class MetisLMSSpectralTraceList(SpectralTraceList):
                 sxmax = slicefov.hdu.header['XMAX']
                 symin = slicefov.hdu.header['YMIN']
                 symax = slicefov.hdu.header['YMAX']
-                print(f"fovimage: {fovimage.shape}")
-                print(f"slicefov: {slicefov.hdu.data.shape}")
-                print(symin, symax, sxmin, sxmax)
                 fovimage[symin:symax, sxmin:sxmax] += slicefov.hdu.data
 
             obj.hdu = fits.ImageHDU(data=fovimage, header=obj.detector_header)
@@ -243,10 +232,13 @@ class MetisLMSSpectralTrace(SpectralTrace):
         """Determine wavelength range that spectral trace covers on image plane"""
         xmin = det_mm_lims['xd_min']
         xmax = det_mm_lims['xd_max']
-        ymid = 0.5 * (det_mm_lims['yd_min'] + det_mm_lims['yd_max'])
+
+        lam0 = from_currsys(self.meta['wavelen'])
+        xi0 = 0.
+        ymid = self.xilam2y(xi0, lam0)[0]   # estimate y level of trace
 
         waverange = self.xy2lam(np.array([xmin, xmax]), np.array([ymid, ymid]),
-                                grid=False, postransform=self.phase2lam)
+                                grid=False)
 
         return waverange.min(), waverange.max()
 

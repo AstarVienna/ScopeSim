@@ -148,7 +148,6 @@ class SpectralTraceList(Effect):
         list, identified by meta['trace_id'].
         '''
         if isinstance(obj, FOVSetupBase):
-            print("lss_trace_list.apply_to() setup:", type(obj))
             # Setup of FieldOfView object
             volumes = [self.spectral_traces[key].fov_grid()
                        for key in self.spectral_traces]
@@ -175,14 +174,10 @@ class SpectralTraceList(Effect):
             obj.volumes = new_vols_list
 
         if isinstance(obj, FieldOfViewBase):
-            print("lss_trace_list.apply_to() apply:", type(obj))
-            print(obj)
             # Application to field of view
             if obj.hdu is not None and obj.hdu.header["NAXIS"] == 3:
-                print("lss: taking cube from hdu")
                 obj.cube = obj.hdu
             elif obj.hdu is None and obj.cube is None:
-                print("lss: making cube")
                 obj.cube = obj.make_cube_hdu()
 
             # ..todo: obj will be changed to a single one covering the full field of view
