@@ -288,7 +288,7 @@ class MetisLMSSpectralTrace(SpectralTrace):
         order = self.meta['order']
         angle = self.meta['angle']
         matnames = ['A', 'B', 'AI', 'BI']
-        matrices = dict()
+        matrices = {}
 
         poly = self.table
         for matid in range(4):
