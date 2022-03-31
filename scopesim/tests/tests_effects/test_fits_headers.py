@@ -1,3 +1,4 @@
+import os
 import pytest
 from pytest import raises
 from astropy.io import fits
@@ -5,6 +6,16 @@ import numpy as np
 
 from scopesim.effects import ExtraFitsKeywords
 from scopesim.effects import fits_headers as fh
+import scopesim as sim
+
+YAMLS_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),
+                                          "../mocks/yamls/"))
+
+@pytest.fixture(scope="function")
+def simplecado_opt():
+    simplecado_yaml = os.path.join(YAMLS_PATH, "SimpleCADO.yaml")
+    cmd = sim.UserCommands(yamls=[simplecado_yaml])
+    return sim.OpticalTrain(cmd)
 
 
 @pytest.fixture(scope="function")
@@ -15,6 +26,120 @@ def comb_hdul():
     hdul = fits.HDUList([pri, im, tbl])
 
     return hdul
+
+
+# taken from the example yaml in docstring of ExtraFitsKeywords
+@pytest.fixture(scope="function")
+def yaml_string():
+    return """
+- ext_type: PrimaryHDU
+  keywords:
+    HIERARCH:
+      ESO:
+        TEL:
+          area: ["!TEL.area", "default = 0"]
+          pixel_scale: "!INST.pixel_scale"
+          its_over: 9000
+        DAR:
+          VALUE: '#dark_current.value'   # will be resolved via effects
+        DPR:
+          TYPE: 'some_type'
+      SIM:
+        random_simulation_keyword: some_value
+      MIC:
+        micado_specific: ['keyword', 'keyword comment']
+
+  unresolved_keywords:
+    HIERARCH:
+      ESO:
+        ATM:
+          TEMPERAT: '!ATMO.temperature'   # will be left as a string
+
+- ext_type: ImageHDU
+  keywords:
+    HIERARCH:
+      SIM:
+        hello: world
+        hallo: welt
+        grias_di: woed
+        zdrasviute: mir
+        salud: el mundo
+"""
+
+
+class TestInit:
+    def test_initialises_with_nothing(self):
+        assert isinstance(ExtraFitsKeywords(), ExtraFitsKeywords)
+
+    @pytest.mark.usefixtures("yaml_string")
+    def test_initialies_with_yaml_string(self, yaml_string):
+        eff = ExtraFitsKeywords(yaml_string=yaml_string)
+        assert isinstance(eff, ExtraFitsKeywords)
+
+
+# @pytest.mark.usefixtures("simplecado_opt")
+@pytest.mark.usefixtures("comb_hdul")
+class TestApplyTo:
+    def test_works_if_no_resolve_or_opticsmanager(self, comb_hdul):
+        header_dict = {"ext_type": "PrimaryHDU",
+                       "unresolved_keywords":
+                           {"SIM":
+                                {"dark_current": "#dark_current.value"}
+                            }
+                       }
+        eff = ExtraFitsKeywords(header_dict=header_dict)
+        hdul = eff.apply_to(comb_hdul)
+        hdr = hdul[0].header
+
+        assert hdr["HIERARCH SIM dark_current"] == '#dark_current.value'
+
+    def test_errors_if_resolve_and_no_opticsmanager(self, comb_hdul):
+        header_dict = {"ext_type": "PrimaryHDU",
+                       "keywords":
+                           {"SIM":
+                                {"dark_current": "#dark_current.value"}
+                            }
+                       }
+        eff = ExtraFitsKeywords(header_dict=header_dict)
+        with pytest.raises(ValueError):
+            hdul = eff.apply_to(comb_hdul)
+
+    @pytest.mark.usefixtures("simplecado_opt")
+    def test_resolves_hash_strings_with_opticsmanager(self, simplecado_opt,
+                                                      comb_hdul):
+        header_dict = {"ext_name": "PriHDU",
+                       "keywords":
+                           {"SIM":
+                                {"dark_current": "#dark_current.value",
+                                 "telescope_area": "!TEL.area"}
+                            }
+                       }
+        opt_man = simplecado_opt.optics_manager
+        eff = ExtraFitsKeywords(header_dict=header_dict)
+        hdul = eff.apply_to(comb_hdul, resolve=True, optics_manager=opt_man)
+
+        assert hdul[0].header["HIERARCH SIM dark_current"] == 0.1
+        assert hdul[0].header["HIERARCH SIM telescope_area"] == 0.
+
+    @pytest.mark.usefixtures("yaml_string")
+    @pytest.mark.usefixtures("simplecado_opt")
+    def test_full_yaml_string(self, yaml_string, simplecado_opt, comb_hdul):
+        opt_man = simplecado_opt.optics_manager
+        eff = ExtraFitsKeywords(yaml_string=yaml_string)
+        hdul = eff.apply_to(comb_hdul, optics_manager=opt_man)
+        pri_hdr = hdul[0].header
+
+        # resolved keywords
+        assert pri_hdr["HIERARCH ESO TEL area"] == 0             # !-str
+        assert pri_hdr["HIERARCH ESO TEL pixel_scale"] == 0.004  # !-str
+        assert pri_hdr["HIERARCH ESO DAR VALUE"] == 0.1          # #-str
+        assert pri_hdr["HIERARCH ESO TEL its_over"] == 9000      # normal
+        # unresolved keywords
+        assert pri_hdr["HIERARCH ESO ATM TEMPERAT"] == '!ATMO.temperature'
+        # comments
+        assert pri_hdr.comments["HIERARCH ESO TEL area"] == "[m2] default = 0"
+        # ImageHDU header
+        assert hdul[1].header["HIERARCH SIM grias_di"] == "woed"
 
 
 @pytest.mark.usefixtures("comb_hdul")
@@ -51,11 +176,25 @@ class TestFlattenDict:
                         {"ATM":
                              {"PWV": 1.0, "AIRMASS": 2.0},
                          "DPR": {"TYPE": "DARK"}},
-                    "SIM": {"area": "!TEL.area"}
+                    "SIM": {
+                        "area": ("!TEL.area", "area")}
                     }
                }
         flat_dict = fh.flatten_dict(dic)
         assert flat_dict["HIERARCH ESO ATM PWV"] == 1.0
         assert flat_dict["HIERARCH ESO ATM AIRMASS"] == 2.0
         assert flat_dict["HIERARCH ESO DPR TYPE"] == "DARK"
-        assert flat_dict["HIERARCH SIM area"] == "!TEL.area"
+        assert flat_dict["HIERARCH SIM area"][0] == "!TEL.area"
+        assert flat_dict["HIERARCH SIM area"][1] == "area"
+
+    def test_resolves_bang_strings(self):
+        dic = {"SIM": {"area": "!TEL.area"}}
+        flat_dict = fh.flatten_dict(dic, resolve=True)
+        assert flat_dict["SIM area"] == 0
+
+    @pytest.mark.usefixtures("simplecado_opt")
+    def test_resolves_hash_strings(self, simplecado_opt):
+        dic = {"SIM": {"dark_current": "#dark_current.value"}}
+        opt_man = simplecado_opt.optics_manager
+        flat_dict = fh.flatten_dict(dic, resolve=True, optics_manager=opt_man)
+        assert flat_dict["SIM dark_current"] == 0.1

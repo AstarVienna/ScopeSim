@@ -1,6 +1,8 @@
 import yaml
+from copy import deepcopy
 import numpy as np
 from astropy.io import fits
+from astropy import units as u
 from . import Effect
 from ..utils import check_keys, from_currsys
 
@@ -31,7 +33,10 @@ class ExtraFitsKeywords(Effect):
     filename : str, optional
         Name of a .yaml nested dictionary file. See below for examples
 
-    header_dict : nested dicts
+    yaml_string : str, optional
+        A triple-" string containing the contents of a yaml file
+
+    header_dict : nested dicts, optional
         A series of nested python dictionaries following the format of the
         examples below. This keyword allows these dicts to be definied directly
         in the Effect yaml file, rather than in a seperate header keywords file.
@@ -152,40 +157,60 @@ class ExtraFitsKeywords(Effect):
     """
     def __init__(self, **kwargs):
         params = {"header_dict": None,
-                  "filename": None}
-        self.meta["z_order"] = [999]
+                  "filename": None,
+                  "yaml_string": None}
+        self.meta = {"z_order": [999],
+                     "name": "Extra FITS headers"}
         self.meta.update(params)
         self.meta.update(kwargs)
 
-        self.dict_list = []
-        filename = self.meta["filename"]
-        if filename is not None:
-            with open(filename) as f:
+        tmp_dicts = []
+        if self.meta["filename"] is not None:
+            with open(self.meta["filename"]) as f:
                 # possible multiple yaml docs in a file
                 # --> returns list even for a single doc
-                dics = [dic for dic in yaml.full_load_all(f)]
-                for dic in dics:
-                    # format says yaml file contains list of dicts
-                    if isinstance(dic, list):
-                        self.dict_list += dic
-                    # catch case where user forgets the list
-                    elif isinstance(dic, dict):
-                        self.dict_list += [dic]
+                tmp_dicts += [dic for dic in yaml.full_load_all(f)]
+
+        if self.meta["yaml_string"] is not None:
+            yml = self.meta["yaml_string"]
+            tmp_dicts += [dic for dic in yaml.full_load_all(yml)]
 
         if self.meta["header_dict"] is not None:
-            self.dict_list += [self.meta["header_dict"]]
+            if not isinstance(self.meta["header_dict"], list):
+                tmp_dicts += [self.meta["header_dict"]]
+            else:
+                tmp_dicts += self.meta["header_dict"]
+
+        self.dict_list = []
+        for dic in tmp_dicts:
+            # format says yaml file contains list of dicts
+            if isinstance(dic, list):
+                self.dict_list += dic
+            # catch case where user forgets the list
+            elif isinstance(dic, dict):
+                self.dict_list += [dic]
+
 
     def apply_to(self, hdul, **kwargs):
+        """
+        Parameters
+        ----------
+        optics_manager : scopesim.OpticsManager, optional
+            Used to resolve #-strings
+
+        """
+        opt_man = kwargs.get("optics_manager")
         if isinstance(hdul, fits.HDUList):
             for dic in self.dict_list:
-                resolved = flatten_dict(dic.get("keywords", {}), resolve=Ture)
+                resolved = flatten_dict(dic.get("keywords", {}), resolve=True,
+                                        optics_manager=opt_man)
                 unresolved = flatten_dict(dic.get("unresolved_keywords", {}))
                 exts = get_relevant_extensions(dic, hdul)
                 for i in exts:
                     hdul[i].header.update(resolved)
                     hdul[i].header.update(unresolved)
 
-        return hdlu
+        return hdul
 
 
 def get_relevant_extensions(dic, hdul):
@@ -197,21 +222,67 @@ def get_relevant_extensions(dic, hdul):
         ext_n = np.array(dic["ext_number"])
         exts += list(ext_n[ext_n<len(hdul)])
     elif dic.get("ext_type") is not None:
-        cls = tuple([getattr(fits, cls_str) for cls_str in dic["ext_type"]])
+        if not isinstance(dic["ext_type"], list):
+            ext_type_list = [dic["ext_type"]]
+        cls = tuple([getattr(fits, cls_str) for cls_str in ext_type_list])
         exts += [i for i, hdu in enumerate(hdul) if isinstance(hdu, cls)]
 
     return exts
 
 
-def flatten_dict(dic, base_str="", flat_dict={}, resolve=False):
+def flatten_dict(dic, base_key="", flat_dict={},
+                 resolve=False, optics_manager=None):
+    """
+    Flattens nested yaml dictionaries into a single level dictionary
+
+    Parameters
+    ----------
+    dic : dict
+    base_key : str
+    flat_dict : dict, optional
+        Top-level dictionary for recursive calls
+    resolve : bool
+        If True, resolves !-str via from_currsys and #-str via optics_manager
+    optics_manager : scopesim.OpticsManager
+        Required for resolving #-strings
+
+    Returns
+    -------
+    flat_dict : dict
+
+    """
     for key, val in dic.items():
-        new_str = base_str + f"{key} "
+        flat_key = base_key + f"{key} "
         if isinstance(val, dict):
-            flatten_dict(val, new_str, flat_dict, resolve)
+            flatten_dict(val, flat_key, flat_dict, resolve, optics_manager)
         else:
-            new_str = new_str[:-1]
-            flat_dict[new_str] = val
-            if resolve:
-                flat_dict[new_str] = from_currsys(flat_dict[new_str])
+            flat_key = flat_key[:-1]
+
+            # catch any value+comments lists
+            comment = ""
+            if isinstance(val, list) and len(val) == 2:
+                value, comment = val
+            else:
+                value = deepcopy(val)
+
+            # resolve any bang or hash strings
+            if resolve and isinstance(value, str):
+                if value[0] == "!":
+                    value = from_currsys(value)
+                elif value[0] == "#":
+                    if optics_manager is None:
+                        raise ValueError("An OpticsManager object must be "
+                                         "passed in order to resolve #-strings")
+                    value = optics_manager[value]
+
+            if isinstance(value, u.Quantity):
+                comment = f"[{str(value.unit)}] " + comment
+                value = value.value
+
+            # Add the flattened KEYWORD = (value, comment) to the header dict
+            if len(comment) > 0:
+                flat_dict[flat_key] = (value, comment)
+            else:
+                flat_dict[flat_key] = value
 
     return flat_dict
