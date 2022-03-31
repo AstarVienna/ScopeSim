@@ -160,10 +160,12 @@ class TestGetRelevantExtensions:
         assert np.all([ans in exts for ans in answer])
         assert len(exts) == len(answer)
 
-    def test_works_for_ext_type(self, comb_hdul):
-        dic = {"ext_type": ["ImageHDU", "PrimaryHDU"]}
+    @pytest.mark.parametrize("ext_type, answer",
+                             [("PrimaryHDU", [0]),
+                              (["ImageHDU", "PrimaryHDU"], [0, 1])])
+    def test_works_for_ext_type(self, comb_hdul, ext_type, answer):
+        dic = {"ext_type": ext_type}
         exts = fh.get_relevant_extensions(dic, comb_hdul)
-        answer = [0, 1]
 
         assert np.all([ans in exts for ans in answer])
         assert len(exts) == len(answer)
@@ -188,9 +190,9 @@ class TestFlattenDict:
         assert flat_dict["HIERARCH SIM area"][1] == "area"
 
     def test_resolves_bang_strings(self):
-        dic = {"SIM": {"area": "!TEL.area"}}
+        dic = {"SIM": {"random_seed": "!SIM.random.seed"}}
         flat_dict = fh.flatten_dict(dic, resolve=True)
-        assert flat_dict["SIM area"] == 0
+        assert flat_dict["SIM random_seed"] == None
 
     @pytest.mark.usefixtures("simplecado_opt")
     def test_resolves_hash_strings(self, simplecado_opt):

@@ -222,7 +222,9 @@ def get_relevant_extensions(dic, hdul):
         ext_n = np.array(dic["ext_number"])
         exts += list(ext_n[ext_n<len(hdul)])
     elif dic.get("ext_type") is not None:
-        if not isinstance(dic["ext_type"], list):
+        if isinstance(dic["ext_type"], list):
+            ext_type_list = dic["ext_type"]
+        else:
             ext_type_list = [dic["ext_type"]]
         cls = tuple([getattr(fits, cls_str) for cls_str in ext_type_list])
         exts += [i for i, hdu in enumerate(hdul) if isinstance(hdu, cls)]
