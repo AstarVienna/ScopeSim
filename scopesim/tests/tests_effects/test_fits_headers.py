@@ -4,7 +4,7 @@ from pytest import raises
 from astropy.io import fits
 import numpy as np
 
-from scopesim.effects import ExtraFitsKeywords, EffectsMetaKeywords
+from scopesim.effects import ExtraFitsKeywords, EffectsMetaKeywords, SourceDescriptionFitsKeywords
 from scopesim.effects import fits_headers as fh
 import scopesim as sim
 
@@ -77,7 +77,6 @@ class TestExtraFitsKeywordsInit:
         assert isinstance(eff, ExtraFitsKeywords)
 
 
-# @pytest.mark.usefixtures("simplecado_opt")
 @pytest.mark.usefixtures("comb_hdul")
 class TestExtraFitsKeywordsApplyTo:
     def test_works_if_no_resolve_or_opticaltrain(self, comb_hdul):
@@ -201,6 +200,7 @@ class TestFlattenDict:
         assert flat_dict["SIM dark_current"] == 0.1
 
 
+@pytest.mark.usefixtures("comb_hdul")
 @pytest.mark.usefixtures("yaml_string")
 @pytest.mark.usefixtures("simplecado_opt")
 class TestEffectsMetaKeywordsApplyTo:
@@ -225,4 +225,14 @@ class TestEffectsMetaKeywordsApplyTo:
 
 
 @pytest.mark.usefixtures("simplecado_opt")
+@pytest.mark.usefixtures("comb_hdul")
 class TestSourceDescriptionFitsKeywordsApplyTo:
+    def test_works(self, simplecado_opt, comb_hdul):
+        from scopesim.source.source_templates import star
+        simplecado_opt._last_source = star() + star()
+        eff = SourceDescriptionFitsKeywords()
+        hdul = eff.apply_to(comb_hdul, optical_train=simplecado_opt)
+        pri_hdr = hdul[0].header
+
+        for key in pri_hdr:
+            print(key, pri_hdr[key])

@@ -404,19 +404,19 @@ class SourceDescriptionFitsKeywords(ExtraFitsKeywords):
             src = opt_train._last_source
             src_dicts = []
             if src is not None:
+                prefix = self.meta['keyword_prefix']
                 for i, field in enumerate(src.fields):
 
+                    src_class = field.__class__.__name__
                     src_dic = {}
                     if isinstance(field, fits.ImageHDU):
                         hdr = field.header
-                        src_dic["type"] = "ImageHDU"
                         for key in hdr:
                             src_dic += [{key: [hdr[key], hdr.comments[key]]}]
                         src_dicts += [src_dic]
 
                     elif isinstance(field, Table):
                         src_dic = deepcopy(field.meta)
-                        src_dic["type"] = "Table"
                         src_dic["length"] = len(field)
                         for j, name in enumerate(field.colnames):
                             src_dic[f"col{j}_name"] = name
@@ -424,9 +424,10 @@ class SourceDescriptionFitsKeywords(ExtraFitsKeywords):
 
                     self.dict_list = [{"ext_number": self.meta["ext_number"],
                                        "keywords": {
+                                           f"{prefix} SRC{i} class": src_class,
                                            f"{prefix} SRC{i}": src_dic}
                                        }]
-                    super_apply_to = super(EffectsMetaKeywords, self).apply_to
+                    super_apply_to = super(SourceDescriptionFitsKeywords, self).apply_to
                     hdul = super_apply_to(hdul=hdul, optical_train=opt_train)
 
         return hdul
