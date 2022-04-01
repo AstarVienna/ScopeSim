@@ -21,6 +21,7 @@ from ..detector import DetectorArray
 from ..source.source import Source
 from ..utils import from_currsys
 from ..version import version
+from .. import effects
 from .. import rc
 from . import fov_utils as fu
 
@@ -305,6 +306,10 @@ class OpticalTrain:
             dtcr_effects = self.optics_manager.detector_effects
             hdul = detector_array.readout(self.image_planes, array_effects,
                                          dtcr_effects, **kwargs)
+
+            fits_effects = self.optics_manager.get_all(ExtraFitsKeywords)
+            for effect in fits_effects:
+                hdul = effect.apply_to(hdul, optical_train=self)
 
             try:
                 hdul = self.write_header(hdul)

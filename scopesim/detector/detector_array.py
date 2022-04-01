@@ -91,6 +91,12 @@ class DetectorArray:
         hdu_list = fits.HDUList([pri_hdu]
                                 + [dtcr.hdu for dtcr in self.detectors])
                                 # + [effects_hdu])
+
+        for effect in self.array_effects:
+            image_plane = effect.apply_to(image_plane, **self.meta)
+
+
+
         self.latest_exposure = hdu_list
 
         return self.latest_exposure
