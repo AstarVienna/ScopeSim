@@ -203,7 +203,7 @@ class TestFlattenDict:
 
 @pytest.mark.usefixtures("yaml_string")
 @pytest.mark.usefixtures("simplecado_opt")
-class TestEffectsMetaKeywordsInit:
+class TestEffectsMetaKeywordsApplyTo:
     def test_effect_meta_in_header(self, yaml_string, simplecado_opt, comb_hdul):
         eff = EffectsMetaKeywords()
         hdul = eff.apply_to(comb_hdul, optical_train=simplecado_opt)
@@ -222,3 +222,7 @@ class TestEffectsMetaKeywordsInit:
         assert "GOKU EFF0 class" not in pri_hdr
         assert sec_hdr["GOKU EFF0 class"] == "DetectorList"
         assert sec_hdr["GOKU EFF0 array_dict pixsize"] == "list:[0.015]"
+
+
+@pytest.mark.usefixtures("simplecado_opt")
+class TestSourceDescriptionFitsKeywordsApplyTo:

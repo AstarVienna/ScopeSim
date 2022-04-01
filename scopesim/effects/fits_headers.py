@@ -366,7 +366,7 @@ class EffectsMetaKeywords(ExtraFitsKeywords):
                 eff_meta = deepcopy(opt_train[f"#{eff_name}.!"])
 
                 if self.meta["add_excluded_effects"] and not eff_meta["include"]:
-                   continue
+                    continue
 
                 keys = list(eff_meta.keys())
                 for key in keys:
@@ -386,5 +386,47 @@ class EffectsMetaKeywords(ExtraFitsKeywords):
                                    }]
                 super_apply_to = super(EffectsMetaKeywords, self).apply_to
                 hdul = super_apply_to(hdul=hdul, optical_train=opt_train)
+
+        return hdul
+
+
+class SourceDescriptionFitsKeywords(ExtraFitsKeywords):
+    def __init__(self, **kwargs):
+        self.meta = {"z_order": [998],
+                     "name": "Source description FITS headers",
+                     "ext_number": [0],
+                     "keyword_prefix": "HIERARCH SIM"}
+        self.meta.update(kwargs)
+
+    def apply_to(self, hdul, **kwargs):
+        opt_train = kwargs.get("optical_train")
+        if isinstance(hdul, fits.HDUList) and opt_train is not None:
+            src = opt_train._last_source
+            src_dicts = []
+            if src is not None:
+                for i, field in enumerate(src.fields):
+
+                    src_dic = {}
+                    if isinstance(field, fits.ImageHDU):
+                        hdr = field.header
+                        src_dic["type"] = "ImageHDU"
+                        for key in hdr:
+                            src_dic += [{key: [hdr[key], hdr.comments[key]]}]
+                        src_dicts += [src_dic]
+
+                    elif isinstance(field, Table):
+                        src_dic = deepcopy(field.meta)
+                        src_dic["type"] = "Table"
+                        src_dic["length"] = len(field)
+                        for j, name in enumerate(field.colnames):
+                            src_dic[f"col{j}_name"] = name
+                            src_dic[f"col{j}_unit"] = str(field[name].unit)
+
+                    self.dict_list = [{"ext_number": self.meta["ext_number"],
+                                       "keywords": {
+                                           f"{prefix} SRC{i}": src_dic}
+                                       }]
+                    super_apply_to = super(EffectsMetaKeywords, self).apply_to
+                    hdul = super_apply_to(hdul=hdul, optical_train=opt_train)
 
         return hdul
