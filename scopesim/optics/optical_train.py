@@ -18,6 +18,7 @@ from .fov_manager import FOVManager
 from .image_plane import ImagePlane
 from ..commands.user_commands import UserCommands
 from ..detector import DetectorArray
+from ..effects import ExtraFitsKeywords
 from ..source.source import Source
 from ..utils import from_currsys
 from ..version import version
