@@ -2,10 +2,12 @@ import os
 import pytest
 from pytest import raises
 from astropy.io import fits
+from astropy import units as u
 import numpy as np
 
 from scopesim.effects import ExtraFitsKeywords, EffectsMetaKeywords, SourceDescriptionFitsKeywords
 from scopesim.effects import fits_headers as fh
+from scopesim.source.source_templates import star
 import scopesim as sim
 
 YAMLS_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),
@@ -228,11 +230,19 @@ class TestEffectsMetaKeywordsApplyTo:
 @pytest.mark.usefixtures("comb_hdul")
 class TestSourceDescriptionFitsKeywordsApplyTo:
     def test_works(self, simplecado_opt, comb_hdul):
-        from scopesim.source.source_templates import star
-        simplecado_opt._last_source = star() + star()
+        star1, star2 = star(flux=1*u.ABmag), star()
+        star1.meta["hello"] = "world"
+        star2.meta["servus"] = "oida"
+
+        simplecado_opt._last_source = star1 + star2
         eff = SourceDescriptionFitsKeywords()
         hdul = eff.apply_to(comb_hdul, optical_train=simplecado_opt)
         pri_hdr = hdul[0].header
 
-        for key in pri_hdr:
-            print(key, pri_hdr[key])
+        # for key in pri_hdr:
+        #     print(key, pri_hdr[key])
+
+        assert pri_hdr["SIM SRC0 hello"] == "world"
+        assert pri_hdr["SIM SRC1 servus"] == "oida"
+
+

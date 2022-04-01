@@ -391,6 +391,32 @@ class EffectsMetaKeywords(ExtraFitsKeywords):
 
 
 class SourceDescriptionFitsKeywords(ExtraFitsKeywords):
+    """
+    Adds parameters from all Source fields to the FITS headers
+
+    Parameters
+    ----------
+    ext_number : int, list of ints, optional
+        Default 0. The numbers of the extensions to which the header keywords
+        should be added
+
+    keyword_prefix : str, optional
+        Default "HIERARCH SIM". Custom FITS header keyword prefix. Effect meta
+        dict entries will appear in the header as:
+        ``<keyword_prefix> SRCn <key> : <value>``
+
+    Examples
+    --------
+    Yaml file entry:
+    ::
+        name: source_descriptor
+        class: SourceDescriptionFitsKeywords
+        description: adds info from all Source fields to the FITS header
+        kwargs:
+          ext_number: [0]
+          keyword_prefix: HIERARCH SIM
+
+    """
     def __init__(self, **kwargs):
         self.meta = {"z_order": [998],
                      "name": "Source description FITS headers",
@@ -408,15 +434,14 @@ class SourceDescriptionFitsKeywords(ExtraFitsKeywords):
                 for i, field in enumerate(src.fields):
 
                     src_class = field.__class__.__name__
-                    src_dic = {}
+                    src_dic = deepcopy(src._meta_dicts[i])
                     if isinstance(field, fits.ImageHDU):
                         hdr = field.header
                         for key in hdr:
-                            src_dic += [{key: [hdr[key], hdr.comments[key]]}]
-                        src_dicts += [src_dic]
+                            src_dic = {key: [hdr[key], hdr.comments[key]]}
 
                     elif isinstance(field, Table):
-                        src_dic = deepcopy(field.meta)
+                        src_dic.update(field.meta)
                         src_dic["length"] = len(field)
                         for j, name in enumerate(field.colnames):
                             src_dic[f"col{j}_name"] = name
