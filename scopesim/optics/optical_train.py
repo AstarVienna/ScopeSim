@@ -309,7 +309,7 @@ class OpticalTrain:
 
             fits_effects = self.optics_manager.get_all(ExtraFitsKeywords)
             for effect in fits_effects:
-                hdul = effect.apply_to(hdul, optics_manager=self.optics_manager)
+                hdul = effect.apply_to(hdul, optical_train=self)
 
             try:
                 hdul = self.write_header(hdul)

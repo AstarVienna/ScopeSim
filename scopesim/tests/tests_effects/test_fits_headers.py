@@ -4,7 +4,7 @@ from pytest import raises
 from astropy.io import fits
 import numpy as np
 
-from scopesim.effects import ExtraFitsKeywords
+from scopesim.effects import ExtraFitsKeywords, EffectsMetaKeywords
 from scopesim.effects import fits_headers as fh
 import scopesim as sim
 
@@ -67,7 +67,7 @@ def yaml_string():
 """
 
 
-class TestInit:
+class TestExtraFitsKeywordsInit:
     def test_initialises_with_nothing(self):
         assert isinstance(ExtraFitsKeywords(), ExtraFitsKeywords)
 
@@ -79,8 +79,8 @@ class TestInit:
 
 # @pytest.mark.usefixtures("simplecado_opt")
 @pytest.mark.usefixtures("comb_hdul")
-class TestApplyTo:
-    def test_works_if_no_resolve_or_opticsmanager(self, comb_hdul):
+class TestExtraFitsKeywordsApplyTo:
+    def test_works_if_no_resolve_or_opticaltrain(self, comb_hdul):
         header_dict = {"ext_type": "PrimaryHDU",
                        "unresolved_keywords":
                            {"SIM":
@@ -93,7 +93,7 @@ class TestApplyTo:
 
         assert hdr["HIERARCH SIM dark_current"] == '#dark_current.value'
 
-    def test_errors_if_resolve_and_no_opticsmanager(self, comb_hdul):
+    def test_errors_if_resolve_and_no_opticaltrain(self, comb_hdul):
         header_dict = {"ext_type": "PrimaryHDU",
                        "keywords":
                            {"SIM":
@@ -105,7 +105,7 @@ class TestApplyTo:
             hdul = eff.apply_to(comb_hdul)
 
     @pytest.mark.usefixtures("simplecado_opt")
-    def test_resolves_hash_strings_with_opticsmanager(self, simplecado_opt,
+    def test_resolves_hash_strings_with_opticaltrain(self, simplecado_opt,
                                                       comb_hdul):
         header_dict = {"ext_name": "PriHDU",
                        "keywords":
@@ -114,9 +114,9 @@ class TestApplyTo:
                                  "telescope_area": "!TEL.area"}
                             }
                        }
-        opt_man = simplecado_opt.optics_manager
         eff = ExtraFitsKeywords(header_dict=header_dict)
-        hdul = eff.apply_to(comb_hdul, resolve=True, optics_manager=opt_man)
+        hdul = eff.apply_to(comb_hdul, resolve=True,
+                            optical_train=simplecado_opt)
 
         assert hdul[0].header["HIERARCH SIM dark_current"] == 0.1
         assert hdul[0].header["HIERARCH SIM telescope_area"] == 0.
@@ -124,9 +124,8 @@ class TestApplyTo:
     @pytest.mark.usefixtures("yaml_string")
     @pytest.mark.usefixtures("simplecado_opt")
     def test_full_yaml_string(self, yaml_string, simplecado_opt, comb_hdul):
-        opt_man = simplecado_opt.optics_manager
         eff = ExtraFitsKeywords(yaml_string=yaml_string)
-        hdul = eff.apply_to(comb_hdul, optics_manager=opt_man)
+        hdul = eff.apply_to(comb_hdul, optical_train=simplecado_opt)
         pri_hdr = hdul[0].header
 
         # resolved keywords
@@ -197,6 +196,29 @@ class TestFlattenDict:
     @pytest.mark.usefixtures("simplecado_opt")
     def test_resolves_hash_strings(self, simplecado_opt):
         dic = {"SIM": {"dark_current": "#dark_current.value"}}
-        opt_man = simplecado_opt.optics_manager
-        flat_dict = fh.flatten_dict(dic, resolve=True, optics_manager=opt_man)
+        flat_dict = fh.flatten_dict(dic, resolve=True,
+                                    optics_manager=simplecado_opt.optics_manager)
         assert flat_dict["SIM dark_current"] == 0.1
+
+
+@pytest.mark.usefixtures("yaml_string")
+@pytest.mark.usefixtures("simplecado_opt")
+class TestEffectsMetaKeywordsInit:
+    def test_effect_meta_in_header(self, yaml_string, simplecado_opt, comb_hdul):
+        eff = EffectsMetaKeywords()
+        hdul = eff.apply_to(comb_hdul, optical_train=simplecado_opt)
+        pri_hdr = hdul[0].header
+
+        assert pri_hdr["SIM EFF0 class"] == "DetectorList"
+        assert pri_hdr["SIM EFF0 array_dict pixsize"] == "list:[0.015]"
+
+    def test_effect_meta_in_secondary_header(self, yaml_string, simplecado_opt,
+                                             comb_hdul):
+        eff = EffectsMetaKeywords(ext_number=1, keyword_prefix="HIERARCH GOKU")
+        hdul = eff.apply_to(comb_hdul, optical_train=simplecado_opt)
+        pri_hdr = hdul[0].header
+        sec_hdr = hdul[1].header
+
+        assert "GOKU EFF0 class" not in pri_hdr
+        assert sec_hdr["GOKU EFF0 class"] == "DetectorList"
+        assert sec_hdr["GOKU EFF0 array_dict pixsize"] == "list:[0.015]"

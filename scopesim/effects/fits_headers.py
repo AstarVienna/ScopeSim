@@ -3,6 +3,7 @@ from copy import deepcopy
 import numpy as np
 from astropy.io import fits
 from astropy import units as u
+from astropy.table import Table
 from . import Effect
 from ..utils import check_keys, from_currsys
 
@@ -41,6 +42,31 @@ class ExtraFitsKeywords(Effect):
         examples below. This keyword allows these dicts to be definied directly
         in the Effect yaml file, rather than in a seperate header keywords file.
 
+    Examples
+    --------
+    Specifying the extra FITS keywords directly in the .yaml file where the
+    Effect objects are described.
+    ::
+        name: extra_fits_header_entries
+        class: ExtraFitsKeywords
+        kwargs:
+          header_dict:
+            - ext_type: PrimaryHDU
+              keywords:
+                HIERARCH:
+                  ESO:
+                    ATM:
+                      TEMPERAT: -5
+
+    The contents of ``header_dict`` can also be abstracted away into a seperate
+    file, e.g. ``extra_FITS_keys.yaml``. The file format is described below in
+    detail below.
+    ::
+        name: extra_fits_header_entries
+        class: ExtraFitsKeywords
+        kwargs:
+          filename: extra_FITS_keys.yaml
+
 
     Yaml file format
     ----------------
@@ -51,19 +77,19 @@ class ExtraFitsKeywords(Effect):
     reserved for a list of keyword groups.
     For example::
 
-    - ext_type: PrimaryHDU
-      keywords:
-        HIERARCH:
-          ESO:
-            ATM:
-              TEMPERAT: -5
+        - ext_type: PrimaryHDU
+          keywords:
+            HIERARCH:
+              ESO:
+                ATM:
+                  TEMPERAT: -5
 
-    - ext_number: [1, 2]
-      keywords:
-        HIERARCH:
-          ESO:
-            DET:
-              DIT: [5, '[s] exposure length']   # example of adding a comment
+        - ext_number: [1, 2]
+          keywords:
+            HIERARCH:
+              ESO:
+                DET:
+                  DIT: [5, '[s] exposure length']   # example of adding a comment
 
     The keywords can be added to one or more extensions, based on one of the
     following ``ext_`` qualifiers: ``ext_name``, ``ext_number``, ``ext_type``
@@ -74,13 +100,13 @@ class ExtraFitsKeywords(Effect):
 
     The above example will result in the following keyword added to:
 
-    - PrimaryHDU (ext 0):
+    - PrimaryHDU (ext 0)::
 
-      header['HIERARCH ESO ATM TEMPERAT'] = -5
+          header['HIERARCH ESO ATM TEMPERAT'] = -5
 
-    - Extensions 1 and 2 (regardless of type):
+    - Extensions 1 and 2 (regardless of type)::
 
-      header['HIERARCH ESO DET DIT'] = (5, '[s] exposure length')
+          header['HIERARCH ESO DET DIT'] = (5, '[s] exposure length')
 
     Resolved and un-resolved keywords
     ---------------------------------
@@ -98,20 +124,20 @@ class ExtraFitsKeywords(Effect):
     The format for this will be to use a new type: the hash-string.
     This will have this format::
 
-      #<optical_element_name>.<effect_name>.<kwarg_name>
+        #<optical_element_name>.<effect_name>.<kwarg_name>
 
     For example, the temperature of the MICADO detector array can be accessed by::
 
-      '#MICADO_DET.full_detector_array.temperature'
+        '#MICADO_DET.full_detector_array.temperature'
 
-    In the context of the yaml file this would look like
+    In the context of the yaml file this would look like::
 
-    - ext_type: PrimaryHDU
-      keywords:
-        HIERARCH:
-          ESO:
-            DET
-              TEMPERAT: '#MICADO_DET.full_detector_array.temperature'
+        - ext_type: PrimaryHDU
+          keywords:
+            HIERARCH:
+              ESO:
+                DET
+                  TEMPERAT: '#MICADO_DET.full_detector_array.temperature'
 
     Obviously some though needs to be put into how exactly we list the simulation
     parameters in a coherent manner.
@@ -195,15 +221,15 @@ class ExtraFitsKeywords(Effect):
         """
         Parameters
         ----------
-        optics_manager : scopesim.OpticsManager, optional
+        optical_train : scopesim.OpticalTrain, optional
             Used to resolve #-strings
 
         """
-        opt_man = kwargs.get("optics_manager")
+        opt_train = kwargs.get("optical_train")
         if isinstance(hdul, fits.HDUList):
             for dic in self.dict_list:
                 resolved = flatten_dict(dic.get("keywords", {}), resolve=True,
-                                        optics_manager=opt_man)
+                                        optics_manager=opt_train)
                 unresolved = flatten_dict(dic.get("unresolved_keywords", {}))
                 exts = get_relevant_extensions(dic, hdul)
                 for i in exts:
@@ -262,7 +288,7 @@ def flatten_dict(dic, base_key="", flat_dict={},
 
             # catch any value+comments lists
             comment = ""
-            if isinstance(val, list) and len(val) == 2:
+            if isinstance(val, list) and len(val) == 2 and isinstance(val[1], str):
                 value, comment = val
             else:
                 value = deepcopy(val)
@@ -281,6 +307,9 @@ def flatten_dict(dic, base_key="", flat_dict={},
                 comment = f"[{str(value.unit)}] " + comment
                 value = value.value
 
+            if isinstance(value, (list, np.ndarray)):
+                value = f"{value.__class__.__name__}:{str(list(value))}"
+
             # Add the flattened KEYWORD = (value, comment) to the header dict
             if len(comment) > 0:
                 flat_dict[flat_key] = (value, comment)
@@ -288,3 +317,74 @@ def flatten_dict(dic, base_key="", flat_dict={},
                 flat_dict[flat_key] = value
 
     return flat_dict
+
+
+class EffectsMetaKeywords(ExtraFitsKeywords):
+    """
+    Adds meta dictionary info from all Effects to the FITS headers
+
+    Parameters
+    ----------
+    ext_number : int, list of ints, optional
+        Default 0. The numbers of the extensions to which the header keywords
+        should be added
+
+    add_excluded_effects : bool, optional
+        Default False. Add meta dict for effects with ``<effect>.include=False``
+
+    keyword_prefix : str, optional
+        Default "HIERARCH SIM". Custom FITS header keyword prefix. Effect meta
+        dict entries will appear in the header as:
+        ``<keyword_prefix> EFFn <key> : <value>``
+
+    Examples
+    --------
+    Yaml file entry:
+    ::
+        name: effect_dumper
+        class: EffectsMetaKeywords
+        description: adds all effects meta dict entries to the FITS header
+        kwargs:
+          ext_number: [0, 1]
+          add_excluded_effects: False
+          keyword_prefix: HIERARCH SIM
+
+    """
+    def __init__(self, **kwargs):
+        self.meta = {"z_order": [998],
+                     "name": "Effect Meta FITS headers",
+                     "ext_number": [0],
+                     "add_excluded_effects": False,
+                     "keyword_prefix": "HIERARCH SIM"}
+        self.meta.update(kwargs)
+
+    def apply_to(self, hdul, **kwargs):
+        opt_train = kwargs.get("optical_train")
+        if isinstance(hdul, fits.HDUList) and opt_train is not None:
+            for i, eff_name in enumerate(opt_train.effects["name"]):
+                # get a resolved meta dict from the effect
+                eff_meta = deepcopy(opt_train[f"#{eff_name}.!"])
+
+                if self.meta["add_excluded_effects"] and not eff_meta["include"]:
+                   continue
+
+                keys = list(eff_meta.keys())
+                for key in keys:
+                    value = eff_meta[key]
+                    if key in ["history", "notes", "changes"]:
+                        eff_meta.pop(key)
+                    if isinstance(value, Table):
+                        eff_meta[key] = f"Table object of length: {len(value)}"
+
+                # add effect under the EFFn keyword
+                prefix = self.meta['keyword_prefix']
+                class_name = opt_train[eff_name].__class__.__name__
+                self.dict_list = [{"ext_number": self.meta["ext_number"],
+                                   "keywords": {
+                                       f"{prefix} EFF{i} class": [class_name, "ScopeSim class name"],
+                                       f"{prefix} EFF{i}": eff_meta}
+                                   }]
+                super_apply_to = super(EffectsMetaKeywords, self).apply_to
+                hdul = super_apply_to(hdul=hdul, optical_train=opt_train)
+
+        return hdul
