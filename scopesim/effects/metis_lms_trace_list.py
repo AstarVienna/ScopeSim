@@ -14,6 +14,7 @@ from .spectral_trace_list import SpectralTraceList
 from .spectral_trace_list_utils import SpectralTrace
 from .spectral_trace_list_utils import Transform2D
 from .apertures import ApertureMask
+from .ter_curves import TERCurve
 from ..base_classes import FieldOfViewBase, FOVSetupBase
 from ..optics.fov import FieldOfView
 
@@ -441,3 +442,60 @@ class MetisLMSImageSlicer(ApertureMask):
 
         super().__init__(array_dict=slicer_dict, id="LMS slicer",
                          conserve_image=True, **kwargs)
+
+
+
+class MetisLMSEfficiency(TERCurve):
+    """
+    Computes the grating efficiency (blaze function) for the METIS LMS.
+
+    The procedure is described in E-REP-ATC-MET-1016_1.0. For a given order
+    (determined by the central wavelength) the grating efficiency is modelled
+    as a squared sinc function of wavelength via the grating angle.
+    """
+    _class_params = {
+        "grat_spacing": 18.2,
+        "eff_wid": 0.23,
+        "eff_max": 0.75
+    }
+
+    def __init__(self, **kwargs):
+        self.meta = self._class_params
+        self.meta.update(kwargs)
+
+        filename = find_file(self.meta['filename'])
+        wcal = fits.getdata(filename, extname='WCAL')
+        if 'wavelen' in kwargs:
+            wavelen = kwargs['wavelen']
+            grat_spacing = self.meta['grat_spacing']
+            ech = echelle_setting(wavelen, grat_spacing, wcal)
+            self.meta['order'] = ech['Ord']
+        else:
+            wavelen = None
+
+        lam, efficiency = self.make_ter_curve(wcal, wavelen)
+
+        super().__init__(wavelength=lam,
+                         transmission=efficiency,
+                         emissivity=np.zeros_like(lam),
+                         **self.meta)
+
+    def make_ter_curve(self, wcal, wavelen=None):
+        """Compute the blaze function for the selected order"""
+        order = self.meta['order']
+        eff_wid = self.meta['eff_wid']
+        eff_max = self.meta['eff_max']
+
+        wcal_ord = wcal[wcal['Ord'] == self.meta['order']]
+
+        if wavelen is not None:
+            lam = np.linspace(wavelen - 0.2, wavelen + 0.2, 1001)
+            angle = wcal_ord['c0'] * lam + wcal_ord['c1']
+        else:
+            angle = np.linspace(7, -7, 10001)
+            lam = wcal_ord['ic0'] * angle + wcal_ord['ic1']
+
+        phase = order * np.pi * np.sin(np.deg2rad(angle)) * eff_wid
+        efficiency = eff_max * np.sinc(phase / np.pi)**2
+
+        return lam, efficiency
