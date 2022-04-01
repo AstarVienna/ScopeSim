@@ -418,7 +418,7 @@ class SourceDescriptionFitsKeywords(ExtraFitsKeywords):
 
     """
     def __init__(self, **kwargs):
-        self.meta = {"z_order": [998],
+        self.meta = {"z_order": [997],
                      "name": "Source description FITS headers",
                      "ext_number": [0],
                      "keyword_prefix": "HIERARCH SIM"}
