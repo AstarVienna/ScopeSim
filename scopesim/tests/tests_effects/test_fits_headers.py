@@ -239,9 +239,6 @@ class TestSourceDescriptionFitsKeywordsApplyTo:
         hdul = eff.apply_to(comb_hdul, optical_train=simplecado_opt)
         pri_hdr = hdul[0].header
 
-        # for key in pri_hdr:
-        #     print(key, pri_hdr[key])
-
         assert pri_hdr["SIM SRC0 hello"] == "world"
         assert pri_hdr["SIM SRC1 servus"] == "oida"
 
@@ -295,8 +292,8 @@ class TestAllFitsKeywordEffects:
         simplecado_opt.observe(star1)
         hdul = simplecado_opt.readout()[0]
 
-        for key in hdul[0].header:
-            print(key, ":", hdul[0].header[key])
+        # for key in hdul[0].header:
+        #     print(key, ":", hdul[0].header[key])
 
         hdr = hdul[0].header
         assert hdr["ESO INS dark_current"] == 0.1
