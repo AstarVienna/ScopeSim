@@ -14,8 +14,8 @@ In this tutorial, we will load the model of MICADO (including Armazones, ELT, MA
 For real simulation, we will obviously leave all normal MICADO effects turned on, while still adding the plug-in Effect. Hopefully this tutorial will serve as a refernce for those who want to see **how to create Plug-ins** and how to manipulate the effects in the MICADO optical train model.
 
 
-Create and optical model for MICADO and the ELT
------------------------------------------------
+Create an optical model for MICADO and the ELT
+----------------------------------------------
 
 .. jupyter-execute::
     :raises:

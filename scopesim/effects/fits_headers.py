@@ -169,7 +169,7 @@ class ExtraFitsKeywords(Effect):
                   PWV: '!ATMO.pwv'
                   SEEING: 1.2
                 DAR:
-                  VALUE: '#<effect_name>.<kwarg_name>'   # will be resolved via effects
+                  VALUE: '#<effect_name>.<meta_name>'   # will be resolved via effects
                 DPR:
                   TYPE: 'some_type'
               SIM:
