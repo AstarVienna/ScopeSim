@@ -309,15 +309,16 @@ class OpticalTrain:
                                          dtcr_effects, **kwargs)
 
             fits_effects = self.optics_manager.get_all(ExtraFitsKeywords)
-            for effect in fits_effects:
-                hdul = effect.apply_to(hdul, optical_train=self)
-
-            try:
-                hdul = self.write_header(hdul)
-            except Exception as error:
-                print("\nWarning: header update failed, data will be saved with incomplete header.")
-                print("Reason: ", sys.exc_info()[0], error)
-                print("")
+            if len(fits_effects) > 0:
+                for effect in fits_effects:
+                    hdul = effect.apply_to(hdul, optical_train=self)
+            else:
+                try:
+                    hdul = self.write_header(hdul)
+                except Exception as error:
+                    print("\nWarning: header update failed, data will be saved with incomplete header.")
+                    print("Reason: ", sys.exc_info()[0], error)
+                    print("")
 
             if filename is not None and isinstance(filename, str):
                 fname = filename

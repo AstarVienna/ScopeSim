@@ -67,6 +67,19 @@ class ExtraFitsKeywords(Effect):
         kwargs:
           filename: extra_FITS_keys.yaml
 
+    The Effect can be added directly in an iPython session.
+    ::
+        >>> hdr_dic = {"ext_type": "PrimaryHDU",
+                       "keywords":
+                           {"HIERARCH":
+                               {"SIM":
+                                   {"hello": world}
+                               }
+                           }
+                       }
+        >>> extra_keys = ExtraFitsKeywords(header_dict=hdr_dic)
+        >>> optical_train.optics_manager.add_effect(extra_keys)
+
 
     Yaml file format
     ----------------
@@ -182,11 +195,14 @@ class ExtraFitsKeywords(Effect):
 
     """
     def __init__(self, **kwargs):
-        params = {"header_dict": None,
+        # don't pass kwargs, as DataContainer can't handle yaml files
+        super(ExtraFitsKeywords, self).__init__()
+        params = {"name": "Extra FITS headers",
+                  "z_order": [999],
+                  "header_dict": None,
                   "filename": None,
-                  "yaml_string": None}
-        self.meta = {"z_order": [999],
-                     "name": "Extra FITS headers"}
+                  "yaml_string": None,
+                  }
         self.meta.update(params)
         self.meta.update(kwargs)
 
@@ -294,7 +310,7 @@ def flatten_dict(dic, base_key="", flat_dict={},
                 value = deepcopy(val)
 
             # resolve any bang or hash strings
-            if resolve and isinstance(value, str):
+            if resolve and isinstance(value, str) and len(value) > 0:
                 if value[0] == "!":
                     value = from_currsys(value)
                 elif value[0] == "#":
@@ -351,11 +367,13 @@ class EffectsMetaKeywords(ExtraFitsKeywords):
 
     """
     def __init__(self, **kwargs):
-        self.meta = {"z_order": [998],
-                     "name": "Effect Meta FITS headers",
-                     "ext_number": [0],
-                     "add_excluded_effects": False,
-                     "keyword_prefix": "HIERARCH SIM"}
+        super(ExtraFitsKeywords, self).__init__()
+        params = {"name": "Effect Meta FITS headers",
+                  "z_order": [998],
+                  "ext_number": [0],
+                  "add_excluded_effects": False,
+                  "keyword_prefix": "HIERARCH SIM"}
+        self.meta.update(params)
         self.meta.update(kwargs)
 
     def apply_to(self, hdul, **kwargs):
@@ -418,10 +436,12 @@ class SourceDescriptionFitsKeywords(ExtraFitsKeywords):
 
     """
     def __init__(self, **kwargs):
-        self.meta = {"z_order": [997],
-                     "name": "Source description FITS headers",
-                     "ext_number": [0],
-                     "keyword_prefix": "HIERARCH SIM"}
+        super(ExtraFitsKeywords, self).__init__()
+        params = {"name": "Source description FITS headers",
+                  "z_order": [997],
+                  "ext_number": [0],
+                  "keyword_prefix": "HIERARCH SIM"}
+        self.meta.update(params)
         self.meta.update(kwargs)
 
     def apply_to(self, hdul, **kwargs):
@@ -454,5 +474,65 @@ class SourceDescriptionFitsKeywords(ExtraFitsKeywords):
                                        }]
                     super_apply_to = super(SourceDescriptionFitsKeywords, self).apply_to
                     hdul = super_apply_to(hdul=hdul, optical_train=opt_train)
+
+        return hdul
+
+
+class SimulationConfigFitsKeywords(ExtraFitsKeywords):
+    """
+        Adds parameters from all config dictionaries to the FITS headers
+
+        Parameters
+        ----------
+        ext_number : int, list of ints, optional
+            Default 0. The numbers of the extensions to which the header keywords
+            should be added
+
+        resolve : bool
+            Default True. If True, all !-strings and #-strings are resolved via
+            ``from_currsys`` before being add to the header. If False, the
+            unaltered !-strings or #-strings are added to the header.
+
+        keyword_prefix : str, optional
+            Default "HIERARCH SIM". Custom FITS header keyword prefix. Effect meta
+            dict entries will appear in the header as:
+            ``<keyword_prefix> SRCn <key> : <value>``
+
+        Examples
+        --------
+        Yaml file entry:
+        ::
+            name: source_descriptor
+            class: SimulationConfigFitsKeywords
+            description: adds info from all config dicts to the FITS header
+            kwargs:
+              ext_number: [0]
+              resolve: False
+              keyword_prefix: HIERARCH SIM
+
+        """
+    def __init__(self, **kwargs):
+        super(ExtraFitsKeywords, self).__init__()
+        params = {"name": "Simulation Config FITS headers",
+                  "z_order": [996],
+                  "ext_number": [0],
+                  "resolve": True,
+                  "keyword_prefix": "HIERARCH SIM"}
+        self.meta.update(params)
+        self.meta.update(kwargs)
+
+    def apply_to(self, hdul, **kwargs):
+        opt_train = kwargs.get("optical_train")
+        if isinstance(hdul, fits.HDUList) and opt_train is not None:
+            cmds = opt_train.cmds.cmds.dic
+            sim_prefix = self.meta['keyword_prefix']
+            resolve_prefix = "unresolved_" if not self.meta["resolve"] else ""
+            # needed for the super().apply_to method
+            self.dict_list = [{"ext_number": self.meta["ext_number"],
+                               f"{resolve_prefix}keywords": {
+                                   f"{sim_prefix} CONFIG": cmds}
+                               }]
+            super_apply_to = super(SimulationConfigFitsKeywords, self).apply_to
+            hdul = super_apply_to(hdul=hdul, optical_train=opt_train)
 
         return hdul
