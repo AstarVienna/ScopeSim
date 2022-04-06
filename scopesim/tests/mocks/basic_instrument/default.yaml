@@ -33,3 +33,13 @@ mode_yamls :
   yamls :
     - YAML_mode_spectroscopy.yaml   # mode specific effects and properties
 
+---
+name: config_overrides
+alias: SIM
+description: SIM config param overrides
+
+properties:
+  spectral:
+    wave_min: 0.7,
+    wave_mid: 1.2,
+    wave_max: 2.7

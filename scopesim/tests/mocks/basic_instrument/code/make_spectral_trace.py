@@ -1,8 +1,8 @@
 """
 3 traces vertically covering the regions:
-- J: 1.0, 1.35     dwave = 0.35
-- H: 1.3, 1.8      dwave = 0.5
-- K: 1.75, 2.5     dwave = 0.75
+- J: 1.0, 1.35     dwave = 0.35 --> R~2800
+- H: 1.3, 1.8      dwave = 0.5  --> R~2000
+- K: 1.75, 2.5     dwave = 0.75 --> R~1300
 
 The detector is 1024 * 0.2 = 204.8" [+/-102.4"] and 10.24mm [+/-5.21mm]
 Slit is 60", or 300 pixel, so trace x-borders should be:
