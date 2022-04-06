@@ -49,14 +49,14 @@ extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.intersphinx',
     'sphinx.ext.todo',
-    'sphinx.ext.coverage',
     'sphinx.ext.mathjax',
     'sphinx.ext.viewcode',
-
     'numpydoc',
     'sphinxcontrib.apidoc',
     'matplotlib.sphinxext.plot_directive',
+
     # 'jupyter_sphinx.execute',
+    # 'sphinx.ext.coverage',
 ]
 
 # apidoc settings

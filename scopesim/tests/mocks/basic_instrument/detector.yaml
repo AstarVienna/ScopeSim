@@ -1,0 +1,25 @@
+### DETECTOR
+object: detector
+alias: DET
+name: test_detector
+
+properties : []
+
+effects:
+- name: test_detector_array_list
+  class: DetectorList
+  kwargs:
+    array_dict: {"id": [1], "pixsize": [0.015], "angle": [0.], "gain": [1.0],
+                 "x_cen": [0], y_cen: [0], xhw: [0.15], yhw: [0.15]}
+    x_cen_unit: mm
+    y_cen_unit: mm
+    xhw_unit: mm
+    yhw_unit: mm
+    pixsize_unit: mm
+    angle_unit: deg
+    gain_unit: electron/adu
+
+- name: test_shot_noise
+  class: ShotNoise
+  kwargs:
+    use_inbuilt_seed: True

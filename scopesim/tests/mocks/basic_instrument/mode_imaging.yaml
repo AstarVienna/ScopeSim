@@ -1,0 +1,13 @@
+# Telescope
+object : telescope
+alias : TEL
+name : test_telescope
+
+properties :
+  temperature : 8999
+
+effects :
+- name: random_effect
+  class: Effect
+  kwargs:
+    meaning_of_life: 42

@@ -1,0 +1,31 @@
+# Default config file for setting up the instrument
+object : observation
+alias : OBS
+name : test_instrument
+description : default parameters needed for a basic simulation
+
+packages :
+- basic_instrument
+
+yamls :
+  - telescope.yaml
+  - instrument.yaml
+  - detector.yaml
+
+properties :
+  airmass : 1.
+  modes : ["imaging", "spectroscopy"]
+  dit: 60
+  ndit: 1
+
+mode_yamls :
+- name : imaging
+  alias: INST
+  yamls :
+    - mode_imaging.yaml
+
+- name : spectroscopy
+  alias: INST
+  yamls :
+    - mode_spectroscopy.yaml
+

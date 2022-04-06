@@ -1,0 +1,22 @@
+# Telescope
+object : telescope
+alias : TEL
+name : basic_telescope
+description : The telescope properties
+
+properties :
+  temperature : 0   # [deg C]
+
+effects :
+- name : telescope_reflection
+  class : TERcurve
+  kwargs :
+    array_dict :
+      wavelength : [0.3, 1, 3, 3.01]
+      reflection : [0, 1, 1, 0]
+    wavelength_unit : um
+    action : reflection
+    outer : 10
+    outer_unit : m
+    inner : 0
+    inner_unit : m
