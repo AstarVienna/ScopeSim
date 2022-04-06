@@ -187,9 +187,20 @@ class SpectralTrace:
         xmax_mm, ymax_mm = fpa_wcsd.all_pix2world(xmax, ymax, 0)
 
         # wavelength step per detector pixel at centre of slice
-        # ..todo: I try the average here, but is that correct? The pixel
-        #         edges may not correspond precisely to wave limits
-        avg_dlam_per_pix = (wave_max - wave_min) / sub_naxis2
+        # ..todo: - currently using average dlam_per_pix. This should
+        #           be okay if there is not strong anamorphism. Below, we
+        #           compute an image of abs(dlam_per_pix) in the focal plane.
+        #           XiLamImage would need that as an image of xi/lam, which should
+        #           be possible but too much for the time being.
+        #         - The dispersion direction is selected by the direction of the
+        #           gradient of lam(x, y). This works if the lam-axis is well
+        #           aligned with x or y. Needs to be tested for MICADO.
+        dlam_by_dx, dlam_by_dy = self.xy2lam.gradient()
+        if np.abs(dlam_by_dx(0, 0)) > np.abs(dlam_by_dy(0, 0)):
+            avg_dlam_per_pix = (wave_max - wave_min) / sub_naxis1
+        else:
+            avg_dlam_per_pix = (wave_max - wave_min) / sub_naxis2
+
         try:
             xilam = XiLamImage(fov, avg_dlam_per_pix)
             self.xilam = xilam    # ..todo: remove
