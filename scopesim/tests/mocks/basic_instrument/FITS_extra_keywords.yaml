@@ -1,0 +1,15 @@
+# Extra keywords for ESO
+- ext_number: 0
+  keywords:
+    HIERARCH:
+      ESO:
+        ATM:
+          SEEING: "!OBS.psf_fwhm"
+        TEL:
+          TEMPERAT: '!TEL.temperature'   # will be resolved via from_currsys
+
+  unresolved_keywords:
+    HIERARCH:
+      ESO:
+        TEL:
+          TEMPERAT: '!TEL.temperature'   # will be left as a string

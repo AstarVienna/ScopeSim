@@ -2,12 +2,18 @@
 object : telescope
 alias : TEL
 name : basic_telescope
-description : The telescope properties
+description : The telescope properties and effects
 
 properties :
   temperature : 0   # [deg C]
 
 effects :
+-   name : psf
+    description : Seeing limited PSF
+    class : SeeingPSF
+    kwargs :
+      fwhm : "!OBS.psf_fhwm"       # [arcsec]
+
 - name : telescope_reflection
   class : TERcurve
   kwargs :
@@ -20,3 +26,4 @@ effects :
     outer_unit : m
     inner : 0
     inner_unit : m
+

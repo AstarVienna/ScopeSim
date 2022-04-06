@@ -5,27 +5,31 @@ name : test_instrument
 description : default parameters needed for a basic simulation
 
 packages :
-- basic_instrument
+- basic_instrument          # name of package dependencies
 
 yamls :
-  - telescope.yaml
-  - instrument.yaml
-  - detector.yaml
+  - YAML_telescope.yaml          # telescope effects and properties
+  - YAML_basic_instrument.yaml   # common instrument effects and properties
+  - YAML_detector.yaml           # electronic and detector effects and properties
 
 properties :
-  airmass : 1.
-  modes : ["imaging", "spectroscopy"]
+  psf_fhwm: 0.8             # [arcsec]
+  modes : ["imaging"]       # default mode name
   dit: 60
   ndit: 1
+  slit_name : "narrow"
+  filter_name : "J"
 
 mode_yamls :
 - name : imaging
-  alias: INST
-  yamls :
-    - mode_imaging.yaml
+  alias : OBS
+  properties :
+    include_slit : False
 
 - name : spectroscopy
-  alias: INST
+  alias: OBS
+  properties :
+    include_slit : True
   yamls :
-    - mode_spectroscopy.yaml
+    - YAML_mode_spectroscopy.yaml   # mode specific effects and properties
 

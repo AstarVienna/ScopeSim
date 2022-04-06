@@ -1,0 +1,45 @@
+### INSTRUMENT COMMON EFFECTS LIST
+object : instrument
+alias : INST
+name : basic_instrument
+description : Effects from the common optics
+
+properties :
+    temperature : -190
+    pixel_scale: 0.2       # arcsec / pixel
+    plate_scale: 20        # arcsec / mm
+    # pixel_size : 0.01    # mm / pixel
+
+effects :
+-   name: static_surfaces
+    description : surfaces list for common optics
+    class: SurfaceList
+    kwargs:
+        filename: INS_common_optics.dat
+
+-   name: filter_wheel
+    description: self-explanitory
+    class: FilterWheel
+    kwargs:
+        filter_names:       # list the names in sub-folder "filters"
+            - BrGamma
+            - CH4
+            - J
+            - H
+            - Ks
+        filename_format: "filters/TC_filter_{}.dat"     # use f-string format
+        current_filter: "!OBS.filter_name"              # default filter
+        minimum_throughput: !!float 1.01E-4             # below this is 0
+        outer: 0.2                                      # diameter
+        outer_unit: "m"
+
+  - name: slit_wheel
+    description: collection of field masks and slits
+    class: SlitWheel
+    include: "!OBS.include_slit"
+    kwargs:
+      slit_names:
+        - narrow
+        - wide
+      filename_format: "slits/SLIT_{}.dat"
+      current_slit: "!OBS.slit_name"
