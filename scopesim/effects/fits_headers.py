@@ -5,7 +5,7 @@ from astropy.io import fits
 from astropy import units as u
 from astropy.table import Table
 from . import Effect
-from ..utils import check_keys, from_currsys
+from ..utils import check_keys, from_currsys, find_file
 
 
 class ExtraFitsKeywords(Effect):
@@ -208,7 +208,8 @@ class ExtraFitsKeywords(Effect):
 
         tmp_dicts = []
         if self.meta["filename"] is not None:
-            with open(self.meta["filename"]) as f:
+            yaml_file = find_file(self.meta["filename"])
+            with open(yaml_file) as f:
                 # possible multiple yaml docs in a file
                 # --> returns list even for a single doc
                 tmp_dicts += [dic for dic in yaml.full_load_all(f)]
