@@ -17,18 +17,69 @@ class DetectorList(Effect):
     """
     A description of detector positions and properties
 
+    The list of detectors must have the following table columns
+    ::
+        id   x_cen   y_cen  x_size  y_size  pixel_size  angle    gain
+
+    The units for each column (except ``id``) must be given in the meta data
+    using the format ``<colname>_unit``. E.g. ``x_size_unit``.
+    See examples below.
+
+    .. note::
+       Currently only the units specified below are accepted.
+
+       For ``x(y)_size_unit``, acceptable units are ``mm``, ``pixel``
+
     Examples
     --------
+    With the ``array_dict`` feature
     ::
+        -   name: single_detector
+            class: DetectorList
+            kwargs:
+                image_plane_id : 0
+                array_dict:
+                    id: [1]
+                    x_cen: [0.]
+                    y_cen: [0.]
+                    x_size: [5.12]
+                    y_size: [5.12]
+                    pixel_size: [0.01]
+                    angle: [0.]
+                    gain: [1.0]
+                x_cen_unit: mm
+                y_cen_unit: mm
+                x_size_unit: mm
+                y_size_unit: mm
+                pixel_size_unit: mm
+                angle_unit: deg
+                gain_unit: electron/adu
 
-        - name : full_detector
+
+    Or referring to a table contained in a seperate ASCII file
+    ::
+        - name : full_detector_array
           class : DetectorList
           kwargs :
-            filename : "FPA_array_layout.dat"
-            active_detectors : [1, 5]
+            filename : "detecotr_list.dat"
+            active_detectors : [1, 3]
+
+    where the file detecotr_list.dat contains the following information
+    ::
+        # x_cen_unit : mm
+        # y_cen_unit : mm
+        # x_size_unit : pix
+        # y_size_unit : pix
+        # pixel_size_unit : mm
+        # angle_unit : deg
+        # gain_unit : electron/adu
+        #
+        id   x_cen   y_cen  x_size  y_size  pixel_size  angle    gain
+        1   -63.94    0.00    4096    4096       0.015    0.0     1.0
+        2     0.00    0.00    4096    4096       0.015   90.0     1.0
+        3    63.94    0.00    4096    4096       0.015  180.0     1.0
 
     """
-
     def __init__(self, **kwargs):
         super(DetectorList, self).__init__(**kwargs)
         params = {"z_order": [90, 290, 390, 490],
@@ -47,8 +98,9 @@ class DetectorList(Effect):
                 if col in self.table.colnames:
                     self.table[col] = self.table[col] * mult_cols[col]
                     self.table.rename_column(col, new_colnames[col])
-        if "xhw_unit" in self.meta or "yhw_unit" in self.meta:
+        if not "x_size_unit" in self.meta and "xhw_unit" in self.meta:
             self.meta["x_size_unit"] = self.meta["xhw_unit"]
+        if not "y_size_unit" in self.meta and "yhw_unit" in self.meta:
             self.meta["y_size_unit"] = self.meta["yhw_unit"]
 
     def apply_to(self, obj, **kwargs):
@@ -91,21 +143,23 @@ class DetectorList(Effect):
     def image_plane_header(self):
         tbl = self.active_table
         pixel_size = np.min(utils.quantity_from_table("pixel_size", tbl, u.mm))
-        x_unit = utils.unit_from_table("x_cen", tbl, u.mm)
-        y_unit = utils.unit_from_table("y_cen", tbl, u.mm)
+        x_unit = utils.unit_from_table("x_size", tbl, u.mm)
+        y_unit = utils.unit_from_table("y_size", tbl, u.mm)
 
         xcen = tbl["x_cen"].data.astype(float)
         ycen = tbl["y_cen"].data.astype(float)
         dx, dy = 0.5 * float(tbl["x_size"]), 0.5 * float(tbl["y_size"])
 
-        scale_factor = 1
-        if x_unit.name == "pix":
-            scale_factor = pixel_size / u.pix
+        scale_unit = 1        # either unitless to retain
+        if "pix" in x_unit.name:
+            scale_unit = u.mm / u.pix
+            dx *= pixel_size.value
+            dy *= pixel_size.value
 
-        x_det_min = np.min(xcen - dx) * x_unit * scale_factor
-        x_det_max = np.max(xcen + dx) * x_unit * scale_factor
-        y_det_min = np.min(ycen - dy) * y_unit * scale_factor
-        y_det_max = np.max(ycen + dy) * y_unit * scale_factor
+        x_det_min = np.min(xcen - dx) * x_unit * scale_unit
+        x_det_max = np.max(xcen + dx) * x_unit * scale_unit
+        y_det_min = np.min(ycen - dy) * y_unit * scale_unit
+        y_det_max = np.max(ycen + dy) * y_unit * scale_unit
 
         x_det = [x_det_min.to(u.mm).value, x_det_max.to(u.mm).value]
         y_det = [y_det_min.to(u.mm).value, y_det_max.to(u.mm).value]
@@ -159,8 +213,10 @@ class DetectorList(Effect):
                 hdr["PC2_2"] = cang
 
             # hdr["GAIN"] = row["gain"]
-            # if "id" in row:
-            #     hdr["ID"] = row["id"]
+            if "id" in row:
+                hdr["DET_ID"] = row["id"]
+                hdr["EXTNAME"] = f'DET_{row["id"]}'
+
             row_dict = {col: row[col] for col in row.colnames}
             hdr.update(row_dict)
             hdrs += [hdr]

@@ -53,11 +53,11 @@ properties :
 
   logging :
     log_to_file: False
-    log_to_console: False
+    log_to_console: True
     file_path: ".scopesim.log"
     file_open_mode: "w"   # w - overwrite, a - append
-    file_level: "DEBUG"            # DEBUG INFO WARNING ERROR CRITICAL
-    console_level: "CRITICAL"      # DEBUG INFO WARNING ERROR CRITICAL
+    file_level:    "DEBUG"         # DEBUG INFO WARNING ERROR CRITICAL
+    console_level: "WARNING"       # DEBUG INFO WARNING ERROR CRITICAL
 
   tests :
     # overridden in tests/__init__.py

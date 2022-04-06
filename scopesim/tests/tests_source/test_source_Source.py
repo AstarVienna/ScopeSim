@@ -240,6 +240,14 @@ class TestSourceAddition:
         assert np.all(fits_img_src.fields[0].data == fits_src.fields[0].data)
         assert img_fits_src.fields[0] is not img_src.fields[0]
 
+    def test_meta_data_is_passed_on_when_added(self, table_source, image_source):
+        table_source.meta["hello"] = "world"
+        image_source.meta["servus"] = "oida"
+        new_source = table_source + image_source
+
+        assert new_source._meta_dicts[0]["hello"] == "world"
+        assert new_source._meta_dicts[1]["servus"] == "oida"
+
 
 @pytest.mark.usefixtures("table_source", "image_source")
 class TestSourceImageInRange:

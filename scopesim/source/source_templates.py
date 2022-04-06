@@ -69,6 +69,9 @@ def star(x=0, y=0, flux=0):
                 units=[u.arcsec, u.arcsec, None, None, mag_unit])
     tbl.meta["photometric_system"] = "vega" if mag_unit == u.mag else "ab"
     src = Source(spectra=spec, table=tbl)
+    src.meta.update({"function_call": f"star(x={x}, y={y}, flux={flux})",
+                     "module": "scopesim.source.source_templates",
+                     "object": "star"})
 
     return src
 

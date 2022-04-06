@@ -150,7 +150,7 @@ class FieldOfView(FieldOfViewBase):
         return self.hdu
 
     def flatten(self):
-        if self.hdu.header["NAXIS"] == 3:
+        if self.hdu and self.hdu.header["NAXIS"] == 3:
             image = np.sum(self.hdu.data, axis=0)
             self.hdu.data = image
 
@@ -331,8 +331,9 @@ class FieldOfView(FieldOfViewBase):
                     for x, y, f in zip(xs, ys, fracs):
                         canvas_image_hdu.data[y, x] += fluxes[ref] * weight * f
             else:
-                x = np.array(xpix + 0.5).astype(int)
-                y = np.array(ypix + 0.5).astype(int)     # quickest way to round
+                # Note: these had x/ypix+0.5 until a06ab75
+                x = np.array(xpix).astype(int)
+                y = np.array(ypix).astype(int)     # quickest way to round
                 f = np.array([fluxes[ref] for ref in field["ref"]])
                 weight = np.array(field["weight"])
 

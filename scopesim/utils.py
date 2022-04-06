@@ -847,9 +847,10 @@ def quantity_from_table(colname, table, default_unit=""):
                     col = col << u.Unit(com_tbl[colname_u])
             else:
                 col = col * u.Unit(default_unit)
-                logging.warning(
-                    "{}_unit was not found in table.meta: {}. Default to: {}"
-                    "".format(colname, table.meta, default_unit))
+                tbl_name = table.meta.get("name", table.meta.get("filename"))
+                logging.info("{}_unit was not found in table.meta: {}. "
+                             "Default to: {}"
+                             "".format(colname, tbl_name, default_unit))
 
     return col
 
@@ -869,9 +870,10 @@ def unit_from_table(colname, table, default_unit=""):
         if colname_u in com_tbl:
             unit = u.Unit(com_tbl[colname_u])
         else:
-            logging.warning("{}_unit was not found in table.meta: {}. "
-                          "Default to: {}"
-                          "".format(colname, table.meta, default_unit))
+            tbl_name = table.meta.get("name", table.meta.get("filename"))
+            logging.info("{}_unit was not found in table.meta: {}. "
+                         "Default to: {}"
+                         "".format(colname, tbl_name, default_unit))
             unit = u.Unit(default_unit)
 
     return unit

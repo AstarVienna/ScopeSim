@@ -1,0 +1,107 @@
+ScopeSim Development Plan / Wishlist
+====================================
+
+ScopeSim
+--------
+- Finish update of spectroscopy mode to incorporate the core code from SpecCADO
+    WHY: Speeds up SLIT mode, enables expansion to IFU and MOS spectrographs
+    WHAT: Implement spatial-spectral Field-of-View objects
+    WHAT: Re-write of FOV-Manager class to accomodate 2+1D FOV objects
+
+- Simplify Effect object API
+    WHY: Makes "custom" effect objects easier to write for 3rd parties (e.g. JU Pott's astrometry group)
+    WHAT: Remove the "fov_grid" method used by FOV-Manager. Replace it with a further apply_to loop when initialising the in-memory instrument model
+    
+- Add 3D Detector-Cube object
+    WHY: Enables very quick "science grade" spectroscopy data products to be produced
+    WHY: Paves the way for ETC-mode for ScopeSim
+    WHAT: Write new DetectorCube class, which piggy-backs the current Detector class
+    
+- Add ETC mode
+    WHY: Quick generation of ETC table data for delivery to ESO (and whomever else wants it)
+    WHY: Increases future usability by astronomers when writing observing proposals
+    WHAT: Add functions for determining SNR through photometry, line integration, or per-pixel
+    WHAT: Add DetectorETC class, which contains flux and noise images, and returns a table of SNR values
+    
+- Add simple Coronographic Effects (as much as possible)
+    WHY: Elephant in the room. Needs to be included.
+    WHAT: An Effect wrapper for a grid of PSFs for different coronographic conditions
+
+- Add "observatory like" functionality (specifiy RA, Dec, obs date)
+    WHY: Most often requested feature is to add RA and Dec to observing parameters. 
+    WHY: Atmospheric conditions change with Zenith distance, which is related to RA and Dec
+    WHY: Helps astronomers better conceptualise their observations
+    WHAT: ScopeSim will pull in a list of objects from Simbad and add these to the background of the images
+    WHAT: Link skycalc Effect wrapper to the RA and Dec (i.e. Zenith Distance) parameters
+
+- Link to external packages like TIPTOP (generic anayltical AO PSF realisations) and PYXEL (generic detector noise simualtions)
+    WHY: For more accurate realistions of the most important external noise sources
+    WHAT: Write an interface standard for these two packages. Possibly liase with the developers so that the packages can deliver "ScopeSim-Ready" objects
+
+- Remove dependency on astropy units
+    WHY: They are slow
+    WHAT: Define a set of internal units for Scopesim. Replace all astropy.unit references with internally consistent units propogation
+    
+- Remove dependency on astropy HDU objects
+    WHY: They are slow. Too many internal checks on the header keywords. Factor of 10x speed increase when using ScopeSim's interal "PoorMansHeader" object
+    WHAT: Expand PoorMansHeader to cover all use cases, add minimal units checks, replace all occurences of astropy HDU objects
+    
+- Remove dependency on Synphot spectra objects
+    WHY: They are slow. Based on astropy interpolation objects and astropy units. Too many checks.
+    WHAT: Write a new high-speed spectral interpolatio class based on the scipy.interpolate objects.
+    
+- Add time-dependency to the observation sequences
+    WHY: To allow realistic astrometry observations
+    WHAT: Add a time parameter to the on-sky Source objects
+    WHAT: Add a OBS_DATE parameter to the OpticalTrain class. This places the objects in the Field-of-View as seen on the date of the observation
+
+
+ScopeSim_Templates
+------------------
+- Add ArtPop wrapper. ArtPop is a better (3rd-party) generator for (old and new) stellar population ScopeSim-Source objects. 
+    WHY: Allows users to make more realistic on-sky targets using isochrone libraries.
+    WHAT: Wrap the ArtPop package into a ScopeSim_Templates sub-module
+    WHAT: Code and submit a pull request to the ArtPop developers to enable ArtPop to generate ScopeSim-like Source objects
+    
+- Add Vela simualtion wrapper. Vela is a set of high-res simulated galaxies observed over cosmic time
+    WHY: Allows users to add realisitc galaxies to their images with spatial resolutions better than MICADO for any redshift. Useful for imaging feasibility studies
+    WHAT: Write a wrapper sub-module that fetches data from the Vela server (or from a copy hosted at Uni-Vienna)
+
+- Add suite of test objects for pipeline development projects (MICADO, METIS)
+    WHY: A designated set of pipeline-useful objects helps standardise the objects included (or excluded) from pipeline testing
+    WHAT: Add the recipes developed by Hugo Buddelmeijer to a MICADO sub-package of ScopeSim_Templates
+
+- Add stellar population astronometric helper functions
+    WHY: Makes running astrometric science feasibiltiy cases easier for the users
+    WHAT: Add the code written by JU-Pott's group for astrometric simulations to the ScopeSim-Templates "stars" sub-package
+
+
+IRDB
+----
+- Add a MICADO_ETC package
+    WHAT: Add consolidated transmission curves, PSFs, detector characteristics to enable high-speed windowed simuations
+
+- Updates to MICADO, MICADO_Sci, MAORY, ELT, Armazones packages as new data becomes available
+    WHAT: Add new modes, updated values and data files
+
+- Automatic documentation for each of the packages
+    WHY: Helps authors check whether the package data is contained in the proper format
+    WHAT: Code to build a documentation page (on RTFD) for each package upon pushing to GitHub
+
+- Automatic file consistency testing
+    WHY: Automatic tests let the author know if the file(s) they add will break or significantly alter the expected simulation outputs
+    WHAT: Code to check units and min, max values
+    
+- Automated instrument performance estimates
+    WHY: Lets users and authors know what the expected performance of the instrument will be, based on the data files and settings included in the packages
+    WHAT: Definition of how to determine instrument performance
+    WHAT: Code for running and extracting the instrument performance parameters
+        
+        
+Documentation and Testing
+-------------------------
+- Update and expand astronomy Use-case documentation
+- Update and expand Developer use-case documentation
+- Update and expand Functional interface (API) documentation
+- Write a series of iPython Notebooks as "learning-by-doing" guides
+- Maybe a series of youtube videos describing what is happening and how to take advantage of the saved internal information in ScopeSim

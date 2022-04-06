@@ -32,8 +32,6 @@ effects :
     filename : "TRACE_3arcsec.fits"
     wave_colname : "lam"
     s_colname : "xi"
-    col_number_start : 1
-    invalid_value : 0
 
 - name : slit_3000x50mas
   class : ApertureMask
