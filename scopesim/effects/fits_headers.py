@@ -1,5 +1,6 @@
 import yaml
 from copy import deepcopy
+import datetime
 import numpy as np
 from astropy.io import fits
 from astropy import units as u
@@ -326,6 +327,9 @@ def flatten_dict(dic, base_key="", flat_dict={},
 
             if isinstance(value, (list, np.ndarray)):
                 value = f"{value.__class__.__name__}:{str(list(value))}"
+
+            if isinstance(value, (datetime.time, datetime.date, datetime.datetime)):
+                value = value.isoformat()
 
             # Add the flattened KEYWORD = (value, comment) to the header dict
             if len(comment) > 0:
