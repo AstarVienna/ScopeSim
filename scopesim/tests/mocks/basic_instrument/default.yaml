@@ -13,7 +13,7 @@ yamls :
   - YAML_detector.yaml           # electronic and detector effects and properties
 
 properties :
-  psf_fhwm: 1.5             # [arcsec]
+  psf_fwhm: 1.5             # [arcsec]
   modes : ["imaging"]       # default mode name
   dit: 60
   ndit: 1
@@ -44,3 +44,4 @@ properties:
     wave_min: 0.7
     wave_mid: 1.2
     wave_max: 2.7
+  spectral_bin_width: !!float 5E-4

@@ -5,8 +5,6 @@
       ESO:
         ATM:
           SEEING: "!OBS.psf_fwhm"
-        TEL:
-          TEMPERAT: '!TEL.temperature'   # will be resolved via from_currsys
 
   unresolved_keywords:
     HIERARCH:

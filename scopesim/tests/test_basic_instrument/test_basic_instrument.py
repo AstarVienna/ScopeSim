@@ -84,9 +84,9 @@ class TestObserveSpectroscopyMode:
 
         if PLOTS:
             plt.subplot(121)
-            plt.imshow(imp_im[:, 175:200], norm=LogNorm())
+            plt.imshow(imp_im)
             plt.subplot(122)
-            plt.imshow(det_im, norm=LogNorm())
+            plt.imshow(det_im)
             plt.show()
 
         xs = [(175, 200), (500, 525), (825, 850)]
@@ -98,3 +98,19 @@ class TestObserveSpectroscopyMode:
             x0, x1 = xs[i]
             trace_flux = det_im[:, x0:x1].sum()     # sum along a trace
             assert round(trace_flux / spot_flux) == round(n_spots[i])
+
+
+class TestFitsHeader:
+    def test_source_keywords_in_header(self):
+        src = st.star()
+        cmd = sim.UserCommands(use_instrument="basic_instrument",
+                               set_modes=["imaging"])
+        opt = sim.OpticalTrain(cmd)
+        opt.observe(src)
+        hdul = opt.readout()[0]
+        hdr = hdul[0].header
+
+        assert hdr["SIM SRC0 object"] == 'star'
+        assert hdr["SIM EFF12 class"] == 'SourceDescriptionFitsKeywords'
+        assert hdr["SIM CONFIG OBS filter_name"] == 'J'
+        assert hdr["ESO ATM SEEING"] == sim.utils.from_currsys("!OBS.psf_fwhm")

@@ -67,21 +67,20 @@ effects:
     noise_std : 12
     n_channels : 16
 
-#-   name : source_fits_keywords
-#    decription : adds meta data from Source object to FITS header
-#    class : SourceDescriptionFitsKeywords
-#
-#-   name : effects_fits_keywords
-#    decription : adds meta dicts from all Effect objects to FITS header
-#    class : EffectsMetaKeywords
-#
-#-   name : config_fits_keywords
-#    decription : adds all UserCommands dicts to FITS header
-#    class : SimulationConfigFitsKeywords
-#
-#-   name : extra_fits_keywords
-#    decription : adds extra FITS keywords from a yaml file
-#    class : ExtraFitsKeywords
-#    include : False
-#    kwargs :
-#      filename: FITS_extra_keywords.yaml
+-   name : source_fits_keywords
+    decription : adds meta data from Source object to FITS header
+    class : SourceDescriptionFitsKeywords
+
+-   name : effects_fits_keywords
+    decription : adds meta dicts from all Effect objects to FITS header
+    class : EffectsMetaKeywords
+
+-   name : config_fits_keywords
+    decription : adds all UserCommands dicts to FITS header
+    class : SimulationConfigFitsKeywords
+
+-   name : extra_fits_keywords
+    decription : adds extra FITS keywords from a yaml file
+    class : ExtraFitsKeywords
+    kwargs :
+      filename: FITS_extra_keywords.yaml

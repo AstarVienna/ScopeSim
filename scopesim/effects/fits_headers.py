@@ -384,11 +384,15 @@ class EffectsMetaKeywords(ExtraFitsKeywords):
     def apply_to(self, hdul, **kwargs):
         opt_train = kwargs.get("optical_train")
         if isinstance(hdul, fits.HDUList) and opt_train is not None:
+            # todo: use a different way of getting all the effect names
+            # opt.effects returns the __repr__, not the original name
             for i, eff_name in enumerate(opt_train.effects["name"]):
                 # Check for spaces
                 if " " in eff_name:
                     # E.g. 'filter_wheel_1 : [open]'
-                    assert eff_name.startswith("filter_wheel") or eff_name.startswith("pupil_wheel"),\
+                    assert eff_name.startswith("filter_wheel") or \
+                           eff_name.startswith("pupil_wheel") or \
+                           eff_name.startswith("slit_wheel"),\
                         f"Unknown effect name with space: {eff_name}"
                     eff_name = eff_name.split()[0]
 
