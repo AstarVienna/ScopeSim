@@ -26,7 +26,11 @@ ScopeSim_ is on pip::
 
 Getting started
 ---------------
-A basic simulation of ELT/MICADO image would look something like this::
+A basic simulation of ELT/MICADO image would look something like this
+
+.. todo:: replace this with the new ``load_example_optical_train``
+
+::
 
     import scopesim_templates
     from scopesim.server.database import download_package
