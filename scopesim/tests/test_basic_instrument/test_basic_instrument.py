@@ -76,6 +76,7 @@ class TestObserveSpectroscopyMode:
         opt["shot_noise"].include = False
         opt["dark_current"].include = False
         opt["readout_noise"].include = False
+        opt["atmospheric_radiometry"].include = False
 
         opt.observe(src)
         hdul = opt.readout()[0]
@@ -86,7 +87,7 @@ class TestObserveSpectroscopyMode:
             plt.subplot(121)
             plt.imshow(imp_im)
             plt.subplot(122)
-            plt.imshow(det_im)
+            plt.imshow(det_im, norm=LogNorm())
             plt.show()
 
         xs = [(175, 200), (500, 525), (825, 850)]
