@@ -20,7 +20,7 @@ effects:
   description: Cut-out of the focal plane image with custom dimensions and coordinates
   kwargs:
       image_plane_id: 0
-      pixel_size: 0.015
+      pixel_size: 0.01
       x: "!DET.x"
       y: "!DET.y"
       width: "!DET.width"
@@ -55,8 +55,8 @@ effects:
   class: LinearityCurve
   kwargs:
     array_dict:
-      incident: [0, 1e99]
-      measured: [0, 1e99]
+      incident: [0, !!float 1e99]
+      measured: [0, !!float 1e99]
     incident_unit : ph
     measured_unit : ph
 

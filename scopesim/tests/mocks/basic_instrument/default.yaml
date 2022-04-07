@@ -13,23 +13,24 @@ yamls :
   - YAML_detector.yaml           # electronic and detector effects and properties
 
 properties :
-  psf_fhwm: 0.8             # [arcsec]
+  psf_fhwm: 1.5             # [arcsec]
   modes : ["imaging"]       # default mode name
   dit: 60
   ndit: 1
   slit_name : "narrow"
-  filter_name : "J"
 
 mode_yamls :
 - name : imaging
   alias : OBS
   properties :
     include_slit : False
+    filter_name : "J"
 
 - name : spectroscopy
   alias: OBS
   properties :
     include_slit : True
+    filter_name : "open"
   yamls :
     - YAML_mode_spectroscopy.yaml   # mode specific effects and properties
 
@@ -40,6 +41,6 @@ description: SIM config param overrides
 
 properties:
   spectral:
-    wave_min: 0.7,
-    wave_mid: 1.2,
+    wave_min: 0.7
+    wave_mid: 1.2
     wave_max: 2.7

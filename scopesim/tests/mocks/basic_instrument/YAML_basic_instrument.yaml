@@ -27,6 +27,7 @@ effects :
       - J
       - H
       - Ks
+      - open
     filename_format: "filters/TC_filter_{}.dat"     # use f-string format
     current_filter: "!OBS.filter_name"              # default filter
     minimum_throughput: !!float 1.01E-4             # below this is 0
