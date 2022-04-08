@@ -222,3 +222,41 @@ class SpectralTraceList(Effect):
         msg = 'SpectralTraceList: "{}" : {} traces' \
               ''.format(self.meta.get("name"), len(self.spectral_traces))
         return msg
+
+
+class SpectralTraceListWheel(Effect):
+    def __init__(self):
+        required_keys = ["trace_list_names",
+                         "filename_format",
+                         "current_trace_list"]
+        check_keys(kwargs, required_keys, action="error")
+
+        super(SpectralTraceListWheel, self).__init__(**kwargs)
+
+        params = {"z_order": [70, 270, 670],
+                  "path": "",
+                  "report_plot_include": True,
+                  "report_table_include": True,
+                  "report_table_rounding": 4}
+        self.meta.update(params)
+        self.meta.update(kwargs)
+
+        path = pth.join(self.meta["path"],
+                        from_currsys(self.meta["filename_format"]))
+        self.trace_lists = {}
+        for name in self.meta["trace_list_names"]:
+            kwargs["name"] = name
+            self.trace_lists[name] = SpectralTraceList(filename=path.format(name),
+                                                       **kwargs)
+
+    def apply_to(self, obj, **kwargs):
+        '''Use apply_to of current trace list'''
+        return self.current_trace_list.apply_to(obj, **kwargs)
+
+    @property
+    def current_trace_list(self):
+        trace_list_eff = None
+        trace_list_name = from_currsys(self.meta["current_trace_list"])
+        if trace_list_name is not None:
+            trace_list_eff = self.trace_lists[trace_list_name]
+        return trace_list_eff
