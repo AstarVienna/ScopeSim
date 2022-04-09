@@ -53,6 +53,17 @@ def list_packages(pkg_name=None):
     -------
     pkg_names : list
 
+    Examples
+    --------
+    ::
+        from scopesim import list_packages
+
+        # list all stable packages on the server
+        list_packages()
+
+        # list all variants of a specific package
+        list_packages("Armazones")
+
     """
     pkgs_dict = get_server_package_list()
 
@@ -96,6 +107,11 @@ def download_packages(pkg_names, release="stable", save_dir=None, from_cache=Non
         Use the cached versions of the packages. If None, defaults to the RC
         value: ``!SIM.file.use_cached_downloads``
 
+    Returns
+    -------
+    save_path : str
+        The absolute path to the saved ``.zip`` package
+
     Examples
     --------
     ::
@@ -110,12 +126,6 @@ def download_packages(pkg_names, release="stable", save_dir=None, from_cache=Non
         # Specific version of the package
         list_packages("test_package")
         download_packages("test_package", release="2022-04-09.dev")
-
-
-    Returns
-    -------
-    save_path : str
-        The absolute path to the saved ``.zip`` package
 
     """
     base_url = rc.__config__["!SIM.file.server_base_url"]
