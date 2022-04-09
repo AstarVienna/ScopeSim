@@ -230,6 +230,62 @@ class SpectralTraceList(Effect):
 
 
 class SpectralTraceListWheel(Effect):
+    """
+    A Wheel-Effect object for selecting between multiple gratings/grisms
+
+    See ``SpectralTraceList`` for the trace file format description.
+
+    Parameters
+    ----------
+    trace_list_names : list
+        The list of unique identifiers in the trace filenames
+
+    filename_format : str
+        f-string that directs scopesim to the folder containing the trace files.
+        This can be a !-string if the trace names are shared with other *Wheel
+        effect objects (e.g. a FilterWheel). See examples.
+
+    current_trace_list : str
+        default trace file to use
+
+    kwargs : key-value pairs
+        Addition keywords that are passed to the ``SpectralTraceList`` objects
+        See SpectralTraceList docstring
+
+    Examples
+    --------
+    A simplified YAML file example taken from the OSIRIS instrument package::
+
+        alias: INST
+        name: OSIRIS_LSS
+
+        properties:
+          decouple_detector_from_sky_headers: True
+          grism_names:
+            - R300B
+            - R500B
+            - R1000B
+            - R2500V
+
+        effects:
+          - name: spectral_trace_wheel
+            description: grism wheel contining spectral trace geometries
+            class: SpectralTraceListWheel
+            kwargs:
+              current_trace_list: "!OBS.grating_name"
+              filename_format: "traces/LSS_{}_TRACE.fits"
+              trace_list_names: "!INST.grism_names"
+
+          - name: grating_efficiency
+            description: OSIRIS grating efficiency curves, piggybacking on FilterWheel
+            class: FilterWheel
+            kwargs:
+              minimum_throughput: !!float 0.
+              filename_format: "gratings/{}.txt"
+              current_filter: "!OBS.grating_name"
+              filter_names: "!INST.grism_names"
+
+    """
     def __init__(self, **kwargs):
         required_keys = ["trace_list_names",
                          "filename_format",
