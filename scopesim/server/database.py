@@ -40,6 +40,20 @@ def get_server_folder_contents(dir_name, unique_str=".zip"):
 
 
 def list_packages(pkg_name=None):
+    """
+    List all packages, or all variants of a single package
+
+    Parameters
+    ----------
+    pkg_name : str, optional
+        - None: lists all stable packages on the server
+        - <PackageName>: lists all variants of <PackageName> on the server
+
+    Returns
+    -------
+    pkg_names : list
+
+    """
     pkgs_dict = get_server_package_list()
 
     if pkg_name is None:
