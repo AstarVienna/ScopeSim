@@ -5,6 +5,7 @@ The Effect is called SpectralTraceList, it applies a list of
 optics.spectral_trace_SpectralTrace objects to a FieldOfView.
 '''
 
+from os import path as pth
 import numpy as np
 
 from astropy.io import fits
@@ -149,6 +150,10 @@ class SpectralTraceList(Effect):
         if isinstance(obj, FieldOfViewBase):
             if obj.hdu is not None and obj.hdu.header["NAXIS"] == 3:
                 obj.cube = obj.hdu
+            elif obj.hdu is not None and obj.hdu.header["NAXIS"] == 2:
+                # todo: catch the case of obj.hdu.header["NAXIS"] == 2
+                # for MAAT
+                pass
             elif obj.hdu is None and obj.cube is None:
                 obj.cube = obj.make_cube_hdu()
 
@@ -225,7 +230,7 @@ class SpectralTraceList(Effect):
 
 
 class SpectralTraceListWheel(Effect):
-    def __init__(self):
+    def __init__(self, **kwargs):
         required_keys = ["trace_list_names",
                          "filename_format",
                          "current_trace_list"]
@@ -244,7 +249,7 @@ class SpectralTraceListWheel(Effect):
         path = pth.join(self.meta["path"],
                         from_currsys(self.meta["filename_format"]))
         self.trace_lists = {}
-        for name in self.meta["trace_list_names"]:
+        for name in from_currsys(self.meta["trace_list_names"]):
             kwargs["name"] = name
             self.trace_lists[name] = SpectralTraceList(filename=path.format(name),
                                                        **kwargs)
@@ -260,3 +265,8 @@ class SpectralTraceListWheel(Effect):
         if trace_list_name is not None:
             trace_list_eff = self.trace_lists[trace_list_name]
         return trace_list_eff
+
+    @property
+    def display_name(self):
+        name = self.meta.get("name", self.meta.get("filename", "<untitled>"))
+        return f'{name} : [{from_currsys(self.meta["current_trace_list"])}]'
