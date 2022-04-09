@@ -534,9 +534,10 @@ class FilterWheel(Effect):
         path = pth.join(self.meta["path"],
                         from_currsys(self.meta["filename_format"]))
         self.filters = {}
-        for name in self.meta["filter_names"]:
+        for name in from_currsys(self.meta["filter_names"]):
             kwargs["name"] = name
-            self.filters[name] = FilterCurve(filename=path.format(name), **kwargs)
+            self.filters[name] = FilterCurve(filename=path.format(name),
+                                             **kwargs)
 
         self.table = self.get_table()
 
@@ -817,7 +818,7 @@ class ADCWheel(Effect):
         path = pth.join(self.meta["path"],
                         from_currsys(self.meta["filename_format"]))
         self.adcs = {}
-        for name in self.meta["adc_names"]:
+        for name in from_currsys(self.meta["adc_names"]):
             kwargs["name"] = name
             self.adcs[name] = TERCurve(filename=path.format(name),
                                        **kwargs)
