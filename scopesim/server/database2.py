@@ -84,8 +84,18 @@ def download_packages(pkg_names, release="stable", save_dir=None, from_cache=Non
 
     Examples
     --------
+    Stable release of a list of packages
     ::
+        from scopesim import download_packages
+        download_packages(["test_package", "test_package"])
 
+    Development release of a single package
+    ::
+        download_packages("test_package", release="latest")
+
+    Specific version of the package
+    ::
+        db.download_packages("test_package", release="2022-04-09.dev")
 
 
     Returns

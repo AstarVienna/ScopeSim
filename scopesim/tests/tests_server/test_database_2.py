@@ -45,7 +45,7 @@ class TestDownloadPackages:
 
     def test_downloads_latest_package(self):
         with TemporaryDirectory() as tmpdir:
-            db.download_packages(["test_package"], release="latest",
+            db.download_packages("test_package", release="latest",
                                  save_dir=tmpdir, from_cache=False)
             version_path = os.path.join(tmpdir, "test_package", "version.yaml")
             with open(version_path) as f:
