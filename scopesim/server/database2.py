@@ -85,6 +85,22 @@ def get_server_package_list():
     return pkgs_dict
 
 
+def get_server_folder_contents(dir_name, unique_str=".zip"):
+    url = rc.__config__["!SIM.file.server_base_url"] + dir_name
+
+    try:
+        result = requests.get(url).content
+    except Exception as error:
+        raise ValueError(f"URL returned error: {url}") from error
+
+    soup = bs4.BeautifulSoup(result, features="lxml")
+    hrefs = soup.findAll("a", href=True)
+    pkgs = [href.string for href in hrefs
+            if href.string is not None and ".zip" in href.string]
+
+    return pkgs
+
+
 def list_packages(pkg_name=None):
     pkgs_dict = get_server_package_list()
 
@@ -96,41 +112,3 @@ def list_packages(pkg_name=None):
         pkg_names = [pkg for pkg in pkgs if pkg_name in pkg]
 
     return pkg_names
-
-
-def get_server_folder_contents(dir_name, unique_str=".zip"):
-    """
-    Returns a list of file and/or directory paths on the HTTP server ``url``
-
-    Parameters
-    ----------
-    url : str
-        The URL of the IRDB HTTP server.
-
-    unique_str : str, list
-        A unique string to look for in the beautiful HTML soup:
-        "/" for directories this, ".zip" for packages
-
-    Returns
-    -------
-    paths : list
-        List of paths containing in ``url`` which contain ``unique_str``
-
-    """
-    if isinstance(unique_str, str):
-        unique_str = [unique_str]
-
-    url = rc.__config__["!SIM.file.server_base_url"] + dir_name
-
-    try:
-        result = requests.get(url).content
-    except Exception as error:
-        raise ValueError(f"URL returned error: {url}") from error
-
-    soup = bs4.BeautifulSoup(result, features="lxml")
-    paths = soup.findAll("a", href=True)
-    select_paths = []
-    for the_str in unique_str:
-        select_paths += [tmp.string for tmp in paths
-                         if tmp.string is not None and the_str in tmp.string]
-    return select_paths
