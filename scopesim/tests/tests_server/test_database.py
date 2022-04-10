@@ -3,6 +3,7 @@ import yaml
 from tempfile import TemporaryDirectory
 import numpy as np
 from scopesim.server import database as db
+from scopesim.server.gitdir import download as download_github_folder
 
 
 def test_package_list_loads():
@@ -64,14 +65,38 @@ class TestDownloadPackages:
 
             assert version_dict["version"] == release
 
-    def test_downloads_github_version_of_package(self):
-        pass
+    def test_downloads_github_version_of_package_with_semicolon(self):
+        release = "github:728761fc76adb548696205139e4e9a4260401dfc"
+        with TemporaryDirectory() as tmpdir:
+            db.download_packages("ELT", release=release,
+                                 save_dir=tmpdir, from_cache=False)
+            filename = os.path.join(tmpdir, "ELT", "EC_sky_25.tbl")
+
+            assert os.path.exists(filename)
+
+    def test_downloads_github_version_of_package_with_at_symbol(self):
+        release = "github@728761fc76adb548696205139e4e9a4260401dfc"
+        with TemporaryDirectory() as tmpdir:
+            db.download_packages("ELT", release=release,
+                                 save_dir=tmpdir, from_cache=False)
+            filename = os.path.join(tmpdir, "ELT", "EC_sky_25.tbl")
+
+            assert os.path.exists(filename)
 
 
+class TestGitDirDownload:
+    def test_downloads_current_package(self):
+        with TemporaryDirectory() as tmpdir:
+            url = "https://github.com/AstarVienna/irdb/tree/dev_maat/OSIRIS"
+            download_github_folder(url, output_dir=tmpdir)
+            filename = os.path.join(tmpdir, "OSIRIS", "default.yaml")
 
+            assert os.path.exists(filename)
 
-def test_gitdit():
-    from scopesim.server.gitdir import download
-    download("https://github.com/AstarVienna/irdb/tree/dev_maat/OSIRIS")
+    def test_downloads_with_old_commit_hash(self):
+        with TemporaryDirectory() as tmpdir:
+            url = "https://github.com/AstarVienna/irdb/tree/728761fc76adb548696205139e4e9a4260401dfc/ELT"
+            download_github_folder(url, output_dir=tmpdir)
+            filename = os.path.join(tmpdir, "ELT", "EC_sky_25.tbl")
 
-
+            assert os.path.exists(filename)
