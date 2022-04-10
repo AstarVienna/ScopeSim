@@ -83,6 +83,15 @@ class TestDownloadPackages:
 
             assert os.path.exists(filename)
 
+def test_old_download_package_signature():
+    with TemporaryDirectory() as tmpdir:
+        db.download_package(["instruments/test_package.zip"], save_dir=tmpdir)
+        version_path = os.path.join(tmpdir, "test_package", "version.yaml")
+        with open(version_path) as f:
+            version_dict = yaml.full_load(f)
+
+        assert version_dict["release"] == "stable"
+
 
 class TestGitDirDownload:
     def test_downloads_current_package(self):

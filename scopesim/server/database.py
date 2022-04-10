@@ -193,6 +193,44 @@ def download_packages(pkg_names, release="stable", save_dir=None, from_cache=Non
 # Funtions below from from OLD_database.py
 # ==============================================================================
 
+# for backwards compatibility
+def download_package(pkg_path, save_dir=None, url=None, from_cache=None):
+    """
+    Downloads a package to the local disk
+
+    Parameters
+    ----------
+    pkg_path : str, list
+        A ``.zip`` package path as given by ``list_packages()``
+
+    save_dir : str
+        The place on the local disk where the ``.zip`` package is to be saved.
+        If left as None, defaults to the value in
+        scopesim.rc.__config__["!SIM.file.local_packages_path"]
+
+    url : str
+        The URL of the IRDB HTTP server. If left as None, defaults to the
+        value in scopesim.rc.__config__["!SIM.file.server_base_url"]
+
+    from_cache : bool
+        Use the cached versions of the packages. If None, defaults to the RC
+        value: ``!SIM.file.use_cached_downloads``
+
+    Returns
+    -------
+    save_path : str
+        The absolute path to the saved ``.zip`` package
+
+    """
+    # todo: add proper depreciation warning
+    text = "Function Depreciated --> please use scopesim.download_package-s-()"
+    logging.warning(text)
+    print(text)
+
+    pkg_names = [pkg.split("/")[-1].replace(".zip", "") for pkg in pkg_path]
+    return download_packages(pkg_names, release="stable", save_dir=save_dir,
+                             from_cache=from_cache)
+
 def get_server_elements(url, unique_str="/"):
     """
     Returns a list of file and/or directory paths on the HTTP server ``url``
