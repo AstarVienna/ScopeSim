@@ -2,7 +2,7 @@ import os
 import yaml
 from tempfile import TemporaryDirectory
 import numpy as np
-from scopesim.server import database2 as db
+from scopesim.server import database as db
 
 
 def test_package_list_loads():
@@ -66,3 +66,12 @@ class TestDownloadPackages:
 
     def test_downloads_github_version_of_package(self):
         pass
+
+
+
+
+def test_gitdit():
+    from scopesim.server.gitdir import download
+    download("https://github.com/AstarVienna/irdb/tree/dev_maat/OSIRIS")
+
+
