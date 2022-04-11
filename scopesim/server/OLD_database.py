@@ -161,7 +161,7 @@ def download_package(pkg_path, save_dir=None, url=None, from_cache=None):
                 zip_ref.extractall(save_dir)
 
         except HTTPError:
-            ValueError(f"Unable to find file: {url + pkg_path}")
+            raise ValueError(f"Unable to find file: {url + pkg_path}")
 
         save_path = os.path.abspath(save_path)
 
