@@ -95,7 +95,7 @@ def download(repo_url, flatten=False, output_dir="./"):
             except KeyboardInterrupt:
                 # when CTRL+C is pressed during the execution of this script,
                 logging.error("GitHub download interrupted by User")
-                sys.exit()
+                raise
 
         for file in data:
             file_url = file["download_url"]
