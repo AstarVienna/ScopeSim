@@ -95,12 +95,13 @@ def test_old_download_package_signature():
 
 class TestGitDirDownload:
     def test_downloads_current_package(self):
-        with TemporaryDirectory() as tmpdir:
-            url = "https://github.com/AstarVienna/irdb/tree/dev_maat/OSIRIS"
-            download_github_folder(url, output_dir=tmpdir)
-            filename = os.path.join(tmpdir, "OSIRIS", "default.yaml")
+        # with TemporaryDirectory() as tmpdir:
+        tmpdir = "."
+        url = "https://github.com/AstarVienna/irdb/tree/dev_master/MICADO"
+        download_github_folder(url, output_dir=tmpdir)
+        filename = os.path.join(tmpdir, "MICADO", "default.yaml")
 
-            assert os.path.exists(filename)
+        assert os.path.exists(filename)
 
     def test_downloads_with_old_commit_hash(self):
         with TemporaryDirectory() as tmpdir:
