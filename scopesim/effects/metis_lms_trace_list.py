@@ -409,6 +409,8 @@ def echelle_setting(wavelength, grat_spacing, wcal_def):
         raise TypeError("wcal_def not in recognised format:", wcal_def)
 
     # Compute angles, determine which order gives angle closest to zero
+    print(wcal['c0'], wcal['c1'])
+    print(wavelength)
     angles = wcal['c0'] * wavelength + wcal['c1']
     imin = np.argmin(np.abs(angles))
 
@@ -433,7 +435,7 @@ class MetisLMSImageSlicer(ApertureMask):
     from the `Aperture List` extension of the trace file `!OBS.trace_file`.
     """
     def __init__(self, filename, ext_id="Aperture List", **kwargs):
-        filename = from_currsys(filename)
+        filename = find_file(from_currsys(filename))
         ap_list = fits.getdata(filename, extname=ext_id)
         xmin, xmax = ap_list['left'].min(), ap_list['right'].max()
         ymin, ymax = ap_list['bottom'].min(), ap_list['top'].max()
@@ -466,7 +468,7 @@ class MetisLMSEfficiency(TERCurve):
         filename = find_file(self.meta['filename'])
         wcal = fits.getdata(filename, extname='WCAL')
         if 'wavelen' in kwargs:
-            wavelen = kwargs['wavelen']
+            wavelen = from_currsys(kwargs['wavelen'])
             grat_spacing = self.meta['grat_spacing']
             ech = echelle_setting(wavelen, grat_spacing, wcal)
             self.meta['order'] = ech['Ord']
