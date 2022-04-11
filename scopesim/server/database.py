@@ -128,9 +128,10 @@ def download_packages(pkg_names, release="stable", save_dir=None, from_cache=Non
         list_packages("test_package")
         download_packages("test_package", release="2022-04-09.dev")
 
-        # Specific package from a Gtihub commit hash (use "@" or ":")
+        # Specific package from a Gtihub commit hash or branch/tag name (use "@" or ":")
         download_packages("ELT", release="github:728761fc76adb548696205139e4e9a4260401dfc")
         download_packages("ELT", release="github@728761fc76adb548696205139e4e9a4260401dfc")
+        download_packages("ELT", release="github@dev_master")
 
     """
     base_url = rc.__config__["!SIM.file.server_base_url"]
@@ -179,8 +180,8 @@ def download_packages(pkg_names, release="stable", save_dir=None, from_cache=Non
                     with zipfile.ZipFile(file_path, 'r') as zip_ref:
                         zip_ref.extractall(save_dir)
 
-                except HTTPError:
-                    ValueError(f"Unable to find file: {url + pkg_path}")
+                except HTTPError as error:
+                    raise ValueError(f"Unable to find file: {url + pkg_path}") from error
             else:
                 download_github_folder(repo_url=pkg_url, output_dir=save_dir)
                 save_path = save_dir

@@ -12,7 +12,6 @@ import urllib.request
 import signal
 import argparse
 import json
-import sys
 import logging
 
 
@@ -26,9 +25,9 @@ def create_url(url):
     # Check if the given url is a url to a GitHub repo. If it is, tell the
     # user to use 'git clone' to download it
     if re.match(repo_only_url,url):
-        logging.error("✘ The given url is a complete repository. "
-                      "Use 'git clone' to download the repository")
-        sys.exit()
+        message = "✘ The given url is a complete repository. Use 'git clone' to download the repository"
+        logging.error(message)
+        raise ValueError(message)
 
     # extract the branch name from the given url (e.g master)
     branch = re_branch.search(url)
@@ -66,7 +65,7 @@ def download(repo_url, flatten=False, output_dir="./"):
     except KeyboardInterrupt:
         # when CTRL+C is pressed during the execution of this script,
         logging.error("GitHub download interrupted by User")
-        sys.exit()
+        raise
 
     if not flatten:
         # make a directory with the name which is taken from the actual repo
@@ -95,7 +94,7 @@ def download(repo_url, flatten=False, output_dir="./"):
             except KeyboardInterrupt:
                 # when CTRL+C is pressed during the execution of this script,
                 logging.error("GitHub download interrupted by User")
-                sys.exit()
+                raise
 
         for file in data:
             file_url = file["download_url"]
@@ -125,7 +124,7 @@ def download(repo_url, flatten=False, output_dir="./"):
                 except KeyboardInterrupt:
                     # when CTRL+C is pressed during the execution of this script,
                     logging.error("GitHub download interrupted by User")
-                    sys.exit()
+                    raise
             else:
                 download(file["html_url"], flatten, dir_out)
 
