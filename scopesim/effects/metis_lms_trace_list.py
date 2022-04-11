@@ -409,8 +409,6 @@ def echelle_setting(wavelength, grat_spacing, wcal_def):
         raise TypeError("wcal_def not in recognised format:", wcal_def)
 
     # Compute angles, determine which order gives angle closest to zero
-    print(wcal['c0'], wcal['c1'])
-    print(wavelength)
     angles = wcal['c0'] * wavelength + wcal['c1']
     imin = np.argmin(np.abs(angles))
 
