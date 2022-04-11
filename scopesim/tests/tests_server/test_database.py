@@ -3,7 +3,6 @@ import yaml
 from tempfile import TemporaryDirectory
 import numpy as np
 from scopesim.server import database as db
-from scopesim.server.gitdir import download as download_github_folder
 
 
 def test_package_list_loads():
@@ -95,18 +94,18 @@ def test_old_download_package_signature():
 
 class TestGitDirDownload:
     def test_downloads_current_package(self):
-        # with TemporaryDirectory() as tmpdir:
-        tmpdir = "."
-        url = "https://github.com/AstarVienna/irdb/tree/dev_master/MICADO"
-        download_github_folder(url, output_dir=tmpdir)
-        filename = os.path.join(tmpdir, "MICADO", "default.yaml")
+        with TemporaryDirectory() as tmpdir:
+            # tmpdir = "."
+            url = "https://github.com/AstarVienna/irdb/tree/dev_master/MICADO"
+            db.download_github_folder(url, output_dir=tmpdir)
+            filename = os.path.join(tmpdir, "MICADO", "default.yaml")
 
-        assert os.path.exists(filename)
+            assert os.path.exists(filename)
 
     def test_downloads_with_old_commit_hash(self):
         with TemporaryDirectory() as tmpdir:
             url = "https://github.com/AstarVienna/irdb/tree/728761fc76adb548696205139e4e9a4260401dfc/ELT"
-            download_github_folder(url, output_dir=tmpdir)
+            db.download_github_folder(url, output_dir=tmpdir)
             filename = os.path.join(tmpdir, "ELT", "EC_sky_25.tbl")
 
             assert os.path.exists(filename)

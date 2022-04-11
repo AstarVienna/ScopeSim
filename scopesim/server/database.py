@@ -1,8 +1,11 @@
 """
 Functions to download instrument packages and example data
 """
+import json
+import re
 import shutil
 import os
+import urllib.request
 import zipfile
 import logging
 from urllib3.exceptions import HTTPError
@@ -13,7 +16,6 @@ import bs4
 from astropy.utils.data import download_file
 
 from scopesim import rc
-from .gitdir import download as download_github_folder
 
 
 def get_server_package_list():
@@ -366,3 +368,82 @@ def download_example_data(file_path, save_dir=None, url=None, from_cache=None):
         save_path = os.path.abspath(save_path)
 
     return save_path
+
+
+# """
+# 2022-04-10 (KL)
+# Code taken directly from https://github.com/sdushantha/gitdir
+# Adapted for ScopeSim usage.
+# Many thanks to the authors!
+# """
+
+def create_github_url(url):
+    """
+    From the given url, produce a URL that is compatible with Github's REST API. Can handle blob or tree paths.
+    """
+    repo_only_url = re.compile(r"https:\/\/github\.com\/[a-z\d](?:[a-z\d]|-(?=[a-z\d])){0,38}\/[a-zA-Z0-9]+$")
+    re_branch = re.compile("/(tree|blob)/(.+?)/")
+
+    # Check if the given url is a url to a GitHub repo. If it is, tell the
+    # user to use 'git clone' to download it
+    if re.match(repo_only_url,url):
+        message = "✘ The given url is a complete repository. Use 'git clone' to download the repository"
+        logging.error(message)
+        raise ValueError(message)
+
+    # extract the branch name from the given url (e.g master)
+    branch = re_branch.search(url)
+    download_dirs = url[branch.end():]
+    api_url = (url[:branch.start()].replace("github.com", "api.github.com/repos", 1) +
+              "/contents/" + download_dirs + "?ref=" + branch.group(2))
+    return api_url, download_dirs
+
+
+def download_github_folder(repo_url, output_dir="./"):
+    """
+    Downloads the files and directories in repo_url.
+
+    Re-written based on the on the download function `here <https://github.com/sdushantha/gitdir/blob/f47ce9d85ee29f8612ce5ae804560a12b803ddf3/gitdir/gitdir.py#L55>`_
+    """
+    # convert repo_url into an api_url
+    api_url, download_dirs = create_github_url(repo_url)
+
+    # get the contents of the github folder
+    user_interrupt_text = "GitHub download interrupted by User"
+    try:
+        opener = urllib.request.build_opener()
+        opener.addheaders = [('User-agent', 'Mozilla/5.0')]
+        urllib.request.install_opener(opener)
+        response = urllib.request.urlretrieve(api_url)
+    except KeyboardInterrupt:
+        # when CTRL+C is pressed during the execution of this script
+        logging.error(user_interrupt_text)
+        raise ValueError(user_interrupt_text)
+
+    # Make the base directories for this GitHub folder
+    os.makedirs(os.path.join(output_dir, download_dirs), exist_ok=True)
+
+    with open(response[0], "r") as f:
+        data = json.load(f)
+
+        for entry in data:
+            # if the entry is a further folder, walk through it
+            if entry["type"] == "dir":
+                download2(repo_url=entry["html_url"],
+                          output_dir=output_dir)
+
+            # if the entry is a file, download it
+            elif entry["type"] == "file":
+                try:
+                    opener = urllib.request.build_opener()
+                    opener.addheaders = [('User-agent', 'Mozilla/5.0')]
+                    urllib.request.install_opener(opener)
+                    # download the file
+                    save_path = os.path.join(output_dir, entry['path'])
+                    urllib.request.urlretrieve(entry["download_url"], save_path)
+                    logging.info(f"Downloaded: {entry['path']}")
+
+                except KeyboardInterrupt:
+                    # when CTRL+C is pressed during the execution of this script
+                    logging.error(user_interrupt_text)
+                    raise ValueError(user_interrupt_text)
