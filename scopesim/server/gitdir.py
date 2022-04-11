@@ -110,7 +110,6 @@ def download(repo_url, flatten=False, output_dir="./"):
 
             if dirname != '':
                 os.makedirs(os.path.dirname(path), exist_ok=True)
-                # os.makedirs(os.path.join(dir_out, os.path.dirname(path)), exist_ok=True)
             else:
                 pass
 
