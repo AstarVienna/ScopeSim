@@ -12,7 +12,6 @@ import urllib.request
 import signal
 import argparse
 import json
-import sys
 import logging
 
 
