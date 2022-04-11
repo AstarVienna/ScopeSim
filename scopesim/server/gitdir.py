@@ -26,9 +26,9 @@ def create_url(url):
     # Check if the given url is a url to a GitHub repo. If it is, tell the
     # user to use 'git clone' to download it
     if re.match(repo_only_url,url):
-        logging.error("✘ The given url is a complete repository. "
-                      "Use 'git clone' to download the repository")
-        sys.exit()
+        message = "✘ The given url is a complete repository. Use 'git clone' to download the repository"
+        logging.error(message)
+        raise ValueError(message)
 
     # extract the branch name from the given url (e.g master)
     branch = re_branch.search(url)
