@@ -35,8 +35,8 @@ class DetectorModePropertiesSetter(Effect):
     """
     Sets mode specific curr_sys properties for different detector readout modes
 
-    A little class (DetectorModePropertiesSetter) that allows different "!DET"
-    properties to be set on the fly.
+    A little class (``DetectorModePropertiesSetter``) that allows different
+    ``"!DET"`` properties to be set on the fly.
 
     Parameters
     ----------
@@ -46,10 +46,10 @@ class DetectorModePropertiesSetter(Effect):
 
     Examples
     --------
-
     Add the values for the different detector readout modes to all the relevant
     detector yaml files. In this case the METIS HAWAII (L, M band) and GeoSnap
     (N band) detectors: METIS_DET_IMG_LM.yaml , METIS_DET_IMG_N.yaml
+    ::
 
         - name: lm_detector_readout_parameters
           class: DetectorModePropertiesSetter
@@ -66,7 +66,7 @@ class DetectorModePropertiesSetter(Effect):
 
     Add the OBS dict entry !OBS.detector_readout_mode to the properties section
     of the mode_yamls descriptions in the default.yaml files.
-
+    ::
         mode_yamls:
           - object: observation
             alias: OBS
@@ -154,11 +154,12 @@ class AutoExposure(Effect):
 
     The effects sets the parameters `!OBS.dit` and `!OBS.ndit`.
 
-    Example yaml entry
-    ------------------
+    Examples
+    --------
     The parameters `!OBS.exptime`, `!DET.full_well` and `!DET.mindit` should
     be defined as properties in the respective subsections.
     ::
+
        name: auto_exposure
        description: automatic determination of DIT and NDIT
        class: AutoExposure
