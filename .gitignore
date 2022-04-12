@@ -26,6 +26,7 @@ MANIFEST
 
 # Documentation etc: Sphinx and ReadTheDocs
 reference/
+effects_docstrings/
 *.ipynb_checkpoints
 
 

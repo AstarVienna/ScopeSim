@@ -1,5 +1,5 @@
+import inspect
 from copy import deepcopy, copy
-
 from astropy.table import Table
 
 from .. import effects as efs
@@ -95,3 +95,13 @@ def empty_surface_list(**kwargs):
                 meta={"outer_unit": "m", "inner_unit": "m",
                       "angle_unit": "deg", "temperature_unit": "deg_C"})
     return efs.SurfaceList(table=tbl[:0], **kwargs)
+
+
+def scopesim_effect_classes(base_effect=efs.Effect):
+    members = inspect.getmembers(efs)
+    efs_dict = {".".join([cls.__module__, cls.__name__]).replace("scopesim.effects.", ""): cls
+                for name, cls in members
+                if hasattr(cls, "__mro__") and base_effect in cls.__mro__}
+    sorted_effects = {key: efs_dict[key] for key in sorted(efs_dict)}
+
+    return sorted_effects
