@@ -54,6 +54,7 @@ def setup_package():
                             "pyyaml>5.1",
                             "requests>=2.20",
                             "beautifulsoup4>=4.4",
+                            "lxml",
                             "synphot>=0.1.3",
                             "skycalc_ipy>=0.1.3",
                             "anisocado",
