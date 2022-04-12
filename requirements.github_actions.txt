@@ -10,12 +10,14 @@ docutils
 requests
 beautifulsoup4
 pyyaml
+pysftp
 
 synphot
 skycalc_ipy
 anisocado
+scopesim_templates
 
 # Just so that readthedocs doesn't include the tests module - yes it's hacky
 skycalc_cli
 
-scopesim_templates
+

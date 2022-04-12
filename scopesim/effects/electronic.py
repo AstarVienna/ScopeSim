@@ -375,6 +375,7 @@ class ShotNoise(Effect):
             negvals = np.sum(data < 0)
             if negvals:
                 logging.warning(f"Effect ShotNoise: {negvals} negative pixels")
+                data[data < 0] = 0
 
             below = data < 2**20
             above = np.invert(below)

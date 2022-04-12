@@ -45,16 +45,18 @@ release = ''
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
+    'nbsphinx',
     'sphinx.ext.autodoc',
     'sphinx.ext.intersphinx',
     'sphinx.ext.todo',
-    'sphinx.ext.coverage',
     'sphinx.ext.mathjax',
     'sphinx.ext.viewcode',
-    # 'jupyter_sphinx.execute',
     'numpydoc',
     'sphinxcontrib.apidoc',
     'matplotlib.sphinxext.plot_directive',
+
+    # 'jupyter_sphinx.execute',
+    # 'sphinx.ext.coverage',
 ]
 
 # apidoc settings

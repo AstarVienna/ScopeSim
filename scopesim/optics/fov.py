@@ -336,7 +336,11 @@ class FieldOfView(FieldOfViewBase):
                 y = np.array(ypix).astype(int)     # quickest way to round
                 f = np.array([fluxes[ref] for ref in field["ref"]])
                 weight = np.array(field["weight"])
-                canvas_image_hdu.data[y, x] += f * weight
+
+                # Mask out any stars that were pushed out of the fov by rounding
+                m = (x < canvas_image_hdu.data.shape[1]) * \
+                    (y < canvas_image_hdu.data.shape[0])
+                canvas_image_hdu.data[y[m], x[m]] += f[m] * weight[m]
 
         # 4. Find Background fields
         for field in self.background_fields:
