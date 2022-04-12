@@ -16,12 +16,10 @@ ScopeSim_ is on pip::
 
 .. note:: ScopeSim only supports python 3.6 and above
 
-.. _ScopeSim:    https://scopesim.readthedocs.io/en/latest/
-.. _`ScopeSim Templates`: https://scopesim-templates.readthedocs.io/en/latest/
-
 .. toctree::
     :maxdepth: 2
     :caption: Contents:
 
+    use_examples/index
     Reference API <reference/modules>
 
