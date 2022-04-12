@@ -479,6 +479,7 @@ class FieldOfView(FieldOfViewBase):
                        field.header['CDELT2'] * u.Unit(field.header['CUNIT2'])).to(u.arcsec**2)
 
             #field.data = field.data / pixarea.value
+            fov_pixarea = utils.from_currsys(self.meta["pixel_scale"]) ** 2
             field.data = field.data / fov_pixarea
             canvas_image_hdu = imp_utils.add_imagehdu_to_imagehdu(field,
                                                     canvas_image_hdu,
