@@ -22,12 +22,14 @@ properties :
 
 mode_yamls :
 - name : imaging
+  description: Basic NIR imager
   alias : OBS
   properties :
     include_slit : False
     filter_name : "J"
 
 - name : spectroscopy
+  description: Basic three-trace long-slit spectrograph
   alias: OBS
   properties :
     include_slit : True

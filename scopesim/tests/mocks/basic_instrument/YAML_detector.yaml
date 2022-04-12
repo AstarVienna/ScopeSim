@@ -19,13 +19,13 @@ effects:
   class: DetectorWindow
   description: Cut-out of the focal plane image with custom dimensions and coordinates
   kwargs:
-      image_plane_id: 0
-      pixel_size: 0.01
-      x: "!DET.x"
-      y: "!DET.y"
-      width: "!DET.width"
-      height: "!DET.height"
-      units: pixel
+    image_plane_id: 0
+    pixel_size: 0.01
+    x: "!DET.x"
+    y: "!DET.y"
+    width: "!DET.width"
+    height: "!DET.height"
+    units: pixel
 
 - name : qe_curve
   description : Quantum efficiency curve (pseudo transmission curve)
@@ -64,23 +64,23 @@ effects:
   description : Readout noise frames
   class : PoorMansHxRGReadoutNoise
   kwargs :
-    noise_std : 12
+    noise_std : 4
     n_channels : 16
 
--   name : source_fits_keywords
-    decription : adds meta data from Source object to FITS header
-    class : SourceDescriptionFitsKeywords
+- name : source_fits_keywords
+  decription : adds meta data from Source object to FITS header
+  class : SourceDescriptionFitsKeywords
 
--   name : effects_fits_keywords
-    decription : adds meta dicts from all Effect objects to FITS header
-    class : EffectsMetaKeywords
+- name : effects_fits_keywords
+  decription : adds meta dicts from all Effect objects to FITS header
+  class : EffectsMetaKeywords
 
--   name : config_fits_keywords
-    decription : adds all UserCommands dicts to FITS header
-    class : SimulationConfigFitsKeywords
+- name : config_fits_keywords
+  decription : adds all UserCommands dicts to FITS header
+  class : SimulationConfigFitsKeywords
 
--   name : extra_fits_keywords
-    decription : adds extra FITS keywords from a yaml file
-    class : ExtraFitsKeywords
-    kwargs :
-      filename: FITS_extra_keywords.yaml
+- name : extra_fits_keywords
+  decription : adds extra FITS keywords from a yaml file
+  class : ExtraFitsKeywords
+  kwargs :
+    filename: FITS_extra_keywords.yaml

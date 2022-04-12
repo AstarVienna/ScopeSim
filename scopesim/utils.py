@@ -566,10 +566,8 @@ def find_file(filename, path=None, silent=False):
 
     # no file found
     msg = f"File cannot be found: {filename}"
-    logging.error(msg)
-
     if not silent:
-        print(msg)
+        logging.error(msg)
 
     if from_currsys("!SIM.file.error_on_missing_file") is True:
         raise ValueError(msg)
@@ -625,7 +623,7 @@ def convert_table_comments_to_dict(tbl):
             logging.warning("Couldn't convert <table>.meta['COMMENT'] to dict")
             comments_dict = tbl.meta["COMMENT"]
     else:
-        logging.warning("No comments in table")
+        logging.debug("No comments in table")
 
     return comments_dict
 

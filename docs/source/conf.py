@@ -26,8 +26,8 @@ os.environ['PYTHONPATH'] = ':'.join((package_path,
 # -- Project information -----------------------------------------------------
 
 project = 'ScopeSim'
-copyright = '2019, Kieran Leschinski'
-author = 'Kieran Leschinski'
+copyright = '2019, A*Vienna'
+author = 'Kieran Leschinski, Oliver Czoske'
 
 # The short X.Y version
 version = ''
@@ -46,15 +46,14 @@ release = ''
 # ones.
 extensions = [
     'nbsphinx',
-    'sphinx.ext.autodoc',
     'sphinx.ext.intersphinx',
     'sphinx.ext.todo',
     'sphinx.ext.mathjax',
     'sphinx.ext.viewcode',
     'numpydoc',
-    'sphinxcontrib.apidoc',
     'matplotlib.sphinxext.plot_directive',
-
+    'sphinxcontrib.apidoc',
+    'sphinx.ext.autodoc',
     # 'jupyter_sphinx.execute',
     # 'sphinx.ext.coverage',
 ]
@@ -103,6 +102,13 @@ pygments_style = None
 # a list of builtin themes.
 #
 # html_theme = 'alabaster'
+if not os.environ.get("READTHEDOCS") == "True":
+    import sphinx_rtd_theme
+    html_theme = "sphinx_rtd_theme"
+    extensions += ["sphinx_rtd_theme"]
+    os.environ["PYTHONPATH"] += "F:\\Work\\ScopeSim;F:\\Work\\HowManyBloodyPhotons;F:\\Work\\ScopeSim_Templates;F:\\Work\\Pyckles;F:\\Work\\AnisoCADO;F:\\Work\\skycalc_ipy;F:\\Work\\speXtra;"
+
+nbsphinx_execute = "never"
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
@@ -131,7 +137,7 @@ html_favicon = '_static/logos/S_favicon.png'
 # -- Options for HTMLHelp output ---------------------------------------------
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'ScopeSimdoc'
+htmlhelp_basename = 'ScopeSimDocs'
 
 
 # -- Options for LaTeX output ------------------------------------------------

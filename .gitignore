@@ -38,7 +38,6 @@ data_backup
 .idea/
 *.log
 *.zip
-examples
 data_ext
 dist
 
