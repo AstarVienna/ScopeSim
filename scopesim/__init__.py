@@ -71,6 +71,8 @@ from .source.source import Source
 from .server.database import (list_packages, download_packages,
                               list_example_data, download_example_data)
 
+from .tests.mocks.load_basic_instrument import load_example_optical_train
+
 ################################################################################
 #                          VERSION INFORMATION                                 #
 ################################################################################

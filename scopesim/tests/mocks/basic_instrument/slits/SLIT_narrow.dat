@@ -1,0 +1,9 @@
+# description : corner coordinates of a 60 x 0.5 arcsec slit
+# x_unit : arcsec
+# y_unit : arcsec
+#
+  x      y
+-30   -0.25
+ 30   -0.25
+ 30    0.25
+-30    0.25

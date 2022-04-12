@@ -21,4 +21,4 @@ __search_path__ = [__config__["!SIM.file.local_packages_path"],
 
 # if os.environ.get("READTHEDOCS") == "True" or "F:" in os.getcwd():
 #     extra_paths = ["../", "../../", "../../../", "../../../../"]
-#     __search_path__ = extra_pa    ths + __search_path__
+#     __search_path__ = extra_paths + __search_path__
