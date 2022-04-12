@@ -148,7 +148,7 @@ class DetectorList(Effect):
 
         xcen = tbl["x_cen"].data.astype(float)
         ycen = tbl["y_cen"].data.astype(float)
-        dx, dy = 0.5 * float(tbl["x_size"]), 0.5 * float(tbl["y_size"])
+        dx, dy = 0.5 * tbl["x_size"], 0.5 * tbl["y_size"]
 
         scale_unit = 1        # either unitless to retain
         if "pix" in x_unit.name:
