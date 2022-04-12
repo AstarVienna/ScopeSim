@@ -9,6 +9,7 @@ jupyter
 docutils
 requests
 beautifulsoup4
+lxml
 pyyaml
 
 synphot
