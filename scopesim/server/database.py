@@ -429,8 +429,8 @@ def download_github_folder(repo_url, output_dir="./"):
         for entry in data:
             # if the entry is a further folder, walk through it
             if entry["type"] == "dir":
-                download2(repo_url=entry["html_url"],
-                          output_dir=output_dir)
+                download_github_folder(repo_url=entry["html_url"],
+                                       output_dir=output_dir)
 
             # if the entry is a file, download it
             elif entry["type"] == "file":
