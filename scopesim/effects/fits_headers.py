@@ -390,9 +390,7 @@ class EffectsMetaKeywords(ExtraFitsKeywords):
                 # Check for spaces
                 if " " in eff_name:
                     # E.g. 'filter_wheel_1 : [open]'
-                    assert eff_name.startswith("filter_wheel") or \
-                           eff_name.startswith("pupil_wheel") or \
-                           eff_name.startswith("slit_wheel"),\
+                    assert "wheel" in eff_name, \
                         f"Unknown effect name with space: {eff_name}"
                     eff_name = eff_name.split()[0]
 

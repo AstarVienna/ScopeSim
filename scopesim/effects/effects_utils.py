@@ -83,7 +83,9 @@ def make_effect(effect_dict, **properties):
 
 
 def is_spectroscope(effects):
-    return any([isinstance(eff, efs.SpectralTraceList) for eff in effects])
+    spec_classes = (efs.SpectralTraceList,
+                    efs.SpectralTraceListWheel)
+    return any([isinstance(eff, spec_classes) for eff in effects])
 
 
 def empty_surface_list(**kwargs):

@@ -169,7 +169,7 @@ class OpticsManager:
 
     @property
     def is_spectroscope(self):
-        return bool(len(self.get_all(efs.SpectralTraceList)))
+        return is_spectroscope(self.all_effects)
 
     @property
     def image_plane_headers(self):
@@ -226,6 +226,10 @@ class OpticsManager:
         return self._surfaces_table
 
     @property
+    def all_effects(self):
+        return [eff for opt_eff in self.optical_elements for eff in opt_eff]
+
+    @property
     def system_transmission(self):
 
         wave_unit = u.Unit(rc.__currsys__["!SIM.spectral.wave_unit"])
@@ -260,7 +264,7 @@ class OpticsManager:
         # Hence we need to reconstruct the full effects list
 
         # flat_list = [item for sublist in l for item in sublist]
-        all_effs = [eff for opt_eff in self.optical_elements for eff in opt_eff]
+        all_effs = self.all_effects
 
         elements = [opt_el.meta["name"] for opt_el in self.optical_elements
                     for eff in opt_el.effects]

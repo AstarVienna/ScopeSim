@@ -12,6 +12,7 @@ Classes:
 - LinearityCurve - apply detector (non-)linearity and saturation
 - ReferencePixelBorder
 - BinnedImage
+- Bias - adds constant bias level to readout
 
 Functions:
 - make_ron_frame
@@ -245,6 +246,27 @@ class SummedExposure(Effect):
 
         return obj
 
+
+class Bias(Effect):
+    """
+    Adds a constant bias level to readout
+
+    """
+    def __init__(self, **kwargs):
+        super(Bias, self).__init__(**kwargs)
+        params = {"z_order": [855]}
+        self.meta.update(params)
+        self.meta.update(kwargs)
+
+        required_keys = ["bias"]
+        utils.check_keys(self.meta, required_keys, action="error")
+
+    def apply_to(self, obj, **kwargs):
+        if isinstance(obj, DetectorBase):
+            biaslevel = from_currsys(self.meta["bias"])
+            obj._hdu.data += biaslevel
+
+        return obj
 
 class PoorMansHxRGReadoutNoise(Effect):
     def __init__(self, **kwargs):
