@@ -26,6 +26,7 @@ ScopeSim_ is on pip::
     getting_started
     examples/index
     5_liners/index
+    effects_docstrings/index
     Reference API <reference/modules>
 
 

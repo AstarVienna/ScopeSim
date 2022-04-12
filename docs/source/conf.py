@@ -17,7 +17,9 @@
 # sys.path.insert(0, os.path.abspath('.'))
 
 import os
-#if "TRAVIS" in os.environ:
+import sys
+
+sys.path.append(os.path.abspath("./_ext"))
 package_path = os.path.abspath('../..')
 os.environ['PYTHONPATH'] = ':'.join((package_path,
                                      os.environ.get('PYTHONPATH', '')))
@@ -45,6 +47,7 @@ release = ''
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
+    'scopesim_sphinx_ext',
     'nbsphinx',
     'sphinx.ext.intersphinx',
     'sphinx.ext.todo',
@@ -54,6 +57,7 @@ extensions = [
     'matplotlib.sphinxext.plot_directive',
     'sphinxcontrib.apidoc',
     'sphinx.ext.autodoc',
+
     # 'jupyter_sphinx.execute',
     # 'sphinx.ext.coverage',
 ]
