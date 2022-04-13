@@ -21,8 +21,9 @@ from os import path as pth
 import sys
 
 package_path = pth.abspath('../..')
-os.environ['PYTHONPATH'] = ':'.join((package_path,
-                                     os.environ.get('PYTHONPATH', '')))
+os.environ['PYTHONPATH'] += package_path
+# os.environ['PYTHONPATH'] = ':'.join((package_path,
+#                                      os.environ.get('PYTHONPATH', '')))
 
 sphinx_ext_path = pth.join(pth.abspath(pth.dirname(__file__)), "_ext")
 sys.path.append(sphinx_ext_path)
