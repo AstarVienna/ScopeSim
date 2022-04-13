@@ -14,8 +14,8 @@ sphinx:
 
 python:
    install:
-     - path: .
      - requirements: requirements.readthedocs.txt
+     - path: .
 
 # If using Sphinx, optionally build your docs in additional formats such as PDF
 # formats: []     # ignore htmlzip. html is always run
