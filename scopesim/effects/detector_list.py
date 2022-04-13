@@ -19,7 +19,17 @@ class DetectorList(Effect):
 
     The list of detectors must have the following table columns
     ::
+
         id   x_cen   y_cen  x_size  y_size  pixel_size  angle    gain
+
+    where:
+    * "id" is a reference id for the chip (fits header EXTNAME)
+    * "x_cen" and "y_cen" [mm] are the physical coordinates of centre of the chip on the
+      detector plane
+    * "x_size", "y_size" [mm, pixel] are the width/height of the chip
+    * "pixel_size" [mm] is the physical size of pixels in the detector
+    * "angle" [deg] is the rotation of the detector relative to the x-axis
+    * "gain" [e-/ADU] is the conversion factor for electrons (photons) to ADUs
 
     The units for each column (except ``id``) must be given in the meta data
     using the format ``<colname>_unit``. E.g. ``x_size_unit``.
@@ -30,10 +40,22 @@ class DetectorList(Effect):
 
        For ``x(y)_size_unit``, acceptable units are ``mm``, ``pixel``
 
+    Parameters
+    ----------
+    filename : str, optional
+        Filename of the ASCII file with the detector description. See examples
+
+    array_dict : dict
+        Dict containing the detector description. See examples
+
+    image_plane_id : int
+        Which image plane the detector will look at (generally 0)
+
     Examples
     --------
     With the ``array_dict`` feature
     ::
+
         -   name: single_detector
             class: DetectorList
             kwargs:
@@ -58,14 +80,17 @@ class DetectorList(Effect):
 
     Or referring to a table contained in a seperate ASCII file
     ::
+
         - name : full_detector_array
           class : DetectorList
           kwargs :
             filename : "detecotr_list.dat"
             active_detectors : [1, 3]
+            image_plane_id : 0
 
     where the file detecotr_list.dat contains the following information
     ::
+
         # x_cen_unit : mm
         # y_cen_unit : mm
         # x_size_unit : pix

@@ -36,7 +36,7 @@ class TERCurve(Effect):
 
     Examples
     --------
-    Inside a YAML file description::
+    Directly inside a YAML file description::
 
         name: bogus_surface
         class: TERCurve
@@ -52,15 +52,20 @@ class TERCurve(Effect):
                 value: 15.5
                 unit: ABmag
 
-    Inside an ASCII file::
+    Indirectly inside a YAML file::
+
+        name: some_curve
+        class TERCurve
+        kwargs:
+            filename: bogus_surface.dat
+
+    which references this ASCII file::
 
         # name: bogus_surface
         # wavelength_unit: um
-        # emission_unit: ph s-1 m-2 um-1
-        # rescale_emission: {filter_name: "Paranal/HAWKI.Ks", value: 36.3, unit: Jy}
-        wavelength  transmission    emission
-        0.3         0.9             1
-        3.0         0.9             1
+        wavelength  transmission    emissivity
+        0.3         0.9             0.1
+        3.0         0.9             0.1
 
     """
     def __init__(self, **kwargs):

@@ -224,6 +224,15 @@ class ApertureList(Effect):
     """
     A list of apertures, useful for IFU or MOS instruments
 
+    Parameters
+    ----------
+
+    Examples
+    --------
+
+    File format
+    -----------
+
     Much like an ApertureMask, an ApertureList can be initialised by either
     of the three standard DataContainer methods. The easiest is however to
     make an ASCII file with the following columns::
@@ -253,6 +262,7 @@ class ApertureList(Effect):
        area, while ``4`` simply uses 4 points on the ellipse.
        Consequently, ``4`` results in a diamond shaped mask covering only
        half of the constraining area filled by ``"rect"``.
+
 
     """
     def __init__(self, **kwargs):
@@ -346,24 +356,45 @@ class ApertureList(Effect):
 
 class SlitWheel(Effect):
     """
-    This wheel holds a selection of predefined spectroscopic slits
-    and possibly other field masks.
+    A selection of predefined spectroscopic slits and possibly other field masks
 
     It should contain an open position.
     A user can define a non-standard slit by directly using the Aperture
     effect.
 
+    .. todo: This is based on FilterWheel. There is a more efficient way to do this, when we have time.
+
+    Parameters
+    ----------
+    slit_names : list of str
+
+    filename_format : str
+        A f-string for the path to the slit files
+
+    current_slit : str
+        Default name
+
     Examples
     --------
+    This Effect assumes a folder full of ASCII files containing the edges of
+    each slit. Each file should be names the same except for the slit's name
+    or identifier.
+
+    This example assumes a folder ``masks`` containing the slit ASCII files
+    with the naming convention: ``slit_A.dat``, ``slit_B.dat``, etc.
     ::
+
         name: slit_wheel
         class: SlitWheel
         kwargs:
-            slit_names: []
-            filename_format: "MASK_slit_{}.dat
+            slit_names:
+                - A
+                - B
+                - C
+            filename_format: "masks/slit_{}.dat
             current_slit: "C"
-    """
 
+    """
     def __init__(self, **kwargs):
         required_keys = ["slit_names", "filename_format", "current_slit"]
         check_keys(kwargs, required_keys, action="error")

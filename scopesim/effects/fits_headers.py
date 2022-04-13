@@ -494,37 +494,38 @@ class SourceDescriptionFitsKeywords(ExtraFitsKeywords):
 
 class SimulationConfigFitsKeywords(ExtraFitsKeywords):
     """
-        Adds parameters from all config dictionaries to the FITS headers
+    Adds parameters from all config dictionaries to the FITS headers
 
-        Parameters
-        ----------
-        ext_number : int, list of ints, optional
-            Default 0. The numbers of the extensions to which the header keywords
-            should be added
+    Parameters
+    ----------
+    ext_number : int, list of ints, optional
+        Default 0. The numbers of the extensions to which the header keywords
+        should be added
 
-        resolve : bool
-            Default True. If True, all !-strings and #-strings are resolved via
-            ``from_currsys`` before being add to the header. If False, the
-            unaltered !-strings or #-strings are added to the header.
+    resolve : bool
+        Default True. If True, all !-strings and #-strings are resolved via
+        ``from_currsys`` before being add to the header. If False, the
+        unaltered !-strings or #-strings are added to the header.
 
-        keyword_prefix : str, optional
-            Default "HIERARCH SIM". Custom FITS header keyword prefix. Effect meta
-            dict entries will appear in the header as:
-            ``<keyword_prefix> SRCn <key> : <value>``
+    keyword_prefix : str, optional
+        Default "HIERARCH SIM". Custom FITS header keyword prefix. Effect meta
+        dict entries will appear in the header as:
+        ``<keyword_prefix> SRCn <key> : <value>``
 
-        Examples
-        --------
-        Yaml file entry:
-        ::
-            name: source_descriptor
-            class: SimulationConfigFitsKeywords
-            description: adds info from all config dicts to the FITS header
-            kwargs:
-              ext_number: [0]
-              resolve: False
-              keyword_prefix: HIERARCH SIM
+    Examples
+    --------
+    Yaml file entry:
+    ::
 
-        """
+        name: source_descriptor
+        class: SimulationConfigFitsKeywords
+        description: adds info from all config dicts to the FITS header
+        kwargs:
+          ext_number: [0]
+          resolve: False
+          keyword_prefix: HIERARCH SIM
+
+    """
     def __init__(self, **kwargs):
         super(ExtraFitsKeywords, self).__init__()
         params = {"name": "Simulation Config FITS headers",
