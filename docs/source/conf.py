@@ -17,12 +17,16 @@
 # sys.path.insert(0, os.path.abspath('.'))
 
 import os
+from os import path as pth
 import sys
 
-sys.path.append(os.path.abspath("./_ext"))
-package_path = os.path.abspath('../..')
+package_path = pth.abspath('../..')
 os.environ['PYTHONPATH'] = ':'.join((package_path,
                                      os.environ.get('PYTHONPATH', '')))
+
+sphinx_ext_path = pth.join(pth.abspath(pth.dirname(__file__), "_ext"))
+sys.path.append(sphinx_ext_path)
+os.environ['PYTHONPATH'] += sphinx_ext_path
 
 
 # -- Project information -----------------------------------------------------
@@ -64,7 +68,7 @@ extensions = [
 
 # apidoc settings
 numpydoc_show_class_members = False
-apidoc_module_dir = os.path.abspath('../../scopesim/')
+apidoc_module_dir = pth.abspath('../../scopesim/')
 apidoc_output_dir = 'reference'
 apidoc_separate_modules = True
 apidoc_excluded_paths = ["tests/", "docs/"]
