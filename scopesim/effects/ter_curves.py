@@ -286,12 +286,14 @@ class SkycalcTERCurve(AtmosphericTERCurve):
         else:
             path = find_file(self.meta["use_local_skycalc_file"])
             fits_tbl = fits.getdata(path, ext=1)
+            fits_hdr = fits.getheader(path, ext=1)
             tbl = Table(fits_tbl)
             tbl["lam"].unit = u.um
             for colname in tbl.colnames:
                 if "flux" in colname:
                     tbl[colname].unit = u.Unit("ph s-1 m-2 um-1 arcsec-2")
             tbl_small = Table()
+            tbl_small.meta["fits_header"] = dict(fits_hdr)
             tbl_small.add_columns([tbl["lam"], tbl["trans"], tbl["flux"]])
             tbl = tbl_small
 
