@@ -86,11 +86,18 @@ class MetisLMSSpectralTraceList(SpectralTraceList):
             fovwcs = WCS(obj.cube.header)
             # Make this linear to avoid jump at RA 0 deg
             fovwcs.wcs.ctype = ['LINEAR', 'LINEAR', fovwcs.wcs.ctype[2]]
+            fovwcs_spat = fovwcs.sub(2)
             ny_slice = self.meta['slice_samples'] #
+
+            # Spatial pixel coordinates
+            xslice, yslice = np.meshgrid(np.arange(n_x),
+                                         np.arange(ny_slice))
 
             fovimage = np.zeros((obj.detector_header['NAXIS2'],
                                  obj.detector_header['NAXIS1']),
                                 dtype=np.float32)
+
+
             for sptid, spt in self.spectral_traces.items():
                 ymin = spt.meta['fov']['y_min']
                 ymax = spt.meta['fov']['y_max']
@@ -100,19 +107,20 @@ class MetisLMSSpectralTraceList(SpectralTraceList):
                 slicewcs.wcs.ctype = ['LINEAR', 'LINEAR', slicewcs.wcs.ctype[2]]
                 slicewcs.wcs.crpix[1] = (ny_slice + 1) / 2
                 slicewcs.wcs.crval[1] = (ymin + ymax) / 2 / 3600
-                #slicewcs.wcs.crval[1] = 0.
                 slicewcs.wcs.cdelt[1] = (ymax - ymin) / ny_slice / 3600
+                slicewcs_spat = slicewcs.sub(2)
+
+                # World coordinates for the slice
+                xworld, yworld = slicewcs_spat.all_pix2world(xslice,
+                                                             yslice, 0)
+                # FOV pixel coordinates for the slice
+                xfov, yfov = fovwcs_spat.all_world2pix(xworld, yworld, 0)
 
                 slicecube = np.zeros((n_z, ny_slice, n_x))
                 for islice in range(n_z):
                     ifov = RectBivariateSpline(np.arange(n_y),
                                                np.arange(n_x),
                                                fovcube[islice], kx=1, ky=1)
-                    xslice, yslice = np.meshgrid(np.arange(n_x),
-                                                 np.arange(ny_slice))
-                    xworld, yworld = slicewcs.sub(2).all_pix2world(xslice,
-                                                                   yslice, 0)
-                    xfov, yfov = fovwcs.sub(2).all_world2pix(xworld, yworld, 0)
                     slicecube[islice] = ifov(yfov, xfov, grid=False)
 
                 slicefov = FieldOfView(obj.header,
