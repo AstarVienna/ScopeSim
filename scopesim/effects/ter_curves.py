@@ -9,6 +9,7 @@ from astropy import units as u
 
 from synphot import SourceSpectrum
 from synphot.units import PHOTLAM
+import skycalc_ipy
 
 from .ter_curves_utils import combine_two_spectra, apply_throughput_to_cube
 from .ter_curves_utils import download_svo_filter, download_svo_filter_list
@@ -276,8 +277,6 @@ class SkycalcTERCurve(AtmosphericTERCurve):
     def load_skycalc_table(self):
         use_local_file = from_currsys(self.meta["use_local_skycalc_file"])
         if not use_local_file:
-
-            import skycalc_ipy
             self.skycalc_conn = skycalc_ipy.SkyCalc()
             tbl = self.query_server()
 
