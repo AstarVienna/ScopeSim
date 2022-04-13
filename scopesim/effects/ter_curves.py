@@ -274,7 +274,8 @@ class SkycalcTERCurve(AtmosphericTERCurve):
             self.load_skycalc_table()
 
     def load_skycalc_table(self):
-        if not self.meta["use_local_skycalc_file"]:
+        use_local_file = from_currsys(self.meta["use_local_skycalc_file"])
+        if not use_local_file:
 
             import skycalc_ipy
             self.skycalc_conn = skycalc_ipy.SkyCalc()
@@ -284,9 +285,9 @@ class SkycalcTERCurve(AtmosphericTERCurve):
                 self.meta["name"] = self.skycalc_conn["observatory"]
 
         else:
-            path = find_file(self.meta["use_local_skycalc_file"])
+            path = find_file(use_local_file)
             fits_tbl = fits.getdata(path, ext=1)
-            fits_hdr = fits.getheader(path, ext=1)
+            fits_hdr = fits.getheader(path, ext=0)
             tbl = Table(fits_tbl)
             tbl["lam"].unit = u.um
             for colname in tbl.colnames:
