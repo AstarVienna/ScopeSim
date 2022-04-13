@@ -20,10 +20,17 @@ import os
 from os import path as pth
 import sys
 
+sys.path.insert(0, os.path.abspath('/'))
+sys.path.insert(0, os.path.abspath('docs'))
+sys.path.insert(0, os.path.abspath('docs/source/'))
+
+sphinx_ext_path = pth.join(pth.abspath(pth.dirname(__file__)), "_ext")
+sys.path.append(sphinx_ext_path)
+
+
 package_path = pth.abspath('../..')
-os.environ['PYTHONPATH'] += package_path
-# os.environ['PYTHONPATH'] = ':'.join((package_path,
-#                                      os.environ.get('PYTHONPATH', '')))
+os.environ['PYTHONPATH'] = ';'.join((package_path,
+                                     os.environ.get('PYTHONPATH', '')))
 
 sphinx_ext_path = pth.join(pth.abspath(pth.dirname(__file__)), "_ext")
 sys.path.append(sphinx_ext_path)
