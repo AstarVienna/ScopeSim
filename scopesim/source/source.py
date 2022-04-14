@@ -336,7 +336,8 @@ class Source(SourceBase):
         wave = wcs.all_pix2world(header['CRPIX1'], header['CRPIX2'],
                                  np.arange(data.shape[0]), 0)[-1]
 
-        wave = (wave * u.Unit(wcs.wcs.cunit[-1])).to(u.um)
+        wave = (wave * u.Unit(wcs.wcs.cunit[-1])).to(u.um,
+                                                     equivalencies=u.spectral())
 
         # WCS keywords must be updated because astropy.wcs converts wavelengths to 'm'
         header.update(wcs.to_header())
