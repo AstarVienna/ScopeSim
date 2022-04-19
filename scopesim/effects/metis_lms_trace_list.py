@@ -320,8 +320,6 @@ class MetisLMSSpectralTrace(SpectralTrace):
 
         return matrices
 
-    # ..todo: use filename and instantiate the effect from the fits file
-    #         Can Effect/DataContainer deal with multi-extension files?
 
     def lam2phase(self, lam):
         """

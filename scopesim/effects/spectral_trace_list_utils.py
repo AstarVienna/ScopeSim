@@ -498,10 +498,6 @@ class XiLamImage():
         self.interp = RectBivariateSpline(self.xi, self.lam, self.image,
                                           kx=spline_order[0],
                                           ky=spline_order[1])
-        # This is not executed. ..todo: define a switch?
-        if True:
-            fits.writeto("test_xilam.fits", data=self.image,
-                         header=self.wcs.to_header(), overwrite=True)
 
 
 class Transform2D():
