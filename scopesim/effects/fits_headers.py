@@ -327,15 +327,18 @@ def flatten_dict(dic, base_key="", flat_dict={},
 
             if isinstance(value, (list, np.ndarray)):
                 value = f"{value.__class__.__name__}:{str(list(value))}"
+                max_len = 80 - len(flat_key)
+                if len(value) > max_len:
+                    value = value[:max_len-4] * " ..."
 
             if isinstance(value, (datetime.time, datetime.date, datetime.datetime)):
                 value = value.isoformat()
 
             # Add the flattened KEYWORD = (value, comment) to the header dict
             if len(comment) > 0:
-                flat_dict[flat_key] = (value, comment)
+                flat_dict[flat_key] = (str(value), str(comment))
             else:
-                flat_dict[flat_key] = value
+                flat_dict[flat_key] = str(value)
 
     return flat_dict
 
