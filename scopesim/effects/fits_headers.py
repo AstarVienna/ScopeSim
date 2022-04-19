@@ -329,7 +329,7 @@ def flatten_dict(dic, base_key="", flat_dict={},
                 value = f"{value.__class__.__name__}:{str(list(value))}"
                 max_len = 80 - len(flat_key)
                 if len(value) > max_len:
-                    value = value[:max_len-4] * " ..."
+                    value = value[:max_len-4] + " ..."
 
             if isinstance(value, (datetime.time, datetime.date, datetime.datetime)):
                 value = value.isoformat()
