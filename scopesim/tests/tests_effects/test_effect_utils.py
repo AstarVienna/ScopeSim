@@ -2,6 +2,7 @@ import os
 import pytest
 
 from scopesim import rc
+from scopesim import effects as efs
 from scopesim.effects import effects_utils as eu, GaussianDiffractionPSF, \
     SurfaceList
 from scopesim.tests.mocks.py_objects.effects_objects import _surf_list, \
@@ -68,3 +69,15 @@ class TestCombineSurfaceEffects:
                                                    filter_surface):
         new_surf_list = eu.combine_surface_effects([filter_surface, surf_list])
         assert len(new_surf_list.table) == len(surf_list.table) + 1
+
+
+class TestScopesimEffectClasses:
+    def test_all_effects_including_effect_base(self):
+        all_efs = eu.scopesim_effect_classes()
+        assert efs.Effect in list(all_efs.values())
+        assert len(all_efs) > 2
+
+    def test_only_psf_effects_returned(self):
+        all_efs = eu.scopesim_effect_classes(efs.PSF)
+        assert efs.Effect not in list(all_efs.values())
+        assert all(["psf" in eff for eff in all_efs])

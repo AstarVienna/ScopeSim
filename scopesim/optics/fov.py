@@ -329,11 +329,16 @@ class FieldOfView(FieldOfViewBase):
                     for x, y, f in zip(xs, ys, fracs):
                         canvas_image_hdu.data[y, x] += fluxes[ref] * weight * f
             else:
-                x = np.array(xpix + 0.5).astype(int)
-                y = np.array(ypix + 0.5).astype(int)     # quickest way to round
+                # Note: these had x/ypix+0.5 until a06ab75
+                x = np.array(xpix).astype(int)
+                y = np.array(ypix).astype(int)     # quickest way to round
                 f = np.array([fluxes[ref] for ref in field["ref"]])
                 weight = np.array(field["weight"])
-                canvas_image_hdu.data[y, x] += f * weight
+
+                # Mask out any stars that were pushed out of the fov by rounding
+                m = (x < canvas_image_hdu.data.shape[1]) * \
+                    (y < canvas_image_hdu.data.shape[0])
+                canvas_image_hdu.data[y[m], x[m]] += f[m] * weight[m]
 
         # 4. Find Background fields
         for field in self.background_fields:
@@ -472,6 +477,7 @@ class FieldOfView(FieldOfViewBase):
                        field.header['CDELT2'] * u.Unit(field.header['CUNIT2'])).to(u.arcsec**2)
 
             #field.data = field.data / pixarea.value
+            fov_pixarea = utils.from_currsys(self.meta["pixel_scale"]) ** 2
             field.data = field.data / fov_pixarea
             canvas_image_hdu = imp_utils.add_imagehdu_to_imagehdu(field,
                                                     canvas_image_hdu,

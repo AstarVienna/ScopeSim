@@ -144,6 +144,7 @@ class Source(SourceBase):
 
         self.meta = {}
         self.meta.update(kwargs)
+        self._meta_dicts = [self.meta]
 
         self.fields = []
         self.spectra = []
@@ -224,8 +225,10 @@ class Source(SourceBase):
         if not image_hdu.header.get("BG_SRC"):
             image_hdu.header["CRVAL1"] = 0
             image_hdu.header["CRVAL2"] = 0
-            image_hdu.header["CRPIX1"] = (image_hdu.header["NAXIS1"] + 1) / 2
-            image_hdu.header["CRPIX2"] = (image_hdu.header["NAXIS2"] + 1) / 2
+            image_hdu.header["CRPIX1"] = image_hdu.header["NAXIS1"] / 2
+            image_hdu.header["CRPIX2"] = image_hdu.header["NAXIS2"] / 2
+            #image_hdu.header["CRPIX1"] = (image_hdu.header["NAXIS1"] + 1) / 2
+            #image_hdu.header["CRPIX2"] = (image_hdu.header["NAXIS2"] + 1) / 2
             # .. todo:: find where the actual problem is with negative CDELTs
             # .. todo:: --> abs(pixel_scale) in header_from_list_of_xy
             if image_hdu.header["CDELT1"] < 0:
@@ -504,23 +507,7 @@ class Source(SourceBase):
 
         self.bandpass = bandpass
 
-    def append(self, source_to_add):
-        new_source = source_to_add.make_copy()
-        if isinstance(new_source, Source):
-            for field in new_source.fields:
-                if isinstance(field, Table):
-                    field["ref"] += len(self.spectra)
-                    self.fields += [field]
 
-                elif isinstance(field, (fits.ImageHDU, fits.PrimaryHDU)):
-                    if ("SPEC_REF" in field.header and
-                        isinstance(field.header["SPEC_REF"], int)):
-                        field.header["SPEC_REF"] += len(self.spectra)
-                    self.fields += [field]
-                self.spectra += new_source.spectra
-        else:
-            raise ValueError("Cannot add {} object to Source object"
-                             "".format(type(new_source)))
 
     def plot(self):
         """
@@ -550,6 +537,7 @@ class Source(SourceBase):
     def make_copy(self):
         new_source = Source()
         new_source.meta = deepcopy(self.meta)
+        new_source._meta_dicts = deepcopy(self._meta_dicts)
         new_source.spectra = deepcopy(self.spectra)
         for field in self.fields:
             if isinstance(field, (fits.ImageHDU, fits.PrimaryHDU)) \
@@ -559,6 +547,26 @@ class Source(SourceBase):
                 new_source.fields += [deepcopy(field)]
 
         return new_source
+
+    def append(self, source_to_add):
+        new_source = source_to_add.make_copy()
+        if isinstance(source_to_add, Source):
+            for field in new_source.fields:
+                if isinstance(field, Table):
+                    field["ref"] += len(self.spectra)
+                    self.fields += [field]
+
+                elif isinstance(field, (fits.ImageHDU, fits.PrimaryHDU)):
+                    if ("SPEC_REF" in field.header and
+                        isinstance(field.header["SPEC_REF"], int)):
+                        field.header["SPEC_REF"] += len(self.spectra)
+                    self.fields += [field]
+                self.spectra += new_source.spectra
+
+                self._meta_dicts += source_to_add._meta_dicts
+        else:
+            raise ValueError("Cannot add {} object to Source object"
+                             "".format(type(new_source)))
 
     def __add__(self, new_source):
         self_copy = self.make_copy()

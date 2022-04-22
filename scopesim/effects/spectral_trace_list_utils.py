@@ -42,12 +42,10 @@ class SpectralTrace:
                      "y_colname": "y",
                      "s_colname": "s",
                      "wave_colname": "wavelength",
-                     "col_number_start": 0,
                      "dwave": 0.002,
                      "aperture_id": 0,
                      "image_plane_id": 0,
                      "extension_id": 2,
-                     "invalid_value": None,
                      "spline_order": 4,
                      "pixel_size": None,
                      "description": "<no description>"}
@@ -62,10 +60,7 @@ class SpectralTrace:
 
         if isinstance(trace_tbl, (fits.BinTableHDU, fits.TableHDU)):
             self.table = Table.read(trace_tbl)
-            try:
-                self.meta["trace_id"] = trace_tbl.header['EXTNAME']
-            except KeyError:
-                pass
+            self.meta["trace_id"] = trace_tbl.header.get('EXTNAME', "<unknown trace id>")
         elif isinstance(trace_tbl, Table):
             self.table = trace_tbl
         else:
@@ -73,7 +68,6 @@ class SpectralTrace:
                              "fits.TableHDU, astropy.Table): {}"
                              "".format(type(trace_tbl)))
 
-        # Interpolation functions
         self.compute_interpolation_functions()
 
     def fov_grid(self):
@@ -276,8 +270,8 @@ class SpectralTrace:
         img_header["YMAX"] = ymax
 
         if np.any(image < 0):
-            logging.warning("map_spectra_to_focal_plane:", np.sum(image < 0),
-                            "negative pixels")
+            logging.warning("map_spectra_to_focal_plane: {} negative pixels"
+                            "".format(np.sum(image < 0)))
 
         image_hdu = fits.ImageHDU(header=img_header, data=image)
         return image_hdu
@@ -791,44 +785,44 @@ def get_affine_parameters(coords):
     return rotations, shears
 
 
-def sanitize_table(tbl, invalid_value, wave_colname, x_colname, y_colname,
-                   spline_order=4, ext_id=None):
-
-    y_colnames = [col for col in tbl.colnames if y_colname in col]
-    x_colnames = [col.replace(y_colname, x_colname) for col in y_colnames]
-
-    for x_col, y_col in zip(x_colnames, y_colnames):
-        wave = tbl[wave_colname].data
-        x = tbl[x_col].data
-        y = tbl[y_col].data
-
-        valid = (x != invalid_value) * (y != invalid_value)
-        invalid = np.invert(valid)
-        if sum(invalid) == 0:
-            continue
-
-        if sum(valid) == 0:
-            logging.warning("--- Extension {} ---"
-                            "All points in {} or {} were invalid. \n"
-                            "THESE COLUMNS HAVE BEEN REMOVED FROM THE TABLE \n"
-                            "invalid_value = {} \n"
-                            "wave = {} \nx = {} \ny = {}"
-                            "".format(ext_id, x_col, y_col, invalid_value,
-                                      wave, x, y))
-            tbl.remove_columns([x_col, y_col])
-            continue
-
-        k = spline_order
-        if wave[-1] > wave[0]:
-            xnew = InterpolatedUnivariateSpline(wave[valid], x[valid], k=k)
-            ynew = InterpolatedUnivariateSpline(wave[valid], y[valid], k=k)
-        else:
-            xnew = InterpolatedUnivariateSpline(wave[valid][::-1],
-                                                x[valid][::-1], k=k)
-            ynew = InterpolatedUnivariateSpline(wave[valid][::-1],
-                                                y[valid][::-1], k=k)
-
-        tbl[x_col][invalid] = xnew(wave[invalid])
-        tbl[y_col][invalid] = ynew(wave[invalid])
-
-    return tbl
+# def sanitize_table(tbl, invalid_value, wave_colname, x_colname, y_colname,
+#                    spline_order=4, ext_id=None):
+#
+#     y_colnames = [col for col in tbl.colnames if y_colname in col]
+#     x_colnames = [col.replace(y_colname, x_colname) for col in y_colnames]
+#
+#     for x_col, y_col in zip(x_colnames, y_colnames):
+#         wave = tbl[wave_colname].data
+#         x = tbl[x_col].data
+#         y = tbl[y_col].data
+#
+#         valid = (x != invalid_value) * (y != invalid_value)
+#         invalid = np.invert(valid)
+#         if sum(invalid) == 0:
+#             continue
+#
+#         if sum(valid) == 0:
+#             logging.warning("--- Extension {} ---"
+#                             "All points in {} or {} were invalid. \n"
+#                             "THESE COLUMNS HAVE BEEN REMOVED FROM THE TABLE \n"
+#                             "invalid_value = {} \n"
+#                             "wave = {} \nx = {} \ny = {}"
+#                             "".format(ext_id, x_col, y_col, invalid_value,
+#                                       wave, x, y))
+#             tbl.remove_columns([x_col, y_col])
+#             continue
+#
+#         k = spline_order
+#         if wave[-1] > wave[0]:
+#             xnew = InterpolatedUnivariateSpline(wave[valid], x[valid], k=k)
+#             ynew = InterpolatedUnivariateSpline(wave[valid], y[valid], k=k)
+#         else:
+#             xnew = InterpolatedUnivariateSpline(wave[valid][::-1],
+#                                                 x[valid][::-1], k=k)
+#             ynew = InterpolatedUnivariateSpline(wave[valid][::-1],
+#                                                 y[valid][::-1], k=k)
+#
+#         tbl[x_col][invalid] = xnew(wave[invalid])
+#         tbl[y_col][invalid] = ynew(wave[invalid])
+#
+#     return tbl

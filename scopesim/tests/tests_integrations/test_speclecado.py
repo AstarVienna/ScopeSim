@@ -43,8 +43,7 @@ class TestMicadoSpec:
 # def test_plot_spec_trace_layout():
 #
 #     spt = efs.SpectralTraceList(filename="TRACE_15arcsec.fits",
-#                                 wave_colname="lam", s_colname="xi",
-#                                 invalid_value=0, col_number_start=1)
+#                                 wave_colname="lam", s_colname="xi")
 #     det = efs.DetectorList(filename="FPA_array_layout.dat")
 #
 #     if PLOTS:

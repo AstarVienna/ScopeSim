@@ -4,6 +4,7 @@ from scopesim import rc
 from scopesim.optics import optical_element as opt_elem
 from scopesim.effects import GaussianDiffractionPSF
 from scopesim.commands import UserCommands
+from scopesim.effects import Effect
 
 from scopesim.tests.mocks.py_objects.yaml_objects import _atmo_yaml_dict, \
     _detector_yaml_dict
@@ -57,6 +58,26 @@ class TestOpticalElementGetZOrderEffects:
                                                detector_yaml_dict):
         opt_el = opt_elem.OpticalElement(detector_yaml_dict)
         assert len(opt_el.get_z_order_effects(z_orders)) == n
+
+
+@pytest.mark.usefixtures("detector_yaml_dict")
+class TestGetItem:
+    def test_returns_effect_for_normal_string(self, detector_yaml_dict):
+        opt_el = opt_elem.OpticalElement(detector_yaml_dict)
+        eff = opt_el["detector_qe_curve"]
+        assert isinstance(eff, Effect)
+
+    def test_returns_effect_for_normal_string(self, detector_yaml_dict):
+        opt_el = opt_elem.OpticalElement(detector_yaml_dict)
+        value = opt_el["#detector_qe_curve.filename"]
+        assert value == "TER_blank.dat"
+
+    @pytest.mark.parametrize("key", [("detector_qe_curve.filename"),
+                                     ("#detector_qe_curve")])
+    def test_pass_silently_when_not_valid_hash_string(self, detector_yaml_dict,
+                                                     key):
+        opt_el = opt_elem.OpticalElement(detector_yaml_dict)
+        assert len(opt_el[key]) == 0
 
 
 @pytest.mark.usefixtures("detector_yaml_dict")

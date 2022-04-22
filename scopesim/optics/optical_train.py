@@ -18,9 +18,11 @@ from .fov_manager import FOVManager
 from .image_plane import ImagePlane
 from ..commands.user_commands import UserCommands
 from ..detector import DetectorArray
+from ..effects import ExtraFitsKeywords
 from ..source.source import Source
 from ..utils import from_currsys
 from ..version import version
+from .. import effects
 from .. import rc
 from . import fov_utils as fu
 
@@ -198,6 +200,7 @@ class OpticalTrain:
             for ii in range(len(self.image_planes)):
                 self.image_planes[ii] = effect.apply_to(self.image_planes[ii])
 
+        self._last_fovs = fovs
         self._last_source = source
 
 
@@ -305,12 +308,17 @@ class OpticalTrain:
             hdul = detector_array.readout(self.image_planes, array_effects,
                                          dtcr_effects, **kwargs)
 
-            try:
-                hdul = self.write_header(hdul)
-            except Exception as error:
-                print("\nWarning: header update failed, data will be saved with incomplete header.")
-                print("Reason: ", sys.exc_info()[0], error)
-                print("")
+            fits_effects = self.optics_manager.get_all(ExtraFitsKeywords)
+            if len(fits_effects) > 0:
+                for effect in fits_effects:
+                    hdul = effect.apply_to(hdul, optical_train=self)
+            else:
+                try:
+                    hdul = self.write_header(hdul)
+                except Exception as error:
+                    print("\nWarning: header update failed, data will be saved with incomplete header.")
+                    print("Reason: ", sys.exc_info()[0], error)
+                    print("")
 
             if filename is not None and isinstance(filename, str):
                 fname = filename
@@ -391,7 +399,6 @@ class OpticalTrain:
                 iheader['DARK'] = from_currsys("!DET.dark_current"), "[e/s]"
 
         ifilter = 1   # Counts filter wheels
-        islit = 1     # Counts slit wheels
         isurface = 1  # Counts surface lists
         for eff in self.optics_manager.source_effects:
             efftype = type(eff).__name__
@@ -405,9 +412,8 @@ class OpticalTrain:
                 ifilter += 1
 
             if efftype == "SlitWheel" and eff.include:
-                iheader[f'SLIT{islit}'] = (eff.current_slit.meta['name'],
-                                           eff.meta['name'])
-                islit += 1
+                iheader['SLIT'] = (eff.current_slit.meta['name'],
+                                   eff.meta['name'])
 
             if efftype == "PupilTransmission" and eff.include:
                 iheader['PUPTRANS'] = (from_currsys("!OBS.pupil_transmission"),
