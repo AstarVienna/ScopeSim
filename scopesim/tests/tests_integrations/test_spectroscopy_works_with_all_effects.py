@@ -209,8 +209,7 @@ class TestSpectroscopyMICADO:
         assert isinstance(ap_mask, efs.ApertureMask)
 
         spt = efs.SpectralTraceList(filename="TRACE_15arcsec.fits",
-                                    wave_colname="lam", s_colname="xi",
-                                    col_number_start=1)
+                                    wave_colname="lam", s_colname="xi")
         assert isinstance(spt, efs.SpectralTraceList)
 
         waves = spt.fov_grid(which="waveset")

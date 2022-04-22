@@ -140,14 +140,53 @@ class OpticalElement:
         self.add_effect(other)
 
     def __getitem__(self, item):
+        """
+        Returns Effects of Effect meta properties
+
+        Parameters
+        ----------
+        item : str, int, Effect-Class
+            Either the name, list index, or Class of an effect.
+            It is possible to get meta entries from a named effect by using:
+            ``#<effect_name>.<meta-key>``
+
+        Returns
+        -------
+        obj : str, float, Effect, list
+            - str, float : if #-string is used to get Effect.meta entries
+            - Effect : if a unique Effect name is given
+            - list : if an Effect-Class is given
+
+        Examples
+        --------
+        ::
+            from scopesim.effect import TERCurve
+            opt_el = opt_elem.OpticalElement(detector_yaml_dict)
+
+            effect_list = opt_el[TERCurve]
+            effect = opt_el[0]
+            effect = opt_el["detector_qe_curve"]
+            meta_value = opt_el["#detector_qe_curve.filename"]
+
+        """
         obj = None
         if isclass(item):
             obj = self.get_all(item)
         elif isinstance(item, int):
             obj = self.effects[item]
         elif isinstance(item, str):
-            obj = [eff for eff in self.effects
-                   if eff.meta["name"] == item]
+            if item[0] == "#" and "." in item:
+                eff, meta = item.replace("#", "").split(".")
+                obj = self[eff][f"#{meta}"]
+            else:
+                obj = [eff for eff in self.effects
+                       if eff.meta["name"] == item]
+
+        if isinstance(obj, list) and len(obj) == 1:
+            obj = obj[0]
+        # if obj is None or len(obj) == 0:
+        #     logging.warning(f'No result for key: "{item}". '
+        #                     f'Did you mean "#{item}"?')
 
         return obj
 

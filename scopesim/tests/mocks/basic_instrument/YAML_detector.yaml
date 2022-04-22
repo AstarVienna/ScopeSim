@@ -1,0 +1,86 @@
+# Detector
+object: detector
+alias: DET
+name: basic_detector
+description : The detector and electronic properties and effects
+
+properties :
+  image_plane_id : 0
+  temperature : -230      # [deg C]
+  dit: "!OBS.dit"
+  ndit: "!OBS.ndit"
+  width: 1024             # [pixel]
+  height: 1024
+  x: 0                    # [mm]
+  y: 0
+
+effects:
+- name: detector_window
+  class: DetectorWindow
+  description: Cut-out of the focal plane image with custom dimensions and coordinates
+  kwargs:
+    image_plane_id: 0
+    pixel_size: 0.01
+    x: "!DET.x"
+    y: "!DET.y"
+    width: "!DET.width"
+    height: "!DET.height"
+    units: pixel
+
+- name : qe_curve
+  description : Quantum efficiency curve (pseudo transmission curve)
+  class : QuantumEfficiencyCurve
+  kwargs :
+    array_dict:
+      wavelength: [0.7, 0.9, 2.4, 2.6]
+      transmission: [0.0, 1, 1, 0.0]
+    wavelength_unit : um
+    action : transmission
+
+- name: exposure_action
+  description: Summing up sky signal for all DITs and NDITs
+  class: SummedExposure
+
+- name: dark_current
+  class: DarkCurrent
+  kwargs:
+    value: 0.1           # [e-/s] level of dark current for detector
+
+- name: shot_noise
+  description : apply poisson shot noise to images
+  class: ShotNoise
+
+- name: detector_linearity
+  description : Linearity characteristics of chip
+  class: LinearityCurve
+  kwargs:
+    array_dict:
+      incident: [0, !!float 1e99]
+      measured: [0, !!float 1e99]
+    incident_unit : ph
+    measured_unit : ph
+
+- name : readout_noise
+  description : Readout noise frames
+  class : PoorMansHxRGReadoutNoise
+  kwargs :
+    noise_std : 4
+    n_channels : 16
+
+- name : source_fits_keywords
+  decription : adds meta data from Source object to FITS header
+  class : SourceDescriptionFitsKeywords
+
+- name : effects_fits_keywords
+  decription : adds meta dicts from all Effect objects to FITS header
+  class : EffectsMetaKeywords
+
+- name : config_fits_keywords
+  decription : adds all UserCommands dicts to FITS header
+  class : SimulationConfigFitsKeywords
+
+- name : extra_fits_keywords
+  decription : adds extra FITS keywords from a yaml file
+  class : ExtraFitsKeywords
+  kwargs :
+    filename: FITS_extra_keywords.yaml

@@ -73,6 +73,7 @@ class TestGetKernel:
     def test_returns_array_with_single_kernel_from_fov(self, waves, max_pixel):
         constpsf = FieldConstantPSF(filename="test_ConstPSF.fits")
         fov = _centre_fov(n=10, waverange=waves)
+        fov.view()
         kernel = constpsf.get_kernel(fov)
 
         assert np.sum(kernel) == approx(1)
@@ -83,6 +84,7 @@ class TestGetKernel:
         fov = _centre_fov(n=10, waverange=[1.5, 1.7])
         fov.header["CDELT1"] *= factor
         fov.header["CDELT2"] *= factor
+        fov.view()
 
         constpsf = FieldConstantPSF(filename="test_ConstPSF.fits")
         kernel = constpsf.get_kernel(fov)

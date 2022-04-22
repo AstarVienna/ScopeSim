@@ -57,6 +57,14 @@ class UserCommands:
         list of yaml filenames that are needed for the combined optical system
         E.g. ["MICADO_Standalone_RO.yaml", "MICADO_H4RG.yaml", "MICADO_.yaml"]
 
+    mode_yamls : list of yamls, optional
+        list of yaml docs ("OBS" docs) that are applicable only to specific
+        operational modes of the instrument.
+        Further yaml files can be specified in the recursive doc entry: "yamls"
+
+    set_modes : list of strings, optional
+        A list of default mode yamls to load. E.g. ["SCAO", "IMG_4mas"]
+
     properties : dict, optional
         Any extra "OBS" properties that should be added
 

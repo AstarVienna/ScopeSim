@@ -3,6 +3,7 @@ from os import path as pth
 import numpy as np
 from astropy import units as u
 from astropy.table import Table
+from astropy.io import fits
 from astropy.utils.decorators import deprecated_renamed_argument
 
 from synphot import SourceSpectrum, ConstFlux1D, Empirical1D
@@ -11,6 +12,7 @@ from synphot.units import PHOTLAM
 from scopesim.rc import __pkg_dir__
 from .source import Source
 from .. import rc
+from .source_utils import make_img_wcs_header
 
 __all__ = ["empty_sky", "star", "star_field"]
 
@@ -27,6 +29,7 @@ def empty_sky(flux=0):
     sky = Source(lam=[0.3, 3.0]*u.um, spectra=[flux, flux]*PHOTLAM,
                  x=[0], y=[0], ref=[0], weight=[1])
     return sky
+
 
 @deprecated_renamed_argument('mag', 'flux', '0.1.5')
 def star(x=0, y=0, flux=0):
@@ -69,6 +72,9 @@ def star(x=0, y=0, flux=0):
                 units=[u.arcsec, u.arcsec, None, None, mag_unit])
     tbl.meta["photometric_system"] = "vega" if mag_unit == u.mag else "ab"
     src = Source(spectra=spec, table=tbl)
+    src.meta.update({"function_call": f"star(x={x}, y={y}, flux={flux})",
+                     "module": "scopesim.source.source_templates",
+                     "object": "star"})
 
     return src
 
@@ -147,7 +153,41 @@ def star_field(n, mmin, mmax, width, height=None, use_grid=False):
     return stars
 
 
+def uniform_source(amplitude=0, size=60):
+    """
+    Simplified form of scopesim_templates.misc.uniform_source, mostly intended for testing
+
+    it creates an extended uniform source with a flat spectrum scaled to the magnitude.
+    This function creates an image with extend^2 pixels with pixel size of 1 arcsec^2 so provided amplitudes
+    are in flux or magnitudes per arcsec^2
+
+    amplitude : magnitude or flux (PER ARCSEC^2) of the spectrum
+    extend : int
+    extension of the field in arcsec, will always produce a square field
+
+    """
+    spec_template = vega_spectrum(mag=amplitude)
+    if isinstance(amplitude, u.Quantity):
+        if amplitude.unit.physical_type == "spectral flux density":  # ABmag and Jy
+            amplitude = amplitude.to(u.ABmag)
+            mag_unit = u.ABmag
+            spec_template = ab_spectrum(mag=amplitude.value)
+        else:
+            spec_template = st_spectrum(mag=amplitude.value)
+
+    data = np.ones(shape=(size, size))
+
+    header = make_img_wcs_header(pixel_scale=1, image_size=data.shape)
+    hdu = fits.ImageHDU(header=header, data=data)
+
+    src = Source(spectra=spec_template, image_hdu=hdu)
+
+    return src
+
+
 def vega_spectrum(mag=0):
+    if isinstance(mag, u.Quantity):
+        mag = mag.value
     vega = SourceSpectrum.from_file(pth.join(__pkg_dir__, "vega.fits"))
     vega = vega * 10 ** (-0.4 * mag)
     return vega

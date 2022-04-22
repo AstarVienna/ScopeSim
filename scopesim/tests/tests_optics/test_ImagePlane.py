@@ -854,9 +854,8 @@ class TestSubPixelFractions:
     def test_fractions_come_out_correctly_for_mixed_offsets(self, x, y, xx_exp,
                                                             yy_exp, ff_exp):
         xx, yy, ff = imp_utils.sub_pixel_fractions(x, y)
-        assert pytest.approx(xx == xx_exp)
-        assert pytest.approx(yy == yy_exp)
-        assert pytest.approx(ff == ff_exp)
+        for aa, bb in [[xx, xx_exp], [yy, yy_exp], [ff, ff_exp]]:
+            assert all([a == approx(b) for a, b in zip(aa, bb)])
 
 
 @pytest.mark.usefixtures("image_hdu_square", "image_hdu_rect")
