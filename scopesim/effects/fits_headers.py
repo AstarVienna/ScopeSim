@@ -198,7 +198,8 @@ class ExtraFitsKeywords(Effect):
     def __init__(self, **kwargs):
         # don't pass kwargs, as DataContainer can't handle yaml files
         super(ExtraFitsKeywords, self).__init__()
-        params = {"name": "Extra FITS headers",
+        params = {"name": "extra_fits_keywords",
+                  "description": "Extra FITS headers",
                   "z_order": [999],
                   "header_dict": None,
                   "filename": None,
@@ -336,9 +337,9 @@ def flatten_dict(dic, base_key="", flat_dict={},
 
             # Add the flattened KEYWORD = (value, comment) to the header dict
             if len(comment) > 0:
-                flat_dict[flat_key] = (str(value), str(comment))
+                flat_dict[flat_key] = (value, str(comment))
             else:
-                flat_dict[flat_key] = str(value)
+                flat_dict[flat_key] = value
 
     return flat_dict
 
@@ -376,7 +377,8 @@ class EffectsMetaKeywords(ExtraFitsKeywords):
     """
     def __init__(self, **kwargs):
         super(ExtraFitsKeywords, self).__init__()
-        params = {"name": "Effect Meta FITS headers",
+        params = {"name": "effects_fits_keywords",
+                  "description": "Effect Meta FITS headers",
                   "z_order": [998],
                   "ext_number": [0],
                   "add_excluded_effects": False,
@@ -454,7 +456,8 @@ class SourceDescriptionFitsKeywords(ExtraFitsKeywords):
     """
     def __init__(self, **kwargs):
         super(ExtraFitsKeywords, self).__init__()
-        params = {"name": "Source description FITS headers",
+        params = {"name": "source_fits_keywords",
+                  "description": "Source description FITS headers",
                   "z_order": [997],
                   "ext_number": [0],
                   "keyword_prefix": "HIERARCH SIM"}
@@ -530,7 +533,8 @@ class SimulationConfigFitsKeywords(ExtraFitsKeywords):
         """
     def __init__(self, **kwargs):
         super(ExtraFitsKeywords, self).__init__()
-        params = {"name": "Simulation Config FITS headers",
+        params = {"name": "simulation_fits_keywords",
+                  "description": "Simulation Config FITS headers",
                   "z_order": [996],
                   "ext_number": [0],
                   "resolve": True,

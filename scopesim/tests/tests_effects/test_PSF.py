@@ -46,7 +46,8 @@ class TestGetKernel:
 
 
 class TestRotationBlur:
-    def test_returns_rotated_kernel_array_has_same_sum(self):
+    @pytest.mark.parametrize("angle", ([1, 5, 15, 60]))
+    def test_returns_rotated_kernel_array_has_same_sum(self, angle):
         # Without blur
         implane = basic_image_plane()
         implane.data[75,75] = 1
@@ -63,7 +64,7 @@ class TestRotationBlur:
         implane = basic_image_plane()
         implane.data[75,75] = 1
 
-        psf = PSF(rotational_blur_angle=15)
+        psf = PSF(rotational_blur_angle=angle)
         psf.kernel = basic_kernel()
         implane = psf.apply_to(implane)
 
@@ -72,7 +73,7 @@ class TestRotationBlur:
             plt.imshow(implane.data)
             plt.show()
 
-        assert np.sum(implane.data) == approx(1)
+        assert np.sum(implane.data) == approx(1, rel=3e-3)
 
 
 class TestBkgLevel:
@@ -171,5 +172,5 @@ class TestApplyTo:
                 plt.imshow(implane.data[i, :, :])
             plt.show()
 
-        assert np.sum(implane.data[1, :, :]) == approx(1)
+        assert np.sum(implane.data[1, :, :]) == approx(1, rel=1e-2)
         assert implane.data[1, 75, 75] == approx(np.max(psf.kernel), rel=1e-2)
