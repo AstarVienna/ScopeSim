@@ -1,3 +1,4 @@
+"""Defines FieldOfView class"""
 from copy import deepcopy
 
 import numpy as np
@@ -5,14 +6,14 @@ from scipy.interpolate import interp1d
 
 from astropy import units as u
 from astropy.io import fits
-from astropy.table import Table, Column
+from astropy.table import Table
 from synphot import Empirical1D, SourceSpectrum
 from synphot.units import PHOTLAM
 
 from . import fov_utils as fu
 from . import image_plane_utils as imp_utils
 
-from ..base_classes import SourceBase, FieldOfViewBase, PoorMansHeader
+from ..base_classes import SourceBase, FieldOfViewBase
 from .. import utils
 
 
@@ -57,12 +58,10 @@ class FieldOfView(FieldOfViewBase):
                      }
         self.meta.update(kwargs)
 
-        if not any([utils.has_needed_keywords(header, s) for s in ["", "S"]]):
-            raise ValueError("header must contain a valid sky-plane WCS: {}"
-                             "".format(dict(header)))
+        if not any((utils.has_needed_keywords(header, s) for s in ["", "S"])):
+            raise ValueError(f"header must contain a valid sky-plane WCS: {dict(header)}")
         if not utils.has_needed_keywords(header, "D"):
-            raise ValueError("header must contain a valid image-plane WCS: {}"
-                             "".format(dict(header)))
+            raise ValueError(f"header must contain a valid image-plane WCS: {dict(header)}")
 
         self.header = fits.Header()
         self.header["NAXIS"] = 2
@@ -93,8 +92,7 @@ class FieldOfView(FieldOfViewBase):
         """
 
         if not isinstance(src, SourceBase):
-            raise ValueError("source must be a Source object: {}"
-                             "".format(type(src)))
+            raise ValueError(f"source must be a Source object: {type(src)}")
 
         fields_in_fov = [field for field in src.fields
                          if fu.is_field_in_fov(self.header, field)]
