@@ -222,7 +222,7 @@ class TestReadout:
         hdus = opt.readout()
         hdu = hdus[0]
 
-        if PLOTS:
+        if not PLOTS:
             plt.subplot(221)
             plt.imshow(unity_src.fields[0].data)
             plt.colorbar()
@@ -237,7 +237,7 @@ class TestReadout:
             plt.show()
 
         src_average = np.average(unity_src.fields[0].data)
-        assert np.average(hdu[1].data) == approx(np.pi / 4., rel=1e-3)
+        assert np.median(hdu[1].data) == approx(np.pi / 4., rel=1e-2)
 
 
 @pytest.mark.usefixtures("simplecado_opt")

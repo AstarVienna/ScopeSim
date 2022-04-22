@@ -45,7 +45,7 @@ class FieldOfView(FieldOfViewBase):
                      "wave_bin_type": "linear",
 
                      "area": 0 * u.m**2,
-                     "pixel_scale": "!INST.pixel_scale",
+                     "pixel_area": None,                    # [arcsec]
                      "sub_pixel": "!SIM.sub_pixel.flag",
                      "distortion": {"scale": [1, 1],
                                     "offset": [0, 0],
@@ -82,6 +82,16 @@ class FieldOfView(FieldOfViewBase):
         self._waverange = None
         self._wavelength = None
         self._volume = None
+
+    @property
+    def pixel_area(self):
+        if self.meta["pixel_area"] is None:
+            hdr = self.header
+            pixarea = (hdr['CDELT1'] * u.Unit(hdr['CUNIT1']) *
+                       hdr['CDELT2'] * u.Unit(hdr['CUNIT2'])).to(u.arcsec ** 2)
+            self.meta["pixel_area"] = pixarea.value     # [arcsec]
+
+        return self.meta["pixel_area"]
 
     def extract_from(self, src):
         """ ..assumption: Bandpass has been applied
@@ -214,8 +224,8 @@ class FieldOfView(FieldOfViewBase):
 
         for field in self.background_fields:
             bg_solid_angle = u.Unit(field.header["SOLIDANG"]).to(u.arcsec**-2)
-            pixel_area = utils.from_currsys(self.meta["pixel_scale"]) ** 2
-            area_factor = pixel_area * bg_solid_angle       # arcsec**2 * arcsec**-2
+            # pixel_area = utils.from_currsys(self.meta["pixel_scale"]) ** 2
+            area_factor = self.pixel_area * bg_solid_angle       # arcsec**2 * arcsec**-2
 
             ref = field.header["SPEC_REF"]
             canvas_flux += self.spectra[ref](fov_waveset).value * area_factor
@@ -343,8 +353,8 @@ class FieldOfView(FieldOfViewBase):
         # 4. Find Background fields
         for field in self.background_fields:
             bg_solid_angle = u.Unit(field.header["SOLIDANG"]).to(u.arcsec**-2)
-            pixel_area = utils.from_currsys(self.meta["pixel_scale"]) ** 2
-            area_factor = pixel_area * bg_solid_angle       # arcsec**2 * arcsec**-2
+            # pixel_area = utils.from_currsys(self.meta["pixel_scale"]) ** 2
+            area_factor = self.pixel_area * bg_solid_angle       # arcsec**2 * arcsec**-2
 
             flux = fluxes[field.header["SPEC_REF"]] * area_factor
             canvas_image_hdu.data += flux
@@ -452,13 +462,13 @@ class FieldOfView(FieldOfViewBase):
             field_data = field_interp(fov_waveset.value)
 
             # Pixel scale conversion
-            fov_pixarea = utils.from_currsys(self.meta["pixel_scale"]) ** 2
+            # self.pixel_area = utils.from_currsys(self.meta["pixel_scale"]) ** 2
             field_pixarea = (field.header['CDELT1']
                              * field.header['CDELT2']
                              * u.Unit(field.header['CUNIT1'])
                              * u.Unit(field.header['CUNIT2'])).to(u.arcsec**2)
             field_pixarea = field_pixarea.value
-            field_data *= field_pixarea / fov_pixarea
+            field_data *= field_pixarea / self.pixel_area
             field_hdu = fits.ImageHDU(data=field_data, header=field.header)
             canvas_cube_hdu = imp_utils.add_imagehdu_to_imagehdu(
                 field_hdu,
@@ -477,8 +487,8 @@ class FieldOfView(FieldOfViewBase):
                        field.header['CDELT2'] * u.Unit(field.header['CUNIT2'])).to(u.arcsec**2)
 
             #field.data = field.data / pixarea.value
-            fov_pixarea = utils.from_currsys(self.meta["pixel_scale"]) ** 2
-            field.data = field.data / fov_pixarea
+            # self.pixel_area = utils.from_currsys(self.meta["pixel_scale"]) ** 2
+            field.data = field.data / self.pixel_area
             canvas_image_hdu = imp_utils.add_imagehdu_to_imagehdu(field,
                                                     canvas_image_hdu,
                                                     spline_order=spline_order)
@@ -491,7 +501,8 @@ class FieldOfView(FieldOfViewBase):
             # Cube should be in PHOTLAM arcsec-2 for SpectralTrace mapping
             # Point sources are in PHOTLAM per pixel
             # Point sources need to be scaled up by inverse pixel_area
-            pixel_area = utils.from_currsys(self.meta["pixel_scale"]) ** 2
+            # pixel_area = utils.from_currsys(self.meta["pixel_scale"]) ** 2
+            pixel_area = self.pixel_area
             for row in field:
                 xsky, ysky = row["x"], row["y"]
                 ref, weight = row["ref"], row["weight"]
