@@ -222,7 +222,7 @@ class TestReadout:
         hdus = opt.readout()
         hdu = hdus[0]
 
-        if not PLOTS:
+        if PLOTS:
             plt.subplot(221)
             plt.imshow(unity_src.fields[0].data)
             plt.colorbar()

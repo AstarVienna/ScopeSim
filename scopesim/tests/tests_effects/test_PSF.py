@@ -131,7 +131,7 @@ class TestApplyTo:
         implane = basic_image_plane()
         implane.data[75,75] = 1
 
-        if not PLOTS:
+        if PLOTS:
             plt.subplot(131)
             plt.imshow(implane.data)
 
@@ -155,7 +155,7 @@ class TestApplyTo:
         implane.data[75,75] = 1
         implane.data = implane.data[None, :, :] * np.ones(3)[:, None, None]
 
-        if not PLOTS:
+        if PLOTS:
             plt.subplot(231)
             plt.imshow(implane.data[1, :, :])
 
