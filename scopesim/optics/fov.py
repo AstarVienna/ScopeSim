@@ -224,7 +224,6 @@ class FieldOfView(FieldOfViewBase):
 
         for field in self.background_fields:
             bg_solid_angle = u.Unit(field.header["SOLIDANG"]).to(u.arcsec**-2)
-            # pixel_area = utils.from_currsys(self.meta["pixel_scale"]) ** 2
             area_factor = self.pixel_area * bg_solid_angle       # arcsec**2 * arcsec**-2
 
             ref = field.header["SPEC_REF"]
@@ -353,7 +352,6 @@ class FieldOfView(FieldOfViewBase):
         # 4. Find Background fields
         for field in self.background_fields:
             bg_solid_angle = u.Unit(field.header["SOLIDANG"]).to(u.arcsec**-2)
-            # pixel_area = utils.from_currsys(self.meta["pixel_scale"]) ** 2
             area_factor = self.pixel_area * bg_solid_angle       # arcsec**2 * arcsec**-2
 
             flux = fluxes[field.header["SPEC_REF"]] * area_factor
@@ -462,7 +460,6 @@ class FieldOfView(FieldOfViewBase):
             field_data = field_interp(fov_waveset.value)
 
             # Pixel scale conversion
-            # self.pixel_area = utils.from_currsys(self.meta["pixel_scale"]) ** 2
             field_pixarea = (field.header['CDELT1']
                              * field.header['CDELT2']
                              * u.Unit(field.header['CUNIT1'])
@@ -486,8 +483,6 @@ class FieldOfView(FieldOfViewBase):
             pixarea = (field.header['CDELT1'] * u.Unit(field.header['CUNIT1']) *
                        field.header['CDELT2'] * u.Unit(field.header['CUNIT2'])).to(u.arcsec**2)
 
-            #field.data = field.data / pixarea.value
-            # self.pixel_area = utils.from_currsys(self.meta["pixel_scale"]) ** 2
             field.data = field.data / self.pixel_area
             canvas_image_hdu = imp_utils.add_imagehdu_to_imagehdu(field,
                                                     canvas_image_hdu,
@@ -501,7 +496,6 @@ class FieldOfView(FieldOfViewBase):
             # Cube should be in PHOTLAM arcsec-2 for SpectralTrace mapping
             # Point sources are in PHOTLAM per pixel
             # Point sources need to be scaled up by inverse pixel_area
-            # pixel_area = utils.from_currsys(self.meta["pixel_scale"]) ** 2
             pixel_area = self.pixel_area
             for row in field:
                 xsky, ysky = row["x"], row["y"]
