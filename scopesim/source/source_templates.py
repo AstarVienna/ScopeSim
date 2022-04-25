@@ -9,6 +9,7 @@ from astropy.utils.decorators import deprecated_renamed_argument
 from synphot import SourceSpectrum, ConstFlux1D, Empirical1D
 from synphot.units import PHOTLAM
 
+from scopesim.optics import image_plane_utils as ipu
 from scopesim.rc import __pkg_dir__
 from .source import Source
 from .. import rc
@@ -153,6 +154,78 @@ def star_field(n, mmin, mmax, width, height=None, use_grid=False):
     return stars
 
 
+def uniform_illumination(xs, ys, pixel_scale, flux):
+    """
+    Return a Source for a uniformly illuminated area
+
+    Parameters
+    ----------
+    xs, ys : list of float
+        [arcsec] min and max extent of each dimension relative to FOV centre
+        E.g. `xs=[-1, 1], ys=[5, 5.5]`
+
+    pixel_scale : float
+        [arcsec]
+
+    flux : astropy.Quantity
+        [mag, ABMag, Jy] Flux per arcsecond of the Source
+
+    Returns
+    -------
+    src : scopesim.Source
+
+    Examples
+    --------
+    A 200x200 uniform illumination Source at 1 Jy/arcsec2
+    ::
+
+        src = uniform_illumination(xs=[-1,1], ys=[-1, 1],
+                                   pixel_scale=0.01, flux=1*u.Jy)
+
+
+    A source that extends just past the MICADO 15" slit dimensions
+    ::
+
+        src = uniform_illumination(xs=[-8, 8], ys=[-0.03, 0.03],
+                                   pixel_scale=0.004, flux=10*u.mag)
+
+
+    """
+
+    import numpy as np
+    from astropy import units as u
+    from astropy.io import fits
+    from scopesim.source.source_templates import vega_spectrum, ab_spectrum
+    from scopesim import Source
+    from scopesim.optics import image_plane_utils as ipu
+
+    mag_unit = u.mag
+    spec_template = vega_spectrum
+    if isinstance(flux, u.Quantity):
+        if flux.unit.physical_type == "spectral flux density":  # ABmag and Jy
+            mag_unit = u.ABmag
+            spec_template = ab_spectrum
+            flux = flux.to(u.ABmag)
+        flux = flux.value
+
+    spec = spec_template()
+
+    hdr = ipu.header_from_list_of_xy(x=np.array(xs) / 3600.,
+                                     y=np.array(ys) / 3600.,
+                                     pixel_scale=pixel_scale / 3600.)
+    sf = 10**(-0.4*flux) * pixel_scale**2
+    data = sf * np.ones([max(1, hdr["NAXIS2"]), max(1, hdr["NAXIS1"])])
+    hdu = fits.ImageHDU(header=hdr, data=data)
+
+    hdu.header["SPEC_REF"] = 0
+    hdu.header["SPECMAG"] = 0
+    hdu.header["SPECUNIT"] = str(mag_unit)
+
+    src = Source(image_hdu=hdu, spectra=[spec])
+
+    return src
+
+
 def uniform_source(amplitude=0, size=60):
     """
     Simplified form of scopesim_templates.misc.uniform_source, mostly intended for testing
@@ -166,6 +239,7 @@ def uniform_source(amplitude=0, size=60):
     extension of the field in arcsec, will always produce a square field
 
     """
+
     spec_template = vega_spectrum(mag=amplitude)
     if isinstance(amplitude, u.Quantity):
         if amplitude.unit.physical_type == "spectral flux density":  # ABmag and Jy

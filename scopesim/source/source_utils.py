@@ -202,8 +202,6 @@ def make_img_wcs_header(pixel_scale, image_size):
 
     return imgwcs.to_header()
 
-
-
 #     unit = extract_unit_from_imagehdu(imagehdu)
 #
 #     per_unit_area = False
@@ -261,4 +259,5 @@ def make_img_wcs_header(pixel_scale, image_size):
 #                       "FLUXUNIT to the header.")
 #
 #     return unit
+
 
