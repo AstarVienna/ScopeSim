@@ -1,7 +1,7 @@
 from os import path as pth
 
 import numpy as np
-import scopesim.source.source_templates
+
 from astropy import units as u
 from astropy.table import Table
 from astropy.io import fits
