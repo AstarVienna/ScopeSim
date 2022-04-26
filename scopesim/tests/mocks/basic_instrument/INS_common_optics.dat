@@ -1,0 +1,9 @@
+# outer_unit : m
+# inner_unit : m
+# angle_unit : degree
+# temperature_unit : deg_C
+#
+name          outer  inner  angle  temperature        action         filename
+entr_window   0.5    0.     0.     !TEL.temperature   transmission   INS_unity_trans.dat
+mirror_2      0.5    0.     0.     -190               reflection     INS_unity_refl.dat
+

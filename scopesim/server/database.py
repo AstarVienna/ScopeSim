@@ -1,12 +1,16 @@
 """
 Functions to download instrument packages and example data
 """
+import json
+import re
 import shutil
 import os
+import urllib.request
 import zipfile
 import logging
 from urllib3.exceptions import HTTPError
 
+import yaml
 import requests
 import bs4
 from astropy.utils.data import download_file
@@ -14,30 +18,227 @@ from astropy.utils.data import download_file
 from scopesim import rc
 
 
-def get_local_packages(path):
-    """
-    List the packages that are available in the directory ``path``
+def get_server_package_list():
+    url = rc.__config__["!SIM.file.server_base_url"]
+    response = requests.get(url + "packages.yaml")
+    pkgs_dict = yaml.full_load(response.text)
 
-    Parameters
-    ----------
-    path : str
-        Directory containing all local instrument package files
+    return pkgs_dict
 
-    Returns
-    -------
-    pkgs : list
-        Names of packages on the local disk
 
-    """
-    dirnames = os.listdir(path)
-    pkgs = []
+def get_server_folder_contents(dir_name, unique_str=".zip"):
+    url = rc.__config__["!SIM.file.server_base_url"] + dir_name
 
-    for dname in dirnames:
-        if os.path.exists(os.path.join(path, dname, dname+".yaml")):
-            pkgs += [dname]
+    try:
+        result = requests.get(url).content
+    except Exception as error:
+        raise ValueError(f"URL returned error: {url}") from error
+
+    soup = bs4.BeautifulSoup(result, features="lxml")
+    hrefs = soup.findAll("a", href=True)
+    pkgs = [href.string for href in hrefs
+            if href.string is not None and ".zip" in href.string]
 
     return pkgs
 
+
+def list_packages(pkg_name=None):
+    """
+    List all packages, or all variants of a single package
+
+    Parameters
+    ----------
+    pkg_name : str, optional
+        - None: lists all stable packages on the server
+        - <PackageName>: lists all variants of <PackageName> on the server
+
+    Returns
+    -------
+    pkg_names : list
+
+    Examples
+    --------
+    ::
+        from scopesim import list_packages
+
+        # list all stable packages on the server
+        list_packages()
+
+        # list all variants of a specific package
+        list_packages("Armazones")
+
+    """
+    pkgs_dict = get_server_package_list()
+
+    if pkg_name is None:
+        pkg_names = list(pkgs_dict.keys())
+    elif pkg_name in pkgs_dict:
+        path = pkgs_dict[pkg_name]["path"]
+        pkgs = get_server_folder_contents(path)
+        pkg_names = [pkg for pkg in pkgs if pkg_name in pkg]
+
+    return pkg_names
+
+
+def download_packages(pkg_names, release="stable", save_dir=None, from_cache=None):
+    """
+    Download one or more packages to the local disk
+
+    1. Download stable, dev
+    2. Download specific version
+    3. Download from github via url
+
+    Parameters
+    ----------
+    pkg_names : str, list
+        A list of package name, see ``list_packages()``
+
+    release : str, optional
+        By default, the most recent stable version of a package is downloaded.
+        Other options are:
+        - "stable" : the most recent stable version
+        - "latest" : the latest development version to be published
+        - a specific package filename as given by list_packages (see examples)
+        - a github url for the specific branch and package (see examples)
+
+    save_dir : str, optional
+        The place on the local disk where the ``.zip`` package is to be saved.
+        If left as None, defaults to the value in
+        scopesim.rc.__config__["!SIM.file.local_packages_path"]
+
+    from_cache : bool, optional
+        Use the cached versions of the packages. If None, defaults to the RC
+        value: ``!SIM.file.use_cached_downloads``
+
+    Returns
+    -------
+    save_path : str
+        The absolute path to the saved ``.zip`` package
+
+    Examples
+    --------
+    ::
+        from scopesim import download_packages, list_packages
+
+        # Stable release of a list of packages
+        download_packages(["test_package", "test_package"])
+
+        # Development release of a single package
+        download_packages("test_package", release="latest")
+
+        # Specific version of the package
+        list_packages("test_package")
+        download_packages("test_package", release="2022-04-09.dev")
+
+        # Specific package from a Gtihub commit hash or branch/tag name (use "@" or ":")
+        download_packages("ELT", release="github:728761fc76adb548696205139e4e9a4260401dfc")
+        download_packages("ELT", release="github@728761fc76adb548696205139e4e9a4260401dfc")
+        download_packages("ELT", release="github@dev_master")
+
+    """
+    base_url = rc.__config__["!SIM.file.server_base_url"]
+
+    pkgs_dict = get_server_package_list()
+
+    if isinstance(pkg_names, str):
+        pkg_names = [pkg_names]
+
+    save_paths = []
+    for pkg_name in pkg_names:
+        if pkg_name in pkgs_dict:
+            pkg_dict = pkgs_dict[pkg_name]
+            path = pkg_dict["path"] + "/"
+
+            from_github = False
+            if release in ["stable", "latest"]:
+                zip_name = pkg_dict[release]
+                pkg_url = f"{base_url}{path}/{zip_name}.zip"
+            elif "github" in release:
+                base_url = "https://github.com/AstarVienna/irdb/tree/"
+                github_hash = release.split(":")[-1].split("@")[-1]
+                pkg_url = f"{base_url}{github_hash}/{pkg_name}"
+                from_github = True
+            else:
+                zip_name = f"{pkg_name}.{release}.zip"
+                pkg_variants = get_server_folder_contents(path)
+                if zip_name not in pkg_variants:
+                    raise ValueError(f"{zip_name} is not amoung the hosted "
+                                     f"variants: {pkg_variants}")
+                pkg_url = f"{base_url}{path}/{zip_name}"
+
+            if save_dir is None:
+                save_dir = rc.__config__["!SIM.file.local_packages_path"]
+            if not os.path.exists(save_dir):
+                os.mkdir(save_dir)
+
+            if not from_github:
+                try:
+                    if from_cache is None:
+                        from_cache = rc.__config__["!SIM.file.use_cached_downloads"]
+                    cache_path = download_file(pkg_url, cache=from_cache)
+                    save_path = os.path.join(save_dir, f"{pkg_name}.zip")
+                    file_path = shutil.copy2(cache_path, save_path)
+
+                    with zipfile.ZipFile(file_path, 'r') as zip_ref:
+                        zip_ref.extractall(save_dir)
+
+                except HTTPError as error:
+                    raise ValueError(f"Unable to find file: {url + pkg_path}") from error
+            else:
+                download_github_folder(repo_url=pkg_url, output_dir=save_dir)
+                save_path = save_dir
+
+            save_paths += [os.path.abspath(save_path)]
+
+        else:
+            raise HTTPError(f"Unable to find package: {base_url + pkg_name}")
+
+    return save_paths
+
+# ==============================================================================
+# Funtions below from from OLD_database.py
+# ==============================================================================
+
+# for backwards compatibility
+def download_package(pkg_path, save_dir=None, url=None, from_cache=None):
+    """
+    Downloads a package to the local disk
+
+    Parameters
+    ----------
+    pkg_path : str, list
+        A ``.zip`` package path as given by ``list_packages()``
+
+    save_dir : str
+        The place on the local disk where the ``.zip`` package is to be saved.
+        If left as None, defaults to the value in
+        scopesim.rc.__config__["!SIM.file.local_packages_path"]
+
+    url : str
+        The URL of the IRDB HTTP server. If left as None, defaults to the
+        value in scopesim.rc.__config__["!SIM.file.server_base_url"]
+
+    from_cache : bool
+        Use the cached versions of the packages. If None, defaults to the RC
+        value: ``!SIM.file.use_cached_downloads``
+
+    Returns
+    -------
+    save_path : str
+        The absolute path to the saved ``.zip`` package
+
+    """
+    # todo: add proper depreciation warning
+    text = "Function Depreciated --> please use scopesim.download_package-s-()"
+    logging.warning(text)
+    print(text)
+
+    if isinstance(pkg_path, str):
+        pkg_path = [pkg_path]
+
+    pkg_names = [pkg.replace(".zip", "").split("/")[-1] for pkg in pkg_path]
+    return download_packages(pkg_names, release="stable", save_dir=save_dir,
+                             from_cache=from_cache)
 
 def get_server_elements(url, unique_str="/"):
     """
@@ -74,134 +275,6 @@ def get_server_elements(url, unique_str="/"):
                          if tmp.string is not None and the_str in tmp.string]
     return select_paths
 
-
-def list_packages(location="all", url=None, local_dir=None,
-                  return_pkgs=False, silent=False):
-    """
-    List all ``.zip`` packages found under ``url``
-
-    Parameters
-    ----------
-    location : str
-        ["server", "local", "all"] To look for packages on the server or on the
-        local hard-drive, or both
-
-    url : str
-        The URL of the IRDB HTTP server. If left as None, defaults to the
-        value in scopesim.rc.__config__["!SIM.file.server_base_url"]
-
-    local_dir : str
-        Path to the folder where the local packages are stored (or downloaded)
-        If left as None, defaults to
-        scopesim.rc.__config__["!SIM.file.local_packages_path"]
-
-    return_pkgs : bool
-        If True, returns a list of package names
-
-    silent : bool
-        If True, does not print the list of package names
-
-    Returns
-    -------
-    all_pkgs : list of str
-        A list of paths to the ``.zip`` packages relative to ``url``
-        The full string should be passed to download_package
-
-    """
-
-    def print_package_list(the_pkgs, loc=""):
-        print(f"\nPackages saved {loc}\n" + "=" * (len(loc) + 15))
-        for pkg in the_pkgs:
-            print(pkg)
-
-    if url is None:
-        url = rc.__config__["!SIM.file.server_base_url"]
-    if local_dir is None:
-        local_dir = rc.__config__["!SIM.file.local_packages_path"]
-
-    return_pkgs_list = []
-
-    if location.lower() in ["local", "all"]:
-        local_pkgs = get_local_packages(local_dir)
-        if not silent:
-            print_package_list(local_pkgs, f"locally: {local_dir}")
-            return_pkgs_list += local_pkgs
-
-    if location.lower() in ["server", "all"]:
-        server_pkgs = []
-        folders = get_server_elements(url, "/")
-        for folder in folders:
-            pkgs = get_server_elements(url + folder, ".zip")
-            server_pkgs += [folder + pkg for pkg in pkgs]
-        if not silent:
-            print_package_list(server_pkgs, f"on the server: {url}")
-            return_pkgs_list += server_pkgs
-
-    if return_pkgs:
-        return return_pkgs_list
-
-    return None
-
-def download_package(pkg_path, save_dir=None, url=None, from_cache=None):
-    """
-    Downloads a package to the local disk
-
-    Parameters
-    ----------
-    pkg_path : str, list
-        A ``.zip`` package path as given by ``list_packages()``
-
-    save_dir : str
-        The place on the local disk where the ``.zip`` package is to be saved.
-        If left as None, defaults to the value in
-        scopesim.rc.__config__["!SIM.file.local_packages_path"]
-
-    url : str
-        The URL of the IRDB HTTP server. If left as None, defaults to the
-        value in scopesim.rc.__config__["!SIM.file.server_base_url"]
-
-    from_cache : bool
-        Use the cached versions of the packages. If None, defaults to the RC
-        value: ``!SIM.file.use_cached_downloads``
-
-    Returns
-    -------
-    save_path : str
-        The absolute path to the saved ``.zip`` package
-
-    """
-    if isinstance(pkg_path, (list, tuple)):
-        save_path = [download_package(pkg, save_dir, url) for pkg in pkg_path]
-
-    elif isinstance(pkg_path, str):
-        if pkg_path[-4:] != ".zip":
-            logging.warning("Appended '.zip' to %s", pkg_path)
-            pkg_path += ".zip"
-
-        if url is None:
-            url = rc.__config__["!SIM.file.server_base_url"]
-        if save_dir is None:
-            save_dir = rc.__config__["!SIM.file.local_packages_path"]
-
-        if not os.path.exists(save_dir):
-            os.mkdir(save_dir)
-
-        try:
-            if from_cache is None:
-                from_cache = rc.__config__["!SIM.file.use_cached_downloads"]
-            cache_path = download_file(url + pkg_path, cache=from_cache)
-            save_path = os.path.join(save_dir, os.path.basename(pkg_path))
-            file_path = shutil.copy2(cache_path, save_path)
-
-            with zipfile.ZipFile(file_path, 'r') as zip_ref:
-                zip_ref.extractall(save_dir)
-
-        except HTTPError:
-            ValueError(f"Unable to find file: {url + pkg_path}")
-
-        save_path = os.path.abspath(save_path)
-
-    return save_path
 
 def list_example_data(url=None, return_files=False, silent=False):
     """
@@ -248,6 +321,7 @@ def list_example_data(url=None, return_files=False, silent=False):
         return return_file_list
 
     return None
+
 
 def download_example_data(file_path, save_dir=None, url=None, from_cache=None):
     """
@@ -300,3 +374,82 @@ def download_example_data(file_path, save_dir=None, url=None, from_cache=None):
         save_path = os.path.abspath(save_path)
 
     return save_path
+
+
+# """
+# 2022-04-10 (KL)
+# Code taken directly from https://github.com/sdushantha/gitdir
+# Adapted for ScopeSim usage.
+# Many thanks to the authors!
+# """
+
+def create_github_url(url):
+    """
+    From the given url, produce a URL that is compatible with Github's REST API. Can handle blob or tree paths.
+    """
+    repo_only_url = re.compile(r"https:\/\/github\.com\/[a-z\d](?:[a-z\d]|-(?=[a-z\d])){0,38}\/[a-zA-Z0-9]+$")
+    re_branch = re.compile("/(tree|blob)/(.+?)/")
+
+    # Check if the given url is a url to a GitHub repo. If it is, tell the
+    # user to use 'git clone' to download it
+    if re.match(repo_only_url,url):
+        message = "✘ The given url is a complete repository. Use 'git clone' to download the repository"
+        logging.error(message)
+        raise ValueError(message)
+
+    # extract the branch name from the given url (e.g master)
+    branch = re_branch.search(url)
+    download_dirs = url[branch.end():]
+    api_url = (url[:branch.start()].replace("github.com", "api.github.com/repos", 1) +
+              "/contents/" + download_dirs + "?ref=" + branch.group(2))
+    return api_url, download_dirs
+
+
+def download_github_folder(repo_url, output_dir="./"):
+    """
+    Downloads the files and directories in repo_url.
+
+    Re-written based on the on the download function `here <https://github.com/sdushantha/gitdir/blob/f47ce9d85ee29f8612ce5ae804560a12b803ddf3/gitdir/gitdir.py#L55>`_
+    """
+    # convert repo_url into an api_url
+    api_url, download_dirs = create_github_url(repo_url)
+
+    # get the contents of the github folder
+    user_interrupt_text = "GitHub download interrupted by User"
+    try:
+        opener = urllib.request.build_opener()
+        opener.addheaders = [('User-agent', 'Mozilla/5.0')]
+        urllib.request.install_opener(opener)
+        response = urllib.request.urlretrieve(api_url)
+    except KeyboardInterrupt:
+        # when CTRL+C is pressed during the execution of this script
+        logging.error(user_interrupt_text)
+        raise ValueError(user_interrupt_text)
+
+    # Make the base directories for this GitHub folder
+    os.makedirs(os.path.join(output_dir, download_dirs), exist_ok=True)
+
+    with open(response[0], "r") as f:
+        data = json.load(f)
+
+        for entry in data:
+            # if the entry is a further folder, walk through it
+            if entry["type"] == "dir":
+                download_github_folder(repo_url=entry["html_url"],
+                                       output_dir=output_dir)
+
+            # if the entry is a file, download it
+            elif entry["type"] == "file":
+                try:
+                    opener = urllib.request.build_opener()
+                    opener.addheaders = [('User-agent', 'Mozilla/5.0')]
+                    urllib.request.install_opener(opener)
+                    # download the file
+                    save_path = os.path.join(output_dir, entry['path'])
+                    urllib.request.urlretrieve(entry["download_url"], save_path)
+                    logging.info(f"Downloaded: {entry['path']}")
+
+                except KeyboardInterrupt:
+                    # when CTRL+C is pressed during the execution of this script
+                    logging.error(user_interrupt_text)
+                    raise ValueError(user_interrupt_text)

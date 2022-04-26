@@ -98,13 +98,6 @@ class FOVManager:
         if from_currsys(self.meta["preload_fovs"]) is True:
             self._fovs_list = self.generate_fovs_list()
 
-        # ..todo: Make sure this is changed for multiple detectors
-        # x_mm, y_mm = ipu.calc_footprint(det_eff.image_plane_header, "D")
-        # self.volumes_list.detector_limits = {"xd_min": min(x_mm),
-        #                                      "xd_max": max(x_mm),
-        #                                      "yd_min": min(y_mm),
-        #                                      "yd_max": min(y_mm)}
-
     def generate_fovs_list(self):
         """
         Generates a series of FieldOfViews objects based self.effects
