@@ -33,13 +33,17 @@ def load_example_optical_train(**kwargs):
     opt: OpticalTrain
 
     """
-    old_lpp = deepcopy(rc.__currsys__["!SIM.file.local_packages_path"])
+    old_local_path = deepcopy(rc.__config__["!SIM.file.local_packages_path"])
+    old_search_path = deepcopy(rc.__search_path__)
+
     inst_pkgs = os.path.dirname(__file__)
-    rc.__currsys__["!SIM.file.local_packages_path"] = inst_pkgs
+    rc.__config__["!SIM.file.local_packages_path"] = inst_pkgs
+    rc.__search_path__ = [inst_pkgs]
 
     cmd = UserCommands(use_instrument="basic_instrument", **kwargs)
     opt = OpticalTrain(cmd)
 
-    rc.__currsys__["!SIM.file.local_packages_path"] = old_lpp
+    rc.__config__["!SIM.file.local_packages_path"] = old_local_path
+    rc.__search_path__ = old_search_path
 
     return opt
