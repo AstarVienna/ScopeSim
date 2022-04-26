@@ -132,7 +132,7 @@ class MetisLMSSpectralTraceList(SpectralTraceList):
                 slicefov.meta['trace_id'] = sptid
                 slicefov.cube = fits.ImageHDU(header=slicewcs.to_header(),
                                               data=slicecube)
-                #slicefov.cube.writeto(f"slicefov_{sptid}.fits")
+                #slicefov.cube.writeto(f"slicefov_{sptid}.fits", overwrite=True)
                 slicefov.hdu = spt.map_spectra_to_focal_plane(slicefov)
 
                 sxmin = slicefov.hdu.header['XMIN']
@@ -221,10 +221,12 @@ class MetisLMSSpectralTrace(SpectralTrace):
 
         layout = ioascii.read(find_file("!DET.layout.file_name"))
         det_lims = {}
-        det_lims['xd_min'] = min(layout['x_cen'] - layout['xhw'])
-        det_lims['xd_max'] = max(layout['x_cen'] + layout['xhw'])
-        det_lims['yd_min'] = min(layout['y_cen'] - layout['yhw'])
-        det_lims['yd_max'] = max(layout['y_cen'] + layout['yhw'])
+        xhw = layout['pixel_size'] * layout['x_size'] / 2
+        yhw = layout['pixel_size'] * layout['y_size'] / 2
+        det_lims['xd_min'] = min(layout['x_cen'] - xhw)
+        det_lims['xd_max'] = max(layout['x_cen'] + xhw)
+        det_lims['yd_min'] = min(layout['y_cen'] - yhw)
+        det_lims['yd_max'] = max(layout['y_cen'] + yhw)
         wave_min, wave_max = self.get_waverange(det_lims)
 
         # ..todo: just a hack - xi and x are the same except xi is a quantity
@@ -439,11 +441,17 @@ class MetisLMSImageSlicer(ApertureMask):
     """
     def __init__(self, filename, ext_id="Aperture List", **kwargs):
         filename = find_file(from_currsys(filename))
+        ap_hdr = fits.getheader(filename, extname=ext_id)
         ap_list = fits.getdata(filename, extname=ext_id)
         xmin, xmax = ap_list['left'].min(), ap_list['right'].max()
         ymin, ymax = ap_list['bottom'].min(), ap_list['top'].max()
         slicer_dict = {"x": [xmin, xmax, xmax, xmin],
-                      "y": [ymin, ymin, ymax, ymax]}
+                       "y": [ymin, ymin, ymax, ymax]}
+        try:
+            kwargs["x_unit"] = ap_hdr['X_UNIT']
+            kwargs["y_unit"] = ap_hdr['Y_UNIT']
+        except KeyError:
+            pass
 
         super().__init__(array_dict=slicer_dict, id="LMS slicer",
                          conserve_image=True, **kwargs)

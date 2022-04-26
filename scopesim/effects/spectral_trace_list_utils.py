@@ -138,7 +138,7 @@ class SpectralTrace:
         xi_max = fov.meta['xi_max'].value           # [arcsec]
         xlim_mm, ylim_mm = self.footprint(wave_min=wave_min, wave_max=wave_max,
                                           xi_min=xi_min, xi_max=xi_max)
-
+        #print("xlim_mm:", xlim_mm, "   ylim_mm:", ylim_mm)
         if xlim_mm is None:
             print("xlim_mm is None")
             return None
@@ -163,6 +163,8 @@ class SpectralTrace:
         ymax = np.ceil(ylim_px.max()).astype(int)
 
         ## Check if spectral trace footprint is outside FoV
+        #print(fpa_wcsd)
+        #print(xmin, xmax, ymin, ymax, " <<->> ", naxis1d, naxis2d)
         if xmax < 0 or xmin > naxis1d or ymax < 0 or ymin > naxis2d:
             logging.warning("Spectral trace footprint is outside FoV")
             return None
@@ -270,8 +272,8 @@ class SpectralTrace:
         img_header["YMAX"] = ymax
 
         if np.any(image < 0):
-            logging.warning("map_spectra_to_focal_plane: {} negative pixels"
-                            "".format(np.sum(image < 0)))
+            logging.warning(f"map_spectra_to_focal_plane: {np.sum(image < 0)} negative pixels")
+
 
         image_hdu = fits.ImageHDU(header=img_header, data=image)
         return image_hdu
@@ -291,6 +293,8 @@ class SpectralTrace:
             If `None`, use the full range that the spectral trace is defined on.
             Float values are interpreted as arcsec.
         '''
+        #print(f"footprint: {wave_min}, {wave_max}, {xi_min}, {xi_max}")
+
         ## Define the wavelength range of the footprint. This is a compromise
         ## between the requested range (by method args) and the definition
         ## range of the spectral trace

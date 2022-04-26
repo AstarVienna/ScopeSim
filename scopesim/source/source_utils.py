@@ -195,14 +195,12 @@ def make_img_wcs_header(pixel_scale, image_size):
     imgwcs = wcs.WCS(naxis=2)
     imgwcs.wcs.ctype = ["RA---TAN", "DEC--TAN"]
     imgwcs.wcs.cunit = [u.deg, u.deg]
-    imgwcs.wcs.crpix = [x // 2, y // 2]
+    imgwcs.wcs.crpix = [(x + 1) / 2, (y + 1) / 2]
     imgwcs.wcs.cdelt = np.array([-pixel_scale / 3600, pixel_scale / 3600])
     imgwcs.wcs.crval = [ra, dec]
     imgwcs.wcs.cunit = [u.deg, u.deg]
 
     return imgwcs.to_header()
-
-
 
 #     unit = extract_unit_from_imagehdu(imagehdu)
 #
@@ -261,4 +259,5 @@ def make_img_wcs_header(pixel_scale, image_size):
 #                       "FLUXUNIT to the header.")
 #
 #     return unit
+
 
