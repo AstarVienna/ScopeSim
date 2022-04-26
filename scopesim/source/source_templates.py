@@ -1,6 +1,7 @@
 from os import path as pth
 
 import numpy as np
+import scopesim.source.source_templates
 from astropy import units as u
 from astropy.table import Table
 from astropy.io import fits
@@ -153,34 +154,31 @@ def star_field(n, mmin, mmax, width, height=None, use_grid=False):
     return stars
 
 
-def uniform_source(amplitude=0, size=60):
+def uniform_source(sp=None, extent=60):
     """
     Simplified form of scopesim_templates.misc.uniform_source, mostly intended for testing
 
-    it creates an extended uniform source with a flat spectrum scaled to the magnitude.
     This function creates an image with extend^2 pixels with pixel size of 1 arcsec^2 so provided amplitudes
     are in flux or magnitudes per arcsec^2
 
-    amplitude : magnitude or flux (PER ARCSEC^2) of the spectrum
-    extend : int
-    extension of the field in arcsec, will always produce a square field
+    It accepts any synphot.SourceSpectrum compatible object
+
+    sp : synphot.SourceSpectrum
+         defaults to vega_spectrum() with magnitude 0 mag/arcsec2
+
+    extent : int, default 60
+        extension of the field in arcsec, will always produce a square field. Default value produces a field of 60x60 arcsec
 
     """
-    spec_template = vega_spectrum(mag=amplitude)
-    if isinstance(amplitude, u.Quantity):
-        if amplitude.unit.physical_type == "spectral flux density":  # ABmag and Jy
-            amplitude = amplitude.to(u.ABmag)
-            mag_unit = u.ABmag
-            spec_template = ab_spectrum(mag=amplitude.value)
-        else:
-            spec_template = st_spectrum(mag=amplitude.value)
+    if sp is None:
+        sp = vega_spectrum()
 
-    data = np.ones(shape=(size, size))
+    data = np.ones(shape=(extent, extent))
 
     header = make_img_wcs_header(pixel_scale=1, image_size=data.shape)
     hdu = fits.ImageHDU(header=header, data=data)
 
-    src = Source(spectra=spec_template, image_hdu=hdu)
+    src = Source(spectra=sp, image_hdu=hdu)
 
     return src
 
