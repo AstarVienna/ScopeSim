@@ -164,7 +164,9 @@ class TestSpanishVOFilterWheelInit:
                                              name="test_svo_wheel",
                                              include_str="_filter")
 
-        assert np.all(["_filter" in name for name in filt_wheel.filters])
+        # last filter is an open filter by default
+        filt_names = list(filt_wheel.filters.keys())[:-1]
+        assert np.all(["_filter" in name for name in filt_names])
 
     def test_returns_filters_with_exclude_str(self):
         filt_wheel = tc.SpanishVOFilterWheel(observatory="GTC",

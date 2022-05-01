@@ -18,6 +18,7 @@ from .ter_curves import TERCurve
 from ..base_classes import FieldOfViewBase, FOVSetupBase
 from ..optics.fov import FieldOfView
 
+
 class MetisLMSSpectralTraceList(SpectralTraceList):
     """
     SpectralTraceList for the METIS LM spectrograph
@@ -171,7 +172,6 @@ class MetisLMSSpectralTraceList(SpectralTraceList):
         grat_spacing = self.meta['grat_spacing']
         wcal = self._file['WCAL'].data
         return echelle_setting(lam, grat_spacing, wcal)
-
 
 
 class MetisLMSSpectralTrace(SpectralTrace):
@@ -431,7 +431,6 @@ def echelle_setting(wavelength, grat_spacing, wcal_def):
     return {"Ord": order, "Angle": angle, "Phase": phase}
 
 
-
 class MetisLMSImageSlicer(ApertureMask):
     """
     Treats the METIS LMS image slicer as an aperture mask effect. This helps
@@ -457,7 +456,6 @@ class MetisLMSImageSlicer(ApertureMask):
 
         super().__init__(array_dict=slicer_dict, id="LMS slicer",
                          conserve_image=True, **kwargs)
-
 
 
 class MetisLMSEfficiency(TERCurve):

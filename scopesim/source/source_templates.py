@@ -1,6 +1,7 @@
 from os import path as pth
 
 import numpy as np
+
 from astropy import units as u
 from astropy.table import Table
 from astropy.io import fits
@@ -9,10 +10,10 @@ from astropy.utils.decorators import deprecated_renamed_argument
 from synphot import SourceSpectrum, ConstFlux1D, Empirical1D
 from synphot.units import PHOTLAM
 
-from scopesim.rc import __pkg_dir__
+from ..optics import image_plane_utils as ipu
+from .source_utils import make_img_wcs_header
 from .source import Source
 from .. import rc
-from .source_utils import make_img_wcs_header
 
 __all__ = ["empty_sky", "star", "star_field"]
 
@@ -153,34 +154,118 @@ def star_field(n, mmin, mmax, width, height=None, use_grid=False):
     return stars
 
 
-def uniform_source(amplitude=0, size=60):
+def uniform_illumination(xs, ys, pixel_scale, flux=None, spectrum=None):
+    """
+    Return a Source for a uniformly illuminated area
+
+    Parameters
+    ----------
+    xs, ys : list of float
+        [arcsec] min and max extent of each dimension relative to FOV centre
+        E.g. `xs=[-1, 1], ys=[5, 5.5]`
+
+    pixel_scale : float
+        [arcsec]
+
+    flux : astropy.Quantity
+        [mag, ABMag, Jy] Flux per arcsecond of the Source
+
+    Returns
+    -------
+    src : scopesim.Source
+
+    Examples
+    --------
+    A 200x200 uniform illumination Source at 1 Jy/arcsec2
+    ::
+
+        src = uniform_illumination(xs=[-1,1], ys=[-1, 1],
+                                   pixel_scale=0.01, flux=1*u.Jy)
+
+
+    A source that extends just past the MICADO 15" slit dimensions with a flux
+    of 10 mag/arcsec2
+    ::
+
+        src = uniform_illumination(xs=[-8, 8], ys=[-0.03, 0.03],
+                                   pixel_scale=0.004, flux=10*u.mag)
+
+    Using a self made frequency-comb spectrum with 1 Jy lines ever 0.1µm
+    ::
+
+        import numpy as np
+        from astropy import units as u
+        from synphot import SourceSpectrum, Empirical1D
+
+        wave = np.arange(0.7, 2.5, 0.001) * u.um
+        flux = np.zeros(len(wave))
+        flux[::100] = 1 * u.Jy
+        spec = SourceSpectrum(Empirical1D, points=wave, lookup_table=flux)
+
+        src = uniform_illumination(xs=[-8, 8], ys=[-0.03, 0.03],
+                                   pixel_scale=0.004, spectrum=spec)
+
+    """
+    if flux is not None:
+        mag_unit = u.mag
+        spec_template = vega_spectrum
+        if isinstance(flux, u.Quantity):
+            if flux.unit.physical_type == "spectral flux density":  # ABmag and Jy
+                mag_unit = u.ABmag
+                spec_template = ab_spectrum
+                flux = flux.to(u.ABmag)
+            flux = flux.value
+
+        spec = spec_template()
+        scale_factor = pixel_scale ** 2 * 10 ** (-0.4 * flux)
+    elif spectrum is not None:
+        spec = spectrum
+        mag_unit = "PHOTLAM"
+        scale_factor = pixel_scale ** 2
+    else:
+        raise ValueError(f"Either flux or spectrum must be passed: {flux}, {spectrum}")
+
+    hdr = ipu.header_from_list_of_xy(x=np.array(xs) / 3600.,
+                                     y=np.array(ys) / 3600.,
+                                     pixel_scale=pixel_scale / 3600.)
+
+    data = scale_factor * np.ones([max(1, hdr["NAXIS2"]), max(1, hdr["NAXIS1"])])
+    hdu = fits.ImageHDU(header=hdr, data=data)
+
+    hdu.header["SPEC_REF"] = 0
+    hdu.header["SPECMAG"] = 0
+    hdu.header["SPECUNIT"] = str(mag_unit)
+
+    src = Source(image_hdu=hdu, spectra=[spec])
+
+    return src
+
+
+def uniform_source(sp=None, extent=60):
     """
     Simplified form of scopesim_templates.misc.uniform_source, mostly intended for testing
 
-    it creates an extended uniform source with a flat spectrum scaled to the magnitude.
     This function creates an image with extend^2 pixels with pixel size of 1 arcsec^2 so provided amplitudes
     are in flux or magnitudes per arcsec^2
 
-    amplitude : magnitude or flux (PER ARCSEC^2) of the spectrum
-    extend : int
-    extension of the field in arcsec, will always produce a square field
+    It accepts any synphot.SourceSpectrum compatible object
+
+    sp : synphot.SourceSpectrum
+         defaults to vega_spectrum() with magnitude 0 mag/arcsec2
+
+    extent : int, default 60
+        extension of the field in arcsec, will always produce a square field. Default value produces a field of 60x60 arcsec
 
     """
-    spec_template = vega_spectrum(mag=amplitude)
-    if isinstance(amplitude, u.Quantity):
-        if amplitude.unit.physical_type == "spectral flux density":  # ABmag and Jy
-            amplitude = amplitude.to(u.ABmag)
-            mag_unit = u.ABmag
-            spec_template = ab_spectrum(mag=amplitude.value)
-        else:
-            spec_template = st_spectrum(mag=amplitude.value)
+    if sp is None:
+        sp = vega_spectrum()
 
-    data = np.ones(shape=(size, size))
+    data = np.ones(shape=(extent, extent))
 
     header = make_img_wcs_header(pixel_scale=1, image_size=data.shape)
     hdu = fits.ImageHDU(header=header, data=data)
 
-    src = Source(spectra=spec_template, image_hdu=hdu)
+    src = Source(spectra=sp, image_hdu=hdu)
 
     return src
 
@@ -188,7 +273,7 @@ def uniform_source(amplitude=0, size=60):
 def vega_spectrum(mag=0):
     if isinstance(mag, u.Quantity):
         mag = mag.value
-    vega = SourceSpectrum.from_file(pth.join(__pkg_dir__, "vega.fits"))
+    vega = SourceSpectrum.from_file(pth.join(rc.__pkg_dir__, "vega.fits"))
     vega = vega * 10 ** (-0.4 * mag)
     return vega
 

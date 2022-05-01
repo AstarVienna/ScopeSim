@@ -9,6 +9,7 @@ from astropy import units as u
 
 from synphot import SourceSpectrum
 from synphot.units import PHOTLAM
+import skycalc_ipy
 
 from .ter_curves_utils import combine_two_spectra, apply_throughput_to_cube
 from .ter_curves_utils import download_svo_filter, download_svo_filter_list
@@ -18,7 +19,7 @@ from ..optics.surface import SpectralSurface
 from ..source.source_utils import make_imagehdu_from_table
 from ..source.source import Source
 from ..base_classes import SourceBase, FOVSetupBase
-from ..utils import from_currsys, quantify, check_keys
+from ..utils import from_currsys, quantify, check_keys, find_file
 
 
 class TERCurve(Effect):
@@ -236,7 +237,7 @@ class SkycalcTERCurve(AtmosphericTERCurve):
             >>> import skycalc_ipy
             >>> skycalc_ipy.SkyCalc().keys
 
-        .. note:: Compared to skycalc_ipy, wmin and wmax must be given in units
+        .. note:: Different to skycalc_ipy, wmin and wmax must be given in units
             of ``um``
 
         Examples
@@ -253,16 +254,57 @@ class SkycalcTERCurve(AtmosphericTERCurve):
                 outer_unit : "m"
 
         """
-        import skycalc_ipy
-
         super(SkycalcTERCurve, self).__init__(**kwargs)
         self.meta["z_order"] = [112, 512]
+        self.meta["use_local_skycalc_file"] = False
         self.meta.update(kwargs)
 
-        self.skycalc_conn = skycalc_ipy.SkyCalc()
-        self.query_server()
-        if "name" not in self.meta:
-            self.meta["name"] = self.skycalc_conn["observatory"]
+        self.skycalc_table = None
+
+        if self.include is True:
+            self.load_skycalc_table()
+
+    @property
+    def include(self):
+        return from_currsys(self.meta["include"])
+
+    @include.setter
+    def include(self, item):
+        self.meta["include"] = item
+        if item is True and self.skycalc_table is None:
+            self.load_skycalc_table()
+
+    def load_skycalc_table(self):
+        use_local_file = from_currsys(self.meta["use_local_skycalc_file"])
+        if not use_local_file:
+            self.skycalc_conn = skycalc_ipy.SkyCalc()
+            tbl = self.query_server()
+
+            if "name" not in self.meta:
+                self.meta["name"] = self.skycalc_conn["observatory"]
+
+        else:
+            path = find_file(use_local_file)
+            fits_tbl = fits.getdata(path, ext=1)
+            fits_hdr = fits.getheader(path, ext=0)
+            tbl = Table(fits_tbl)
+            tbl["lam"].unit = u.um
+            for colname in tbl.colnames:
+                if "flux" in colname:
+                    tbl[colname].unit = u.Unit("ph s-1 m-2 um-1 arcsec-2")
+            tbl_small = Table()
+            tbl_small.meta["fits_header"] = dict(fits_hdr)
+            tbl_small.add_columns([tbl["lam"], tbl["trans"], tbl["flux"]])
+            tbl = tbl_small
+
+        for i, colname in enumerate(["wavelength", "transmission", "emission"]):
+            tbl.columns[i].name = colname
+        tbl.meta["wavelength_unit"] = tbl.columns[0].unit
+        tbl.meta["emission_unit"] = tbl.columns[2].unit
+
+        self.surface.table = tbl
+        self.surface.meta.update(tbl.meta)
+        self.skycalc_table = tbl
 
     def query_server(self, **kwargs):
         self.meta.update(kwargs)
@@ -285,12 +327,7 @@ class SkycalcTERCurve(AtmosphericTERCurve):
             logging.exception(msg)
             raise ValueError(msg)
 
-        for i, colname in enumerate(["wavelength", "transmission", "emission"]):
-            tbl.columns[i].name = colname
-        tbl.meta["wavelength_unit"] = tbl.columns[0].unit
-        tbl.meta["emission_unit"] = tbl.columns[2].unit
-        self.surface.table = tbl
-        self.surface.meta.update(tbl.meta)
+        return tbl
 
 
 class QuantumEfficiencyCurve(TERCurve):

@@ -112,6 +112,6 @@ class TestFitsHeader:
         hdr = hdul[0].header
 
         assert hdr["SIM SRC0 object"] == 'star'
-        assert hdr["SIM EFF12 class"] == 'SourceDescriptionFitsKeywords'
+        assert hdr["SIM EFF13 class"] == 'SourceDescriptionFitsKeywords'
         assert hdr["SIM CONFIG OBS filter_name"] == 'J'
         assert hdr["ESO ATM SEEING"] == sim.utils.from_currsys("!OBS.psf_fwhm")

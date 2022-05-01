@@ -11,6 +11,7 @@ from astropy.table import Table
 from scopesim import utils
 from scopesim import rc
 from scopesim import load_example_optical_train, OpticalTrain
+from scopesim.utils import from_currsys
 
 
 class TestFindFile:
@@ -230,10 +231,10 @@ class TestLoadExampleOptTrain:
         opt = load_example_optical_train()
 
         assert isinstance(opt, OpticalTrain)
-        assert opt["slit_wheel"].include == False
+        assert from_currsys(opt["slit_wheel"].include) == False
 
     def test_loads_spectroscopy_optical_train_object(self):
         opt = load_example_optical_train(set_modes=["spectroscopy"])
 
         assert isinstance(opt, OpticalTrain)
-        assert opt["slit_wheel"].include == True
+        assert from_currsys(opt["slit_wheel"].include) == True
