@@ -279,8 +279,6 @@ def vega_spectrum(mag=0):
 
 
 def st_spectrum(mag=0):
-    # ..todo: the waves vector is a bit random, in particular its length, but sets the resolution of
-    #         the final spectrum in scopesim. Can this be make more general?
     waves = np.geomspace(100, 300000, 50000)
     sp = ConstFlux1D(amplitude=mag*u.STmag)
 
@@ -288,8 +286,6 @@ def st_spectrum(mag=0):
 
 
 def ab_spectrum(mag=0):
-    # ..todo: the waves vector is a bit random, in particular its length, but sets the resolution of
-    #         the final spectrum in scopesim. Can this be make more general?
     waves = np.geomspace(100, 300000, 50000)
     sp = ConstFlux1D(amplitude=mag * u.ABmag)
 
