@@ -29,7 +29,7 @@ class MetisLMSSpectralTraceList(SpectralTraceList):
         "slicewidth": 0.0207,  # arcsec
         "pixscale": 0.0082,    # arcsec
         "grat_spacing": 18.2,
-        "plate_scale": 0.303,
+        "fp2_platescale": 0.303,
     }
 
     def __init__(self, **kwargs):
@@ -184,7 +184,7 @@ class MetisLMSSpectralTrace(SpectralTrace):
         "slicewidth": 0.0207,  # arcsec
         "pixscale": 0.0082,    # arcsec
         "grat_spacing": 18.2,
-        "plate_scale": 0.303,
+        "fp2_platescale": 0.303,
     }
 
     def __init__(self, hdulist, spslice, params, **kwargs):
@@ -362,13 +362,13 @@ class MetisLMSSpectralTrace(SpectralTrace):
         """
         Convert position in arcsec to position in FP2
         """
-        return xi / self.meta['plate_scale']
+        return xi / self.meta['fp2_platescale']
 
     def fp2sky(self, fp_x):
         """
         Convert position in FP2 to position on sky
         """
-        return fp_x * self.meta['plate_scale']
+        return fp_x * self.meta['fp2_platescale']
 
 
     def __repr__(self):
