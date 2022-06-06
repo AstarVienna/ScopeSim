@@ -247,10 +247,8 @@ class MetisLMSSpectralTrace(SpectralTrace):
         lam0 = from_currsys(self.meta['wavelen'])
         xi0 = 0.
         ymid = self.xilam2y(xi0, lam0)[0]   # estimate y level of trace
-        print(xi0, lam0, " --> ", ymid)
         waverange = self.xy2lam(np.array([xmin, xmax]), np.array([ymid, ymid]),
                                 grid=False)
-        print(xmin, xmax, ymid, " --> ", waverange)
 
         return waverange.min(), waverange.max()
 
