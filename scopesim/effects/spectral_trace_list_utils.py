@@ -138,7 +138,6 @@ class SpectralTrace:
         xi_max = fov.meta['xi_max'].value           # [arcsec]
         xlim_mm, ylim_mm = self.footprint(wave_min=wave_min, wave_max=wave_max,
                                           xi_min=xi_min, xi_max=xi_max)
-        #print("xlim_mm:", xlim_mm, "   ylim_mm:", ylim_mm)
         if xlim_mm is None:
             print("xlim_mm is None")
             return None
@@ -163,8 +162,6 @@ class SpectralTrace:
         ymax = np.ceil(ylim_px.max()).astype(int)
 
         ## Check if spectral trace footprint is outside FoV
-        #print(fpa_wcsd)
-        #print(xmin, xmax, ymin, ymax, " <<->> ", naxis1d, naxis2d)
         if xmax < 0 or xmin > naxis1d or ymax < 0 or ymin > naxis2d:
             logging.warning("Spectral trace footprint is outside FoV")
             return None
@@ -277,6 +274,66 @@ class SpectralTrace:
 
         image_hdu = fits.ImageHDU(header=img_header, data=image)
         return image_hdu
+
+    def rectify_trace(self, hdulist, interps=None, wcs=None, nlam=None,
+                      nxi=None, **kwargs):
+        """Create 2D spectrum for a trace
+
+        Parameters
+        ----------
+        hdulist : HDUList
+           The result of scopesim readout
+        interps : list of interpolation functions
+           If provided, there must be one for each image extension in `hdulist`.
+           The functions go from pixels to the images and can be created with,
+           e.g., RectBivariateSpline.
+        wcs : The WCS describing the rectified XiLamImage. This can be created
+           in a simple way from the fov included in the `OpticalTrain` used in
+           the simulation run producing `hdulist`.
+        nlam, nxi : int
+           Number of pixels in the rectified 2D spectrum.
+        """
+        if interps is None:
+            interps = make_image_interpolations(hdulist, kx=1, ky=1)
+
+
+        # ..todo: build wcs if not provided
+
+        # Create Xi, Lam images (do I need Iarr and Jarr or can I build Xi, Lam directly?)
+        Iarr, Jarr = np.meshgrid(np.arange(nlam, dtype=np.float32),
+                                 np.arange(nxi, dtype=np.float32))
+        Lam, Xi = wcs.all_pix2world(Iarr, Jarr, 0)
+
+        # Make sure that we do have microns
+        Lam = Lam * u.Unit(wcs.wcs.cunit[0]).to(u.um)
+
+        print("lambda:", Lam.min(), Lam.max())
+        print("xi:    ", Xi.min(), Xi.max())
+
+        # Convert Xi, Lam to focal plane units
+        Xarr = self.xilam2x(Xi, Lam)
+        Yarr = self.xilam2y(Xi, Lam)
+
+        rect_spec = np.zeros_like(Xarr, dtype=np.float32)
+
+        ihdu = 0
+        for hdu in hdulist:
+            if not isinstance(hdu, fits.ImageHDU):
+                continue
+
+            wcs_fp = WCS(hdu.header, key="D")
+            n_x = hdu.header['NAXIS1']
+            n_y = hdu.header['NAXIS2']
+            iarr, jarr = wcs_fp.all_world2pix(Xarr, Yarr, 0)
+            mask = (iarr > 0) * (iarr < n_x) * (jarr > 0) * (jarr < n_y)
+            if np.any(mask):
+                specpart = interps[ihdu](jarr, iarr, grid=False)
+                rect_spec += specpart * mask
+
+            ihdu += 1
+
+        return rect_spec
+
 
     def footprint(self, wave_min=None, wave_max=None, xi_min=None, xi_max=None):
         '''
@@ -733,6 +790,20 @@ def _xiy2xlam_fit(layout, params):
     xiy2lam = fitter(pinit_lam, xi_arr, y_arr, lam_arr)
     return xiy2x, xiy2lam
 
+
+def make_image_interpolations(hdulist, **kwargs):
+    """
+    Create 2D interpolation functions for images
+    """
+    interps = []
+    for hdu in hdulist:
+        if isinstance(hdu, fits.ImageHDU):
+            interps.append(
+                RectBivariateSpline(np.arange(hdu.header['NAXIS1']),
+                                    np.arange(hdu.header['NAXIS2']),
+                                    hdu.data, **kwargs)
+            )
+    return interps
 
 # ..todo: Check whether the following functions are actually used
 def rolling_median(x, n):

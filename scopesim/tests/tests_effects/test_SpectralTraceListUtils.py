@@ -8,7 +8,10 @@ import pytest
 
 import numpy as np
 
+from astropy.io import fits
+
 from scopesim.effects.spectral_trace_list_utils import Transform2D, power_vector
+from scopesim.effects.spectral_trace_list_utils import make_image_interpolations
 
 class TestPowerVec:
     """Test function power_vector()"""
@@ -106,3 +109,24 @@ class TestTransform2D:
         n_x, n_y = 4, 2
         res = tf2d(np.ones((n_y, n_x)), np.ones((n_y, n_x)), grid=False)
         assert res.shape == (n_y, n_x)
+
+
+class TestImageInterpolations:
+    """Tests for function make_image_interpolations"""
+    def test_return_empty_for_table(self):
+        hdul = fits.HDUList([fits.PrimaryHDU(), fits.BinTableHDU()])
+        assert make_image_interpolations(hdul) == []
+
+    def test_return_correct_number_of_interps(self):
+        nimg = 10
+        hdul = fits.HDUList([fits.ImageHDU(data=np.ones((10, 10)))] * nimg)
+        interps = make_image_interpolations(hdul)
+        assert len(interps) == nimg
+
+    def test_interpolation_is_accurate(self):
+        xx, yy = np.meshgrid(np.arange(100), np.arange(100))
+        img = np.sin(xx/6) * np.cos(yy/7)
+        hdul = fits.HDUList(fits.ImageHDU(data=img))
+        interps = make_image_interpolations(hdul, kx=1, ky=1)
+        imginterp = interps[0](yy, xx, grid=False)
+        assert np.allclose(imginterp, img)

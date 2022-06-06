@@ -10,9 +10,10 @@ import numpy as np
 
 from astropy.io import fits
 from astropy.table import Table
+from astropy.wcs import WCS
 
 from .effects import Effect
-from .spectral_trace_list_utils import SpectralTrace
+from .spectral_trace_list_utils import SpectralTrace, make_image_interpolations
 from ..utils import from_currsys, check_keys, interp2
 from ..optics.image_plane_utils import header_from_list_of_xy
 from ..base_classes import FieldOfViewBase, FOVSetupBase
@@ -117,14 +118,13 @@ class SpectralTraceList(Effect):
 
         if self._file is not None:
             self.make_spectral_traces()
-
+            self.update_meta()
 
     def make_spectral_traces(self):
         '''Returns a dictionary of spectral traces read in from a file'''
         self.ext_data = self._file[0].header["EDATA"]
         self.ext_cat = self._file[0].header["ECAT"]
         self.catalog = Table(self._file[self.ext_cat].data)
-
         spec_traces = {}
         for row in self.catalog:
             params = {col: row[col] for col in row.colnames}
@@ -133,6 +133,34 @@ class SpectralTraceList(Effect):
             spec_traces[row["description"]] = SpectralTrace(hdu, **params)
 
         self.spectral_traces = spec_traces
+
+    def update_meta(self):
+        """
+        Update fov related meta values
+
+        The values describe the full extent of the spectral trace
+        volume in wavelength and space
+        """
+        wlim, xlim, ylim = [], [], []
+        for thetrace in self.spectral_traces.values():
+            fov = thetrace.fov_grid()
+            if 'wave_min' in fov:
+                wlim.extend([fov['wave_min'], fov['wave_max']])
+            if 'x_min' in fov:
+                xlim.extend([fov['x_min'], fov['x_max']])
+            if 'y_min' in fov:
+                ylim.extend([fov['y_min'], fov['y_max']])
+
+        if wlim != []:
+            self.meta['wave_min'] = np.min(wlim)
+            self.meta['wave_max'] = np.max(wlim)
+        if xlim != []:
+            self.meta['x_min'] = np.min(xlim)
+            self.meta['x_max'] = np.max(xlim)
+        if ylim != []:
+            self.meta['y_min'] = np.min(ylim)
+            self.meta['y_max'] = np.max(ylim)
+
 
     def apply_to(self, obj, **kwargs):
         '''
@@ -184,15 +212,73 @@ class SpectralTraceList(Effect):
             elif obj.hdu is None and obj.cube is None:
                 obj.cube = obj.make_cube_hdu()
 
-            # ..todo: obj will be changed to a single one covering the full field of view
-            # covered by the image slicer (28 slices for LMS; for LSS still only a single slit)
-            # We need a loop over spectral_traces that chops up obj into the single-slice fov before
-            # calling map_spectra...
             trace_id = obj.meta['trace_id']
             spt = self.spectral_traces[trace_id]
             obj.hdu = spt.map_spectra_to_focal_plane(obj)
 
         return obj
+
+
+    def rectify_cube(self, hdul):
+        """
+        Rectify an IFU observation into a data cube
+
+        The HDU list (or fits file) must have been created with the
+        present OpticalTrain (or an identically configured one).
+
+        Parameters
+        ----------
+        hdul : HDUList, file name
+           an ifu observation created with the present OpticalTrain
+        """
+        if not isinstance(hdul, fits.HDUList):
+            hdul = fits.open(hdul)
+
+        # Create interpolation functions
+        ip_funcs = make_image_interpolations(hdul, kx=1, ky=1)
+
+        # Create a common wcs for the rectification
+        dwave = from_currsys("!SIM.spectral.spectral_bin_width")
+        pixscale = self.meta['pixel_scale']
+        naxis1 = int((self.meta['x_max'] - self.meta['x_min']) / pixscale)
+        naxis2 = len(self.spectral_traces)
+        naxis3 = int((self.meta['wave_max'] - self.meta['wave_min'])/dwave)
+        slicewidth = (self.meta['y_max'] - self.meta['y_min']) / naxis2
+
+        rectwcs = WCS(naxis=2)
+        rectwcs.wcs.ctype = ['WAVE', 'LINEAR']
+        rectwcs.wcs.crpix = [1, (naxis1 + 1)/2]
+        rectwcs.wcs.crval = [self.meta['wave_min'], 0]
+        rectwcs.wcs.cdelt = [dwave, pixscale]
+        rectwcs.wcs.cunit = ['um', 'arcsec']
+
+        cube = np.zeros((naxis3, naxis2, naxis1), dtype=np.float32)
+        for i, (sptid, spt) in enumerate(self.spectral_traces.items()):
+            result = spt.rectify_trace(hdul, interps=ip_funcs,
+                                       wcs=rectwcs, nlam=naxis3, nxi=naxis1)
+            cube[:, i, :] = result.T
+
+        cubehdr = fits.Header()
+        cubehdr['INSMODE'] = from_currsys(self.meta['element_name'])
+        cubehdr['WAVELEN'] = from_currsys(self.meta['wavelen'])
+        cubehdr['CTYPE1'] = 'LINEAR'
+        cubehdr['CTYPE2'] = 'LINEAR'
+        cubehdr['CTYPE3'] = 'WAVE'
+        cubehdr['CRPIX1'] = (naxis1 + 1)/2
+        cubehdr['CRPIX2'] = (naxis2 + 1)/2
+        cubehdr['CRPIX3'] = 1.
+        cubehdr['CRVAL1'] = 0.
+        cubehdr['CRVAL2'] = 0.
+        cubehdr['CRVAL3'] = self.meta['wave_min']
+        cubehdr['CDELT1'] = pixscale
+        cubehdr['CDELT2'] = slicewidth
+        cubehdr['CDELT3'] = dwave
+        cubehdr['CUNIT1'] = 'arcsec'
+        cubehdr['CUNIT2'] = 'arcsec'
+        cubehdr['CUNIT3'] = 'um'
+
+        cubehdu = fits.ImageHDU(data=cube, header=cubehdr)
+        return cubehdu
 
     def get_waveset(self, pixel_size=None):
         if pixel_size is None:
@@ -252,11 +338,16 @@ class SpectralTraceList(Effect):
         return plt.gcf()
 
     def __repr__(self):
-        return "\n".join([spt.__repr__() for spt in self.spectral_traces])
+        #return "\n".join([spt.__repr__() for spt in self.spectral_traces])
+        return self.__str__()
 
     def __str__(self):
-        msg = 'SpectralTraceList: "{}" : {} traces' \
+        msg = 'SpectralTraceList: "{}" : {} trace' \
               ''.format(self.meta.get("name"), len(self.spectral_traces))
+        if len(self.spectral_traces) != 1:
+            msg += 's'
+        msg += '\n  wave_min: {} um   wave_max: {} um' \
+            ''.format(self.meta.get('wave_min'), self.meta.get('wave_max'))
         return msg
 
 
