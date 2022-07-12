@@ -19,7 +19,8 @@ ScopeSim_ is on pip::
 .. warning:: July 2022: The downloadable content server was retired and the data migrated to a new server.
 
    ScopeSim v0.5.1 and above have been redirected to a new server URL.
-   Please either upgrade to the latest version (``pip install --upgrade scopesim``), or follow these `instructions to update the server URL <https://astarvienna.github.io/server_upgrade_instructions.html>`_ in the config file.
+
+   For older verions, please either upgrade to the latest version (``pip install --upgrade scopesim``), or follow these `instructions to update the server URL <https://astarvienna.github.io/server_upgrade_instructions.html>`_ in the config file.
 
 
 .. _ScopeSim:    https://scopesim.readthedocs.io/en/latest/
