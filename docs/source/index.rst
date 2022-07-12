@@ -16,6 +16,12 @@ ScopeSim_ is on pip::
 
 .. note:: ScopeSim only supports python 3.6 and above
 
+.. warning:: July 2022: The downloadable content server was retired and the data migrated to a new server.
+
+   ScopeSim v0.5.1 and above have been redirected to a new server URL.
+   Please either upgrade to the latest version (``pip install --upgrade scopesim``), or follow these `instructions to update the server URL <https://astarvienna.github.io/server_upgrade_instructions.html>`_ in the config file.
+
+
 .. _ScopeSim:    https://scopesim.readthedocs.io/en/latest/
 .. _`ScopeSim Templates`: https://scopesim-templates.readthedocs.io/en/latest/
 
