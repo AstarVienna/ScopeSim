@@ -1,6 +1,7 @@
 import pytest
 from pytest import raises
 import os
+from time import time
 import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib.colors import LogNorm
@@ -37,8 +38,13 @@ class TestObserveImagingMode:
         cmd = sim.UserCommands(use_instrument="basic_instrument",
                                set_modes=["imaging"])
         opt = sim.OpticalTrain(cmd)
+
+        start = time()
         opt.observe(src)
         hdul = opt.readout()[0]
+        end = time()
+        print(end-start)
+
         det_im = hdul[1].data
 
         if PLOTS:
@@ -73,13 +79,17 @@ class TestObserveSpectroscopyMode:
         cmd = sim.UserCommands(use_instrument="basic_instrument",
                                set_modes=["spectroscopy"])
         opt = sim.OpticalTrain(cmd)
-        opt["shot_noise"].include = False
-        opt["dark_current"].include = False
-        opt["readout_noise"].include = False
-        opt["atmospheric_radiometry"].include = False
+        for effect_name in ["shot_noise", "dark_current", "readout_noise",
+                            "atmospheric_radiometry", "source_fits_keywords",
+                            "effects_fits_keywords", "config_fits_keywords"]:
+            opt[effect_name].include = False
 
+        start = time()
         opt.observe(src)
         hdul = opt.readout()[0]
+        end = time()
+        print(end-start)
+
         imp_im = opt.image_planes[0].data
         det_im = hdul[1].data
 
@@ -87,7 +97,7 @@ class TestObserveSpectroscopyMode:
             plt.subplot(121)
             plt.imshow(imp_im)
             plt.subplot(122)
-            plt.imshow(det_im, norm=LogNorm())
+            plt.imshow(det_im)
             plt.show()
 
         xs = [(175, 200), (500, 525), (825, 850)]
