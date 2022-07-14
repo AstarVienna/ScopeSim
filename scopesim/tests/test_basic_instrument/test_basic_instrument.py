@@ -38,12 +38,8 @@ class TestObserveImagingMode:
         cmd = sim.UserCommands(use_instrument="basic_instrument",
                                set_modes=["imaging"])
         opt = sim.OpticalTrain(cmd)
-
-        start = time()
         opt.observe(src)
         hdul = opt.readout()[0]
-        end = time()
-        print(end-start)
 
         det_im = hdul[1].data
 
@@ -93,7 +89,7 @@ class TestObserveSpectroscopyMode:
         imp_im = opt.image_planes[0].data
         det_im = hdul[1].data
 
-        if PLOTS:
+        if not PLOTS:
             plt.subplot(121)
             plt.imshow(imp_im)
             plt.subplot(122)

@@ -24,48 +24,97 @@ The format of the fits file is:
 wave, slit ["], x [mm], y [mm]
 
 """
+from copy import deepcopy
 import numpy as np
 from astropy.table import Table
 from astropy import units as u
 from astropy.io import fits
 from matplotlib import pyplot as plt
 
-names = ["J", "H", "K"]
-wave_mins = np.array([1.0, 1.3, 1.75])
-wave_maxs = np.array([1.35, 1.8, 2.5])
-s_cens = np.array([-65., 0., 65.])
-dss = np.array([-30., 10., 0., 10., 30.])
 
-hdus = []
-for wave_min, wave_max, s_cen, name in zip(wave_mins, wave_maxs, s_cens, names):
-    n = 101
+def make_lss_trace_file():
+    names = ["J", "H", "K"]
+    wave_mins = np.array([1.0, 1.3, 1.75])
+    wave_maxs = np.array([1.35, 1.8, 2.5])
+    s_cens = np.array([-65., 0., 65.])
+    dss = np.array([-30., 10., 0., 10., 30.])
 
-    waves = np.geomspace(wave_min, wave_max, n)
-    waves = np.array([[w]*5 for w in waves]).flatten()
+    hdus = []
+    for wave_min, wave_max, s_cen, name in zip(wave_mins, wave_maxs, s_cens, names):
+        n = 101
 
-    ys = np.array([[y]*5 for y in np.linspace(-5, 5, n)]).flatten()
+        waves = np.geomspace(wave_min, wave_max, n)
+        waves = np.array([[w]*5 for w in waves]).flatten()
 
-    ss = np.array(list(dss) * n)
-    xs = (ss + s_cen) / 20.
+        ys = np.array([[y]*5 for y in np.linspace(-5, 5, n)]).flatten()
 
-    tbl = Table(names=["wavelength", "s", "x", "y"],
-                data=[waves, ss, xs, ys],
-                units=[u.um, u.arcsec, u.mm, u.mm])
-    hdu = fits.table_to_hdu(tbl)
-    hdu.header["EXTNAME"] = f"TRACE_{name}"
-    hdus += [hdu]
+        ss = np.array(list(dss) * n)
+        xs = (ss + s_cen) / 20.
 
-tbl = Table(names=["description", "extension_id", "aperture_id", "image_plane_id"],
-            data=[[hdu.header["EXTNAME"] for hdu in hdus],
-                  [2,3,4],
-                  [0,0,0],
-                  [0,0,0]])
-cat_hdu = fits.table_to_hdu(tbl)
-cat_hdu.header["EXTNAME"] = "TOC"
+        tbl = Table(names=["wavelength", "s", "x", "y"],
+                    data=[waves, ss, xs, ys],
+                    units=[u.um, u.arcsec, u.mm, u.mm])
+        hdu = fits.table_to_hdu(tbl)
+        hdu.header["EXTNAME"] = f"TRACE_{name}"
+        hdus += [hdu]
 
-pri_hdr = fits.PrimaryHDU()
-pri_hdr.header["ECAT"] = 1         # where to find the catalogue table
-pri_hdr.header["EDATA"] = 2        # where the data tables start
+    tbl = Table(names=["description", "extension_id", "aperture_id", "image_plane_id"],
+                data=[[hdu.header["EXTNAME"] for hdu in hdus],
+                      [2,3,4],
+                      [0,0,0],
+                      [0,0,0]])
+    cat_hdu = fits.table_to_hdu(tbl)
+    cat_hdu.header["EXTNAME"] = "TOC"
 
-hdul = fits.HDUList([pri_hdr, cat_hdu] + hdus)
-hdul.writeto("../INS_lss_traces.fits", overwrite=True)
+    pri_hdr = fits.PrimaryHDU()
+    pri_hdr.header["ECAT"] = 1         # where to find the catalogue table
+    pri_hdr.header["EDATA"] = 2        # where the data tables start
+
+    hdul = fits.HDUList([pri_hdr, cat_hdu] + hdus)
+    hdul.writeto("../INS_lss_traces.fits", overwrite=True)
+
+# make_lss_trace_file()
+
+def make_ifu_trace_file():
+    names = ["Ap0", "Ap1", "Ap2"]
+    wave_min = 1.75
+    wave_max = 2.5
+    s_cens = np.array([-65., 0., 65.])
+    dss = np.array([-30., 10., 0., 10., 30.])
+
+    hdus = []
+    for s_cen, name in zip(s_cens, names):
+        n = 101
+
+        waves = np.geomspace(wave_min, wave_max, n)
+        waves = np.array([[w] * 5 for w in waves]).flatten()
+
+        ys = np.array([[y] * 5 for y in np.linspace(-5, 5, n)]).flatten()
+
+        ss = np.array(list(dss) * n)
+        xs = (ss + s_cen) / 20.
+
+        tbl = Table(names=["wavelength", "s", "x", "y"],
+                    data=[waves, ss, xs, ys],
+                    units=[u.um, u.arcsec, u.mm, u.mm])
+        hdu = fits.table_to_hdu(tbl)
+        hdu.header["EXTNAME"] = f"TRACE_{name}"
+        hdus += [hdu]
+
+    tbl = Table(
+        names=["description", "extension_id", "aperture_id", "image_plane_id"],
+        data=[[hdu.header["EXTNAME"] for hdu in hdus],
+              [2, 3, 4],
+              [0, 1, 2],
+              [0, 0, 0]])
+    cat_hdu = fits.table_to_hdu(tbl)
+    cat_hdu.header["EXTNAME"] = "TOC"
+
+    pri_hdr = fits.PrimaryHDU()
+    pri_hdr.header["ECAT"] = 1  # where to find the catalogue table
+    pri_hdr.header["EDATA"] = 2  # where the data tables start
+
+    hdul = fits.HDUList([pri_hdr, cat_hdu] + hdus)
+    hdul.writeto("../INS_ifu_traces.fits", overwrite=True)
+
+make_ifu_trace_file()
