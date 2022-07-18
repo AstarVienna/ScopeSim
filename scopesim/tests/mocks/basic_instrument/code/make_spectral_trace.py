@@ -76,18 +76,18 @@ def make_lss_trace_file():
 # make_lss_trace_file()
 
 def make_ifu_trace_file():
-    names = ["Ap0", "Ap1", "Ap2"]
+    names = [f"Ap{i}" for i in range(5)]
     wave_min = 1.75
     wave_max = 2.5
-    s_cens = np.array([-65., 0., 65.])
-    dss = np.array([-30., 10., 0., 10., 30.])
+    s_cens = np.array([-64., -32., 0., 32., 64.])   # across detector
+    dss = np.array([-14., -7., 0., 7., 14.])     # across slit
 
     hdus = []
     for s_cen, name in zip(s_cens, names):
         n = 101
 
         waves = np.geomspace(wave_min, wave_max, n)
-        waves = np.array([[w] * 5 for w in waves]).flatten()
+        waves = np.array([[w] * 5 for w in waves]).flatten()    # 5 pos along slit
 
         ys = np.array([[y] * 5 for y in np.linspace(-5, 5, n)]).flatten()
 
@@ -104,9 +104,9 @@ def make_ifu_trace_file():
     tbl = Table(
         names=["description", "extension_id", "aperture_id", "image_plane_id"],
         data=[[hdu.header["EXTNAME"] for hdu in hdus],
-              [2, 3, 4],
-              [0, 1, 2],
-              [0, 0, 0]])
+              [2, 3, 4, 5, 6],
+              [0, 1, 2, 3, 4],
+              [0, 0, 0, 0, 0]])
     cat_hdu = fits.table_to_hdu(tbl)
     cat_hdu.header["EXTNAME"] = "TOC"
 
@@ -117,4 +117,4 @@ def make_ifu_trace_file():
     hdul = fits.HDUList([pri_hdr, cat_hdu] + hdus)
     hdul.writeto("../INS_ifu_traces.fits", overwrite=True)
 
-make_ifu_trace_file()
+# make_ifu_trace_file()

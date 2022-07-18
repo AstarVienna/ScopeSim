@@ -160,10 +160,12 @@ class SpectralTraceList(Effect):
                     extracted_vols = obj.extract(axes=["wave", "x", "y"],
                                                  edges=(wave_edges,
                                                         x_edges,
-                                                        y_edges))
+                                                        y_edges),
+                                                 aperture_id=vol["aperture_id"])
                 else:
                     extracted_vols = obj.extract(axes=["wave"],
-                                                 edges=([wave_edges]))
+                                                 edges=(wave_edges, ),
+                                                 aperture_id=vol["aperture_id"])
 
                 for ex_vol in extracted_vols:
                     ex_vol["meta"].update(vol)
@@ -241,7 +243,7 @@ class SpectralTraceList(Effect):
 
         from matplotlib import pyplot as plt
         from matplotlib._pylab_helpers import Gcf
-        if len(Gcf.figs()) == 0:
+        if len(Gcf.figs) == 0:
             plt.figure(figsize=(12, 12))
 
         if self.spectral_traces is not None:

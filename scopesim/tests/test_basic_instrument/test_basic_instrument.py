@@ -80,18 +80,15 @@ class TestObserveSpectroscopyMode:
                             "effects_fits_keywords", "config_fits_keywords"]:
             opt[effect_name].include = False
 
-        start = time()
         opt.observe(src)
         hdul = opt.readout()[0]
-        end = time()
-        print(end-start)
 
         imp_im = opt.image_planes[0].data
         det_im = hdul[1].data
 
-        if not PLOTS:
+        if PLOTS:
             plt.subplot(121)
-            plt.imshow(imp_im)
+            plt.imshow(imp_im, norm=LogNorm())
             plt.subplot(122)
             plt.imshow(det_im)
             plt.show()
@@ -100,11 +97,74 @@ class TestObserveSpectroscopyMode:
         dlams = np.array([0.35, 0.5, 0.75])
         n_spots = dlams / 0.05
 
-        spot_flux = 28000
+        spot_flux = 28000       # due to psf flux losses in narrow slit (0.5")
         for i in range(3):
             x0, x1 = xs[i]
             trace_flux = det_im[:, x0:x1].sum()     # sum along a trace
             assert round(trace_flux / spot_flux) == round(n_spots[i])
+
+
+class TestObserveIfuMode:
+    def test_runs(self):
+        wave = np.arange(0.7, 2.5, 0.001)
+        spec = np.zeros(len(wave))
+        spec[25::50] += 100      # every 0.05µm, offset by 0.025µm
+        x = [-4, -2, 0, 2, 4] * 5
+        y = [y0 for y0 in range(-4, 5, 2) for i in range(5)]
+        src = sim.Source(lam=wave*u.um, spectra=spec,
+                         x=x, y=y, ref=[0]*len(x), weight=[1e-3]*len(x))
+
+        cmd = sim.UserCommands(use_instrument="basic_instrument",
+                               set_modes=["ifu"])
+        opt = sim.OpticalTrain(cmd)
+        for effect_name in ["shot_noise", "dark_current", "readout_noise",
+                            "atmospheric_radiometry", "source_fits_keywords",
+                            "effects_fits_keywords", "config_fits_keywords"]:
+            opt[effect_name].include = False
+
+        opt.observe(src)
+        hdul = opt.readout()[0]
+
+        imp_im = opt.image_planes[0].data
+        det_im = hdul[1].data
+
+        if PLOTS:
+            plt.subplot(121)
+            plt.imshow(imp_im, norm=LogNorm())
+            plt.subplot(122)
+            plt.imshow(det_im)
+            plt.show()
+
+        xs = [(157, 226), (317, 386), (476, 545), (640, 706), (797, 866)]
+        spot_flux = 100000       # due to psf flux in large IFU slices (2")
+        for i in range(5):
+            x0, x1 = xs[i]
+            trace_flux = det_im[:, x0:x1].sum()     # sum along a trace
+            assert round(trace_flux / spot_flux) == 15 * 5
+
+
+    def test_random_star_field(self):
+        src = sim.source.source_templates.star_field(n=100, mmin=8, mmax=18, width=10)
+
+        cmd = sim.UserCommands(use_instrument="basic_instrument",
+                               set_modes=["ifu"])
+        opt = sim.OpticalTrain(cmd)
+        for effect_name in ["source_fits_keywords", "effects_fits_keywords",
+                            "config_fits_keywords"]:
+            opt[effect_name].include = False
+
+        opt.observe(src)
+        hdul = opt.readout()[0]
+
+        imp_im = opt.image_planes[0].data
+        det_im = hdul[1].data
+
+        if PLOTS:
+            plt.subplot(121)
+            plt.imshow(imp_im, norm=LogNorm())
+            plt.subplot(122)
+            plt.imshow(det_im, norm=LogNorm())
+            plt.show()
 
 
 class TestFitsHeader:
@@ -118,6 +178,6 @@ class TestFitsHeader:
         hdr = hdul[0].header
 
         assert hdr["SIM SRC0 object"] == 'star'
-        assert hdr["SIM EFF13 class"] == 'SourceDescriptionFitsKeywords'
+        assert hdr["SIM EFF14 class"] == 'SourceDescriptionFitsKeywords'
         assert hdr["SIM CONFIG OBS filter_name"] == 'J'
         assert hdr["ESO ATM SEEING"] == sim.utils.from_currsys("!OBS.psf_fwhm")

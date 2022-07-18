@@ -117,15 +117,15 @@ class ApertureMask(Effect):
 
         return obj
 
-    def fov_grid(self, which="edges", **kwargs):
-        """ Returns a header with the sky coordinates """
-        logging.warning("DetectorList.fov_grid will be depreciated in v1.0")
-        if which == "edges":
-            self.meta.update(kwargs)
-            return self.header
-        elif which == "masks":
-            self.meta.update(kwargs)
-            return self.mask
+    # def fov_grid(self, which="edges", **kwargs):
+    #     """ Returns a header with the sky coordinates """
+    #     logging.warning("DetectorList.fov_grid will be depreciated in v1.0")
+    #     if which == "edges":
+    #         self.meta.update(kwargs)
+    #         return self.header
+    #     elif which == "masks":
+    #         self.meta.update(kwargs)
+    #         return self.mask
 
     @property
     def hdu(self):
@@ -197,15 +197,15 @@ class RectangularApertureMask(ApertureMask):
 
         self.table = self.get_table(**kwargs)
 
-    def fov_grid(self, which="edges", **kwargs):
-        """ Returns a header with the sky coordinates """
-        if which == "edges":
-            self.table = self.get_table(**kwargs)
-            return self.header      # from base class ApertureMask
-
-        elif which == "masks":
-            self.meta.update(kwargs)
-            return self.mask
+    # def fov_grid(self, which="edges", **kwargs):
+    #     """ Returns a header with the sky coordinates """
+    #     if which == "edges":
+    #         self.table = self.get_table(**kwargs)
+    #         return self.header      # from base class ApertureMask
+    #
+    #     elif which == "masks":
+    #         self.meta.update(kwargs)
+    #         return self.mask
 
     def get_table(self, **kwargs):
         self.meta.update(kwargs)
@@ -272,13 +272,35 @@ class ApertureList(Effect):
                              "conserve_image", "shape"]
             check_keys(self.table.colnames, required_keys)
 
-    def fov_grid(self, which="edges", **kwargs):
-        params = deepcopy(self.meta)
-        params.update(kwargs)
-        if which == "edges":
-            return [ap.fov_grid(which=which, **params) for ap in self.apertures]
-        if which == "masks":
-            return {ap.meta["id"]: ap.mask for ap in self.apertures}
+    def apply_to(self, obj, **kwargs):
+        if isinstance(obj, FOVSetupBase):
+            new_vols = []
+            for row in self.table:
+                vols = obj.extract(["x", "y"], ([row["left"], row["right"]],
+                                                [row["bottom"], row["top"] ]))
+                for vol in vols:
+                    vol["meta"]["aperture_id"] = row["id"]
+
+                    # ..todo: HUGE HACK - Get rid of this!
+                    vol["meta"]["xi_min"] = row["left"] * u.arcsec
+                    vol["meta"]["xi_max"] = row["right"] * u.arcsec
+                    vol["conserve_image"] = row["conserve_image"]
+                    vol["shape"] = row["shape"]
+                    vol["angle"] = row["angle"]
+
+                new_vols += vols
+
+            obj.volumes = new_vols
+
+        return obj
+
+    # def fov_grid(self, which="edges", **kwargs):
+    #     params = deepcopy(self.meta)
+    #     params.update(kwargs)
+    #     if which == "edges":
+    #         return [ap.fov_grid(which=which, **params) for ap in self.apertures]
+    #     if which == "masks":
+    #         return {ap.meta["id"]: ap.mask for ap in self.apertures}
 
     @property
     def apertures(self):
@@ -297,7 +319,7 @@ class ApertureList(Effect):
             params = {"id": row["id"],
                       "angle": row["angle"],
                       "shape": row["shape"],
-                      "conserve_image": row["conserve_image"],
+                      "conserve_image": yaml.load(str(row["conserve_image"])),
                       "no_mask": self.meta["no_mask"],
                       "pixel_scale": self.meta["pixel_scale"],
                       "x_unit": "arcsec",
@@ -339,8 +361,8 @@ class ApertureList(Effect):
             raise ValueError("Secondary argument not of type ApertureList: {}"
                              "".format(type(other)))
 
-    def __getitem__(self, item):
-        return self.get_apertures(item)[0]
+    # def __getitem__(self, item):
+    #     return self.get_apertures(item)[0]
 
 
 
