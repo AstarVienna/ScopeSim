@@ -2,6 +2,7 @@
 from os import path as pth
 from copy import deepcopy
 import logging
+import yaml
 
 import numpy as np
 from matplotlib.path import Path
@@ -117,15 +118,16 @@ class ApertureMask(Effect):
 
         return obj
 
-    # def fov_grid(self, which="edges", **kwargs):
-    #     """ Returns a header with the sky coordinates """
-    #     logging.warning("DetectorList.fov_grid will be depreciated in v1.0")
-    #     if which == "edges":
-    #         self.meta.update(kwargs)
-    #         return self.header
-    #     elif which == "masks":
-    #         self.meta.update(kwargs)
-    #         return self.mask
+    # Outdated. Remove when removing all old FOVManager code from effects
+    def fov_grid(self, which="edges", **kwargs):
+        """ Returns a header with the sky coordinates """
+        logging.warning("DetectorList.fov_grid will be depreciated in v1.0")
+        if which == "edges":
+            self.meta.update(kwargs)
+            return self.header
+        elif which == "masks":
+            self.meta.update(kwargs)
+            return self.mask
 
     @property
     def hdu(self):
