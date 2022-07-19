@@ -186,7 +186,7 @@ class FovVolumeList(FOVSetupBase):
     wave : [um]
         On-sky wavelengths
     xd, yd : [mm]
-        Detector plane coordinated relative to centre of ImagePlane
+        Detector plane coordinates relative to centre of ImagePlane
 
     """
 

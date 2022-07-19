@@ -321,7 +321,7 @@ class ApertureList(Effect):
             params = {"id": row["id"],
                       "angle": row["angle"],
                       "shape": row["shape"],
-                      "conserve_image": yaml.load(str(row["conserve_image"])),
+                      "conserve_image": yaml.full_load(str(row["conserve_image"])),
                       "no_mask": self.meta["no_mask"],
                       "pixel_scale": self.meta["pixel_scale"],
                       "x_unit": "arcsec",
