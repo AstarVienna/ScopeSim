@@ -1,6 +1,12 @@
-version = '0.5.0'
-date    = '2022-04-22 22:00:00 GMT'
+version = '0.5.1'
+date    = '2022-07-14 12:00:00 GMT'
 yaml_descriptions = """
+- version : 0.5.1
+  date : 2022-07-12
+  comment : Update of DLC server URL to scopesim.univie.ac.at
+  changes :
+  - Changed URL in defaults.yaml file
+
 - version : 0.5.0
   date : 2022-04-22
   comment : IFU Spectroscopy mode for METIS

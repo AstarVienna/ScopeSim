@@ -82,12 +82,13 @@ class FOVManager:
                      "sub_pixel": "!SIM.sub_pixel.flag",
                      "sub_pixel_fraction": "!SIM.sub_pixel.fraction",
                      "preload_fovs": "!SIM.computing.preload_field_of_views",
-                     "decouple_sky_det_hdrs": "!INST.decouple_detector_from_sky_headers"}
+                     "decouple_sky_det_hdrs": "!INST.decouple_detector_from_sky_headers",
+                     "aperture_id": 0}
         self.meta.update(kwargs)
 
         params = from_currsys({"wave_min": self.meta["wave_min"],
                                "wave_max": self.meta["wave_max"]})
-        fvl_meta = ["area", "pixel_scale"]
+        fvl_meta = ["area", "pixel_scale", "aperture_id"]
         params["meta"] = from_currsys({key: self.meta[key] for key in fvl_meta})
         self.volumes_list = FovVolumeList(initial_volume=params)
 
@@ -185,7 +186,7 @@ class FovVolumeList(FOVSetupBase):
     wave : [um]
         On-sky wavelengths
     xd, yd : [mm]
-        Detector plane coordinated relative to centre of ImagePlane
+        Detector plane coordinates relative to centre of ImagePlane
 
     """
 
@@ -197,15 +198,16 @@ class FovVolumeList(FOVSetupBase):
                          "x_max": 1800,
                          "y_min": -1800,
                          "y_max": 1800,
-                         "meta": {"area": 0 * u.um**2}
+                         "meta": {"area": 0 * u.um**2,
+                                  "aperture_id": 0}
                          }]
-        self.volumes[0].update(initial_volume)
+        self.volumes[0].update(initial_volume)  # .. TODO: Careful! This overwrites meta
         self.detector_limits = {"xd_min": 0,
                                 "xd_max": 0,
                                 "yd_min": 0,
                                 "yd_max": 0}
 
-    def split(self, axis, value):
+    def split(self, axis, value, aperture_id=None):
         """
         Splits the all volumes that include axis=value into two.
 
@@ -218,6 +220,9 @@ class FovVolumeList(FOVSetupBase):
         axis : str, list of str
             "wave", "x", "y"
         value : float, list of floats
+        aperture_id : int, optional
+            Default None. If ``None``, split all volumes. If ``int``, only split
+            volumes with this ``aperture_id`` in the meta dict
 
         Examples
         --------
@@ -228,6 +233,8 @@ class FovVolumeList(FOVSetupBase):
             >>> fvl.split(axis=["x", "y"], value=[0, 0])
             >>> fvl.split(axis=["x", "y"], value=([-1, 1], 0))
             >>> fvl.split(axis=["x", "y"], value=([-1, 1], [0, 5]))
+            >>> fvl.split(axis="wave", value=3.0, aperture_id=1)
+            >>> fvl.split(axis="wave", value=3.0, aperture_id=None)
 
         """
         if isinstance(axis, (tuple, list)):
@@ -238,13 +245,15 @@ class FovVolumeList(FOVSetupBase):
                 self.split(axis, val)
         else:
             for i, vol_old in enumerate(self.volumes):
-                if vol_old[f"{axis}_min"] < value and vol_old[f"{axis}_max"] > value:
+                if aperture_id in (vol_old["meta"]["aperture_id"], None)  \
+                        and vol_old[f"{axis}_min"] < value \
+                        and vol_old[f"{axis}_max"] > value:
                     vol_new = deepcopy(vol_old)
                     vol_new[f"{axis}_min"] = value
                     vol_old[f"{axis}_max"] = value
                     self.volumes.insert(i+1, vol_new)
 
-    def shrink(self, axis, values):
+    def shrink(self, axis, values, aperture_id=None):
         """
         - Loop through all volume dict
         - Replace any entries where min < values.min
@@ -256,12 +265,16 @@ class FovVolumeList(FOVSetupBase):
             "wave", "x", "y"
         values : list of 2 floats
             [min, max], [min, None], [None, max]
+        aperture_id : int, optional
+            Default None. If ``None``, shrink all volumes. If ``int``, only
+            shrink volumes with this ``aperture_id`` in the meta dict
 
         Examples
         --------
         ::
             >>> fvl = FovVolumeList()
             >>> fvl.shrink(axis="wave", values=[3.0, 3.1])
+            >>> fvl.shrink(axis="wave", values=[2.9, 3.1], aperture_id=1)
             >>> fvl.shrink(axis=["x", "y"], values=([-1, 1], [0, 5]))
 
 
@@ -271,22 +284,27 @@ class FovVolumeList(FOVSetupBase):
                 self.shrink(ax, val)
         else:
             to_pop = []
+
             if values[0] is not None:
                 for i, vol in enumerate(self.volumes):
-                    if vol[f"{axis}_max"] <= values[0]:
-                        to_pop += [i]
-                    elif vol[f"{axis}_min"] < values[0]:
-                        vol[f"{axis}_min"] = values[0]
+                    if aperture_id in (vol["meta"]["aperture_id"], None):
+                        if vol[f"{axis}_max"] <= values[0]:
+                            to_pop += [i]
+                        elif vol[f"{axis}_min"] < values[0]:
+                            vol[f"{axis}_min"] = values[0]
+
             if values[1] is not None:
                 for i, vol in enumerate(self.volumes):
-                    if vol[f"{axis}_min"] >= values[1]:
-                        to_pop += [i]
-                    if vol[f"{axis}_max"] > values[1]:
-                        vol[f"{axis}_max"] = values[1]
+                    if aperture_id in (vol["meta"]["aperture_id"], None):
+                        if vol[f"{axis}_min"] >= values[1]:
+                            to_pop += [i]
+                        if vol[f"{axis}_max"] > values[1]:
+                            vol[f"{axis}_max"] = values[1]
+
             for i in sorted(to_pop)[::-1]:
                 self.volumes.pop(i)
 
-    def extract(self, axes, edges):
+    def extract(self, axes, edges, aperture_id=None):
         """
         Returns new volumes from within all existing volumes
 
@@ -299,16 +317,21 @@ class FovVolumeList(FOVSetupBase):
             "wave", "x", "y"
         edges : list, tuple of lists
             Edge points for each axes listed
+        aperture_id : int, optional
+            Default None. If ``None``, extract from all volumes. If ``int``,
+            only extract from volumes with this ``aperture_id`` in the meta dict
 
         Examples
         --------
         ::
             >>> fvl = FovVolumeList()
             >>> fvl.split("x", 0)
-            >>> new_vols = fvl.extract(axes=["wave"], edges=([0.5, 0.6]))
+            >>> new_vols = fvl.extract(axes=["wave"], edges=([0.5, 0.6], ))
             >>> new_vols = fvl.extract(axes=["x", "y"], edges=([-1, 1], [0, 5]))
             >>> new_vols = fvl.extract(axes=["x", "y", "wave"],
             >>>                        edges=([-1, 1], [0, 5], [0.5, 0.6]))
+            >>> new_vols = fvl.extract(axes=["x", "y"], edges=([-1, 1], [0, 5]),
+            >>>                        aperture_id=1)
             >>>
             >>> fvl += [new_vols]
 
@@ -320,18 +343,19 @@ class FovVolumeList(FOVSetupBase):
         """
         new_vols = []
         for old_vol in self.volumes:
-            add_flag = True
-            new_vol = deepcopy(old_vol)
-            for axis, edge in zip(axes, edges):
-                if edge[0] <= old_vol[f"{axis}_max"] and \
-                   edge[1] >= old_vol[f"{axis}_min"]:
-                    new_vol[f"{axis}_min"] = max(edge[0], old_vol[f"{axis}_min"])
-                    new_vol[f"{axis}_max"] = min(edge[1], old_vol[f"{axis}_max"])
-                else:
-                    add_flag = False
+            if aperture_id in (old_vol["meta"]["aperture_id"], None):
+                add_flag = True
+                new_vol = deepcopy(old_vol)
+                for axis, edge in zip(axes, edges):
+                    if edge[0] <= old_vol[f"{axis}_max"] and \
+                       edge[1] >= old_vol[f"{axis}_min"]:
+                        new_vol[f"{axis}_min"] = max(edge[0], old_vol[f"{axis}_min"])
+                        new_vol[f"{axis}_max"] = min(edge[1], old_vol[f"{axis}_max"])
+                    else:
+                        add_flag = False
 
-            if add_flag is True:
-                new_vols += [new_vol]
+                if add_flag is True:
+                    new_vols += [new_vol]
 
         return new_vols
 

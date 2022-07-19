@@ -44,3 +44,10 @@ effects :
       - wide
     filename_format: "slits/SLIT_{}.dat"
     current_slit: "!OBS.slit_name"
+
+- name: image_slicer
+  description: collection of slits correspnding to the image slicer apertures
+  class: ApertureList
+  include: "!OBS.include_slicer"
+  kwargs:
+    filename: "INS_ifu_apertures.dat"

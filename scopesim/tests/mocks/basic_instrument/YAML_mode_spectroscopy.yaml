@@ -11,3 +11,17 @@ effects :
   class : SpectralTraceList
   kwargs :
     filename : "INS_lss_traces.fits"
+
+
+---
+
+name: config_overrides
+alias: SIM
+description: SIM config param overrides
+
+properties:
+  spectral:
+    wave_min: 0.7
+    wave_mid: 1.2
+    wave_max: 2.7
+    spectral_bin_width: !!float 3E-4
