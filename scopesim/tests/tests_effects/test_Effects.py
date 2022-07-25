@@ -51,6 +51,17 @@ class TestEffectReport:
         assert "The dimensions of the MICADO central detector" in rst_str
 
 
+class TestGet:
+    def test_returns_meta_value_for_hash_string(self):
+        det_list = eo._detector_list()
+        assert det_list["#image_plane_id"] == 0
+
+    def test_raises_error_without_hash(self):
+        det_list = eo._detector_list()
+        with pytest.raises(ValueError):
+            det_list["image_plane_id"] == 0
+
+
 @pytest.mark.usefixtures("surf_list_file")
 class TestSurfaceListInit:
     def test_initialises_with_nothing(self):

@@ -1,0 +1,50 @@
+# Default config file for setting up the instrument
+object : observation
+alias : OBS
+name : test_instrument
+description : default parameters needed for a basic simulation
+
+packages :
+- basic_instrument          # name of package dependencies
+
+yamls :
+  - YAML_atmosphere.yaml         # atmospheric transmission and emission
+  - YAML_telescope.yaml          # telescope effects and properties
+  - YAML_basic_instrument.yaml   # common instrument effects and properties
+  - YAML_detector.yaml           # electronic and detector effects and properties
+
+properties :
+  psf_fwhm: 1.5             # [arcsec]
+  modes : ["imaging"]       # default mode name
+  dit: 60
+  ndit: 1
+  slit_name : "narrow"
+
+mode_yamls :
+- name : imaging
+  description: Basic NIR imager
+  alias : OBS
+  properties :
+    include_slit : False
+    include_slicer: False
+    filter_name : "J"
+
+- name : spectroscopy
+  description: Basic three-trace long-slit spectrograph
+  alias: OBS
+  properties :
+    include_slit : True
+    include_slicer: False
+    filter_name : "open"
+  yamls :
+    - YAML_mode_spectroscopy.yaml   # mode specific effects and properties
+
+- name : ifu
+  description: Basic three-trace integral-field-unit spectrograph
+  alias: OBS
+  properties:
+    include_slit: False
+    include_slicer: True
+    filter_name: "open"
+  yamls:
+    - YAML_mode_ifu.yaml   # mode specific effects and properties

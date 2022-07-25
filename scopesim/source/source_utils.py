@@ -178,6 +178,30 @@ def scale_imagehdu(imagehdu, waverange, area=None):
 
     return imagehdu
 
+
+def make_img_wcs_header(pixel_scale, image_size):
+    """
+    Create a WCS header for an image
+
+    pixel_scale : float
+        arcsecs
+    image_size : tuple
+        x, y where x, y are integers
+
+    """
+    ra, dec = 0, 0
+    x, y = image_size
+
+    imgwcs = wcs.WCS(naxis=2)
+    imgwcs.wcs.ctype = ["RA---TAN", "DEC--TAN"]
+    imgwcs.wcs.cunit = [u.deg, u.deg]
+    imgwcs.wcs.crpix = [(x + 1) / 2, (y + 1) / 2]
+    imgwcs.wcs.cdelt = np.array([-pixel_scale / 3600, pixel_scale / 3600])
+    imgwcs.wcs.crval = [ra, dec]
+    imgwcs.wcs.cunit = [u.deg, u.deg]
+
+    return imgwcs.to_header()
+
 #     unit = extract_unit_from_imagehdu(imagehdu)
 #
 #     per_unit_area = False
@@ -235,4 +259,5 @@ def scale_imagehdu(imagehdu, waverange, area=None):
 #                       "FLUXUNIT to the header.")
 #
 #     return unit
+
 

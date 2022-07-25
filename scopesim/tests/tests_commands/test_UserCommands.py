@@ -1,23 +1,23 @@
 import os
 import shutil
 import pytest
+from tempfile import TemporaryDirectory
 
 from scopesim import rc
 from scopesim.commands.user_commands import UserCommands
-from scopesim.server.database import download_package
+from scopesim.server import database as db
 
-LOCAL_PKGS_PATH = "./scopesim_pkg_dir_tmp/"
-rc.__config__["!SIM.file.local_packages_path"] = os.path.abspath(LOCAL_PKGS_PATH)
+tmpdir = TemporaryDirectory()
 
 
 def setup_module():
-    if not os.path.exists(LOCAL_PKGS_PATH):
-        os.mkdir(LOCAL_PKGS_PATH)
-    download_package("instruments/test_package.zip")
+    db.download_packages(["test_package"], release="stable",
+                         save_dir=tmpdir.name, from_cache=False)
+    rc.__config__["!SIM.file.local_packages_path"] = tmpdir.name
 
 
 def teardown_module():
-        shutil.rmtree(LOCAL_PKGS_PATH)
+    tmpdir.cleanup()
 
 
 class TestInit:
@@ -111,5 +111,3 @@ class TestListLocalPackages:
 class TestTrackIpAddress:
     def test_see_if_theres_an_entry_on_the_server_log_file(self):
         cmds = UserCommands(use_instrument="test_package")
-
-

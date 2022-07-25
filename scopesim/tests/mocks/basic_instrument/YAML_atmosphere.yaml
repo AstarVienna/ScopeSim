@@ -1,0 +1,25 @@
+# Atmosphere
+object : atmosphere
+alias : ATMO
+name : basic_atmosphere
+description : The atmospheric properties and effects
+
+properties:
+  background:
+    filter_name: "J"
+    value: 16.6
+    unit: mag
+
+effects :
+- name : atmospheric_radiometry
+  description : atmospheric emission and transmission
+  class : AtmosphericTERCurve
+  include : True
+  kwargs :
+    filename: ATMO_default_NIR_IMG.dat
+    area: "!TEL.area"
+    rescale_emission:
+      filename_format: "filters/TC_filter_{}.dat"
+      filter_name: "!ATMO.background.filter_name"
+      value: "!ATMO.background.value"
+      unit: "!ATMO.background.unit"

@@ -12,6 +12,7 @@ Classes:
 - LinearityCurve - apply detector (non-)linearity and saturation
 - ReferencePixelBorder
 - BinnedImage
+- Bias - adds constant bias level to readout
 
 Functions:
 - make_ron_frame
@@ -35,8 +36,8 @@ class DetectorModePropertiesSetter(Effect):
     """
     Sets mode specific curr_sys properties for different detector readout modes
 
-    A little class (DetectorModePropertiesSetter) that allows different "!DET"
-    properties to be set on the fly.
+    A little class (``DetectorModePropertiesSetter``) that allows different
+    ``"!DET"`` properties to be set on the fly.
 
     Parameters
     ----------
@@ -46,10 +47,10 @@ class DetectorModePropertiesSetter(Effect):
 
     Examples
     --------
-
     Add the values for the different detector readout modes to all the relevant
     detector yaml files. In this case the METIS HAWAII (L, M band) and GeoSnap
     (N band) detectors: METIS_DET_IMG_LM.yaml , METIS_DET_IMG_N.yaml
+    ::
 
         - name: lm_detector_readout_parameters
           class: DetectorModePropertiesSetter
@@ -66,7 +67,7 @@ class DetectorModePropertiesSetter(Effect):
 
     Add the OBS dict entry !OBS.detector_readout_mode to the properties section
     of the mode_yamls descriptions in the default.yaml files.
-
+    ::
         mode_yamls:
           - object: observation
             alias: OBS
@@ -154,11 +155,12 @@ class AutoExposure(Effect):
 
     The effects sets the parameters `!OBS.dit` and `!OBS.ndit`.
 
-    Example yaml entry
-    ------------------
+    Examples
+    --------
     The parameters `!OBS.exptime`, `!DET.full_well` and `!DET.mindit` should
     be defined as properties in the respective subsections.
     ::
+
        name: auto_exposure
        description: automatic determination of DIT and NDIT
        class: AutoExposure
@@ -244,6 +246,27 @@ class SummedExposure(Effect):
 
         return obj
 
+
+class Bias(Effect):
+    """
+    Adds a constant bias level to readout
+
+    """
+    def __init__(self, **kwargs):
+        super(Bias, self).__init__(**kwargs)
+        params = {"z_order": [855]}
+        self.meta.update(params)
+        self.meta.update(kwargs)
+
+        required_keys = ["bias"]
+        utils.check_keys(self.meta, required_keys, action="error")
+
+    def apply_to(self, obj, **kwargs):
+        if isinstance(obj, DetectorBase):
+            biaslevel = from_currsys(self.meta["bias"])
+            obj._hdu.data += biaslevel
+
+        return obj
 
 class PoorMansHxRGReadoutNoise(Effect):
     def __init__(self, **kwargs):
@@ -348,9 +371,12 @@ class ShotNoise(Effect):
             # basically the same. For large arrays the normal distribution
             # takes only 60% as long as the poisson distribution
             data = det._hdu.data
-            if np.any(data > 0):
-                logging.warning("Effect ShotNoise:", np.sum(data < 0),
-                                "negative pixels")
+
+            # Check if there are negative values in the data
+            negvals = np.sum(data < 0)
+            if negvals:
+                logging.warning(f"Effect ShotNoise: {negvals} negative pixels")
+                data[data < 0] = 0
 
             below = data < 2**20
             above = np.invert(below)
