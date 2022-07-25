@@ -32,6 +32,7 @@
 # [WCS = CRPIXn, CRVALn = (0,0), CTYPEn, CDn_m, NAXISn, CUNITn
 """
 
+import os
 import pickle
 import logging
 from copy import deepcopy
@@ -143,6 +144,7 @@ class Source(SourceBase):
 
         self.meta = {}
         self.meta.update(kwargs)
+        self._meta_dicts = [self.meta]
 
         self.fields = []
         self.spectra = []
@@ -192,6 +194,7 @@ class Source(SourceBase):
             fits_type = utils.get_fits_type(filename)
             data = fits.getdata(filename)
             hdr = fits.getheader(filename)
+            hdr['FILENAME'] = os.path.basename(filename)
             if fits_type == "image":
                 image = fits.ImageHDU(data=data, header=hdr)
                 if spectra is not None:
@@ -224,6 +227,8 @@ class Source(SourceBase):
             image_hdu.header["CRVAL2"] = 0
             image_hdu.header["CRPIX1"] = image_hdu.header["NAXIS1"] / 2
             image_hdu.header["CRPIX2"] = image_hdu.header["NAXIS2"] / 2
+            #image_hdu.header["CRPIX1"] = (image_hdu.header["NAXIS1"] + 1) / 2
+            #image_hdu.header["CRPIX2"] = (image_hdu.header["NAXIS2"] + 1) / 2
             # .. todo:: find where the actual problem is with negative CDELTs
             # .. todo:: --> abs(pixel_scale) in header_from_list_of_xy
             if image_hdu.header["CDELT1"] < 0:
@@ -243,7 +248,7 @@ class Source(SourceBase):
         else:
             image_hdu.header["SPEC_REF"] = ""
             logging.warning("No spectrum was provided. SPEC_REF set to ''. "
-                          "This could cause problems later")
+                            "This could cause problems later")
             raise NotImplementedError
 
         for i in [1, 2]:
@@ -316,6 +321,7 @@ class Source(SourceBase):
             with fits.open(cube) as hdul:
                 data = hdul[ext].data
                 header = hdul[ext].header
+                header['FILENAME'] = os.path.basename(cube)
                 wcs = WCS(cube)
 
         try:
@@ -333,7 +339,8 @@ class Source(SourceBase):
         wave = wcs.all_pix2world(header['CRPIX1'], header['CRPIX2'],
                                  np.arange(data.shape[0]), 0)[-1]
 
-        wave = (wave * u.Unit(wcs.wcs.cunit[-1])).to(u.um)
+        wave = (wave * u.Unit(wcs.wcs.cunit[-1])).to(u.um,
+                                                     equivalencies=u.spectral())
 
         # WCS keywords must be updated because astropy.wcs converts wavelengths to 'm'
         header.update(wcs.to_header())
@@ -500,23 +507,7 @@ class Source(SourceBase):
 
         self.bandpass = bandpass
 
-    def append(self, source_to_add):
-        new_source = source_to_add.make_copy()
-        if isinstance(new_source, Source):
-            for field in new_source.fields:
-                if isinstance(field, Table):
-                    field["ref"] += len(self.spectra)
-                    self.fields += [field]
 
-                elif isinstance(field, (fits.ImageHDU, fits.PrimaryHDU)):
-                    if ("SPEC_REF" in field.header and
-                        isinstance(field.header["SPEC_REF"], int)):
-                        field.header["SPEC_REF"] += len(self.spectra)
-                    self.fields += [field]
-                self.spectra += new_source.spectra
-        else:
-            raise ValueError("Cannot add {} object to Source object"
-                             "".format(type(new_source)))
 
     def plot(self):
         """
@@ -546,6 +537,7 @@ class Source(SourceBase):
     def make_copy(self):
         new_source = Source()
         new_source.meta = deepcopy(self.meta)
+        new_source._meta_dicts = deepcopy(self._meta_dicts)
         new_source.spectra = deepcopy(self.spectra)
         for field in self.fields:
             if isinstance(field, (fits.ImageHDU, fits.PrimaryHDU)) \
@@ -555,6 +547,26 @@ class Source(SourceBase):
                 new_source.fields += [deepcopy(field)]
 
         return new_source
+
+    def append(self, source_to_add):
+        new_source = source_to_add.make_copy()
+        if isinstance(source_to_add, Source):
+            for field in new_source.fields:
+                if isinstance(field, Table):
+                    field["ref"] += len(self.spectra)
+                    self.fields += [field]
+
+                elif isinstance(field, (fits.ImageHDU, fits.PrimaryHDU)):
+                    if ("SPEC_REF" in field.header and
+                        isinstance(field.header["SPEC_REF"], int)):
+                        field.header["SPEC_REF"] += len(self.spectra)
+                    self.fields += [field]
+                self.spectra += new_source.spectra
+
+                self._meta_dicts += source_to_add._meta_dicts
+        else:
+            raise ValueError("Cannot add {} object to Source object"
+                             "".format(type(new_source)))
 
     def __add__(self, new_source):
         self_copy = self.make_copy()

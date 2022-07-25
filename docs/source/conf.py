@@ -17,17 +17,28 @@
 # sys.path.insert(0, os.path.abspath('.'))
 
 import os
-#if "TRAVIS" in os.environ:
-package_path = os.path.abspath('../..')
-os.environ['PYTHONPATH'] = ':'.join((package_path,
-                                     os.environ.get('PYTHONPATH', '')))
+from os import path as pth
+import sys
 
+# No idea which one of these is the right one for RTD, but now it works,
+# so don't touch them!
+sys.path.insert(0, os.path.abspath('/'))
+sys.path.insert(0, os.path.abspath('docs'))
+sys.path.insert(0, os.path.abspath('docs/source/'))
+
+sphinx_ext_path = pth.join(pth.abspath(pth.dirname(__file__)), "_ext")
+sys.path.append(sphinx_ext_path)
+
+package_path = pth.abspath('../..')
+os.environ['PYTHONPATH'] = ';'.join((package_path,
+                                     sphinx_ext_path,
+                                     os.environ.get('PYTHONPATH', '')))
 
 # -- Project information -----------------------------------------------------
 
 project = 'ScopeSim'
-copyright = '2019, Kieran Leschinski'
-author = 'Kieran Leschinski'
+copyright = '2019, A*Vienna'
+author = 'Kieran Leschinski, Oliver Czoske'
 
 # The short X.Y version
 version = ''
@@ -45,21 +56,24 @@ release = ''
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
-    'sphinx.ext.autodoc',
+    'scopesim_sphinx_ext',
+    'nbsphinx',
     'sphinx.ext.intersphinx',
     'sphinx.ext.todo',
-    'sphinx.ext.coverage',
     'sphinx.ext.mathjax',
     'sphinx.ext.viewcode',
-    # 'jupyter_sphinx.execute',
     'numpydoc',
-    'sphinxcontrib.apidoc',
     'matplotlib.sphinxext.plot_directive',
+    'sphinxcontrib.apidoc',
+    'sphinx.ext.autodoc',
+
+    # 'jupyter_sphinx.execute',
+    # 'sphinx.ext.coverage',
 ]
 
 # apidoc settings
 numpydoc_show_class_members = False
-apidoc_module_dir = os.path.abspath('../../scopesim/')
+apidoc_module_dir = pth.abspath('../../scopesim/')
 apidoc_output_dir = 'reference'
 apidoc_separate_modules = True
 apidoc_excluded_paths = ["tests/", "docs/"]
@@ -101,6 +115,13 @@ pygments_style = None
 # a list of builtin themes.
 #
 # html_theme = 'alabaster'
+if not os.environ.get("READTHEDOCS") == "True":
+    import sphinx_rtd_theme
+    html_theme = "sphinx_rtd_theme"
+    extensions += ["sphinx_rtd_theme"]
+    os.environ["PYTHONPATH"] += "F:\\Work\\ScopeSim;F:\\Work\\HowManyBloodyPhotons;F:\\Work\\ScopeSim_Templates;F:\\Work\\Pyckles;F:\\Work\\AnisoCADO;F:\\Work\\skycalc_ipy;F:\\Work\\speXtra;"
+
+nbsphinx_execute = "never"
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
@@ -129,7 +150,7 @@ html_favicon = '_static/logos/S_favicon.png'
 # -- Options for HTMLHelp output ---------------------------------------------
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'ScopeSimdoc'
+htmlhelp_basename = 'ScopeSimDocs'
 
 
 # -- Options for LaTeX output ------------------------------------------------

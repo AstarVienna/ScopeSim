@@ -1,7 +1,5 @@
-import os
 import pytest
 
-import numpy as np
 from astropy import units as u
 
 from synphot.units import PHOTLAM

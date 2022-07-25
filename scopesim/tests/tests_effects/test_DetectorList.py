@@ -70,6 +70,82 @@ class TestImagePlaneHeader:
         assert 4096 * 2 < hdr_big["NAXIS1"] < 4096 * 2 + 200
         assert 4096 * 2 < hdr_big["NAXIS2"] < 4096 * 2 + 200
 
+    def test_happy_using_x_size_unit_in_pixels(self):
+        det_list = DetectorList(array_dict={"id":[0, 1],
+                                            "x_cen":[-0.2, 0.2],      # mm
+                                            "y_cen":[0, 0],
+                                            "x_size":[32, 32],        # pixel
+                                            "y_size":[32, 32],
+                                            "pixsize":[0.01, 0.01],   # mm/pixel
+                                            "angle":[0, 0],
+                                            "gain":[1, 1]},
+                                x_size_unit="pixel",
+                                y_size_unit="pixel",
+                                image_plane_id=0)
+
+        hdr_big = det_list.image_plane_header
+        assert hdr_big["NAXIS1"] == (16 + 20) * 2
+        assert hdr_big["NAXIS2"] == 32
+
+    def test_happy_using_x_size_unit_in_mm(self):
+        det_list = DetectorList(array_dict={"id":[0, 1],
+                                            "x_cen":[-0.2, 0.2],      # mm
+                                            "y_cen":[0, 0],
+                                            "x_size":[0.32, 0.32],        # pixel
+                                            "y_size":[0.32, 0.32],
+                                            "pixsize":[0.01, 0.01],   # mm/pixel
+                                            "angle":[0, 0],
+                                            "gain":[1, 1]},
+                                x_size_unit="mm",
+                                y_size_unit="mm",
+                                image_plane_id=0)
+
+        hdr_big = det_list.image_plane_header
+        assert hdr_big["NAXIS1"] == (16 + 20) * 2
+        assert hdr_big["NAXIS2"] == 32
+
+
+class TestDetecotrHeaders:
+    def test_happy_using_x_size_unit_in_pixels(self):
+        det_list = DetectorList(array_dict={"id":[0, 1],
+                                            "x_cen":[-0.2, 0.2],      # mm
+                                            "y_cen":[0, 0],
+                                            "x_size":[32, 32],        # pixel
+                                            "y_size":[32, 32],
+                                            "pixsize":[0.01, 0.01],   # mm/pixel
+                                            "angle":[0, 0],
+                                            "gain":[1, 1]},
+                                x_size_unit="pixel",
+                                y_size_unit="pixel",
+                                x_cen_unit="mm",
+                                y_cen_unit="mm",
+                                image_plane_id=0)
+
+        det_hdrs = det_list.detector_headers()
+        for hdr in det_hdrs:
+            assert hdr["NAXIS1"] == 32
+            assert hdr["NAXIS2"] == 32
+
+    def test_happy_using_x_size_unit_in_pixels(self):
+        det_list = DetectorList(array_dict={"id":[0, 1],
+                                            "x_cen":[-0.2, 0.2],      # mm
+                                            "y_cen":[0, 0],
+                                            "x_size":[0.32, 0.32],        # pixel
+                                            "y_size":[0.32, 0.32],
+                                            "pixsize":[0.01, 0.01],   # mm/pixel
+                                            "angle":[0, 0],
+                                            "gain":[1, 1]},
+                                x_size_unit="mm",
+                                y_size_unit="mm",
+                                x_cen_unit="mm",
+                                y_cen_unit="mm",
+                                image_plane_id=0)
+
+        det_hdrs = det_list.detector_headers()
+        for hdr in det_hdrs:
+            assert hdr["NAXIS1"] == 32
+            assert hdr["NAXIS2"] == 32
+
 
 class TestFovGrid:
     def test_returns_aperture_mask_object(self):

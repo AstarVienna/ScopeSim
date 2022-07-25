@@ -1,0 +1,29 @@
+# Telescope
+object : telescope
+alias : TEL
+name : basic_telescope
+description : The telescope properties and effects
+
+properties :
+  temperature : 0   # [deg C]
+
+effects :
+- name : psf
+  description : Seeing limited PSF
+  class : SeeingPSF
+  kwargs :
+    fwhm : "!OBS.psf_fwhm"       # [arcsec]
+
+- name : telescope_reflection
+  class : TERCurve
+  kwargs :
+    array_dict :
+      wavelength : [0.3, 1, 3, 3.01]
+      reflection : [0, 1., 1., 0]
+    wavelength_unit : um
+    action : reflection
+    outer : 10
+    outer_unit : m
+    inner : 0
+    inner_unit : m
+
