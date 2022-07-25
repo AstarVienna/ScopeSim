@@ -1,0 +1,13 @@
+# Extra keywords for ESO
+- ext_number: 0
+  keywords:
+    HIERARCH:
+      ESO:
+        ATM:
+          SEEING: "!OBS.psf_fwhm"
+
+  unresolved_keywords:
+    HIERARCH:
+      ESO:
+        TEL:
+          TEMPERAT: '!TEL.temperature'   # will be left as a string

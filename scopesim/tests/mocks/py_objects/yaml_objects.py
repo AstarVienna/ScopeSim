@@ -54,13 +54,13 @@ def _inst_yaml_dict():
     text = """
 # INSTRUMENT OPTICS
 object : instrument
+alias: INST
 name : micado_wide_field
 inst_pkg_name : micado
 
 properties :
     temperature : -190
     pixel_scale : 0.004
-    
 
 effects :
 -   name : micado_surface_list
@@ -89,6 +89,7 @@ def _detector_yaml_dict():
     text = """
 # Detector array
 object : detector
+alias : DET
 name : micado_detector_array
 inst_pkg_name : micado
 

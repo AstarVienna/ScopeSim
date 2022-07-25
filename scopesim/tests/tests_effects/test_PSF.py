@@ -1,3 +1,4 @@
+"""Unit tests for PSF and psf_utils"""
 import pytest
 from pytest import approx
 import numpy as np
@@ -6,6 +7,7 @@ from matplotlib.colors import LogNorm
 
 from scopesim.effects import PSF
 from scopesim.effects.psf_utils import rotational_blur
+from scopesim.effects.psf_utils import get_bkg_level
 from scopesim.optics import ImagePlane
 from scopesim.tests.mocks.py_objects.header_objects import _implane_header
 
@@ -44,7 +46,8 @@ class TestGetKernel:
 
 
 class TestRotationBlur:
-    def test_returns_rotated_kernel_array_has_same_sum(self):
+    @pytest.mark.parametrize("angle", ([1, 5, 15, 60]))
+    def test_returns_rotated_kernel_array_has_same_sum(self, angle):
         # Without blur
         implane = basic_image_plane()
         implane.data[75,75] = 1
@@ -57,11 +60,11 @@ class TestRotationBlur:
             plt.subplot(121)
             plt.imshow(implane.data)
 
-        # Without blur
+        # With blur
         implane = basic_image_plane()
         implane.data[75,75] = 1
 
-        psf = PSF(rotational_blur_angle=15)
+        psf = PSF(rotational_blur_angle=angle)
         psf.kernel = basic_kernel()
         implane = psf.apply_to(implane)
 
@@ -70,15 +73,65 @@ class TestRotationBlur:
             plt.imshow(implane.data)
             plt.show()
 
-        assert np.sum(implane.data) == approx(1)
+        assert np.sum(implane.data) == approx(1, rel=3e-3)
 
+
+class TestBkgLevel:
+    def test_bkg_width_negative_on_2d_image(self):
+        img = np.random.rand(5, 5)
+        assert get_bkg_level(img, -1) == np.median(img)
+
+    def test_bkg_width_zero_on_2d_image(self):
+        img = np.random.rand(5, 5)
+        assert get_bkg_level(img, 0) == 0
+
+    def test_bkg_width_positive_on_2d_image(self):
+        img = np.array([[1, 2, 2, 2, 1],
+                        [1, 2, 2, 2, 1],
+                        [1, 2, 3, 2, 1],
+                        [1, 2, 2, 2, 1],
+                        [1, 2, 2, 2, 1]])
+        assert get_bkg_level(img, 1) == 1
+        assert get_bkg_level(img, 2) == 2
+
+    def test_bkg_width_negative_on_3d_cube(self):
+        cube = np.random.rand(5, 5, 5)
+        med = np.array([np.median(cube[i, :, :]) for i in np.arange(5)])
+        assert np.all(get_bkg_level(cube, -1) == med)
+
+    def test_bkg_width_zero_on_3d_cube(self):
+        cube = np.random.rand(5, 5, 5)
+        zeromed = np.zeros(cube.shape[0])
+        assert np.all(get_bkg_level(cube, 0) == zeromed)
+
+    def test_bkg_width_positive_on_3d_cube(self):
+        img = np.array([[1, 2, 2, 2, 1],
+                        [1, 2, 2, 2, 1],
+                        [1, 2, 3, 2, 1],
+                        [1, 2, 2, 2, 1],
+                        [1, 2, 2, 2, 1]])
+        cube = np.outer(np.arange(5), img).reshape(5, 5, 5)
+        med_1 = np.arange(5)
+        med_2 = 2 * np.arange(5)
+        assert np.all(get_bkg_level(cube, +1) == med_1)
+        assert np.all(get_bkg_level(cube, +2) == med_2)
+
+    def test_bkg_width_error_on_4d_obj(self):
+        obj = np.random.rand(2, 2, 2, 2)
+        with pytest.raises(ValueError):
+            get_bkg_level(obj, 0)
+
+    def test_bkg_width_error_on_1d_obj(self):
+        obj = np.random.rand(10)
+        with pytest.raises(ValueError):
+            get_bkg_level(obj, -1)
 
 class TestApplyTo:
     def test_convolves_with_2D_image(self):
         implane = basic_image_plane()
         implane.data[75,75] = 1
 
-        if not PLOTS:
+        if PLOTS:
             plt.subplot(131)
             plt.imshow(implane.data)
 
@@ -102,7 +155,7 @@ class TestApplyTo:
         implane.data[75,75] = 1
         implane.data = implane.data[None, :, :] * np.ones(3)[:, None, None]
 
-        if not PLOTS:
+        if PLOTS:
             plt.subplot(231)
             plt.imshow(implane.data[1, :, :])
 
@@ -119,5 +172,5 @@ class TestApplyTo:
                 plt.imshow(implane.data[i, :, :])
             plt.show()
 
-        assert np.sum(implane.data[1, :, :]) == approx(1)
+        assert np.sum(implane.data[1, :, :]) == approx(1, rel=1e-2)
         assert implane.data[1, 75, 75] == approx(np.max(psf.kernel), rel=1e-2)

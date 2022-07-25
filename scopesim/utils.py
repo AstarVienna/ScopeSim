@@ -566,10 +566,8 @@ def find_file(filename, path=None, silent=False):
 
     # no file found
     msg = f"File cannot be found: {filename}"
-    logging.error(msg)
-
     if not silent:
-        print(msg)
+        logging.error(msg)
 
     if from_currsys("!SIM.file.error_on_missing_file") is True:
         raise ValueError(msg)
@@ -625,7 +623,7 @@ def convert_table_comments_to_dict(tbl):
             logging.warning("Couldn't convert <table>.meta['COMMENT'] to dict")
             comments_dict = tbl.meta["COMMENT"]
     else:
-        logging.warning("No comments in table")
+        logging.debug("No comments in table")
 
     return comments_dict
 
@@ -847,9 +845,10 @@ def quantity_from_table(colname, table, default_unit=""):
                     col = col << u.Unit(com_tbl[colname_u])
             else:
                 col = col * u.Unit(default_unit)
-                logging.warning(
-                    "{}_unit was not found in table.meta: {}. Default to: {}"
-                    "".format(colname, table.meta, default_unit))
+                tbl_name = table.meta.get("name", table.meta.get("filename"))
+                logging.info("{}_unit was not found in table.meta: {}. "
+                             "Default to: {}"
+                             "".format(colname, tbl_name, default_unit))
 
     return col
 
@@ -869,9 +868,10 @@ def unit_from_table(colname, table, default_unit=""):
         if colname_u in com_tbl:
             unit = u.Unit(com_tbl[colname_u])
         else:
-            logging.warning("{}_unit was not found in table.meta: {}. "
-                          "Default to: {}"
-                          "".format(colname, table.meta, default_unit))
+            tbl_name = table.meta.get("name", table.meta.get("filename"))
+            logging.info("{}_unit was not found in table.meta: {}. "
+                         "Default to: {}"
+                         "".format(colname, tbl_name, default_unit))
             unit = u.Unit(default_unit)
 
     return unit
@@ -1019,3 +1019,16 @@ def write_report(text, filename=None, output=["rst"]):
             fname = os.path.join(*fname.parts[:-1], fname.stem + suffix)
             with open(fname, "w") as f:
                 f.write(out_text)
+
+
+def pretty_print_dict(dic, indent=0):
+    text = ""
+    for key, value in dic.items():
+        if isinstance(value, dict):
+            text += " " * indent + f"{str(key)}:\n"
+            text += pretty_print_dict(value, indent=indent + 2)
+        else:
+            text += " " * indent + f"{str(key)}: {str(value)}\n"
+
+    return text
+

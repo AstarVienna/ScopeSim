@@ -159,7 +159,7 @@ def combine_imagehdu_fields(fov_header, src, fields_indexes, wave_min, wave_max,
     canvas_hdu = fits.ImageHDU(header=fov_header, data=image)
     spline_order = utils.from_currsys("!SIM.computing.spline_order")
     pixel_area = fov_header["CDELT1"] * fov_header["CDELT2"] * \
-                 u.Unit(fov_header["CUNIT1"]).to(u.arcsec) ** 2
+                 u.Unit(fov_header["CUNIT1"].lower()).to(u.arcsec) ** 2
 
     for ii in fields_indexes:
         field = src.fields[ii]
@@ -296,8 +296,10 @@ def extract_area_from_imagehdu(imagehdu, fov_volume):
 
     xp, yp = imp_utils.val2pix(hdr, np.array([x0s, x1s]), np.array([y0s, y1s]))
     (x0p, x1p), (y0p, y1p) = np.round(xp).astype(int), np.round(yp).astype(int)
-    if x0p == x1p: x1p += 1
-    if y0p == y1p: y1p += 1
+    if x0p == x1p:
+        x1p += 1
+    if y0p == y1p:
+        y1p += 1
 
     new_hdr = imp_utils.header_from_list_of_xy([x0s, x1s], [y0s, y1s],
                                                pixel_scale=hdr["CDELT1"])
@@ -320,10 +322,17 @@ def extract_area_from_imagehdu(imagehdu, fov_volume):
         wunit = u.Unit(hdr.get("CUNIT3", "AA"))
         fov_waves = utils.quantify(fov_volume["waves"], u.um).to(wunit).value
 
+<<<<<<< HEAD
         # if min(hdu_waves) > min(fov_waves) or max(hdu_waves) < max(fov_waves):
         #     raise ValueError(f"FOV waveset is not a subset of cube waveset: "
         #                      f"{fov_waves} --> {hdu_waves}")
 
+=======
+        # OC [2021-12-14] if fov range is not covered by the source return nothing
+        if not np.any(mask):
+            print("FOV {} um - {} um: not covered by Source".format(fov_waves[0], fov_waves[1]))
+            return None
+>>>>>>> dev_master
 
         # ---------------------------------------------------------------------
         # OLD way of extracting cube volume
@@ -397,11 +406,11 @@ def extract_range_from_spectrum(spectrum, waverange):
     mask = (spec_waveset > wave_min) * (spec_waveset < wave_max)
 
     if sum(mask) == 0:
-        logging.warning(f"Waverange does not overlap with Spectrum waveset: "
+        logging.info(f"Waverange does not overlap with Spectrum waveset: "
                       f"{[wave_min, wave_max]} <> {spec_waveset} "
                       f"for spectrum {spectrum}")
     if wave_min < min(spec_waveset) or wave_max > max(spec_waveset):
-        logging.warning(f"Waverange only partially overlaps with Spectrum waveset: "
+        logging.info(f"Waverange only partially overlaps with Spectrum waveset: "
                       f"{[wave_min, wave_max]} <> {spec_waveset} "
                       f"for spectrum {spectrum}")
 
@@ -442,8 +451,8 @@ def make_cube_from_table(table, spectra, waveset, fov_header, sub_pixel=False):
     crpix1, crpix2 = fov_header["CRPIX1"], fov_header["CRPIX2"]
     cunit1, cunit2 = fov_header["CUNIT1"], fov_header["CUNIT2"]
 
-    xps = (table["x"].to(cunit1).value - crval1) / cdelt1 + crpix1
-    yps = (table["y"].to(cunit2).value - crval2) / cdelt2 + crpix2
+    xps = (table["x"].to(cunit1.lower()).value - crval1) / cdelt1 + crpix1
+    yps = (table["y"].to(cunit2.lower()).value - crval2) / cdelt2 + crpix2
     refs, weights = table["ref"], table["weight"]
 
     for xp, yp, ref, weight in zip(xps, yps, refs, weights):

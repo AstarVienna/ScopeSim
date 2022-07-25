@@ -12,17 +12,17 @@ from ..mocks.py_objects.yaml_objects import _atmo_yaml_dict
 
 @pytest.fixture(scope="function")
 def atmo_yaml_dict():
-    rc.__config__["!SIM.spectral.wave_min"] = 0.5
-    rc.__config__["!SIM.spectral.wave_mid"] = 1.5
-    rc.__config__["!SIM.spectral.wave_max"] = 2.5
-    rc.__config__["!SIM.sub_pixel.fraction"] = 1
-    rc.__config__["!INST.pixel_scale"] = 0.004
-
     atmo_dict = _atmo_yaml_dict()
     atmo_dict["properties"].update({"pupil_angle": 0, "airmass": 1.14,
                                     "altitude": 2400, "temperature": 7,
                                     "pressure": 0.755,
-                                    "pixel_scale": 0.004})      # "!INST.pixel_scale"
+                                    "pixel_scale": 0.004,
+                                    "wave_min": 0.5,
+                                    "wave_mid": 1.5,
+                                    "wave_max": 2.5,
+                                    "sub_pixel_fraction": 1,
+                                    "pixel_scale": 0.004,
+                                    })      # "!INST.pixel_scale"
 
     return atmo_dict
 

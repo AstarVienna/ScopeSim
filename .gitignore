@@ -26,6 +26,7 @@ MANIFEST
 
 # Documentation etc: Sphinx and ReadTheDocs
 reference/
+effects_docstrings/
 *.ipynb_checkpoints
 
 
@@ -38,7 +39,6 @@ data_backup
 .idea/
 *.log
 *.zip
-examples
 data_ext
 dist
 
