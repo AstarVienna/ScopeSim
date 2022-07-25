@@ -34,7 +34,7 @@ properties :
 
   file :
     local_packages_path : "./inst_pkgs/"
-    server_base_url : "https://www.univie.ac.at/simcado/InstPkgSvr/"
+    server_base_url : "https://scopesim.univie.ac.at/InstPkgSvr/"
     use_cached_downloads : "update"
     search_path : ["./inst_pkgs/", "./"]
     error_on_missing_file : False
@@ -57,7 +57,7 @@ properties :
     file_path: ".scopesim.log"
     file_open_mode: "w"   # w - overwrite, a - append
     file_level:    "DEBUG"      # DEBUG INFO WARNING ERROR CRITICAL
-    console_level: "INFO"    # DEBUG INFO WARNING ERROR CRITICAL
+    console_level: "WARNING"    # DEBUG INFO WARNING ERROR CRITICAL
 
   tests :
     # overridden in tests/__init__.py

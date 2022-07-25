@@ -91,7 +91,7 @@ def download_packages(pkg_names, release="stable", save_dir=None, from_cache=Non
     Parameters
     ----------
     pkg_names : str, list
-        A list of package name, see ``list_packages()``
+        A list of package names, see ``list_packages()``
 
     release : str, optional
         By default, the most recent stable version of a package is downloaded.
@@ -190,6 +190,9 @@ def download_packages(pkg_names, release="stable", save_dir=None, from_cache=Non
 
             save_paths += [os.path.abspath(save_path)]
 
+        else:
+            raise HTTPError(f"Unable to find package: {base_url + pkg_name}")
+
     return save_paths
 
 # ==============================================================================
@@ -230,7 +233,10 @@ def download_package(pkg_path, save_dir=None, url=None, from_cache=None):
     logging.warning(text)
     print(text)
 
-    pkg_names = [pkg.split("/")[-1].replace(".zip", "") for pkg in pkg_path]
+    if isinstance(pkg_path, str):
+        pkg_path = [pkg_path]
+
+    pkg_names = [pkg.replace(".zip", "").split("/")[-1] for pkg in pkg_path]
     return download_packages(pkg_names, release="stable", save_dir=save_dir,
                              from_cache=from_cache)
 

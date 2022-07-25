@@ -258,13 +258,14 @@ def rotational_blur(image, angle):
     """
     image_rot = np.copy(image)
 
-    n_angles = 0
+    n_angles = 1
     rad_to_deg = 57.29578
     edge_pixel_unit_angle = np.arctan2(1, (image.shape[0] // 2)) * rad_to_deg
     while abs(angle) > edge_pixel_unit_angle and n_angles < 25:
         angle /= 2.
         image_rot += spi.rotate(image_rot, angle, reshape=False, order=1)
-        n_angles += 1
+        # each time kernel is rotated and added, the frame total doubles
+        n_angles *= 2
 
     return image_rot / n_angles
 

@@ -38,9 +38,7 @@ class SpectralTrace:
     Focal plane coordinates are:
     - x, y : [mm]
     '''
-
-    def __init__(self, trace_tbl, **kwargs):
-        self.meta = {"x_colname": "x",
+    _class_params = {"x_colname": "x",
                      "y_colname": "y",
                      "s_colname": "s",
                      "wave_colname": "wavelength",
@@ -51,6 +49,13 @@ class SpectralTrace:
                      "spline_order": 4,
                      "pixel_size": None,
                      "description": "<no description>"}
+
+    def __init__(self, trace_tbl, **kwargs):
+        # Within scopesim, the actual parameter values are
+        # passed as kwargs from the SpectralTraceList.
+        # The values need to be here for stand-alone use.
+        self.meta = {}
+        self.meta.update(self._class_params)
         self.meta.update(kwargs)
 
         if isinstance(trace_tbl, (fits.BinTableHDU, fits.TableHDU)):
@@ -63,19 +68,6 @@ class SpectralTrace:
                              "fits.TableHDU, astropy.Table): {}"
                              "".format(type(trace_tbl)))
 
-        # ..todo: Should that be made np.unique?
-        self.waves = np.unique(self.table[self.meta["wave_colname"]])
-        self.wave_min = quantify(np.min(self.waves), u.um).value
-        self.wave_max = quantify(np.max(self.waves), u.um).value
-
-        # ..todo: This bunch of variables can probably go.
-        self._disp = None           # [mm/um] spectral dispersion distance
-        self._waverange = None
-        self._wave_bin_edges = None
-        self._wave_bin_centers = None
-        self._curves = None
-
-        # Interpolation functions   ..todo: equivalent for LMS
         self.compute_interpolation_functions()
 
     def fov_grid(self):
@@ -102,10 +94,23 @@ class SpectralTrace:
         """
         Compute various interpolation functions between slit and focal plane
         """
+        if self.meta["invalid_value"] is not None:
+            self.table = sanitize_table(
+                self.table,
+                invalid_value=self.meta["invalid_value"],
+                wave_colname=self.meta["wave_colname"],
+                x_colname=self.meta["x_colname"],
+                y_colname=self.meta["y_colname"],
+                spline_order=self.meta["spline_order"],
+                ext_id=self.meta["extension_id"])
+
         x_arr = self.table[self.meta['x_colname']]
         y_arr = self.table[self.meta['y_colname']]
         xi_arr = self.table[self.meta['s_colname']]
         lam_arr = self.table[self.meta['wave_colname']]
+
+        self.wave_min = quantify(np.min(lam_arr), u.um).value
+        self.wave_max = quantify(np.max(lam_arr), u.um).value
 
         self.xy2xi = Transform2D.fit(x_arr, y_arr, xi_arr)
         self.xy2lam = Transform2D.fit(x_arr, y_arr, lam_arr)
@@ -133,8 +138,9 @@ class SpectralTrace:
         xi_max = fov.meta['xi_max'].value           # [arcsec]
         xlim_mm, ylim_mm = self.footprint(wave_min=wave_min, wave_max=wave_max,
                                           xi_min=xi_min, xi_max=xi_max)
-
+        #print("xlim_mm:", xlim_mm, "   ylim_mm:", ylim_mm)
         if xlim_mm is None:
+            print("xlim_mm is None")
             return None
 
         fov_header = fov.header
@@ -157,6 +163,8 @@ class SpectralTrace:
         ymax = np.ceil(ylim_px.max()).astype(int)
 
         ## Check if spectral trace footprint is outside FoV
+        #print(fpa_wcsd)
+        #print(xmin, xmax, ymin, ymax, " <<->> ", naxis1d, naxis2d)
         if xmax < 0 or xmin > naxis1d or ymax < 0 or ymin > naxis2d:
             logging.warning("Spectral trace footprint is outside FoV")
             return None
@@ -251,7 +259,6 @@ class SpectralTrace:
         image = xilam.interp(xi_fpa, lam_fpa, grid=False) * ijmask
 
         # Scale to ph / s / pixel
-        dlam_by_dx, dlam_by_dy = self.xy2lam.gradient()
         dlam_per_pix = pixsize * np.sqrt(dlam_by_dx(ximg_fpa, yimg_fpa)**2 +
                                          dlam_by_dy(ximg_fpa, yimg_fpa)**2)
         image *= pixscale * dlam_per_pix        # [arcsec/pix] * [um/pix]
@@ -265,57 +272,11 @@ class SpectralTrace:
         img_header["YMAX"] = ymax
 
         if np.any(image < 0):
-            logging.warning("map_spectra_to_focal_plane: {} negative pixels"
-                            "".format(np.sum(image < 0)))
+            logging.warning(f"map_spectra_to_focal_plane: {np.sum(image < 0)} negative pixels")
+
 
         image_hdu = fits.ImageHDU(header=img_header, data=image)
         return image_hdu
-
-
-    def get_max_dispersion(self, **kwargs):
-        '''Get the maximum dispersion in a spectral trace
-
-        This is a wrapper for the function in `spectral_trace_utils`.
-        '''
-        params = {}
-        params.update(self.meta)
-        params["wave_min"] = self.wave_min
-        params["wave_max"] = self.wave_max
-        params.update(kwargs)
-
-        disp, waverange = get_max_dispersion(self, **params)  # dwave is passed from kwargs
-        self._disp = disp
-        self._waverange = waverange
-
-        return self._disp, self._waverange
-
-    def get_pixel_wavelength_edges(self, pixel_size):
-        """Returns the wavelengths at the edge of pixels along a trace"""
-        self.meta["pixel_size"] = pixel_size
-        if self._disp is None or self._waverange is None:
-            self.get_max_dispersion()
-
-        um_per_pix = pixel_size / self._disp  # wavelength range per pixel
-        wbe = pixel_wavelength_edges(um_per_pix, self._waverange,
-                                               self.wave_min, self.wave_max)
-        self._wave_bin_edges = wbe
-        self._wave_bin_centers = 0.5 * (wbe[:-1] + wbe[1:])
-
-        return self._wave_bin_edges
-
-    @property
-    def wave_edges(self):
-        pixel_size = self.meta["pixel_size"]
-        if self._wave_bin_edges is None and pixel_size is not None:
-            self.get_pixel_wavelength_edges(pixel_size)
-        return self._wave_bin_edges
-
-    @property
-    def wave_centers(self):
-        pixel_size = self.meta["pixel_size"]
-        if self._wave_bin_centers is None and pixel_size is not None:
-            self.get_pixel_wavelength_edges(pixel_size)
-        return self._wave_bin_centers
 
     def footprint(self, wave_min=None, wave_max=None, xi_min=None, xi_max=None):
         '''
@@ -332,61 +293,64 @@ class SpectralTrace:
             If `None`, use the full range that the spectral trace is defined on.
             Float values are interpreted as arcsec.
         '''
+        #print(f"footprint: {wave_min}, {wave_max}, {xi_min}, {xi_max}")
+
         ## Define the wavelength range of the footprint. This is a compromise
         ## between the requested range (by method args) and the definition
         ## range of the spectral trace
-        try:
+        ## This is only relevant if the trace is given by a table of reference
+        ## points. Otherwise (METIS LMS!) we assume that the range is valid.
+        if ('wave_colname' in self.meta and
+            self.meta['wave_colname'] in self.table.colnames):
+            # Here, the parameters are obtained from a table of reference points
             wave_unit = self.table[self.meta['wave_colname']].unit
-        except KeyError:
-            wave_unit = u.um
+            wave_val = quantify(self.table[self.meta['wave_colname']].data,
+                                wave_unit)
 
-        wave_val = quantify(self.table[self.meta['wave_colname']].data,
-                            wave_unit)
+            if wave_min is None:
+                wave_min = np.min(wave_val)
+            if wave_max is None:
+                wave_max = np.max(wave_val)
 
-        if wave_min is None:
-            wave_min = np.min(wave_val)
-        if wave_max is None:
-            wave_max = np.max(wave_val)
+            wave_min = quantify(wave_min, u.um)
+            wave_max = quantify(wave_max, u.um)
 
-        wave_min = quantify(wave_min, u.um)
-        wave_max = quantify(wave_max, u.um)
+            # Requested wavelenth range is entirely outside definition range:
+            # no footprint
+            if wave_min > np.max(wave_val) or wave_max < np.min(wave_val):
+                return None, None
 
-        # Requested wavelenth range is entirely outside definition range:
-        # no footprint
-        if wave_min > np.max(wave_val) or wave_max < np.min(wave_val):
-            return None, None
+            # Restrict to overlap of requested range and definition range
+            wave_min = max(wave_min, np.min(wave_val)).value
+            wave_max = min(wave_max, np.max(wave_val)).value
 
-        # Restrict to overlap of requested range and definition range
-        wave_min = max(wave_min, np.min(wave_val)).value
-        wave_max = min(wave_max, np.max(wave_val)).value
+            ## Define the slit range of the footprint. This is a compromise
+            ## between the requested range (by method args) and the definition
+            ## range of the spectral trace
+            try:
+                xi_unit = self.table[self.meta['s_colname']].unit
+            except KeyError:
+                xi_unit = u.arcsec
 
-        ## Define the slit range of the footprint. This is a compromise
-        ## between the requested range (by method args) and the definition
-        ## range of the spectral trace
-        try:
-            xi_unit = self.table[self.meta['s_colname']].unit
-        except KeyError:
-            xi_unit = u.arcsec
+            xi_val = quantify(self.table[self.meta['s_colname']].data,
+                              xi_unit)
 
-        xi_val = quantify(self.table[self.meta['s_colname']].data,
-                          xi_unit)
+            if xi_min is None:
+                xi_min = np.min(xi_val)
+            if xi_max is None:
+                xi_max = np.max(xi_val)
 
-        if xi_min is None:
-            xi_min = np.min(xi_val)
-        if xi_max is None:
-            xi_max = np.max(xi_val)
+            xi_min = quantify(xi_min, u.arcsec)
+            xi_max = quantify(xi_max, u.arcsec)
 
-        xi_min = quantify(xi_min, u.arcsec)
-        xi_max = quantify(xi_max, u.arcsec)
+            # Requested slit range is entirely outside definition range:
+            # no footprint
+            if xi_min > np.max(xi_val) or xi_max < np.min(xi_val):
+                return None, None
 
-        # Requested slit range is entirely outside definition range:
-        # no footprint
-        if xi_min > np.max(xi_val) or xi_max < np.min(xi_val):
-            return None, None
-
-        # Restrict to overlap of requested range and definition range
-        xi_min = max(xi_min, np.min(xi_val)).value
-        xi_max = min(xi_max, np.max(xi_val)).value
+            # Restrict to overlap of requested range and definition range
+            xi_min = max(xi_min, np.min(xi_val)).value
+            xi_max = min(xi_max, np.max(xi_val)).value
 
         # Map the edges of xi/lam to the focal plance
         n_edge = 512
@@ -402,49 +366,8 @@ class SpectralTrace:
         x_edge = self.xilam2x(xi_edge, wave_edge)
         y_edge = self.xilam2y(xi_edge, wave_edge)
 
-        return ([np.min(x_edge), np.max(x_edge), np.max(x_edge), np.min(x_edge)],
-                [np.min(y_edge), np.min(y_edge), np.max(y_edge), np.max(y_edge)])
-
-    def fov_headers(self, sky_header, **kwargs):
-        check_keys(kwargs, ["wave_min", "wave_max",
-                            "pixel_scale", "plate_scale"], "error")
-        kwargs = from_currsys(kwargs)
-        wave_min = quantify(kwargs["wave_min"], u.um).value
-        wave_max = quantify(kwargs["wave_max"], u.um).value
-        pixel_D_scale = sky_header["CDELT1"] / (kwargs["plate_scale"] / 3600)
-
-        detector_edges = None
-        if "det_header" in kwargs and kwargs["det_header"] is not None:
-            xdet, ydet = imp_utils.calc_footprint(kwargs["det_header"], "D")
-            detector_edges = {"x_min": np.min(xdet), "x_max": np.max(xdet),
-                              "y_min": np.min(ydet), "y_max": np.max(ydet)}
-
-        if sky_header["APERTURE"] != self.meta["aperture_id"]:
-            fov_hdrs = []
-        elif wave_min > self.wave_max or wave_max < self.wave_min:
-            fov_hdrs = []
-        else:
-            pixel_size = kwargs["pixel_scale"] / kwargs["plate_scale"]
-            curve_hdrs = self.get_curve_headers(pixel_size, wave_min, wave_max,
-                                                detector_edges=detector_edges)
-            if len(curve_hdrs) > 0:
-                print("Generated {} headers from {}".format(len(curve_hdrs),
-                                                            self.__repr__()))
-
-            for mtc_hdr in curve_hdrs:
-                mtc_hdr["EXT"] = self.meta["extension_id"]
-                mtc_hdr["APERTURE"] = self.meta["aperture_id"]
-                mtc_hdr["IMGPLANE"] = self.meta["image_plane_id"]
-                mtc_hdr["CDELT1D"] = pixel_D_scale
-                mtc_hdr["CDELT2D"] = pixel_D_scale
-                # mtc_hdr["CRPIX2D"] = sky_header["NAXIS2"] * 0.5
-                # ..todo:: assumption here is that they are on the same pixel scale - bad assumption!
-                mtc_hdr["NAXIS2"] = sky_header["NAXIS2"]
-                mtc_hdr.update(sky_header)
-
-            fov_hdrs = curve_hdrs
-
-        return fov_hdrs
+        return ([x_edge.min(), x_edge.max(), x_edge.max(), x_edge.min()],
+                [y_edge.min(), y_edge.min(), y_edge.max(), y_edge.max()])
 
     def plot(self, wave_min=None, wave_max=None, c="r"):
         '''Plot control points of the SpectralTrace'''
@@ -503,7 +426,6 @@ class XiLamImage():
     def __init__(self, fov, dlam_per_pix):
         # ..todo: we assume that we always have a cube. We use SpecCADO's
         #         add_cube_layer method
-
         cube_wcs = WCS(fov.cube.header, key=' ')
         wcs_lam = cube_wcs.sub([3])
 
@@ -574,10 +496,6 @@ class XiLamImage():
         self.interp = RectBivariateSpline(self.xi, self.lam, self.image,
                                           kx=spline_order[0],
                                           ky=spline_order[1])
-        # This is not executed. ..todo: define a switch?
-        if False:
-            fits.writeto("test_xilam.fits", data=self.image,
-                         header=self.wcs.to_header(), overwrite=True)
 
 
 class Transform2D():
@@ -589,19 +507,54 @@ class Transform2D():
     along columns, the power of y increases, such that A[j, i] is
     the coefficient of x^i y^j.
 
+    The functions `pretransform_x` and `pretransform_y` can be used to
+    transform the input variables before the matrix is applied. The function
+    `posttransform` can be applied to the output after application of the
+    matrix.
+
+    In Scopesim, a usecase for the pre- and post-transform functions is the
+    METIS LMS, where the matrices are applied to phases while Scopesim
+    operates on wavelengths. The functions to pass are `lam2phase` and
+    `phase2lam`.
+
     Parameters
     ----------
     matrix : np.array
         matrix of polynomial coefficients
+    pretransform_x : function, tuple
+    pretransform_y : function, tuple
+        If not None, the function is applied to the input
+        variable `x` or `y` before the actual 2D transform is computed
+    posttransform : function, tuple
+        If not None, the function is applied to the output variable
+        after the 2D transform is computed
 
-    ..todo: alternatively, the matrix can be created from a fit to data
+    When passed as a tuple, the first element is the function itself,
+    the second element is a dictionary of arguments to the function.
+    Example:
+    ```
+    def rescale(x, scale=1.):
+        return x * scale
+    pretransform_x = (rescale, {"scale": 0.5})
+    ```
     """
 
-    def __init__(self, matrix):
-        self.matrix = matrix
-        self.ny, self.nx = matrix.shape
+    def __init__(self, matrix, pretransform_x=None,
+                 pretransform_y=None, posttransform=None):
+        self.matrix = np.asarray(matrix)
+        self.ny, self.nx = self.matrix.shape
+        self.pretransform_x = self._repackage(pretransform_x)
+        self.pretransform_y = self._repackage(pretransform_y)
+        self.posttransform = self._repackage(posttransform)
 
-    def __call__(self, x, y, grid=False):
+    def _repackage(self, trafo):
+        """Make sure `trafo` is a tuple"""
+        if trafo is not None and not isinstance(trafo, tuple):
+            trafo = (trafo, {})
+        return trafo
+
+
+    def __call__(self, x, y, grid=False, **kwargs):
         """
         Apply the polynomial transform
 
@@ -610,6 +563,9 @@ class Transform2D():
         formed by the tensor product of the vectors x and y. When grid=False,
         the vectors of x and y define the components of a number of points (in
         this case, x and y must be of the same length).
+
+        Functions `pretransform_x`, `pretransform_y` and `posttransform`
+        can be supplied to override the instance values.
 
         Parameters
         ----------
@@ -624,12 +580,25 @@ class Transform2D():
         in x and y. When grid=False, a vector. In this case, x and y must
         have the same length.
         """
+        if "pretransform_x" in kwargs:
+            self.pretransform_x = self._repackage(kwargs["pretransform_x"])
+        if "pretransform_y" in kwargs:
+            self.pretransform_y = self._repackage(kwargs["pretransform_y"])
+        if "posttransform" in kwargs:
+            self.posttransform = self._repackage(kwargs["posttransform"])
+
         x = np.array(x)
         y = np.array(y)
         orig_shape = x.shape
 
         if not grid and x.shape != y.shape:
             raise ValueError("x and y must have the same length when grid is False")
+
+        # Apply pre transforms
+        if self.pretransform_x is not None:
+            x = self.pretransform_x[0](x, **self.pretransform_x[1])
+        if self.pretransform_y is not None:
+            y = self.pretransform_y[0](y, **self.pretransform_y[1])
 
         xvec = power_vector(x.flatten(), self.nx - 1)
         yvec = power_vector(y.flatten(), self.ny - 1)
@@ -647,6 +616,10 @@ class Transform2D():
                 result = np.float32(result)
             else:
                 result = result.reshape(orig_shape)
+
+        # Apply posttransform
+        if self.posttransform is not None:
+            result = self.posttransform[0](result, **self.posttransform[1])
 
         return result
 
@@ -774,140 +747,6 @@ def fill_zeros(x):
         if x[i] == 0:
             x[i] = x[i-1]
     return x
-
-def get_max_dispersion(spt, wave_min, wave_max, dwave, **kwargs):
-    """
-    Finds the maximum distance [mm] per wavelength unit [um] along a trace
-
-    The function looks for the minimum gradient of `spt.xy2lam` and returns
-    the inverse and the corresponding wavelength.
-    """
-    gradient = deriv_polynomial2d(spt.xy2lam)
-    dx_dwave = gradient[0](spt.table['x'], spt.table['y'])
-    dy_dwave = gradient[1](spt.table['x'], spt.table['y'])
-    absgrad2 = np.sqrt(dx_dwave**2 + dy_dwave**2)
-
-    max_disp = 1. / np.min(absgrad2)
-    wave_max = spt.table['wavelength'][np.argmin(absgrad2)]
-
-    # ..todo: not sure why these have to be arrays?
-    return np.array([max_disp]), np.array([wave_max])
-
-def get_max_dispersion_old(trace_tbls, wave_min, wave_max, dwave,
-                       **kwargs):
-    """
-    Finds the maximum distance [mm] per wavelength unit [um] along a trace
-
-    Looks at all the trace lines (x, y) per wavelength across the slit for each
-    trace, and for every trace projected onto the image plane.
-    For each wavelength in the range [wave_min, wave_max] return the largest
-    dx/dwave value based on all the trace projection lines.
-
-    Parameters
-    ----------
-    trace_tbls : list of fits.BinTableHDU
-        List of trace position tables. Units of table [um, mm, mm]
-        Each table must have columns [wavelength, x0, y0, ..., xN, yN]
-    wave_min, wave_max : float
-        [um] minimum wavelength to look at
-    dwave : float
-        [um] wavelength step size
-
-    kwargs
-    ------
-    x_colname, y_colname, wave_colname : str
-        The name of each column for x, y, and wavelength on the image plane
-        Default column names: ["x", "y", "wavelength"]
-    col_number_start : int
-        Default is 0. Start of the column numbering. I.e. x0, y0, s0 etc.
-        If the columns start at x1, y1, etc; set ``col_number_start=1``
-
-    Returns
-    -------
-    max_grad : array
-        [mm/um] The maximum sensible gradient of all spectral trace projections
-    waverange : array
-        [um] The wavelengths corresponding to the gradients
-
-    """
-
-    params = {"x_colname": "x",
-              "y_colname": "y",
-              "wave_colname": "wavelength",
-              "col_number_start": 0}
-    params.update(kwargs)
-
-    waverange = np.arange(wave_min, wave_max, dwave)
-    dispersions = []
-    for tbl in trace_tbls:
-        if not isinstance(tbl, Table):
-            tbl = Table(tbl)
-
-        n = len([col for col in tbl.colnames if params["y_colname"] in col])
-        k = params["col_number_start"]
-        # .. todo: Can't use x1, etc. anymore, we have only one column x
-        colnames = ["y"+str(ii) for ii in range(k, n+k)] + \
-                   ["x"+str(ii) for ii in range(k, n+k)]
-        for xcol in colnames:
-            xpos = tbl[xcol]
-            wave = tbl[params["wave_colname"]]
-            if wave[0] > wave[1]:
-                wave = wave[::-1]
-                xpos = xpos[::-1]
-
-            # disp is a new range [mm] derived from the trace coordinates (x, lam)
-            # and the spectral resolution dwave
-            mask = (waverange >= np.min(wave)) * (waverange <= np.max(wave))
-            disp = np.zeros(len(waverange))
-            disp[mask] = np.interp(waverange[mask], wave, xpos)
-            disp /= dwave         # [mm/um] distance / wave_unit
-            dispersions += [disp]
-
-    # find the maximum dispersion for overlapping orders by using gradients
-    # .. NOTE: careful of the np.abs(). Not sure if it should be here.
-    grads = np.array([np.abs(np.gradient(disp)) for disp in dispersions])
-    max_grad = fill_zeros(rolling_median(np.max(grads, axis=0), 15))
-
-    # import matplotlib.pyplot as plt
-    # for grad in grads:
-    #     plt.plot(waverange, grad)
-    # plt.scatter(waverange, max_grad)
-    # plt.show()
-
-    # max_grad is d_pos / d_wave : change in position [mm] per micron [um]
-    return max_grad, waverange
-
-
-def pixel_wavelength_edges(um_per_pix, waverange, wave_min, wave_max):
-    """
-    Get the wavelength bin edges for pixels under (a series) of spectral traces
-
-    Returns the wavelength bin edges needed to properly project the spectrum
-    according to the provided dispersion vector ``um_per_pix``
-
-    Note: Units must be consistent, recommended [um]
-
-    Parameters
-    ----------
-    um_per_pix : list, array
-    waverange : list, array
-    wave_min, wave_max : float
-
-    Returns
-    -------
-    wave_bin_edges : array
-        [um] The wavelength bin edges
-
-    """
-
-    wave_bin_edges = []
-    wave = wave_min
-    while wave < wave_max:
-        wave_bin_edges += [wave]
-        wave += np.interp(wave, waverange, um_per_pix)
-
-    return np.array(wave_bin_edges)
-
 
 def get_affine_parameters(coords):
     """

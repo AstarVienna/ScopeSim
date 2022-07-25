@@ -141,6 +141,10 @@ class DetectorList(Effect):
 
             obj.shrink(axis=["x", "y"], values=([min(x_sky), max(x_sky)],
                                                 [min(y_sky), max(y_sky)]))
+            obj.detector_limits = {"xd_min": min(x_mm),
+                                   "xd_max": max(x_mm),
+                                   "yd_min": min(y_mm),
+                                   "yd_max": max(y_mm)}
 
         return obj
 
