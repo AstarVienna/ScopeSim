@@ -2,7 +2,12 @@ include README.md
 include LICENCE
 include scopesim/defaults.yaml
 include scopesim/vega.fits
-prune scopesim/tests*
+include scopesim/tests/mocks/*/*.yaml
+include scopesim/tests/mocks/*/*.fits
+include scopesim/tests/mocks/*/*.dat
+include scopesim/tests/mocks/*/*/*.yaml
+include scopesim/tests/mocks/*/*/*.fits
+include scopesim/tests/mocks/*/*/*.dat
 prune *OLD_*
 prune *docs_to_be_sorted*
 prune *misc*
