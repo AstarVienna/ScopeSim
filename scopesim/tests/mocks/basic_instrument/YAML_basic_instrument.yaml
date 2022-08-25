@@ -46,7 +46,7 @@ effects :
     current_slit: "!OBS.slit_name"
 
 - name: image_slicer
-  description: collection of slits correspnding to the image slicer apertures
+  description: collection of slits corresponding to the image slicer apertures
   class: ApertureList
   include: "!OBS.include_slicer"
   kwargs:
