@@ -17,6 +17,7 @@ from ..utils import from_currsys, check_keys, interp2
 from ..optics.image_plane_utils import header_from_list_of_xy
 from ..base_classes import FieldOfViewBase, FOVSetupBase
 
+
 class SpectralTraceList(Effect):
     """
     List of spectral trace geometries for the detector plane
@@ -117,7 +118,6 @@ class SpectralTraceList(Effect):
 
         if self._file is not None:
             self.make_spectral_traces()
-
 
     def make_spectral_traces(self):
         '''Returns a dictionary of spectral traces read in from a file'''

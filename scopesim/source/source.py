@@ -479,6 +479,17 @@ class Source(SourceBase):
     #                               lookup_table=fluxes)
 
     def shift(self, dx=0, dy=0, layers=None):
+        """
+        Shifts the position of one or more fields w.r.t. the optical axis
+
+        Parameters
+        ----------
+        dx, dy : float
+            [arcsec]
+        layers : list of ints
+            which .fields entries to shift
+
+        """
 
         if layers is None:
             layers = np.arange(len(self.fields))
@@ -506,8 +517,6 @@ class Source(SourceBase):
             raise ValueError("type(bandpass) must be synphot.SpectralElement")
 
         self.bandpass = bandpass
-
-
 
     def plot(self):
         """
