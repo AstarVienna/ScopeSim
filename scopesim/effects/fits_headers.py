@@ -104,6 +104,7 @@ class ExtraFitsKeywords(Effect):
               ESO:
                 DET:
                   DIT: [5, '[s] exposure length']   # example of adding a comment
+            EXTNAME: "DET艘.DATA"                    # example of extension specific qualifier
 
     The keywords can be added to one or more extensions, based on one of the
     following ``ext_`` qualifiers: ``ext_name``, ``ext_number``, ``ext_type``
@@ -112,15 +113,27 @@ class ExtraFitsKeywords(Effect):
     For a list, ScopeSim will add the keywords to all extensions matching the
     specified type/name/number
 
+    The number of the extension can be used in a value by using the "艘"
+    character. That is, the "艘" character is replaced by the extension number.
+    "艘" is choosen because it is not allowed to be used in FITS values, and
+    it is the "ideograph counter for ships, vessels CJK", which seems
+    appropriate.
+
     The above example will result in the following keyword added to:
 
     - PrimaryHDU (ext 0)::
 
           header['HIERARCH ESO ATM TEMPERAT'] = -5
 
-    - Extensions 1 and 2 (regardless of type)::
+    - Extension 1 (regardless of type)::
 
           header['HIERARCH ESO DET DIT'] = (5, '[s] exposure length')
+          header['EXTNAME'] = "DET1.DATA"
+
+    - Extension 2 (regardless of type)::
+
+          header['HIERARCH ESO DET DIT'] = (5, '[s] exposure length')
+          header['EXTNAME'] = "DET2.DATA"
 
     Resolved and un-resolved keywords
     ---------------------------------
@@ -252,7 +265,11 @@ class ExtraFitsKeywords(Effect):
                 unresolved = flatten_dict(dic.get("unresolved_keywords", {}))
                 exts = get_relevant_extensions(dic, hdul)
                 for i in exts:
-                    hdul[i].header.update(resolved)
+                    resolved_with_counters = {
+                        k: v.replace("艘", str(i)) if isinstance(v, str) else v
+                        for k, v in resolved.items()
+                    }
+                    hdul[i].header.update(resolved_with_counters)
                     hdul[i].header.update(unresolved)
 
         return hdul
@@ -277,7 +294,7 @@ def get_relevant_extensions(dic, hdul):
     return exts
 
 
-def flatten_dict(dic, base_key="", flat_dict={},
+def flatten_dict(dic, base_key="", flat_dict=None,
                  resolve=False, optics_manager=None):
     """
     Flattens nested yaml dictionaries into a single level dictionary
@@ -298,6 +315,8 @@ def flatten_dict(dic, base_key="", flat_dict={},
     flat_dict : dict
 
     """
+    if flat_dict is None:
+        flat_dict = {}
     for key, val in dic.items():
         flat_key = base_key + f"{key} "
         if isinstance(val, dict):
