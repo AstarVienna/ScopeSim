@@ -11,6 +11,7 @@ from collections import OrderedDict
 from docutils.core import publish_string
 from copy import deepcopy
 
+import requests
 import yaml
 import numpy as np
 from astropy import units as u
@@ -1032,3 +1033,34 @@ def pretty_print_dict(dic, indent=0):
 
     return text
 
+
+def return_latest_github_actions_jobs_status(owner_name="AstarVienna", repo_name="ScopeSim",
+                                             branch="dev_master", actions_yaml_name="tests.yml"):
+    """
+    Gets the status of the latest test run
+    """
+    response = requests.get(f"https://api.github.com/repos/{owner_name}/{repo_name}/"
+                            f"actions/workflows/{actions_yaml_name}/runs?branch={branch}&per_page=1")
+    dic = response.json()
+    run_id = dic["workflow_runs"][0]["id"]
+
+    response = requests.get(f"https://api.github.com/repos/{owner_name}/{repo_name}/actions/runs/{run_id}/jobs")
+    dic = response.json()
+    params_list = []
+    for job in dic["jobs"]:
+        params = {"name": job['name'],
+                  "status": job['status'],
+                  "conclusion": job['conclusion'],
+                  "started_at": job['started_at'],
+                  "completed_at": job['completed_at'],
+                  "url": job['html_url'],
+                  "badge_url": None}
+
+        key = "Python_" + job['name'].split()[-1][:-1]
+        value = "passing" if job['conclusion'] == "success" else "failing"
+        colour = "brightgreen" if job['conclusion'] == "success" else "red"
+        badge_url = f"https://img.shields.io/badge/{key}-{value}-{colour}"
+        params["badge_url"] = badge_url
+        params_list += [params]
+
+    return params_list
