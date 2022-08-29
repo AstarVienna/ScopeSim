@@ -66,7 +66,7 @@ def yaml_string():
         grias_di: woed
         zdrasviute: mir
         salud: el mundo
-    EXTNAME: "DET艘.DATA"    
+    EXTNAME: "DET§.DATA"    
 """
 
 

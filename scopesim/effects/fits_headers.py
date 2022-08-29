@@ -104,7 +104,7 @@ class ExtraFitsKeywords(Effect):
               ESO:
                 DET:
                   DIT: [5, '[s] exposure length']   # example of adding a comment
-            EXTNAME: "DET艘.DATA"                    # example of extension specific qualifier
+            EXTNAME: "DET§.DATA"                    # example of extension specific qualifier
 
     The keywords can be added to one or more extensions, based on one of the
     following ``ext_`` qualifiers: ``ext_name``, ``ext_number``, ``ext_type``
@@ -113,9 +113,9 @@ class ExtraFitsKeywords(Effect):
     For a list, ScopeSim will add the keywords to all extensions matching the
     specified type/name/number
 
-    The number of the extension can be used in a value by using the "艘"
-    character. That is, the "艘" character is replaced by the extension number.
-    "艘" is choosen because it is not allowed to be used in FITS values, and
+    The number of the extension can be used in a value by using the "§"
+    character. That is, the "§" character is replaced by the extension number.
+    "§" is choosen because it is not allowed to be used in FITS values, and
     it is the "ideograph counter for ships, vessels CJK", which seems
     appropriate.
 
@@ -266,7 +266,7 @@ class ExtraFitsKeywords(Effect):
                 exts = get_relevant_extensions(dic, hdul)
                 for i in exts:
                     resolved_with_counters = {
-                        k: v.replace("艘", str(i)) if isinstance(v, str) else v
+                        k: v.replace("§", str(i)) if isinstance(v, str) else v
                         for k, v in resolved.items()
                     }
                     hdul[i].header.update(resolved_with_counters)

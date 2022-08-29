@@ -63,7 +63,7 @@ class ApertureMask(Effect):
 
     array_dict : dict
         A dictionary containing the columns listed above:
-        ``{x: [...], y: [...], id: <int>, conserve_image: <bool>}
+        ``{x: [...], y: [...], id: <int>, conserve_image: <bool>}``
 
     Other Parameters
     ----------------
