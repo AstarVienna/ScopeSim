@@ -1,4 +1,4 @@
-'''Effects related to field masks, including spectroscopic slits'''
+"""Effects related to field masks, including spectroscopic slits"""
 from os import path as pth
 from copy import deepcopy
 import logging
@@ -445,7 +445,7 @@ class SlitWheel(Effect):
 
 
     def apply_to(self, obj, **kwargs):
-        '''Use apply_to of current_slit'''
+        """Use apply_to of current_slit"""
         return self.current_slit.apply_to(obj, **kwargs)
 
 
@@ -453,7 +453,7 @@ class SlitWheel(Effect):
         return self.current_slit.fov_grid(which=which, **kwargs)
 
     def change_slit(self, slitname=None):
-        '''Change the current slit'''
+        """Change the current slit"""
         if not slitname or slitname in self.slits.keys():
             self.meta['current_slit'] = slitname
             self.include = slitname
@@ -462,7 +462,7 @@ class SlitWheel(Effect):
 
     @property
     def current_slit(self):
-        '''Return the currently used slit'''
+        """Return the currently used slit"""
         currslit = from_currsys(self.meta["current_slit"])
         if not currslit:
             return False
@@ -478,10 +478,12 @@ class SlitWheel(Effect):
         return getattr(self.current_slit, item)
 
     def get_table(self):
-        '''Create a table of slits with centre position, width and length
+        """
+        Create a table of slits with centre position, width and length
 
         Width is defined as the extension in the y-direction, length in the
-        x-direction. All values are in milliarcsec.'''
+        x-direction. All values are in milliarcsec.
+        """
         names = list(self.slits.keys())
         slits = self.slits.values()
         xmax = np.array([slit.data['x'].max() * u.Unit(slit.meta['x_unit'])

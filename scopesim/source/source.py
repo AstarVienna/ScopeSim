@@ -83,10 +83,10 @@ class Source(SourceBase):
 
         New ScopeSim-style input
         - ``table=<astropy.Table>, spectra=<list of synphot.SourceSpectrum>``
-        - ``table=<astropy.Table>, lam=<array>, spectra=<list of array>
+        - ``table=<astropy.Table>, lam=<array>, spectra=<list of array>``
         - ``image_hdu=<fits.ImageHDU>, spectra=<list of synphot.SourceSpectrum>``
-        - ``image_hdu=<fits.ImageHDU>, lam=<array>, spectra=<list of array>
-        - ``image_hdu=<fits.ImageHDU>, flux=<astropy.Quantity>
+        - ``image_hdu=<fits.ImageHDU>, lam=<array>, spectra=<list of array>``
+        - ``image_hdu=<fits.ImageHDU>, flux=<astropy.Quantity>``
 
         Old SimCADO-style input
         - ``x=<array>, y=<array>, ref=<array>, spectra=<list of synphot.SourceSpectrum>``

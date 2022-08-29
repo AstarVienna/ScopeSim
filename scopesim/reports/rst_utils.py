@@ -49,7 +49,9 @@ from matplotlib.colors import LogNorm
 
 
 def process_comment_code(node, context_code):
-    """Add code from a ``comment`` node to the context_code string"""
+    """
+    Add code from a ``comment`` node to the context_code string
+    """
     result = node.rawsource.split("---")
     options = yaml.full_load(result[0]) if len(result) > 1 else {}
     new_code = result[-1]
@@ -97,7 +99,7 @@ def process_code(context_code, code, options):
           from previous code blocks.
         - ``clear-figure`` adds ``plt.clf()`` to the context string before the
           current code block is added
-        - ``plot`` adds ``plt.savefig({name}.{format}) to the context string.
+        - ``plot`` adds ``plt.savefig({name}.{format})`` to the context string.
           If multiple formats are given, these will be iterated over.
 
     For ``comment`` blocks, options should be given in a yaml style header,

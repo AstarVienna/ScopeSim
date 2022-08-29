@@ -24,8 +24,7 @@ class DetectorList(Effect):
 
     where:
     * "id" is a reference id for the chip (fits header EXTNAME)
-    * "x_cen" and "y_cen" [mm] are the physical coordinates of centre of the chip on the
-      detector plane
+    * "x_cen" and "y_cen" [mm] are the physical coordinates of centre of the chip on the detector plane
     * "x_size", "y_size" [mm, pixel] are the width/height of the chip
     * "pixel_size" [mm] is the physical size of pixels in the detector
     * "angle" [deg] is the rotation of the detector relative to the x-axis

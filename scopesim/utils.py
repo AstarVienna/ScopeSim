@@ -441,7 +441,7 @@ def setup_loggers(**kwargs):
     """
     Sets up both console and file loggers.
 
-    Acceptable parameters are the same as the ``!SIM.logging'' sub dictionary
+    Acceptable parameters are the same as the ``!SIM.logging`` sub dictionary
 
     """
     logd = rc.__currsys__["!SIM.logging"]

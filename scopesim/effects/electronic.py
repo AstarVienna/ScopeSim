@@ -42,7 +42,7 @@ class DetectorModePropertiesSetter(Effect):
     Parameters
     ----------
     mode_properties : dict
-        A dictionary containing the DET parameters to be changed for each mode
+        A dictionary containing the DET parameters to be changed for each mode.
         See below for an example yaml entry.
 
     Examples
@@ -68,6 +68,7 @@ class DetectorModePropertiesSetter(Effect):
     Add the OBS dict entry !OBS.detector_readout_mode to the properties section
     of the mode_yamls descriptions in the default.yaml files.
     ::
+
         mode_yamls:
           - object: observation
             alias: OBS
@@ -449,23 +450,25 @@ class LinearityCurve(Effect):
     Examples
     --------
 
-    The effect can be instantiated in various ways.
-    - name: detector_linearity
-      class: LinearityCurve
-      kwargs:
-        file_name: FPA_linearity.dat
+    The effect can be instantiated in various ways.::
 
-    - name: detector_linearity
-      class: LinearityCurve
-      kwargs:
-        array_dict: {incident: [0, 77000, 999999999999],
-                     measured: [0, 77000, 77000]}
+        - name: detector_linearity
+          class: LinearityCurve
+          kwargs:
+            file_name: FPA_linearity.dat
 
-    - name: detector_linearity
-      class: LinearityCurve
-      kwargs:
-        incident: [0, 77000, 99999999]
-        measured: [0, 77000, 77000]
+        - name: detector_linearity
+          class: LinearityCurve
+          kwargs:
+            array_dict: {incident: [0, 77000, 999999999999],
+                         measured: [0, 77000, 77000]}
+
+        - name: detector_linearity
+          class: LinearityCurve
+          kwargs:
+            incident: [0, 77000, 99999999]
+            measured: [0, 77000, 77000]
+
     """
     def __init__(self, **kwargs):
         super().__init__(**kwargs)

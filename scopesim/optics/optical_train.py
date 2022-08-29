@@ -472,11 +472,12 @@ class OpticalTrain:
 
 
     def shutdown(self):
-        '''Shut down the instrument.
+        """
+        Shut down the instrument.
 
         This method closes all open file handles and should be called when the optical train
         is no longer needed.
-        '''
+        """
         for effect_name in self.effects['name']:
             try:
                 self[effect_name]._file.close()

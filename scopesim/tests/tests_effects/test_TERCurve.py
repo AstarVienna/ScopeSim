@@ -107,7 +107,7 @@ class TestSpanishVOFilterCurveInit:
 
 @pytest.fixture(name="fwheel", scope="class")
 def _filter_wheel():
-    '''Instantiate a FilterWheel'''
+    """Instantiate a FilterWheel"""
     return tc.FilterWheel(**{"filter_names": ["Ks", "Br-gamma"],
                              "filename_format": "TC_filter_{}.dat",
                              "current_filter": "Br-gamma"})

@@ -248,6 +248,7 @@ class SkycalcTERCurve(AtmosphericTERCurve):
         Examples
         --------
         ::
+
             - name : skycalc_background
               class : SkycalcTERCurve
               kwargs :
@@ -343,15 +344,14 @@ class QuantumEfficiencyCurve(TERCurve):
         self.meta["position"] = -1          # position in surface table
 
 
-
 class FilterCurve(TERCurve):
     """
-    Other Parameters
-    ----------------
-    position : int
-    filter_name : str
+    Parameters
+    ----------
+    position : int, optional
+    filter_name : str, optional
         ``Ks`` - corresponding to the filter name in the filename pattern
-    filename_format : str
+    filename_format : str, optional
         ``TC_filter_{}.dat``
 
     Can either be created using the standard 3 options:
@@ -466,6 +466,7 @@ class TopHatFilterCurve(FilterCurve):
     Examples
     --------
     ::
+
         name: J_band_tophat
         class: TopHatFilterCurve
         kwargs:
@@ -520,6 +521,7 @@ class SpanishVOFilterCurve(FilterCurve):
     Examples
     --------
     ::
+
         name: HAWKI-Ks
         class: SpanishVOFilterCurve
         kwargs:
@@ -550,6 +552,7 @@ class FilterWheel(Effect):
     Examples
     --------
     ::
+
         name: filter_wheel
         class: FilterWheel
         kwargs:
@@ -585,14 +588,14 @@ class FilterWheel(Effect):
 
 
     def apply_to(self, obj, **kwargs):
-        '''Use apply_to of current filter'''
+        """Use apply_to of current filter"""
         return self.current_filter.apply_to(obj, **kwargs)
 
     def fov_grid(self, which="waveset", **kwargs):
         return self.current_filter.fov_grid(which=which, **kwargs)
 
     def change_filter(self, filtername=None):
-        '''Change the current filter'''
+        """Change the current filter"""
         if filtername in self.filters.keys():
             self.meta['current_filter'] = filtername
         else:
@@ -657,7 +660,6 @@ class FilterWheel(Effect):
         return tbl
 
 
-
 class TopHatFilterWheel(FilterWheel):
     """
     A selection of top-hat filter curves as defined in the input lists
@@ -685,6 +687,7 @@ class TopHatFilterWheel(FilterWheel):
     Examples
     --------
     ::
+
         name: top_hat_filter_wheel
         class: TopHatFilterWheel
         kwargs:
@@ -756,6 +759,7 @@ class SpanishVOFilterWheel(FilterWheel):
     Examples
     --------
     ::
+
         name: svo_filter_wheel
         class: SpanishVOFilterWheel
         kwargs:
@@ -836,6 +840,7 @@ class ADCWheel(Effect):
     Example
     -------
     ::
+
        name : adc_wheel
        class: ADCWheel
        kwargs:
@@ -868,7 +873,7 @@ class ADCWheel(Effect):
         self.table = self.get_table()
 
     def apply_to(self, obj, **kwargs):
-        '''Use apply_to of current adc'''
+        """Use apply_to of current adc"""
         return self.current_adc.apply_to(obj, **kwargs)
 
     def change_adc(self, adcname=None):
@@ -881,7 +886,7 @@ class ADCWheel(Effect):
 
     @property
     def current_adc(self):
-        '''Return the currently used ADC'''
+        """Return the currently used ADC"""
         curradc = from_currsys(self.meta['current_adc'])
         if not curradc:
             return False
