@@ -286,13 +286,13 @@ class TestListEffects:
 
 @pytest.mark.usefixtures("simplecado_opt")
 class TestShutdown:
-    '''Test that fits files are closed on shutdown of OpticalTrain'''
+    """Test that fits files are closed on shutdown of OpticalTrain"""
 
     def test_files_closed_on_shutdown(self, simplecado_opt):
-        '''Test for closed files in two ways:
+        """Test for closed files in two ways:
         - `closed` flag is set to True
         - data access fails
-        '''
+        """
         # Add an effect with a psf
         psf = sim.effects.FieldConstantPSF(filename="test_ConstPSF.fits",
                                            name="testpsf")

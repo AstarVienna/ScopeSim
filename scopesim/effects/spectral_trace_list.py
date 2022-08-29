@@ -1,9 +1,9 @@
-'''
+"""
 Effect for mapping spectral cubes to the detector plane
 
 The Effect is called SpectralTraceList, it applies a list of
 optics.spectral_trace_SpectralTrace objects to a FieldOfView.
-'''
+"""
 
 from os import path as pth
 import numpy as np
@@ -120,7 +120,7 @@ class SpectralTraceList(Effect):
             self.make_spectral_traces()
 
     def make_spectral_traces(self):
-        '''Returns a dictionary of spectral traces read in from a file'''
+        """Returns a dictionary of spectral traces read in from a file"""
         self.ext_data = self._file[0].header["EDATA"]
         self.ext_cat = self._file[0].header["ECAT"]
         self.catalog = Table(self._file[self.ext_cat].data)
@@ -135,7 +135,7 @@ class SpectralTraceList(Effect):
         self.spectral_traces = spec_traces
 
     def apply_to(self, obj, **kwargs):
-        '''
+        """
         Interface between FieldOfView and SpectralTraceList
 
         This is called twice:
@@ -146,7 +146,7 @@ class SpectralTraceList(Effect):
         object and applies the mapping to the image plane to it.
         The FieldOfView object is associated to one SpectralTrace from the
         list, identified by meta['trace_id'].
-        '''
+        """
         if isinstance(obj, FOVSetupBase):
             # Setup of FieldOfView object
             volumes = [self.spectral_traces[key].fov_grid()
@@ -274,9 +274,9 @@ class SpectralTraceListWheel(Effect):
         The list of unique identifiers in the trace filenames
 
     filename_format : str
-        f-string that directs scopesim to the folder containing the trace files.
-        This can be a !-string if the trace names are shared with other *Wheel
-        effect objects (e.g. a FilterWheel). See examples.
+        ``f-string`` that directs scopesim to the folder containing the trace
+        files. This can be a ``!-string`` if the trace names are shared with
+        other ``*Wheel`` effect objects (e.g. a ``FilterWheel``). See examples.
 
     current_trace_list : str
         default trace file to use
@@ -344,7 +344,7 @@ class SpectralTraceListWheel(Effect):
                                                        **kwargs)
 
     def apply_to(self, obj, **kwargs):
-        '''Use apply_to of current trace list'''
+        """Use apply_to of current trace list"""
         return self.current_trace_list.apply_to(obj, **kwargs)
 
     @property

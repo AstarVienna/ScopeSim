@@ -19,14 +19,14 @@ class ExtraFitsKeywords(Effect):
     Simulation parameters (Effect kwargs values, etc) will be added automatically
     by ScopeSim in a different function, but following this format.
 
-    The dictionaries should be split into different HIERARCH lists:
+    The dictionaries should be split into different HIERARCH lists, e.g.:
 
     - HIERARCH ESO
-     For ESO specific keywords
+      For ESO specific keywords
     - HIERARCH SIM
-     For ScopeSim specific keywords, like simulation parameters
+      For ScopeSim specific keywords, like simulation parameters
     - HIERARCH MIC
-     For MICADO specific keywords, (unsure what these would be yet)
+      For MICADO specific keywords, (unsure what these would be yet)
 
     More HIERARCH style keywords can also be added as needed for other use-cases
 
@@ -48,6 +48,7 @@ class ExtraFitsKeywords(Effect):
     Specifying the extra FITS keywords directly in the .yaml file where the
     Effect objects are described.
     ::
+
         name: extra_fits_header_entries
         class: ExtraFitsKeywords
         kwargs:
@@ -63,6 +64,7 @@ class ExtraFitsKeywords(Effect):
     file, e.g. ``extra_FITS_keys.yaml``. The file format is described below in
     detail below.
     ::
+
         name: extra_fits_header_entries
         class: ExtraFitsKeywords
         kwargs:
@@ -70,6 +72,7 @@ class ExtraFitsKeywords(Effect):
 
     The Effect can be added directly in an iPython session.
     ::
+
         >>> hdr_dic = {"ext_type": "PrimaryHDU",
                        "keywords":
                            {"HIERARCH":
@@ -104,7 +107,7 @@ class ExtraFitsKeywords(Effect):
               ESO:
                 DET:
                   DIT: [5, '[s] exposure length']   # example of adding a comment
-            EXTNAME: "DET艘.DATA"  #
+            EXTNAME: "DET§.DATA"                    # example of extension specific qualifier
 
     The keywords can be added to one or more extensions, based on one of the
     following ``ext_`` qualifiers: ``ext_name``, ``ext_number``, ``ext_type``
@@ -113,9 +116,9 @@ class ExtraFitsKeywords(Effect):
     For a list, ScopeSim will add the keywords to all extensions matching the
     specified type/name/number
 
-    The number of the extension can be used in a value by using the "艘"
-    character. That is, the "艘" character is replaced by the extension number.
-    "艘" is choosen because it is not allowed to be used in FITS values, and
+    The number of the extension can be used in a value by using the "§"
+    character. That is, the "§" character is replaced by the extension number.
+    "§" is choosen because it is not allowed to be used in FITS values, and
     it is the "ideograph counter for ships, vessels CJK", which seems
     appropriate.
 
@@ -139,8 +142,8 @@ class ExtraFitsKeywords(Effect):
     ---------------------------------
     ScopeSim uses bang-strings to resolve global parameters.
     E.g: ``from_currsys('!ATMO.temperature')`` will resolve to a float
-    These bang-strings will be resolved automatically in the ``keywords`` dictionary
-    section.
+    These bang-strings will be resolved automatically in the ``keywords``
+    dictionary section.
 
     If the keywords bang-string should instead remain unresolved and the string
     added verbatim to the header, we use the ``unresolved_keywords`` dictionary
@@ -153,7 +156,8 @@ class ExtraFitsKeywords(Effect):
 
         #<optical_element_name>.<effect_name>.<kwarg_name>
 
-    For example, the temperature of the MICADO detector array can be accessed by::
+    For example, the temperature of the MICADO detector array can be accessed
+    by::
 
         '#MICADO_DET.full_detector_array.temperature'
 
@@ -166,11 +170,11 @@ class ExtraFitsKeywords(Effect):
                 DET
                   TEMPERAT: '#MICADO_DET.full_detector_array.temperature'
 
-    Obviously some though needs to be put into how exactly we list the simulation
-    parameters in a coherent manner.
+    Obviously some though needs to be put into how exactly we list the
+    simulation parameters in a coherent manner.
     But this is 'Zukunftsmusik'.
-    For now we really just want an interface that can add the ESO header keywords,
-    which can also be expanded in the future for our own purposes.
+    For now we really just want an interface that can add the ESO header
+    keywords, which can also be expanded in the future for our own purposes.
 
     Below is an example of some extra keywords for MICADO headers::
 
@@ -248,9 +252,10 @@ class ExtraFitsKeywords(Effect):
             elif isinstance(dic, dict):
                 self.dict_list += [dic]
 
-
     def apply_to(self, hdul, **kwargs):
         """
+        Adds extra fits keywords from a yaml file including !,#-stings
+
         Parameters
         ----------
         optical_train : scopesim.OpticalTrain, optional
@@ -266,7 +271,7 @@ class ExtraFitsKeywords(Effect):
                 exts = get_relevant_extensions(dic, hdul)
                 for i in exts:
                     resolved_with_counters = {
-                        k: v.replace("艘", str(i)) if isinstance(v, str) else v
+                        k: v.replace("§", str(i)) if isinstance(v, str) else v
                         for k, v in resolved.items()
                     }
                     hdul[i].header.update(resolved_with_counters)
@@ -385,6 +390,7 @@ class EffectsMetaKeywords(ExtraFitsKeywords):
     --------
     Yaml file entry:
     ::
+
         name: effect_dumper
         class: EffectsMetaKeywords
         description: adds all effects meta dict entries to the FITS header
@@ -465,6 +471,7 @@ class SourceDescriptionFitsKeywords(ExtraFitsKeywords):
     --------
     Yaml file entry:
     ::
+
         name: source_descriptor
         class: SourceDescriptionFitsKeywords
         description: adds info from all Source fields to the FITS header
@@ -519,37 +526,38 @@ class SourceDescriptionFitsKeywords(ExtraFitsKeywords):
 
 class SimulationConfigFitsKeywords(ExtraFitsKeywords):
     """
-        Adds parameters from all config dictionaries to the FITS headers
+    Adds parameters from all config dictionaries to the FITS headers
 
-        Parameters
-        ----------
-        ext_number : int, list of ints, optional
-            Default 0. The numbers of the extensions to which the header keywords
-            should be added
+    Parameters
+    ----------
+    ext_number : int, list of ints, optional
+        Default 0. The numbers of the extensions to which the header keywords
+        should be added
 
-        resolve : bool
-            Default True. If True, all !-strings and #-strings are resolved via
-            ``from_currsys`` before being add to the header. If False, the
-            unaltered !-strings or #-strings are added to the header.
+    resolve : bool
+        Default True. If True, all !-strings and #-strings are resolved via
+        ``from_currsys`` before being add to the header. If False, the
+        unaltered !-strings or #-strings are added to the header.
 
-        keyword_prefix : str, optional
-            Default "HIERARCH SIM". Custom FITS header keyword prefix. Effect meta
-            dict entries will appear in the header as:
-            ``<keyword_prefix> SRCn <key> : <value>``
+    keyword_prefix : str, optional
+        Default "HIERARCH SIM". Custom FITS header keyword prefix. Effect meta
+        dict entries will appear in the header as:
+        ``<keyword_prefix> SRCn <key> : <value>``
 
-        Examples
-        --------
-        Yaml file entry:
-        ::
-            name: source_descriptor
-            class: SimulationConfigFitsKeywords
-            description: adds info from all config dicts to the FITS header
-            kwargs:
-              ext_number: [0]
-              resolve: False
-              keyword_prefix: HIERARCH SIM
+    Examples
+    --------
+    Yaml file entry:
+    ::
 
-        """
+        name: source_descriptor
+        class: SimulationConfigFitsKeywords
+        description: adds info from all config dicts to the FITS header
+        kwargs:
+          ext_number: [0]
+          resolve: False
+          keyword_prefix: HIERARCH SIM
+
+    """
     def __init__(self, **kwargs):
         super(ExtraFitsKeywords, self).__init__()
         params = {"name": "simulation_fits_keywords",

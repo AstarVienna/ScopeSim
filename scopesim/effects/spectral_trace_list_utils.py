@@ -26,7 +26,7 @@ from ..utils import deriv_polynomial2d, power_vector, interp2, check_keys,\
 
 
 class SpectralTrace:
-    '''Definition of one spectral trace
+    """Definition of one spectral trace
 
     A SpectralTrace describes the mapping of spectral slit coordinates
     to the focal plane. The class reads an order layout and fits several
@@ -37,7 +37,7 @@ class SpectralTrace:
     - lam : Wavelength [um]
     Focal plane coordinates are:
     - x, y : [mm]
-    '''
+    """
     _class_params = {"x_colname": "x",
                      "y_colname": "y",
                      "s_colname": "s",
@@ -279,7 +279,7 @@ class SpectralTrace:
         return image_hdu
 
     def footprint(self, wave_min=None, wave_max=None, xi_min=None, xi_max=None):
-        '''
+        """
         Return corners of rectangle enclosing spectral trace
 
         Parameters
@@ -292,7 +292,7 @@ class SpectralTrace:
             Minimum and maximum slit position on the sky.
             If `None`, use the full range that the spectral trace is defined on.
             Float values are interpreted as arcsec.
-        '''
+        """
         #print(f"footprint: {wave_min}, {wave_max}, {xi_min}, {xi_max}")
 
         ## Define the wavelength range of the footprint. This is a compromise
@@ -370,7 +370,7 @@ class SpectralTrace:
                 [y_edge.min(), y_edge.min(), y_edge.max(), y_edge.max()])
 
     def plot(self, wave_min=None, wave_max=None, c="r"):
-        '''Plot control points of the SpectralTrace'''
+        """Plot control points of the SpectralTrace"""
 
         # Footprint (rectangle enclosing the trace)
         xlim, ylim  = self.footprint(wave_min=wave_min, wave_max=wave_max)

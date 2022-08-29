@@ -1,6 +1,13 @@
-version = '0.5.1'
-date    = '2022-07-14 12:00:00 GMT'
+version = '0.5.2'
+date    = '2022-08-25 17:00:00 GMT'
 yaml_descriptions = """
+- version : 0.5.2
+  date : 2022-08-25
+  comment : Update of DLC server URL to scopesim.univie.ac.at
+  changes :
+  - Updated MANIFEST.in to include all the files needed by the basic_instrument test optical train
+  - Small update to allow iterative extension specific FITS header keywords. E.g. EXTNAME = DETn.DATA
+
 - version : 0.5.1
   date : 2022-07-12
   comment : Update of DLC server URL to scopesim.univie.ac.at

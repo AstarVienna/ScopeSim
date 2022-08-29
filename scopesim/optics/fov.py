@@ -365,7 +365,7 @@ class FieldOfView(FieldOfViewBase):
         """
         Used for IFUs, slit spectrographs, and coherent MOSs (e.g.KMOS)
 
-        Returned cube units are ph s-1 voxel-1
+        Returned cube units are ``ph s-1 voxel-1``
 
         .. note:: ``self.make_cube()`` does NOT store anything in ``self.cube``
 
@@ -378,30 +378,35 @@ class FieldOfView(FieldOfViewBase):
 
         The cube is made with these steps:
 
-        1. Make waveset and canvas cube
+        1. Make waveset and canvas cube::
+
             if at least one cube:
                 set waveset to equal largest cube waveset
             else:
                 make waveset from self.meta values
             make canvas cube based on waveset of largest cube and NAXIS1,2 from fov.header
 
-        2. Find Cube fields
+        2. Find Cube fields::
+
             rescale and reorient cubes
             interp1d smaller cubes with waveset
             add cubes to cavas cube
 
-        3. Find Image fields
+        3. Find Image fields::
+
             rescale and reorient images
             evaluate spectra at waveset
             expand image by spectra to 3D form
             add image cubes to canvas cube
 
-        4. Find Table fields
+        4. Find Table fields::
+
             evaluate spectra at waveset
             add spectrum at x,y position in canvas cube
 
-        PHOTLAM = ph/s/m2/um
-        original source fields are in units of:
+        ``PHOTLAM = ph/s/m2/um``.
+        Original source fields are in units of:
+
         - tables: (PHOTLAM in spectrum)
         - images: arcsec-2 (PHOTLAM in spectrum)
         - cubes: PHOTLAM arcsec-2

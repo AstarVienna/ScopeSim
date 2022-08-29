@@ -693,11 +693,12 @@ class FieldConstantPSF(DiscretePSF):
 
 class FieldVaryingPSF(DiscretePSF):
     """
-    kwargs
-    ------
-    sub_pixel_flag
-    flux_accuracy : float
+    Parameters
+    ----------
+    sub_pixel_flag : bool, optional
+    flux_accuracy : float, optional
         Default 1e-3. Level of flux conservation during rescaling of kernel
+
     """
     def __init__(self, **kwargs):
         # sub_pixel_flag and flux_accuracy are taken care of in PSF base class
