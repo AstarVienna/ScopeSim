@@ -72,7 +72,7 @@ class OpticsManager:
 
         The YAML files can each be separate ``.yaml`` files, or be contained in
         a single ``.yaml`` file separated by a yaml-document-separator:
-        ``\n --- \n``
+        ``  \n  ---  \n  ``.
 
         Parameters
         ----------

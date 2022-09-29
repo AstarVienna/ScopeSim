@@ -1,4 +1,4 @@
-'''Tests for class SlitWheel'''
+"""Tests for class SlitWheel"""
 import os
 import pytest
 
@@ -12,7 +12,7 @@ if FILES_PATH not in rc.__search_path__:
 
 @pytest.fixture(name="swheel", scope="class")
 def fixture_swheel():
-    '''Instantiate a SlitWheel'''
+    """Instantiate a SlitWheel"""
     return SlitWheel(slit_names=["A", "B"],
                      filename_format="MASK_slit_{}.dat",
                      current_slit="B")

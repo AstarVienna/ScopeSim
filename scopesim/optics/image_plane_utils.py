@@ -497,8 +497,8 @@ def rescale_imagehdu(imagehdu, pixel_scale, wcs_suffix="", conserve_flux=True,
             imagehdu.header["CRPIX2"+si] *= zoom2
             imagehdu.header["CDELT1"+si] = pixel_scale
             imagehdu.header["CDELT2"+si] = pixel_scale
-            imagehdu.header["CUNIT1"+si] = "deg"
-            imagehdu.header["CUNIT1"+si] = "deg"
+            imagehdu.header["CUNIT1"+si] = "mm" if si == 'D' else "deg"
+            imagehdu.header["CUNIT2"+si] = "mm" if si == 'D' else "deg"
 
     return imagehdu
 

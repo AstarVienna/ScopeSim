@@ -1,4 +1,6 @@
-'''TODO: Insert docstring'''
+"""
+TODO: Insert docstring
+"""
 
 ###############################################################################
 # PlaneEffect

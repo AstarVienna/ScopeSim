@@ -2,6 +2,7 @@ import os
 import numpy as np
 from scopesim.effects import effects_utils as eu
 
+
 def setup(app):
     output_dir = os.path.abspath(os.path.join(os.path.dirname(__file__),
                                  "../effects_docstrings"))

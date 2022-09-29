@@ -1,0 +1,26 @@
+# IFU Spectroscopy mode specific Effects and properties
+name : mode_ifu
+alias : INST
+
+properties :
+  decouple_detector_from_sky_headers: True
+
+effects :
+- name : ifu_spectral_traces
+  description : list of ifu trace geometries on the focal plane
+  class : SpectralTraceList
+  kwargs :
+    filename : "INS_ifu_traces.fits"
+
+---
+
+name: config_overrides
+alias: SIM
+description: SIM config param overrides
+
+properties:
+  spectral:
+    wave_min: 1.7
+    wave_mid: 2.1
+    wave_max: 2.5
+    spectral_bin_width: !!float 9E-4

@@ -66,6 +66,7 @@ def yaml_string():
         grias_di: woed
         zdrasviute: mir
         salud: el mundo
+    EXTNAME: "DET§.DATA"    
 """
 
 
@@ -140,6 +141,7 @@ class TestExtraFitsKeywordsApplyTo:
         assert pri_hdr.comments["HIERARCH ESO TEL area"] == "[m2] default = 0"
         # ImageHDU header
         assert hdul[1].header["HIERARCH SIM grias_di"] == "woed"
+        assert hdul[1].header["EXTNAME"] == "DET1.DATA"
 
 
 @pytest.mark.usefixtures("comb_hdul")

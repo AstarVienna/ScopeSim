@@ -363,7 +363,7 @@ class OpticalTrain:
         iheader = hdulist[1].header
         iheader['EXPTIME'] = from_currsys("!OBS.exptime"), "[s]"
         iheader['DIT'] = from_currsys("!OBS.dit"), "[s]"
-        iheader['NDIT'] = from_currsys("!OBS.ndit"), "[s]"
+        iheader['NDIT'] = from_currsys("!OBS.ndit")
         iheader['BUNIT'] = 'e', 'per EXPTIME'
         iheader['PIXSCALE'] = from_currsys("!INST.pixel_scale"), "[arcsec]"
 
@@ -472,11 +472,12 @@ class OpticalTrain:
 
 
     def shutdown(self):
-        '''Shut down the instrument.
+        """
+        Shut down the instrument.
 
         This method closes all open file handles and should be called when the optical train
         is no longer needed.
-        '''
+        """
         for effect_name in self.effects['name']:
             try:
                 self[effect_name]._file.close()

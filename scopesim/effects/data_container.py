@@ -132,7 +132,7 @@ class DataContainer:
 
         .. note:: Use this call for reading in individual FITS extensions.
 
-           The ``.data'' handle will read in **all** extensions and return an
+           The ``.data`` handle will read in **all** extensions and return an
            HDUList object
 
         Parameters

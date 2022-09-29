@@ -13,11 +13,14 @@ tmpdir = TemporaryDirectory()
 def setup_module():
     db.download_packages(["test_package"], release="stable",
                          save_dir=tmpdir.name, from_cache=False)
+    rc.__config__["local_packages_path_OLD"] = rc.__config__["!SIM.file.local_packages_path"]
     rc.__config__["!SIM.file.local_packages_path"] = tmpdir.name
 
 
 def teardown_module():
     tmpdir.cleanup()
+    rc.__config__["!SIM.file.local_packages_path"] = rc.__config__["local_packages_path_OLD"]
+    # TODO: something like rc.__config__.pop("local_packages_path_OLD")
 
 
 class TestInit:
