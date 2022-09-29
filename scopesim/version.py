@@ -1,6 +1,15 @@
-version = '0.5.2'
-date    = '2022-08-25 17:00:00 GMT'
+version = '0.5.3'
+date    = '2022-09-29 12:00:00 GMT'
 yaml_descriptions = """
+- version : 0.5.3
+  date : 2022-09-29
+  comment : Minor upgrade to Spec modes and to FITS keywords
+  github_pr_url : https://github.com/AstarVienna/ScopeSim/pull/165
+  changes :
+  - Effect object ExtraFitsKeywords now has the ability to add keywords with incrementing index numbers based on the extension number
+  - FOV + FOVManager + FOVVolumes classes now accept aperture_id as an argument
+  - ApertureList effects object now has an apply_to function which splits the FOVVolumeList accordingly
+
 - version : 0.5.2
   date : 2022-08-25
   comment : Update of DLC server URL to scopesim.univie.ac.at
