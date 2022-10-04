@@ -10,6 +10,8 @@ How to compile and put these on pip::
     $ python setup.py sdist bdist_wheel
     $ twine upload dist/*
 
+Don't forget the 1 and the * at the end
+
 Errors
 ------
 
