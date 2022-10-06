@@ -116,13 +116,12 @@ class ExtraFitsKeywords(Effect):
     For a list, ScopeSim will add the keywords to all extensions matching the
     specified type/name/number
 
-    The number of the extension can be used in a value by using the "++"
-    character. That is, the "++" character is replaced by the extension number.
-    "++" is choosen because it is not allowed to be used in FITS values, and
-    it is the "ideograph counter for ships, vessels CJK", which seems
-    appropriate.
+    The number of the extension can be used in a value by using the "++" string.
+    That is, keyword values with "++" with have the extension number inserted
+    where the "++" is.
 
-    The above example will result in the following keyword added to:
+    The above example (``EXTNAME: "DET++.DATA"``) will result in the following
+    keyword added only to extensions 1 and 2:
 
     - PrimaryHDU (ext 0)::
 
