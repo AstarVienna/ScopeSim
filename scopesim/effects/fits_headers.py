@@ -107,7 +107,7 @@ class ExtraFitsKeywords(Effect):
               ESO:
                 DET:
                   DIT: [5, '[s] exposure length']   # example of adding a comment
-            EXTNAME: "DET§.DATA"                    # example of extension specific qualifier
+            EXTNAME: "DET++.DATA"                   # example of extension specific qualifier
 
     The keywords can be added to one or more extensions, based on one of the
     following ``ext_`` qualifiers: ``ext_name``, ``ext_number``, ``ext_type``
@@ -116,13 +116,12 @@ class ExtraFitsKeywords(Effect):
     For a list, ScopeSim will add the keywords to all extensions matching the
     specified type/name/number
 
-    The number of the extension can be used in a value by using the "§"
-    character. That is, the "§" character is replaced by the extension number.
-    "§" is choosen because it is not allowed to be used in FITS values, and
-    it is the "ideograph counter for ships, vessels CJK", which seems
-    appropriate.
+    The number of the extension can be used in a value by using the "++" string.
+    That is, keyword values with "++" with have the extension number inserted
+    where the "++" is.
 
-    The above example will result in the following keyword added to:
+    The above example (``EXTNAME: "DET++.DATA"``) will result in the following
+    keyword added only to extensions 1 and 2:
 
     - PrimaryHDU (ext 0)::
 
@@ -271,7 +270,7 @@ class ExtraFitsKeywords(Effect):
                 exts = get_relevant_extensions(dic, hdul)
                 for i in exts:
                     resolved_with_counters = {
-                        k: v.replace("§", str(i)) if isinstance(v, str) else v
+                        k: v.replace("++", str(i)) if isinstance(v, str) else v
                         for k, v in resolved.items()
                     }
                     hdul[i].header.update(resolved_with_counters)
@@ -520,6 +519,12 @@ class SourceDescriptionFitsKeywords(ExtraFitsKeywords):
                                        }]
                     super_apply_to = super(SourceDescriptionFitsKeywords, self).apply_to
                     hdul = super_apply_to(hdul=hdul, optical_train=opt_train)
+
+            # catch the function call
+            for hdu in hdul:
+                for key in hdu.header:
+                    if "function_call" in key:
+                        hdu.header[f"FN{key.split()[1]}"] = hdu.header.pop(key)
 
         return hdul
 
