@@ -1,5 +1,6 @@
 import os
 import pytest
+from tempfile import TemporaryDirectory
 from pytest import raises
 from copy import deepcopy
 from astropy.io import fits
@@ -66,7 +67,7 @@ def yaml_string():
         grias_di: woed
         zdrasviute: mir
         salud: el mundo
-    EXTNAME: "DET§.DATA"    
+    EXTNAME: "DET++.DATA"    
 """
 
 
@@ -243,6 +244,26 @@ class TestSourceDescriptionFitsKeywordsApplyTo:
 
         assert pri_hdr["SIM SRC0 hello"] == "world"
         assert pri_hdr["SIM SRC1 servus"] == "oida"
+
+    def test_value_is_longer_than_80_characters(self, simplecado_opt, comb_hdul):
+        star1, star2 = star(flux=1*u.ABmag), star()
+        star1.meta["function_call"] *= 5
+
+        simplecado_opt._last_source = star1 + star2
+        simplecado_opt._last_source
+        eff = fh.SourceDescriptionFitsKeywords()
+        hdul = eff.apply_to(comb_hdul, optical_train=simplecado_opt)
+        pri_hdr = hdul[0].header
+
+        assert len(pri_hdr["FNSRC0"]) == 120
+
+        # save to disk, what happens to cards that are longer than 80 characters
+        with TemporaryDirectory() as tmpdir:
+            fname = os.path.join(tmpdir, "test.fits")
+            hdul.writeto(fname)
+            tmp_hdr = fits.getheader(fname)
+
+        assert len(tmp_hdr["FNSRC0"]) == 120
 
 
 @pytest.mark.usefixtures("simplecado_opt")
