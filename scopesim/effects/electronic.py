@@ -12,6 +12,7 @@ Classes:
 - LinearityCurve - apply detector (non-)linearity and saturation
 - ReferencePixelBorder
 - BinnedImage
+- UnequalBinnedImage
 - Bias - adds constant bias level to readout
 
 Functions:
@@ -557,6 +558,24 @@ class BinnedImage(Effect):
 
         return det
 
+class UnequalBinnedImage(Effect):
+    def __init__(self, **kwargs):
+        super(UnequalBinnedImage, self).__init__(**kwargs)
+        self.meta["z_order"] = [870]
+
+        self.required_keys = ["binx","biny"]
+        utils.check_keys(self.meta, self.required_keys, action="error")
+
+    def apply_to(self, det, **kwargs):
+        if isinstance(det, DetectorBase):
+            bx = from_currsys(self.meta["binx"])
+            by = from_currsys(self.meta["biny"])
+            image = det._hdu.data
+            h, w = image.shape
+            new_image = image.reshape((h//bx, bx, w//by, by))
+            det._hdu.data = new_image.sum(axis=3).sum(axis=1)
+
+        return det
 
 ################################################################################
 
