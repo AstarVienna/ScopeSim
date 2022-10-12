@@ -33,7 +33,7 @@ At the beginning of any script or jupyter notebook we can run the following comm
 This is by far the simplest method, but it requires this lone of code in every script::
 
     import scopesim
-    scopesim.rc.__config__["!SIm.file.local_packages_path"] = "<path/to/IRDB>"
+    scopesim.rc.__config__["!SIM.file.local_packages_path"] = "<path/to/IRDB>"
 
 
 By editing the ScopeSim config file

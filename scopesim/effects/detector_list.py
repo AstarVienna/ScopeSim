@@ -87,7 +87,7 @@ class DetectorList(Effect):
             active_detectors : [1, 3]
             image_plane_id : 0
 
-    where the file detecotr_list.dat contains the following information
+    where the file detector_list.dat contains the following information
     ::
 
         # x_cen_unit : mm

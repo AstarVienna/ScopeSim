@@ -1,6 +1,14 @@
-version = '0.5.3'
-date    = '2022-09-29 12:00:00 GMT'
+version = '0.5.4'
+date    = '2022-10-06 16:00:00 GMT'
 yaml_descriptions = """
+- version : 0.5.4
+  date : 2022-10-06
+  comment : Hotfix for header keyword generators
+  github_pr_url : https://github.com/AstarVienna/ScopeSim/pull/166
+  changes :
+  - incremental special characters for header keywords changed from `§`to `++`
+  - source object function calls are now given their own FITS header keyword FNSRCn (function-call source N) due to astropy not liking the combination of HIERARCH and CONTINUE keywords
+
 - version : 0.5.3
   date : 2022-09-29
   comment : Minor upgrade to Spec modes and to FITS keywords
