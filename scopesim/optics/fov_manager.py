@@ -288,7 +288,8 @@ class FovVolumeList(FOVSetupBase):
 
             if values[0] is not None:
                 for i, vol in enumerate(self.volumes):
-                    if aperture_id in (vol["meta"]["aperture_id"], None):
+                    if aperture_id in np.array(vol["meta"]["aperture_id"]) or \
+                       aperture_id is None:
                         if vol[f"{axis}_max"] <= values[0]:
                             to_pop += [i]
                         elif vol[f"{axis}_min"] < values[0]:
@@ -344,7 +345,8 @@ class FovVolumeList(FOVSetupBase):
         """
         new_vols = []
         for old_vol in self.volumes:
-            if aperture_id in (old_vol["meta"]["aperture_id"], None):
+            if aperture_id in np.array(old_vol["meta"]["aperture_id"]) or \
+               aperture_id is None:
                 add_flag = True
                 new_vol = deepcopy(old_vol)
                 for axis, edge in zip(axes, edges):
@@ -367,7 +369,7 @@ class FovVolumeList(FOVSetupBase):
         return self.volumes[item]
 
     def __setitem__(self, key, value):
-        self.volumes[item] = value
+        self.volumes[key] = value
 
     def __repr__(self):
         text = f"FovVolumeList with [{len(self.volumes)}] volumes:\n"

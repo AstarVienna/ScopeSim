@@ -105,7 +105,7 @@ class TestObserveSpectroscopyMode:
 
 
 class TestObserveIfuMode:
-    def test_runs(self):
+    def test_runs_with_a_source_in_each_slit(self):
         wave = np.arange(0.7, 2.5, 0.001)
         spec = np.zeros(len(wave))
         spec[25::50] += 100      # every 0.05µm, offset by 0.025µm
@@ -128,7 +128,7 @@ class TestObserveIfuMode:
         imp_im = opt.image_planes[0].data
         det_im = hdul[1].data
 
-        if PLOTS:
+        if not PLOTS:
             plt.subplot(121)
             plt.imshow(imp_im, norm=LogNorm())
             plt.subplot(122)
@@ -141,7 +141,6 @@ class TestObserveIfuMode:
             x0, x1 = xs[i]
             trace_flux = det_im[:, x0:x1].sum()     # sum along a trace
             assert round(trace_flux / spot_flux) == 15 * 5
-
 
     def test_random_star_field(self):
         src = sim.source.source_templates.star_field(n=100, mmin=8, mmax=18, width=10)
@@ -164,6 +163,38 @@ class TestObserveIfuMode:
             plt.imshow(imp_im, norm=LogNorm())
             plt.subplot(122)
             plt.imshow(det_im, norm=LogNorm())
+            plt.show()
+
+    def test_runs_with_a_single_point_source(self):
+        wave = np.arange(0.7, 2.5, 0.001)
+        spec = np.zeros(len(wave))
+        spec[25::50] += 100      # every 0.05µm, offset by 0.025µm
+        src = sim.Source(lam=wave*u.um, spectra=spec,
+                         x=[0], y=[0], ref=[0], weight=[1e-3])
+
+        cmd = sim.UserCommands(use_instrument="basic_instrument",
+                               set_modes=["ifu"])
+        cmd["!OBS.psf_fwhm"] = 10
+        cmd.yaml_dicts[3]["effects"][3]["kwargs"]["fov_for_each_aperture"] = True
+        cmd.yaml_dicts[3]["effects"][3]["kwargs"]["extend_fov_beyond_slit"] = 0
+
+        opt = sim.OpticalTrain(cmd)
+        for effect_name in ["shot_noise", "dark_current", "readout_noise",
+                            "atmospheric_radiometry", "source_fits_keywords",
+                            "effects_fits_keywords", "config_fits_keywords"]:
+            opt[effect_name].include = False
+
+        opt.observe(src)
+        hdul = opt.readout()[0]
+
+        imp_im = opt.image_planes[0].data
+        det_im = hdul[1].data
+
+        if not PLOTS:
+            plt.subplot(121)
+            plt.imshow(imp_im, norm=LogNorm())
+            plt.subplot(122)
+            plt.imshow(det_im)
             plt.show()
 
 

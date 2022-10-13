@@ -280,18 +280,6 @@ class SeeingPSF(AnalyticalPSF):
         self.meta["fwhm"] = fwhm
         self.meta["z_order"] = [242, 642]
 
-    # def fov_grid(self, which="waveset", **kwargs):
-    #     wavelengths = []
-    #     if which == "waveset" and \
-    #             "waverange" in kwargs and \
-    #             "pixel_scale" in kwargs:
-    #         waverange = utils.quantify(kwargs["waverange"], u.um)
-    #         wavelengths = waverange
-    #         # ..todo: return something useful
-    #
-    #     # .. todo: check that this is actually correct
-    #     return wavelengths
-
     def get_kernel(self, fov):
         # called by .apply_to() from the base PSF class
 

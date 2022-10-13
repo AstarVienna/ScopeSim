@@ -7,6 +7,7 @@ from astropy.io import fits
 
 from scopesim import rc
 from scopesim.effects import ApertureList, ApertureMask
+from scopesim.optics.fov_manager import FovVolumeList
 
 import matplotlib.pyplot as plt
 PLOTS = False
@@ -17,23 +18,69 @@ if FILES_PATH not in rc.__search_path__:
     rc.__search_path__ += [FILES_PATH]
 
 
+def basic_aperture_list(**kwargs):
+    params = {"array_dict": {"id": [0, 1, 2],
+                             "left": [-3, -1, -1],
+                             "right": [3, 1, 1],
+                             "top": [-1, 1, 3],
+                             "bottom": [-3, -1, 1],
+                             "angle": [0, 0, 0],
+                             "conserve_image": [True]*3,
+                             "shape": ["rect", "hex", 7]},
+              "x_unit": "arcsec",
+              "y_unit": "arcsec",
+              "pixel_scale": 0.01}
+    params.update(kwargs)
+    return ApertureList(**params)
+
+
 class TestInit:
     def test_initialises_with_nothing(self):
         isinstance(ApertureList(), ApertureList)
 
     def test_initialises_with_array_dict(self):
-        params = {"array_dict": {"id": [0], "left": [-1], "right": [1],
-                                 "top": [1], "bottom": [1], "angle": [0],
-                                 "conserve_image": [True], "shape": [7]},
-                  "x_unit": "arcsec",
-                  "y_unit": "arcsec",
-                  "pixel_scale": 0.01}
-        apl = ApertureList(**params)
+        apl = basic_aperture_list()
         assert isinstance(apl, ApertureList)
 
     def test_initialises_with_filename(self):
         apl = ApertureList(filename="test_aperture_list.dat")
         assert isinstance(apl, ApertureList)
+
+
+class TestApplyTo:
+    def test_extracts_volumes_for_all_apertures(self):
+        apl = basic_aperture_list()
+        fvl = FovVolumeList()
+        fvl = apl.apply_to(fvl)
+        assert len(fvl.volumes) == 3
+        assert fvl.volumes[0]["x_min"] == -3
+        assert fvl.volumes[1]["x_min"] == -1
+
+    def test_extracts_single_volume_for_all_apertures(self):
+        apl = basic_aperture_list(fov_for_each_aperture=False)
+        fvl = FovVolumeList()
+        fvl = apl.apply_to(fvl)
+        assert len(fvl.volumes) == 1
+        assert fvl.volumes[0]["x_min"] == -3
+        assert fvl.volumes[0]["y_max"] == 3
+
+    def test_increases_all_volume_sizes_for_extend_beyond_slit(self):
+        apl = basic_aperture_list(fov_for_each_aperture=True,
+                                  extend_fov_beyond_slit=2)
+        fvl = FovVolumeList()
+        fvl = apl.apply_to(fvl)
+        assert len(fvl.volumes) == 3
+        assert fvl.volumes[0]["x_min"] == -5
+        assert fvl.volumes[1]["x_min"] == -3
+
+    def test_increases_single_volume_for_extend_beyond_slit(self):
+        apl = basic_aperture_list(fov_for_each_aperture=False,
+                                  extend_fov_beyond_slit=3)
+        fvl = FovVolumeList()
+        fvl = apl.apply_to(fvl)
+        assert len(fvl.volumes) == 1
+        assert fvl.volumes[0]["x_min"] == -6
+        assert fvl.volumes[0]["y_max"] == 6
 
 
 class TestApertures:
@@ -48,32 +95,3 @@ class TestApertures:
                 plt.subplot(2, 2, ii+1)
                 plt.imshow(apertures[ii].mask.T)
             plt.show()
-
-
-class TestFovGrid:
-    def test_returns_headers(self):
-        apl = ApertureList(filename="test_aperture_list.dat",
-                           no_mask=False, pixel_scale=0.01)
-        hdrs = apl.fov_grid()
-        assert all([isinstance(hdr, fits.Header) for hdr in hdrs])
-
-        if PLOTS:
-            from scopesim.optics.image_plane import ImagePlane
-            from scopesim.optics.image_plane_utils import header_from_list_of_xy
-            from astropy.io.fits import ImageHDU
-
-            x = np.array([-3, 3]) / 3600.
-            y = np.array([-3, 3]) / 3600.
-            pixel_scale = 0.01 / 3600
-            hdr = header_from_list_of_xy(x, y, pixel_scale)
-            implane = ImagePlane(hdr)
-
-            for i in range(4):
-                hdu = ImageHDU(data=apl[i].mask.astype(int)+1,
-                               header=apl[i].header)
-                implane.add(hdu)
-
-            plt.imshow(implane.data, origin="lower")
-            plt.show()
-
-

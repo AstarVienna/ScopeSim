@@ -67,6 +67,10 @@ class ApertureMask(Effect):
 
     Other Parameters
     ----------------
+    extend_fov_beyond_slit : float
+        [arcsec] Default 0. Increases the on-sky size of the FOV by this
+        amount in all directions when extracting flux from the Source object.
+
     pixel_scale : float
         [arcsec] Defaults to ``"!INST.pixel_scale"`` from the config
 
@@ -84,7 +88,8 @@ class ApertureMask(Effect):
                 kwargs["filename"] = kwargs["filename_format"].format(w, h)
 
         super(ApertureMask, self).__init__(**kwargs)
-        params = {"pixel_scale": "!INST.pixel_scale",
+        params = {"extend_fov_beyond_slit": 0,
+                  "pixel_scale": "!INST.pixel_scale",
                   "no_mask": True,
                   "angle": 0,
                   "shape": "rect",
@@ -109,25 +114,18 @@ class ApertureMask(Effect):
         if isinstance(obj, FOVSetupBase):
             x = quantity_from_table("x", self.table, u.arcsec).to(u.arcsec).value
             y = quantity_from_table("y", self.table, u.arcsec).to(u.arcsec).value
-            obj.shrink(["x", "y"], ([min(x), max(x)], [min(y), max(y)]))
+            dr = self.meta["extend_fov_beyond_slit"]
+            x_min, x_max = min(x) - dr, max(x) + dr
+            y_min, y_max = min(y) - dr, max(y) + dr
+            obj.shrink(["x", "y"], ([x_min, x_max], [y_min, y_max]))
 
             # ..todo: HUGE HACK - Get rid of this!
+            # Assume the slit coord 'xi' is along the x axis
             for vol in obj.volumes:
                 vol["meta"]["xi_min"] = min(x) * u.arcsec
                 vol["meta"]["xi_max"] = max(x) * u.arcsec
 
         return obj
-
-    # Outdated. Remove when removing all old FOVManager code from effects
-    def fov_grid(self, which="edges", **kwargs):
-        """ Returns a header with the sky coordinates """
-        logging.warning("DetectorList.fov_grid will be depreciated in v1.0")
-        if which == "edges":
-            self.meta.update(kwargs)
-            return self.header
-        elif which == "masks":
-            self.meta.update(kwargs)
-            return self.mask
 
     @property
     def hdu(self):
@@ -199,16 +197,6 @@ class RectangularApertureMask(ApertureMask):
 
         self.table = self.get_table(**kwargs)
 
-    # def fov_grid(self, which="edges", **kwargs):
-    #     """ Returns a header with the sky coordinates """
-    #     if which == "edges":
-    #         self.table = self.get_table(**kwargs)
-    #         return self.header      # from base class ApertureMask
-    #
-    #     elif which == "masks":
-    #         self.meta.update(kwargs)
-    #         return self.mask
-
     def get_table(self, **kwargs):
         self.meta.update(kwargs)
         x = from_currsys(self.meta["x"])
@@ -269,7 +257,9 @@ class ApertureList(Effect):
     """
     def __init__(self, **kwargs):
         super(ApertureList, self).__init__(**kwargs)
-        params = {"pixel_scale": "!INST.pixel_scale",
+        params = {"fov_for_each_aperture": True,
+                  "extend_fov_beyond_slit": 0,
+                  "pixel_scale": "!INST.pixel_scale",
                   "n_round_corners": 32,        # number of corners use to estimate ellipse
                   "no_mask": False,             # .. todo:: is this necessary when we have conserve_image?
                   "report_plot_include": True,
@@ -286,33 +276,48 @@ class ApertureList(Effect):
 
     def apply_to(self, obj, **kwargs):
         if isinstance(obj, FOVSetupBase):
-            new_vols = []
-            for row in self.table:
-                vols = obj.extract(["x", "y"], ([row["left"], row["right"]],
-                                                [row["bottom"], row["top"] ]))
-                for vol in vols:
-                    vol["meta"]["aperture_id"] = row["id"]
+            dr = self.meta["extend_fov_beyond_slit"]
+            if self.meta["fov_for_each_aperture"] is True:
+                new_vols = []
+                for row in self.table:
+                    x_min, x_max = row["left"] - dr, row["right"] + dr
+                    y_min, y_max = row["bottom"] - dr, row["top"] + dr
+                    vols = obj.extract(["x", "y"], ([x_min, x_max],
+                                                    [y_min, y_max]))
+                    for vol in vols:
+                        vol["meta"]["aperture_id"] = row["id"]
 
-                    # ..todo: HUGE HACK - Get rid of this!
-                    vol["meta"]["xi_min"] = row["left"] * u.arcsec
-                    vol["meta"]["xi_max"] = row["right"] * u.arcsec
-                    vol["conserve_image"] = row["conserve_image"]
-                    vol["shape"] = row["shape"]
-                    vol["angle"] = row["angle"]
+                        # ..todo: HUGE HACK - Get rid of this!
+                        # Assume the slit coord 'xi' is along the x axis
+                        vol["meta"]["xi_min"] = row["left"] * u.arcsec
+                        vol["meta"]["xi_max"] = row["right"] * u.arcsec
+                        vol["conserve_image"] = row["conserve_image"]
+                        vol["shape"] = row["shape"]
+                        vol["angle"] = row["angle"]
 
-                new_vols += vols
+                    new_vols += vols
 
-            obj.volumes = new_vols
+                obj.volumes = new_vols
+
+            else:
+                x_min = min(self.table["left"]) - dr
+                x_max = max(self.table["right"]) + dr
+                y_min = min(self.table["bottom"]) - dr
+                y_max = max(self.table["top"]) + dr
+
+                obj.shrink(["x", "y"], ([x_min, x_max], [y_min, y_max]))
+                vol = obj.volumes[0]
+                vol["meta"]["aperture_id"] = list(self.table["id"])
+
+                # ..todo: HUGE HACK - Get rid of this!
+                # Assume the slit coord 'xi' is along the x axis
+                vol["meta"]["xi_min"] = x_min * u.arcsec
+                vol["meta"]["xi_max"] = x_max * u.arcsec
+                vol["conserve_image"] = True
+                vol["shape"] = "rect"
+                vol["angle"] = 0
 
         return obj
-
-    # def fov_grid(self, which="edges", **kwargs):
-    #     params = deepcopy(self.meta)
-    #     params.update(kwargs)
-    #     if which == "edges":
-    #         return [ap.fov_grid(which=which, **params) for ap in self.apertures]
-    #     if which == "masks":
-    #         return {ap.meta["id"]: ap.mask for ap in self.apertures}
 
     @property
     def apertures(self):
@@ -372,10 +377,6 @@ class ApertureList(Effect):
         else:
             raise ValueError("Secondary argument not of type ApertureList: {}"
                              "".format(type(other)))
-
-    # def __getitem__(self, item):
-    #     return self.get_apertures(item)[0]
-
 
 
 class SlitWheel(Effect):
@@ -443,14 +444,9 @@ class SlitWheel(Effect):
 
         self.table = self.get_table()
 
-
     def apply_to(self, obj, **kwargs):
         """Use apply_to of current_slit"""
         return self.current_slit.apply_to(obj, **kwargs)
-
-
-    def fov_grid(self, which="edges", **kwargs):
-        return self.current_slit.fov_grid(which=which, **kwargs)
 
     def change_slit(self, slitname=None):
         """Change the current slit"""
@@ -472,7 +468,6 @@ class SlitWheel(Effect):
     def display_name(self):
         return f'{self.meta["name"]} : ' \
                f'[{from_currsys(self.meta["current_slit"])}]'
-
 
     def __getattr__(self, item):
         return getattr(self.current_slit, item)
