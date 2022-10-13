@@ -13,14 +13,14 @@ from ..utils import from_currsys
 from ..base_classes import DetectorBase
 
 
-class RotateCCD(Effect):
+class Rotate90CCD(Effect):
     """
     Rotates CCD by integer multiples of 90 degrees
     rotations kwarg is number of counter-clockwise rotations
 
     """
     def __init__(self, **kwargs):
-        super(RotateCCD, self).__init__(**kwargs)
+        super(Rotate90CCD, self).__init__(**kwargs)
         params = {"z_order": [809]}
         self.meta.update(params)
         self.meta.update(kwargs)
