@@ -9,7 +9,8 @@ from os import path as pth
 import numpy as np
 
 from astropy.io import fits
-from astropy.table import Table
+from astropy.table import Table, Column, vstack
+from astropy import units as u
 
 from .effects import Effect
 from .spectral_trace_list_utils import SpectralTrace
@@ -82,10 +83,8 @@ class SpectralTraceList(Effect):
                      "y_colname": "y",
                      "s_colname": "s",
                      "wave_colname": "wavelength",
-                     "col_number_start": 0,
                      "center_on_wave_mid": False,
                      "dwave": 0.002,  # [um] for finding the best fit dispersion
-                     "invalid_value": None,  # for dodgy trace file values
                      }
 
     def __init__(self, **kwargs):
@@ -106,7 +105,6 @@ class SpectralTraceList(Effect):
                   "wave_colname": "wavelength",
                   "center_on_wave_mid": False,
                   "dwave": 0.002,  # [um] for finding the best fit dispersion
-                  "invalid_value": None,  # for dodgy trace file values
                   "report_plot_include": True,
                   "report_table_include": False,
                   }
@@ -359,3 +357,66 @@ class SpectralTraceListWheel(Effect):
     def display_name(self):
         name = self.meta.get("name", self.meta.get("filename", "<untitled>"))
         return f'{name} : [{from_currsys(self.meta["current_trace_list"])}]'
+
+
+
+class UnresolvedSpectralTraceList(SpectralTraceList):
+    def make_spectral_traces(self):
+        """Returns a dictionary of spectral traces read in from a file"""
+        self.ext_data = self._file[0].header["EDATA"]
+        self.ext_cat = self._file[0].header["ECAT"]
+        self.catalog = Table(self._file[self.ext_cat].data)
+
+        spec_traces = {}
+        for row in self.catalog:
+            params = {col: row[col] for col in row.colnames}
+            params.update(self.meta)
+            hdu = self._file[row["extension_id"]]
+            tbl = Table(hdu.data)
+            scol = Column(name="s", unit="arcsec",
+                          data=sorted([-1, 0, 1] * len(tbl)))
+            tbl_big = vstack([tbl, tbl, tbl])
+            tbl_big.add_column(scol)
+            spec_traces[row["description"]] = SpectralTrace(tbl_big, **params)
+
+        self.spectral_traces = spec_traces
+
+    def get_xyz_for_trace(self, trace, spectrum):
+        pixel_scale = from_currsys(self.meta["pixel_scale"])
+        plate_scale = from_currsys(self.meta["plate_scale"])
+        pixel_size = pixel_scale / plate_scale
+
+        y = trace.table[self.meta["y_colname"]]
+        ys = np.arange(min(y), max(y) + pixel_size, pixel_size)
+        waves = trace._xiy2lam([0] * len(ys), ys)
+        xs = trace.xilam2x([0] * len(waves), waves)
+        zs = spectrum(waves*u.um)
+
+        return xs, ys, zs
+
+    def add_trace_to_image(self, image, x_mm, y_mm, flux):
+        pixel_scale = from_currsys(self.meta["pixel_scale"])
+        plate_scale = from_currsys(self.meta["plate_scale"])
+        pixel_size = pixel_scale / plate_scale
+
+        x_pix_cen, y_pix_cen = np.array(image.shape) / 2
+        x_pix = x_mm / pixel_size + x_pix_cen
+        ws1 = x_pix - x_pix.astype(int)
+        ws0 = 1 - ws1
+
+        xp0 = x_pix.astype(int)
+        xp1 = x_pix.astype(int) + 1
+        yp = (y_mm / pixel_size + y_pix_cen).astype(int)
+        mask = (xp0 >= 0) * (xp1 < image.shape[1]) * (yp >= 0) * (
+                yp < image.shape[0])
+        xp0 = xp0[mask]
+        xp1 = xp1[mask]
+        yp = yp[mask]
+        flux = flux[mask]
+        ws0 = ws0[mask]
+        ws1 = ws1[mask]
+
+        image[yp, xp0] = flux * ws0
+        image[yp, xp1] = flux * ws1
+
+        return image

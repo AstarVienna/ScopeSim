@@ -162,3 +162,7 @@ def test_set_pc_matrix(rotation_ang=0, shear_ang=10):
         plt.plot(xd, yd, "o-")
         plt.plot(xs, ys, "o-")
         plt.show()
+
+
+class TestUnresolvedSpectralTraceListInit:
+    pass

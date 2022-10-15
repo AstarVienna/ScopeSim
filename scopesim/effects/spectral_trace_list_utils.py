@@ -94,15 +94,6 @@ class SpectralTrace:
         """
         Compute various interpolation functions between slit and focal plane
         """
-        if self.meta["invalid_value"] is not None:
-            self.table = sanitize_table(
-                self.table,
-                invalid_value=self.meta["invalid_value"],
-                wave_colname=self.meta["wave_colname"],
-                x_colname=self.meta["x_colname"],
-                y_colname=self.meta["y_colname"],
-                spline_order=self.meta["spline_order"],
-                ext_id=self.meta["extension_id"])
 
         x_arr = self.table[self.meta['x_colname']]
         y_arr = self.table[self.meta['y_colname']]
@@ -121,7 +112,10 @@ class SpectralTrace:
         self.xy2lam = Transform2D.fit(x_arr, y_arr, lam_arr)
         self.xilam2x = Transform2D.fit(xi_arr, lam_arr, x_arr)
         self.xilam2y = Transform2D.fit(xi_arr, lam_arr, y_arr)
+
+        self._xix2y = Transform2D.fit(xi_arr, x_arr, y_arr)
         self._xiy2x = Transform2D.fit(xi_arr, y_arr, x_arr)
+        self._xix2lam = Transform2D.fit(xi_arr, x_arr, lam_arr)
         self._xiy2lam = Transform2D.fit(xi_arr, y_arr, lam_arr)
 
     def map_spectra_to_focal_plane(self, fov):
@@ -301,6 +295,12 @@ class SpectralTrace:
             Minimum and maximum slit position on the sky.
             If `None`, use the full range that the spectral trace is defined on.
             Float values are interpreted as arcsec.
+
+        Returns
+        -------
+        xy_edges : tuple of lists
+            (x_edges, y_edges) in [mm]
+
         """
         #print(f"footprint: {wave_min}, {wave_max}, {xi_min}, {xi_max}")
 
@@ -375,8 +375,10 @@ class SpectralTrace:
         x_edge = self.xilam2x(xi_edge, wave_edge)
         y_edge = self.xilam2y(xi_edge, wave_edge)
 
-        return ([x_edge.min(), x_edge.max(), x_edge.max(), x_edge.min()],
-                [y_edge.min(), y_edge.min(), y_edge.max(), y_edge.max()])
+        xy_edges = ([x_edge.min(), x_edge.max(), x_edge.max(), x_edge.min()],
+                    [y_edge.min(), y_edge.min(), y_edge.max(), y_edge.max()])
+
+        return xy_edges
 
     def plot(self, wave_min=None, wave_max=None, c="r"):
         """Plot control points of the SpectralTrace"""
@@ -796,46 +798,3 @@ def get_affine_parameters(coords):
     shears = (np.average(shears, axis=0) * rad2deg) - (90 + rotations)
 
     return rotations, shears
-
-
-# def sanitize_table(tbl, invalid_value, wave_colname, x_colname, y_colname,
-#                    spline_order=4, ext_id=None):
-#
-#     y_colnames = [col for col in tbl.colnames if y_colname in col]
-#     x_colnames = [col.replace(y_colname, x_colname) for col in y_colnames]
-#
-#     for x_col, y_col in zip(x_colnames, y_colnames):
-#         wave = tbl[wave_colname].data
-#         x = tbl[x_col].data
-#         y = tbl[y_col].data
-#
-#         valid = (x != invalid_value) * (y != invalid_value)
-#         invalid = np.invert(valid)
-#         if sum(invalid) == 0:
-#             continue
-#
-#         if sum(valid) == 0:
-#             logging.warning("--- Extension {} ---"
-#                             "All points in {} or {} were invalid. \n"
-#                             "THESE COLUMNS HAVE BEEN REMOVED FROM THE TABLE \n"
-#                             "invalid_value = {} \n"
-#                             "wave = {} \nx = {} \ny = {}"
-#                             "".format(ext_id, x_col, y_col, invalid_value,
-#                                       wave, x, y))
-#             tbl.remove_columns([x_col, y_col])
-#             continue
-#
-#         k = spline_order
-#         if wave[-1] > wave[0]:
-#             xnew = InterpolatedUnivariateSpline(wave[valid], x[valid], k=k)
-#             ynew = InterpolatedUnivariateSpline(wave[valid], y[valid], k=k)
-#         else:
-#             xnew = InterpolatedUnivariateSpline(wave[valid][::-1],
-#                                                 x[valid][::-1], k=k)
-#             ynew = InterpolatedUnivariateSpline(wave[valid][::-1],
-#                                                 y[valid][::-1], k=k)
-#
-#         tbl[x_col][invalid] = xnew(wave[invalid])
-#         tbl[y_col][invalid] = ynew(wave[invalid])
-#
-#     return tbl

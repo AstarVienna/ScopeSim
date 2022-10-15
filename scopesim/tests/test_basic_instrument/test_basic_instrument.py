@@ -190,7 +190,7 @@ class TestObserveIfuMode:
         imp_im = opt.image_planes[0].data
         det_im = hdul[1].data
 
-        if not PLOTS:
+        if PLOTS:
             plt.subplot(121)
             plt.imshow(imp_im, norm=LogNorm())
             plt.subplot(122)
