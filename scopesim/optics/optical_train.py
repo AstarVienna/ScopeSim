@@ -203,7 +203,6 @@ class OpticalTrain:
         self._last_fovs = fovs
         self._last_source = source
 
-
     def prepare_source(self, source):
         """
         Prepare source for observation

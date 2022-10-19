@@ -75,7 +75,7 @@ class FieldOfView(FieldOfViewBase):
         self.fields = []
         self.spectra = {}
 
-        self.cube = None        # 3D array for IFU, long-lit, Slicer-MOS
+        self.cube = None        # 3D array for IFU, long-slit, Slicer-MOS
         self.image = None       # 2D array for Imagers
         self.spectrum = None    # SourceSpectrum for Fibre-fed MOS
 
@@ -92,6 +92,11 @@ class FieldOfView(FieldOfViewBase):
             self.meta["pixel_area"] = pixarea.value     # [arcsec]
 
         return self.meta["pixel_area"]
+
+    def sub_fov(self, left, right, top, bottom):
+
+
+
 
     def extract_from(self, src):
         """ ..assumption: Bandpass has been applied
@@ -212,7 +217,6 @@ class FieldOfView(FieldOfViewBase):
             ref = field.header["SPEC_REF"]
             weight = np.sum(field.data)
             canvas_flux += self.spectra[ref](fov_waveset).value * weight
-
 
         for field in self.table_fields:
             refs = np.array(field["ref"])

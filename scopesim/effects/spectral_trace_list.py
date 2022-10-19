@@ -7,6 +7,7 @@ optics.spectral_trace_SpectralTrace objects to a FieldOfView.
 
 from os import path as pth
 import numpy as np
+from copy import deepcopy
 
 from astropy.io import fits
 from astropy.table import Table, Column, vstack
@@ -15,7 +16,7 @@ from astropy import units as u
 from .effects import Effect
 from .spectral_trace_list_utils import SpectralTrace
 from ..utils import from_currsys, check_keys, interp2
-from ..optics.image_plane_utils import header_from_list_of_xy
+from ..optics import image_plane_utils as ipu
 from ..base_classes import FieldOfViewBase, FOVSetupBase
 
 
@@ -188,9 +189,60 @@ class SpectralTraceList(Effect):
             # covered by the image slicer (28 slices for LMS; for LSS still only a single slit)
             # We need a loop over spectral_traces that chops up obj into the single-slice fov before
             # calling map_spectra...
-            trace_id = obj.meta['trace_id']
-            spt = self.spectral_traces[trace_id]
-            obj.hdu = spt.map_spectra_to_focal_plane(obj)
+
+            # OLD CODE ---------------------------------------------------------
+            # trace_id = obj.meta['trace_id']
+            # spt = self.spectral_traces[trace_id]
+            # obj.hdu = spt.map_spectra_to_focal_plane(obj)
+
+            # NEW CODE ---------------------------------------------------------
+            tbl = obj.meta["sub_apertures"]
+            trace_hdus = []
+            cube_orig = deepcopy(obj.cube)
+
+            class PoorMansFov:
+                def __init__(self, **kwargs):
+                    self.meta = {"wave_min": 0,
+                                 "wave_max": 0,
+                                 "xi_min": 0,
+                                 "xi_max": 0,
+                                 "eta_min": 0,
+                                 "eta_max": 0}
+                    self.meta.update(kwargs)
+                    self.cube = kwargs.get("cube")
+                    self.header = kwargs.get("header")
+                    self.detector_header = kwargs.get("detector_header")
+
+                @classmethod
+                def from_real_fov(cls, fov, row):
+                    cube
+                    header
+                    detector_header
+
+                    pmfov = cls(cube=cube, header=hdr, detector_header=det_hdr,
+                                wave_min=fov.meta["wave_min"],
+                                wave_max=fov.meta["wave_max"],
+                                xi_min=row["left"], xi_max=row["right"],
+                                eta_min=row["bottom"], eta_max=row["top"])
+
+                    return pmfov
+
+
+            for row in tbl:
+                i = np.argwhere(self.catalog["aperture_id"] == row["id"])[0][0]
+                trace_name = self.catalog["description"][i]
+                spt = self.spectral_traces[trace_name]
+                trace_hdus += [spt.map_spectra_to_focal_plane(obj)]
+
+            pixel_size = obj.header["CDELT1D"] * u.Unit(obj.header["CUNIT1D"])
+            hdr = ipu.get_canvas_header(trace_hdus, pixel_scale=pixel_size)
+            image = np.zeros((hdr["NAXIS2"], hdr["NAXIS1"]))
+            canvas_hdu = fits.ImageHDU(header=hdr, data=image)
+
+            for trace_hdu in trace_hdus:
+                canvas_hdu = ipu.add_imagehdu_to_imagehdu(trace_hdu, canvas_hdu,
+                                                          wcs_suffix="D")
+            obj.hdu = canvas_hdu
 
         return obj
 
@@ -229,7 +281,7 @@ class SpectralTraceList(Effect):
     def image_plane_header(self):
         x, y = self.footprint
         pixel_scale = from_currsys(self.meta["pixel_scale"])
-        hdr = header_from_list_of_xy(x, y, pixel_scale, "D")
+        hdr = ipu.header_from_list_of_xy(x, y, pixel_scale, "D")
 
         return hdr
 
@@ -359,7 +411,6 @@ class SpectralTraceListWheel(Effect):
         return f'{name} : [{from_currsys(self.meta["current_trace_list"])}]'
 
 
-
 class UnresolvedSpectralTraceList(SpectralTraceList):
     def make_spectral_traces(self):
         """Returns a dictionary of spectral traces read in from a file"""
@@ -381,42 +432,65 @@ class UnresolvedSpectralTraceList(SpectralTraceList):
 
         self.spectral_traces = spec_traces
 
-    def get_xyz_for_trace(self, trace, spectrum):
+    def apply_to(self, fov, **kwargs):
+        if isinstance(fov, FieldOfViewBase):
+            # cycle through the fibre traces
+            for trace in self.spectral_traces.values():
+                # make a combined spectrum for the fibre
+                spec = fov.make_spectrum()
+
+                # find the xyz for the trace
+                wmin, wmax = fov.meta["wave_min"].value, fov.meta["wave_max"].value
+                xs, ys, zs = self.get_xyz_for_trace(trace, spec, wmin, wmax)
+
+                # Add spectral traces to image
+                fov.image.data = self.add_trace_to_image(fov.image.data, xs, ys, zs)
+
+        return fov
+
+    def get_xyz_for_trace(self, spec_trace, spectrum,
+                          wave_min=None, wave_max=None):
         pixel_scale = from_currsys(self.meta["pixel_scale"])
         plate_scale = from_currsys(self.meta["plate_scale"])
         pixel_size = pixel_scale / plate_scale
 
-        y = trace.table[self.meta["y_colname"]]
+        y = spec_trace.table[self.meta["y_colname"]]
         ys = np.arange(min(y), max(y) + pixel_size, pixel_size)
-        waves = trace._xiy2lam([0] * len(ys), ys)
-        xs = trace.xilam2x([0] * len(waves), waves)
-        zs = spectrum(waves*u.um)
+        waves = spec_trace._xiy2lam([0] * len(ys), ys)
+        if wave_min is not None and wave_max is not None:
+            mask = (waves >= wave_min) * (waves <= wave_max)
+            waves = waves[mask]
+
+        xs = spec_trace.xilam2x([0] * len(waves), waves)
+        ys = spec_trace.xilam2y([0] * len(waves), waves)
+        zs = spectrum(waves * u.um)
 
         return xs, ys, zs
 
-    def add_trace_to_image(self, image, x_mm, y_mm, flux):
+    def add_trace_to_image(self, image, xs, ys, zs):
         pixel_scale = from_currsys(self.meta["pixel_scale"])
         plate_scale = from_currsys(self.meta["plate_scale"])
         pixel_size = pixel_scale / plate_scale
 
-        x_pix_cen, y_pix_cen = np.array(image.shape) / 2
-        x_pix = x_mm / pixel_size + x_pix_cen
-        ws1 = x_pix - x_pix.astype(int)
+        xp_cen, yp_cen = np.array(image.shape) / 2
+
+        xs_pix = xs / pixel_size + xp_cen
+        ws1 = xs_pix - xs_pix.astype(int)
         ws0 = 1 - ws1
 
-        xp0 = x_pix.astype(int)
-        xp1 = x_pix.astype(int) + 1
-        yp = (y_mm / pixel_size + y_pix_cen).astype(int)
+        xp0 = xs_pix.astype(int)
+        xp1 = xs_pix.astype(int) + 1
+        yp = (ys / pixel_size + yp_cen).astype(int)
         mask = (xp0 >= 0) * (xp1 < image.shape[1]) * (yp >= 0) * (
                 yp < image.shape[0])
         xp0 = xp0[mask]
         xp1 = xp1[mask]
         yp = yp[mask]
-        flux = flux[mask]
+        zs = zs[mask]
         ws0 = ws0[mask]
         ws1 = ws1[mask]
 
-        image[yp, xp0] = flux * ws0
-        image[yp, xp1] = flux * ws1
+        image[yp, xp0] = zs * ws0
+        image[yp, xp1] = zs * ws1
 
         return image

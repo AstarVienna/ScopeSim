@@ -190,12 +190,38 @@ class TestObserveIfuMode:
         imp_im = opt.image_planes[0].data
         det_im = hdul[1].data
 
+        assert imp_im.sum() == pytest.approx(5251, rel=1e-3)
+
         if PLOTS:
             plt.subplot(121)
             plt.imshow(imp_im, norm=LogNorm())
             plt.subplot(122)
             plt.imshow(det_im)
             plt.show()
+
+
+class TestObserveMosMode:
+    def test_loads(self):
+        wave = np.arange(0.7, 2.5, 0.001)
+        spec = np.zeros(len(wave))
+        spec[25::50] += 100      # every 0.05µm, offset by 0.025µm
+        src = sim.Source(lam=wave*u.um, spectra=spec,
+                         x=[-5, 5, 0, -5, 5],
+                         y=[-5, -5, 0, 5, 5],
+                         ref=[0]*5,
+                         weight=[1e-3]*5)
+
+        cmd = sim.UserCommands(use_instrument="basic_instrument",
+                               set_modes=["mos"])
+        opt = sim.OpticalTrain(cmd)
+        opt.observe(src)
+        pass
+
+
+
+
+
+
 
 
 class TestFitsHeader:

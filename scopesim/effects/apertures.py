@@ -8,11 +8,11 @@ import numpy as np
 from matplotlib.path import Path
 from astropy.io import fits
 from astropy import units as u
-from astropy.table import Table
+from astropy.table import Table, Column
 
 from .effects import Effect
 from ..optics import image_plane_utils as imp_utils
-from ..base_classes import FOVSetupBase
+from ..base_classes import FOVSetupBase, FieldOfViewBase
 
 from ..utils import quantify, quantity_from_table, from_currsys, check_keys
 
@@ -214,15 +214,30 @@ class ApertureList(Effect):
     """
     A list of apertures, useful for IFU or MOS instruments
 
-    Parameters
-    ----------
-
     Examples
     --------
+    Defining the apertures of an image slicer IFU::
+
+        - name: image_slicer
+          description: collection of slits corresponding to the image slicer apertures
+          class: ApertureList
+          kwargs:
+            filename: "INS_ifu_apertures.dat"
+            fov_for_each_aperture : True
+            extend_fov_beyond_slit : 2            # [arcsec]
+
+    Where the file ``INS_ifu_apertures.dat`` includes this table::
+
+        id  left    right   bottom  top     angle   conserve_image  shape
+        0   -14     14      -5      -3      0       True            rect
+        1   -14     14      -3      -1      0       True            rect
+        2   -14     14      -1      1       0       True            rect
+        3   -14     14      1       3       0       True            rect
+        4   -14     14      3       5       0       True            rect
+
 
     File format
     -----------
-
     Much like an ApertureMask, an ApertureList can be initialised by either
     of the three standard DataContainer methods. The easiest is however to
     make an ASCII file with the following columns::
@@ -248,7 +263,7 @@ class ApertureList(Effect):
     .. note:: ``shape`` values ``"rect"`` and ``4`` do not produce equal results
 
        Both use 4 equidistant points around an ellipse constrained by
-       [``left``, ..., etc]. However ``"rect"`` aims to fill the contraining
+       [``left``, ..., etc]. However ``"rect"`` aims to fill the constraining
        area, while ``4`` simply uses 4 points on the ellipse.
        Consequently, ``4`` results in a diamond shaped mask covering only
        half of the constraining area filled by ``"rect"``.
@@ -286,6 +301,7 @@ class ApertureList(Effect):
                                                     [y_min, y_max]))
                     for vol in vols:
                         vol["meta"]["aperture_id"] = row["id"]
+                        vol["meta"]["sub_apertures"] = Table(rows=row)
 
                         # ..todo: HUGE HACK - Get rid of this!
                         # Assume the slit coord 'xi' is along the x axis
@@ -308,6 +324,7 @@ class ApertureList(Effect):
                 obj.shrink(["x", "y"], ([x_min, x_max], [y_min, y_max]))
                 vol = obj.volumes[0]
                 vol["meta"]["aperture_id"] = list(self.table["id"])
+                vol["meta"]["sub_apertures"] = self.table
 
                 # ..todo: HUGE HACK - Get rid of this!
                 # Assume the slit coord 'xi' is along the x axis
@@ -377,6 +394,69 @@ class ApertureList(Effect):
         else:
             raise ValueError("Secondary argument not of type ApertureList: {}"
                              "".format(type(other)))
+
+
+class FibreApertureList(ApertureList):
+    """
+    A subclass of ApertureList for fibre apertures
+
+    File format
+    -----------
+
+    Much like an ApertureList, a FibreApertureList can be initialised by either
+    of the three standard DataContainer methods.
+    The easiest is however to make an ASCII file with the following columns::
+
+        id  x       y       r       angle  conserve_image  shape
+            arcsec  arcsec  arcsec  deg
+        int float   float   float   float  bool            str/int
+
+    where:
+    - x,y : centres of the fibres
+    - r : radius (NOT diameter) of the fibre head.
+    - angle : rotation of the first vertex from x=0
+    - conserve_image : flag for maintaining spatial information of flux
+    - shape : string or int. See ApertureList for allowed strings
+
+    .. note:: FibreApertureList does not support Elliptical fibre.
+
+
+
+
+    """
+
+    def __init__(self, **kwargs):
+        # Initialise with the super-super class, i.e. Effect, not ApertureList
+        super(ApertureList, self).__init__(**kwargs)
+        params = {"fov_for_each_aperture": True,
+                  "extend_fov_beyond_slit": 0,
+                  "pixel_scale": "!INST.pixel_scale",
+                  "n_round_corners": 32,        # number of corners use to estimate ellipse
+                  "no_mask": False,             # .. todo:: is this necessary when we have conserve_image?
+                  "report_plot_include": True,
+                  "report_table_include": True,
+                  "report_table_rounding": 4}
+        self.meta["z_order"] = [81, 281]
+        self.meta.update(params)
+        self.meta.update(kwargs)
+
+        if self.table is not None:
+            required_keys = ["id", "x", "y", "r", "angle",
+                             "conserve_image", "shape"]
+            check_keys(self.table.colnames, required_keys)
+
+        left = self.table["x"] - self.table["r"]
+        right = self.table["x"] + self.table["r"]
+        bottom = self.table["y"] - self.table["r"]
+        top = self.table["y"] + self.table["r"]
+        left.name = "left"
+        right.name = "right"
+        bottom.name = "bottom"
+        top.name = "top"
+        self.table.add_columns([left, right, bottom, top])
+
+
+
 
 
 class SlitWheel(Effect):

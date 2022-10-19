@@ -203,7 +203,6 @@ class SpectralTrace:
         #           gradient of lam(x, y). This works if the lam-axis is well
         #           aligned with x or y. Needs to be tested for MICADO.
 
-
         # dlam_by_dx, dlam_by_dy = self.xy2lam.gradient()
         # if np.abs(dlam_by_dx(0, 0)) > np.abs(dlam_by_dy(0, 0)):
         if self.dispersion_axis == "x":
@@ -449,6 +448,9 @@ class XiLamImage():
         # This is based on the cube shape and assumes that the cube's spatial
         # dimensions are set by the slit aperture
         (n_lam, n_eta, n_xi) = fov.cube.data.shape
+
+        m_xi = int((fov.meta['xi_max'].value - fov.meta['xi_min'].value) / d_xi)
+        assert m_xi == n_xi
 
         # arrays of cube coordinates
         cube_xi = d_xi * np.arange(n_xi) + fov.meta['xi_min'].value
