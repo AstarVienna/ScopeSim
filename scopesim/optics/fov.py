@@ -94,7 +94,7 @@ class FieldOfView(FieldOfViewBase):
         return self.meta["pixel_area"]
 
     def sub_fov(self, left, right, top, bottom):
-
+        pass
 
 
 

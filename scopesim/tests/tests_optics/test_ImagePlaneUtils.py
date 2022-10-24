@@ -335,3 +335,37 @@ class TestSubPixelFractions:
     #     print(xs)
 
 
+class TestExtractRegionFromHdu:
+    @pytest.mark.parametrize("x_cen, y_cen", [(0, 0), (-15, 0), (-15, 96)])
+    def test_returns_sub_section_inside_2d_imagehdu(self, x_cen, y_cen):
+        # [w,h] = [50, 200], [dx, dy] = 1"
+        x_edges = (np.array([-10, 10]) + x_cen) / 3600
+        y_edges = (np.array([-3, 3]) + y_cen) / 3600
+        hdu = imo._image_hdu_rect()
+        new_hdu = imp_utils.extract_region_from_imagehdu(hdu, x_edges, y_edges)
+
+        assert isinstance(new_hdu, fits.ImageHDU)
+        assert new_hdu.data.shape[1] == 21
+        assert new_hdu.data.shape[0] == 7
+
+    def test_errors_for_sub_section_outside_2d_imagehdu(self):
+        # [w,h] = [50, 200], [dx, dy] = 1"
+        x_edges = (np.array([-10, 10]) + 25) / 3600
+        y_edges = np.array([-3, 3]) / 3600
+        hdu = imo._image_hdu_rect()
+
+        with pytest.raises(AssertionError):
+            imp_utils.extract_region_from_imagehdu(hdu, x_edges, y_edges)
+
+    def test_returns_sub_section_inside_3d_imagehdu(self):
+        # [w,h] = [50, 200], [dx, dy] = 1"
+        x_edges = np.array([-10, 10]) / 3600
+        y_edges = np.array([-3, 3]) / 3600
+        hdu = imo._image_hdu_rect()
+        hdu.data = hdu.data[None, :, :] * np.arange(3)[:, None, None]
+        new_hdu = imp_utils.extract_region_from_imagehdu(hdu, x_edges, y_edges)
+
+        assert isinstance(new_hdu, fits.ImageHDU)
+        assert new_hdu.data.shape[2] == 21
+        assert new_hdu.data.shape[1] == 7
+        assert new_hdu.data.shape[0] == 3

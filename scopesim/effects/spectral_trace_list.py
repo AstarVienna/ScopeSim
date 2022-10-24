@@ -191,14 +191,12 @@ class SpectralTraceList(Effect):
             # calling map_spectra...
 
             # OLD CODE ---------------------------------------------------------
-            # trace_id = obj.meta['trace_id']
-            # spt = self.spectral_traces[trace_id]
-            # obj.hdu = spt.map_spectra_to_focal_plane(obj)
+
+            trace_id = obj.meta['trace_id']
+            spt = self.spectral_traces[trace_id]
+            obj.hdu = spt.map_spectra_to_focal_plane(obj)
 
             # NEW CODE ---------------------------------------------------------
-            tbl = obj.meta["sub_apertures"]
-            trace_hdus = []
-            cube_orig = deepcopy(obj.cube)
 
             class PoorMansFov:
                 def __init__(self, **kwargs):
@@ -215,24 +213,30 @@ class SpectralTraceList(Effect):
 
                 @classmethod
                 def from_real_fov(cls, fov, row):
-                    cube
-                    header
-                    detector_header
+                    x_edges = [row["left"], row["right"]] * u.arcsec
+                    y_edges = [row["bottom"], row["top"]] * u.arcsec
 
-                    pmfov = cls(cube=cube, header=hdr, detector_header=det_hdr,
+                    cube = ipu.extract_region_from_imagehdu(fov.cube,
+                                                            x_edges.to(u.deg).value,
+                                                            y_edges.to(u.deg).value)
+
+                    pmfov = cls(cube=cube,
+                                header=fov.header,
+                                detector_header=fov.detector_header,
                                 wave_min=fov.meta["wave_min"],
                                 wave_max=fov.meta["wave_max"],
-                                xi_min=row["left"], xi_max=row["right"],
-                                eta_min=row["bottom"], eta_max=row["top"])
+                                xi_min=x_edges[0], xi_max=x_edges[1],
+                                eta_min=y_edges[0], eta_max=y_edges[1])
 
                     return pmfov
 
-
-            for row in tbl:
+            trace_hdus = []
+            for row in obj.meta["sub_apertures"]:
                 i = np.argwhere(self.catalog["aperture_id"] == row["id"])[0][0]
+                sub_aperture_fov = PoorMansFov.from_real_fov(obj, row)
                 trace_name = self.catalog["description"][i]
                 spt = self.spectral_traces[trace_name]
-                trace_hdus += [spt.map_spectra_to_focal_plane(obj)]
+                trace_hdus += [spt.map_spectra_to_focal_plane(sub_aperture_fov)]
 
             pixel_size = obj.header["CDELT1D"] * u.Unit(obj.header["CUNIT1D"])
             hdr = ipu.get_canvas_header(trace_hdus, pixel_scale=pixel_size)
@@ -243,6 +247,8 @@ class SpectralTraceList(Effect):
                 canvas_hdu = ipu.add_imagehdu_to_imagehdu(trace_hdu, canvas_hdu,
                                                           wcs_suffix="D")
             obj.hdu = canvas_hdu
+
+            # END EDIT ---------------------------------------------------------
 
         return obj
 

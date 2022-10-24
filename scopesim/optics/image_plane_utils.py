@@ -853,3 +853,46 @@ def split_header(hdr, chunk_size, wcs_suffix=""):
             hdr_list += [hdr_sky]
 
     return hdr_list
+
+
+def extract_region_from_imagehdu(hdu, x_edges, y_edges, wcs_suffix=""):
+    """
+    Returns an ImageHDU for a subsection of the
+
+    Parameters
+    ----------
+    hdu
+    x_edges : list of floats
+        [deg, mm]
+    y_edges : list of floats
+        [deg, mm]
+
+    Returns
+    -------
+
+    """
+
+    s = "D" if wcs_suffix == "D" else " "
+    w = wcs.WCS(hdu.header, key=s, naxis=2)
+    xps, yps = w.all_world2pix([min(x_edges), max(x_edges)],
+                               [min(y_edges), max(y_edges)], 1)
+    xps, yps = np.round(xps).astype(int), np.round(yps).astype(int)
+
+    w, h = hdu.header["NAXIS1"], hdu.header["NAXIS2"]
+    assert xps[0] >= 0 and xps[1] <= w and yps[0] >= 0 and yps[1] <= h, \
+           f"Pixel edges ({xps, yps}) were not within the bounds " \
+           f"of the array shape ({0, hdu.data.shape[-1], 0, hdu.data.shape[-2]})"
+
+    if hdu.header["NAXIS"] == 2:
+        new_data = hdu.data[yps[0]:yps[1]+1, xps[0]:xps[1]+1]
+    elif hdu.header["NAXIS"] == 3:
+        new_data = hdu.data[:, yps[0]:yps[1]+1, xps[0]:xps[1]+1]
+
+    new_hdu = fits.ImageHDU(data=new_data)
+    new_hdu.header.update(hdu.header)
+    new_hdu.header.update({"CRVAL1": np.average(x_edges),
+                           "CRVAL2": np.average(y_edges),
+                           "CRPIX1": np.average(xps),
+                           "CRPIX2": np.average(yps)})
+
+    return new_hdu
