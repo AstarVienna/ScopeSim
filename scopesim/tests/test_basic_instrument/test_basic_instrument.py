@@ -190,9 +190,9 @@ class TestObserveIfuMode:
         imp_im = opt.image_planes[0].data
         det_im = hdul[1].data
 
-        # assert imp_im.sum() == pytest.approx(5251, rel=1e-3)
+        assert imp_im.sum() == pytest.approx(5251, rel=1e-3)
 
-        if not PLOTS:
+        if PLOTS:
             plt.subplot(121)
             plt.imshow(imp_im, norm=LogNorm())
             plt.subplot(122)
