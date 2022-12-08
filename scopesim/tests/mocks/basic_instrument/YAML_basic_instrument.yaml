@@ -51,3 +51,4 @@ effects :
   include: "!OBS.include_slicer"
   kwargs:
     filename: "INS_ifu_apertures.dat"
+    extend_fov_beyond_slit: 5

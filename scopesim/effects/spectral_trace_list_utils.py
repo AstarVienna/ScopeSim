@@ -423,7 +423,7 @@ class SpectralTrace:
         return msg
 
 
-class XiLamImage():
+class XiLamImage:
     """
     Class to compute a rectified 2D spectrum
 
@@ -507,7 +507,7 @@ class XiLamImage():
                                           ky=spline_order[1])
 
 
-class Transform2D():
+class Transform2D:
     """
     2-dimensional polynomial transform
 

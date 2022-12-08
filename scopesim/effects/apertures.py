@@ -217,6 +217,8 @@ class ApertureList(Effect):
     Parameters
     ----------
 
+
+
     Examples
     --------
 
@@ -286,6 +288,7 @@ class ApertureList(Effect):
                                                     [y_min, y_max]))
                     for vol in vols:
                         vol["meta"]["aperture_id"] = row["id"]
+                        vol["meta"]["extend_fov_beyond_slit"] = dr
 
                         # ..todo: HUGE HACK - Get rid of this!
                         # Assume the slit coord 'xi' is along the x axis

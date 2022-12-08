@@ -186,6 +186,15 @@ class SpectralTraceList(Effect):
             elif obj.hdu is None and obj.cube is None:
                 obj.cube = obj.make_cube_hdu()
 
+            # Cut off FOV extended borders
+            pixel_scale = obj.meta["pixel_scale"]
+            dr = obj.meta["extend_fov_beyond_slit"]
+            dr_p = round(dr / pixel_scale)      # int or round?
+            if dr_p > 0:
+                obj.cube.data = obj.cube.data[:, dr_p:-dr_p, dr_p:-dr_p]
+                obj.cube.header["CRPIX1"] -= dr_p
+                obj.cube.header["CRPIX2"] -= dr_p
+
             # ..todo: obj will be changed to a single one covering the full field of view
             # covered by the image slicer (28 slices for LMS; for LSS still only a single slit)
             # We need a loop over spectral_traces that chops up obj into the single-slice fov before
