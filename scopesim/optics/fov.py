@@ -55,6 +55,7 @@ class FieldOfView(FieldOfViewBase):
                      "conserve_image": True,
                      "trace_id": None,
                      "aperture_id": None,
+                     "extend_fov_beyond_slit": 0,
                      }
         self.meta.update(kwargs)
 
@@ -506,20 +507,22 @@ class FieldOfView(FieldOfViewBase):
             # Point sources are in PHOTLAM per pixel
             # Point sources need to be scaled up by inverse pixel_area
             pixel_area = self.pixel_area
+            zmax, ymax, xmax = canvas_cube_hdu.data.shape
             for row in field:
                 xsky, ysky = row["x"], row["y"]
                 ref, weight = row["ref"], row["weight"]
                 # x, y are ALWAYS in arcsec - crval is in deg
                 xpix, ypix = imp_utils.val2pix(self.header, xsky / 3600, ysky / 3600)
-                if utils.from_currsys(self.meta["sub_pixel"]):
-                    xs, ys, fracs = imp_utils.sub_pixel_fractions(xpix, ypix)
-                    for i, j, k in zip(xs, ys, fracs):
-                        flux_vector = specs[ref].value * weight * k / pixel_area
-                        canvas_cube_hdu.data[:, j, i] +=  flux_vector
-                else:
-                    x, y = int(xpix), int(ypix)
-                    flux_vector = specs[ref].value * weight / pixel_area
-                    canvas_cube_hdu.data[:, y, x] += flux_vector
+                if 0 <= xpix < xmax and 0 <= ypix < ymax:
+                    if utils.from_currsys(self.meta["sub_pixel"]):
+                        xs, ys, fracs = imp_utils.sub_pixel_fractions(xpix, ypix)
+                        for i, j, k in zip(xs, ys, fracs):
+                            flux_vector = specs[ref].value * weight * k / pixel_area
+                            canvas_cube_hdu.data[:, j, i] += flux_vector
+                    else:
+                        x, y = int(xpix), int(ypix)
+                        flux_vector = specs[ref].value * weight / pixel_area
+                        canvas_cube_hdu.data[:, y, x] += flux_vector
 
         # 5. Add Background fields
         for field in self.background_fields:

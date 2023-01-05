@@ -214,6 +214,11 @@ class ApertureList(Effect):
     """
     A list of apertures, useful for IFU or MOS instruments
 
+    Parameters
+    ----------
+
+
+
     Examples
     --------
     Defining the apertures of an image slicer IFU::
@@ -301,6 +306,7 @@ class ApertureList(Effect):
                                                     [y_min, y_max]))
                     for vol in vols:
                         vol["meta"]["aperture_id"] = row["id"]
+                        vol["meta"]["extend_fov_beyond_slit"] = dr
                         vol["meta"]["sub_apertures"] = Table(rows=row)
 
                         # ..todo: HUGE HACK - Get rid of this!
