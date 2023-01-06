@@ -448,6 +448,10 @@ class UnresolvedSpectralTraceList(SpectralTraceList):
     def apply_to(self, fov, **kwargs):
         if isinstance(fov, FieldOfViewBase):
             # cycle through the fibre traces
+            # todo:
+            #   fov.image is currently empty -> needs to contain an image the size of the detector?
+            #   (fov.hdu contains the spectral cube)
+
             for trace in self.spectral_traces.values():
                 # make a combined spectrum for the fibre
                 spec = fov.make_spectrum()
@@ -458,6 +462,9 @@ class UnresolvedSpectralTraceList(SpectralTraceList):
 
                 # Add spectral traces to image
                 fov.image.data = self.add_trace_to_image(fov.image.data, xs, ys, zs)
+                # todo: the problem here is that the fov.hdu will be added to image_planes
+                #   self.image_planes[fov.image_plane_id].add(fov.hdu)
+                #   come up with a workaround. ?Alter make_spectrum to pass cube to fov.cube?
 
         return fov
 

@@ -223,6 +223,7 @@ class TestObserveIfuMode:
         det_im = hdul[1].data
 
         if PLOTS:
+            plt.ion()
             plt.subplot(121)
             plt.imshow(imp_im, norm=LogNorm())
             plt.subplot(122)
