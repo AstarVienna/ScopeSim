@@ -10,7 +10,7 @@ from astropy import units as u
 import scopesim as sim
 from scopesim.source import source_templates as st
 
-PLOTS = False
+PLOTS = True
 
 inst_pkgs = os.path.join(os.path.dirname(__file__), "../mocks")
 sim.rc.__currsys__["!SIM.file.local_packages_path"] = inst_pkgs

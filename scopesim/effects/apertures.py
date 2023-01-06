@@ -408,7 +408,6 @@ class FibreApertureList(ApertureList):
 
     File format
     -----------
-
     Much like an ApertureList, a FibreApertureList can be initialised by either
     of the three standard DataContainer methods.
     The easiest is however to make an ASCII file with the following columns::
@@ -424,13 +423,10 @@ class FibreApertureList(ApertureList):
     - conserve_image : flag for maintaining spatial information of flux
     - shape : string or int. See ApertureList for allowed strings
 
-    .. note:: FibreApertureList does not support Elliptical fibre.
-
-
+    .. note:: FibreApertureList does not support Elliptical fibres.
 
 
     """
-
     def __init__(self, **kwargs):
         # Initialise with the super-super class, i.e. Effect, not ApertureList
         super(ApertureList, self).__init__(**kwargs)
