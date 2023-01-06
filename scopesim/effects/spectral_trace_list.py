@@ -199,65 +199,63 @@ class SpectralTraceList(Effect):
             # We need a loop over spectral_traces that chops up obj into the single-slice fov before
             # calling map_spectra...
 
-            # OLD CODE ---------------------------------------------------------
+            if not isinstance(obj.meta.get("sub_apertures"), Table):
+                # Long-slits (OLD CODE) ----------------------------------------
+                trace_id = obj.meta['trace_id']
+                spt = self.spectral_traces[trace_id]
+                obj.hdu = spt.map_spectra_to_focal_plane(obj)
 
-            trace_id = obj.meta['trace_id']
-            spt = self.spectral_traces[trace_id]
-            obj.hdu = spt.map_spectra_to_focal_plane(obj)
+            else:
+                # IFU, MOS (NEW CODE) ------------------------------------------
+                class PoorMansFov:
+                    def __init__(self, **kwargs):
+                        self.meta = {"wave_min": 0,
+                                     "wave_max": 0,
+                                     "xi_min": 0,
+                                     "xi_max": 0,
+                                     "eta_min": 0,
+                                     "eta_max": 0}
+                        self.meta.update(kwargs)
+                        self.cube = kwargs.get("cube")
+                        self.header = kwargs.get("header")
+                        self.detector_header = kwargs.get("detector_header")
 
-            # NEW CODE ---------------------------------------------------------
+                    @classmethod
+                    def from_real_fov(cls, fov, row):
+                        x_edges = [row["left"], row["right"]] * u.arcsec
+                        y_edges = [row["bottom"], row["top"]] * u.arcsec
 
-            class PoorMansFov:
-                def __init__(self, **kwargs):
-                    self.meta = {"wave_min": 0,
-                                 "wave_max": 0,
-                                 "xi_min": 0,
-                                 "xi_max": 0,
-                                 "eta_min": 0,
-                                 "eta_max": 0}
-                    self.meta.update(kwargs)
-                    self.cube = kwargs.get("cube")
-                    self.header = kwargs.get("header")
-                    self.detector_header = kwargs.get("detector_header")
+                        cube = ipu.extract_region_from_imagehdu(fov.cube,
+                                                                x_edges.to(u.deg).value,
+                                                                y_edges.to(u.deg).value)
 
-                @classmethod
-                def from_real_fov(cls, fov, row):
-                    x_edges = [row["left"], row["right"]] * u.arcsec
-                    y_edges = [row["bottom"], row["top"]] * u.arcsec
+                        pmfov = cls(cube=cube,
+                                    header=fov.header,
+                                    detector_header=fov.detector_header,
+                                    wave_min=fov.meta["wave_min"],
+                                    wave_max=fov.meta["wave_max"],
+                                    xi_min=x_edges[0], xi_max=x_edges[1],
+                                    eta_min=y_edges[0], eta_max=y_edges[1])
 
-                    cube = ipu.extract_region_from_imagehdu(fov.cube,
-                                                            x_edges.to(u.deg).value,
-                                                            y_edges.to(u.deg).value)
+                        return pmfov
 
-                    pmfov = cls(cube=cube,
-                                header=fov.header,
-                                detector_header=fov.detector_header,
-                                wave_min=fov.meta["wave_min"],
-                                wave_max=fov.meta["wave_max"],
-                                xi_min=x_edges[0], xi_max=x_edges[1],
-                                eta_min=y_edges[0], eta_max=y_edges[1])
+                trace_hdus = []
+                for row in obj.meta["sub_apertures"]:
+                    i = np.argwhere(self.catalog["aperture_id"] == row["id"])[0][0]
+                    sub_aperture_fov = PoorMansFov.from_real_fov(obj, row)
+                    trace_name = self.catalog["description"][i]
+                    spt = self.spectral_traces[trace_name]
+                    trace_hdus += [spt.map_spectra_to_focal_plane(sub_aperture_fov)]
 
-                    return pmfov
+                pixel_size = obj.header["CDELT1D"] * u.Unit(obj.header["CUNIT1D"])
+                hdr = ipu.get_canvas_header(trace_hdus, pixel_scale=pixel_size)
+                image = np.zeros((hdr["NAXIS2"], hdr["NAXIS1"]))
+                canvas_hdu = fits.ImageHDU(header=hdr, data=image)
 
-            trace_hdus = []
-            for row in obj.meta["sub_apertures"]:
-                i = np.argwhere(self.catalog["aperture_id"] == row["id"])[0][0]
-                sub_aperture_fov = PoorMansFov.from_real_fov(obj, row)
-                trace_name = self.catalog["description"][i]
-                spt = self.spectral_traces[trace_name]
-                trace_hdus += [spt.map_spectra_to_focal_plane(sub_aperture_fov)]
-
-            pixel_size = obj.header["CDELT1D"] * u.Unit(obj.header["CUNIT1D"])
-            hdr = ipu.get_canvas_header(trace_hdus, pixel_scale=pixel_size)
-            image = np.zeros((hdr["NAXIS2"], hdr["NAXIS1"]))
-            canvas_hdu = fits.ImageHDU(header=hdr, data=image)
-
-            for trace_hdu in trace_hdus:
-                canvas_hdu = ipu.add_imagehdu_to_imagehdu(trace_hdu, canvas_hdu,
-                                                          wcs_suffix="D")
-            obj.hdu = canvas_hdu
-
-            # END EDIT ---------------------------------------------------------
+                for trace_hdu in trace_hdus:
+                    canvas_hdu = ipu.add_imagehdu_to_imagehdu(trace_hdu, canvas_hdu,
+                                                              wcs_suffix="D")
+                obj.hdu = canvas_hdu
 
         return obj
 
