@@ -227,7 +227,6 @@ class TestObserveIfuMode:
             plt.imshow(imp_im, norm=LogNorm())
             plt.subplot(122)
             plt.imshow(det_im)
-            plt.pause(0)
             plt.show()
 
         assert imp_im.sum() == pytest.approx(5251, rel=1e-3)
@@ -237,7 +236,8 @@ class TestObserveMosMode:
     def test_loads(self):
         wave = np.arange(0.7, 2.5, 0.001)
         spec = np.ones(len(wave))
-        spec[25::50] += 2      # every 0.05µm, offset by 0.025µm
+        spec[25::50] += 1      # every 0.05µm, offset by 0.025µm
+        spec *= 1e3
         src = sim.Source(lam=wave*u.um, spectra=spec,
                          x=[-5, 5, 0, -5, 5],
                          y=[-5, -5, 0, 5, 5],
@@ -248,9 +248,16 @@ class TestObserveMosMode:
                                set_modes=["mos"])
         opt = sim.OpticalTrain(cmd)
         opt.observe(src)
+        hdul = opt.readout()[0]
+
+        imp_im = opt.image_planes[0].data
+        det_im = hdul[1].data
+
         if PLOTS:
-            plt.imshow(opt.image_planes[0].data, norm=LogNorm())
-            plt.pause(0)
+            plt.subplot(121)
+            plt.imshow(imp_im, norm=LogNorm())
+            plt.subplot(122)
+            plt.imshow(det_im)
             plt.show()
 
 
