@@ -19,6 +19,9 @@ __currsys__ = __config__
 __search_path__ = [__config__["!SIM.file.local_packages_path"],
                    __pkg_dir__] + __config__["!SIM.file.search_path"]
 
+__basic_inst_path__ = os.path.abspath(os.path.join(__pkg_dir__,
+                                      "tests/mocks/basic_instrument/"))
+
 # if os.environ.get("READTHEDOCS") == "True" or "F:" in os.getcwd():
 #     extra_paths = ["../", "../../", "../../../", "../../../../"]
 #     __search_path__ = extra_paths + __search_path__

@@ -115,6 +115,7 @@ class SpectralTraceList(Effect):
         self.meta.update(self._class_params)
         self.meta.update(kwargs)
 
+        self.spectral_traces = {}
         if self._file is not None:
             self.make_spectral_traces()
 
@@ -431,10 +432,15 @@ class UnresolvedSpectralTraceList(SpectralTraceList):
         self.ext_cat = self._file[0].header["ECAT"]
         self.catalog = Table(self._file[self.ext_cat].data)
 
+        self._pixel_scale = from_currsys(self.meta["pixel_scale"])
+        self._plate_scale = from_currsys(self.meta["plate_scale"])
+        self._pixel_size = self._pixel_scale / self._plate_scale
+
         spec_traces = {}
         for row in self.catalog:
             params = {col: row[col] for col in row.colnames}
             params.update(self.meta)
+            params["trace_id"] = row["description"]
             hdu = self._file[row["extension_id"]]
             tbl = Table(hdu.data)
             scol = Column(name="s", unit="arcsec",
@@ -446,37 +452,44 @@ class UnresolvedSpectralTraceList(SpectralTraceList):
         self.spectral_traces = spec_traces
 
     def apply_to(self, fov, **kwargs):
+        """
+        .. todo. Caveats
+            - Each FOV has 1 sub_aperture, which has 1 trace
+            - Only traces that are primarily vertical will display properly
+        This is the only way it can be at the moment
+        """
         if isinstance(fov, FieldOfViewBase):
-            # cycle through the fibre traces
-            # todo:
-            #   fov.image is currently empty -> needs to contain an image the size of the detector?
-            #   (fov.hdu contains the spectral cube)
-
             for trace in self.spectral_traces.values():
-                # make a combined spectrum for the fibre
-                spec = fov.make_spectrum()
+                if trace.meta["aperture_id"] == fov.meta["aperture_id"]:
+                    # make a combined spectrum for the fibre
+                    spec = fov.make_spectrum()
 
-                # find the xyz for the trace
-                wmin, wmax = fov.meta["wave_min"].value, fov.meta["wave_max"].value
-                xs, ys, zs = self.get_xyz_for_trace(trace, spec, wmin, wmax)
+                    # find the xyz for the trace
+                    wmin = fov.meta["wave_min"].value
+                    wmax = fov.meta["wave_max"].value
+                    xs, ys, zs = self.get_xyz_for_trace(trace, spec, wmin, wmax)
+                    image = self.trace_to_image(xs, ys, zs)
+                    pixel_size = self._pixel_size
+                    hdr = ipu.header_from_list_of_xy(xs, ys, pixel_size, "D")
 
-                # Add spectral traces to image
-                fov.image.data = self.add_trace_to_image(fov.image.data, xs, ys, zs)
-                # todo: the problem here is that the fov.hdu will be added to image_planes
-                #   self.image_planes[fov.image_plane_id].add(fov.hdu)
-                #   come up with a workaround. ?Alter make_spectrum to pass cube to fov.cube?
+                    fov.cube = fov.hdu
+                    fov.hdu = fits.ImageHDU(data=image, header=hdr)
 
         return fov
 
     def get_xyz_for_trace(self, spec_trace, spectrum,
                           wave_min=None, wave_max=None):
-        pixel_scale = from_currsys(self.meta["pixel_scale"])
-        plate_scale = from_currsys(self.meta["plate_scale"])
-        pixel_size = pixel_scale / plate_scale
 
+        # Define dispersion direction
+        x = spec_trace.table[self.meta["x_colname"]]
         y = spec_trace.table[self.meta["y_colname"]]
-        ys = np.arange(min(y), max(y) + pixel_size, pixel_size)
-        waves = spec_trace._xiy2lam([0] * len(ys), ys)
+        if max(x) - min(x) > max(y) - min(y):
+            xs = np.arange(min(x), max(x) + self._pixel_size, self._pixel_size)
+            waves = spec_trace._xix2lam([0] * len(xs), xs)
+        else:
+            ys = np.arange(min(y), max(y) + self._pixel_size, self._pixel_size)
+            waves = spec_trace._xiy2lam([0] * len(ys), ys)
+
         if wave_min is not None and wave_max is not None:
             mask = (waves >= wave_min) * (waves <= wave_max)
             waves = waves[mask]
@@ -487,30 +500,28 @@ class UnresolvedSpectralTraceList(SpectralTraceList):
 
         return xs, ys, zs
 
-    def add_trace_to_image(self, image, xs, ys, zs):
-        pixel_scale = from_currsys(self.meta["pixel_scale"])
-        plate_scale = from_currsys(self.meta["plate_scale"])
-        pixel_size = pixel_scale / plate_scale
-
-        xp_cen, yp_cen = np.array(image.shape) / 2
-
-        xs_pix = xs / pixel_size + xp_cen
-        ws1 = xs_pix - xs_pix.astype(int)
-        ws0 = 1 - ws1
+    def trace_to_image(self, xs, ys, zs, image=None):
+        xs_pix = (xs - min(xs)) / self._pixel_size
+        xfrac1 = xs_pix - xs_pix.astype(int)
+        xfrac0 = 1 - xfrac1
 
         xp0 = xs_pix.astype(int)
-        xp1 = xs_pix.astype(int) + 1
-        yp = (ys / pixel_size + yp_cen).astype(int)
-        mask = (xp0 >= 0) * (xp1 < image.shape[1]) * (yp >= 0) * (
-                yp < image.shape[0])
+        xp1 = xp0 + 1
+        yp = ((ys - min(ys)) / self._pixel_size).astype(int)
+
+        if image is None:
+            image = np.zeros((max(yp) + 1, max(xp1) + 1))
+
+        mask = (xp0 >= 0) * (xp1 < image.shape[1]) * \
+               (yp >= 0) * (yp < image.shape[0])
         xp0 = xp0[mask]
         xp1 = xp1[mask]
         yp = yp[mask]
         zs = zs[mask]
-        ws0 = ws0[mask]
-        ws1 = ws1[mask]
+        xfrac0 = xfrac0[mask]
+        xfrac1 = xfrac1[mask]
 
-        image[yp, xp0] = zs * ws0
-        image[yp, xp1] = zs * ws1
+        image[yp, xp0] = zs * xfrac0
+        image[yp, xp1] = zs * xfrac1
 
         return image
