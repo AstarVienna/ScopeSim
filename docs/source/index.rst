@@ -3,7 +3,7 @@
     :alt: Welcome to the ScopeSim Documentation!
     :align: center
 
-An attempt at creating a common pythonic framework for telescope instrument
+123An attempt at creating a common pythonic framework for telescope instrument
 data simulators.
 
 ScopeSim_ is on pip::
