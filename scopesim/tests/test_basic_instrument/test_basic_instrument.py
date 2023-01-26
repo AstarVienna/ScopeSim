@@ -255,7 +255,7 @@ class TestObserveMosMode:
 
         if PLOTS:
             plt.subplot(121)
-            plt.imshow(imp_im, norm=LogNorm())
+            plt.imshow(imp_im)
             plt.subplot(122)
             plt.imshow(det_im)
             plt.show()
