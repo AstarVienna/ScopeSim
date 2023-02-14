@@ -49,3 +49,17 @@ class TestSlitWheel:
     def test_changes_to_false(self, swheel):
         swheel.change_slit(False)
         assert not swheel.current_slit
+
+    def test_add_slit_to_wheel(self, swheel):
+        num_slit_old = len(swheel.slits)
+        kwargs = {"array_dict": {"x": [-2, -1, 1, 2],
+                                 "y": [-1, -2, 2, 1]},
+                  "x_unit": "arcsec",
+                  "y_unit": "arcsec"}
+        newslit = ApertureMask(name="newslit", **kwargs)
+
+        swheel.add_slit(newslit, name='newslit')
+        assert len(swheel.slits) == num_slit_old + 1
+
+        swheel.change_slit('newslit')
+        assert swheel.current_slit.display_name == "newslit"
