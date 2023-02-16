@@ -350,6 +350,11 @@ def flatten_dict(dic, base_key="", flat_dict=None,
                 comment = f"[{str(value.unit)}] " + comment
                 value = value.value
 
+            # Convert e.g.  Unit(mag) to just "mag". Not sure how this will
+            # work when deserializing though.
+            if isinstance(value, u.Unit):
+                value = str(value)
+
             if isinstance(value, (list, np.ndarray)):
                 value = f"{value.__class__.__name__}:{str(list(value))}"
                 max_len = 80 - len(flat_key)
