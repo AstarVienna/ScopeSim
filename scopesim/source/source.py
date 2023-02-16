@@ -144,6 +144,9 @@ class Source(SourceBase):
 
         self.meta = {}
         self.meta.update(kwargs)
+        # ._meta_dicts contains a meta for each of the .fields. It is primarily
+        # used to set proper FITS header keywords for each field so the source
+        # can be reconstructed from the FITS headers.
         self._meta_dicts = [self.meta]
 
         self.fields = []
@@ -490,7 +493,6 @@ class Source(SourceBase):
             which .fields entries to shift
 
         """
-
         if layers is None:
             layers = np.arange(len(self.fields))
 
@@ -559,6 +561,13 @@ class Source(SourceBase):
 
     def append(self, source_to_add):
         new_source = source_to_add.make_copy()
+        # If there is no field yet, then self._meta_dicts contains a
+        # reference to self.meta, which is empty. This ensures that both are
+        # updated at the same time. However, it is important that the fields
+        # and _meta_dicts match when appending sources.
+        if len(self.fields) == 0:
+            assert self._meta_dicts == [{}]
+            self._meta_dicts = []
         if isinstance(source_to_add, Source):
             for field in new_source.fields:
                 if isinstance(field, Table):
