@@ -1,6 +1,19 @@
-version = '0.5.4'
-date    = '2022-10-06 16:00:00 GMT'
+version = '0.5.5'
+date    = '2023-03-08 18:00:00 GMT'
 yaml_descriptions = """
+- version : 0.5.5
+  date : 2023-03-08
+  comment : Hotfix for header keyword generators
+  changes :
+  - Return to § for incremental extension keywords #168
+  - thin slit confusing dispersion direction #169
+  - Adds unequal (i.e. 2x1) binning and option to rotate the CCD by integer multiples of 90 degrees #170
+  - add filters and slits to wheels #176
+  - psf_utils.rescale_kernel: fix for negative shifts #177
+  - Fix bug where the ._meta_dicts can become longer than the .fields #178
+  - Add test that Source() is additive identity #179
+  - Allow astropy Units to be values in FITS headers. #180
+
 - version : 0.5.4
   date : 2022-10-06
   comment : Hotfix for header keyword generators
