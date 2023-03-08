@@ -443,11 +443,9 @@ class SlitWheel(Effect):
 
         self.table = self.get_table()
 
-
     def apply_to(self, obj, **kwargs):
         """Use apply_to of current_slit"""
         return self.current_slit.apply_to(obj, **kwargs)
-
 
     def fov_grid(self, which="edges", **kwargs):
         return self.current_slit.fov_grid(which=which, **kwargs)
@@ -459,6 +457,21 @@ class SlitWheel(Effect):
             self.include = slitname
         else:
             raise ValueError("Unknown slit requested: " + slitname)
+
+    def add_slit(self, newslit, name=None):
+        """
+        Add a slit to the SlitWheel
+
+        Parameters
+        ==========
+        newslit : Slit
+        name : string
+           Name to be used for the new slit. If `None`, a name from
+           the newslit object is used.
+        """
+        if name is None:
+            name = newslit.display_name
+        self.slits[name] = newslit
 
     @property
     def current_slit(self):

@@ -133,6 +133,16 @@ class TestFilterWheelInit:
         with pytest.raises(ValueError):
             fwheel.change_filter('X')
 
+    def test_add_filter_to_wheel(self, fwheel):
+        num_filt_old = len(fwheel.filters)
+        newfilter = tc.TopHatFilterCurve(transmission=0.9, blue_cutoff=1.,
+                                         red_cutoff=2., name='blank')
+        fwheel.add_filter(newfilter, name='blank')
+        assert len(fwheel.filters) == num_filt_old + 1
+
+        fwheel.change_filter("blank")
+        assert fwheel.current_filter.display_name == "blank"
+
     def test_plots_all_filters(self, fwheel):
         if PLOTS:
             fwheel.plot()

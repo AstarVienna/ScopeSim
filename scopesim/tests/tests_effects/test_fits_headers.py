@@ -176,21 +176,30 @@ class TestGetRelevantExtensions:
 
 class TestFlattenDict:
     def test_works(self):
-        dic = {"HIERARCH":
-                   {"ESO":
-                        {"ATM":
-                             {"PWV": 1.0, "AIRMASS": 2.0},
-                         "DPR": {"TYPE": "DARK"}},
-                    "SIM": {
-                        "area": ("!TEL.area", "area")}
+        dic = {
+            "HIERARCH": {
+                "ESO": {
+                    "ATM": {
+                        "PWV": 1.0,
+                        "AIRMASS": 2.0,
+                    },
+                    "DPR": {
+                        "TYPE": "DARK",
                     }
-               }
+                },
+                "SIM": {
+                    "area": ("!TEL.area", "area"),
+                    "SRC0": {"scaling_unit": u.mag},
+                },
+           },
+        }
         flat_dict = fh.flatten_dict(dic)
         assert flat_dict["HIERARCH ESO ATM PWV"] == 1.0
         assert flat_dict["HIERARCH ESO ATM AIRMASS"] == 2.0
         assert flat_dict["HIERARCH ESO DPR TYPE"] == "DARK"
         assert flat_dict["HIERARCH SIM area"][0] == "!TEL.area"
         assert flat_dict["HIERARCH SIM area"][1] == "area"
+        assert flat_dict["HIERARCH SIM SRC0 scaling_unit"] == "mag"
 
     def test_resolves_bang_strings(self):
         dic = {"SIM": {"random_seed": "!SIM.random.seed"}}

@@ -16,4 +16,6 @@ from .electronic import *
 from .obs_strategies import *
 from .fits_headers import *
 
+from .rotation import *
+
 # from . import effects_utils

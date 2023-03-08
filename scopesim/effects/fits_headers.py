@@ -107,7 +107,7 @@ class ExtraFitsKeywords(Effect):
               ESO:
                 DET:
                   DIT: [5, '[s] exposure length']   # example of adding a comment
-            EXTNAME: "DET++.DATA"                   # example of extension specific qualifier
+            EXTNAME: "DET§.DATA"                   # example of extension specific qualifier
 
     The keywords can be added to one or more extensions, based on one of the
     following ``ext_`` qualifiers: ``ext_name``, ``ext_number``, ``ext_type``
@@ -116,11 +116,11 @@ class ExtraFitsKeywords(Effect):
     For a list, ScopeSim will add the keywords to all extensions matching the
     specified type/name/number
 
-    The number of the extension can be used in a value by using the "++" string.
-    That is, keyword values with "++" with have the extension number inserted
-    where the "++" is.
+    The number of the extension can be used in a value by using the "§" string.
+    That is, keyword values with "§" with have the extension number inserted
+    where the "§" is.
 
-    The above example (``EXTNAME: "DET++.DATA"``) will result in the following
+    The above example (``EXTNAME: "DET§.DATA"``) will result in the following
     keyword added only to extensions 1 and 2:
 
     - PrimaryHDU (ext 0)::
@@ -269,9 +269,10 @@ class ExtraFitsKeywords(Effect):
                 unresolved = flatten_dict(dic.get("unresolved_keywords", {}))
                 exts = get_relevant_extensions(dic, hdul)
                 for i in exts:
+                    # On windows machines Â appears in the string when using §
                     resolved_with_counters = {
-                        k: v.replace("++", str(i)) if isinstance(v, str) else v
-                        for k, v in resolved.items()
+                        k: v.replace("Â", "").replace("§", str(i)).replace("++", str(i))
+                        if isinstance(v, str) else v for k, v in resolved.items()
                     }
                     hdul[i].header.update(resolved_with_counters)
                     hdul[i].header.update(unresolved)
@@ -348,6 +349,11 @@ def flatten_dict(dic, base_key="", flat_dict=None,
             if isinstance(value, u.Quantity):
                 comment = f"[{str(value.unit)}] " + comment
                 value = value.value
+
+            # Convert e.g.  Unit(mag) to just "mag". Not sure how this will
+            # work when deserializing though.
+            if isinstance(value, u.Unit):
+                value = str(value)
 
             if isinstance(value, (list, np.ndarray)):
                 value = f"{value.__class__.__name__}:{str(list(value))}"
