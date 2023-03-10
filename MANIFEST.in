@@ -2,6 +2,7 @@ include README.md
 include LICENCE
 include scopesim/defaults.yaml
 include scopesim/vega.fits
+recursive-include scopesim/data *
 
 prune *OLD_*
 prune *docs_to_be_sorted*
