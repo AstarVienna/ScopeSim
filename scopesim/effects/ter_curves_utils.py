@@ -1,4 +1,5 @@
 import logging
+from pathlib import Path
 
 import numpy as np
 from astropy import units as u
@@ -40,6 +41,8 @@ FILTER_DEFAULTS = {"U": "Generic/Bessell.U",
                    "BrGamma": "Gemini/NIRI.BrG-G0218",
                    }
 
+PATH_HERE = Path(__file__).parent
+PATH_SVO_DATA = PATH_HERE.parent / "data" / "svo"
 
 def get_filter_effective_wavelength(filter_name):
     if isinstance(filter_name, str):
@@ -85,7 +88,13 @@ def download_svo_filter(filter_name, return_style="synphot",
 
     """
     url = f"http://svo2.cab.inta-csic.es/theory/fps3/fps.php?ID={filter_name}"
-    path = download_file(url, cache=True)
+    path = find_file(
+        filter_name,
+        path=[PATH_SVO_DATA],
+        silent=True,
+    )
+    if not path:
+        path = download_file(url, cache=True)
 
     try:
         tbl = Table.read(path, format='votable')
@@ -147,7 +156,14 @@ def download_svo_filter_list(observatory, instrument, short_names=False,
     """
     base_url = f"http://svo2.cab.inta-csic.es/theory/fps3/fps.php?"
     url = base_url + f"Facility={observatory}&Instrument={instrument}"
-    path = download_file(url, cache=True)
+    fn = f"{observatory}/{instrument}"
+    path = find_file(
+        fn,
+        path=[PATH_SVO_DATA],
+        silent=True,
+    )
+    if not path:
+        path = download_file(url, cache=True)
 
     tbl = Table.read(path, format='votable')
     names = list(tbl["filterID"])

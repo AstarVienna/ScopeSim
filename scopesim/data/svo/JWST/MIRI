@@ -1,0 +1,504 @@
+<?xml version="1.0"?>
+<VOTABLE version="1.1" xsi:schemaLocation="http://www.ivoa.net/xml/VOTable/v1.1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <INFO name="QUERY_STATUS" value="OK"/>
+  <RESOURCE type="results">
+    <TABLE>
+    <FIELD name="FilterProfileService" ucd="meta.ref.ivorn" utype="PhotometryFilter.fpsIdentifier" unit="" datatype="char" arraysize="*"/>
+    <FIELD name="filterID" ucd="meta.id" utype="photdm:PhotometryFilter.identifier" unit="" datatype="char" arraysize="*"/>
+    <FIELD name="WavelengthUnit" ucd="meta.unit" utype="PhotometryFilter.SpectralAxis.unit" unit="" datatype="char" arraysize="*"/>
+    <FIELD name="WavelengthUCD" ucd="meta.ucd" utype="PhotometryFilter.SpectralAxis.UCD" unit="" datatype="char" arraysize="*"/>
+    <FIELD name="PhotSystem" ucd="" utype="photdm:PhotometricSystem.description" unit="" datatype="char" arraysize="*"/>
+    <FIELD name="DetectorType" ucd="" utype="photdm:PhotometricSystem.detectorType" unit="" datatype="char" arraysize="*"/>
+    <FIELD name="Band" ucd="" utype="photdm:PhotometryFilter.bandName" unit="" datatype="char" arraysize="*"/>
+    <FIELD name="Instrument" ucd="instr" utype="" unit="" datatype="char" arraysize="*"/>
+    <FIELD name="Facility" ucd="instr.obsty" utype="" unit="" datatype="char" arraysize="*"/>
+    <FIELD name="ProfileReference" ucd="" utype="" unit="" datatype="char" arraysize="*"/>
+    <FIELD name="CalibrationReference" ucd="" utype="" unit="" datatype="char" arraysize="*"/>
+    <FIELD name="Description" ucd="meta.note" utype="photdm:PhotometryFilter.description" unit="" datatype="char" arraysize="*"/>
+    <FIELD name="Comments" ucd="meta.note" utype="" unit="" datatype="char" arraysize="*"/>
+    <FIELD name="WavelengthRef" ucd="em.wl" utype="" unit="Angstrom" datatype="double" />
+    <FIELD name="WavelengthMean" ucd="em.wl" utype="photdm:PhotometryFilter.SpectralAxis.Coverage.Location.Value" unit="Angstrom" datatype="double" />
+    <FIELD name="WavelengthEff" ucd="em.wl.effective" utype="" unit="Angstrom" datatype="double" />
+    <FIELD name="WavelengthMin" ucd="em.wl;stat.min" utype="photdm:PhotometryFilter.SpectralAxis.Coverage.Bounds.Start" unit="Angstrom" datatype="double" />
+    <FIELD name="WavelengthMax" ucd="em.wl;stat.max" utype="photdm:PhotometryFilter.SpectralAxis.Coverage.Bounds.Stop" unit="Angstrom" datatype="double" />
+    <FIELD name="WidthEff" ucd="instr.bandwidth" utype="photdm:PhotometryFilter.SpectralAxis.Coverage.Bounds.Extent" unit="Angstrom" datatype="double" />
+    <FIELD name="WavelengthCen" ucd="em.wl" utype="" unit="Angstrom" datatype="double" />
+    <FIELD name="WavelengthPivot" ucd="em.wl" utype="" unit="Angstrom" datatype="double" />
+    <FIELD name="WavelengthPeak" ucd="em.wl" utype="" unit="Angstrom" datatype="double" />
+    <FIELD name="WavelengthPhot" ucd="em.wl" utype="" unit="Angstrom" datatype="double" />
+    <FIELD name="FWHM" ucd="instr.bandwidth" utype="" unit="Angstrom" datatype="double" />
+    <FIELD name="Fsun" ucd="phot.flux.density" utype="" unit="erg/cm2/s/A" datatype="double" />
+    <FIELD name="PhotCalID" ucd="meta.id" utype="photdm:PhotCal.identifier" unit="" datatype="char" arraysize="*"/>
+    <FIELD name="MagSys" ucd="meta.code" utype="photdm:PhotCal.MagnitudeSystem.type" unit="" datatype="char" arraysize="*"/>
+    <FIELD name="ZeroPoint" ucd="phot.flux.density" utype="photdm:PhotCal.ZeroPoint.Flux.value" unit="Jy" datatype="double" />
+    <FIELD name="ZeroPointUnit" ucd="meta.unit" utype="photdm:PhotCal.ZeroPoint.Flux.unit" unit="" datatype="char" arraysize="*"/>
+    <FIELD name="Mag0" ucd="phot.mag" utype="photdm:PhotCal.ZeroPoint.referenceMagnitude.value" unit="" datatype="double" />
+    <FIELD name="ZeroPointType" ucd="meta.code" utype="photdm:PhotCal.ZeroPoint.type" unit="" datatype="char" arraysize="*"/>
+    <FIELD name="AsinhSoft" ucd="obs.param" utype="photdm:PhotCal.AsinhZeroPoint.softeningParameter" unit="" datatype="double" />
+      <FIELD name="TrasmissionCurve" ucd="DATA_LINK" utype="phfdm:PhotometryFilter.filterTransmissionCurve" datatype="char" arraysize="*"/>
+      <DATA>
+        <TABLEDATA>
+          <TR>
+            <TD>ivo://svo/fps</TD>
+            <TD>JWST/MIRI.F560W</TD>
+            <TD>Angstrom</TD>
+            <TD>em.wl</TD>
+            <TD>MIRI</TD>
+            <TD>1</TD>
+            <TD></TD>
+            <TD>MIRI</TD>
+            <TD>JWST</TD>
+            <TD>https://jwst-docs.stsci.edu/display/JTI/MIRI+Filters+and+Dispersers</TD>
+            <TD></TD>
+            <TD>MIRI F560W filter</TD>
+            <TD>nominal transmission of the JWST OTE is not included</TD>
+            <TD>56352.571445651</TD>
+            <TD>56651.280468474</TD>
+            <TD>55870.535199546</TD>
+            <TD>48847.4</TD>
+            <TD>64242.6</TD>
+            <TD>9461.3626514445</TD>
+            <TD>56118.583002646</TD>
+            <TD>56352.571445651</TD>
+            <TD>58780</TD>
+            <TD>56071.940770299</TD>
+            <TD>11179.130291005</TD>
+            <TD>0.22168176470067</TD>
+            <TD>JWST/MIRI.F560W/Vega</TD>
+            <TD>Vega</TD>
+            <TD>116.38017512422</TD>
+            <TD>Jy</TD>
+            <TD>0</TD>
+            <TD>Pogson</TD>
+            <TD>0</TD>
+            <TD><![CDATA[http://svo2.cab.inta-csic.es//theory/fps3/fps.php?ID=JWST/MIRI.F560W]]></TD>
+          </TR>
+          <TR>
+            <TD>ivo://svo/fps</TD>
+            <TD>JWST/MIRI.F770W</TD>
+            <TD>Angstrom</TD>
+            <TD>em.wl</TD>
+            <TD>MIRI</TD>
+            <TD>1</TD>
+            <TD></TD>
+            <TD>MIRI</TD>
+            <TD>JWST</TD>
+            <TD>https://jwst-docs.stsci.edu/display/JTI/MIRI+Filters+and+Dispersers</TD>
+            <TD></TD>
+            <TD>MIRI F770W filter</TD>
+            <TD>nominal transmission of the JWST OTE is not included</TD>
+            <TD>76393.244810525</TD>
+            <TD>77111.389886765</TD>
+            <TD>75224.937928611</TD>
+            <TD>64740.1</TD>
+            <TD>88353.2</TD>
+            <TD>18278.12891567</TD>
+            <TD>76339.809311934</TD>
+            <TD>76393.244810525</TD>
+            <TD>80820</TD>
+            <TD>75706.234172807</TD>
+            <TD>21048.584141109</TD>
+            <TD>0.071882509575773</TD>
+            <TD>JWST/MIRI.F770W/Vega</TD>
+            <TD>Vega</TD>
+            <TD>64.833625183406</TD>
+            <TD>Jy</TD>
+            <TD>0</TD>
+            <TD>Pogson</TD>
+            <TD>0</TD>
+            <TD><![CDATA[http://svo2.cab.inta-csic.es//theory/fps3/fps.php?ID=JWST/MIRI.F770W]]></TD>
+          </TR>
+          <TR>
+            <TD>ivo://svo/fps</TD>
+            <TD>JWST/MIRI.F1000W</TD>
+            <TD>Angstrom</TD>
+            <TD>em.wl</TD>
+            <TD>MIRI</TD>
+            <TD>1</TD>
+            <TD></TD>
+            <TD>MIRI</TD>
+            <TD>JWST</TD>
+            <TD>https://jwst-docs.stsci.edu/display/JTI/MIRI+Filters+and+Dispersers</TD>
+            <TD></TD>
+            <TD>MIRI F1000W filter</TD>
+            <TD>nominal transmission of the JWST OTE is not included</TD>
+            <TD>99531.164169362</TD>
+            <TD>99981.094530323</TD>
+            <TD>98792.568724159</TD>
+            <TD>87627.688888889</TD>
+            <TD>111018.1</TD>
+            <TD>17036.691847117</TD>
+            <TD>99567.317204301</TD>
+            <TD>99531.164169362</TD>
+            <TD>105000</TD>
+            <TD>99092.491108527</TD>
+            <TD>18731.301075269</TD>
+            <TD>0.025102696146854</TD>
+            <TD>JWST/MIRI.F1000W/Vega</TD>
+            <TD>Vega</TD>
+            <TD>38.993103886714</TD>
+            <TD>Jy</TD>
+            <TD>0</TD>
+            <TD>Pogson</TD>
+            <TD>0</TD>
+            <TD><![CDATA[http://svo2.cab.inta-csic.es//theory/fps3/fps.php?ID=JWST/MIRI.F1000W]]></TD>
+          </TR>
+          <TR>
+            <TD>ivo://svo/fps</TD>
+            <TD>JWST/MIRI.F1065C</TD>
+            <TD>Angstrom</TD>
+            <TD>em.wl</TD>
+            <TD>MIRI</TD>
+            <TD>1</TD>
+            <TD></TD>
+            <TD>MIRI</TD>
+            <TD>JWST</TD>
+            <TD>https://jwst-docs.stsci.edu/jwst-mid-infrared-instrument/miri-instrumentation/miri-filters-and-dispersers</TD>
+            <TD></TD>
+            <TD>MIRI F1065C coronographic filter</TD>
+            <TD>Approximate curve digitized from plot in reference webpage.
+</TD>
+            <TD>105628.39025921</TD>
+            <TD>105681.52260848</TD>
+            <TD>105542.38813308</TD>
+            <TD>100201.08101494</TD>
+            <TD>111538.67148012</TD>
+            <TD>5647.2487338715</TD>
+            <TD>105617.43199648</TD>
+            <TD>105628.39025921</TD>
+            <TD>106155.97</TD>
+            <TD>105577.83061172</TD>
+            <TD>5682.8070663406</TD>
+            <TD>0.019657454314828</TD>
+            <TD>JWST/MIRI.F1065C/Vega</TD>
+            <TD>Vega</TD>
+            <TD>33.890489436923</TD>
+            <TD>Jy</TD>
+            <TD>0</TD>
+            <TD>Pogson</TD>
+            <TD>0</TD>
+            <TD><![CDATA[http://svo2.cab.inta-csic.es//theory/fps3/fps.php?ID=JWST/MIRI.F1065C]]></TD>
+          </TR>
+          <TR>
+            <TD>ivo://svo/fps</TD>
+            <TD>JWST/MIRI.F1140C</TD>
+            <TD>Angstrom</TD>
+            <TD>em.wl</TD>
+            <TD>MIRI</TD>
+            <TD>1</TD>
+            <TD></TD>
+            <TD>MIRI</TD>
+            <TD>JWST</TD>
+            <TD>https://jwst-docs.stsci.edu/jwst-mid-infrared-instrument/miri-instrumentation/miri-filters-and-dispersers</TD>
+            <TD></TD>
+            <TD>MIRI F1140C coronographic filter</TD>
+            <TD>Approximate curve digitized from plot in reference webpage.
+</TD>
+            <TD>113103.03238919</TD>
+            <TD>113156.51557554</TD>
+            <TD>113013.46845431</TD>
+            <TD>107334.18582284</TD>
+            <TD>119536.96497344</TD>
+            <TD>6036.5321991656</TD>
+            <TD>113120.48698733</TD>
+            <TD>113103.03238919</TD>
+            <TD>112978.34</TD>
+            <TD>113049.15288667</TD>
+            <TD>5864.1523939697</TD>
+            <TD>0.015003356552015</TD>
+            <TD>JWST/MIRI.F1140C/Vega</TD>
+            <TD>Vega</TD>
+            <TD>29.625297118219</TD>
+            <TD>Jy</TD>
+            <TD>0</TD>
+            <TD>Pogson</TD>
+            <TD>0</TD>
+            <TD><![CDATA[http://svo2.cab.inta-csic.es//theory/fps3/fps.php?ID=JWST/MIRI.F1140C]]></TD>
+          </TR>
+          <TR>
+            <TD>ivo://svo/fps</TD>
+            <TD>JWST/MIRI.F1130W</TD>
+            <TD>Angstrom</TD>
+            <TD>em.wl</TD>
+            <TD>MIRI</TD>
+            <TD>1</TD>
+            <TD></TD>
+            <TD>MIRI</TD>
+            <TD>JWST</TD>
+            <TD>https://jwst-docs.stsci.edu/display/JTI/MIRI+Filters+and+Dispersers</TD>
+            <TD></TD>
+            <TD>MIRI F1130W filter</TD>
+            <TD>nominal transmission of the JWST OTE is not included</TD>
+            <TD>113085.01112053</TD>
+            <TD>113159.43894948</TD>
+            <TD>112960.7219695</TD>
+            <TD>106389.5</TD>
+            <TD>119837</TD>
+            <TD>7229.1495637816</TD>
+            <TD>113104.04492566</TD>
+            <TD>113085.01112053</TD>
+            <TD>114810</TD>
+            <TD>113010.57714731</TD>
+            <TD>7128.9689722043</TD>
+            <TD>0.015018291200703</TD>
+            <TD>JWST/MIRI.F1130W/Vega</TD>
+            <TD>Vega</TD>
+            <TD>30.422513739974</TD>
+            <TD>Jy</TD>
+            <TD>0</TD>
+            <TD>Pogson</TD>
+            <TD>0</TD>
+            <TD><![CDATA[http://svo2.cab.inta-csic.es//theory/fps3/fps.php?ID=JWST/MIRI.F1130W]]></TD>
+          </TR>
+          <TR>
+            <TD>ivo://svo/fps</TD>
+            <TD>JWST/MIRI.F1280W</TD>
+            <TD>Angstrom</TD>
+            <TD>em.wl</TD>
+            <TD>MIRI</TD>
+            <TD>1</TD>
+            <TD></TD>
+            <TD>MIRI</TD>
+            <TD>JWST</TD>
+            <TD>https://jwst-docs.stsci.edu/display/JTI/MIRI+Filters+and+Dispersers</TD>
+            <TD></TD>
+            <TD>MIRI F1280W filter</TD>
+            <TD>nominal transmission of the JWST OTE is not included</TD>
+            <TD>128101.36999074</TD>
+            <TD>128738.3368061</TD>
+            <TD>127060.61771058</TD>
+            <TD>112516</TD>
+            <TD>143369.4</TD>
+            <TD>24337.719010728</TD>
+            <TD>128539.67989002</TD>
+            <TD>128101.36999074</TD>
+            <TD>120780</TD>
+            <TD>127481.80123344</TD>
+            <TD>25339.061272584</TD>
+            <TD>0.0092754633318044</TD>
+            <TD>JWST/MIRI.F1280W/Vega</TD>
+            <TD>Vega</TD>
+            <TD>23.787199358692</TD>
+            <TD>Jy</TD>
+            <TD>0</TD>
+            <TD>Pogson</TD>
+            <TD>0</TD>
+            <TD><![CDATA[http://svo2.cab.inta-csic.es//theory/fps3/fps.php?ID=JWST/MIRI.F1280W]]></TD>
+          </TR>
+          <TR>
+            <TD>ivo://svo/fps</TD>
+            <TD>JWST/MIRI.F1500W</TD>
+            <TD>Angstrom</TD>
+            <TD>em.wl</TD>
+            <TD>MIRI</TD>
+            <TD>1</TD>
+            <TD></TD>
+            <TD>MIRI</TD>
+            <TD>JWST</TD>
+            <TD>https://jwst-docs.stsci.edu/display/JTI/MIRI+Filters+and+Dispersers</TD>
+            <TD></TD>
+            <TD>MIRI F1500W filter</TD>
+            <TD>nominal transmission of the JWST OTE is not included</TD>
+            <TD>150635.07169187</TD>
+            <TD>151469.08497837</TD>
+            <TD>149256.55348357</TD>
+            <TD>131189.1</TD>
+            <TD>171410.9</TD>
+            <TD>29426.227371347</TD>
+            <TD>150820.49343904</TD>
+            <TD>150635.07169187</TD>
+            <TD>148740</TD>
+            <TD>149808.87520525</TD>
+            <TD>31126.470749043</TD>
+            <TD>0.0048877557936468</TD>
+            <TD>JWST/MIRI.F1500W/Vega</TD>
+            <TD>Vega</TD>
+            <TD>17.275163351045</TD>
+            <TD>Jy</TD>
+            <TD>0</TD>
+            <TD>Pogson</TD>
+            <TD>0</TD>
+            <TD><![CDATA[http://svo2.cab.inta-csic.es//theory/fps3/fps.php?ID=JWST/MIRI.F1500W]]></TD>
+          </TR>
+          <TR>
+            <TD>ivo://svo/fps</TD>
+            <TD>JWST/MIRI.F1550C</TD>
+            <TD>Angstrom</TD>
+            <TD>em.wl</TD>
+            <TD>MIRI</TD>
+            <TD>1</TD>
+            <TD></TD>
+            <TD>MIRI</TD>
+            <TD>JWST</TD>
+            <TD>https://jwst-docs.stsci.edu/jwst-mid-infrared-instrument/miri-instrumentation/miri-filters-and-dispersers</TD>
+            <TD></TD>
+            <TD>MIRI F1550C coronographic filter</TD>
+            <TD>Approximate curve digitized from plot in reference webpage.
+</TD>
+            <TD>155167.73838977</TD>
+            <TD>155219.65212798</TD>
+            <TD>155079.49825604</TD>
+            <TD>149400.61656836</TD>
+            <TD>161523.60608287</TD>
+            <TD>7038.0136629677</TD>
+            <TD>155112.87915011</TD>
+            <TD>155167.73838977</TD>
+            <TD>155687.84</TD>
+            <TD>155114.08214975</TD>
+            <TD>7347.7776094</TD>
+            <TD>0.004287090427937</TD>
+            <TD>JWST/MIRI.F1550C/Vega</TD>
+            <TD>Vega</TD>
+            <TD>15.92728499363</TD>
+            <TD>Jy</TD>
+            <TD>0</TD>
+            <TD>Pogson</TD>
+            <TD>0</TD>
+            <TD><![CDATA[http://svo2.cab.inta-csic.es//theory/fps3/fps.php?ID=JWST/MIRI.F1550C]]></TD>
+          </TR>
+          <TR>
+            <TD>ivo://svo/fps</TD>
+            <TD>JWST/MIRI.F1800W</TD>
+            <TD>Angstrom</TD>
+            <TD>em.wl</TD>
+            <TD>MIRI</TD>
+            <TD>1</TD>
+            <TD></TD>
+            <TD>MIRI</TD>
+            <TD>JWST</TD>
+            <TD>https://jwst-docs.stsci.edu/display/JTI/MIRI+Filters+and+Dispersers</TD>
+            <TD></TD>
+            <TD>MIRI F1800W filter</TD>
+            <TD>nominal transmission of the JWST OTE is not included</TD>
+            <TD>179837.22718463</TD>
+            <TD>180508.30666044</TD>
+            <TD>178732.77995521</TD>
+            <TD>160278.8</TD>
+            <TD>202850.6</TD>
+            <TD>29145.639860041</TD>
+            <TD>180096.23770492</TD>
+            <TD>179837.22718463</TD>
+            <TD>173790</TD>
+            <TD>179174.91132303</TD>
+            <TD>29829.524590164</TD>
+            <TD>0.0024063728459195</TD>
+            <TD>JWST/MIRI.F1800W/Vega</TD>
+            <TD>Vega</TD>
+            <TD>12.17521927761</TD>
+            <TD>Jy</TD>
+            <TD>0</TD>
+            <TD>Pogson</TD>
+            <TD>0</TD>
+            <TD><![CDATA[http://svo2.cab.inta-csic.es//theory/fps3/fps.php?ID=JWST/MIRI.F1800W]]></TD>
+          </TR>
+          <TR>
+            <TD>ivo://svo/fps</TD>
+            <TD>JWST/MIRI.F2100W</TD>
+            <TD>Angstrom</TD>
+            <TD>em.wl</TD>
+            <TD>MIRI</TD>
+            <TD>1</TD>
+            <TD></TD>
+            <TD>MIRI</TD>
+            <TD>JWST</TD>
+            <TD>https://jwst-docs.stsci.edu/display/JTI/MIRI+Filters+and+Dispersers</TD>
+            <TD></TD>
+            <TD>MIRI F2100W filter</TD>
+            <TD>nominal transmission of the JWST OTE is not included</TD>
+            <TD>207950.05740857</TD>
+            <TD>209373.19559041</TD>
+            <TD>205607.10381218</TD>
+            <TD>178759</TD>
+            <TD>244051</TD>
+            <TD>44045.651013118</TD>
+            <TD>208176.12272727</TD>
+            <TD>207950.05740857</TD>
+            <TD>204880</TD>
+            <TD>206544.58351505</TD>
+            <TD>46818.154545455</TD>
+            <TD>0.0013609123689406</TD>
+            <TD>JWST/MIRI.F2100W/Vega</TD>
+            <TD>Vega</TD>
+            <TD>9.1069624968942</TD>
+            <TD>Jy</TD>
+            <TD>0</TD>
+            <TD>Pogson</TD>
+            <TD>0</TD>
+            <TD><![CDATA[http://svo2.cab.inta-csic.es//theory/fps3/fps.php?ID=JWST/MIRI.F2100W]]></TD>
+          </TR>
+          <TR>
+            <TD>ivo://svo/fps</TD>
+            <TD>JWST/MIRI.F2300C</TD>
+            <TD>Angstrom</TD>
+            <TD>em.wl</TD>
+            <TD>MIRI</TD>
+            <TD>1</TD>
+            <TD></TD>
+            <TD>MIRI</TD>
+            <TD>JWST</TD>
+            <TD>https://jwst-docs.stsci.edu/jwst-mid-infrared-instrument/miri-instrumentation/miri-filters-and-dispersers</TD>
+            <TD></TD>
+            <TD>MIRI F2300C coronographic filter</TD>
+            <TD>Approximate curve digitized from plot in reference webpage.
+</TD>
+            <TD>226446.44316658</TD>
+            <TD>227630.4870809</TD>
+            <TD>224493.7622614</TD>
+            <TD>196351.35169287</TD>
+            <TD>261867.66116864</TD>
+            <TD>43032.648288166</TD>
+            <TD>226945.12652101</TD>
+            <TD>226446.44316658</TD>
+            <TD>219980.85</TD>
+            <TD>225271.91168103</TD>
+            <TD>43815.779187988</TD>
+            <TD>0.00096510340006773</TD>
+            <TD>JWST/MIRI.F2300C/Vega</TD>
+            <TD>Vega</TD>
+            <TD>7.6197971866949</TD>
+            <TD>Jy</TD>
+            <TD>0</TD>
+            <TD>Pogson</TD>
+            <TD>0</TD>
+            <TD><![CDATA[http://svo2.cab.inta-csic.es//theory/fps3/fps.php?ID=JWST/MIRI.F2300C]]></TD>
+          </TR>
+          <TR>
+            <TD>ivo://svo/fps</TD>
+            <TD>JWST/MIRI.F2550W</TD>
+            <TD>Angstrom</TD>
+            <TD>em.wl</TD>
+            <TD>MIRI</TD>
+            <TD>1</TD>
+            <TD></TD>
+            <TD>MIRI</TD>
+            <TD>JWST</TD>
+            <TD>https://jwst-docs.stsci.edu/display/JTI/MIRI+Filters+and+Dispersers</TD>
+            <TD></TD>
+            <TD>MIRI F2550W filter</TD>
+            <TD>nominal transmission of the JWST OTE is not included</TD>
+            <TD>253640.03917236</TD>
+            <TD>254994.19394447</TD>
+            <TD>251520.09900624</TD>
+            <TD>223391.4</TD>
+            <TD>299940</TD>
+            <TD>38759.886299276</TD>
+            <TD>250189.16666667</TD>
+            <TD>253640.03917236</TD>
+            <TD>239970</TD>
+            <TD>252344.0376353</TD>
+            <TD>34301.666666667</TD>
+            <TD>0.00061369648815106</TD>
+            <TD>JWST/MIRI.F2550W/Vega</TD>
+            <TD>Vega</TD>
+            <TD>6.1420629946614</TD>
+            <TD>Jy</TD>
+            <TD>0</TD>
+            <TD>Pogson</TD>
+            <TD>0</TD>
+            <TD><![CDATA[http://svo2.cab.inta-csic.es//theory/fps3/fps.php?ID=JWST/MIRI.F2550W]]></TD>
+          </TR>
+        </TABLEDATA>
+      </DATA>
+    </TABLE>
+  </RESOURCE>
+</VOTABLE>
