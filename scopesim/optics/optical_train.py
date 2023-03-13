@@ -1,3 +1,4 @@
+import copy
 import os
 import sys
 from copy import deepcopy
@@ -101,15 +102,16 @@ class OpticalTrain:
 
         Parameters
         ----------
-        user_commands : UserCommands
+        user_commands : UserCommands or str
 
         """
 
         if isinstance(user_commands, str):
             user_commands = UserCommands(use_instrument=user_commands)
-
-        if not isinstance(user_commands, UserCommands):
-            raise ValueError("user_commands must be a UserCommands object: "
+        elif isinstance(user_commands, UserCommands):
+            user_commands = copy.deepcopy(user_commands)
+        else:
+            raise ValueError("user_commands must be a UserCommands or str object: "
                              "{}".format(type(user_commands)))
 
         self.cmds = user_commands
