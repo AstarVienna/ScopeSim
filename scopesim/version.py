@@ -1,6 +1,14 @@
-version = '0.5.5'
-date    = '2023-03-08 18:00:00 GMT'
+version = '0.5.6'
+date    = '2023-03-13 16:00:00 GMT'
 yaml_descriptions = """
+- version : 0.5.6
+  date : 2023-03-13
+  comment : Hotfix to include minimal set of SVO data
+  changes :
+  - Run notebooks in CI #183
+  - Add SVO data because SVO is down #185
+  - Fix OpticalTrain shared cmds attribute and fix docstring #186
+
 - version : 0.5.5
   date : 2023-03-08
   comment : Hotfix for header keyword generators
