@@ -1,0 +1,409 @@
+<?xml version="1.0"?>
+<VOTABLE version="1.1" xsi:schemaLocation="http://www.ivoa.net/xml/VOTable/v1.1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <INFO name="QUERY_STATUS" value="OK"/>
+  <RESOURCE type="results">
+    <TABLE utype="photdm:PhotometryFilter.transmissionCurve.spectrum">
+    <PARAM name="FilterProfileService" value="ivo://svo/fps" ucd="meta.ref.ivorn" utype="PhotometryFilter.fpsIdentifier" datatype="char" arraysize="*"/>
+    <PARAM name="filterID" value="GTC/OSIRIS.F858_filter" ucd="meta.id" utype="photdm:PhotometryFilter.identifier" datatype="char" arraysize="*"/>
+    <PARAM name="WavelengthUnit" value="Angstrom" ucd="meta.unit" utype="PhotometryFilter.SpectralAxis.unit" datatype="char" arraysize="*"/>
+    <PARAM name="WavelengthUCD" value="em.wl" ucd="meta.ucd" utype="PhotometryFilter.SpectralAxis.UCD" datatype="char" arraysize="*"/>
+    <PARAM name="Description" value="GTC, Osiris, F858 (filter only)" ucd="meta.note" utype="photdm:PhotometryFilter.description" datatype="char" arraysize="*"/>
+    <PARAM name="PhotSystem" value="OSIRIS" utype="photdm:PhotometricSystem.description" datatype="char" arraysize="*">
+       <DESCRIPTION>Photometric system</DESCRIPTION>
+    </PARAM>
+    <PARAM name="DetectorType" value="1" utype="photdm:PhotometricSystem.detectorType" datatype="char" arraysize="*">
+       <DESCRIPTION>Detector type. 0:Energy counter, 1:Photon counter.</DESCRIPTION>
+    </PARAM>
+    <PARAM name="Instrument" value="Osiris" ucd="instr" datatype="char" arraysize="*">
+       <DESCRIPTION>Instrument</DESCRIPTION>
+    </PARAM>
+    <PARAM name="Facility" value="GTC" ucd="instr.obsty" datatype="char" arraysize="*">
+       <DESCRIPTION>Observational facility</DESCRIPTION>
+    </PARAM>
+    <PARAM name="ProfileReference" value="http://www.gtc.iac.es/en/pages/instrumentation/osiris.php" datatype="char" arraysize="*"/>
+    <PARAM name="Description" value="GTC, Osiris, F858 (filter only)" ucd="meta.note" utype="photdm:PhotometryFilter.description" datatype="char" arraysize="*"/>
+    <PARAM name="components" value="Filter" datatype="char" arraysize="*">
+       <DESCRIPTION>Transmission components</DESCRIPTION>
+    </PARAM>
+    <PARAM name="WavelengthRef" value="8589.5591531889" unit="Angstrom" ucd="em.wl" datatype="double" >
+       <DESCRIPTION>Reference wavelength. Defined as the same than the pivot wavelength.</DESCRIPTION>
+    </PARAM>
+    <PARAM name="WavelengthMean" value="8594.8536919816" unit="Angstrom" ucd="em.wl" utype="photdm:PhotometryFilter.SpectralAxis.Coverage.Location.Value" datatype="double" >
+       <DESCRIPTION>Mean wavelength. Defined as integ[x*filter(x) dx]/integ[filter(x) dx]</DESCRIPTION>
+    </PARAM>
+    <PARAM name="WavelengthEff" value="8586.3862763744" unit="Angstrom" ucd="em.wl.effective" datatype="double" >
+       <DESCRIPTION>Effective wavelength. Defined as integ[x*filter(x)*vega(x) dx]/integ[filter(x)*vega(x) dx]</DESCRIPTION>
+    </PARAM>
+    <PARAM name="WavelengthMin" value="8165.8382724719" unit="Angstrom" ucd="em.wl;stat.min" utype="photdm:PhotometryFilter.SpectralAxis.Coverage.Bounds.Start" datatype="double" >
+       <DESCRIPTION>Minimum filter wavelength. Defined as the first lambda value with a transmission at least 1% of maximum transmission</DESCRIPTION>
+    </PARAM>
+    <PARAM name="WavelengthMax" value="8973.8906822811" unit="Angstrom" ucd="em.wl;stat.max" utype="photdm:PhotometryFilter.SpectralAxis.Coverage.Bounds.Stop" datatype="double" >
+       <DESCRIPTION>Maximum filter wavelength. Defined as the last lambda value with a transmission at least 1% of maximum transmission</DESCRIPTION>
+    </PARAM>
+    <PARAM name="WidthEff" value="563.75499513226" unit="Angstrom" ucd="instr.bandwidth" utype="photdm:PhotometryFilter.SpectralAxis.Coverage.Bounds.Extent" datatype="double" >
+       <DESCRIPTION>Effective width. Defined as integ[x*filter(x) dx].\nEquivalent to the horizontal size of a rectangle with height equal to maximum transmission and with the same area that the one covered by the filter transmission curve.</DESCRIPTION>
+    </PARAM>
+    <PARAM name="WavelengthCen" value="8589.67373904" unit="Angstrom" ucd="em.wl" datatype="double" >
+       <DESCRIPTION>Central wavelength. Defined as the central wavelength between the two points defining FWMH</DESCRIPTION>
+    </PARAM>
+    <PARAM name="WavelengthPivot" value="8589.5591531889" unit="Angstrom" ucd="em.wl" datatype="double" >
+       <DESCRIPTION>Peak wavelength. Defined as sqrt{integ[x*filter(x) dx]/integ[filter(x) dx/x]}</DESCRIPTION>
+    </PARAM>
+    <PARAM name="WavelengthPeak" value="8750" unit="Angstrom" ucd="em.wl" datatype="double" >
+       <DESCRIPTION>Peak wavelength. Defined as the lambda value with larger transmission</DESCRIPTION>
+    </PARAM>
+    <PARAM name="WavelengthPhot" value="8589.9713721615" unit="Angstrom" ucd="em.wl" datatype="double" >
+       <DESCRIPTION>Photon distribution based effective wavelength. Defined as integ[x^2*filter(x)*vega(x) dx]/integ[x*filter(x)*vega(x) dx]</DESCRIPTION>
+    </PARAM>
+    <PARAM name="FWHM" value="582.50522886058" unit="Angstrom" ucd="instr.bandwidth" datatype="double" >
+       <DESCRIPTION>Full width at half maximum. Defined as the difference between the two wavelengths for which filter transmission is half maximum</DESCRIPTION>
+    </PARAM>
+    <PARAM name="Fsun" value="98.264696465699" unit="erg/cm2/s/A" ucd="phot.flux.density" datatype="double" >
+       <DESCRIPTION>Sun flux</DESCRIPTION>
+    </PARAM>
+    <PARAM name="PhotCalID" value="GTC/OSIRIS.F858_filter/Vega" ucd="meta.id" utype="photdm:PhotCal.identifier" datatype="char" arraysize="*"/>
+    <PARAM name="MagSys" value="Vega" ucd="meta.code" utype="photdm:PhotCal.MagnitudeSystem.type" datatype="char" arraysize="*"/>
+    <PARAM name="ZeroPoint" value="2243.0876481227" unit="Jy" ucd="phot.flux.density" utype="photdm:PhotCal.ZeroPoint.Flux.value" datatype="double" />
+    <PARAM name="ZeroPointUnit" value="Jy" ucd="meta.unit" utype="photdm:PhotCal.ZeroPoint.Flux.unit" datatype="char" arraysize="*"/>
+    <PARAM name="ZeroPointType" value="Pogson" ucd="meta.code" utype="photdm:PhotCal.ZeroPoint.type" datatype="char" arraysize="*"/>
+      <FIELD name="Wavelength" utype="spec:Data.SpectralAxis.Value" ucd="em.wl" unit="Angstrom" datatype="double"/>
+      <FIELD name="Transmission" utype="spec:Data.FluxAxis.Value" ucd="phys.transmission" unit="" datatype="double"/>
+      <DATA>
+        <TABLEDATA>
+          <TR>
+            <TD>8160.000000</TD>
+            <TD>0.007944</TD>
+          </TR>
+          <TR>
+            <TD>8170.000000</TD>
+            <TD>0.010792</TD>
+          </TR>
+          <TR>
+            <TD>8180.000000</TD>
+            <TD>0.014508</TD>
+          </TR>
+          <TR>
+            <TD>8190.000000</TD>
+            <TD>0.019745</TD>
+          </TR>
+          <TR>
+            <TD>8200.000000</TD>
+            <TD>0.026992</TD>
+          </TR>
+          <TR>
+            <TD>8210.000000</TD>
+            <TD>0.036589</TD>
+          </TR>
+          <TR>
+            <TD>8220.000000</TD>
+            <TD>0.051130</TD>
+          </TR>
+          <TR>
+            <TD>8230.000000</TD>
+            <TD>0.069954</TD>
+          </TR>
+          <TR>
+            <TD>8240.000000</TD>
+            <TD>0.097686</TD>
+          </TR>
+          <TR>
+            <TD>8250.000000</TD>
+            <TD>0.133288</TD>
+          </TR>
+          <TR>
+            <TD>8260.000000</TD>
+            <TD>0.186973</TD>
+          </TR>
+          <TR>
+            <TD>8270.000000</TD>
+            <TD>0.248139</TD>
+          </TR>
+          <TR>
+            <TD>8280.000000</TD>
+            <TD>0.323657</TD>
+          </TR>
+          <TR>
+            <TD>8290.000000</TD>
+            <TD>0.406445</TD>
+          </TR>
+          <TR>
+            <TD>8300.000000</TD>
+            <TD>0.494191</TD>
+          </TR>
+          <TR>
+            <TD>8310.000000</TD>
+            <TD>0.580054</TD>
+          </TR>
+          <TR>
+            <TD>8320.000000</TD>
+            <TD>0.661381</TD>
+          </TR>
+          <TR>
+            <TD>8330.000000</TD>
+            <TD>0.728369</TD>
+          </TR>
+          <TR>
+            <TD>8340.000000</TD>
+            <TD>0.783026</TD>
+          </TR>
+          <TR>
+            <TD>8350.000000</TD>
+            <TD>0.820479</TD>
+          </TR>
+          <TR>
+            <TD>8360.000000</TD>
+            <TD>0.850331</TD>
+          </TR>
+          <TR>
+            <TD>8370.000000</TD>
+            <TD>0.869462</TD>
+          </TR>
+          <TR>
+            <TD>8380.000000</TD>
+            <TD>0.884514</TD>
+          </TR>
+          <TR>
+            <TD>8390.000000</TD>
+            <TD>0.893212</TD>
+          </TR>
+          <TR>
+            <TD>8400.000000</TD>
+            <TD>0.898442</TD>
+          </TR>
+          <TR>
+            <TD>8410.000000</TD>
+            <TD>0.901885</TD>
+          </TR>
+          <TR>
+            <TD>8420.000000</TD>
+            <TD>0.903234</TD>
+          </TR>
+          <TR>
+            <TD>8430.000000</TD>
+            <TD>0.904385</TD>
+          </TR>
+          <TR>
+            <TD>8440.000000</TD>
+            <TD>0.905751</TD>
+          </TR>
+          <TR>
+            <TD>8450.000000</TD>
+            <TD>0.906918</TD>
+          </TR>
+          <TR>
+            <TD>8460.000000</TD>
+            <TD>0.909068</TD>
+          </TR>
+          <TR>
+            <TD>8470.000000</TD>
+            <TD>0.911933</TD>
+          </TR>
+          <TR>
+            <TD>8480.000000</TD>
+            <TD>0.915025</TD>
+          </TR>
+          <TR>
+            <TD>8490.000000</TD>
+            <TD>0.919110</TD>
+          </TR>
+          <TR>
+            <TD>8500.000000</TD>
+            <TD>0.923636</TD>
+          </TR>
+          <TR>
+            <TD>8510.000000</TD>
+            <TD>0.928795</TD>
+          </TR>
+          <TR>
+            <TD>8520.000000</TD>
+            <TD>0.933429</TD>
+          </TR>
+          <TR>
+            <TD>8530.000000</TD>
+            <TD>0.937974</TD>
+          </TR>
+          <TR>
+            <TD>8540.000000</TD>
+            <TD>0.942281</TD>
+          </TR>
+          <TR>
+            <TD>8550.000000</TD>
+            <TD>0.945543</TD>
+          </TR>
+          <TR>
+            <TD>8560.000000</TD>
+            <TD>0.947417</TD>
+          </TR>
+          <TR>
+            <TD>8570.000000</TD>
+            <TD>0.948114</TD>
+          </TR>
+          <TR>
+            <TD>8580.000000</TD>
+            <TD>0.949445</TD>
+          </TR>
+          <TR>
+            <TD>8590.000000</TD>
+            <TD>0.949438</TD>
+          </TR>
+          <TR>
+            <TD>8600.000000</TD>
+            <TD>0.948998</TD>
+          </TR>
+          <TR>
+            <TD>8610.000000</TD>
+            <TD>0.948101</TD>
+          </TR>
+          <TR>
+            <TD>8620.000000</TD>
+            <TD>0.947265</TD>
+          </TR>
+          <TR>
+            <TD>8630.000000</TD>
+            <TD>0.945565</TD>
+          </TR>
+          <TR>
+            <TD>8640.000000</TD>
+            <TD>0.945423</TD>
+          </TR>
+          <TR>
+            <TD>8650.000000</TD>
+            <TD>0.945462</TD>
+          </TR>
+          <TR>
+            <TD>8660.000000</TD>
+            <TD>0.946168</TD>
+          </TR>
+          <TR>
+            <TD>8670.000000</TD>
+            <TD>0.946466</TD>
+          </TR>
+          <TR>
+            <TD>8680.000000</TD>
+            <TD>0.948415</TD>
+          </TR>
+          <TR>
+            <TD>8690.000000</TD>
+            <TD>0.950739</TD>
+          </TR>
+          <TR>
+            <TD>8700.000000</TD>
+            <TD>0.953058</TD>
+          </TR>
+          <TR>
+            <TD>8710.000000</TD>
+            <TD>0.955506</TD>
+          </TR>
+          <TR>
+            <TD>8720.000000</TD>
+            <TD>0.957337</TD>
+          </TR>
+          <TR>
+            <TD>8730.000000</TD>
+            <TD>0.959518</TD>
+          </TR>
+          <TR>
+            <TD>8740.000000</TD>
+            <TD>0.960117</TD>
+          </TR>
+          <TR>
+            <TD>8750.000000</TD>
+            <TD>0.960674</TD>
+          </TR>
+          <TR>
+            <TD>8760.000000</TD>
+            <TD>0.959732</TD>
+          </TR>
+          <TR>
+            <TD>8770.000000</TD>
+            <TD>0.958967</TD>
+          </TR>
+          <TR>
+            <TD>8780.000000</TD>
+            <TD>0.957503</TD>
+          </TR>
+          <TR>
+            <TD>8790.000000</TD>
+            <TD>0.955858</TD>
+          </TR>
+          <TR>
+            <TD>8800.000000</TD>
+            <TD>0.954998</TD>
+          </TR>
+          <TR>
+            <TD>8810.000000</TD>
+            <TD>0.953416</TD>
+          </TR>
+          <TR>
+            <TD>8820.000000</TD>
+            <TD>0.948101</TD>
+          </TR>
+          <TR>
+            <TD>8830.000000</TD>
+            <TD>0.934098</TD>
+          </TR>
+          <TR>
+            <TD>8840.000000</TD>
+            <TD>0.903833</TD>
+          </TR>
+          <TR>
+            <TD>8850.000000</TD>
+            <TD>0.846924</TD>
+          </TR>
+          <TR>
+            <TD>8860.000000</TD>
+            <TD>0.751784</TD>
+          </TR>
+          <TR>
+            <TD>8870.000000</TD>
+            <TD>0.632586</TD>
+          </TR>
+          <TR>
+            <TD>8880.000000</TD>
+            <TD>0.492655</TD>
+          </TR>
+          <TR>
+            <TD>8890.000000</TD>
+            <TD>0.359682</TD>
+          </TR>
+          <TR>
+            <TD>8900.000000</TD>
+            <TD>0.245764</TD>
+          </TR>
+          <TR>
+            <TD>8910.000000</TD>
+            <TD>0.163778</TD>
+          </TR>
+          <TR>
+            <TD>8920.000000</TD>
+            <TD>0.104695</TD>
+          </TR>
+          <TR>
+            <TD>8930.000000</TD>
+            <TD>0.066376</TD>
+          </TR>
+          <TR>
+            <TD>8940.000000</TD>
+            <TD>0.041772</TD>
+          </TR>
+          <TR>
+            <TD>8950.000000</TD>
+            <TD>0.026764</TD>
+          </TR>
+          <TR>
+            <TD>8960.000000</TD>
+            <TD>0.016971</TD>
+          </TR>
+          <TR>
+            <TD>8970.000000</TD>
+            <TD>0.011135</TD>
+          </TR>
+          <TR>
+            <TD>8980.000000</TD>
+            <TD>0.007207</TD>
+          </TR>
+        </TABLEDATA>
+      </DATA>
+    </TABLE>
+  </RESOURCE>
+</VOTABLE>
