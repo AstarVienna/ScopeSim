@@ -5,6 +5,7 @@ scipy
 astropy
 matplotlib
 jupyter
+jupytext
 
 docutils
 requests
