@@ -39,6 +39,8 @@ jobs:
           pip install .
           pip install -r requirements.github_actions.txt
       - name: Run Pytest
-        run: pytest
+        run: pytest --cov=scopesim
       - name: Run notebooks
         run: ./runnotebooks.sh
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v3
