@@ -8,6 +8,9 @@ matplotlib
 jupyter
 jupytext
 
+# for scipy.datasets
+pooch
+
 docutils
 requests
 beautifulsoup4
