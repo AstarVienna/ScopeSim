@@ -123,7 +123,7 @@ This development of this project was funded by the project IS538004 of the Hochs
 
 # References
 
-
+```
 @misc{scopesim,
     author = {{Leschinski}, Kieran},
      title = "{ScopeSim - A python framework for creating astronomical instrument data simulators}",
@@ -132,3 +132,4 @@ This development of this project was funded by the project IS538004 of the Hochs
    journal = {​GitHub repository},
        url = {​https://github.com/AstarVienna/ScopeSim}
 }
+```
