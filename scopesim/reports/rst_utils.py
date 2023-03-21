@@ -299,7 +299,16 @@ def latexify_rst_text(rst_text, filename=None, path=None, title_char="=",
         filename = rst_text.split(title_char)[0].strip().replace(" ", "_")
 
     text = "Title\n<<<<<\nSubtitle\n>>>>>>>>\n\n"
-    parts = publish_parts(text + rst_text, writer_name="latex")
+    parts = publish_parts(
+        text + rst_text,
+        writer_name="latex",
+        # Settings_overrides to placate FutureWarnings.
+        # TODO: Decide whether the future defaults look better.
+        settings_overrides={
+            "use_latex_citations": False,
+            "legacy_column_widths": True,
+        },
+    )
 
     if not float_figures:
         parts["body"] = parts["body"].replace('begin{figure}',

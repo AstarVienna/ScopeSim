@@ -287,7 +287,7 @@ def get_bkg_level(obj, bg_w):
         if bg_w == 0:
             bkg_level = 0
         else:
-            mask = np.zeros_like(obj, dtype=np.bool8)
+            mask = np.zeros_like(obj, dtype=bool)
             if bg_w > 0:
                 mask[bg_w:-bg_w,bg_w:-bg_w] = True
             bkg_level = np.ma.median(np.ma.masked_array(obj, mask=mask))
@@ -296,7 +296,7 @@ def get_bkg_level(obj, bg_w):
         if bg_w == 0:
             bkg_level = np.array([0] * obj.shape[0])
         else:
-            mask = np.zeros_like(obj, dtype=np.bool8)
+            mask = np.zeros_like(obj, dtype=bool)
             if bg_w > 0:
                 mask[:, bg_w:-bg_w, bg_w:-bg_w] = True
             bkg_level = np.ma.median(np.ma.masked_array(obj, mask=mask),

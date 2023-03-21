@@ -404,7 +404,7 @@ class FieldOfView(FieldOfViewBase):
             evaluate spectra at waveset
             add spectrum at x,y position in canvas cube
 
-        ``PHOTLAM = ph/s/m2/um``.
+        ``PHOTLAM = ph / (s * m2 * um)``.
         Original source fields are in units of:
 
         - tables: (PHOTLAM in spectrum)

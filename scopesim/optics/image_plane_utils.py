@@ -4,7 +4,7 @@ import numpy as np
 from astropy import units as u, wcs
 from astropy.io import fits
 from astropy.table import Table
-from scipy.ndimage import interpolation as ndi
+import scipy.ndimage as ndi
 
 from .. import utils
 
