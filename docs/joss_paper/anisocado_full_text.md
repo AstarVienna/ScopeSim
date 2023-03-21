@@ -130,5 +130,5 @@ This development of this project was funded by the project IS538004 of the Hochs
       year = {2020},
  publisher = {​GitHub},
    journal = {​GitHub repository},
-       url = {​https://github.com/astronomyk/scopesim}
+       url = {​https://github.com/AstarVienna/ScopeSim}
 }

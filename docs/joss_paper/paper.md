@@ -67,8 +67,6 @@ Documentation can be found at https://scopesim.readthedocs.io/en/latest/
     - Data redcution pipeline developers
     - New PIs, Proposals for new instruments
 
-![caption](path)
-
 # ScopeSim workflow
 
 ## Connection to other packages in the software framework
