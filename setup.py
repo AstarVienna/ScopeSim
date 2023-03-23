@@ -48,9 +48,10 @@ def setup_package():
           include_package_data=True,
           packages=find_packages(exclude=('docs', 'docs_to_be_sorted', 'data',
                                           'misc', 'OLD_code', 'temp', 'tests')),
-          install_requires=["numpy>=1.16",
-                            "scipy>=1.0.0",
-                            "astropy>=2.0",
+          python_requires='>=3.8.0',
+          install_requires=["numpy>=1.19.5",
+                            "scipy>=1.10.0",
+                            "astropy>=5.0",
                             "matplotlib>=1.5",
 
                             "docutils",
