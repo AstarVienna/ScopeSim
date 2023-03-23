@@ -81,7 +81,7 @@ IRDB
 - Add a MICADO_ETC package
     WHAT: Add consolidated transmission curves, PSFs, detector characteristics to enable high-speed windowed simuations
 
-- Updates to MICADO, MICADO_Sci, MAORY, ELT, Armazones packages as new data becomes available
+- Updates to MICADO, MICADO_Sci, MORFEO, ELT, Armazones packages as new data becomes available
     WHAT: Add new modes, updated values and data files
 
 - Automatic documentation for each of the packages
