@@ -283,6 +283,22 @@ def _add_intpixel_sources_to_canvas(canvas_hdu, xpix, ypix, flux, mask):
 
 
 def _add_subpixel_sources_to_canvas(canvas_hdu, xpix, ypix, flux, mask):
+    """
+
+    Parameters
+    ----------
+    canvas_hdu : fits.ImageHDU
+    xpix, ypix : list of floats
+        [pix] Coordinates of sources in units of images pixel
+    flux : list of floats
+    mask : list of bools
+        flags for adding or ignoring a source
+
+    Returns
+    -------
+    canvas_hdu : fits.ImageHDU
+
+    """
     canvas_hdu.header["comment"] = "Adding {} sub-pixel files" \
                                    "".format(len(flux))
     canvas_shape = canvas_hdu.data.shape
