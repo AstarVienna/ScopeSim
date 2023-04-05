@@ -1,19 +1,21 @@
-from copy import deepcopy
-import numpy as np
-from scipy.signal import convolve
-from scipy.interpolate import RectBivariateSpline
+from typing import Optional
 
-from astropy import units as u
-from astropy.io import fits
-from astropy.convolution import Gaussian2DKernel
-from astropy.wcs import WCS
 import anisocado as aniso
+import numpy as np
+import numpy.typing as npt
+from astropy import units as u
+from astropy.convolution import Gaussian2DKernel
+from astropy.io import fits
+from astropy.wcs import WCS
+from numba import njit, prange
+from scipy.interpolate import RectBivariateSpline
+from scipy.signal import convolve
 
-from .effects import Effect
-from . import ter_curves_utils as tu
 from . import psf_utils as pu
-from ..base_classes import ImagePlaneBase, FieldOfViewBase, FOVSetupBase
+from . import ter_curves_utils as tu
+from .effects import Effect
 from .. import utils
+from ..base_classes import ImagePlaneBase, FieldOfViewBase, FOVSetupBase
 
 
 class PoorMansFOV:
@@ -83,6 +85,11 @@ class PSF(Effect):
 
                 # subtract background level before convolving, re-add afterwards
                 bkg_level = pu.get_bkg_level(image, self.meta["bkg_width"])
+
+                # import plotly.express as px
+                # fig = px.imshow(image)
+                # fig.show()
+                np.save("i", image - bkg_level)
 
                 # do the convolution
                 mode = utils.from_currsys(self.meta["convolve_mode"])
@@ -701,8 +708,7 @@ class FieldVaryingPSF(DiscretePSF):
 
     """
     def __init__(self, **kwargs):
-        # sub_pixel_flag and flux_accuracy are taken care of in PSF base class
-        super(FieldVaryingPSF, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
         self.required_keys = ["filename"]
         utils.check_keys(self.meta, self.required_keys, action="error")
@@ -836,3 +842,146 @@ class FieldVaryingPSF(DiscretePSF):
 
     def plot(self):
         return super().plot(PoorMansFOV())
+
+
+@njit(parallel=True)
+def _linear_interpolation(grid: np.array, position: np.array) -> np.array:
+    """Bilinear interpolation of a grid of 2D arrays at a given position.
+
+    This function interpolates a grid of 2D arrays at a given position using a weighted mean (i.e. bi-linear
+    interpolation). The grid object should be of shape (M, N, I, J), with MxN the shape of the grid of arrays and IxJ
+    the shape of the array at each point.
+
+    @param grid: An array with shape `(M, N, I, J)` defining a `MxN` grid of 2D arrays to be interpolated.
+    @param position: An array containing the position in the `MxN` at which the resulting 2D array is computed.
+    @return: An IxJ array at the given position obtained by interpolation.
+    """
+
+    # Find the closest grid points to the given position
+    x, y = position
+    x0 = int(x)
+    y0 = int(y)
+    x1 = x0 + 1
+    y1 = y0 + 1
+
+    # TODO: Check for out of bounds positions
+
+    # Get the four closest arrays to the given position
+    psf00 = grid[x0, y0, :, :]
+    psf01 = grid[x0, y1, :, :]
+    psf10 = grid[x1, y0, :, :]
+    psf11 = grid[x1, y1, :, :]
+
+    # Define the weights for each grid point
+    dx = x - x0
+    dy = y - y0
+    inv_dx = 1 - dx
+    inv_dy = 1 - dy
+
+    a = inv_dx * inv_dy
+    b = dx * inv_dy
+    c = inv_dx * dy
+    d = dx * dy
+
+    # Construct support array and retrieve pixel values by interpolating
+    M, N, I, J = grid.shape
+    output = np.empty((I, J), dtype=grid.dtype)
+    for i in prange(I):
+        for j in range(J):
+            output[i, j] = (
+                    a * psf00[i, j]
+                    + b * psf01[i, j]
+                    + c * psf10[i, j]
+                    + d * psf11[i, j]
+            )
+    return output
+
+
+class GridFieldVaryingPSF(DiscretePSF):
+    def __init__(self,
+                 psf_grid: npt.ArrayLike,
+                 mode: str = "linear"):
+
+        self.grid = np.array(psf_grid)
+        self.mode = mode
+
+    @staticmethod
+    @njit(parallel=True)
+    def _convolve2d_varying_psf(grid: np.array,
+                                img: np.array,
+                                interpolator):
+
+        # Get image and kernel dimensions
+        img_i, img_j = img.shape
+        grid_i, grid_j, psf_i, psf_j = grid.shape
+
+        # Add padding to the image (note: Numba doesn't support np.pad)
+        padded_img = np.zeros((img_i + psf_i - 1, img_j + psf_j - 1), dtype=img.dtype)
+        padded_img[psf_i // 2:psf_i // 2 + img_i, psf_j // 2:psf_j // 2 + img_j] = img
+
+        # Create output array
+        output = np.empty_like(img)
+
+        # Compute PSF and convolve for each pixel
+        for i in prange(img_i):
+            for j in range(img_j):
+                # Get PSF for current pixel
+                psf = interpolator(grid, np.array((psf_i, psf_j)))  # [JA] TODO: Coordinate palceholders here
+
+                # Compute convolution for current pixel
+                pixel_sum = 0
+                for ki in prange(psf_i):
+                    for kj in range(psf_j):
+                        pixel_sum += padded_img[i + ki][j + kj] * psf[ki][kj]
+                output[i][j] = pixel_sum
+
+        return output
+
+    def apply_to(self, fov, mode: Optional[str] = None, **kwargs):
+        # .. todo: add in field rotation
+        # .. todo: add in 3D cubes
+        # accept "full", "dit", "none"
+
+        # Select interpolation mode
+        mode = str(mode if mode else self.mode).lower()
+        if mode == "linear":
+            interpolator = _linear_interpolation
+        elif mode == "nearest":
+            # TODO: Finish nearest interpolator to enable this
+            raise NotImplementedError(f"Mode \'{mode}\' under development.")
+        else:
+            raise NotImplementedError(f"Mode \'{mode}\' not implemented.")
+
+        # Check if there are any fov.fields to apply a psf to
+        if isinstance(fov, FieldOfViewBase):
+            if len(fov.fields) > 0:
+                if fov.image is None:
+                    fov.image = fov.make_image_hdu().data
+
+                old_shape = fov.image.shape
+
+                # [JA] TODO: Renormalise kernel
+                # kernel[kernel < 0.] = 0.
+                # sum_kernel = np.sum(kernel)
+                # if abs(sum_kernel - 1) > self.meta["flux_accuracy"]:
+                #     kernel /= sum_kernel
+
+                # kernel = kernel.astype(float)
+                image = fov.image.astype(float)
+                canvas = self._convolve2d_varying_psf(self.grid, image, interpolator)
+
+                # [JA] Is the following necessary?
+                # reset WCS header info
+                new_shape = canvas.shape
+                fov.image = canvas
+
+                # ..todo: careful with which dimensions mean what
+                if "CRPIX1" in fov.header:
+                    fov.header["CRPIX1"] += (new_shape[0] - old_shape[0]) / 2
+                    fov.header["CRPIX2"] += (new_shape[1] - old_shape[1]) / 2
+
+                if "CRPIX1D" in fov.header:
+                    fov.header["CRPIX1D"] += (new_shape[0] - old_shape[0]) / 2
+                    fov.header["CRPIX2D"] += (new_shape[1] - old_shape[1]) / 2
+
+        return fov
