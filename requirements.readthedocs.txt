@@ -8,7 +8,6 @@ requests
 beautifulsoup4
 lxml
 pyyaml
-pysftp
 
 synphot
 skycalc_ipy

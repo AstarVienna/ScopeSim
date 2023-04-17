@@ -58,7 +58,6 @@ def setup_package():
                             "beautifulsoup4>=4.4",
                             "lxml",
                             "pyyaml>5.1",
-                            "pysftp",
                             
                             "synphot>=0.1.3",
                             "skycalc_ipy>=0.1.3",
