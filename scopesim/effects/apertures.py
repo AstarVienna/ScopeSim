@@ -538,6 +538,21 @@ class SlitWheel(Effect):
         else:
             raise ValueError("Unknown slit requested: " + slitname)
 
+    def add_slit(self, newslit, name=None):
+        """
+        Add a slit to the SlitWheel
+
+        Parameters
+        ==========
+        newslit : Slit
+        name : string
+           Name to be used for the new slit. If `None`, a name from
+           the newslit object is used.
+        """
+        if name is None:
+            name = newslit.display_name
+        self.slits[name] = newslit
+
     @property
     def current_slit(self):
         """Return the currently used slit"""

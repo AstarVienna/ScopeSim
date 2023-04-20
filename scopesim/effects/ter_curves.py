@@ -1,3 +1,4 @@
+'''Transmission, emissivity, reflection curves'''
 import numpy as np
 from astropy import units as u
 from os import path as pth
@@ -355,7 +356,7 @@ class FilterCurve(TERCurve):
         ``TC_filter_{}.dat``
 
     Can either be created using the standard 3 options:
-    - ``filename``: direct filename of the filer curve
+    - ``filename``: direct filename of the filter curve
     - ``table``: an ``astropy.Table``
     - ``array_dict``: a dictionary version of a table: ``{col_name1: values, }``
 
@@ -487,10 +488,10 @@ class TopHatFilterCurve(FilterCurve):
         red = kwargs["red_cutoff"]
         peak = kwargs["transmission"]
         wing = kwargs.get("wing_transmission", 0)
-        
+
         waveset = [wave_min, 0.999*blue, blue, red, red*1.001, wave_max]
         transmission = [wing, wing, peak, peak, wing, wing]
-        
+
         tbl = Table(names=["wavelength", "transmission"],
                     data=[waveset, transmission])
         super(TopHatFilterCurve, self).__init__(table=tbl,
@@ -600,6 +601,21 @@ class FilterWheel(Effect):
             self.meta['current_filter'] = filtername
         else:
             raise ValueError("Unknown filter requested: " + filtername)
+
+    def add_filter(self, newfilter, name=None):
+        """
+        Add a filter to the FilterWheel
+
+        Parameters
+        ==========
+        newfilter : FilterCurve
+        name : string
+           Name to be used for the new filter. If `None` a name from
+           the newfilter object is used.
+        """
+        if name is None:
+            name = newfilter.display_name
+        self.filters[name] = newfilter
 
     @property
     def current_filter(self):

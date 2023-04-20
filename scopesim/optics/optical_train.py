@@ -1,7 +1,9 @@
+import copy
 import os
 import sys
 from copy import deepcopy
 from shutil import copyfileobj
+import logging
 
 from datetime import datetime
 
@@ -101,15 +103,16 @@ class OpticalTrain:
 
         Parameters
         ----------
-        user_commands : UserCommands
+        user_commands : UserCommands or str
 
         """
 
         if isinstance(user_commands, str):
             user_commands = UserCommands(use_instrument=user_commands)
-
-        if not isinstance(user_commands, UserCommands):
-            raise ValueError("user_commands must be a UserCommands object: "
+        elif isinstance(user_commands, UserCommands):
+            user_commands = copy.deepcopy(user_commands)
+        else:
+            raise ValueError("user_commands must be a UserCommands or str object: "
                              "{}".format(type(user_commands)))
 
         self.cmds = user_commands
@@ -181,6 +184,7 @@ class OpticalTrain:
         # [3D - Atmospheric shifts, PSF, NCPAs, Grating shift/distortion]
         fovs = self.fov_manager.fovs
         for fov in fovs:
+            logging.info(f"Processing FOV: {effect.display_name}")
             # print("FOV", fov_i+1, "of", n_fovs, flush=True)
             # .. todo: possible bug with bg flux not using plate_scale
             #          see fov_utils.combine_imagehdu_fields
@@ -189,6 +193,7 @@ class OpticalTrain:
             hdu_type = "cube" if self.fov_manager.is_spectroscope else "image"
             fov.view(hdu_type)
             for effect in self.optics_manager.fov_effects:
+                logging.info(f"Applying Effect: {effect.display_name}")
                 fov = effect.apply_to(fov)
 
             fov.flatten()

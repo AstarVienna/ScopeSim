@@ -1,17 +1,18 @@
 pytest
+pytest-cov
 
 numpy>=1.16
 scipy
 astropy
 matplotlib
 jupyter
+jupytext
 
 docutils
 requests
 beautifulsoup4
 lxml
 pyyaml
-pysftp
 
 synphot
 skycalc_ipy
