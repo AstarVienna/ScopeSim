@@ -214,7 +214,19 @@ class TestUnresolvedSpectralTraceListInit:
             plt.subplot(2, 3, i+1)
             plt.imshow(image, origin="lower")
 
-        if not PLOTS:
+        if PLOTS:
             plt.pause(0)
             plt.show()
 
+class TestMosaicSpectralTraceList():
+    def test_intit(self):
+        sptl = spt.MosaicSpectralTraceList(
+            plate_scale=6.33333,
+            pixel_scale=0.095,
+            wave_min=1.420,
+            wave_max=1.857,
+        )
+        assert len(sptl.spectral_traces) == 14
+        print(sptl.spectral_traces["Trace_Ap0"].table)
+
+        # assert sptl.spectral_traces["TRACE_Ap0"].meta["trace_id"] == "TRACE_Ap0"

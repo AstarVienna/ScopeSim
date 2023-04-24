@@ -52,6 +52,7 @@ def setup_package():
                             "scipy>=1.0.0",
                             "astropy>=2.0",
                             "matplotlib>=1.5",
+                            "pandas>=1.5.2",
 
                             "docutils",
                             "requests>=2.20",
