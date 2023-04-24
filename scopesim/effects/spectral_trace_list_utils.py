@@ -853,7 +853,7 @@ class TraceGenerator:
         self._xmos = np.arange(self._fiber_per_mos) * self._trace_distance * self._pixel_size
 
     def _trace_names(self):
-        return [f"BUNDLE_FIBRE_{bun+1}_{fib+1}"
+        return [f"Trace_Ap{fib + self._fiber_per_mos * bun}"
                 for bun in range(self._nbr_mos)
                 for fib in range(self._fiber_per_mos)]
 
