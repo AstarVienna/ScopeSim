@@ -171,7 +171,7 @@ def test_set_pc_matrix(rotation_ang=0, shear_ang=10):
 
 
 class TestUnresolvedSpectralTraceListInit:
-    def test_intit(self):
+    def test_init(self):
         sptl = spt.UnresolvedSpectralTraceList(filename="INS_mos_traces.fits")
         assert len(sptl.spectral_traces) == 5
         assert sptl.spectral_traces["TRACE_Ap0"].meta["trace_id"] == "TRACE_Ap0"
