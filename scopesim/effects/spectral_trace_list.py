@@ -14,7 +14,7 @@ from astropy.table import Table, Column, vstack
 from astropy import units as u
 
 from .effects import Effect
-from .spectral_trace_list_utils import SpectralTrace
+from .spectral_trace_list_utils import SpectralTrace, TraceGenerator
 from ..utils import from_currsys, check_keys, interp2
 from ..optics import image_plane_utils as ipu
 from ..base_classes import FieldOfViewBase, FOVSetupBase
@@ -546,3 +546,35 @@ class UnresolvedSpectralTraceList(SpectralTraceList):
                 x, y = trace.footprint()
                 import matplotlib.pyplot as plt
                 plt.plot(x, y)
+
+class MosaicSpectralTraceList(UnresolvedSpectralTraceList):
+    def __init__(self, **kwargs):
+        params = {"pixel_scale": "!INST.pixel_scale",  # [arcsec / pix]}
+                  "plate_scale": "!INST.plate_scale",  # [arcsec / mm]
+                  "wave_min": "!SIM.spectral.wave_min",  # [um]
+                  "wave_mid": "!SIM.spectral.wave_mid",  # [um]
+                  "wave_max": "!SIM.spectral.wave_max",  # [um]
+                  "distance_between_fibers": 8, #pixels
+                  "fiber_per_bundle" : 7,
+                  "n_bundles" : 2,
+                  "distance_between_bundles": 32, #pixels
+                  }
+        params.update(**kwargs)
+        super(SpectralTraceList, self).__init__(**params) 
+
+        self._pixel_scale = from_currsys(self.meta["pixel_scale"])
+        self._plate_scale = from_currsys(self.meta["plate_scale"])
+        self._pixel_size = self._pixel_scale / self._plate_scale
+
+
+        t = TraceGenerator(l_low = from_currsys(self.meta["wave_min"]),
+                           l_high = from_currsys(self.meta["wave_max"]),
+                           delta_lambda = from_currsys("!SIM.spectral.spectral_bin_width"),
+                           pixel_size = self._pixel_size,  # mm
+                           trace_distances = from_currsys(self.meta["distance_between_fibers"]),  # pixels
+                           fiber_per_mos = from_currsys(self.meta["fiber_per_bundle"]),
+                           nbr_mos = from_currsys(self.meta["n_bundles"]),
+                           mos_distance = from_currsys(self.meta["distance_between_bundles"]),  # pixels 
+        )
+        self._file = t.make_fits() 
+        super().make_spectral_traces()
