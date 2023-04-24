@@ -442,7 +442,7 @@ class UnresolvedSpectralTraceList(SpectralTraceList):
             params.update(self.meta)
             params["trace_id"] = row["description"]
             hdu = self._file[row["extension_id"]]
-            tbl = Table(hdu.data)
+            tbl = Table.read(hdu)
             scol = Column(name="s", unit="arcsec",
                           data=sorted([-1, 0, 1] * len(tbl)))
             tbl_big = vstack([tbl, tbl, tbl])
@@ -467,7 +467,8 @@ class UnresolvedSpectralTraceList(SpectralTraceList):
                     # find the xyz for the trace
                     wmin = fov.meta["wave_min"].value
                     wmax = fov.meta["wave_max"].value
-                    xs, ys, zs = self.get_xyz_for_trace(trace, spec, wmin, wmax)
+                    xs, ys, zs = self.get_xyz_for_trace(trace, spec, wmin, wmax,
+                                                        fov.meta["area"])
                     image = self.trace_to_image(xs, ys, zs)
                     pixel_size = self._pixel_size
                     hdr = ipu.header_from_list_of_xy(xs, ys, pixel_size, "D")
@@ -478,7 +479,7 @@ class UnresolvedSpectralTraceList(SpectralTraceList):
         return fov
 
     def get_xyz_for_trace(self, spec_trace, spectrum,
-                          wave_min=None, wave_max=None):
+                          wave_min=None, wave_max=None, area=1*u.m**2):
 
         # Define dispersion direction
         x = spec_trace.table[self.meta["x_colname"]]
@@ -494,9 +495,19 @@ class UnresolvedSpectralTraceList(SpectralTraceList):
             mask = (waves >= wave_min) * (waves <= wave_max)
             waves = waves[mask]
 
+        dwaves = np.diff(waves)
+        bin_widths = np.zeros_like(waves)
+        bin_widths[:-1] += 0.5 * dwaves
+        bin_widths[1:] += 0.5 * dwaves
+        bin_widths *= u.um
+
         xs = spec_trace.xilam2x([0] * len(waves), waves)
         ys = spec_trace.xilam2y([0] * len(waves), waves)
+        # This interpolation is dodgy. If waves has a coarser resolution than
+        # spectrum.waveset, the peaks of any emision lines are missed.
+        # .. todo: Fix this by
         zs = spectrum(waves * u.um)
+        zs = (zs * area * bin_widths).to(u.ph / u.s)
 
         return xs, ys, zs
 
@@ -525,3 +536,13 @@ class UnresolvedSpectralTraceList(SpectralTraceList):
         image[yp, xp1] = zs * xfrac1
 
         return image
+
+    def plot(self, which="input"):
+        if "in" in which:
+            for trace in self.spectral_traces.values():
+                trace.plot()
+        elif "proj" in which:
+            for trace in self.spectral_traces.values():
+                x, y = trace.footprint()
+                import matplotlib.pyplot as plt
+                plt.plot(x, y)

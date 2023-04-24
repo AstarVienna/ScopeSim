@@ -370,7 +370,7 @@ class TestMakeImage:
             plt.show()
 
 
-@pytest.mark.xfail(reason="revisit fov.waveset e.g. use make_cube waveset")
+# @pytest.mark.xfail(reason="revisit fov.waveset e.g. use make_cube waveset")
 class TestMakeSpectrum:
     def test_make_spectrum_from_table(self):
         src_table = so._table_source()            # 10x10" @ 0.2"/pix, [0.5, 2.5]m @ 0.02µm
@@ -432,9 +432,9 @@ class TestMakeSpectrum:
 
         assert in_sum == approx(out_sum)
 
-        if PLOTS:
+        if not PLOTS:
             waves = fov.waveset
-            plt.plot(waves, spec(waves))
+            plt.plot(waves, spec(waves), "r--")
             for spectrum in src_all.spectra:
                 plt.plot(waves, spectrum(waves))
             plt.show()

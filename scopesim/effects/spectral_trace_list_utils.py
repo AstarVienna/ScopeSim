@@ -403,13 +403,13 @@ class SpectralTrace:
             y = self.table[self.meta["y_colname"]][mask]
             plt.plot(x, y, 'o', c=c)
 
-            for wave in np.unique(waves):
-                xx = x[waves==wave]
-                xx.sort()
-                dx = xx[-1] - xx[-2]
-                plt.text(x[waves==wave].max() + 0.5 * dx,
-                         y[waves==wave].mean(),
-                         str(wave), va='center', ha='left')
+            # for wave in np.unique(waves):
+            #     xx = x[waves==wave]
+            #     xx.sort()
+            #     dx = xx[-1] - xx[-2]
+            #     plt.text(x[waves==wave].max() + 0.5 * dx,
+            #              y[waves==wave].mean(),
+            #              str(wave), va='center', ha='left')
 
 
             plt.gca().set_aspect("equal")

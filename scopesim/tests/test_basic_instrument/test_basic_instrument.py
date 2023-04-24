@@ -253,11 +253,36 @@ class TestObserveMosMode:
         imp_im = opt.image_planes[0].data
         det_im = hdul[1].data
 
-        if PLOTS:
+        if not PLOTS:
             plt.subplot(121)
             plt.imshow(imp_im)
             plt.subplot(122)
             plt.imshow(det_im)
+            plt.show()
+
+    def test_photon_flux_remains_constant(self):
+        wave = np.arange(0.7, 2.5, 0.001)
+        spec = np.ones(len(wave))
+        spec[25::50] += 1  # every 0.05µm, offset by 0.025µm
+        spec *= 1e3
+        src = sim.Source(lam=wave * u.um, spectra=spec,
+                         x=[-5, 5, 0, -5, 5],
+                         y=[-5, -5, 0, 5, 5],
+                         ref=[0]*5,
+                         weight=[1e-3]*5)
+
+        cmd = sim.UserCommands(use_instrument="basic_instrument",
+                               set_modes=["mos"])
+        opt = sim.OpticalTrain(cmd)
+        opt.observe(src)
+
+        imp_im = opt.image_planes[0].data
+
+        in_flux = 5*np.trapz(spec, wave)
+        out_flux = np.sum(imp_im)
+
+        if PLOTS:
+            plt.imshow(imp_im)
             plt.show()
 
 
