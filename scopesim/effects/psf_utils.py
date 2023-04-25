@@ -432,7 +432,7 @@ def _convolve2d_varying_kernel(image: npt.NDArray,
             if pixel_value != 0:
                 y = coordinates[1][j]
                 # Get kernel for current pixel
-                position = npt.NDArray((x, y))
+                position = np.array((x, y))
                 kernel = interpolator(kernel_grid=kernel_grid,
                                       position=position,
                                       check_bounds=check_bounds)

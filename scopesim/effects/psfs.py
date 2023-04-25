@@ -943,7 +943,7 @@ class GridFieldVaryingPSF(DiscretePSF):
         #         obj.image = obj.make_image_hdu().data
 
         if (hasattr(obj, "fields") and len(obj.fields) > 0) or (obj.hdu is not None):
-            old_shape = obj.image.shape
+            # old_shape = obj.image.shape
 
             # normalise kernel
             kernel_grid = self.get_kernel_grid(obj)
