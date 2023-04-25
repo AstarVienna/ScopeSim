@@ -5,6 +5,8 @@ scipy
 astropy
 matplotlib
 jupyter
+numba
+joblib
 
 docutils
 requests

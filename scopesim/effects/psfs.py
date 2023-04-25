@@ -1,5 +1,3 @@
-from typing import Optional
-
 import anisocado as aniso
 import numpy as np
 import numpy.typing as npt
@@ -7,13 +5,13 @@ from astropy import units as u
 from astropy.convolution import Gaussian2DKernel
 from astropy.io import fits
 from astropy.wcs import WCS
-from numba import njit, prange
 from scipy.interpolate import RectBivariateSpline
 from scipy.signal import convolve
 
 from . import psf_utils as pu
 from . import ter_curves_utils as tu
 from .effects import Effect
+from .psf_utils import convolve2d_varying_kernel
 from .. import utils
 from ..base_classes import ImagePlaneBase, FieldOfViewBase, FOVSetupBase
 
@@ -24,7 +22,7 @@ class PoorMansFOV:
         self.header = {"CDELT1": pixel_scale / 3600.,
                        "CDELT2": pixel_scale / 3600.,
                        "NAXIS1": 128,
-                       "NAXIS2": 128,}
+                       "NAXIS2": 128, }
         self.meta = utils.from_currsys("!SIM.spectral")
         self.wavelength = self.meta["wave_mid"] * u.um
         if not recursion_call:
@@ -41,7 +39,7 @@ class PSF(Effect):
         params = {"flux_accuracy": "!SIM.computing.flux_accuracy",
                   "sub_pixel_flag": "!SIM.sub_pixel.flag",
                   "z_order": [40, 640],
-                  "convolve_mode": "same",      # "full", "same"
+                  "convolve_mode": "same",  # "full", "same"
                   "bkg_width": -1,
                   "wave_key": "WAVE0",
                   "normalise_kernel": True,
@@ -67,7 +65,7 @@ class PSF(Effect):
         # 2. During observe: convolution
         elif isinstance(obj, self.convolution_classes):
             if ((hasattr(obj, "fields") and len(obj.fields) > 0) or
-                (obj.hdu is not None)):
+                    (obj.hdu is not None)):
                 kernel = self.get_kernel(obj).astype(float)
 
                 # apply rotational blur for field-tracking observations
@@ -77,7 +75,7 @@ class PSF(Effect):
                     kernel = pu.rotational_blur(kernel, rot_blur_angle)
 
                 # normalise psf kernel      KERNEL SHOULD BE normalised within get_kernel()
-                #if utils.from_currsys(self.meta["normalise_kernel"]) is True:
+                # if utils.from_currsys(self.meta["normalise_kernel"]) is True:
                 #    kernel /= np.sum(kernel)
                 #    kernel[kernel < 0.] = 0.
 
@@ -85,11 +83,6 @@ class PSF(Effect):
 
                 # subtract background level before convolving, re-add afterwards
                 bkg_level = pu.get_bkg_level(image, self.meta["bkg_width"])
-
-                # import plotly.express as px
-                # fig = px.imshow(image)
-                # fig.show()
-                np.save("i", image - bkg_level)
 
                 # do the convolution
                 mode = utils.from_currsys(self.meta["convolve_mode"])
@@ -118,7 +111,6 @@ class PSF(Effect):
                         obj.hdu.header["CRPIX2" + wcsid] += d_y / 2
 
         return obj
-
 
     def fov_grid(self, which="waveset", **kwargs):
         waveset = []
@@ -151,7 +143,6 @@ class PSF(Effect):
         return plt.gcf()
 
 
-
 ################################################################################
 # Analytical PSFs - Vibration, Seeing, NCPAs
 
@@ -166,6 +157,7 @@ class Vibration(AnalyticalPSF):
     """
     Creates a wavelength independent kernel image
     """
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.meta["z_order"] = [244, 744]
@@ -194,6 +186,7 @@ class NonCommonPathAberration(AnalyticalPSF):
     Needed: pixel_scale
     Accepted: kernel_width, strehl_drift
     """
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.meta["z_order"] = [241, 641]
@@ -220,7 +213,7 @@ class NonCommonPathAberration(AnalyticalPSF):
             max_sr = pu.wfe2strehl(self.total_wfe, self.meta["wave_max"])
 
             srs = np.arange(min_sr, max_sr, self.meta["strehl_drift"])
-            waves = 6.2831853 * self.total_wfe * (-np.log(srs))**-0.5
+            waves = 6.2831853 * self.total_wfe * (-np.log(srs)) ** -0.5
             waves = utils.quantify(waves, u.um).value
             waves = (list(waves) + [self.meta["wave_max"]]) * u.um
         else:
@@ -281,6 +274,7 @@ class SeeingPSF(AnalyticalPSF):
         [arcsec]
 
     """
+
     def __init__(self, fwhm=1.5, **kwargs):
         super().__init__(**kwargs)
 
@@ -434,6 +428,7 @@ class AnisocadoConstPSF(SemiAnalyticalPSF):
                 psf_side_length: 512
 
     """
+
     def __init__(self, **kwargs):
         super(AnisocadoConstPSF, self).__init__(**kwargs)
         params = {"z_order": [42, 652],
@@ -445,7 +440,7 @@ class AnisocadoConstPSF(SemiAnalyticalPSF):
 
         self.required_keys = ["filename", "strehl", "wavelength"]
         utils.check_keys(self.meta, self.required_keys, action="error")
-        self.nmRms      # check to see if it throws an error
+        self.nmRms  # check to see if it throws an error
 
         self._psf_object = None
         self._kernel = None
@@ -527,17 +522,17 @@ class AnisocadoConstPSF(SemiAnalyticalPSF):
         im = kernel
         r_sky = pixel_scale * im.shape[0]
         plt.imshow(im, norm=LogNorm(), origin='lower',
-                   extent= [-r_sky, r_sky, -r_sky, r_sky], **kwargs)
+                   extent=[-r_sky, r_sky, -r_sky, r_sky], **kwargs)
         plt.ylabel("[arcsec]")
 
         plt.subplot2grid((2, 2), (0, 1))
         x = kernel.shape[1] // 2
         y = kernel.shape[0] // 2
         r = 16
-        im = kernel[y-r:y+r, x-r:x+r]
+        im = kernel[y - r:y + r, x - r:x + r]
         r_sky = pixel_scale * im.shape[0]
         plt.imshow(im, norm=LogNorm(), origin='lower',
-                   extent= [-r_sky, r_sky, -r_sky, r_sky], **kwargs)
+                   extent=[-r_sky, r_sky, -r_sky, r_sky], **kwargs)
         plt.ylabel("[arcsec]")
         plt.gca().yaxis.set_label_position('right')
 
@@ -561,7 +556,6 @@ class AnisocadoConstPSF(SemiAnalyticalPSF):
         return plt.gcf()
 
 
-
 ################################################################################
 # Discrete PSFs - MAORY and co PSFs
 
@@ -580,6 +574,7 @@ class FieldConstantPSF(DiscretePSF):
     For spectroscopy, the a wavelength-dependent PSF cube is built, where for each
     wavelength the reference PSF is scaled proportional to wavelength.
     """
+
     def __init__(self, **kwargs):
         # sub_pixel_flag and flux_accuracy are taken care of in PSF base class
         super().__init__(**kwargs)
@@ -589,7 +584,7 @@ class FieldConstantPSF(DiscretePSF):
 
         self.meta["z_order"] = [262, 662]
         self._waveset, self.kernel_indexes = pu.get_psf_wave_exts(
-                                              self._file, self.meta["wave_key"])
+            self._file, self.meta["wave_key"])
         self.current_layer_id = None
         self.current_ext = None
         self.current_data = None
@@ -631,7 +626,7 @@ class FieldConstantPSF(DiscretePSF):
                     self.kernel = pu.rescale_kernel(self.kernel, pix_ratio)
 
                 if ((fov.header["NAXIS1"] < hdr["NAXIS1"]) or
-                    (fov.header["NAXIS2"] < hdr["NAXIS2"])):
+                        (fov.header["NAXIS2"] < hdr["NAXIS2"])):
                     self.kernel = pu.cutout_kernel(self.kernel, fov.header)
 
         return self.kernel
@@ -646,7 +641,7 @@ class FieldConstantPSF(DiscretePSF):
 
         lam = fov.hdu.header["CDELT3"] * (1 + np.arange(fov.hdu.header["NAXIS3"])
                                           - fov.hdu.header["CRPIX3"]) \
-                                          + fov.hdu.header["CRVAL3"]
+              + fov.hdu.header["CRVAL3"]
 
         # adapt the size of the output cube to the FOV's spatial shape
         nxpsf = min(512, 2 * nxfov + 1)
@@ -665,7 +660,7 @@ class FieldConstantPSF(DiscretePSF):
 
         psfwcs = WCS(hdr)
         psf = self._file[ext].data
-        psf = psf/psf.sum()         # normalisation of the input psf
+        psf = psf / psf.sum()  # normalisation of the input psf
         nxin, nyin = psf.shape
 
         # We need linear interpolation to preserve positivity. Might think of
@@ -689,7 +684,7 @@ class FieldConstantPSF(DiscretePSF):
                                 psf_wave_pixscale]
             xpsf, ypsf = psfwcs.all_world2pix(xworld, yworld, 0)
             outcube[i,] = (ipsf(ypsf, xpsf, grid=False)
-                           * fov_pixel_scale**2 / psf_wave_pixscale**2)
+                           * fov_pixel_scale ** 2 / psf_wave_pixscale ** 2)
 
         self.kernel = outcube.reshape((lam.shape[0], nypsf, nxpsf))
         # fits.writeto("test_psfcube.fits", data=self.kernel, overwrite=True)
@@ -707,6 +702,7 @@ class FieldVaryingPSF(DiscretePSF):
         Default 1e-3. Level of flux conservation during rescaling of kernel
 
     """
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
@@ -741,7 +737,7 @@ class FieldVaryingPSF(DiscretePSF):
                 for kernel, mask in kernels_masks:
 
                     # renormalise the kernel if needs be
-                    kernel[kernel<0.] = 0.
+                    kernel[kernel < 0.] = 0.
                     sum_kernel = np.sum(kernel)
                     if abs(sum_kernel - 1) > self.meta["flux_accuracy"]:
                         kernel /= sum_kernel
@@ -844,144 +840,254 @@ class FieldVaryingPSF(DiscretePSF):
         return super().plot(PoorMansFOV())
 
 
-@njit(parallel=True)
-def _linear_interpolation(grid: np.array, position: np.array) -> np.array:
-    """Bilinear interpolation of a grid of 2D arrays at a given position.
+# [JA] TODO: The following docstrings are incomplete in some places (e.g. apply_to), mostly due the method and
+#  attribute definition being quite obfuscated throughout the codebase (e.g. meta) and little to no type hints being
+#  provided. Little can be done unless this aspects are improved upon.
+class GridFieldVaryingPSF(DiscretePSF):
+    """A PSF that varies across the field, defined by a regular grid of PSFs at different positions.
 
-    This function interpolates a grid of 2D arrays at a given position using a weighted mean (i.e. bi-linear
-    interpolation). The grid object should be of shape (M, N, I, J), with MxN the shape of the grid of arrays and IxJ
-    the shape of the array at each point.
+    This effect specifies a field-varying PSF which is defined at different positions in a regular grid in the field.
+    Applying this effect to a Field of View object constitutes the convolution of the respective image with an effective
+    PSF at each pixel, which is computed by interpolating the PSFs defined at discrete grid points.
 
-    @param grid: An array with shape `(M, N, I, J)` defining a `MxN` grid of 2D arrays to be interpolated.
-    @param position: An array containing the position in the `MxN` at which the resulting 2D array is computed.
-    @return: An IxJ array at the given position obtained by interpolation.
+    Parameters
+    ----------
+    ...
+
+    Attributes
+    ----------
+    ...
+
+    Methods
+    -------
+    normalise_kernel_grid
+        Normalises each kernel in a kernel grid by its sum.
+    get_kernel_grid
+        Find the nearest wavelength and build PSF kernel grid from file.
+    apply_to
+        TODO
     """
 
-    # Find the closest grid points to the given position
-    x, y = position
-    x0 = int(x)
-    y0 = int(y)
-    x1 = x0 + 1
-    y1 = y0 + 1
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
 
-    # TODO: Check for out of bounds positions
+        self.meta["z_order"] = [262, 662]  # [JA] TODO: Is this ok?
 
-    # Get the four closest arrays to the given position
-    psf00 = grid[x0, y0, :, :]
-    psf01 = grid[x0, y1, :, :]
-    psf10 = grid[x1, y0, :, :]
-    psf11 = grid[x1, y1, :, :]
+        self._waveset, self._kernel_indexes = pu.get_psf_wave_exts(self._file, self.meta["wave_key"])
+        self._current_layer_id = None  # The index of the PSF layer used previously
+        self._kernel = None  # Cached PSF grid
 
-    # Define the weights for each grid point
-    dx = x - x0
-    dy = y - y0
-    inv_dx = 1 - dx
-    inv_dy = 1 - dy
+    def normalise_kernel_grid(self, grid: npt.NDArray, *, force_normalise: bool = False) -> npt.NDArray:
+        """Normalises each kernel in a kernel grid by its sum.
 
-    a = inv_dx * inv_dy
-    b = dx * inv_dy
-    c = inv_dx * dy
-    d = dx * dy
+        Normalises the integral of each kernel in a kernel grid to unity. This normalisation is only performed if the
+        flux accuracy is not respected or the `force_normalise` flag is set to `True`.
 
-    # Construct support array and retrieve pixel values by interpolating
-    M, N, I, J = grid.shape
-    output = np.empty((I, J), dtype=grid.dtype)
-    for i in prange(I):
-        for j in range(J):
-            output[i, j] = (
-                    a * psf00[i, j]
-                    + b * psf01[i, j]
-                    + c * psf10[i, j]
-                    + d * psf11[i, j]
-            )
-    return output
+        Parameters
+        ----------
+        grid : npt.NDArray
+            An array with shape `(M, N, I, J)` defining a `MxN` grid of 2D kernels to be normalised.
+        force_normalise : bool
+            Whether to normalise the kernel grid unheeded to whether the flux accuracy is respected.
 
-
-class GridFieldVaryingPSF(DiscretePSF):
-    def __init__(self,
-                 psf_grid: npt.ArrayLike,
-                 mode: str = "linear"):
-
-        self.grid = np.array(psf_grid)
-        self.mode = mode
-
-    @staticmethod
-    @njit(parallel=True)
-    def _convolve2d_varying_psf(grid: np.array,
-                                img: np.array,
-                                interpolator):
-
-        # Get image and kernel dimensions
-        img_i, img_j = img.shape
-        grid_i, grid_j, psf_i, psf_j = grid.shape
-
-        # Add padding to the image (note: Numba doesn't support np.pad)
-        padded_img = np.zeros((img_i + psf_i - 1, img_j + psf_j - 1), dtype=img.dtype)
-        padded_img[psf_i // 2:psf_i // 2 + img_i, psf_j // 2:psf_j // 2 + img_j] = img
-
-        # Create output array
-        output = np.empty_like(img)
-
-        # Compute PSF and convolve for each pixel
-        for i in prange(img_i):
-            for j in range(img_j):
-                # Get PSF for current pixel
-                psf = interpolator(grid, np.array((psf_i, psf_j)))  # [JA] TODO: Coordinate palceholders here
-
-                # Compute convolution for current pixel
-                pixel_sum = 0
-                for ki in prange(psf_i):
-                    for kj in range(psf_j):
-                        pixel_sum += padded_img[i + ki][j + kj] * psf[ki][kj]
-                output[i][j] = pixel_sum
-
-        return output
-
-    def apply_to(self, fov, mode: Optional[str] = None, **kwargs):
-        # .. todo: add in field rotation
-        # .. todo: add in 3D cubes
-        # accept "full", "dit", "none"
-
-        # Select interpolation mode
-        mode = str(mode if mode else self.mode).lower()
-        if mode == "linear":
-            interpolator = _linear_interpolation
-        elif mode == "nearest":
-            # TODO: Finish nearest interpolator to enable this
-            raise NotImplementedError(f"Mode \'{mode}\' under development.")
+        Returns
+        -------
+        npt.NDArray
+            The input kernel grid with each grid normalised to unity.
+        """
+        kernel_sum = np.sum(grid, axis=(2, 3), keepdims=True)
+        if not force_normalise and np.all(abs(kernel_sum - 1) < self.meta["flux_accuracy"]):
+            return grid
         else:
-            raise NotImplementedError(f"Mode \'{mode}\' not implemented.")
+            return grid / kernel_sum
 
+    def _setup_fov(self, obj: FOVSetupBase):
+        """Setups effect with Field of View object for subsequent observation.
+
+        Parameters
+        ----------
+        obj
+
+        Returns
+        -------
+        obj
+
+        """
+        waveset = self._waveset
+        if len(waveset) != 0:
+            waveset_edges = 0.5 * (waveset[:-1] + waveset[1:])
+            obj.split("wave", utils.quantify(waveset_edges, u.um).value)
+        return obj
+
+    def _apply_to_fov(self, obj, *, normalise_kernel: bool = True, interpolation_mode="linear"):
+        """Applies PSF to provided Field of View object.
+
+        Parameters
+        ----------
+        obj
+            ...
+        normalise_kernel : bool
+            Whether to force normalise the kernel grid unheeded to whether the flux accuracy is respected
+        interpolation_mode : str
+            The interpolation mode to be used to interpolate the convolution kernel.
+
+        Returns
+        -------
+        obj
+
+        """
         # Check if there are any fov.fields to apply a psf to
-        if isinstance(fov, FieldOfViewBase):
-            if len(fov.fields) > 0:
-                if fov.image is None:
-                    fov.image = fov.make_image_hdu().data
+        # [JA] TODO: Check this alternative condition. Which is correct?
+        # if len(obj.fields) > 0:
+        #     if obj.image is None:
+        #         obj.image = obj.make_image_hdu().data
 
-                old_shape = fov.image.shape
+        if (hasattr(obj, "fields") and len(obj.fields) > 0) or (obj.hdu is not None):
+            old_shape = obj.image.shape
 
-                # [JA] TODO: Renormalise kernel
-                # kernel[kernel < 0.] = 0.
-                # sum_kernel = np.sum(kernel)
-                # if abs(sum_kernel - 1) > self.meta["flux_accuracy"]:
-                #     kernel /= sum_kernel
+            # normalise kernel
+            kernel_grid = self.get_kernel_grid(obj)
+            kernel_grid = self.normalise_kernel_grid(kernel_grid, force_normalise=normalise_kernel)
 
-                # kernel = kernel.astype(float)
-                image = fov.image.astype(float)
-                canvas = self._convolve2d_varying_psf(self.grid, image, interpolator)
+            # image = obj.image.astype(float)
+            image = obj.hdu.data.astype(float)
 
-                # [JA] Is the following necessary?
-                # reset WCS header info
-                new_shape = canvas.shape
-                fov.image = canvas
+            # Get image and kernel dimensions and positions
+            img_m, img_n = image.shape
+            unit_factor = u.Unit(obj.header["CUNIT1"].lower()).to(u.deg)
+            img_coors = utils.GridCoordinates(m=img_m,
+                                              n=img_n,
+                                              x0=obj.header["CRVAL1"] * unit_factor,
+                                              y0=obj.header["CRVAL2"] * unit_factor,
+                                              dx=obj.header["CDELT1"] * unit_factor,
+                                              dy=obj.header["CDELT2"] * unit_factor,
+                                              i0=obj.header["CRPIX1"],
+                                              j0=obj.header["CRPIX2"])
 
-                # ..todo: careful with which dimensions mean what
-                if "CRPIX1" in fov.header:
-                    fov.header["CRPIX1"] += (new_shape[0] - old_shape[0]) / 2
-                    fov.header["CRPIX2"] += (new_shape[1] - old_shape[1]) / 2
+            hdr = self._file[self._current_layer_id].header
+            unit_factor = u.Unit(hdr.get("CUNIT1").lower()).to(u.deg) if hdr.get("CUNIT1") else 1
+            grid_m, grid_n, psf_m, psf_n = kernel_grid.shape
+            grid_coors = utils.GridCoordinates(m=grid_m,
+                                               n=grid_n,
+                                               x0=hdr["CRVAL1"] * unit_factor,
+                                               y0=hdr["CRVAL2"] * unit_factor,
+                                               dx=hdr["CDELT1"] * unit_factor,
+                                               dy=hdr["CDELT2"] * unit_factor,
+                                               i0=hdr["CRPIX1"],
+                                               j0=hdr["CRPIX2"])
 
-                if "CRPIX1D" in fov.header:
-                    fov.header["CRPIX1D"] += (new_shape[0] - old_shape[0]) / 2
-                    fov.header["CRPIX2D"] += (new_shape[1] - old_shape[1]) / 2
+            coordinates = img_coors.pix_in_reference_frame(grid_coors)
 
-        return fov
+            # Convolve
+            canvas = convolve2d_varying_kernel(image=image,
+                                               kernel_grid=kernel_grid,
+                                               coordinates=coordinates,
+                                               mode=interpolation_mode)
+
+            # [JA] TODO: In some classes, obj.hdu.data is updated; in other, it's the obj.image. Which is correct?
+            obj.hdu.data = canvas
+
+            # reset WCS header info
+            new_shape = canvas.shape
+
+            # [JA] TODO: Implement this
+            # # ..todo: careful with which dimensions mean what
+            # if "CRPIX1" in fov.header:
+            #     fov.header["CRPIX1"] += (new_shape[0] - old_shape[0]) / 2
+            #     fov.header["CRPIX2"] += (new_shape[1] - old_shape[1]) / 2
+            #
+            # if "CRPIX1D" in fov.header:
+            #     fov.header["CRPIX1D"] += (new_shape[0] - old_shape[0]) / 2
+            #     fov.header["CRPIX2D"] += (new_shape[1] - old_shape[1]) / 2
+
+        return obj
+
+    def get_kernel_grid(self, fov) -> npt.NDArray:
+        """Find the nearest wavelength and build PSF kernel grid from file.
+
+        Given a Field of View object, the closest wavelength PSF grid is retrieved from the input file and, if needed,
+        the PSFs are rescaled to match the FOV pixel scale.
+
+        Parameters
+        ----------
+        fov
+            The Field of View object to be convolved with the PSF grid.
+
+        Returns
+        -------
+        npt.NDArray
+            The PSF grid to be used for the provided Field of View object, rescaled to its pixel scale.
+
+        Raises
+        ------
+        NotImplementedError
+            If the FOV object does not have 2 axis.
+        """
+        ii = pu.nearest_index(fov.wavelength, self._waveset)
+        ext = self._kernel_indexes[ii]
+
+        # Update kernel
+        if ext != self._current_layer_id:
+            if fov.hdu.header['NAXIS'] != 2:
+                raise NotImplementedError("Only FOV with 2 axis supported for now.")
+
+            self._kernel = self._file[ext].data
+            self._current_layer_id = ext
+            hdr = self._file[ext].header
+
+            # compare kernel and fov pixel scales, rescale if needed
+            if "CUNIT3" in hdr:
+                unit_factor = u.Unit(hdr["CUNIT1"].lower()).to(u.deg)
+            else:
+                unit_factor = 1
+
+            kernel_pixel_scale = hdr["CDELT3"] * unit_factor
+            fov_pixel_scale = fov.header["CDELT1"]
+
+            # rescaling kept inside loop to avoid rescaling for every fov
+            pix_ratio = kernel_pixel_scale / fov_pixel_scale
+            if abs(pix_ratio - 1) > self.meta["flux_accuracy"]:  # [JA] TODO: Does this make sense?
+                kernel_center_pixel = (hdr["CRPIX3"], hdr["CRPIX4"])
+                self._kernel = utils.rescale_array_grid(self._kernel,
+                                                        center_pixel=kernel_center_pixel,
+                                                        origin_pixel_scale=kernel_pixel_scale,
+                                                        target_pixel_scale=fov_pixel_scale)
+            # [JA] TODO: fix this
+            # if ((fov.header["NAXIS1"] < hdr["NAXIS3"]) or
+            #         (fov.header["NAXIS2"] < hdr["NAXIS4"])):
+            #     self._kernel = pu.cutout_kernel(self._kernel, fov.header)
+
+        return self._kernel
+
+    def apply_to(self, obj, **kwargs):
+        """TODO docstring
+
+        Parameters
+        ----------
+        obj
+            ...
+
+        Returns
+        -------
+        obj
+            ...
+
+        Raises
+        ------
+        ValueError
+            If `obj` is not of type `FOVSetupBase` or doesn't match one of `self.convolution_classes`.
+        """
+        # [JA] TODO: Write unified docstring for PSF classes
+
+        # 1. During setup of the FieldOfViews
+        if isinstance(obj, FOVSetupBase) and self._waveset is not None:
+            obj = self._setup_fov(obj)
+        # 2. During observe: convolution
+        elif isinstance(obj, self.convolution_classes):
+            obj = self._apply_to_fov(obj,
+                                     normalise_kernel=self.meta.get("normalise_kernel", True),
+                                     interpolation_mode=self.meta.get("interpolation_mode", "linear"))
+        else:
+            raise ValueError("\'obj\' should be of type \'FOVSetupBase\' or match one of \'self.convolution_classes\'.")
+
+        return obj

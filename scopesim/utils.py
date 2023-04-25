@@ -1,23 +1,28 @@
 """
 Helper functions for ScopeSim
 """
+from __future__ import annotations
+
+import logging
 import math
 import os
-from pathlib import Path
 import sys
-import logging
-import logging
 from collections import OrderedDict
-from docutils.core import publish_string
 from copy import deepcopy
+from pathlib import Path
+from typing import Tuple, Union, Optional, List
 
-import requests
-import yaml
 import numpy as np
+import numpy.typing as npt
+import requests
+import scipy as sp
+import yaml
 from astropy import units as u
-from astropy.io import fits
 from astropy.io import ascii as ioascii
+from astropy.io import fits
 from astropy.table import Column, Table
+from docutils.core import publish_string
+from joblib import Parallel, delayed
 
 from . import rc
 
@@ -1064,3 +1069,394 @@ def return_latest_github_actions_jobs_status(owner_name="AstarVienna", repo_name
         params_list += [params]
 
     return params_list
+
+
+class GridAxis:
+    """Class defining a grid axis coordinates and transformations between pixel coordinates and real coordinates.
+
+    Parameters
+    ----------
+    n : int
+        The dimension of the axis.
+    x0 : float
+        The central coordinate - default `0``
+    i0 : Optional[int]
+        The central pixel coordinate - default `n//2`.
+    dx : float
+        The pixel spacing - default `1.0`.
+
+    Attributes
+    ----------
+    n : int
+        The dimension of the axis.
+    x0 : float
+        The central corodinate.
+    i0 : Optional[int]
+        The central pixel coordinate.
+    dx : float
+        The pixel spacing.
+
+    Methods
+    -------
+    pos_to_pix
+        Transforms real reference frame position to pixel positions.
+    pix_to_pos
+        Transforms pixel positions to real reference frame positions.
+    pix_in_reference_frame
+        Transforms pixel positions from one reference frame to another.
+    """
+
+    def __init__(self, n: int, *, x0: float = 0,  i0: Optional[int] = None, dx: float = 1.0):
+        """
+        Parameters
+        ----------
+        n : int
+            The dimension of the axis.
+        x0 : float
+            The central corodinate - default `0``
+        i0 : Optional[int]
+            The central pixel coordinate - default `n//2`.
+        dx : float
+            The pixel spacing - default `1.0`.
+        """
+        self.n = n
+        self.x0 = x0
+        self.i0 = i0 if i0 else n // 2
+        self.dx = dx
+
+    def pos_to_pix(self, pos: Union[float,  npt.NDArray]) -> npt.NDArray:
+        """Transforms real reference frame position to pixel positions.
+
+        Parameters
+        ----------
+        pos :
+            A single or an array of positions in the reference frame.
+
+        Returns
+        -------
+        npt.NDArray
+            The pixel position corresponding to the provided reference frame position.
+        """
+        pos = np.array(pos, ndmin=1)
+        return (pos - self.x0) / self.dx + self.i0
+
+    def pix_to_pos(self, pix: Union[float, npt.NDArray]) -> npt.NDArray:
+        """Transforms pixel positions to real reference frame positions.
+
+        Parameters
+        ----------
+        pix : Union[float, npt.NDArray]
+            A single or an array of pixel positions.
+
+        Returns
+        -------
+        npt.NDArray
+            The position in the reference frame corresponding to the provided pixel positions.
+        """
+        pix = np.array(pix, ndmin=1)
+        return self.x0 + (pix - self.i0) * self.dx
+
+    def pix_in_reference_frame(self,
+                               other: GridAxis,
+                               pix: Optional[Union[float,  npt.NDArray]] = None) -> npt.NDArray:
+        """Transforms pixel positions from one reference frame to another.
+
+        Parameters
+        ----------
+        other : GridAxis
+            The coordinate axis onto which the pixel coordinates are projected.
+        pix : Optional[Union[float,  npt.NDArray]]
+            The pixel positions to be evaluated. If not provided, all pixel positions are evaluated.
+
+        Returns
+        -------
+        npt.NDArray
+            The pixel coordinates projected in the other reference frame.
+        """
+        pix = np.array(pix, ndmin=1) if pix else np.arange(self.n)
+        return (self.x0 + (pix - self.i0) * self.dx - other.x0)/other.dx + other.i0
+
+    @property
+    def coors(self) -> npt.NDArray:
+        """Axis coordinates"""
+        return self.pix_to_pos(np.arange(self.n))
+
+    @property
+    def pix(self) -> npt.NDArray:
+        """Axis pixel coordinates"""
+        return np.arange(self.n) - self.i0
+
+    @property
+    def shape(self) -> Tuple[float]:
+        """Axis shape"""
+        return self.n,
+
+
+class GridCoordinates:
+    """Class defining the coordinates of a grid and transformations between pixel coordinates and real coordinates.
+
+    Parameters
+    ----------
+    m : int
+        The first dimension of the grid.
+    n : int
+        The second dimension of the grid.
+    x0 : float
+        The central coordinate of the first dimension - default `0`.
+    y0 : float
+        The central coordinate of the second dimension - default `0`.
+    i0 : Optional[int]
+        The central pixel coordinate of the first dimension - default `m//2`.
+    j0 : Optional[int]
+        The central pixel coordinate of the second dimension - default `n//2`.
+    dx : float
+        The pixel spacing of the first dimension - default `1.0`.
+    dy : float
+        The pixel spacing of the second dimension - default `1.0`.
+
+    Attributes
+    ----------
+    None
+
+    Methods
+    -------
+    pos_to_pix
+        Transforms real reference frame positions to pixel positions.
+    pix_to_pos
+        Transforms pixel positions to real reference frame positions.
+    pix_in_reference_frame
+        Transforms pixel positions from one reference frame to another.
+    """
+
+    def __init__(self,
+                 m: int, n: int,
+                 *,
+                 x0: float = 0, y0: float = 0,
+                 i0: Optional[int] = None, j0: Optional[int] = None,
+                 dx: float = 1.0, dy: float = 1.0):
+        """
+        Parameters
+        ----------
+        m : int
+            The first dimension of the grid.
+        n : int
+            The second dimension of the grid.
+        x0 : float
+            The central coordinate of the first dimension - default `0`.
+        y0 : float
+            The central coordinate of the second dimension - default `0`.
+        i0 : Optional[int]
+            The central pixel coordinate of the first dimension - default `m//2`.
+        j0 : Optional[int]
+            The central pixel coordinate of the second dimension - default `n//2`.
+        dx : float
+            The pixel spacing of the first dimension - default `1.0`.
+        dy : float
+            The pixel spacing of the second dimension - default `1.0`.
+        """
+        i0 = i0 if i0 else m // 2
+        j0 = j0 if j0 else n // 2
+        self._x_axis = GridAxis(n=m, x0=x0, i0=i0, dx=dx)
+        self._y_axis = GridAxis(n=n, x0=y0, i0=j0, dx=dy)
+
+    @property
+    def x(self) -> GridAxis:
+        """X GridAxis object"""
+        return self._x_axis
+
+    @property
+    def y(self) -> GridAxis:
+        """Y GridAxis object"""
+        return self._y_axis
+
+    @property
+    def shape(self) -> Tuple:
+        """Grid shape"""
+        return self.x.shape + self.y.shape
+
+    @property
+    def i(self) -> npt.NDArray:
+        """X pixel coordinates"""
+        return self.x.pix
+
+    @property
+    def j(self) -> npt.NDArray:
+        """Y pixel coordinates"""
+        return self.y.pix
+
+    def pos_to_pix(self, x:  Union[float,  npt.NDArray], y:  Union[float,  npt.NDArray]) -> npt.NDArray:
+        """Transforms real reference frame positions to pixel positions.
+
+        Parameters
+        ----------
+        x : float
+            A single or an array of X positions in the reference frame.
+        y : float
+            A single or an array of Y position in the reference frame.
+
+        Returns
+        -------
+        npt.NDArray
+            The pixel position corresponding to the provided reference frame position.
+        """
+        return np.array([self.x.pos_to_pix(x), self.y.pos_to_pix(y)])
+
+    def pix_to_pos(self, i: Union[float, npt.NDArray], j: Union[float, npt.NDArray]) -> npt.NDArray:
+        """Transforms pixel positions to real reference frame positions.
+
+        Parameters
+        ----------
+        i : Union[float, npt.NDArray]
+            A single or an array of X pixel positions.
+        j : Union[float, npt.NDArray]
+            A single or an array of Y pixel positions.
+
+        Returns
+        -------
+        npt.NDArray
+            The position in the reference frame corresponding to the provided pixel positions.
+        """
+        return np.array([self.x.pix_to_pos(i), self.y.pix_to_pos(j)])
+
+    def pix_in_reference_frame(self,
+                               other: GridCoordinates,
+                               i: Optional[Union[float, npt.NDArray]] = None,
+                               j: Optional[Union[float, npt.NDArray]] = None,
+                               grid: bool = False) -> List[npt.NDArray]:
+        """Transforms pixel positions from one reference frame to another.
+
+        Parameters
+        ----------
+        other : GridCoordinates
+            The coordinate reference frame onto which the pixel coordinates are projected.
+        i : Optional[Union[float, npt.NDArray]]
+            The X axis pixel positions to be evaluated. If not provided, all pixel positions are evaluated.
+        j : Optional[Union[float, npt.NDArray]]
+            The Y axis pixel positions to be evaluated. If not provided, all pixel positions are evaluated.
+        grid : bool
+            If `True` the return is a meshgrid instead of only the axis coordinates.
+
+        Returns
+        -------
+        List[npt.NDArray]
+            The pixel coordinates or a meshgrid of pixel coordinates projected in the other reference frame.
+        """
+        i_proj = self.x.pix_in_reference_frame(other.x, i)
+        j_proj = self.y.pix_in_reference_frame(other.y, j)
+
+        if grid:
+            return np.meshgrid(i_proj, j_proj)
+        else:
+            return [i_proj, j_proj]
+
+
+def rescale_array(array: npt.ArrayLike,
+                  array_x: npt.ArrayLike,
+                  array_y: npt.ArrayLike,
+                  target_x: npt.ArrayLike,
+                  target_y: npt.ArrayLike,
+                  *,
+                  normalize: bool = True) -> npt.NDArray:
+    """Rescales an array to the desired axis coordinates.
+
+    Parameters
+    ----------
+    array : npt.ArrayLike
+        The input array to be rescaled.
+    array_x : npt.ArrayLike
+        The coordinates of the X axis of the input array.
+    array_y : npt.ArrayLike
+        The coordinates of the X axis of the input array.
+    target_x : npt.ArrayLike
+        The desired coordinates of the X axis after rescaling.
+    target_y : npt.ArrayLike
+        The desired coordinates of the X axis after rescaling.
+    normalize : bool
+        Whether to normalize the array by its sum.
+
+    Returns
+    -------
+    npt.NDArray
+        The rescaled array.
+    """
+    interpolator = sp.interpolate.RectBivariateSpline(x=array_x, y=array_y, z=array, kx=1, ky=1)
+    rescaled_array = interpolator(x=target_x, y=target_y, grid=False)
+    if normalize:
+        rescaled_array *= np.sum(array) / np.sum(rescaled_array)
+    return rescaled_array
+
+
+def rescale_array_grid(grid: npt.NDArray,
+                       center_pixel: npt.NDArray,
+                       origin_pixel_scale: float,
+                       target_pixel_scale: float) -> npt.NDArray:
+    """Rescales each array in a grid of arrays to the desired pixel scale.
+
+    Parameters
+    ----------
+    grid : npt.NDArray
+        An array with shape `(M, N, I, J)` defining a `MxN` grid of 2D arrays to be rescaled.
+    center_pixel : npt.NDArray
+        The pixel coordinates defining the center pixel position of each array
+    origin_pixel_scale : float
+        The pixel width of the input grid.
+    target_pixel_scale : float
+        The desired pixel width for the output grid.
+
+    Returns
+    -------
+    npt.NDArray
+        A `MxN` grid of 2D arrays rescaled by interpolation to the desired pixel_scale.
+    """
+    # [JA] TODO: Check what happens if center pixel is not integer
+    grid_i, grid_j, array_i, array_j = grid.shape
+
+    array_x = (np.arange(start=0, stop=array_i, step=1) - center_pixel[0]) * origin_pixel_scale
+    array_y = (np.arange(start=0, stop=array_j, step=1) - center_pixel[1]) * origin_pixel_scale
+
+    target_x = np.arange(start=int(array_x[0] / target_pixel_scale) * target_pixel_scale,
+                         stop=int(array_x[-1] / target_pixel_scale) * target_pixel_scale,
+                         step=target_pixel_scale)
+    target_y = np.arange(start=int(array_y[0] / target_pixel_scale) * target_pixel_scale,
+                         stop=int(array_y[-1] / target_pixel_scale) * target_pixel_scale,
+                         step=target_pixel_scale)
+    target_shape = (target_x.size, target_y.size)
+
+    target_x, target_y = np.meshgrid(target_x, target_y, indexing='ij')
+
+    # Flatten the input grid along the first two dimensions (i, j)
+    flat_input_grid = grid.reshape((-1, array_i, array_j))
+
+    # Use joblib to rescale the arrays in parallel
+    rescaled_arrays = Parallel(n_jobs=-1)(delayed(rescale_array)(array=array,
+                                                                 array_x=array_x,
+                                                                 array_y=array_y,
+                                                                 target_x=target_x,
+                                                                 target_y=target_y) for array in flat_input_grid)
+
+    # Combine the zoomed arrays back into a single grid
+    output_grid = np.array(rescaled_arrays).reshape((grid_i, grid_j, *target_shape))
+    return output_grid
+
+
+def normalise_array_grid(grid: npt.ArrayLike) -> npt.NDArray:
+    """Normalizes each array in a grid of arrays by its sum.
+
+    Parameters
+    ----------
+    grid : npt.ArrayLike
+        An array with shape `(M, N, I, J)` defining a `MxN` grid of 2D arrays to be normalised.
+
+    Returns
+    -------
+    npt.NDArray
+        The input grid with each array normalized by its sum to unity.
+    """
+    grid = np.array(grid)
+
+    # Calculate the sum along the arrays
+    grid_sum = np.sum(grid, axis=(2, 3), keepdims=True)
+
+    # Apply normalization factor
+    normalized_grid = grid / grid_sum
+    return normalized_grid

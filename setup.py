@@ -52,6 +52,8 @@ def setup_package():
                             "scipy>=1.0.0",
                             "astropy>=2.0",
                             "matplotlib>=1.5",
+                            "numba",
+                            "joblib",
 
                             "docutils",
                             "requests>=2.20",
