@@ -8,6 +8,9 @@ optics.spectral_trace_SpectralTrace objects to a FieldOfView.
 from os import path as pth
 import numpy as np
 
+from matplotlib import pyplot as plt
+from matplotlib._pylab_helpers import Gcf
+
 from astropy.io import fits
 from astropy.table import Table
 from astropy.wcs import WCS
@@ -329,15 +332,13 @@ class SpectralTraceList(Effect):
         if wave_max is None:
             wave_max = from_currsys("!SIM.spectral.wave_max")
 
-        from matplotlib import pyplot as plt
-        from matplotlib._pylab_helpers import Gcf
         if len(Gcf.figs) == 0:
             plt.figure(figsize=(12, 12))
 
         if self.spectral_traces is not None:
             clrs = "rgbcymk" * (1 + len(self.spectral_traces) // 7)
-            for spt, c in zip(self.spectral_traces.values(), clrs):
-                spt.plot(wave_min, wave_max, c=c)
+            for spt, col in zip(self.spectral_traces.values(), clrs):
+                spt.plot(wave_min, wave_max, c=col)
 
         return plt.gcf()
 
@@ -346,16 +347,14 @@ class SpectralTraceList(Effect):
         return self.__str__()
 
     def __str__(self):
-        msg = 'SpectralTraceList: "{}" : {} trace' \
-              ''.format(self.meta.get("name"), len(self.spectral_traces))
-        if len(self.spectral_traces) != 1:
+        name = self.meta.get("name")
+        numtrace = len(self.spectral_traces)
+        msg = f'SpectralTraceList: "{name}" : {numtrace} trace'
+        if numtrace != 1:
             msg += 's'
         wave_min = from_currsys(self.meta.get('wave_min'))
         wave_max = from_currsys(self.meta.get('wave_max'))
-        msg += '\n  wave_min: {} um   wave_max: {} um' \
-            ''.format(wave_min, wave_max)
-            #''.format(self.meta.get('wave_min'), self.meta.get('wave_max'))
-
+        msg += f'\n  wave_min: {wave_min} um   wave_max: {wave_max} um'
         return msg
 
 
