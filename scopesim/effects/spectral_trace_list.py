@@ -350,8 +350,12 @@ class SpectralTraceList(Effect):
               ''.format(self.meta.get("name"), len(self.spectral_traces))
         if len(self.spectral_traces) != 1:
             msg += 's'
+        wave_min = from_currsys(self.meta.get('wave_min'))
+        wave_max = from_currsys(self.meta.get('wave_max'))
         msg += '\n  wave_min: {} um   wave_max: {} um' \
-            ''.format(self.meta.get('wave_min'), self.meta.get('wave_max'))
+            ''.format(wave_min, wave_max)
+            #''.format(self.meta.get('wave_min'), self.meta.get('wave_max'))
+
         return msg
 
 
