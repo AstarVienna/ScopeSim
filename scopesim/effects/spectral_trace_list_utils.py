@@ -26,7 +26,7 @@ from ..utils import deriv_polynomial2d, power_vector, interp2, check_keys,\
 
 
 class SpectralTrace:
-    '''Definition of one spectral trace
+    """Definition of one spectral trace
 
     A SpectralTrace describes the mapping of spectral slit coordinates
     to the focal plane. The class reads an order layout and fits several
@@ -37,7 +37,7 @@ class SpectralTrace:
     - lam : Wavelength [um]
     Focal plane coordinates are:
     - x, y : [mm]
-    '''
+    """
     _class_params = {"x_colname": "x",
                      "y_colname": "y",
                      "s_colname": "s",
@@ -108,6 +108,11 @@ class SpectralTrace:
         y_arr = self.table[self.meta['y_colname']]
         xi_arr = self.table[self.meta['s_colname']]
         lam_arr = self.table[self.meta['wave_colname']]
+
+        wi0, wi1 = lam_arr.argmin(), lam_arr.argmax()
+        x_disp_length = np.diff([x_arr[wi0], x_arr[wi1]])
+        y_disp_length = np.diff([y_arr[wi0], y_arr[wi1]])
+        self.dispersion_axis = "x" if x_disp_length > y_disp_length else "y"
 
         self.wave_min = quantify(np.min(lam_arr), u.um).value
         self.wave_max = quantify(np.max(lam_arr), u.um).value
@@ -200,8 +205,11 @@ class SpectralTrace:
         #         - The dispersion direction is selected by the direction of the
         #           gradient of lam(x, y). This works if the lam-axis is well
         #           aligned with x or y. Needs to be tested for MICADO.
-        dlam_by_dx, dlam_by_dy = self.xy2lam.gradient()
-        if np.abs(dlam_by_dx(0, 0)) > np.abs(dlam_by_dy(0, 0)):
+
+
+        # dlam_by_dx, dlam_by_dy = self.xy2lam.gradient()
+        # if np.abs(dlam_by_dx(0, 0)) > np.abs(dlam_by_dy(0, 0)):
+        if self.dispersion_axis == "x":
             avg_dlam_per_pix = (wave_max - wave_min) / sub_naxis1
         else:
             avg_dlam_per_pix = (wave_max - wave_min) / sub_naxis2
@@ -256,6 +264,7 @@ class SpectralTrace:
         image = xilam.interp(xi_fpa, lam_fpa, grid=False) * ijmask
 
         # Scale to ph / s / pixel
+        dlam_by_dx, dlam_by_dy = self.xy2lam.gradient()
         dlam_per_pix = pixsize * np.sqrt(dlam_by_dx(ximg_fpa, yimg_fpa)**2 +
                                          dlam_by_dy(ximg_fpa, yimg_fpa)**2)
         image *= pixscale * dlam_per_pix        # [arcsec/pix] * [um/pix]
@@ -336,7 +345,7 @@ class SpectralTrace:
 
 
     def footprint(self, wave_min=None, wave_max=None, xi_min=None, xi_max=None):
-        '''
+        """
         Return corners of rectangle enclosing spectral trace
 
         Parameters
@@ -349,7 +358,7 @@ class SpectralTrace:
             Minimum and maximum slit position on the sky.
             If `None`, use the full range that the spectral trace is defined on.
             Float values are interpreted as arcsec.
-        '''
+        """
         #print(f"footprint: {wave_min}, {wave_max}, {xi_min}, {xi_max}")
 
         ## Define the wavelength range of the footprint. This is a compromise
@@ -427,7 +436,7 @@ class SpectralTrace:
                 [y_edge.min(), y_edge.min(), y_edge.max(), y_edge.max()])
 
     def plot(self, wave_min=None, wave_max=None, c="r"):
-        '''Plot control points of the SpectralTrace'''
+        """Plot control points of the SpectralTrace"""
 
         # Footprint (rectangle enclosing the trace)
         xlim, ylim  = self.footprint(wave_min=wave_min, wave_max=wave_max)
@@ -469,7 +478,6 @@ class SpectralTrace:
                         self.meta["extension_id"], self.meta["aperture_id"],
                         self.meta["image_plane_id"])
         return msg
-
 
 
 class XiLamImage():
@@ -516,7 +524,8 @@ class XiLamImage():
             # overlaps with the wavelength range covered by the cube
             if lam0.min() < cube_lam.max() and lam0.max() > cube_lam.min():
                 plane = fov.cube.data[:, i, :].T
-                plane_interp = RectBivariateSpline(cube_xi, cube_lam, plane)
+                plane_interp = RectBivariateSpline(cube_xi, cube_lam, plane,
+                                                   kx=1, ky=1)
                 self.image += plane_interp(cube_xi, lam0)
 
         self.image *= d_eta     # ph/s/um/arcsec2 --> ph/s/um/arcsec

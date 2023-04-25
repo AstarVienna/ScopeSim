@@ -12,6 +12,7 @@ Classes:
 - LinearityCurve - apply detector (non-)linearity and saturation
 - ReferencePixelBorder
 - BinnedImage
+- UnequalBinnedImage
 - Bias - adds constant bias level to readout
 
 Functions:
@@ -42,7 +43,7 @@ class DetectorModePropertiesSetter(Effect):
     Parameters
     ----------
     mode_properties : dict
-        A dictionary containing the DET parameters to be changed for each mode
+        A dictionary containing the DET parameters to be changed for each mode.
         See below for an example yaml entry.
 
     Examples
@@ -68,6 +69,7 @@ class DetectorModePropertiesSetter(Effect):
     Add the OBS dict entry !OBS.detector_readout_mode to the properties section
     of the mode_yamls descriptions in the default.yaml files.
     ::
+
         mode_yamls:
           - object: observation
             alias: OBS
@@ -449,23 +451,25 @@ class LinearityCurve(Effect):
     Examples
     --------
 
-    The effect can be instantiated in various ways.
-    - name: detector_linearity
-      class: LinearityCurve
-      kwargs:
-        file_name: FPA_linearity.dat
+    The effect can be instantiated in various ways.::
 
-    - name: detector_linearity
-      class: LinearityCurve
-      kwargs:
-        array_dict: {incident: [0, 77000, 999999999999],
-                     measured: [0, 77000, 77000]}
+        - name: detector_linearity
+          class: LinearityCurve
+          kwargs:
+            file_name: FPA_linearity.dat
 
-    - name: detector_linearity
-      class: LinearityCurve
-      kwargs:
-        incident: [0, 77000, 99999999]
-        measured: [0, 77000, 77000]
+        - name: detector_linearity
+          class: LinearityCurve
+          kwargs:
+            array_dict: {incident: [0, 77000, 999999999999],
+                         measured: [0, 77000, 77000]}
+
+        - name: detector_linearity
+          class: LinearityCurve
+          kwargs:
+            incident: [0, 77000, 99999999]
+            measured: [0, 77000, 77000]
+
     """
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -554,6 +558,24 @@ class BinnedImage(Effect):
 
         return det
 
+class UnequalBinnedImage(Effect):
+    def __init__(self, **kwargs):
+        super(UnequalBinnedImage, self).__init__(**kwargs)
+        self.meta["z_order"] = [870]
+
+        self.required_keys = ["binx","biny"]
+        utils.check_keys(self.meta, self.required_keys, action="error")
+
+    def apply_to(self, det, **kwargs):
+        if isinstance(det, DetectorBase):
+            bx = from_currsys(self.meta["binx"])
+            by = from_currsys(self.meta["biny"])
+            image = det._hdu.data
+            h, w = image.shape
+            new_image = image.reshape((h//bx, bx, w//by, by))
+            det._hdu.data = new_image.sum(axis=3).sum(axis=1)
+
+        return det
 
 ################################################################################
 

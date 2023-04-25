@@ -1,4 +1,4 @@
-'''Tests for class SlitWheel'''
+"""Tests for class SlitWheel"""
 import os
 import pytest
 
@@ -12,7 +12,7 @@ if FILES_PATH not in rc.__search_path__:
 
 @pytest.fixture(name="swheel", scope="class")
 def fixture_swheel():
-    '''Instantiate a SlitWheel'''
+    """Instantiate a SlitWheel"""
     return SlitWheel(slit_names=["A", "B"],
                      filename_format="MASK_slit_{}.dat",
                      current_slit="B")
@@ -49,3 +49,17 @@ class TestSlitWheel:
     def test_changes_to_false(self, swheel):
         swheel.change_slit(False)
         assert not swheel.current_slit
+
+    def test_add_slit_to_wheel(self, swheel):
+        num_slit_old = len(swheel.slits)
+        kwargs = {"array_dict": {"x": [-2, -1, 1, 2],
+                                 "y": [-1, -2, 2, 1]},
+                  "x_unit": "arcsec",
+                  "y_unit": "arcsec"}
+        newslit = ApertureMask(name="newslit", **kwargs)
+
+        swheel.add_slit(newslit, name='newslit')
+        assert len(swheel.slits) == num_slit_old + 1
+
+        swheel.change_slit('newslit')
+        assert swheel.current_slit.display_name == "newslit"

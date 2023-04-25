@@ -1,4 +1,4 @@
-'''Tests for class ADCWheel'''
+"""Tests for class ADCWheel"""
 import os
 import pytest
 
@@ -12,7 +12,7 @@ if FILES_PATH not in rc.__search_path__:
 
 @pytest.fixture(name="adcwheel", scope="class")
 def fixture_adcwheel():
-    '''Instantiate an ADCWheel'''
+    """Instantiate an ADCWheel"""
     return ADCWheel(adc_names=["const_90", "const_10"],
                     filename_format="TER_ADC_{}.dat",
                     current_adc="const_90")

@@ -91,7 +91,7 @@ def download_packages(pkg_names, release="stable", save_dir=None, from_cache=Non
     Parameters
     ----------
     pkg_names : str, list
-        A list of package name, see ``list_packages()``
+        A list of package names, see ``list_packages()``
 
     release : str, optional
         By default, the most recent stable version of a package is downloaded.

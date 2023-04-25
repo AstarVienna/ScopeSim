@@ -1,4 +1,4 @@
-'''Tests for SpectralSurface'''
+"""Tests for SpectralSurface"""
 # pylint: disable=no-self-use,missing-class-docstring
 # pylint: disable=missing-function-docstring
 
@@ -281,7 +281,7 @@ class TestMakeEmissionFromEmissivity:
 
     @pytest.mark.parametrize("temp", [283, 283*u.deg_C, 283*u.Kelvin])
     def test_blackbody_maximum_agrees_with_wien(self, temp):
-        '''Check the maximum of emission against Wien's law for photon rate'''
+        """Check the maximum of emission against Wien's law for photon rate"""
         emissivity = SpectralElement(Empirical1D, points=[1, 20],
                                      lookup_table=[1., 1.])
         flux = surf_utils.make_emission_from_emissivity(temp, emissivity)

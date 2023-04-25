@@ -13,7 +13,8 @@ from ..utils import real_colname, insert_into_ordereddict, quantify, \
 
 
 def combine_emissions(tbl, surfaces, row_indexes, etendue, use_area=False):
-    '''Combine thermal emission from a series of surfaces
+    """
+    Combine thermal emission from a series of surfaces
 
     The function traces thermal emission through an optical system, taking
     into account the finite reflectivities/transmissivities and emissivities
@@ -33,7 +34,8 @@ def combine_emissions(tbl, surfaces, row_indexes, etendue, use_area=False):
     Returns
     -------
     SourceSpectrum
-    '''
+
+    """
     if len(tbl) == 0:
         return None
 

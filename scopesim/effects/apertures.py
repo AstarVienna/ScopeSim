@@ -1,7 +1,8 @@
-'''Effects related to field masks, including spectroscopic slits'''
+"""Effects related to field masks, including spectroscopic slits"""
 from os import path as pth
 from copy import deepcopy
 import logging
+import yaml
 
 import numpy as np
 from matplotlib.path import Path
@@ -62,7 +63,7 @@ class ApertureMask(Effect):
 
     array_dict : dict
         A dictionary containing the columns listed above:
-        ``{x: [...], y: [...], id: <int>, conserve_image: <bool>}
+        ``{x: [...], y: [...], id: <int>, conserve_image: <bool>}``
 
     Other Parameters
     ----------------
@@ -117,6 +118,7 @@ class ApertureMask(Effect):
 
         return obj
 
+    # Outdated. Remove when removing all old FOVManager code from effects
     def fov_grid(self, which="edges", **kwargs):
         """ Returns a header with the sky coordinates """
         logging.warning("DetectorList.fov_grid will be depreciated in v1.0")
@@ -197,15 +199,15 @@ class RectangularApertureMask(ApertureMask):
 
         self.table = self.get_table(**kwargs)
 
-    def fov_grid(self, which="edges", **kwargs):
-        """ Returns a header with the sky coordinates """
-        if which == "edges":
-            self.table = self.get_table(**kwargs)
-            return self.header      # from base class ApertureMask
-
-        elif which == "masks":
-            self.meta.update(kwargs)
-            return self.mask
+    # def fov_grid(self, which="edges", **kwargs):
+    #     """ Returns a header with the sky coordinates """
+    #     if which == "edges":
+    #         self.table = self.get_table(**kwargs)
+    #         return self.header      # from base class ApertureMask
+    #
+    #     elif which == "masks":
+    #         self.meta.update(kwargs)
+    #         return self.mask
 
     def get_table(self, **kwargs):
         self.meta.update(kwargs)
@@ -223,6 +225,15 @@ class RectangularApertureMask(ApertureMask):
 class ApertureList(Effect):
     """
     A list of apertures, useful for IFU or MOS instruments
+
+    Parameters
+    ----------
+
+    Examples
+    --------
+
+    File format
+    -----------
 
     Much like an ApertureMask, an ApertureList can be initialised by either
     of the three standard DataContainer methods. The easiest is however to
@@ -254,6 +265,7 @@ class ApertureList(Effect):
        Consequently, ``4`` results in a diamond shaped mask covering only
        half of the constraining area filled by ``"rect"``.
 
+
     """
     def __init__(self, **kwargs):
         super(ApertureList, self).__init__(**kwargs)
@@ -272,13 +284,35 @@ class ApertureList(Effect):
                              "conserve_image", "shape"]
             check_keys(self.table.colnames, required_keys)
 
-    def fov_grid(self, which="edges", **kwargs):
-        params = deepcopy(self.meta)
-        params.update(kwargs)
-        if which == "edges":
-            return [ap.fov_grid(which=which, **params) for ap in self.apertures]
-        if which == "masks":
-            return {ap.meta["id"]: ap.mask for ap in self.apertures}
+    def apply_to(self, obj, **kwargs):
+        if isinstance(obj, FOVSetupBase):
+            new_vols = []
+            for row in self.table:
+                vols = obj.extract(["x", "y"], ([row["left"], row["right"]],
+                                                [row["bottom"], row["top"] ]))
+                for vol in vols:
+                    vol["meta"]["aperture_id"] = row["id"]
+
+                    # ..todo: HUGE HACK - Get rid of this!
+                    vol["meta"]["xi_min"] = row["left"] * u.arcsec
+                    vol["meta"]["xi_max"] = row["right"] * u.arcsec
+                    vol["conserve_image"] = row["conserve_image"]
+                    vol["shape"] = row["shape"]
+                    vol["angle"] = row["angle"]
+
+                new_vols += vols
+
+            obj.volumes = new_vols
+
+        return obj
+
+    # def fov_grid(self, which="edges", **kwargs):
+    #     params = deepcopy(self.meta)
+    #     params.update(kwargs)
+    #     if which == "edges":
+    #         return [ap.fov_grid(which=which, **params) for ap in self.apertures]
+    #     if which == "masks":
+    #         return {ap.meta["id"]: ap.mask for ap in self.apertures}
 
     @property
     def apertures(self):
@@ -297,7 +331,7 @@ class ApertureList(Effect):
             params = {"id": row["id"],
                       "angle": row["angle"],
                       "shape": row["shape"],
-                      "conserve_image": row["conserve_image"],
+                      "conserve_image": yaml.full_load(str(row["conserve_image"])),
                       "no_mask": self.meta["no_mask"],
                       "pixel_scale": self.meta["pixel_scale"],
                       "x_unit": "arcsec",
@@ -339,31 +373,52 @@ class ApertureList(Effect):
             raise ValueError("Secondary argument not of type ApertureList: {}"
                              "".format(type(other)))
 
-    def __getitem__(self, item):
-        return self.get_apertures(item)[0]
+    # def __getitem__(self, item):
+    #     return self.get_apertures(item)[0]
 
 
 
 class SlitWheel(Effect):
     """
-    This wheel holds a selection of predefined spectroscopic slits
-    and possibly other field masks.
+    A selection of predefined spectroscopic slits and possibly other field masks
 
     It should contain an open position.
     A user can define a non-standard slit by directly using the Aperture
     effect.
 
+    .. todo: This is based on FilterWheel. There is a more efficient way to do this, when we have time.
+
+    Parameters
+    ----------
+    slit_names : list of str
+
+    filename_format : str
+        A f-string for the path to the slit files
+
+    current_slit : str
+        Default name
+
     Examples
     --------
+    This Effect assumes a folder full of ASCII files containing the edges of
+    each slit. Each file should be names the same except for the slit's name
+    or identifier.
+
+    This example assumes a folder ``masks`` containing the slit ASCII files
+    with the naming convention: ``slit_A.dat``, ``slit_B.dat``, etc.
     ::
+
         name: slit_wheel
         class: SlitWheel
         kwargs:
-            slit_names: []
-            filename_format: "MASK_slit_{}.dat
+            slit_names:
+                - A
+                - B
+                - C
+            filename_format: "masks/slit_{}.dat
             current_slit: "C"
-    """
 
+    """
     def __init__(self, **kwargs):
         required_keys = ["slit_names", "filename_format", "current_slit"]
         check_keys(kwargs, required_keys, action="error")
@@ -388,26 +443,39 @@ class SlitWheel(Effect):
 
         self.table = self.get_table()
 
-
     def apply_to(self, obj, **kwargs):
-        '''Use apply_to of current_slit'''
+        """Use apply_to of current_slit"""
         return self.current_slit.apply_to(obj, **kwargs)
-
 
     def fov_grid(self, which="edges", **kwargs):
         return self.current_slit.fov_grid(which=which, **kwargs)
 
     def change_slit(self, slitname=None):
-        '''Change the current slit'''
+        """Change the current slit"""
         if not slitname or slitname in self.slits.keys():
             self.meta['current_slit'] = slitname
             self.include = slitname
         else:
             raise ValueError("Unknown slit requested: " + slitname)
 
+    def add_slit(self, newslit, name=None):
+        """
+        Add a slit to the SlitWheel
+
+        Parameters
+        ==========
+        newslit : Slit
+        name : string
+           Name to be used for the new slit. If `None`, a name from
+           the newslit object is used.
+        """
+        if name is None:
+            name = newslit.display_name
+        self.slits[name] = newslit
+
     @property
     def current_slit(self):
-        '''Return the currently used slit'''
+        """Return the currently used slit"""
         currslit = from_currsys(self.meta["current_slit"])
         if not currslit:
             return False
@@ -423,10 +491,12 @@ class SlitWheel(Effect):
         return getattr(self.current_slit, item)
 
     def get_table(self):
-        '''Create a table of slits with centre position, width and length
+        """
+        Create a table of slits with centre position, width and length
 
         Width is defined as the extension in the y-direction, length in the
-        x-direction. All values are in milliarcsec.'''
+        x-direction. All values are in milliarcsec.
+        """
         names = list(self.slits.keys())
         slits = self.slits.values()
         xmax = np.array([slit.data['x'].max() * u.Unit(slit.meta['x_unit'])

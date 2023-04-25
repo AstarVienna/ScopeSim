@@ -17,19 +17,19 @@ and astronomical objects and then pushing the object through the optical train.
 The resulting 2D image is then broadcast to a detector chip and read out into a 
 FITS file. 
 
-This code was originally based on the [SimCADO](www.univie.ac.at/simcado) package
+This code was originally based on the [SimCADO](https://github.com/astronomyk/simcado) package
 
 ## Documentation
 The main set of documentation can be found here: 
 https://scopesim.readthedocs.io/en/latest/
 
 A basic Jupyter Notebook can be found here: 
-[scopesim_basic_intro.ipynb](docs/source/_static/scopesim_basic_intro.ipynb)
+[scopesim_basic_intro.ipynb](docs/source/examples/1_scopesim_intro.ipynb)
 
 
 ## Dependencies
 
-For [![Python 3.6](https://img.shields.io/badge/Python-3.6-brightgreen.svg)]() and above the latest versions of these packages are compatible with ScopeSim:
+For [![Python 3.7](https://img.shields.io/badge/Python-3.7-brightgreen.svg)]() and above the latest versions of these packages are compatible with ScopeSim:
 
     numpy >= 1.16
     scipy >= 1.0.0

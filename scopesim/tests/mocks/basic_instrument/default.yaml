@@ -26,6 +26,7 @@ mode_yamls :
   alias : OBS
   properties :
     include_slit : False
+    include_slicer: False
     filter_name : "J"
 
 - name : spectroscopy
@@ -33,18 +34,17 @@ mode_yamls :
   alias: OBS
   properties :
     include_slit : True
+    include_slicer: False
     filter_name : "open"
   yamls :
     - YAML_mode_spectroscopy.yaml   # mode specific effects and properties
 
----
-name: config_overrides
-alias: SIM
-description: SIM config param overrides
-
-properties:
-  spectral:
-    wave_min: 0.7
-    wave_mid: 1.2
-    wave_max: 2.7
-  spectral_bin_width: !!float 5E-4
+- name : ifu
+  description: Basic three-trace integral-field-unit spectrograph
+  alias: OBS
+  properties:
+    include_slit: False
+    include_slicer: True
+    filter_name: "open"
+  yamls:
+    - YAML_mode_ifu.yaml   # mode specific effects and properties

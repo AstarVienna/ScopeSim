@@ -38,6 +38,7 @@ class ChopNodCombiner(Effect):
     Example yaml entry
     ------------------
     ::
+
         name: perpendicular_chop_nod_slanted_pattern
         description: chop throw to (+5, 0) and nod throw to (-7, +10) arcsec
         class: ChopNodCombiner

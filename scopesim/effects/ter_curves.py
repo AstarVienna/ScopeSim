@@ -1,3 +1,4 @@
+'''Transmission, emissivity, reflection curves'''
 import numpy as np
 from astropy import units as u
 from os import path as pth
@@ -37,7 +38,7 @@ class TERCurve(Effect):
 
     Examples
     --------
-    Inside a YAML file description::
+    Directly inside a YAML file description::
 
         name: bogus_surface
         class: TERCurve
@@ -53,15 +54,20 @@ class TERCurve(Effect):
                 value: 15.5
                 unit: ABmag
 
-    Inside an ASCII file::
+    Indirectly inside a YAML file::
+
+        name: some_curve
+        class TERCurve
+        kwargs:
+            filename: bogus_surface.dat
+
+    which references this ASCII file::
 
         # name: bogus_surface
         # wavelength_unit: um
-        # emission_unit: ph s-1 m-2 um-1
-        # rescale_emission: {filter_name: "Paranal/HAWKI.Ks", value: 36.3, unit: Jy}
-        wavelength  transmission    emission
-        0.3         0.9             1
-        3.0         0.9             1
+        wavelength  transmission    emissivity
+        0.3         0.9             0.1
+        3.0         0.9             0.1
 
     """
     def __init__(self, **kwargs):
@@ -243,6 +249,7 @@ class SkycalcTERCurve(AtmosphericTERCurve):
         Examples
         --------
         ::
+
             - name : skycalc_background
               class : SkycalcTERCurve
               kwargs :
@@ -338,19 +345,18 @@ class QuantumEfficiencyCurve(TERCurve):
         self.meta["position"] = -1          # position in surface table
 
 
-
 class FilterCurve(TERCurve):
     """
-    Other Parameters
-    ----------------
-    position : int
-    filter_name : str
+    Parameters
+    ----------
+    position : int, optional
+    filter_name : str, optional
         ``Ks`` - corresponding to the filter name in the filename pattern
-    filename_format : str
+    filename_format : str, optional
         ``TC_filter_{}.dat``
 
     Can either be created using the standard 3 options:
-    - ``filename``: direct filename of the filer curve
+    - ``filename``: direct filename of the filter curve
     - ``table``: an ``astropy.Table``
     - ``array_dict``: a dictionary version of a table: ``{col_name1: values, }``
 
@@ -461,6 +467,7 @@ class TopHatFilterCurve(FilterCurve):
     Examples
     --------
     ::
+
         name: J_band_tophat
         class: TopHatFilterCurve
         kwargs:
@@ -481,10 +488,10 @@ class TopHatFilterCurve(FilterCurve):
         red = kwargs["red_cutoff"]
         peak = kwargs["transmission"]
         wing = kwargs.get("wing_transmission", 0)
-        
+
         waveset = [wave_min, 0.999*blue, blue, red, red*1.001, wave_max]
         transmission = [wing, wing, peak, peak, wing, wing]
-        
+
         tbl = Table(names=["wavelength", "transmission"],
                     data=[waveset, transmission])
         super(TopHatFilterCurve, self).__init__(table=tbl,
@@ -515,6 +522,7 @@ class SpanishVOFilterCurve(FilterCurve):
     Examples
     --------
     ::
+
         name: HAWKI-Ks
         class: SpanishVOFilterCurve
         kwargs:
@@ -545,6 +553,7 @@ class FilterWheel(Effect):
     Examples
     --------
     ::
+
         name: filter_wheel
         class: FilterWheel
         kwargs:
@@ -580,18 +589,33 @@ class FilterWheel(Effect):
 
 
     def apply_to(self, obj, **kwargs):
-        '''Use apply_to of current filter'''
+        """Use apply_to of current filter"""
         return self.current_filter.apply_to(obj, **kwargs)
 
     def fov_grid(self, which="waveset", **kwargs):
         return self.current_filter.fov_grid(which=which, **kwargs)
 
     def change_filter(self, filtername=None):
-        '''Change the current filter'''
+        """Change the current filter"""
         if filtername in self.filters.keys():
             self.meta['current_filter'] = filtername
         else:
             raise ValueError("Unknown filter requested: " + filtername)
+
+    def add_filter(self, newfilter, name=None):
+        """
+        Add a filter to the FilterWheel
+
+        Parameters
+        ==========
+        newfilter : FilterCurve
+        name : string
+           Name to be used for the new filter. If `None` a name from
+           the newfilter object is used.
+        """
+        if name is None:
+            name = newfilter.display_name
+        self.filters[name] = newfilter
 
     @property
     def current_filter(self):
@@ -652,7 +676,6 @@ class FilterWheel(Effect):
         return tbl
 
 
-
 class TopHatFilterWheel(FilterWheel):
     """
     A selection of top-hat filter curves as defined in the input lists
@@ -680,6 +703,7 @@ class TopHatFilterWheel(FilterWheel):
     Examples
     --------
     ::
+
         name: top_hat_filter_wheel
         class: TopHatFilterWheel
         kwargs:
@@ -751,6 +775,7 @@ class SpanishVOFilterWheel(FilterWheel):
     Examples
     --------
     ::
+
         name: svo_filter_wheel
         class: SpanishVOFilterWheel
         kwargs:
@@ -831,6 +856,7 @@ class ADCWheel(Effect):
     Example
     -------
     ::
+
        name : adc_wheel
        class: ADCWheel
        kwargs:
@@ -863,7 +889,7 @@ class ADCWheel(Effect):
         self.table = self.get_table()
 
     def apply_to(self, obj, **kwargs):
-        '''Use apply_to of current adc'''
+        """Use apply_to of current adc"""
         return self.current_adc.apply_to(obj, **kwargs)
 
     def change_adc(self, adcname=None):
@@ -876,7 +902,7 @@ class ADCWheel(Effect):
 
     @property
     def current_adc(self):
-        '''Return the currently used ADC'''
+        """Return the currently used ADC"""
         curradc = from_currsys(self.meta['current_adc'])
         if not curradc:
             return False

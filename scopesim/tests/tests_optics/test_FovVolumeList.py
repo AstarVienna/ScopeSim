@@ -1,5 +1,7 @@
 import pytest
 from pytest import approx
+from copy import deepcopy
+
 import numpy as np
 from astropy import units as u
 from astropy.io import fits
@@ -49,6 +51,28 @@ class TestSplit:
 
         assert len(fvl) == 27
 
+    def test_split_only_aperture_1_volumes(self):
+        fvl = FovVolumeList()
+        fvl.volumes += [deepcopy(fvl.volumes[0])]
+        fvl.volumes[1]["meta"]["aperture_id"] = 1
+        fvl.split(axis="wave", value=3.0, aperture_id=1)
+
+        assert len(fvl) == 3
+
+    def test_no_split_if_wrong_aperture_id(self):
+        fvl = FovVolumeList()
+        fvl.split(axis="wave", value=3.0, aperture_id=99)
+
+        assert len(fvl) == 1
+
+    def test_all_for_aperture_id_equal_none(self):
+        fvl = FovVolumeList()
+        fvl.volumes += [deepcopy(fvl.volumes[0]), deepcopy(fvl.volumes[0])]
+        fvl.volumes[1]["meta"]["aperture_id"] = 1
+        fvl.volumes[2]["meta"]["aperture_id"] = 2
+        fvl.split(axis="wave", value=3.0, aperture_id=None)
+
+        assert len(fvl) == 6
 
 class TestShrink:
     def test_shrinks_limits_for_single_volume(self):
@@ -95,6 +119,28 @@ class TestShrink:
 
         assert len(fvl) == 2
 
+    def test_shrink_only_aperture_id_1_volumes(self):
+        fvl = FovVolumeList()
+        fvl.volumes += [deepcopy(fvl.volumes[0])]
+        fvl.volumes[1]["meta"]["aperture_id"] = 1
+
+        fvl.shrink("wave", [2.9, 3.1], aperture_id=1)
+
+        assert len(fvl) == 2
+        assert fvl[0]["wave_min"] == 0.3
+        assert fvl[1]["wave_min"] == 2.9
+
+    def test_shrink_all_for_aperture_id_equa_none(self):
+        fvl = FovVolumeList()
+        fvl.volumes += [deepcopy(fvl.volumes[0])]
+        fvl.volumes[1]["meta"]["aperture_id"] = 1
+
+        fvl.shrink("wave", [2.9, 3.1], aperture_id=None)
+
+        assert len(fvl) == 2
+        assert fvl[0]["wave_min"] == 2.9
+        assert fvl[1]["wave_min"] == 2.9
+
 
 class TestExtract:
     def test_extracts_volume_fully_inside_old_volume(self):
@@ -130,6 +176,23 @@ class TestExtract:
         fvl = FovVolumeList()
         fvl.split("x", 0)
         new_vols = fvl.extract(["wave"], ([1, 2], ))
+
+        assert len(new_vols) == 2
+
+    def test_extracts_only_from_aperture_id_volumes(self):
+        fvl = FovVolumeList()
+        fvl.volumes += [deepcopy(fvl.volumes[0])]
+        fvl.volumes[1]["meta"]["aperture_id"] = 1
+        new_vols = fvl.extract(axes=["wave"], edges=([0.5, 0.6], ),
+                               aperture_id=1)
+
+        assert len(new_vols) == 1
+
+    def test_extracts_from_all_for_aperture_id_equals_none(self):
+        fvl = FovVolumeList()
+        fvl.volumes += [deepcopy(fvl.volumes[0])]
+        fvl.volumes[1]["meta"]["aperture_id"] = 1
+        new_vols = fvl.extract(["x", "y"], ([-1, 1], [0, 5]), aperture_id=None)
 
         assert len(new_vols) == 2
 

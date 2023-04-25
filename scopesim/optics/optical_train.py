@@ -1,3 +1,4 @@
+import copy
 import os
 import sys
 from copy import deepcopy
@@ -102,15 +103,16 @@ class OpticalTrain:
 
         Parameters
         ----------
-        user_commands : UserCommands
+        user_commands : UserCommands or str
 
         """
 
         if isinstance(user_commands, str):
             user_commands = UserCommands(use_instrument=user_commands)
-
-        if not isinstance(user_commands, UserCommands):
-            raise ValueError("user_commands must be a UserCommands object: "
+        elif isinstance(user_commands, UserCommands):
+            user_commands = copy.deepcopy(user_commands)
+        else:
+            raise ValueError("user_commands must be a UserCommands or str object: "
                              "{}".format(type(user_commands)))
 
         self.cmds = user_commands
@@ -376,7 +378,7 @@ class OpticalTrain:
         iheader = hdulist[1].header
         iheader['EXPTIME'] = from_currsys("!OBS.exptime"), "[s]"
         iheader['DIT'] = from_currsys("!OBS.dit"), "[s]"
-        iheader['NDIT'] = from_currsys("!OBS.ndit"), "[s]"
+        iheader['NDIT'] = from_currsys("!OBS.ndit")
         iheader['BUNIT'] = 'e', 'per EXPTIME'
         iheader['PIXSCALE'] = from_currsys("!INST.pixel_scale"), "[arcsec]"
 
@@ -485,11 +487,12 @@ class OpticalTrain:
 
 
     def shutdown(self):
-        '''Shut down the instrument.
+        """
+        Shut down the instrument.
 
         This method closes all open file handles and should be called when the optical train
         is no longer needed.
-        '''
+        """
         for effect_name in self.effects['name']:
             try:
                 self[effect_name]._file.close()

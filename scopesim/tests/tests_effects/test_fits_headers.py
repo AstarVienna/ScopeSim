@@ -1,5 +1,6 @@
 import os
 import pytest
+from tempfile import TemporaryDirectory
 from pytest import raises
 from copy import deepcopy
 from astropy.io import fits
@@ -66,6 +67,7 @@ def yaml_string():
         grias_di: woed
         zdrasviute: mir
         salud: el mundo
+    EXTNAME: "DET++.DATA"    
 """
 
 
@@ -140,6 +142,7 @@ class TestExtraFitsKeywordsApplyTo:
         assert pri_hdr.comments["HIERARCH ESO TEL area"] == "[m2] default = 0"
         # ImageHDU header
         assert hdul[1].header["HIERARCH SIM grias_di"] == "woed"
+        assert hdul[1].header["EXTNAME"] == "DET1.DATA"
 
 
 @pytest.mark.usefixtures("comb_hdul")
@@ -173,21 +176,30 @@ class TestGetRelevantExtensions:
 
 class TestFlattenDict:
     def test_works(self):
-        dic = {"HIERARCH":
-                   {"ESO":
-                        {"ATM":
-                             {"PWV": 1.0, "AIRMASS": 2.0},
-                         "DPR": {"TYPE": "DARK"}},
-                    "SIM": {
-                        "area": ("!TEL.area", "area")}
+        dic = {
+            "HIERARCH": {
+                "ESO": {
+                    "ATM": {
+                        "PWV": 1.0,
+                        "AIRMASS": 2.0,
+                    },
+                    "DPR": {
+                        "TYPE": "DARK",
                     }
-               }
+                },
+                "SIM": {
+                    "area": ("!TEL.area", "area"),
+                    "SRC0": {"scaling_unit": u.mag},
+                },
+           },
+        }
         flat_dict = fh.flatten_dict(dic)
         assert flat_dict["HIERARCH ESO ATM PWV"] == 1.0
         assert flat_dict["HIERARCH ESO ATM AIRMASS"] == 2.0
         assert flat_dict["HIERARCH ESO DPR TYPE"] == "DARK"
         assert flat_dict["HIERARCH SIM area"][0] == "!TEL.area"
         assert flat_dict["HIERARCH SIM area"][1] == "area"
+        assert flat_dict["HIERARCH SIM SRC0 scaling_unit"] == "mag"
 
     def test_resolves_bang_strings(self):
         dic = {"SIM": {"random_seed": "!SIM.random.seed"}}
@@ -241,6 +253,26 @@ class TestSourceDescriptionFitsKeywordsApplyTo:
 
         assert pri_hdr["SIM SRC0 hello"] == "world"
         assert pri_hdr["SIM SRC1 servus"] == "oida"
+
+    def test_value_is_longer_than_80_characters(self, simplecado_opt, comb_hdul):
+        star1, star2 = star(flux=1*u.ABmag), star()
+        star1.meta["function_call"] *= 5
+
+        simplecado_opt._last_source = star1 + star2
+        simplecado_opt._last_source
+        eff = fh.SourceDescriptionFitsKeywords()
+        hdul = eff.apply_to(comb_hdul, optical_train=simplecado_opt)
+        pri_hdr = hdul[0].header
+
+        assert len(pri_hdr["FNSRC0"]) == 120
+
+        # save to disk, what happens to cards that are longer than 80 characters
+        with TemporaryDirectory() as tmpdir:
+            fname = os.path.join(tmpdir, "test.fits")
+            hdul.writeto(fname)
+            tmp_hdr = fits.getheader(fname)
+
+        assert len(tmp_hdr["FNSRC0"]) == 120
 
 
 @pytest.mark.usefixtures("simplecado_opt")

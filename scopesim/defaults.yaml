@@ -34,7 +34,7 @@ properties :
 
   file :
     local_packages_path : "./inst_pkgs/"
-    server_base_url : "https://www.univie.ac.at/simcado/InstPkgSvr/"
+    server_base_url : "https://scopesim.univie.ac.at/InstPkgSvr/"
     use_cached_downloads : "update"
     search_path : ["./inst_pkgs/", "./"]
     error_on_missing_file : False

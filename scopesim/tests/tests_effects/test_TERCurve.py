@@ -107,7 +107,7 @@ class TestSpanishVOFilterCurveInit:
 
 @pytest.fixture(name="fwheel", scope="class")
 def _filter_wheel():
-    '''Instantiate a FilterWheel'''
+    """Instantiate a FilterWheel"""
     return tc.FilterWheel(**{"filter_names": ["Ks", "Br-gamma"],
                              "filename_format": "TC_filter_{}.dat",
                              "current_filter": "Br-gamma"})
@@ -132,6 +132,16 @@ class TestFilterWheelInit:
     def test_change_to_unknown_filter(self, fwheel):
         with pytest.raises(ValueError):
             fwheel.change_filter('X')
+
+    def test_add_filter_to_wheel(self, fwheel):
+        num_filt_old = len(fwheel.filters)
+        newfilter = tc.TopHatFilterCurve(transmission=0.9, blue_cutoff=1.,
+                                         red_cutoff=2., name='blank')
+        fwheel.add_filter(newfilter, name='blank')
+        assert len(fwheel.filters) == num_filt_old + 1
+
+        fwheel.change_filter("blank")
+        assert fwheel.current_filter.display_name == "blank"
 
     def test_plots_all_filters(self, fwheel):
         if PLOTS:
