@@ -62,11 +62,6 @@ docs = [
 "Source" = "https://github.com/AstarVienna/ScopeSim"
 "Bug Reports" = "https://github.com/AstarVienna/ScopeSim/issues"
 
-[build-system]
-# Use setuptools >= 61.0.0 for package-data
-requires = ["setuptools>=61.0.0", "wheel"]
-build-backend = "setuptools.build_meta"
-
 [tool.setuptools]
 packages = [
     "scopesim"
