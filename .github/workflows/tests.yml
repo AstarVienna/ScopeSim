@@ -36,8 +36,7 @@ jobs:
           # ScopeSim will be installed when the github_actions requirements
           # are installed, because ScopeSim is a dependency of
           # ScopeSim_Templates.
-          pip install .
-          pip install -r requirements.github_actions.txt
+          pip install .[dev,test]
       - name: Run Pytest
         run: pytest --cov=scopesim
       - name: Run notebooks

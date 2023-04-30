@@ -48,6 +48,14 @@ test = [
     # Just so that readthedocs doesn't include the tests module - yes it's hacky
     "skycalc_cli",
 ]
+docs = [
+    "sphinx>=4.3.0",
+    "sphinx-rtd-theme>=0.5.1",
+    "jupyter_sphinx==0.2.3",
+    "sphinxcontrib-apidoc",
+    "nbsphinx",
+    "numpydoc",
+]
 
 [project.urls]
 "Homepage" = "https://scopesim.readthedocs.io/en/latest/"
@@ -65,4 +73,3 @@ packages = [
 ]
 
 # TODO: Add real licence
-# TODO: Remove requirements.github_actions.txt and requirements.readthedocs.txt
