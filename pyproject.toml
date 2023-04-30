@@ -71,5 +71,3 @@ build-backend = "setuptools.build_meta"
 packages = [
     "scopesim"
 ]
-
-# TODO: Add real licence
