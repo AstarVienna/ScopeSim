@@ -1,6 +1,6 @@
 [project]
 name = "ScopeSim"
-version = "0.5.8"
+version = "0.5.7"
 description = "Generalised telescope observation simulator"
 readme = "README.md"
 requires-python = ">=3.7"
@@ -64,8 +64,5 @@ packages = [
     "scopesim"
 ]
 
-# TODO: remove version.py
-# TODO: move long description from setup.py
-# TODO: Remove setup.
 # TODO: Add real licence
 # TODO: Remove requirements.github_actions.txt and requirements.readthedocs.txt
