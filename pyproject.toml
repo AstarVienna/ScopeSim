@@ -3,7 +3,7 @@ name = "ScopeSim"
 version = "0.5.7"
 description = "Generalised telescope observation simulator"
 readme = "README.md"
-requires-python = ">=3.7"
+requires-python = ">=3.8"
 license = {text = "License :: OSI Approved :: GNU General Public License v3 (GPLv3)"}
 authors = [
     {name = "Kieran Leschinski", email="kieran.leschinski@unive.ac.at"},
