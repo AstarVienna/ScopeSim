@@ -938,67 +938,71 @@ class GridFieldVaryingPSF(DiscretePSF):
         """
         # Check if there are any fov.fields to apply a psf to
         # [JA] TODO: Check this alternative condition. Which is correct?
-        # if len(obj.fields) > 0:
-        #     if obj.image is None:
-        #         obj.image = obj.make_image_hdu().data
+        if len(obj.fields) > 0:
+            if obj.image is None:
+                obj.image = obj.make_image_hdu().data
 
-        if (hasattr(obj, "fields") and len(obj.fields) > 0) or (obj.hdu is not None):
-            # old_shape = obj.image.shape
+        # old_shape = obj.image.shape
 
-            # normalise kernel
-            kernel_grid = self.get_kernel_grid(obj)
-            kernel_grid = self.normalise_kernel_grid(kernel_grid, force_normalise=normalise_kernel)
+        # normalise kernel
+        kernel_grid = self.get_kernel_grid(obj)
+        kernel_grid = self.normalise_kernel_grid(kernel_grid, force_normalise=normalise_kernel)
 
-            # image = obj.image.astype(float)
-            image = obj.hdu.data.astype(float)
+        # image = obj.image.astype(float)
+        image = obj.image.astype(float)
 
-            # Get image and kernel dimensions and positions
-            img_m, img_n = image.shape
-            unit_factor = u.Unit(obj.header["CUNIT1"].lower()).to(u.deg)
-            img_coors = utils.GridCoordinates(m=img_m,
-                                              n=img_n,
-                                              x0=obj.header["CRVAL1"] * unit_factor,
-                                              y0=obj.header["CRVAL2"] * unit_factor,
-                                              dx=obj.header["CDELT1"] * unit_factor,
-                                              dy=obj.header["CDELT2"] * unit_factor,
-                                              i0=obj.header["CRPIX1"],
-                                              j0=obj.header["CRPIX2"])
+        # Get image and kernel dimensions and positions
+        img_m, img_n = image.shape
+        unit_factor_1 = u.Unit(obj.header.get("CUNIT1").lower()).to(u.deg) if obj.header.get("CUNIT1") else 1
+        unit_factor_2 = u.Unit(obj.header.get("CUNIT2").lower()).to(u.deg) if obj.header.get("CUNIT2") else 1
+        img_coors = utils.GridCoordinates(m=img_m,
+                                          n=img_n,
+                                          x0=obj.header["CRVAL1"] * unit_factor_1,
+                                          y0=obj.header["CRVAL2"] * unit_factor_2,
+                                          dx=obj.header["CDELT1"] * unit_factor_1,
+                                          dy=obj.header["CDELT2"] * unit_factor_2,
+                                          i0=obj.header["CRPIX1"],
+                                          j0=obj.header["CRPIX2"])
 
-            hdr = self._file[self._current_layer_id].header
-            unit_factor = u.Unit(hdr.get("CUNIT1").lower()).to(u.deg) if hdr.get("CUNIT1") else 1
-            grid_m, grid_n, psf_m, psf_n = kernel_grid.shape
-            grid_coors = utils.GridCoordinates(m=grid_m,
-                                               n=grid_n,
-                                               x0=hdr["CRVAL1"] * unit_factor,
-                                               y0=hdr["CRVAL2"] * unit_factor,
-                                               dx=hdr["CDELT1"] * unit_factor,
-                                               dy=hdr["CDELT2"] * unit_factor,
-                                               i0=hdr["CRPIX1"],
-                                               j0=hdr["CRPIX2"])
+        hdr = self._file[self._current_layer_id].header
+        unit_factor_1 = u.Unit(hdr.get("CUNIT1").lower()).to(u.deg) if hdr.get("CUNIT1") else 1
+        unit_factor_2 = u.Unit(hdr.get("CUNIT2").lower()).to(u.deg) if hdr.get("CUNIT2") else 1
+        grid_m, grid_n, psf_m, psf_n = kernel_grid.shape
+        grid_coors = utils.GridCoordinates(m=grid_m,
+                                           n=grid_n,
+                                           x0=hdr["CRVAL1"] * unit_factor_1,
+                                           y0=hdr["CRVAL2"] * unit_factor_2,
+                                           dx=hdr["CDELT1"] * unit_factor_1*1.5,
+                                           dy=hdr["CDELT2"] * unit_factor_2*1.5,
+                                           i0=hdr["CRPIX1"],
+                                           j0=hdr["CRPIX2"])
 
-            coordinates = img_coors.pix_in_reference_frame(grid_coors)
+        coordinates = img_coors.pix_in_reference_frame(grid_coors)
 
-            # Convolve
-            canvas = convolve2d_varying_kernel(image=image,
-                                               kernel_grid=kernel_grid,
-                                               coordinates=coordinates,
-                                               mode=interpolation_mode)
+        # Convolve
+        bkg_level = pu.get_bkg_level(image, self.meta["bkg_width"])
+        canvas = convolve2d_varying_kernel(image=image-bkg_level,
+                                           kernel_grid=kernel_grid,
+                                           coordinates=coordinates,
+                                           mode=interpolation_mode)
+        canvas += bkg_level
 
-            # [JA] TODO: In some classes, obj.hdu.data is updated; in other, it's the obj.image. Which is correct?
-            obj.hdu.data = canvas
+        # [JA] TODO: In some classes, obj.hdu.data is updated; in other, it's the obj.image. Which is correct?
+        obj.hdu.data = canvas
+        obj.image = canvas
 
-            # reset WCS header info
-            new_shape = canvas.shape
+        # reset WCS header info
+        new_shape = canvas.shape
 
-            # [JA] TODO: Implement this
-            # # ..todo: careful with which dimensions mean what
-            # if "CRPIX1" in fov.header:
-            #     fov.header["CRPIX1"] += (new_shape[0] - old_shape[0]) / 2
-            #     fov.header["CRPIX2"] += (new_shape[1] - old_shape[1]) / 2
-            #
-            # if "CRPIX1D" in fov.header:
-            #     fov.header["CRPIX1D"] += (new_shape[0] - old_shape[0]) / 2
-            #     fov.header["CRPIX2D"] += (new_shape[1] - old_shape[1]) / 2
+        # [JA] TODO: Implement this
+        # # ..todo: careful with which dimensions mean what
+        # if "CRPIX1" in fov.header:
+        #     fov.header["CRPIX1"] += (new_shape[0] - old_shape[0]) / 2
+        #     fov.header["CRPIX2"] += (new_shape[1] - old_shape[1]) / 2
+        #
+        # if "CRPIX1D" in fov.header:
+        #     fov.header["CRPIX1D"] += (new_shape[0] - old_shape[0]) / 2
+        #     fov.header["CRPIX2D"] += (new_shape[1] - old_shape[1]) / 2
 
         return obj
 
@@ -1035,19 +1039,18 @@ class GridFieldVaryingPSF(DiscretePSF):
             self._current_layer_id = ext
             hdr = self._file[ext].header
 
+            # [JA] TODO: Check if CDELTs are different for the same grid
             # compare kernel and fov pixel scales, rescale if needed
-            if "CUNIT3" in hdr:
-                unit_factor = u.Unit(hdr["CUNIT1"].lower()).to(u.deg)
-            else:
-                unit_factor = 1
+            kernel_unit_factor = u.Unit(hdr.get("CUNIT3").lower()).to(u.deg) if hdr.get("CUNIT3") else 1
+            kernel_pixel_scale = hdr["CDELT3"] * kernel_unit_factor
 
-            kernel_pixel_scale = hdr["CDELT3"] * unit_factor
-            fov_pixel_scale = fov.header["CDELT1"]
+            fov_unit_factor = u.Unit(fov.header.get("CUNIT1").lower()).to(u.deg) if fov.header.get("CUNIT1") else 1
+            fov_pixel_scale = fov.header["CDELT1"] * fov_unit_factor
 
             # rescaling kept inside loop to avoid rescaling for every fov
             pix_ratio = kernel_pixel_scale / fov_pixel_scale
             if abs(pix_ratio - 1) > self.meta["flux_accuracy"]:  # [JA] TODO: Does this make sense?
-                kernel_center_pixel = (hdr["CRPIX3"], hdr["CRPIX4"])
+                kernel_center_pixel = np.array([hdr["CRPIX3"], hdr["CRPIX4"]])
                 self._kernel = utils.rescale_array_grid(self._kernel,
                                                         center_pixel=kernel_center_pixel,
                                                         origin_pixel_scale=kernel_pixel_scale,
@@ -1084,9 +1087,10 @@ class GridFieldVaryingPSF(DiscretePSF):
             obj = self._setup_fov(obj)
         # 2. During observe: convolution
         elif isinstance(obj, self.convolution_classes):
-            obj = self._apply_to_fov(obj,
-                                     normalise_kernel=self.meta.get("normalise_kernel", True),
-                                     interpolation_mode=self.meta.get("interpolation_mode", "linear"))
+            if (hasattr(obj, "fields") and len(obj.fields) > 0) or (obj.hdu is not None):
+                obj = self._apply_to_fov(obj,
+                                         normalise_kernel=self.meta.get("normalise_kernel", True),
+                                         interpolation_mode=self.meta.get("interpolation_mode", "linear"))
         else:
             raise ValueError("\'obj\' should be of type \'FOVSetupBase\' or match one of \'self.convolution_classes\'.")
 
