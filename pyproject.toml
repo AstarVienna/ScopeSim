@@ -62,7 +62,5 @@ docs = [
 "Source" = "https://github.com/AstarVienna/ScopeSim"
 "Bug Reports" = "https://github.com/AstarVienna/ScopeSim/issues"
 
-[tool.setuptools]
-packages = [
-    "scopesim"
-]
+[tool.setuptools.packages]
+find = {}
