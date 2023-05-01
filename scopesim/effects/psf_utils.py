@@ -1,4 +1,4 @@
-from typing import Tuple
+from typing import Tuple, List
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -309,8 +309,8 @@ def get_bkg_level(obj, bg_w):
 
 
 @njit()
-def kernel_grid_linear_interpolation(kernel_grid: npt.NDArray, position: npt.NDArray, check_bounds: bool = True) -> npt.NDArray:
-    """Bilinear interpolation of a grid of 2D arrays at a given position.
+def kernel_grid_linear_interpolation(kernel_grid: npt.NDArray, position: npt.NDArray) -> npt.NDArray:
+    """Bi-linear interpolation of a grid of 2D arrays at a given position.
 
     This function interpolates a grid of 2D arrays at a given position using a weighted mean (i.e. bi-linear
     interpolation). The grid object should be of shape (M, N, I, J), with MxN the shape of the grid of arrays and IxJ
@@ -322,19 +322,11 @@ def kernel_grid_linear_interpolation(kernel_grid: npt.NDArray, position: npt.NDA
         An array with shape `(M, N, I, J)` defining a `MxN` grid of 2D arrays to be interpolated.
     position: npt.NDArray
         An array containing the position in the `MxN` at which the resulting 2D array is computed.
-    check_bounds : bool
-        Whether to check if position is within grid limits. This should not be set to False unless this check is
-        performed beforehand.
 
     Returns
     -------
     npt.NDArray
         An IxJ array at the given position obtained by interpolation.
-
-    Raises
-    ------
-    ValueError
-        If the provided position is out of bounds with respect to the provided kernel grid.
     """
     # Grid and kernel dimensions
     grid_i, grid_j, kernel_i, kernel_j = kernel_grid.shape
@@ -345,10 +337,6 @@ def kernel_grid_linear_interpolation(kernel_grid: npt.NDArray, position: npt.NDA
     y0 = int(y)
     x1 = x0 + 1
     y1 = y0 + 1
-
-    if check_bounds:
-        if x0 < 0 or y0 < 0 or x1 >= grid_i or y1 >= grid_j:
-            raise ValueError("Requested position out of bounds for provided kernel grid.")
 
     # Get the four closest arrays to the given position
     psf00 = kernel_grid[x0, y0, :, :]
@@ -384,8 +372,7 @@ def kernel_grid_linear_interpolation(kernel_grid: npt.NDArray, position: npt.NDA
 def _convolve2d_varying_kernel(image: npt.NDArray,
                                kernel_grid: npt.NDArray,
                                coordinates: Tuple[npt.NDArray, npt.NDArray],
-                               interpolator,
-                               check_bounds: bool = True) -> npt.NDArray:
+                               interpolator) -> npt.NDArray:
     """(Helper) Convolve an image with a spatially-varying kernel by interpolating a discrete kernel grid.
 
     Numba JIT function for performing the convolution of an image with a spatially-varying kernel by interpolation of a
@@ -395,7 +382,7 @@ def _convolve2d_varying_kernel(image: npt.NDArray,
     ----------
     image: npt.NDArray
         The image to be convolved.
-    kernel_grid : npt.array
+    kernel_grid : npt.NDArray
         An array with shape `(M, N, I, J)` defining an `MxN` grid of 2D kernels.
     coordinates : Tuple[npt.ArrayLike, npt.ArrayLike]
         A tuple of arrays defining the axis coordinates of each pixel of the image in the kernel grid coordinated in
@@ -403,27 +390,24 @@ def _convolve2d_varying_kernel(image: npt.NDArray,
     interpolator
         A Numba njit'ted function that performs the interpolation. It's signature should be
         `(kernel_grid: npt.NDArray, position: npt.NDArray, check_bounds: bool) -> npt.NDArray`.
-    check_bounds : bool
-        Whether to check if position is within grid limits. This should not be set to False unless this check is
-        performed beforehand.
 
     Returns
     -------
     npt.NDArray
         The image convolved with the kernel grid interpolated at each pixel.
     """
+    # [JA] TODO: Allow for kernel center != kernel.shape // 2
     # Get image, grid and kernel dimensions
     img_i, img_j = image.shape
-    grid_i, grid_j, psf_i, psf_j = kernel_grid.shape
+    grid_i, grid_j, kernel_i, kernel_j = kernel_grid.shape
 
     # Add padding to the image (note: Numba doesn't support np.pad)
-    psf_ci, psf_cj = psf_i // 2, psf_j // 2
-    padded_img = np.zeros((img_i + psf_i - 1, img_j + psf_j - 1), dtype=image.dtype)
-    padded_img[psf_ci:psf_ci + img_i, psf_cj:psf_cj + img_j] = image
+    kernel_ci, kernel_cj = kernel_i // 2, kernel_j // 2
+    padded_img = np.zeros((img_i + kernel_i - 1, img_j + kernel_j - 1), dtype=image.dtype)
+    padded_img[kernel_ci:kernel_ci + img_i, kernel_cj:kernel_cj + img_j] = image
 
     # Create output array
     output = np.zeros_like(padded_img)
-
     # Compute kernel and convolve for each pixel
     for i in prange(img_i):
         x = coordinates[0][i]
@@ -434,34 +418,23 @@ def _convolve2d_varying_kernel(image: npt.NDArray,
                 # Get kernel for current pixel
                 position = np.array((x, y))
                 kernel = interpolator(kernel_grid=kernel_grid,
-                                      position=position,
-                                      check_bounds=check_bounds)
+                                      position=position)
 
-                # # Compute convolution for the current pixel
-                # pixel_sum = 0
-                # for ki in range(psf_i):
-                #     for kj in range(psf_j):
-                #         pixel_sum += padded_img[i + ki][j + kj] * kernel[ki][kj]
-                # output[i][j] = pixel_sum
+                # Apply to image
                 tmp = np.zeros_like(padded_img)
-                # start_i, start_j = psf_ci+i, psf_cj+j
-                # stop_i, stop_j = start_i + psf_i, start_j + psf_j
 
                 start_i, start_j = i, j
-                stop_i, stop_j = start_i + psf_i, start_j + psf_j
-
+                stop_i, stop_j = start_i + kernel_i, start_j + kernel_j
                 tmp[start_i:stop_i, start_j:stop_j] += pixel_value * kernel
+                tmp[start_i:stop_i, start_j:stop_j] = pixel_value * kernel
 
                 output += tmp
-
-    output = output[psf_i // 2:psf_i // 2 + img_i, psf_j // 2:psf_j // 2 + img_j]
-
-    return output
+    return output[kernel_ci:kernel_ci + img_i, kernel_cj:kernel_cj + img_j]
 
 
 def convolve2d_varying_kernel(image: npt.ArrayLike,
                               kernel_grid: npt.ArrayLike,
-                              coordinates: Tuple[npt.ArrayLike, npt.ArrayLike],
+                              coordinates: List[npt.ArrayLike],
                               *,
                               mode: str = "linear") -> npt.NDArray:
     """Convolve an image with a spatially-varying kernel by interpolating a discrete kernel grid.
@@ -477,7 +450,7 @@ def convolve2d_varying_kernel(image: npt.ArrayLike,
         The image to be convolved.
     kernel_grid : npt.ArrayLike
         An array with shape `(M, N, I, J)` defining an `MxN` grid of 2D kernels.
-    coordinates : Tuple[npt.ArrayLike, npt.ArrayLike]
+    coordinates : List[npt.ArrayLike]
         A tuple of arrays defining the axis coordinates of each pixel of the image in the kernel grid coordinated in
         which the kernel is to be computed.
     mode : str
@@ -525,5 +498,4 @@ def convolve2d_varying_kernel(image: npt.ArrayLike,
     return _convolve2d_varying_kernel(image=image,
                                       kernel_grid=kernel_grid,
                                       coordinates=(x, y),
-                                      interpolator=interpolation_fn,
-                                      check_bounds=False)
+                                      interpolator=interpolation_fn)
