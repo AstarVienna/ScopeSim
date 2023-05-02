@@ -1,8 +1,6 @@
 import math
 import numpy as np
-
 from astropy.modeling.models import Moffat2D
-
 from astropy.coordinates import Angle
 from astropy import units as u
 from matplotlib.path import Path
@@ -73,7 +71,6 @@ def diff_shift(wave, airmass, atm_ref_wav,config):
 
     #dry air density
     Da = (1 + Pa * (57.90*1.0e-8 - 0.0009325/T + 0.25844/T**2)) * Pa/T
-    
     #water vapour density
     Dw = (1 + Pw * (1 + 3.7 * 1E-4 * Pw) * (- 2.37321 * 1E-3 + 2.23366/T
                                             - 710.792/T**2
@@ -84,7 +81,6 @@ def diff_shift(wave, airmass, atm_ref_wav,config):
 
     N0_1 = (1.0E-8*((2371.34+683939.7/(130.0-S0**2)+4547.3/(38.9-S0**2))*Da
             + (6487.31+58.058*S0**2-0.71150*S0**4+0.08851*S0**6)*Dw))
-
     N_1 = 1.0E-8*((2371.34+683939.7/(130.0-S**2)+4547.3/(38.9-S**2))*Da
                   + (6487.31+58.058*S**2-0.71150*S**4+0.08851*S**6)*Dw)
 

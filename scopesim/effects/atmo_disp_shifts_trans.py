@@ -1,10 +1,7 @@
 import numpy as np
 from astropy import units as u
-
 from astropy.coordinates import Angle
-
 import atmo_disp_shifts_trans_utils as disp_utils
-
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 plt.style.use('bmh')
@@ -20,8 +17,9 @@ class AD_simulation:
     HR is not currently implemented fully
     """
     def __init__(self,**kwargs):
+        #Simulation parameters for MOSAIC
         params = {'telescope_diameter':39, #m, diameter of telescope (ELT)
-                  'wavefront_outerscale':46, #m, wavefront out scale for FWHM change with airmass/wavelength
+                  'wavefront_outerscale':46, #m, wavefront outer scale for FWHM change with airmass/wavelength. Value to be confirmed.
                   'median_seeing':.68, #arcsec, median seeing at Paranal
                   'median_seeing_wl':.5, #um, wavelength median seeing corresponds to
 
@@ -43,17 +41,17 @@ class AD_simulation:
                   'LR_NIR_J':[1.01,1.395], 
                   'LR_NIR_H':[1.420,1.857], 
                   'LR_NIR_All':[.770,1.857], 
-                  'HR_VIS_G':[0,0], #HR values need to be confirmed, especially VIS
-                  'HR_VIS_R':[0,0],
-                  'HR_VIS_All':[0,0],
-                  'HR_NIR_J':[0,0],
-                  'HR_NIR_H':[0,0],
-                  'HR_NIR_All':[0,0],
+                  'HR_VIS_G':[.510,.568], #HR values need to be confirmed, especially VIS
+                  'HR_VIS_R':[.610,.680],
+                  'HR_NIR_IY':[.770,.907],
+                  'HR_NIR_H':[1.523,1.658],
 
-                  'sim_scale':.005, #arcsec/pixel, scale to carry out the simulation - smaller is slower, more accurate
+
+                  'sim_scale':.005, #arcsec/pixel, scale to carry out the simulation - smaller is slower, more accurate. Do not put above 0.01
                   'sim_HA_samples':21, #number of instantaneous snapshots to average over for the integration                 
                   'relative_plate_PA_angle':0, #deg, relative angle of the plate/apertures and PA=0. For PA=0 along semi major axis, set to 90 deg
                   }
+    
         for kwarg in kwargs.items():
             params[kwarg[0]]=kwarg[1]
         self.config=params
@@ -75,7 +73,7 @@ class AD_simulation:
         
     def load_HA(self,HA_start,HA_end,declination):
         """
-        
+        Calculates the airmasses to use in the simulation using the observation parameters (HA and dec)
         """
         HA_range=np.linspace(HA_start,HA_end,self.config['sim_HA_samples'])
         self.input['HA_range']=HA_range
@@ -104,7 +102,7 @@ class AD_simulation:
         
     def calculate_shifts(self, guide_waveref, aperture_waveref):
         """
-        
+        Calculates shifts of the wavelengths at the different airmasses using Fillipenko
         """  
         self.input['guide_waveref']=guide_waveref
         self.input['aperture_waveref']=aperture_waveref
@@ -144,7 +142,7 @@ class AD_simulation:
     
     def load_PSFs(self):
         """
-        Generates the moffat PSFs - one for 
+        Generates the shifted moffat PSFs - one for for wavelength at each airmass
         """
         all_PSFs=[]
        
@@ -180,7 +178,7 @@ class AD_simulation:
         
     def plots(self):
         """
-        Function to illustrate simulation
+        Function to illustrate simulation results
         1) Transmission vs wavelength curves for individual fibres and entire bundle
         2) Track plot of monochromatic spot PSFs on the aperture over an integration
         """
@@ -221,22 +219,30 @@ class AD_simulation:
             
     def run(self,HA_start,HA_end,declination,band,sampling=0.01,guide_waveref=-1,aperture_waveref=-1):
         """
-        Function to run MOSAIC AD simulation for individual fibre transmission curves
+        Function to run MOSAIC AD simulation for individual fibre transmission curves.
+        Goes through multiple steps:
+        1) Finds observation airmasses based on provided hour angles and declination
+        2) Generates wavelengths to calculate transmission for based on the chosen MOSAIC observing band
+        3) Calculates the shifts of these wavelengths at each airmass
+        4) Generates aperture (for each fibre)
+        5) Generates PSFs of the shifted moffats
+        6) Calculates transmissions using apertures and PSFs
+        
         INPUTS:
         HA_start,HA_end: float, hours
             HA values to start and end the simulated observation at
+            
         declination: float, degrees
             Declination of the target in the simulated observation
+            
         band: string
             Which MOSAIC observing band to carry out the simulation in.
             Must be in the form "X_X_X", such as "LR_VIS_B" with the following options:
-            
             {LR: {VIS: {B, G, R, All}, NIR: {IY, J, H, All}}, HR: {VIS: {G, R}, NIR: {IY, H}}} 
-            
-            *HR not currently implemented*
             
         sampling: float, um
             What interval in um to sample the wavelengths at, default 0.01um
+            
         guide_waveref, aperture_waveref: float, um
             What wavelength to guide the telescope on and centre the apertures on halfway through the integration respectively
             defaults (when values set to -1) are wavelengths halfway through the chosen band 
@@ -244,6 +250,7 @@ class AD_simulation:
         RETURNS:
         wavelengths: 1D array of floats, um
             wavelength samples the transmissions have been calculated for
+            
         fibre_transmissions: 2D array of floats, fraction
             transmissions of each of the fibres for each different simulated wavelength.
             first axis is the respective fibre, second axis is the wavelength
@@ -256,8 +263,8 @@ class AD_simulation:
             guide_waveref,aperture_waveref=band_mid,band_mid
         self.input['guide_waveref']=guide_waveref
         self.input['aperture_waveref']=aperture_waveref
-        self.calculate_shifts(guide_waveref,aperture_waveref)
         
+        self.calculate_shifts(guide_waveref,aperture_waveref)
         self.load_aperture(band)
         self.load_PSFs()
         self.calculate_transmissions()
