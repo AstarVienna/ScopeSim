@@ -1,12 +1,40 @@
 import numpy as np
 from astropy import units as u
 from astropy.coordinates import Angle
-import atmo_disp_shifts_trans_utils as disp_utils
 import matplotlib.pyplot as plt
 import matplotlib as mpl
-plt.style.use('bmh')
 
-class AD_simulation:
+from . import mosaic_atmo_disp_fibre_coupling_utils as disp_utils
+from . import TERCurve
+
+
+class MosaicAtmosDispFibreCoupling(TERCurve):
+    def __init__(self, **kwargs):
+        params = {"HA_start": 0,
+                  "HA_end": 0,
+                  "declination": 0,
+                  "band": "HR_NIR_H",
+                  "sampling": 0.01,     # um
+                  "guide_waveref": -1,
+                  "aperture_waveref": -1}
+
+        super(TERCurve, self).__init__()
+        self.meta.update(params)
+        self.meta.update(kwargs)
+
+        self.coupling_fractions = AtmosDispFibreCoupling(**kwargs)
+
+    def apply_to(self, obj, **kwargs):
+
+        if isinstance(obj, SourceBase):
+            # return objects are: 1D wavelength, 2D transmission curves
+            waves, trans_arr = self.coupling_fractions.run()
+
+
+        return base
+
+
+class AtmosDispFibreCoupling:
     """
     Class to quantify atmospheric dispersion effects on a MOSAIC integration.
     See .run for inputs and outputs
@@ -16,7 +44,7 @@ class AD_simulation:
     Bugs/Issues:
     HR is not currently implemented fully
     """
-    def __init__(self,**kwargs):
+    def __init__(self, **kwargs):
         #Simulation parameters for MOSAIC
         params = {'telescope_diameter':39, #m, diameter of telescope (ELT)
                   'wavefront_outerscale':46, #m, wavefront outer scale for FWHM change with airmass/wavelength. Value to be confirmed.
@@ -46,15 +74,15 @@ class AD_simulation:
                   'HR_NIR_IY':[.770,.907],
                   'HR_NIR_H':[1.523,1.658],
 
-
                   'sim_scale':.005, #arcsec/pixel, scale to carry out the simulation - smaller is slower, more accurate. Do not put above 0.01
                   'sim_HA_samples':21, #number of instantaneous snapshots to average over for the integration                 
                   'relative_plate_PA_angle':0, #deg, relative angle of the plate/apertures and PA=0. For PA=0 along semi major axis, set to 90 deg
                   }
     
-        for kwarg in kwargs.items():
-            params[kwarg[0]]=kwarg[1]
-        self.config=params
+        # for kwarg in kwargs.items():
+        #     params[kwarg[0]]=kwarg[1]
+        params.update(kwargs)
+        self.config = params
         self.input={}
         self.output={}
         
@@ -182,6 +210,8 @@ class AD_simulation:
         1) Transmission vs wavelength curves for individual fibres and entire bundle
         2) Track plot of monochromatic spot PSFs on the aperture over an integration
         """
+        plt.style.use('bmh')
+
         fig,ax=plt.subplots(figsize=[7,5])
         plt.ylim(0,0.1)
         ax.set_ylabel("Individual Fibre Transmission")
@@ -217,7 +247,8 @@ class AD_simulation:
         plt.xlabel("x (arcsec)")
         plt.ylabel("y (arcsec)")
             
-    def run(self,HA_start,HA_end,declination,band,sampling=0.01,guide_waveref=-1,aperture_waveref=-1):
+    def run(self, HA_start, HA_end, declination, band,
+            sampling=0.01, guide_waveref=-1, aperture_waveref=-1):
         """
         Function to run MOSAIC AD simulation for individual fibre transmission curves.
         Goes through multiple steps:
@@ -228,7 +259,8 @@ class AD_simulation:
         5) Generates PSFs of the shifted moffats
         6) Calculates transmissions using apertures and PSFs
         
-        INPUTS:
+        Parameters
+        ----------
         HA_start,HA_end: float, hours
             HA values to start and end the simulated observation at
             
@@ -247,14 +279,17 @@ class AD_simulation:
             What wavelength to guide the telescope on and centre the apertures on halfway through the integration respectively
             defaults (when values set to -1) are wavelengths halfway through the chosen band 
         
-        RETURNS:
-        wavelengths: 1D array of floats, um
-            wavelength samples the transmissions have been calculated for
+        Returns
+        -------
+        wavelengths: 1D array of floats
+            [um] wavelength samples the transmissions have been calculated for
             
-        fibre_transmissions: 2D array of floats, fraction
-            transmissions of each of the fibres for each different simulated wavelength.
-            first axis is the respective fibre, second axis is the wavelength
+        fibre_transmissions: 2D array of floats,
+            [0..1] Transmissions of each of the fibres for each different
+            simulated wavelength. First axis is the respective fibre,
+            second axis is the wavelength
         """
+
         self.load_HA(HA_start,HA_end,declination)
         self.load_MOSAIC_band(band,sampling)
         

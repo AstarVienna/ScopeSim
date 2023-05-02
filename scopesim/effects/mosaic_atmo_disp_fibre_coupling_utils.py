@@ -5,6 +5,7 @@ from astropy.coordinates import Angle
 from astropy import units as u
 from matplotlib.path import Path
 
+
 def calculate_FWHM(wavelength,airmass,config):
     median_seeing=config['median_seeing']
     median_seeing_wl=config['median_seeing_wl']
