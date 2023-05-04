@@ -4,7 +4,7 @@ from astropy.modeling.models import Moffat2D
 from astropy.coordinates import Angle
 from astropy import units as u
 from matplotlib.path import Path
-
+import pandas as pd
 
 def calculate_FWHM(wavelength,airmass,config):
     median_seeing=config['median_seeing']
@@ -118,6 +118,7 @@ def make_aperture(band,major_axis,scale):
         centres=[centre_0,centre_1,centre_2,centre_3,centre_4,centre_5,centre_6]
 
         apertures=np.zeros((7,boundary*2+1,boundary*2+1))
+        apertures_table=[]
         for count,centre in enumerate(centres):
             P1=[centre[0]+triangle_side*np.cos(np.pi*1/3),centre[1]+triangle_side*np.sin(np.pi/3)]
             P2=[centre[0]+triangle_side,centre[1]]
@@ -138,5 +139,8 @@ def make_aperture(band,major_axis,scale):
             mask=mask.reshape(height, width)
             
             apertures[count]=mask
+            apertures_table.append([count,(centre[1]-aperture_centre[1])*scale,(centre[0]-aperture_centre[0])*scale])
             
-    return apertures
+        apertures_table=pd.DataFrame(apertures_table,columns=['fibre_id','dx','dy'])
+        
+    return apertures,apertures_table

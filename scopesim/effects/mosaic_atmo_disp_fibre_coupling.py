@@ -185,8 +185,9 @@ class AtmosDispFibreCoupling:
         """
         Generates apertures, one for each fibre in the bundle
         """
-        apertures=disp_utils.make_aperture(band,self.output['major_axis'],self.config['sim_scale'])
+        apertures,apertures_table=disp_utils.make_aperture(band,self.output['major_axis'],self.config['sim_scale'])
         self.output['apertures']=apertures
+        self.apertures_table=apertures_table
            
     def calculate_transmissions(self):
         """
@@ -284,10 +285,10 @@ class AtmosDispFibreCoupling:
         wavelengths: 1D array of floats
             [um] wavelength samples the transmissions have been calculated for
             
-        fibre_transmissions: 2D array of floats,
+        fibre_transmissions_dic: dictionary, containing 1D arrays of floats
             [0..1] Transmissions of each of the fibres for each different
-            simulated wavelength. First axis is the respective fibre,
-            second axis is the wavelength
+            simulated wavelength. Dictionary key is the fibre id, {0,1...}.
+            The 1D array axis is the wavelength
         """
 
         self.load_HA(HA_start,HA_end,declination)
@@ -307,4 +308,8 @@ class AtmosDispFibreCoupling:
         wavelengths=self.output['wavelengths']
         fibre_transmissions=self.output['raw_integration_transmissions'] 
         
-        return wavelengths, fibre_transmissions
+        fibre_transmissions_dict={}
+        for count,fibre_transmission in enumerate(fibre_transmissions):
+            fibre_transmissions_dict[count]=fibre_transmission
+        
+        return wavelengths, fibre_transmissions_dict
