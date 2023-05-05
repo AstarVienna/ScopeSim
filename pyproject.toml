@@ -22,7 +22,7 @@ classifiers=[
 dependencies = [
     "numpy>=1.18",
     "scipy>=1.4.0",
-    "astropy>=4.0",
+    "astropy>=5.0",
     "matplotlib>=3.2.0",
 
     "docutils>=0.15",
