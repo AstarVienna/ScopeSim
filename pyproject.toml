@@ -20,10 +20,10 @@ classifiers=[
     "Topic :: Scientific/Engineering :: Astronomy",
 ]
 dependencies = [
-    "numpy>=1.16",
-    "scipy>=1.0.0",
-    "astropy>=2.0",
-    "matplotlib>=1.5",
+    "numpy>=1.18",
+    "scipy>=1.4.0",
+    "astropy>=4.0",
+    "matplotlib>=3.2.0",
 
     "docutils",
     "requests>=2.20",
