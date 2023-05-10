@@ -6,6 +6,7 @@ from astropy import units as u
 from matplotlib.path import Path
 import pandas as pd
 
+
 def calculate_FWHM(wavelength,airmass,config):
     median_seeing=config['median_seeing']
     median_seeing_wl=config['median_seeing_wl']
@@ -97,7 +98,7 @@ def line(A,B):
     c=A[1]-m*A[0] 
     return m,c
 
-def make_aperture(band,major_axis,scale):
+def make_aperture_old(band,major_axis,scale):
     scale=scale
     boundary=math.ceil(major_axis/2/scale) #radius of aperture in pixels
 
@@ -133,7 +134,7 @@ def make_aperture(band,major_axis,scale):
             poly_path=Path(polygon)
 
             x, y = np.mgrid[:height, :width]
-            coors=np.hstack((x.reshape(-1, 1), y.reshape(-1,1))) # coors.shape is (4000000,2)
+            coors=np.hstack((x.reshape(-1, 1), y.reshape(-1,1))) 
 
             mask = poly_path.contains_points(coors)
             mask=mask.reshape(height, width)
@@ -144,3 +145,77 @@ def make_aperture(band,major_axis,scale):
         apertures_table=pd.DataFrame(apertures_table,columns=['fibre_id','dx','dy'])
         
     return apertures,apertures_table
+
+def make_aperture(band,major_axis,config):
+    scale=float(config['sim_scale'])
+    boundary=math.ceil(major_axis/2/scale) #radius of aperture in pixels
+
+    if config['custom_hexagon_radius'] != 0:
+        radius=config['custom_hexagon_radius']
+    else:
+        radius=config[band[0:6]+"_hexagon_radius"]
+    sampling = major_axis/(2*radius-1)/scale
+    triangle_side=sampling*np.sqrt(3)/3
+    aperture_centre=[boundary,boundary]
+    
+    centres_array=(cube_spiral([0,0],radius-1))
+    q_vector=np.array([sampling/2,sampling/np.sqrt(3)*3/2])
+    r_vector=np.array([sampling,0])
+    
+    centres_xy_coords=[]
+    for array_val in centres_array:
+        xy_vals=np.array(array_val[0]*q_vector+array_val[1]*r_vector)
+        centres_xy_coords.append(xy_vals)
+
+    apertures=np.zeros((len(centres_array),boundary*2+1,boundary*2+1))
+    apertures_table=[]
+    for count,vals in enumerate(centres_xy_coords):
+        centre=[vals[1]+aperture_centre[0],vals[0]+aperture_centre[1]]
+        P1=[centre[0]+triangle_side*np.cos(np.pi*1/3),centre[1]+triangle_side*np.sin(np.pi/3)]
+        P2=[centre[0]+triangle_side,centre[1]]
+        P3=[centre[0]+triangle_side*np.cos(np.pi/3),centre[1]-triangle_side*np.sin(np.pi/3)]
+        P4=[centre[0]-triangle_side*np.cos(np.pi/3),centre[1]-triangle_side*np.sin(np.pi/3)]
+        P5=[centre[0]-triangle_side,centre[1]]
+        P6=[centre[0]-triangle_side*np.cos(np.pi/3),centre[1]+triangle_side*np.sin(np.pi/3)]
+        polygon=[P1,P2,P3,P4,P5,P6]
+        height=boundary*2+1
+        width=boundary*2+1
+        poly_path=Path(polygon)
+
+        x, y = np.mgrid[:height, :width]
+        coors=np.hstack((x.reshape(-1, 1), y.reshape(-1,1)))
+
+        mask = poly_path.contains_points(coors)
+        mask=mask.reshape(height, width)
+        
+        apertures[count]=mask
+        apertures_table.append([count,(vals[0])*scale,(vals[1])*scale])
+            
+    apertures_table=pd.DataFrame(apertures_table,columns=['fibre_id','dx','dy'])
+    return apertures,apertures_table
+    
+def cube_direction(direction):
+    direction_vectors=[[+1,0],[+1,-1],[0,-1],[-1,0],[-1,+1],[0,+1]]
+    return direction_vectors[direction]
+def cube_add(hex,vec):
+    return [hex[0]+vec[0],hex[1]+vec[1]]
+def cube_neighbor(cube,direction):
+    return cube_add(cube,cube_direction(direction))
+def cube_scale(hex, factor):
+    return [hex[0]*factor,hex[1]*factor]
+def cube_ring(center, radius):
+    results = []
+    hex = cube_add(center,
+                        cube_scale(cube_direction(4), radius))
+    for i in range(0,6):
+        for j in range(0,radius):
+            results.append(hex)
+            hex = cube_neighbor(hex, i)
+    return results
+def cube_spiral(center, radius):
+    results = [center]
+    for k in range(1,radius+1):
+        ring_results=cube_ring(center, k)
+        for i in ring_results:
+            results.append(i)
+    return results

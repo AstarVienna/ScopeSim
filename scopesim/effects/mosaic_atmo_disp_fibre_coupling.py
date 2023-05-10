@@ -42,7 +42,7 @@ class AtmosDispFibreCoupling:
     Author: Jay Stephan
     
     Bugs/Issues:
-    HR is not currently implemented fully
+    HR Wavelength and aperture major axis values need to be confirmed
     """
     def __init__(self, **kwargs):
         #Simulation parameters for MOSAIC
@@ -57,9 +57,15 @@ class AtmosDispFibreCoupling:
                   'pressure':750, #mbar, pressure at Paranal
                   
                   'LR_VIS_major_axis':.702, #arcsec, major axis of observing modes apertures
+                  'LR_VIS_hexagon_radius': 2, #radius of aperture hexagon array in hexagons
                   'LR_NIR_major_axis':.57, 
+                  'LR_NIR_hexagon_radius': 2,
                   'HR_VIS_major_axis':.700, 
+                  'HR_VIS_hexagon_radius': 3,
                   'HR_NIR_major_axis':.57, #This needs to be confirmed, but should be correct
+                  'HR_NIR_hexagon_radius': 2,
+                  
+                  'custom_hexagon_radius': 0, #Change to be non-zero to overide aperture hexagon array
                            
                   'LR_VIS_B':[.390,.458], #um, MOSAIC bands
                   'LR_VIS_G':[.450,.591], 
@@ -185,7 +191,7 @@ class AtmosDispFibreCoupling:
         """
         Generates apertures, one for each fibre in the bundle
         """
-        apertures,apertures_table=disp_utils.make_aperture(band,self.output['major_axis'],self.config['sim_scale'])
+        apertures,apertures_table=disp_utils.make_aperture(band,self.output['major_axis'],self.config)
         self.output['apertures']=apertures
         self.apertures_table=apertures_table
            
