@@ -27,22 +27,22 @@ def make_moffat_PSFs(wavelengths,offsets,airmass,diameter,config,beta=2.5):
     scale=config['sim_scale']
     
     wavelengths,offsets = np.array(wavelengths),np.array(offsets)
-    boundary=math.ceil(diameter/2/scale) #radius of aperture in pixels
+    pixel_radius=math.ceil(diameter/2/scale) #radius of aperture in pixels
 
     FWHMs = calculate_FWHM(wavelengths,airmass,config)
 
-    x = np.arange(-boundary, boundary+1)
-    y = np.arange(-boundary, boundary+1)
+    x = np.arange(0, pixel_radius*2)
+    y = np.arange(0, pixel_radius*2)
     x, y = np.meshgrid(x, y)
           
-    PSFs=np.zeros((len(wavelengths),boundary*2+1,boundary*2+1))
+    PSFs=np.zeros((len(wavelengths),pixel_radius*2,pixel_radius*2))
     for count in range(0,len(wavelengths)):
         alpha=FWHMs[count]/scale/(2*np.sqrt(2**(1/beta)-1))
         moffat_total=(np.pi*alpha**2)/(beta-1)
         x_pos=offsets[count][0]/scale  
         y_pos=offsets[count][1]/scale
 
-        Moffat=Moffat2D(1,x_pos,y_pos,alpha,beta)
+        Moffat=Moffat2D(1,x_pos+pixel_radius-0.5,y_pos+pixel_radius-0.5,alpha,beta)
         Moffat_data=Moffat(x,y)
         PSFs[count]=Moffat_data/moffat_total
 
@@ -99,14 +99,13 @@ def line(A,B):
     return m,c
 
 def make_aperture_old(band,major_axis,scale):
-    scale=scale
-    boundary=math.ceil(major_axis/2/scale) #radius of aperture in pixels
+    pixel_radius=math.ceil(major_axis/2/scale) #radius of aperture in pixels
 
     if band[0:6]=="LR_VIS" or band[0:6]=="LR_NIR" or band[0:6]=="HR_NIR":
         sampling = major_axis/3/scale
         
         triangle_side=sampling*np.sqrt(3)/3
-        aperture_centre=[boundary,boundary]
+        aperture_centre=[pixel_radius-0.5,pixel_radius-0.5]
         
         centre_0=aperture_centre
         centre_1=[centre_0[0],centre_0[1]+sampling]
@@ -118,7 +117,7 @@ def make_aperture_old(band,major_axis,scale):
 
         centres=[centre_0,centre_1,centre_2,centre_3,centre_4,centre_5,centre_6]
 
-        apertures=np.zeros((7,boundary*2+1,boundary*2+1))
+        apertures=np.zeros((7,pixel_radius*2,pixel_radius*2))
         apertures_table=[]
         for count,centre in enumerate(centres):
             P1=[centre[0]+triangle_side*np.cos(np.pi*1/3),centre[1]+triangle_side*np.sin(np.pi/3)]
@@ -129,8 +128,8 @@ def make_aperture_old(band,major_axis,scale):
             P6=[centre[0]-triangle_side*np.cos(np.pi/3),centre[1]+triangle_side*np.sin(np.pi/3)]
 
             polygon=[P1,P2,P3,P4,P5,P6]
-            height=boundary*2+1
-            width=boundary*2+1
+            height=pixel_radius*2
+            width=pixel_radius*2
             poly_path=Path(polygon)
 
             x, y = np.mgrid[:height, :width]
@@ -148,7 +147,7 @@ def make_aperture_old(band,major_axis,scale):
 
 def make_aperture(band,major_axis,config):
     scale=float(config['sim_scale'])
-    boundary=math.ceil(major_axis/2/scale) #radius of aperture in pixels
+    pixel_radius=math.ceil(major_axis/2/scale) #radius of aperture in pixels
 
     if config['custom_hexagon_radius'] != 0:
         radius=config['custom_hexagon_radius']
@@ -156,7 +155,7 @@ def make_aperture(band,major_axis,config):
         radius=config[band[0:6]+"_hexagon_radius"]
     sampling = major_axis/(2*radius-1)/scale
     triangle_side=sampling*np.sqrt(3)/3
-    aperture_centre=[boundary,boundary]
+    aperture_centre=[pixel_radius-0.5,pixel_radius-0.5]
     
     centres_array=(cube_spiral([0,0],radius-1))
     q_vector=np.array([sampling/2,sampling/np.sqrt(3)*3/2])
@@ -167,7 +166,7 @@ def make_aperture(band,major_axis,config):
         xy_vals=np.array(array_val[0]*q_vector+array_val[1]*r_vector)
         centres_xy_coords.append(xy_vals)
 
-    apertures=np.zeros((len(centres_array),boundary*2+1,boundary*2+1))
+    apertures=np.zeros((len(centres_array),pixel_radius*2,pixel_radius*2))
     apertures_table=[]
     for count,vals in enumerate(centres_xy_coords):
         centre=[vals[1]+aperture_centre[0],vals[0]+aperture_centre[1]]
@@ -178,8 +177,8 @@ def make_aperture(band,major_axis,config):
         P5=[centre[0]-triangle_side,centre[1]]
         P6=[centre[0]-triangle_side*np.cos(np.pi/3),centre[1]+triangle_side*np.sin(np.pi/3)]
         polygon=[P1,P2,P3,P4,P5,P6]
-        height=boundary*2+1
-        width=boundary*2+1
+        height=pixel_radius*2
+        width=pixel_radius*2
         poly_path=Path(polygon)
 
         x, y = np.mgrid[:height, :width]
