@@ -972,8 +972,8 @@ class GridFieldVaryingPSF(DiscretePSF):
                                            n=grid_n,
                                            x0=hdr["CRVAL1"] * unit_factor_1,
                                            y0=hdr["CRVAL2"] * unit_factor_2,
-                                           dx=hdr["CDELT1"] * unit_factor_1*1.5,
-                                           dy=hdr["CDELT2"] * unit_factor_2*1.5,
+                                           dx=hdr["CDELT1"] * unit_factor_1,
+                                           dy=hdr["CDELT2"] * unit_factor_2,
                                            i0=hdr["CRPIX1"],
                                            j0=hdr["CRPIX2"])
 
@@ -1055,6 +1055,7 @@ class GridFieldVaryingPSF(DiscretePSF):
                                                         center_pixel=kernel_center_pixel,
                                                         origin_pixel_scale=kernel_pixel_scale,
                                                         target_pixel_scale=fov_pixel_scale)
+
             # [JA] TODO: fix this
             # if ((fov.header["NAXIS1"] < hdr["NAXIS3"]) or
             #         (fov.header["NAXIS2"] < hdr["NAXIS4"])):
