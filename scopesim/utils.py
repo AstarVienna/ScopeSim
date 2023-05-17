@@ -1356,7 +1356,8 @@ def rescale_array(array: npt.ArrayLike,
                   target_x: npt.ArrayLike,
                   target_y: npt.ArrayLike,
                   *,
-                  normalize: bool = True) -> npt.NDArray:
+                  normalize: bool = True,
+                  method: str = "linear") -> npt.NDArray:
     """Rescales an array to the desired axis coordinates.
 
     Parameters
@@ -1373,14 +1374,24 @@ def rescale_array(array: npt.ArrayLike,
         The desired coordinates of the X axis after rescaling.
     normalize : bool
         Whether to normalize the array by its sum.
+    method : str
+        Interpolation method (Default = "linear" : bi-linear interpolation)
 
     Returns
     -------
     npt.NDArray
         The rescaled array.
     """
-    interpolator = sp.interpolate.RectBivariateSpline(x=array_x, y=array_y, z=array, kx=1, ky=1)
-    rescaled_array = interpolator(x=target_x, y=target_y, grid=False)
+    # interpolator = sp.interpolate.RectBivariateSpline(x=array_x, y=array_y, z=array, kx=order, ky=order)
+    # rescaled_array = interpolator(x=target_x, y=target_y, grid=False)
+    print("new2")
+    rescaled_array = sp.interpolate.interpn(points=(array_x, array_y),
+                                            values=array,
+                                            xi=(target_x, target_y),
+                                            bounds_error=False,
+                                            fill_value=0,
+                                            method=method)
+
     if normalize:
         rescaled_array *= np.sum(array) / np.sum(rescaled_array)
     return rescaled_array
@@ -1389,7 +1400,9 @@ def rescale_array(array: npt.ArrayLike,
 def rescale_array_grid(grid: npt.NDArray,
                        center_pixel: npt.NDArray,
                        origin_pixel_scale: float,
-                       target_pixel_scale: float) -> npt.NDArray:
+                       target_pixel_scale: float,
+                       *,
+                       method: str = "linear") -> npt.NDArray:
     """Rescales each array in a grid of arrays to the desired pixel scale.
 
     Parameters
@@ -1402,24 +1415,36 @@ def rescale_array_grid(grid: npt.NDArray,
         The pixel width of the input grid.
     target_pixel_scale : float
         The desired pixel width for the output grid.
+    method : int
+        Interpolation method (Default = "linear" : bi-linear interpolation)
+
 
     Returns
     -------
     npt.NDArray
         A `MxN` grid of 2D arrays rescaled by interpolation to the desired pixel_scale.
     """
-    # [JA] TODO: Check what happens if center pixel is not integer
+
+    # Get grid shape
     grid_i, grid_j, array_i, array_j = grid.shape
 
+    # Define origin coordinates
     array_x = (np.arange(start=0, stop=array_i, step=1) - center_pixel[0]) * origin_pixel_scale
     array_y = (np.arange(start=0, stop=array_j, step=1) - center_pixel[1]) * origin_pixel_scale
 
-    target_x = np.arange(start=int(array_x[0] / target_pixel_scale) * target_pixel_scale,
-                         stop=int(array_x[-1] / target_pixel_scale) * target_pixel_scale,
-                         step=target_pixel_scale)
-    target_y = np.arange(start=int(array_y[0] / target_pixel_scale) * target_pixel_scale,
-                         stop=int(array_y[-1] / target_pixel_scale) * target_pixel_scale,
-                         step=target_pixel_scale)
+    # Define target coordinates
+    target_x_lim = np.max((abs(np.floor(array_x[0] / target_pixel_scale)),
+                           abs(np.ceil(array_x[-1] / target_pixel_scale))))
+    target_x_start = -target_x_lim * target_pixel_scale
+    target_x_stop = (target_x_lim + 0.001) * target_pixel_scale
+    target_x = np.arange(start=target_x_start, stop=target_x_stop, step=target_pixel_scale)
+
+    target_y_lim = np.max((abs(np.floor(array_y[0] / target_pixel_scale)),
+                           abs(np.ceil(array_y[-1] / target_pixel_scale))))
+    target_y_start = -target_y_lim * target_pixel_scale
+    target_y_stop = (target_y_lim + 0.001) * target_pixel_scale
+    target_y = np.arange(start=target_y_start, stop=target_y_stop, step=target_pixel_scale)
+
     target_shape = (target_x.size, target_y.size)
 
     target_x, target_y = np.meshgrid(target_x, target_y, indexing='ij')
@@ -1432,7 +1457,8 @@ def rescale_array_grid(grid: npt.NDArray,
                                                                  array_x=array_x,
                                                                  array_y=array_y,
                                                                  target_x=target_x,
-                                                                 target_y=target_y) for array in flat_input_grid)
+                                                                 target_y=target_y,
+                                                                 method=method) for array in flat_input_grid)
 
     # Combine the zoomed arrays back into a single grid
     output_grid = np.array(rescaled_arrays).reshape((grid_i, grid_j, *target_shape))
