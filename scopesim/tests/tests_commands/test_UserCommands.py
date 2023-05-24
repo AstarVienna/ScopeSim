@@ -150,15 +150,11 @@ def test_patch_fake_symlinks(tmp_path):
     with open(file4, 'w') as f4:
         f4.write("Hello\nWorld\n")
 
-    # With slashes
+    # With slashes. Backslashes would also work on windows,
+    # but not on linux, so we just do not include that case.
     fakelink1 = tmp_path / "L1"
     with open(fakelink1, 'w') as f:
         f.write("H1/H2")
-
-    # With backslashes
-    fakelink2 = tmp_path / "L2"
-    with open(fakelink2, 'w') as f:
-        f.write(r"H1\H2")
 
     # A real link
     reallink1 = tmp_path / "R1"
@@ -177,10 +173,8 @@ def test_patch_fake_symlinks(tmp_path):
     assert patch_fake_symlinks(file3) == file3.resolve()
     assert patch_fake_symlinks(file4) == file4.resolve()
     assert patch_fake_symlinks(fakelink1) == dir2.resolve()
-    assert patch_fake_symlinks(fakelink2) == dir2.resolve()
     assert patch_fake_symlinks(reallink1) == dir2.resolve()
     assert patch_fake_symlinks(fakelink1 / "F1.txt") == file1.resolve()
-    assert patch_fake_symlinks(fakelink2 / "F1.txt") == file1.resolve()
     assert patch_fake_symlinks(reallink1 / "F1.txt") == file1.resolve()
     assert patch_fake_symlinks(root) == root.resolve()
 
