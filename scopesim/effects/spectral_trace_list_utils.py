@@ -10,7 +10,8 @@ import logging
 import numpy as np
 
 from scipy.interpolate import RectBivariateSpline
-from scipy.interpolate import InterpolatedUnivariateSpline
+#from scipy.interpolate import InterpolatedUnivariateSpline
+from scipy.interpolate import interp1d
 from matplotlib import pyplot as plt
 
 from astropy.table import Table
@@ -152,7 +153,6 @@ class SpectralTrace:
         det_header = fov.detector_header
 
         # WCSD from the FieldOfView - this is the full detector plane
-        fpa_wcs = WCS(fov_header, key='D')
         naxis1, naxis2 = fov_header['NAXIS1'], fov_header['NAXIS2']
         pixsize = fov_header['CDELT1D'] * u.Unit(fov_header['CUNIT1D'])
         pixsize = pixsize.to(u.mm).value
@@ -212,13 +212,24 @@ class SpectralTrace:
 
         # dlam_by_dx, dlam_by_dy = self.xy2lam.gradient()
         # if np.abs(dlam_by_dx(0, 0)) > np.abs(dlam_by_dy(0, 0)):
+        xi = np.array([0] * 1001)    # ..todo: This may have to be generalised
+        lam = np.linspace(wave_min, wave_max, 1001)
+        xmm = self.xilam2x(xi, lam)
+        ymm = self.xilam2y(xi, lam)
         if self.dispersion_axis == "x":
-            avg_dlam_per_pix = (wave_max - wave_min) / sub_naxis1
+            dlam_by_dx = self.xy2lam.gradient()[0]
+            dlam_per_pix = interp1d(lam, dlam_by_dx(xmm, ymm) * pixsize,
+                                    fill_value="extrapolate")
+            print("disp x:", wave_max, wave_min, sub_naxis1, np.mean(dlam_per_pix(lam)))
         else:
-            avg_dlam_per_pix = (wave_max - wave_min) / sub_naxis2
-
+            dlam_by_dy = self.xy2lam.gradient()[1]
+            dlam_per_pix = interp1d(lam, dlam_by_dy(xmm, ymm) * pixsize,
+                                    fill_value="extrapolate")
+            print(pixsize)
+            print("disp y:", wave_max, wave_min, sub_naxis2, np.mean(dlam_per_pix(lam)))
         try:
-            xilam = XiLamImage(fov, avg_dlam_per_pix)
+            #avg_dlam_per_pix = 3.23e-5   # ..todo: remove
+            xilam = XiLamImage(fov, dlam_per_pix)
             self.xilam = xilam    # ..todo: remove
         except ValueError:
             print(" ---> ", self.meta['trace_id'], "gave ValueError")
@@ -429,12 +440,21 @@ class XiLamImage():
 
     The class produces and holds an image of xi (relative position along
     the spatial slit direction) and wavelength lambda.
+
+    Parameters
+    ----------
+    fov : FieldOfView
+    dlam_per_pix : a 1-D interpolation function from wavelength (in um) to dispersion
+          (in um/pixel); alternatively a number giving an average dispersion
     """
 
     def __init__(self, fov, dlam_per_pix):
         # ..todo: we assume that we always have a cube. We use SpecCADO's
         #         add_cube_layer method
+        print("Building XiLamImage, dlam_per_pix =",dlam_per_pix)
+        print(fov)
         cube_wcs = WCS(fov.cube.header, key=' ')
+        print(cube_wcs)
         wcs_lam = cube_wcs.sub([3])
 
         d_xi = fov.cube.header['CDELT1']
@@ -447,22 +467,37 @@ class XiLamImage():
         # This is based on the cube shape and assumes that the cube's spatial
         # dimensions are set by the slit aperture
         (n_lam, n_eta, n_xi) = fov.cube.data.shape
+        print(n_lam, n_eta, n_xi)
 
         # arrays of cube coordinates
         cube_xi = d_xi * np.arange(n_xi) + fov.meta['xi_min'].value
         cube_eta = d_eta * (np.arange(n_eta) - (n_eta - 1) / 2)
         cube_lam = wcs_lam.all_pix2world(np.arange(n_lam), 1)[0]
         cube_lam *= u.Unit(wcs_lam.wcs.cunit[0]).to(u.um)
-
+        print("xi: ", cube_xi.min(), cube_xi.max())
+        print("eta:", cube_eta.min(), cube_eta.max())
+        print("lam:", cube_lam.min(), cube_lam.max())
         # Initialise the array to hold the xi-lambda image
         self.image = np.zeros((n_xi, n_lam), dtype=np.float32)
         self.lam = cube_lam
+        try:
+            print("wavelengths:", self.lam)
+            dlam_per_pix_val = dlam_per_pix(np.asarray(self.lam))
+            print("dispersion: ", dlam_per_pix_val)
+        except ValueError:
+            print("ValueError:", dlam_per_pix)
+            print("ValueError:", cube_lam.min(), cube_lam.max())
+            print(dlam_per_pix((cube_lam.min() + cube_lam.max())/2))
+        except TypeError:
+            dlam_per_pix_val = dlam_per_pix
+            print("Warning: using scalar dlam_per_pix =", dlam_per_pix_val)
+            pass
 
         for i, eta in enumerate(cube_eta):
             #if abs(eta) > fov.slit_width / 2:   # ..todo: needed?
             #    continue
+            lam0 = self.lam + dlam_per_pix_val * eta / d_eta
 
-            lam0 = self.lam + dlam_per_pix * eta / d_eta
             # lam0 is the target wavelength. We need to check that this
             # overlaps with the wavelength range covered by the cube
             if lam0.min() < cube_lam.max() and lam0.max() > cube_lam.min():
@@ -505,6 +540,8 @@ class XiLamImage():
         self.interp = RectBivariateSpline(self.xi, self.lam, self.image,
                                           kx=spline_order[0],
                                           ky=spline_order[1])
+        # temporary: write out xilamimage
+        fits.writeto("xilamimage.fits", data=self.image, header=self.wcs.to_header(), overwrite=True)
 
 
 class Transform2D():
