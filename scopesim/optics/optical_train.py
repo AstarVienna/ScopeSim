@@ -166,7 +166,6 @@ class OpticalTrain:
         .. todo:: List is out of date - update
 
         """
-        print("Starting to observe")
         if update:
             self.update(**kwargs)
 
@@ -179,25 +178,20 @@ class OpticalTrain:
 
         # [1D - transmission curves]
         for effect in self.optics_manager.source_effects:
-            print("Applying sourve effect", effect)
             source = effect.apply_to(source)
 
         # [3D - Atmospheric shifts, PSF, NCPAs, Grating shift/distortion]
         fovs = self.fov_manager.fovs
-        print("Number of fovs:", len(fovs))
         for fov in fovs:
             print("Extracting from", fov.meta['trace_id'])
-            print(fov)
             # print("FOV", fov_i+1, "of", n_fovs, flush=True)
             # .. todo: possible bug with bg flux not using plate_scale
             #          see fov_utils.combine_imagehdu_fields
             fov.extract_from(source)
 
             hdu_type = "cube" if self.fov_manager.is_spectroscope else "image"
-            print("    view ", hdu_type)
             fov.view(hdu_type)
             for effect in self.optics_manager.fov_effects:
-                print(fov.meta['trace_id'], "apply_to", effect)
                 fov = effect.apply_to(fov)
 
             fov.flatten()
@@ -230,7 +224,6 @@ class OpticalTrain:
         # Convert to PHOTLAM per arcsec2
         # ..todo: this is not sufficiently general
 
-        print("Preparing source")
         for cube in source.cube_fields:
             header, data, wave = cube.header, cube.data, cube.wave
 
