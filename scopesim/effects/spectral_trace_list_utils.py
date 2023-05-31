@@ -62,16 +62,18 @@ class SpectralTrace:
         if isinstance(trace_tbl, (fits.BinTableHDU, fits.TableHDU)):
             self.table = Table.read(trace_tbl)
             self.meta["trace_id"] = trace_tbl.header.get('EXTNAME', "<unknown trace id>")
+            self.dispersion_axis = trace_tbl.header.get('DISPDIR', 'unknown')
         elif isinstance(trace_tbl, Table):
             self.table = trace_tbl
+            self.dispersion_axis = 'unknown'
         else:
             raise ValueError("trace_tbl must be one of (fits.BinTableHDU, "
                              f"fits.TableHDU, astropy.Table) but is {type(trace_tbl)}")
-
         self.compute_interpolation_functions()
 
         # Declaration of other attributes
         self._xilamimg = None
+        self.dlam_per_pix = None
 
     def fov_grid(self):
         """
@@ -105,10 +107,12 @@ class SpectralTrace:
         xi_arr = self.table[self.meta['s_colname']]
         lam_arr = self.table[self.meta['wave_colname']]
 
-        wi0, wi1 = lam_arr.argmin(), lam_arr.argmax()
-        x_disp_length = np.diff([x_arr[wi0], x_arr[wi1]])
-        y_disp_length = np.diff([y_arr[wi0], y_arr[wi1]])
-        self.dispersion_axis = "x" if x_disp_length > y_disp_length else "y"
+        if self.dispersion_axis == 'unknown':
+            # ..todo: replace with gradient based method
+            wi0, wi1 = lam_arr.argmin(), lam_arr.argmax()
+            x_disp_length = np.diff([x_arr[wi0], x_arr[wi1]])
+            y_disp_length = np.diff([y_arr[wi0], y_arr[wi1]])
+            self.dispersion_axis = "x" if x_disp_length > y_disp_length else "y"
 
         self.wave_min = quantify(np.min(lam_arr), u.um).value
         self.wave_max = quantify(np.max(lam_arr), u.um).value
@@ -119,6 +123,8 @@ class SpectralTrace:
         self.xilam2y = Transform2D.fit(xi_arr, lam_arr, y_arr)
         self._xiy2x = Transform2D.fit(xi_arr, y_arr, x_arr)
         self._xiy2lam = Transform2D.fit(xi_arr, y_arr, lam_arr)
+
+
 
     def map_spectra_to_focal_plane(self, fov):
         """
@@ -200,11 +206,13 @@ class SpectralTrace:
             dlam_grad = self.xy2lam.gradient()[0]  # dlam_by_dx
         else:
             dlam_grad = self.xy2lam.gradient()[1]  # dlam_by_dy
-        dlam_per_pix = interp1d(lam, dlam_grad(x_mm, y_mm) * pixsize,
+        self.dlam_per_pix = interp1d(lam, dlam_grad(x_mm, y_mm) * pixsize,
                                 fill_value="extrapolate")
-
+        print("Mean dispersion:", np.mean(self.dlam_per_pix(lam)))
+        print("Pixel size:", pixsize)
+        print("Dispersion direction:", self.dispersion_axis)
         try:
-            xilam = XiLamImage(fov, dlam_per_pix)
+            xilam = XiLamImage(fov, self.dlam_per_pix)
             self._xilamimg = xilam   # ..todo: remove or make available with a debug flag?
         except ValueError:
             print(f" ---> {self.meta['trace_id']} gave ValueError")
