@@ -42,7 +42,7 @@ class PoorMansHeader:
             self.dic.update(dict(obj))
 
         if isinstance(obj, dict):
-            if any([isinstance(obj[key], (tuple, list)) for key in obj]):
+            if any(isinstance(obj[key], (tuple, list)) for key in obj):
                 for key in obj:
                     if isinstance(obj[key], (tuple, list)):
                         self.comments[key] = obj[key][1]

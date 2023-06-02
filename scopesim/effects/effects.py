@@ -116,7 +116,7 @@ class Effect(DataContainer):
     @property
     def meta_string(self):
         meta_str = ""
-        max_key_len = max([len(key) for key in self.meta.keys()])
+        max_key_len = max(len(key) for key in self.meta.keys())
         for key in self.meta:
             if key not in ["comments", "changes", "description", "history",
                            "report_table_caption", "report_plot_caption",

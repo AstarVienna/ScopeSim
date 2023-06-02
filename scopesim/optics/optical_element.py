@@ -101,7 +101,7 @@ class OpticalElement:
             if eff.include and "z_order" in eff.meta:
                 z = eff.meta["z_order"]
                 if isinstance(z, (list, tuple)):
-                    if any([zmin <= zi <= zmax for zi in z]):
+                    if any(zmin <= zi <= zmax for zi in z):
                         effects += [eff]
                 else:
                     if zmin <= z <= zmax:
@@ -203,7 +203,7 @@ class OpticalElement:
     @property
     def properties_str(self):
         prop_str = ""
-        max_key_len = max([len(key) for key in self.properties.keys()])
+        max_key_len = max(len(key) for key in self.properties.keys())
         for key in self.properties:
             if key not in ["comments", "changes", "description", "history",
                            "report"]:
