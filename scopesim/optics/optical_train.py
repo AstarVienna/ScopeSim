@@ -199,8 +199,8 @@ class OpticalTrain:
 
         # [2D - Vibration, flat fielding, chopping+nodding]
         for effect in self.optics_manager.image_plane_effects:
-            for ii in range(len(self.image_planes)):
-                self.image_planes[ii] = effect.apply_to(self.image_planes[ii])
+            for ii, image_plane in enumerate(self.image_planes):
+                self.image_planes[ii] = effect.apply_to(image_plane)
 
         self._last_fovs = fovs
         self._last_source = source
