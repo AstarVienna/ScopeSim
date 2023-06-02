@@ -177,8 +177,7 @@ class OpticsManager:
         headers = [det_list.image_plane_header for det_list in detector_lists]
 
         if len(detector_lists) == 0:
-            raise ValueError("No DetectorList objects found. {}"
-                             "".format(detector_lists))
+            raise ValueError(f"No DetectorList objects found. {detector_lists}")
 
         return headers
 
@@ -283,20 +282,18 @@ class OpticsManager:
     def report(self, filename=None, output="rst", rst_title_chars="_^#*+",
                **kwargs):
 
-        rst_str = """
+        rst_str = f"""
 List of Optical Elements
-{}
+{rst_title_chars[0] * 24}
 
 Summary of Effects in Optical Elements:
-{}
+{rst_title_chars[1] * 39}
 
 .. table::
     :name: tbl:effects_summary
 
-{}
-""".format(rst_title_chars[0] * 24,
-           rst_title_chars[1] * 39,
-           table_to_rst(self.list_effects(), indent=4))
+{table_to_rst(self.list_effects(), indent=4)}
+"""
 
         reports = [opt_el.report(rst_title_chars=rst_title_chars[-4:], **kwargs)
                    for opt_el in self.optical_elements]
@@ -343,20 +340,19 @@ Summary of Effects in Optical Elements:
     def __setitem__(self, key, value):
         obj = self.__getitem__(key)
         if isinstance(obj, list) and len(obj) > 1:
-            logging.warning("{} does not return a singular object:\n {}"
-                          "".format(key, obj))
+            logging.warning("%s does not return a singular object:\n %s", key, obj)
         elif isinstance(obj, efs.Effect) and isinstance(value, dict):
             obj.meta.update(value)
 
     def __repr__(self):
-        msg = f"\nOpticsManager contains {len(self.optical_elements)} " \
-              f"OpticalElements \n"
+        msg = (f"\nOpticsManager contains {len(self.optical_elements)} "
+               "OpticalElements \n")
         for ii, opt_el in enumerate(self.optical_elements):
-            msg += f'[{ii}] "{opt_el.meta["name"]}" contains ' \
-                   f'{len(opt_el.effects)} effects \n'
+            msg += (f"[{ii}] \"{opt_el.meta['name']}\" contains "
+                    f"{len(opt_el.effects)} effects \n")
 
         return msg
 
     def __str__(self):
         name = self.meta.get("name", self.meta.get("filename", "<empty>"))
-        return f'{type(self).__name__}: "{name}"'
+        return f"{type(self).__name__}: \"{name}\""

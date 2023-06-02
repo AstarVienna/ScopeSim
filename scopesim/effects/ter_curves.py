@@ -1,4 +1,4 @@
-'''Transmission, emissivity, reflection curves'''
+"""Transmission, emissivity, reflection curves"""
 import numpy as np
 from astropy import units as u
 from os import path as pth
@@ -213,10 +213,10 @@ class TERCurve(Effect):
             plt.plot(wave, y, **plot_kwargs)
 
             wave_unit = self.meta.get("wavelength_unit")
-            plt.xlabel("Wavelength [{}]".format(wave_unit))
+            plt.xlabel(f"Wavelength [{wave_unit}]")
             y_str = {"t": "Transmission", "e": "Emission",
                      "r": "Reflectivity", "x": "Throughput"}
-            plt.ylabel("{} [{}]".format(y_str[ter], y.unit))
+            plt.ylabel(f"{y_str[ter]} [{y.unit}]")
 
         return plt.gcf()
 
@@ -376,8 +376,7 @@ class FilterCurve(TERCurve):
             else:
                 raise ValueError("FilterCurve must be passed one of (`filename`"
                                  " `array_dict`, `table`) or both "
-                                 "(`filter_name`, `filename_format`):"
-                                 "{}".format(kwargs))
+                                 f"(`filter_name`, `filename_format`): {kwargs}")
 
         super(FilterCurve, self).__init__(**kwargs)
         if self.table is None:
@@ -598,9 +597,9 @@ class FilterWheel(Effect):
     def change_filter(self, filtername=None):
         """Change the current filter"""
         if filtername in self.filters.keys():
-            self.meta['current_filter'] = filtername
+            self.meta["current_filter"] = filtername
         else:
-            raise ValueError("Unknown filter requested: " + filtername)
+            raise ValueError(f"Unknown filter requested: {filtername}")
 
     def add_filter(self, newfilter, name=None):
         """
@@ -627,8 +626,8 @@ class FilterWheel(Effect):
 
     @property
     def display_name(self):
-        return f'{self.meta["name"]} : ' \
-               f'[{from_currsys(self.meta["current_filter"])}]'
+        return (f"{self.meta['name']} : "
+                f"[{from_currsys(self.meta['current_filter'])}]")
 
     def __getattr__(self, item):
         return getattr(self.current_filter, item)
@@ -895,23 +894,23 @@ class ADCWheel(Effect):
     def change_adc(self, adcname=None):
         """Change the current ADC"""
         if not adcname or adcname in self.adcs.keys():
-            self.meta['current_adc'] = adcname
+            self.meta["current_adc"] = adcname
             self.include = adcname
         else:
-            raise ValueError("Unknown ADC requested: " + adcname)
+            raise ValueError(f"Unknown ADC requested: {adcname}")
 
     @property
     def current_adc(self):
         """Return the currently used ADC"""
-        curradc = from_currsys(self.meta['current_adc'])
+        curradc = from_currsys(self.meta["current_adc"])
         if not curradc:
             return False
         return self.adcs[curradc]
 
     @property
     def display_name(self):
-        return f'{self.meta["name"]} : ' \
-               f'[{from_currsys(self.meta["current_adc"])}]'
+        return (f"{self.meta['name']} : "
+                f"[{from_currsys(self.meta['current_adc'])}]")
 
     def __getattr__(self, item):
         return getattr(self.current_adc, item)
@@ -920,7 +919,7 @@ class ADCWheel(Effect):
         """Create a table of ADCs with maximimum througput"""
         names = list(self.adcs.keys())
         adcs = self.adcs.values()
-        tmax = np.array([adc.data['transmission'].max() for adc in adcs])
+        tmax = np.array([adc.data["transmission"].max() for adc in adcs])
 
         tbl = Table(names=["name", "max_transmission"],
                     data=[names, tmax])

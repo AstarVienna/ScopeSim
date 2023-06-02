@@ -24,7 +24,7 @@ class SystemDict(object):
             "Catch any bang-string properties keys"
             to_pop = []
             for key in new_dict:
-                if key[0] == "!":
+                if key.startswith("!"):
                     self[key] = new_dict[key]
                     to_pop += [key]
             for key in to_pop:
@@ -34,7 +34,7 @@ class SystemDict(object):
                 self.dic = recursive_update(self.dic, new_dict)
 
     def __getitem__(self, item):
-        if isinstance(item, str) and item[0] == "!":
+        if isinstance(item, str) and item.startswith("!"):
             item_chunks = item[1:].split(".")
             entry = self.dic
             for item in item_chunks:
@@ -44,7 +44,7 @@ class SystemDict(object):
             return self.dic[item]
 
     def __setitem__(self, key, value):
-        if isinstance(key, str) and key[0] == "!":
+        if isinstance(key, str) and key.startswith("!"):
             key_chunks = key[1:].split(".")
             entry = self.dic
             for key in key_chunks[:-1]:
@@ -56,7 +56,7 @@ class SystemDict(object):
             self.dic[key] = value
 
     def __contains__(self, item):
-        if isinstance(item, str) and item[0] == "!":
+        if isinstance(item, str) and item.startswith("!"):
             item_chunks = item[1:].split(".")
             entry = self.dic
             for item in item_chunks:
@@ -69,14 +69,13 @@ class SystemDict(object):
 
     def __repr__(self):
         msg = "<SystemDict> contents:"
-        for key in self.dic.keys():
-            val = self.dic[key]
-            msg += "\n{}: ".format(key)
+        for key, val in self.dic.items():
+            msg += f"\n{key}: "
             if isinstance(val, dict):
                 for subkey in val.keys():
-                    msg += "\n  {}: {}".format(subkey, val[subkey])
+                    msg += f"\n  {subkey}: {val[subkey]}"
             else:
-                msg += "{}\n".format(val)
+                msg += f"{val}\n"
         return msg
 
 
@@ -89,17 +88,15 @@ def recursive_update(old_dict, new_dict):
                         old_dict[key] = recursive_update(old_dict[key],
                                                          new_dict[key])
                     else:
-                        logging.warning("Overwriting dict: {} with non-dict: {}"
-                                      "".format(old_dict[key], new_dict[key]))
+                        logging.warning("Overwriting dict: %s with non-dict: %s",
+                                        old_dict[key], new_dict[key])
                         old_dict[key] = new_dict[key]
                 else:
                     if isinstance(new_dict[key], dict):
-                        logging.warning("Overwriting non-dict: {} with dict: {}"
-                                      "".format(old_dict[key], new_dict[key]))
+                        logging.warning("Overwriting non-dict: %s with dict: %s",
+                                        old_dict[key], new_dict[key])
                     old_dict[key] = new_dict[key]
             else:
                 old_dict[key] = new_dict[key]
 
     return old_dict
-
-

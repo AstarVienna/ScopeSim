@@ -104,8 +104,8 @@ def download_svo_filter(filter_name, return_style="synphot",
         if error_on_wrong_name:
             raise ValueError(f"{filter_name} is an incorrect SVO identiier")
         else:
-            logging.warning(f"'{filter_name}' was not found in the SVO. "
-                            f"Defaulting to a unity transmission curve.")
+            logging.warning(("'%s' was not found in the SVO. Defaulting to a "
+                            "unity transmission curve."), filter_name)
             wave = [3e3, 3e5] << u.Angstrom
             trans = np.array([1., 1.])
 
@@ -154,7 +154,7 @@ def download_svo_filter_list(observatory, instrument, short_names=False,
         A list of filter names
 
     """
-    base_url = f"http://svo2.cab.inta-csic.es/theory/fps3/fps.php?"
+    base_url = "http://svo2.cab.inta-csic.es/theory/fps3/fps.php?"
     url = base_url + f"Facility={observatory}&Instrument={instrument}"
     fn = f"{observatory}/{instrument}"
     path = find_file(

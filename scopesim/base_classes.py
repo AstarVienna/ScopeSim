@@ -83,12 +83,8 @@ class PoorMansHeader:
         for key in self.dic:
             cmt_msg = ""
             if key in self.comments:
-                cmt_msg = " / {}".format(self.comments[key])
-
-            msg = "{} = {}".format(key.upper().ljust(9),
-                                   str(self.dic[key]).rjust(16))
-            msgs += msg + cmt_msg + "\n"
-
+                cmt_msg = " / {self.comments[key]}"
+            msgs += f"{key.upper():<9} = {value!s:>16}{cmt_msg}\n"
         return msgs
 
     def items(self):

@@ -121,8 +121,7 @@ class Effect(DataContainer):
             if key not in ["comments", "changes", "description", "history",
                            "report_table_caption", "report_plot_caption",
                            "table"]:
-                meta_str += "    {} : {}\n".format(key.rjust(max_key_len),
-                                                   self.meta[key])
+                meta_str += f"    {key.rjust(max_key_len)} : {self.meta[key]}\n"
 
         return meta_str
 
@@ -223,28 +222,22 @@ class Effect(DataContainer):
         params.update(kwargs)
         params = from_currsys(params)
 
-        rst_str = """
-{}
-{}
-**Included by default**: ``{}``
+        rst_str = f"""
+{str(self)}
+{rst_title_chars[0] * len(str(self))}
+**Included by default**: ``{params["include"]}``
 
-**File Description**: {}
+**File Description**: {params["file_description"]}
 
-**Class Description**: {}
+**Class Description**: {params["class_description"]}
 
 **Changes**:
 
-{}
+{params["changes_str"]}
 
 Data
-{}
-""".format(str(self),
-           rst_title_chars[0] * len(str(self)),
-           params["include"],
-           params["file_description"],
-           params["class_description"],
-           params["changes_str"],
-           rst_title_chars[1] * 4)
+{rst_title_chars[1] * 4}
+"""
 
         if params["report_plot_include"] and hasattr(self, "plot"):
             fig = self.plot()
@@ -265,36 +258,30 @@ Data
                 #                            params["report_rst_path"])
                 # rel_file_path = os.path.join(rel_path, fname)
 
-                rst_str += """
-.. figure:: {}
-    :name: {}
+                rst_str += f"""
+.. figure:: {fname}
+    :name: {"fig:" + params.get("name", "<unknown Effect>")}
 
-    {}
-""".format(fname,
-           "fig:" + params.get("name", "<unknown Effect>"),
-           params["report_plot_caption"])
+    {params["report_plot_caption"]}
+"""
 
         if params["report_table_include"]:
-            rst_str += """
+            rst_str += f"""
 .. table::
-    :name: {}
+    :name: {"tbl:" + params.get("name")}
 
-{}
+{table_to_rst(self.table, indent=4, rounding=params["report_table_rounding"])}
 
-{}
-""".format("tbl:" + params.get("name"),
-           table_to_rst(self.table, indent=4,
-                        rounding=params["report_table_rounding"]),
-           params["report_table_caption"])
+{params["report_table_caption"]}
+"""
 
-        rst_str += """
+        rst_str += f"""
 Meta-data
-{}
+{rst_title_chars[1] * 9}
 ::
 
-{}
-""".format(rst_title_chars[1] * 9,
-           self.meta_string)
+{self.meta_string}
+"""
 
         write_report(rst_str, filename, output)
 
@@ -305,7 +292,7 @@ Meta-data
         Prints basic information on the effect, notably the description
         """
         name = self.meta.get("name", self.meta.get("filename", "<empty>"))
-        text = f'{type(self).__name__}: "{name}"'
+        text = f"{type(self).__name__}: \"{name}\""
 
         desc = self.meta.get("description")
         if desc is not None:
@@ -314,7 +301,7 @@ Meta-data
         print(text)
 
     def __repr__(self):
-        return f'{type(self).__name__}: "{self.display_name}"'
+        return f"{type(self).__name__}: \"{self.display_name}\""
 
     def __str__(self):
         return self.__repr__()

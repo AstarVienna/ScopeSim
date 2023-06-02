@@ -66,7 +66,7 @@ def make_emission_from_array(flux, wave, meta):
             flux = quantify(flux, meta["emission_unit"])
         else:
             logging.warning("emission_unit must be set in self.meta, "
-                          "or emission must be an astropy.Quantity")
+                            "or emission must be an astropy.Quantity")
             flux = None
 
     if isinstance(wave, u.Quantity) and isinstance(flux, u.Quantity):
@@ -80,11 +80,11 @@ def make_emission_from_array(flux, wave, meta):
         flux = SourceSpectrum(Empirical1D, points=wave,
                               lookup_table=flux)
         flux.meta["solid_angle"] = angle
-        flux.meta["history"] = ["Created from emission array with units {}"
-                                "".format(orig_unit)]
+        flux.meta["history"] = [("Created from emission array with units "
+                                 f"{orig_unit}")]
     else:
         logging.warning("wavelength and emission must be "
-                      "astropy.Quantity py_objects")
+                        "astropy.Quantity py_objects")
         flux = None
 
     return flux

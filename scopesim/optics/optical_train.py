@@ -111,8 +111,8 @@ class OpticalTrain:
         elif isinstance(user_commands, UserCommands):
             user_commands = copy.deepcopy(user_commands)
         else:
-            raise ValueError("user_commands must be a UserCommands or str object: "
-                             "{}".format(type(user_commands)))
+            raise ValueError("user_commands must be a UserCommands or str object "
+                             f"but is {type(user_commands)}")
 
         self.cmds = user_commands
         rc.__currsys__ = user_commands
@@ -319,13 +319,12 @@ class OpticalTrain:
                     hdul = self.write_header(hdul)
                 except Exception as error:
                     print("\nWarning: header update failed, data will be saved with incomplete header.")
-                    print("Reason: ", sys.exc_info()[0], error)
-                    print("")
+                    print(f"Reason: {sys.exc_info()[0]} {error}\n")
 
             if filename is not None and isinstance(filename, str):
                 fname = filename
                 if len(self.detector_arrays) > 1:
-                    fname = str(i) + "_" + filename
+                    fname = f"{i}_{filename}"
                 hdul.writeto(fname, overwrite=True)
 
             hduls += [hdul]

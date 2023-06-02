@@ -64,9 +64,9 @@ def nmrms_from_strehl_and_wavelength(strehl, wavelength, strehl_hdu,
     strehls = nms_spline(wavelength, nms)[0]
 
     if strehl > np.max(strehls):
-        raise ValueError("Strehl ratio ({}) is impossible at this wavelength "
-                         "({}). Maximum Strehl possible is {}."
-                         "".format(strehl, wavelength, np.max(strehls)))
+        raise ValueError(f"Strehl ratio ({strehl}) is impossible at this "
+                         f"wavelength ({wavelength}). Maximum Strehl possible "
+                         f"is {np.max(strehls)}.")
 
     if strehls[0] < strehls[-1]:
         nm = np.interp(strehl, strehls, nms)
@@ -178,8 +178,7 @@ def get_psf_wave_exts(hdu_list, wave_key="WAVE0"):
     """
 
     if not isinstance(hdu_list, fits.HDUList):
-        raise ValueError("psf_effect must be a PSF object: {}"
-                         "".format(type(hdu_list)))
+        raise ValueError(f"psf_effect must be a PSF object: {type(hdu_list)}")
 
     tmp = np.array([[ii, hdu.header[wave_key]]
                     for ii, hdu in enumerate(hdu_list)

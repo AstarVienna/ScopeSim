@@ -656,7 +656,7 @@ def real_colname(name, colnames, silent=True):
     if len(real_name) == 0:
         real_name = None
         if not silent:
-            logging.warning("None of {} were found in {}".format(names, colnames))
+            logging.warning("None of %s were found in %s", names, colnames)
     else:
         real_name = real_name[0]
 
@@ -847,9 +847,8 @@ def quantity_from_table(colname, table, default_unit=""):
             else:
                 col = col * u.Unit(default_unit)
                 tbl_name = table.meta.get("name", table.meta.get("filename"))
-                logging.info("{}_unit was not found in table.meta: {}. "
-                             "Default to: {}"
-                             "".format(colname, tbl_name, default_unit))
+                logging.info(("%s_unit was not found in table.meta: %s. "
+                              "Default to: %s"), colname, tbl_name, default_unit)
 
     return col
 
@@ -870,9 +869,8 @@ def unit_from_table(colname, table, default_unit=""):
             unit = u.Unit(com_tbl[colname_u])
         else:
             tbl_name = table.meta.get("name", table.meta.get("filename"))
-            logging.info("{}_unit was not found in table.meta: {}. "
-                         "Default to: {}"
-                         "".format(colname, tbl_name, default_unit))
+            logging.info(("%s_unit was not found in table.meta: %s. "
+                          "Default to: %s"), colname, tbl_name, default_unit)
             unit = u.Unit(default_unit)
 
     return unit
@@ -954,11 +952,11 @@ def from_currsys(item):
         for key in item:
             item[key] = from_currsys(item[key])
 
-    if isinstance(item, str) and len(item) and item[0] == "!":
+    if isinstance(item, str) and len(item) and item.startswith("!"):
         if item in rc.__currsys__:
             item = rc.__currsys__[item]
         else:
-            raise ValueError("{} was not found in rc.__currsys__".format(item))
+            raise ValueError(f"{item} was not found in rc.__currsys__")
 
     if isinstance(item, str) and item.lower() == "none":
         item = None
@@ -981,13 +979,12 @@ def check_keys(input_dict, required_keys, action="error", all_any="all"):
 
     if not keys_present:
         if "error" in action:
-            raise ValueError("One or more of the following keys missing "
-                             "from input_dict: \n{} \n{}"
-                             "".format(required_keys, input_dict.keys()))
+            raise ValueError("One or more of the following keys missing from "
+                             f"input_dict: \n{required_keys} \n{input_dict.keys()}")
         elif "warn" in action:
-            logging.warning("One or more of the following keys missing "
-                          "from input_dict: \n{} \n{}"
-                          "".format(required_keys, input_dict.keys()))
+            logging.warning(("One or more of the following keys missing "
+                             "from input_dict: \n%s \n%s"), required_keys,
+                            input_dict.keys())
 
     return keys_present
 

@@ -88,19 +88,19 @@ class DetectorModePropertiesSetter(Effect):
         self.meta.update(params)
         self.meta.update(kwargs)
 
-        required_keys = ['mode_properties']
+        required_keys = ["mode_properties"]
         utils.check_keys(self.meta, required_keys, action="error")
 
-        self.mode_properties = kwargs['mode_properties']
+        self.mode_properties = kwargs["mode_properties"]
 
     def apply_to(self, obj, **kwargs):
-        mode_name = kwargs.get('detector_readout_mode',
+        mode_name = kwargs.get("detector_readout_mode",
                                from_currsys("!OBS.detector_readout_mode"))
         if isinstance(obj, ImagePlaneBase) and mode_name == "auto":
             mode_name = self.select_mode(obj, **kwargs)
             print("Detector mode set to", mode_name)
 
-        self.meta['detector_readout_mode'] = mode_name
+        self.meta["detector_readout_mode"] = mode_name
         props_dict = self.mode_properties[mode_name]
         rc.__currsys__["!OBS.detector_readout_mode"] = mode_name
         for key, value in props_dict.items():
@@ -181,13 +181,13 @@ class AutoExposure(Effect):
         self.meta.update(params)
         self.meta.update(kwargs)
 
-        required_keys = ['fill_frac', 'full_well', 'mindit']
+        required_keys = ["fill_frac", "full_well", "mindit"]
         utils.check_keys(self.meta, required_keys, action="error")
 
     def apply_to(self, obj, **kwargs):
         if isinstance(obj, (ImagePlaneBase, DetectorBase)):
             implane_max = np.max(obj.data)
-            exptime = kwargs.get('exptime', from_currsys("!OBS.exptime"))
+            exptime = kwargs.get("exptime", from_currsys("!OBS.exptime"))
             mindit = from_currsys(self.meta["mindit"])
 
             if exptime is None:
@@ -219,8 +219,8 @@ class AutoExposure(Effect):
             print(f"                DIT: {dit:.3f} s  NDIT: {ndit}")
             print(f"Total exposure time: {dit * ndit:.3f} s")
 
-            rc.__currsys__['!OBS.dit'] = dit
-            rc.__currsys__['!OBS.ndit'] = ndit
+            rc.__currsys__["!OBS.dit"] = dit
+            rc.__currsys__["!OBS.ndit"] = ndit
 
         return obj
 
@@ -418,8 +418,8 @@ class DarkCurrent(Effect):
             elif isinstance(from_currsys(self.meta["value"]), float):
                 dark = from_currsys(self.meta["value"])
             else:
-                raise ValueError("<DarkCurrent>.meta['value'] must be either"
-                                 "dict or float: {}".format(self.meta["value"]))
+                raise ValueError("<DarkCurrent>.meta['value'] must be either "
+                                 f"dict or float, but is {self.meta['value']}")
 
             dit = from_currsys(self.meta["dit"])
             ndit = from_currsys(self.meta["ndit"])

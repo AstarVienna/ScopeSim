@@ -127,8 +127,7 @@ class SpectralSurface:
             conversion_factor = flux.meta["solid_angle"].to(u.arcsec ** -2)
             flux = flux * conversion_factor
             flux.meta["solid_angle"] = u.arcsec**-2
-            flux.meta["history"] += ["Converted to arcsec-2: {}"
-                                     "".format(conversion_factor)]
+            flux.meta["history"] += [f"Converted to arcsec-2: {conversion_factor}"]
 
         if flux is not None and "rescale_emission" in self.meta:
             dic = from_currsys(self.meta["rescale_emission"])
@@ -195,8 +194,7 @@ class SpectralSurface:
             response_curve = value_arr
         else:
             response_curve = None
-            logging.warning("Both wavelength and {} must be set"
-                          "".format(ter_property))
+            logging.warning("Both wavelength and %s must be set", ter_property)
 
         return response_curve
 
@@ -256,8 +254,8 @@ class SpectralSurface:
         elif colname in self.table.colnames:
             val = self.table[colname].data
         else:
-            logging.debug(f"{colname} not found in either '.meta' or '.table': "
-                          f"[{self.meta.get('name', self.meta['filename'])}]")
+            logging.debug("%s not found in either '.meta' or '.table': [%s]",
+                          colname, self.meta.get("name", self.meta["filename"]))
             return None
 
         col_units = colname+"_unit"
@@ -275,8 +273,8 @@ class SpectralSurface:
         elif val is None:
             val_out = None
         else:
-            raise ValueError("{} must be of type: Quantity, array, list, tuple"
-                             "".format(colname))
+            raise ValueError(f"{colname} must be of type: Quantity, array, "
+                             f"list, tuple, but is {type(colname)}")
 
         return val_out
 
@@ -284,6 +282,6 @@ class SpectralSurface:
         meta = self.meta
         name = meta["name"] if "name" in meta else meta["filename"]
         cols = "".join([col[0].upper() for col in self.table.colnames])
-        msg = '<SpectralSurface> [{}] "{}"'.format(cols, name)
+        msg = "<SpectralSurface> [{cols}] \"{name}\""
 
         return msg

@@ -181,7 +181,7 @@ class UserCommands:
                         if yaml_input == "default.yaml":
                             self.default_yamls = yaml_dict
                     else:
-                        logging.warning("{} could not be found".format(yaml_input))
+                        logging.warning("%s could not be found", yaml_input)
 
                 elif isinstance(yaml_input, dict):
                     self.cmds.update(yaml_input)
@@ -193,7 +193,7 @@ class UserCommands:
 
                 else:
                     raise ValueError("yaml_dicts must be a filename or a "
-                                     "dictionary: {}".format(yaml_input))
+                                     f"dictionary: {yaml_input}")
 
         if "mode_yamls" in kwargs:
             # Convert the yaml list of modes to a dict object
@@ -232,8 +232,7 @@ class UserCommands:
                     if mode in self.modes_dict:
                         defyam["properties"]["modes"] += [mode]
                     else:
-                        raise ValueError("mode '{}' was not recognised"
-                                         "".format(mode))
+                        raise ValueError(f"mode '{mode}' was not recognised")
 
         self.__init__(yamls=self.default_yamls)
 
@@ -245,7 +244,7 @@ class UserCommands:
                 desc = dic["description"] if "description" in dic else "<None>"
                 modes[mode_name] = desc
 
-            msg = "\n".join(["{}: {}".format(key, modes[key]) for key in modes])
+            msg = "\n".join([f"{key}: {modes[key]}" for key in modes])
         else:
             msg = "No modes found"
         return msg
@@ -277,12 +276,11 @@ def check_for_updates(package_name):
     if rc.__currsys__["!SIM.reports.ip_tracking"] and \
             "TRAVIS" not in os.environ:
         front_matter = rc.__currsys__["!SIM.file.server_base_url"]
-        back_matter = "api.php?package_name={}".format(package_name)
+        back_matter = f"api.php?package_name={package_name}"
         try:
             response = requests.get(url=front_matter+back_matter).json()
         except:
-            print("Offline. Cannot check for updates for {}"
-                  "".format(package_name))
+            print(f"Offline. Cannot check for updates for {package_name}")
     return response
 
 
@@ -352,7 +350,7 @@ def add_packages_to_rc_search(local_path, package_list):
         if not pkg_dir.exists():
             # todo: keep here, but add test for this by downloading test_package
             # raise ValueError("Package could not be found: {}".format(pkg_dir))
-            logging.warning(f"Package could not be found: {pkg_dir}")
+            logging.warning("Package could not be found: %s", pkg_dir)
 
         if pkg_dir in rc.__search_path__:
             # if package is already in search_path, move it to the first place
@@ -428,9 +426,10 @@ def list_local_packages(action="display"):
                 os.path.exists(os.path.join(local_path, pkg, "default.yaml"))]
 
     if action == "display":
-        msg = "\nLocal package directory:\n  {}\n" \
-              "Full packages [can be used with 'use_instrument=...']\n  {}\n" \
-              "Support packages\n  {}".format(local_path, main_pkgs, ext_pkgs)
+        msg = (f"\nLocal package directory:\n  {local_path}\n"
+               "Full packages [can be used with 'use_instrument=...']\n"
+               f"{main_pkgs}\n"
+               f"Support packages\n  {ext_pkgs}")
         print(msg)
     else:
         return main_pkgs, ext_pkgs
