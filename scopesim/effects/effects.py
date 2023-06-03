@@ -307,9 +307,9 @@ Meta-data
         return self.__repr__()
 
     def __getitem__(self, item):
-        if isinstance(item, str) and item[0] == "#":
+        if isinstance(item, str) and item.startswith("#"):
             if len(item) > 1:
-                if item[-1] == "!":
+                if item.endswith("!"):
                     key = item[1:-1]
                     if len(key) > 0:
                         value = from_currsys(self.meta[key])
