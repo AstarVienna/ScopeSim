@@ -452,8 +452,8 @@ class OpticalTrain:
                 iheader["SPECTRAC"] = (from_currsys(eff.meta['filename']),
                                        "spectral trace definition")
                 if "CTYPE1" in eff.meta:
-                    for key in ['WCSAXES', 'CTYPE1', 'CTYPE2', 'CRPIX1', 'CRPIX2', 'CRVAL1',
-                                'CRVAL2', 'CDELT1', 'CDELT2', 'CUNIT1', 'CUNIT2']:
+                    for key in {'WCSAXES', 'CTYPE1', 'CTYPE2', 'CRPIX1', 'CRPIX2', 'CRVAL1',
+                                'CRVAL2', 'CDELT1', 'CDELT2', 'CUNIT1', 'CUNIT2'}:
                         iheader[key] = eff.meta[key]
 
         for eff in self.optics_manager.detector_effects:

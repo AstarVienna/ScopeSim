@@ -64,7 +64,7 @@ class OpticalElement:
 
         if isinstance(yaml_dict, dict):
             self.meta.update({key: yaml_dict[key] for key in yaml_dict
-                              if key not in ["properties", "effects"]})
+                              if key not in {"properties", "effects"})
             if "properties" in yaml_dict:
                 self.properties = yaml_dict["properties"]
             if "name" in yaml_dict:
@@ -205,8 +205,8 @@ class OpticalElement:
         prop_str = ""
         max_key_len = max(len(key) for key in self.properties.keys())
         for key in self.properties:
-            if key not in ["comments", "changes", "description", "history",
-                           "report"]:
+            if key not in {"comments", "changes", "description", "history",
+                           "report"}:
                 prop_str += f"    {key.rjust(max_key_len)} : {self.properties[key]}\n"
 
         return prop_str
