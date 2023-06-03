@@ -36,7 +36,7 @@ def combine_surface_effects(surface_effects):
                  if isinstance(eff, (efs.TERCurve, efs.FilterWheel))
                  and not isinstance(eff, efs.SurfaceList)]
 
-    if len(surflist_list) == 0:
+    if not surflist_list:
         surflist_list = [empty_surface_list(name="combined_surface_list")]
 
     new_surflist = copy(surflist_list[0])
