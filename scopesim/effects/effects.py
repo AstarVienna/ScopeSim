@@ -296,7 +296,7 @@ Meta-data
 
         desc = self.meta.get("description")
         if desc is not None:
-             text += f"\nDescription: {desc}"
+            text += f"\nDescription: {desc}"
 
         print(text)
 
