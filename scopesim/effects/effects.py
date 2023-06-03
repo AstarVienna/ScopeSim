@@ -47,8 +47,8 @@ class Effect(DataContainer):
         if not isinstance(obj, (bc.FOVSetupBase, bc.SourceBase,
                                 bc.FieldOfViewBase, bc.ImagePlaneBase,
                                 bc.DetectorBase)):
-            raise ValueError(f"object must one of the following: FOVSetupBase, "
-                             f"Source, FieldOfView, ImagePlane, Detector: "
+            raise ValueError("object must one of the following: FOVSetupBase, "
+                             "Source, FieldOfView, ImagePlane, Detector: "
                              f"{type(obj)}")
 
         return obj
