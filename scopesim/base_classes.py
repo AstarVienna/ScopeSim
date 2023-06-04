@@ -54,8 +54,8 @@ class PoorMansHeader:
 
     def as_header(self):
         hdr = Header(self.dic)
-        for key in self.comments:
-            hdr.comments[key] = self.comments[key]
+        for key, value in self.comments.items():
+            hdr.comments[key] = value
 
         return hdr
 
@@ -80,7 +80,7 @@ class PoorMansHeader:
 
     def __repr__(self):
         msgs = ""
-        for key in self.dic:
+        for key, value in self.dic.items():
             cmt_msg = ""
             if key in self.comments:
                 cmt_msg = " / {self.comments[key]}"
@@ -89,11 +89,11 @@ class PoorMansHeader:
 
     def items(self):
         items_dict = []
-        for key in self.dic:
+        for key, value in self.dic.items():
             if key in self.comments:
-                items_dict += [(key, (self.dic[key], self.comments[key]))]
+                items_dict += [(key, (value, self.comments[key]))]
             else:
-                items_dict += [(key, self.dic[key])]
+                items_dict += [(key, value)]
         return items_dict
 
     def keys(self):

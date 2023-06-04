@@ -651,10 +651,10 @@ class FilterWheel(Effect):
 
         for ii, ter in enumerate(which):
             ax = plt.subplot(len(which), 1, ii+1)
-            for name in self.filters:
-                self.filters[name].plot(which=ter, wavelength=wavelength,
-                                        ax=ax, new_figure=False,
-                                        plot_kwargs={"label": name}, **kwargs)
+            for name, _filter in self.filters.items():
+                _filter.plot(which=ter, wavelength=wavelength, ax=ax,
+                             new_figure=False, plot_kwargs={"label": name},
+                             **kwargs)
 
         # plt.semilogy()
         plt.legend()

@@ -244,7 +244,7 @@ class UserCommands:
                 desc = dic["description"] if "description" in dic else "<None>"
                 modes[mode_name] = desc
 
-            msg = "\n".join([f"{key}: {modes[key]}" for key in modes])
+            msg = "\n".join([f"{key}: {value}" for key, value in modes.items()])
         else:
             msg = "No modes found"
         return msg
