@@ -1,5 +1,7 @@
 import os
 import logging
+from dataclasses import dataclass
+from typing import Any
 
 import numpy as np
 
@@ -17,12 +19,13 @@ from .surface_utils import make_emission_from_emissivity,\
     make_emission_from_array
 
 
+@dataclass
 class PoorMansSurface:
-    """ Solely used by SurfaceList """
-    def __init__(self, emission, throughput, meta):
-        self.emission = emission
-        self.throughput = throughput
-        self.meta = meta
+    """Solely used by SurfaceList """
+    # FIXME: Use correct types instead of Any
+    emission: Any
+    throughput: Any
+    meta: Any
 
 
 class SpectralSurface:
