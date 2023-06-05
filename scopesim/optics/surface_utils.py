@@ -134,10 +134,6 @@ def is_flux_binned(unit):
 
     """
     unit = unit**1
-    flag = False
     # unit.physical_type is a string in astropy<=4.2 and a PhysicalType
     # class in astropy==4.3 and thus has to be cast to a string first.
-    if u.bin in unit._bases or "flux density" not in str(unit.physical_type):
-        flag = True
-
-    return flag
+    return (u.bin in unit._bases or "flux density" not in str(unit.physical_type))
