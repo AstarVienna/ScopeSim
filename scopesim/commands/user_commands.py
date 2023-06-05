@@ -185,7 +185,7 @@ class UserCommands:
 
                 elif isinstance(yaml_input, dict):
                     self.cmds.update(yaml_input)
-                    self.yaml_dicts += [yaml_input]
+                    self.yaml_dicts.append(yaml_input)
 
                     for key in ["packages", "yamls", "mode_yamls"]:
                         if key in yaml_input:
@@ -230,7 +230,7 @@ class UserCommands:
                 defyam["properties"]["modes"] = []
                 for mode in modes:
                     if mode in self.modes_dict:
-                        defyam["properties"]["modes"] += [mode]
+                        defyam["properties"]["modes"].append(mode)
                     else:
                         raise ValueError(f"mode '{mode}' was not recognised")
 

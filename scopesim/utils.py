@@ -1059,6 +1059,6 @@ def return_latest_github_actions_jobs_status(owner_name="AstarVienna", repo_name
         colour = "brightgreen" if job['conclusion'] == "success" else "red"
         badge_url = f"https://img.shields.io/badge/{key}-{value}-{colour}"
         params["badge_url"] = badge_url
-        params_list += [params]
+        params_list.append(params)
 
     return params_list

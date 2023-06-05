@@ -91,9 +91,9 @@ class PoorMansHeader:
         items_dict = []
         for key, value in self.dic.items():
             if key in self.comments:
-                items_dict += [(key, (value, self.comments[key]))]
+                items_dict.append((key, (value, self.comments[key])))
             else:
-                items_dict += [(key, value)]
+                items_dict.append((key, value))
         return items_dict
 
     def keys(self):

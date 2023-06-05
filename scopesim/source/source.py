@@ -221,7 +221,7 @@ class Source(SourceBase):
         if "weight" not in tbl.colnames:
             tbl.add_column(Column(name="weight", data=np.ones(len(tbl))))
         tbl["ref"] += len(self.spectra)
-        self.fields += [tbl]
+        self.fields.append(tbl)
         self.spectra += spectra
 
     def _from_imagehdu_and_spectra(self, image_hdu, spectra):
@@ -261,7 +261,7 @@ class Source(SourceBase):
             image_hdu.header["CUNIT"+str(i)] = "DEG"
             image_hdu.header["CDELT"+str(i)] = val * unit.to(u.deg)
 
-        self.fields += [image_hdu]
+        self.fields.append(image_hdu)
 
     def _from_imagehdu_and_flux(self, image_hdu, flux):
         if isinstance(flux, u.Unit):
@@ -299,7 +299,7 @@ class Source(SourceBase):
         tbl.meta["x_unit"] = "arcsec"
         tbl.meta["y_unit"] = "arcsec"
 
-        self.fields += [tbl]
+        self.fields.append(tbl)
         self.spectra += spectra
 
     def _from_cube(self, cube, ext=0):
@@ -355,7 +355,7 @@ class Source(SourceBase):
         cube_hdu = fits.ImageHDU(data=target_cube, header=target_hdr)
         cube_hdu.wave = wave          # ..todo: review wave attribute, bad practice
 
-        self.fields += [cube_hdu]
+        self.fields.append(cube_hdu)
 
     @property
     def table_fields(self):
@@ -553,9 +553,9 @@ class Source(SourceBase):
         for field in self.fields:
             if isinstance(field, (fits.ImageHDU, fits.PrimaryHDU)) \
                     and field._file is not None:  # and field._data_loaded is False:
-                new_source.fields += [field]
+                new_source.fields.append(field)
             else:
-                new_source.fields += [deepcopy(field)]
+                new_source.fields.append(deepcopy(field))
 
         return new_source
 
@@ -572,13 +572,13 @@ class Source(SourceBase):
             for field in new_source.fields:
                 if isinstance(field, Table):
                     field["ref"] += len(self.spectra)
-                    self.fields += [field]
+                    self.fields.append(field)
 
                 elif isinstance(field, (fits.ImageHDU, fits.PrimaryHDU)):
                     if ("SPEC_REF" in field.header and
                         isinstance(field.header["SPEC_REF"], int)):
                         field.header["SPEC_REF"] += len(self.spectra)
-                    self.fields += [field]
+                    self.fields.append(field)
                 self.spectra += new_source.spectra
 
                 self._meta_dicts += source_to_add._meta_dicts

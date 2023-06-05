@@ -327,7 +327,7 @@ class OpticalTrain:
                     fname = f"{i}_{filename}"
                 hdul.writeto(fname, overwrite=True)
 
-            hduls += [hdul]
+            hduls.append(hdul)
 
         return hduls
 

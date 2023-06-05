@@ -26,7 +26,7 @@ class SystemDict(object):
             for key in new_dict:
                 if key.startswith("!"):
                     self[key] = new_dict[key]
-                    to_pop += [key]
+                    to_pop.append(key)
             for key in to_pop:
                 new_dict.pop(key)
 

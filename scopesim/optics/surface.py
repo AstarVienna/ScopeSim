@@ -130,7 +130,7 @@ class SpectralSurface:
             conversion_factor = flux.meta["solid_angle"].to(u.arcsec ** -2)
             flux = flux * conversion_factor
             flux.meta["solid_angle"] = u.arcsec**-2
-            flux.meta["history"] += [f"Converted to arcsec-2: {conversion_factor}"]
+            flux.meta["history"].append(f"Converted to arcsec-2: {conversion_factor}")
 
         if flux is not None and "rescale_emission" in self.meta:
             dic = from_currsys(self.meta["rescale_emission"])

@@ -76,11 +76,11 @@ class OpticalElement:
                         if eff_dic["name"] in rc.__currsys__.ignore_effects:
                             eff_dic["include"] = False
 
-                    self.effects += [make_effect(eff_dic, **self.properties)]
+                    self.effects.append(make_effect(eff_dic, **self.properties))
 
     def add_effect(self, effect):
         if isinstance(effect, efs.Effect):
-            self.effects += [effect]
+            self.effects.append(effect)
         else:
             logging.warning("%s is not an Effect object and was not added", effect)
 
@@ -102,10 +102,10 @@ class OpticalElement:
                 z = eff.meta["z_order"]
                 if isinstance(z, (list, tuple)):
                     if any(zmin <= zi <= zmax for zi in z):
-                        effects += [eff]
+                        effects.append(eff)
                 else:
                     if zmin <= z <= zmax:
-                        effects += [eff]
+                        effects.append(eff)
 
         return effects
 
