@@ -6,7 +6,6 @@ import os
 from pathlib import Path
 import sys
 import logging
-import logging
 from collections import OrderedDict
 from docutils.core import publish_string
 from copy import deepcopy
