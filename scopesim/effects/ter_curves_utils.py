@@ -103,11 +103,11 @@ def download_svo_filter(filter_name, return_style="synphot",
     except:
         if error_on_wrong_name:
             raise ValueError(f"{filter_name} is an incorrect SVO identiier")
-        else:
-            logging.warning(("'%s' was not found in the SVO. Defaulting to a "
-                            "unity transmission curve."), filter_name)
-            wave = [3e3, 3e5] << u.Angstrom
-            trans = np.array([1., 1.])
+
+        logging.warning(("'%s' was not found in the SVO. Defaulting to a "
+                        "unity transmission curve."), filter_name)
+        wave = [3e3, 3e5] << u.Angstrom
+        trans = np.array([1., 1.])
 
     if return_style == "synphot":
         filt = SpectralElement(Empirical1D, points=wave, lookup_table=trans)

@@ -334,14 +334,14 @@ def seq(start, stop, step=1):
         # integer sequence
         npts = int(npts)
         return start + np.asarray(range(npts + 1)) * step
+
+    npts = int(npts + feps)
+    sequence = start + np.asarray(range(npts + 1)) * step
+    # correct for possible overshot because of fuzz (from seq.R)
+    if step > 0:
+        return np.minimum(sequence, stop)
     else:
-        npts = int(npts + feps)
-        sequence = start + np.asarray(range(npts + 1)) * step
-        # correct for possible overshot because of fuzz (from seq.R)
-        if step > 0:
-            return np.minimum(sequence, stop)
-        else:
-            return np.maximum(sequence, stop)
+        return np.maximum(sequence, stop)
 
 
 def add_mags(mags):
@@ -561,8 +561,6 @@ def find_file(filename, path=None, silent=False):
             while fname[:2] == './':
                 fname = fname[2:]
             return fname
-        else:
-            continue
 
     # no file found
     msg = f"File cannot be found: {filename}"
@@ -888,8 +886,8 @@ def has_needed_keywords(header, suffix=""):
     Check to see if the WCS keywords are in the header
     """
     keys = ["CDELT1", "CRVAL1", "CRPIX1"]
-    return sum([key + suffix in header.keys() for key in keys]) == 3 and \
-           "NAXIS1" in header.keys()
+    return (sum(key + suffix in header.keys() for key in keys) == 3 and
+            "NAXIS1" in header.keys())
 
 
 def stringify_dict(dic, ignore_types=(str, int, float)):
@@ -970,9 +968,9 @@ def check_keys(input_dict, required_keys, action="error", all_any="all"):
         input_dict = {key: None for key in input_dict}
 
     if all_any == "all":
-        keys_present = all([key in input_dict for key in required_keys])
+        keys_present = all(key in input_dict for key in required_keys)
     elif all_any == "any":
-        keys_present = any([key in input_dict for key in required_keys])
+        keys_present = any(key in input_dict for key in required_keys)
     else:
         raise ValueError("all_any must be either 'all' or 'any'")
 
@@ -980,7 +978,7 @@ def check_keys(input_dict, required_keys, action="error", all_any="all"):
         if "error" in action:
             raise ValueError("One or more of the following keys missing from "
                              f"input_dict: \n{required_keys} \n{input_dict.keys()}")
-        elif "warn" in action:
+        if "warn" in action:
             logging.warning(("One or more of the following keys missing "
                              "from input_dict: \n%s \n%s"), required_keys,
                             input_dict.keys())
