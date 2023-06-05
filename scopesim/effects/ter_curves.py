@@ -1,7 +1,6 @@
 """Transmission, emissivity, reflection curves"""
 import numpy as np
 from astropy import units as u
-from os import path as pth
 import logging
 
 from astropy.io import fits
@@ -576,12 +575,11 @@ class FilterWheel(Effect):
         self.meta.update(params)
         self.meta.update(kwargs)
 
-        path = pth.join(self.meta["path"],
-                        from_currsys(self.meta["filename_format"]))
+        path = Path(self.meta["path"], from_currsys(self.meta["filename_format"]))
         self.filters = {}
         for name in from_currsys(self.meta["filter_names"]):
             kwargs["name"] = name
-            self.filters[name] = FilterCurve(filename=path.format(name),
+            self.filters[name] = FilterCurve(filename=str(path).format(name),
                                              **kwargs)
 
         self.table = self.get_table()
@@ -877,12 +875,11 @@ class ADCWheel(Effect):
         self.meta.update(params)
         self.meta.update(kwargs)
 
-        path = pth.join(self.meta["path"],
-                        from_currsys(self.meta["filename_format"]))
+        path = Path(self.meta["path"], from_currsys(self.meta["filename_format"]))
         self.adcs = {}
         for name in from_currsys(self.meta["adc_names"]):
             kwargs["name"] = name
-            self.adcs[name] = TERCurve(filename=path.format(name),
+            self.adcs[name] = TERCurve(filename=str(path).format(name),
                                        **kwargs)
 
         self.table = self.get_table()

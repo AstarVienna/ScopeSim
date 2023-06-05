@@ -416,14 +416,11 @@ def list_local_packages(action="display"):
 
     """
 
-    local_path = os.path.abspath(rc.__config__["!SIM.file.local_packages_path"])
-    pkgs = [d for d in os.listdir(local_path) if
-            os.path.isdir(os.path.join(local_path, d))]
+    local_path = Path(rc.__config__["!SIM.file.local_packages_path"]).absolute()
+    pkgs = [d for d in local_path.iterdir() if d.is_dir()]
 
-    main_pkgs = [pkg for pkg in pkgs if
-                 os.path.exists(os.path.join(local_path, pkg, "default.yaml"))]
-    ext_pkgs = [pkg for pkg in pkgs if not
-                os.path.exists(os.path.join(local_path, pkg, "default.yaml"))]
+    main_pkgs = [pkg for pkg in pkgs if (pkg/"default.yaml").exists()]
+    ext_pkgs = [pkg for pkg in pkgs if not (pkg/"default.yaml").exists()]
 
     if action == "display":
         msg = (f"\nLocal package directory:\n  {local_path}\n"

@@ -1,4 +1,5 @@
-import os
+from pathlib import Path
+
 from astropy.table import Table
 
 from ..effects.data_container import DataContainer
@@ -250,7 +251,7 @@ Data
 
                 for fmt in params["report_plot_file_formats"]:
                     fname = ".".join((fname.split(".")[0], fmt))
-                    file_path = os.path.join(path, fname)
+                    file_path = Path(path, fname)
 
                     fig.savefig(fname=file_path)
 

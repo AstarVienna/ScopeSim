@@ -1,4 +1,4 @@
-from os import path as pth
+from pathlib import Path
 
 import numpy as np
 
@@ -273,7 +273,7 @@ def uniform_source(sp=None, extent=60):
 def vega_spectrum(mag=0):
     if isinstance(mag, u.Quantity):
         mag = mag.value
-    vega = SourceSpectrum.from_file(pth.join(rc.__pkg_dir__, "vega.fits"))
+    vega = SourceSpectrum.from_file(Path(rc.__pkg_dir__, "vega.fits"))
     vega = vega * 10 ** (-0.4 * mag)
     return vega
 

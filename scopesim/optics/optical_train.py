@@ -1,8 +1,8 @@
 import copy
-import os
 import sys
 from copy import deepcopy
 from shutil import copyfileobj
+from pathlib import Path
 
 from datetime import datetime
 
@@ -359,7 +359,7 @@ class OpticalTrain:
 
         # Image hdul
         # ..todo: currently only one, update for detector arrays
-        # ..todo: normalise filenames - some need from_currsys, some need os.path.basename
+        # ..todo: normalise filenames - some need from_currsys, some need Path(...).name
         #         this should go into a function so as to reduce clutter here.
         iheader = hdulist[1].header
         iheader['EXPTIME'] = from_currsys("!OBS.exptime"), "[s]"
@@ -439,7 +439,7 @@ class OpticalTrain:
                 isurface += 1
 
             if efftype == "QuantumEfficiencyCurve" and eff.include:
-                iheader['QE'] = os.path.basename(eff.meta['filename']), eff.meta['name']
+                iheader['QE'] = Path(eff.meta['filename']).name, eff.meta['name']
 
         for eff in self.optics_manager.fov_effects:
             efftype = type(eff).__name__

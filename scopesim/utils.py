@@ -2,7 +2,6 @@
 Helper functions for ScopeSim
 """
 import math
-import os
 from pathlib import Path
 import sys
 import logging
@@ -250,14 +249,15 @@ def add_SED_to_scopesim(file_in, file_out=None, wave_units="um"):
 
     """
 
-    file_name, file_ext = os.path.basename(file_in).split(".")
+    path = Path(file_in)
 
     if file_out is None:
-        if "SED_" not in file_name:
-            file_out = rc.__data_dir__ + "SED_" + file_name + ".dat"
-        else: file_out = rc.__data_dir__ + file_name + ".dat"
+        if "SED_" not in path.name:
+            file_out = rc.__data_dir__ + f"SED_{path.name}.dat"
+        else:
+            file_out = rc.__data_dir__ + f"{path.name}.dat"
 
-    if file_ext.lower() in "fits":
+    if path.suffix.lower() in "fits":
         data = fits.getdata(file_in)
         lam, val = data[data.columns[0].name], data[data.columns[1].name]
     else:
@@ -541,26 +541,32 @@ def find_file(filename, path=None, silent=False):
     if filename is None or filename.lower() == "none":
         return None
 
-    if filename[0] == "!":
+    if filename.startswith("!"):
         filename = from_currsys(filename)
+    # Turn into pathlib.Path object for better manipulation afterwards
+    filename = Path(filename)
 
     if path is None:
         path = rc.__search_path__
 
-    if os.path.isabs(filename):
+    if filename.is_absolute():
         # absolute path: only path to try
         trynames = [filename]
     else:
         # try to find the file in a search path
-        trynames = [os.path.join(trydir, *os.path.split(filename))
+        trynames = [Path(trydir, filename)
                     for trydir in path if trydir is not None]
 
     for fname in trynames:
-        if os.path.exists(fname):   # success
+        if fname.exists():   # success
             # strip leading ./
-            while fname[:2] == './':
-                fname = fname[2:]
+            # Path should take care of this automatically!
+            # while fname[:2] == './':
+            #     fname = fname[2:]
+            # Nevertheless, make sure this is actually the case...
+            assert not str(fname).startswith("./")
             return fname
+            
 
     # no file found
     msg = f"File cannot be found: {filename}"
@@ -1010,10 +1016,8 @@ def write_report(text, filename=None, output=["rst"]):
                 out_text = out_text.decode("utf-8")
 
             suffix = {"rst": ".rst", "latex": ".tex"}[fmt]
-            fname = Path(filename)
-            fname = os.path.join(*fname.parts[:-1], fname.stem + suffix)
-            with open(fname, "w") as f:
-                f.write(out_text)
+            fname = Path(filename).with_suffix(suffix)
+            fname.write_text(out_text, encoding="utf-8")
 
 
 def pretty_print_dict(dic, indent=0):

@@ -1,5 +1,5 @@
-import os
 import logging
+from pathlib import Path
 from dataclasses import dataclass
 from typing import Any
 
@@ -47,7 +47,7 @@ class SpectralSurface:
                      "wavelength_unit"  : u.um}
 
         self.table = Table()
-        if filename is not None and os.path.exists(filename):
+        if filename is not None and Path(filename).exists():
             self.table = ioascii.read(filename)
             tbl_meta = convert_table_comments_to_dict(self.table)
             if isinstance(tbl_meta, dict):

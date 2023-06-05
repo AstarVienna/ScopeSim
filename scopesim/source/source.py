@@ -32,10 +32,10 @@
 # [WCS = CRPIXn, CRVALn = (0,0), CTYPEn, CDn_m, NAXISn, CUNITn
 """
 
-import os
 import pickle
 import logging
 from copy import deepcopy
+from pathlib import Path
 import numpy as np
 
 from astropy.table import Table, Column
@@ -197,7 +197,7 @@ class Source(SourceBase):
             fits_type = utils.get_fits_type(filename)
             data = fits.getdata(filename)
             hdr = fits.getheader(filename)
-            hdr['FILENAME'] = os.path.basename(filename)
+            hdr['FILENAME'] = Path(filename).name
             if fits_type == "image":
                 image = fits.ImageHDU(data=data, header=hdr)
                 if spectra is not None:
@@ -324,7 +324,7 @@ class Source(SourceBase):
             with fits.open(cube) as hdul:
                 data = hdul[ext].data
                 header = hdul[ext].header
-                header['FILENAME'] = os.path.basename(cube)
+                header['FILENAME'] = Path(cube).name
                 wcs = WCS(cube)
 
         try:
