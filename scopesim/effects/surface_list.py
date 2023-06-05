@@ -76,17 +76,18 @@ class SurfaceList(TERCurve):
         self._surface = item
 
     def get_throughput(self, start=0, end=None, rows=None):
-        """ Copied directly from radiometry_table """
+        """Copied directly from radiometry_table."""
 
         if self.table is None:
             return None
-        end = len(self.table) if end is None else end
-        end = end + len(self.table) if end < 0 else end
-        rows = np.arange(start, end) if rows is None else rows
+        if end is None:
+            end = len(self.table)
+        if end < 0:
+            end += len(self.table)
+        if rows is None:
+            rows = np.arange(start, end)
 
-        thru = rad_utils.combine_throughputs(self.table, self.surfaces, rows)
-
-        return thru
+        return rad_utils.combine_throughputs(self.table, self.surfaces, rows)
 
     def get_emission(self, etendue, start=0, end=None, rows=None,
                      use_area=False):
