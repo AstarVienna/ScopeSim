@@ -64,7 +64,7 @@ class OpticalElement:
 
         if isinstance(yaml_dict, dict):
             self.meta.update({key: yaml_dict[key] for key in yaml_dict
-                              if key not in {"properties", "effects"})
+                              if key not in {"properties", "effects"}})
             if "properties" in yaml_dict:
                 self.properties = yaml_dict["properties"]
             if "name" in yaml_dict:
