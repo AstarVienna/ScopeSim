@@ -227,7 +227,7 @@ class OpticalTrain:
             header, data, wave = cube.header, cube.data, cube.wave
 
             # Need to check whether BUNIT is per arcsec2 or per pixel
-            inunit = u.Unit(header['BUNIT'])
+            inunit = u.Unit(header["BUNIT"])
             data = data.astype(np.float32) * inunit
             factor = 1
             for base, power in zip(inunit.bases, inunit.powers):
@@ -241,20 +241,20 @@ class OpticalTrain:
 
             if factor == 1:    # Normalise to 1 arcsec2 if not a spatial density
                 # ..todo: lower needed because "DEG" is not understood, this is ugly
-                pixarea = (header['CDELT1'] * u.Unit(header['CUNIT1'].lower()) *
-                           header['CDELT2'] * u.Unit(header['CUNIT2'].lower())).to(u.arcsec**2)
+                pixarea = (header["CDELT1"] * u.Unit(header["CUNIT1"].lower()) *
+                           header["CDELT2"] * u.Unit(header["CUNIT2"].lower())).to(u.arcsec**2)
                 data = data / pixarea.value    # cube is per arcsec2
 
             data = (data * factor).value
 
-            cube.header['BUNIT'] = 'PHOTLAM/arcsec2'    # ..todo: make this more explicit?
+            cube.header["BUNIT"] = "PHOTLAM/arcsec2"    # ..todo: make this more explicit?
 
             # The imageplane_utils like to have the spatial WCS in units of "deg". Ensure
             # that the cube is passed on accordingly
-            cube.header['CDELT1'] = header['CDELT1'] * u.Unit(header['CUNIT1'].lower()).to(u.deg)
-            cube.header['CDELT2'] = header['CDELT2'] * u.Unit(header['CUNIT2'].lower()).to(u.deg)
-            cube.header['CUNIT1'] = 'deg'
-            cube.header['CUNIT2'] = 'deg'
+            cube.header["CDELT1"] = header["CDELT1"] * u.Unit(header["CUNIT1"].lower()).to(u.deg)
+            cube.header["CDELT2"] = header["CDELT2"] * u.Unit(header["CUNIT2"].lower()).to(u.deg)
+            cube.header["CUNIT1"] = "deg"
+            cube.header["CUNIT2"] = "deg"
 
             # Put on fov wavegrid
             wave_min = min(fov.meta["wave_min"] for fov in self.fov_manager.fovs)
@@ -275,11 +275,11 @@ class OpticalTrain:
                 new_data[:, j, :] = cube_interp(fov_waveset.value)
 
             cube.data = new_data
-            cube.header['CTYPE3'] = 'WAVE'
-            cube.header['CRPIX3'] = 1
-            cube.header['CRVAL3'] = wave_min.value
-            cube.header['CDELT3'] = dwave
-            cube.header['CUNIT3'] = wave_unit.name
+            cube.header["CTYPE3"] = "WAVE"
+            cube.header["CRPIX3"] = 1
+            cube.header["CRVAL3"] = wave_min.value
+            cube.header["CDELT3"] = dwave
+            cube.header["CUNIT3"] = wave_unit.name
 
         return source
 
@@ -336,55 +336,55 @@ class OpticalTrain:
 
         # Primary hdu
         pheader = hdulist[0].header
-        pheader['DATE'] = datetime.now().isoformat(timespec='seconds')
-        pheader['ORIGIN'] = 'Scopesim ' + version
-        pheader['INSTRUME'] = from_currsys("!OBS.instrument")
-        pheader['INSTMODE'] = ", ".join(from_currsys("!OBS.modes"))
-        pheader['TELESCOP'] = from_currsys("!TEL.telescope")
-        pheader['LOCATION'] = from_currsys("!ATMO.location")
+        pheader["DATE"] = datetime.now().isoformat(timespec="seconds")
+        pheader["ORIGIN"] = "Scopesim " + version
+        pheader["INSTRUME"] = from_currsys("!OBS.instrument")
+        pheader["INSTMODE"] = ", ".join(from_currsys("!OBS.modes"))
+        pheader["TELESCOP"] = from_currsys("!TEL.telescope")
+        pheader["LOCATION"] = from_currsys("!ATMO.location")
 
         # Source information taken from first only.
         # ..todo: What if source is a composite?
         srcfield = self._last_source.fields[0]
         if type(srcfield).__name__ == "Table":
-            pheader['SOURCE'] = "Table"
+            pheader["SOURCE"] = "Table"
         elif type(srcfield).__name__ == "ImageHDU":
-            if 'BG_SURF' in srcfield.header:
-                pheader['SOURCE'] = srcfield.header['BG_SURF']
+            if "BG_SURF" in srcfield.header:
+                pheader["SOURCE"] = srcfield.header["BG_SURF"]
             else:
                 try:
-                    pheader['SOURCE'] = srcfield.header['FILENAME']
+                    pheader["SOURCE"] = srcfield.header["FILENAME"]
                 except KeyError:
-                    pheader['SOURCE'] = "ImageHDU"
+                    pheader["SOURCE"] = "ImageHDU"
 
         # Image hdul
         # ..todo: currently only one, update for detector arrays
         # ..todo: normalise filenames - some need from_currsys, some need Path(...).name
         #         this should go into a function so as to reduce clutter here.
         iheader = hdulist[1].header
-        iheader['EXPTIME'] = from_currsys("!OBS.exptime"), "[s]"
-        iheader['DIT'] = from_currsys("!OBS.dit"), "[s]"
-        iheader['NDIT'] = from_currsys("!OBS.ndit")
-        iheader['BUNIT'] = 'e', 'per EXPTIME'
-        iheader['PIXSCALE'] = from_currsys("!INST.pixel_scale"), "[arcsec]"
+        iheader["EXPTIME"] = from_currsys("!OBS.exptime"), "[s]"
+        iheader["DIT"] = from_currsys("!OBS.dit"), "[s]"
+        iheader["NDIT"] = from_currsys("!OBS.ndit")
+        iheader["BUNIT"] = "e", "per EXPTIME"
+        iheader["PIXSCALE"] = from_currsys("!INST.pixel_scale"), "[arcsec]"
 
         # A simple WCS
-        iheader['CTYPE1'] = 'LINEAR'
-        iheader['CTYPE2'] = 'LINEAR'
-        iheader['CRPIX1'] = (iheader['NAXIS1'] + 1) / 2
-        iheader['CRPIX2'] = (iheader['NAXIS2'] + 1) / 2
-        iheader['CRVAL1'] = 0.
-        iheader['CRVAL2'] = 0.
-        iheader['CDELT1'] = iheader['PIXSCALE']
-        iheader['CDELT2'] = iheader['PIXSCALE']
-        iheader['CUNIT1'] = 'arcsec'
-        iheader['CUNIT2'] = 'arcsec'
+        iheader["CTYPE1"] = "LINEAR"
+        iheader["CTYPE2"] = "LINEAR"
+        iheader["CRPIX1"] = (iheader["NAXIS1"] + 1) / 2
+        iheader["CRPIX2"] = (iheader["NAXIS2"] + 1) / 2
+        iheader["CRVAL1"] = 0.
+        iheader["CRVAL2"] = 0.
+        iheader["CDELT1"] = iheader["PIXSCALE"]
+        iheader["CDELT2"] = iheader["PIXSCALE"]
+        iheader["CUNIT1"] = "arcsec"
+        iheader["CUNIT2"] = "arcsec"
 
         for eff in self.optics_manager.detector_setup_effects:
             efftype = type(eff).__name__
 
             if efftype == "DetectorList" and eff.include:
-                iheader['DETECTOR'] = eff.meta['detector']
+                iheader["DETECTOR"] = eff.meta["detector"]
 
         for eff in self.optics_manager.detector_array_effects:
             efftype = type(eff).__name__
@@ -392,12 +392,12 @@ class OpticalTrain:
             if (efftype == "DetectorModePropertiesSetter" and
                 eff.include):
                 # ..todo: can we write this into currsys?
-                iheader['DET_MODE'] = (eff.meta['detector_readout_mode'],
+                iheader["DET_MODE"] = (eff.meta["detector_readout_mode"],
                                        "detector readout mode")
-                iheader['MINDIT'] = from_currsys("!DET.mindit"), "[s]"
-                iheader['FULLWELL'] = from_currsys("!DET.full_well"), "[s]"
-                iheader['RON'] = from_currsys("!DET.readout_noise"), "[e]"
-                iheader['DARK'] = from_currsys("!DET.dark_current"), "[e/s]"
+                iheader["MINDIT"] = from_currsys("!DET.mindit"), "[s]"
+                iheader["FULLWELL"] = from_currsys("!DET.full_well"), "[s]"
+                iheader["RON"] = from_currsys("!DET.readout_noise"), "[e]"
+                iheader["DARK"] = from_currsys("!DET.dark_current"), "[e/s]"
 
         ifilter = 1   # Counts filter wheels
         isurface = 1  # Counts surface lists
@@ -405,62 +405,62 @@ class OpticalTrain:
             efftype = type(eff).__name__
 
             if efftype == "ADCWheel" and eff.include:
-                iheader['ADC'] = eff.current_adc.meta['name']
+                iheader["ADC"] = eff.current_adc.meta["name"]
 
             if efftype == "FilterWheel" and eff.include:
-                iheader[f'FILTER{ifilter}'] = (eff.current_filter.meta['name'],
-                                               eff.meta['name'])
+                iheader[f"FILTER{ifilter}"] = (eff.current_filter.meta["name"],
+                                               eff.meta["name"])
                 ifilter += 1
 
             if efftype == "SlitWheel" and eff.include:
-                iheader['SLIT'] = (eff.current_slit.meta['name'],
-                                   eff.meta['name'])
+                iheader["SLIT"] = (eff.current_slit.meta["name"],
+                                   eff.meta["name"])
 
             if efftype == "PupilTransmission" and eff.include:
-                iheader['PUPTRANS'] = (from_currsys("!OBS.pupil_transmission"),
+                iheader["PUPTRANS"] = (from_currsys("!OBS.pupil_transmission"),
                                        "cold stop, pupil transmission")
 
             if efftype == "SkycalcTERCurve" and eff.include:
-                iheader['ATMOSPHE'] = "Skycalc", "atmosphere model"
-                iheader['LOCATION'] = eff.meta['location']
-                iheader['AIRMASS'] = eff.meta['airmass']
-                iheader['TEMPERAT'] = eff.meta['temperature'], '[degC]'
-                iheader['HUMIDITY'] = eff.meta['humidity']
-                iheader['PRESSURE'] = eff.meta['pressure'], '[hPa]'
-                iheader['PWV'] = eff.meta['pwv'], "precipitable water vapour"
+                iheader["ATMOSPHE"] = "Skycalc", "atmosphere model"
+                iheader["LOCATION"] = eff.meta["location"]
+                iheader["AIRMASS"] = eff.meta["airmass"]
+                iheader["TEMPERAT"] = eff.meta["temperature"], "[degC]"
+                iheader["HUMIDITY"] = eff.meta["humidity"]
+                iheader["PRESSURE"] = eff.meta["pressure"], "[hPa]"
+                iheader["PWV"] = eff.meta["pwv"], "precipitable water vapour"
 
             if efftype == "AtmosphericTERCurve" and eff.include:
-                iheader['ATMOSPHE'] = eff.meta['filename'], "atmosphere model"
+                iheader["ATMOSPHE"] = eff.meta["filename"], "atmosphere model"
                 # ..todo: expand if necessary
 
             if efftype == "SurfaceList" and eff.include:
-                iheader[f'SURFACE{isurface}'] = (eff.meta['filename'],
-                                                 eff.meta['name'])
+                iheader[f"SURFACE{isurface}"] = (eff.meta["filename"],
+                                                 eff.meta["name"])
                 isurface += 1
 
             if efftype == "QuantumEfficiencyCurve" and eff.include:
-                iheader['QE'] = Path(eff.meta['filename']).name, eff.meta['name']
+                iheader["QE"] = Path(eff.meta["filename"]).name, eff.meta["name"]
 
         for eff in self.optics_manager.fov_effects:
             efftype = type(eff).__name__
 
             # ..todo: needs to be handled with isinstance(eff, PSF)
             if efftype == "FieldConstantPSF" and eff.include:
-                iheader["PSF"] = eff.meta['filename'], "point spread function"
+                iheader["PSF"] = eff.meta["filename"], "point spread function"
 
             if efftype == "SpectralTraceList" and eff.include:
-                iheader["SPECTRAC"] = (from_currsys(eff.meta['filename']),
+                iheader["SPECTRAC"] = (from_currsys(eff.meta["filename"]),
                                        "spectral trace definition")
                 if "CTYPE1" in eff.meta:
-                    for key in {'WCSAXES', 'CTYPE1', 'CTYPE2', 'CRPIX1', 'CRPIX2', 'CRVAL1',
-                                'CRVAL2', 'CDELT1', 'CDELT2', 'CUNIT1', 'CUNIT2'}:
+                    for key in {"WCSAXES", "CTYPE1", "CTYPE2", "CRPIX1", "CRPIX2", "CRVAL1",
+                                "CRVAL2", "CDELT1", "CDELT2", "CUNIT1", "CUNIT2"}:
                         iheader[key] = eff.meta[key]
 
         for eff in self.optics_manager.detector_effects:
             efftype = type(eff).__name__
 
             if efftype == "LinearityCurve" and eff.include:
-                iheader['DETLIN'] = from_currsys(eff.meta['filename'])
+                iheader["DETLIN"] = from_currsys(eff.meta["filename"])
 
         return hdulist
 
@@ -479,7 +479,7 @@ class OpticalTrain:
         This method closes all open file handles and should be called when the optical train
         is no longer needed.
         """
-        for effect_name in self.effects['name']:
+        for effect_name in self.effects["name"]:
             try:
                 self[effect_name]._file.close()
             except AttributeError:
