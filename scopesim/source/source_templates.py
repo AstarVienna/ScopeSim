@@ -273,7 +273,9 @@ def uniform_source(sp=None, extent=60):
 def vega_spectrum(mag=0):
     if isinstance(mag, u.Quantity):
         mag = mag.value
-    vega = SourceSpectrum.from_file(Path(rc.__pkg_dir__, "vega.fits"))
+    # HACK: Turn Path object back into string, because not everything
+    #       that depends on this function can handle Path objects (yet)
+    vega = SourceSpectrum.from_file(str(Path(rc.__pkg_dir__, "vega.fits")))
     vega = vega * 10 ** (-0.4 * mag)
     return vega
 
