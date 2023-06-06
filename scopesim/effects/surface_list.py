@@ -25,6 +25,7 @@ class SurfaceList(TERCurve):
         self._emission = None
 
     def fov_grid(self, which="waveset", **kwargs):
+        wave_edges = []
         if which == "waveset":
             self.meta.update(kwargs)
             self.meta = from_currsys(self.meta)
@@ -35,18 +36,15 @@ class SurfaceList(TERCurve):
             throughput = self.throughput(wave)
             threshold = self.meta["minimum_throughput"]
             valid_waves = np.where(throughput >= threshold)[0]
-            if len(valid_waves) > 0:
-                wave_edges = [min(wave[valid_waves]), max(wave[valid_waves])]
-            else:
-                raise ValueError("No transmission found above the threshold {} "
-                                 "in this wavelength range {}. Did you open "
-                                 "the shutter?"
-                                 "".format(self.meta["minimum_throughput"],
-                                           [self.meta["wave_min"],
-                                            self.meta["wave_max"]]))
-        else:
-            wave_edges = []
 
+            if not len(valid_waves):
+                msg = ("No transmission found above the threshold "
+                       f"{self.meta['minimum_throughput']} in this wavelength "
+                       f"range {[self.meta['wave_min'], self.meta['wave_max']]}."
+                       " Did you open the shutter?")
+                raise ValueError(msg)
+
+            wave_edges = [min(wave[valid_waves]), max(wave[valid_waves])]
         return wave_edges
 
     @property
@@ -78,17 +76,18 @@ class SurfaceList(TERCurve):
         self._surface = item
 
     def get_throughput(self, start=0, end=None, rows=None):
-        """ Copied directly from radiometry_table """
+        """Copied directly from radiometry_table."""
 
         if self.table is None:
             return None
-        end = len(self.table) if end is None else end
-        end = end + len(self.table) if end < 0 else end
-        rows = np.arange(start, end) if rows is None else rows
+        if end is None:
+            end = len(self.table)
+        if end < 0:
+            end += len(self.table)
+        if rows is None:
+            rows = np.arange(start, end)
 
-        thru = rad_utils.combine_throughputs(self.table, self.surfaces, rows)
-
-        return thru
+        return rad_utils.combine_throughputs(self.table, self.surfaces, rows)
 
     def get_emission(self, etendue, start=0, end=None, rows=None,
                      use_area=False):

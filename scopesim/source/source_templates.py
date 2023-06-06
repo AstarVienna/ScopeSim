@@ -1,4 +1,4 @@
-from os import path as pth
+from pathlib import Path
 
 import numpy as np
 
@@ -73,7 +73,7 @@ def star(x=0, y=0, flux=0):
                 units=[u.arcsec, u.arcsec, None, None, mag_unit])
     tbl.meta["photometric_system"] = "vega" if mag_unit == u.mag else "ab"
     src = Source(spectra=spec, table=tbl)
-    src.meta.update({"function_call": f"star(x={x}, y={y}, flux={flux})",
+    src.meta.update({"function_call": f"star({x=}, {y=}, {flux=})",
                      "module": "scopesim.source.source_templates",
                      "object": "star"})
 
@@ -273,7 +273,9 @@ def uniform_source(sp=None, extent=60):
 def vega_spectrum(mag=0):
     if isinstance(mag, u.Quantity):
         mag = mag.value
-    vega = SourceSpectrum.from_file(pth.join(rc.__pkg_dir__, "vega.fits"))
+    # HACK: Turn Path object back into string, because not everything
+    #       that depends on this function can handle Path objects (yet)
+    vega = SourceSpectrum.from_file(str(Path(rc.__pkg_dir__, "vega.fits")))
     vega = vega * 10 ** (-0.4 * mag)
     return vega
 

@@ -64,7 +64,7 @@ class OpticalElement:
 
         if isinstance(yaml_dict, dict):
             self.meta.update({key: yaml_dict[key] for key in yaml_dict
-                              if key not in ["properties", "effects"]})
+                              if key not in {"properties", "effects"}})
             if "properties" in yaml_dict:
                 self.properties = yaml_dict["properties"]
             if "name" in yaml_dict:
@@ -76,14 +76,13 @@ class OpticalElement:
                         if eff_dic["name"] in rc.__currsys__.ignore_effects:
                             eff_dic["include"] = False
 
-                    self.effects += [make_effect(eff_dic, **self.properties)]
+                    self.effects.append(make_effect(eff_dic, **self.properties))
 
     def add_effect(self, effect):
         if isinstance(effect, efs.Effect):
-            self.effects += [effect]
+            self.effects.append(effect)
         else:
-            logging.warning("{} is not an Effect object and was not added"
-                          "".format(effect))
+            logging.warning("%s is not an Effect object and was not added", effect)
 
     def get_all(self, effect_class):
         return get_all_effects(self.effects, effect_class)
@@ -102,11 +101,11 @@ class OpticalElement:
             if eff.include and "z_order" in eff.meta:
                 z = eff.meta["z_order"]
                 if isinstance(z, (list, tuple)):
-                    if any([zmin <= zi <= zmax for zi in z]):
-                        effects += [eff]
+                    if any(zmin <= zi <= zmax for zi in z):
+                        effects.append(eff)
                 else:
                     if zmin <= z <= zmax:
-                        effects += [eff]
+                        effects.append(eff)
 
         return effects
 
@@ -191,69 +190,60 @@ class OpticalElement:
         return obj
 
     def __repr__(self):
-        msg = '\nOpticalElement : "{}" contains {} Effects: \n' \
-              ''.format(self.meta["name"], len(self.effects))
-        eff_str = "\n".join(["[{}] {}".format(i, eff.__repr__())
-                             for i, eff in enumerate(self.effects)])
+        msg = (f"\nOpticalElement : \"{self.meta['name']}\" contains "
+               f"{len(self.effects)} Effects: \n")
+        eff_str = "\n".join([f"[{i}] {eff.__repr__()}" for i, eff
+                             in enumerate(self.effects)])
         return msg + eff_str
 
     def __str__(self):
         name = self.meta.get("name", self.meta.get("filename", "<empty>"))
-        return '{}: "{}"'.format(type(self).__name__, name)
+        return f"{type(self).__name__}: \"{name}\""
 
     @property
     def properties_str(self):
         prop_str = ""
-        max_key_len = max([len(key) for key in self.properties.keys()])
+        max_key_len = max(len(key) for key in self.properties.keys())
         for key in self.properties:
-            if key not in ["comments", "changes", "description", "history",
-                           "report"]:
-                prop_str += "    {} : {}\n".format(key.rjust(max_key_len),
-                                                   self.properties[key])
+            if key not in {"comments", "changes", "description", "history",
+                           "report"}:
+                prop_str += f"    {key.rjust(max_key_len)} : {self.properties[key]}\n"
 
         return prop_str
 
     def report(self, filename=None, output="rst", rst_title_chars="^#*+",
                **kwargs):
 
-        rst_str = """
-{}
-{}
+        rst_str = f"""
+{str(self)}
+{rst_title_chars[0] * len(str(self))}
 
-**Element**: {}
+**Element**: {self.meta.get("object", "<unknown optical element>")}
 
-**Alias**: {}
+**Alias**: {self.meta.get("alias", "<unknown alias>")}
         
-**Description**: {}
+**Description**: {self.meta.get("description", "<no description>")}
 
 Global properties
-{}
+{rst_title_chars[1] * 17}
 ::
 
-{}
-""".format(str(self),
-           rst_title_chars[0] * len(str(self)),
-           self.meta.get("object", "<unknown optical element>"),
-           self.meta.get("alias", "<unknown alias>"),
-           self.meta.get("description", "<no description>"),
-           rst_title_chars[1] * 17,
-           self.properties_str)
+{self.properties_str}
+"""
 
         if len(self.list_effects()) > 0:
-            rst_str += """        
+            rst_str += f"""
 Effects
-{}
+{rst_title_chars[1] * 7}
 
 Summary of Effects included in this optical element:
 
 .. table::
-    :name: {}
+    :name: {"tbl:" + self.meta.get("name", "<unknown OpticalElement>")}
    
-{}
+{table_to_rst(self.list_effects(), indent=4)}
  
-""".format(rst_title_chars[1] * 7,
-           "tbl:" + self.meta.get("name", "<unknown OpticalElement>"),
-           table_to_rst(self.list_effects(), indent=4))
+"""
 
         reports = [eff.report(rst_title_chars=rst_title_chars[-2:], **kwargs)
                    for eff in self.effects]
