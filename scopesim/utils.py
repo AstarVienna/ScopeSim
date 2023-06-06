@@ -257,7 +257,7 @@ def add_SED_to_scopesim(file_in, file_out=None, wave_units="um"):
         else:
             file_out = rc.__data_dir__ + f"{path.name}.dat"
 
-    if path.suffix.lower() in "fits":
+    if path.suffix.lower() == ".fits":
         data = fits.getdata(file_in)
         lam, val = data[data.columns[0].name], data[data.columns[1].name]
     else:
