@@ -2,6 +2,7 @@
 import numpy as np
 from astropy import units as u
 import logging
+from pathlib import Path
 
 from astropy.io import fits
 from astropy.table import Table

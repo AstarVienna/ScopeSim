@@ -565,7 +565,9 @@ def find_file(filename, path=None, silent=False):
             #     fname = fname[2:]
             # Nevertheless, make sure this is actually the case...
             assert not str(fname).startswith("./")
-            return fname
+            # HACK: Turn Path object back into string, because not everything
+            #       that depends on this function can handle Path objects (yet)
+            return str(fname)
             
 
     # no file found
