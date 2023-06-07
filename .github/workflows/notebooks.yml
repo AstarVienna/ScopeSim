@@ -1,4 +1,4 @@
-name: Tests
+name: Notebooks
 
 on:
   push:
@@ -38,7 +38,5 @@ jobs:
           # ScopeSim_Templates.
           pip install .
           pip install .[dev,test]
-      - name: Run Pytest
-        run: pytest --cov=scopesim
-      - name: Upload coverage reports to Codecov
-        uses: codecov/codecov-action@v3
+      - name: Run notebooks
+        run: ./runnotebooks.sh
