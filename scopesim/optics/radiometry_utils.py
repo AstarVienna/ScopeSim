@@ -137,8 +137,8 @@ def add_surface_to_table(tbl, surf, name, position, silent=True):
                                          position=position)
         else:
             if not silent:
-                logging.warning("{} was not found in the meta dictionary of {}. "
-                              "This could cause problems".format(colname, name))
+                logging.warning(("%s was not found in the meta dictionary of %s. "
+                                 "This could cause problems"), colname, name)
 
     colname = real_colname("name", new_tbl.colnames)
     new_tbl = change_table_entry(new_tbl, colname, name, position=position)

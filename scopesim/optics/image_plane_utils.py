@@ -557,9 +557,9 @@ def reorient_imagehdu(imagehdu, wcs_suffix="", conserve_flux=True,
         imagehdu.header = hdr
 
     elif any(["PC1_1" in key for key in imagehdu.header]):
-        logging.warning("PC Keywords were found, but not used due to different "
-                      "wcs_suffix given: {} \n {}"
-                      "".format(wcs_suffix, dict(imagehdu.header)))
+        logging.warning(("PC Keywords were found, but not used due to different "
+                         "wcs_suffix given: %s \n %s"),
+                        wcs_suffix, dict(imagehdu.header))
 
     return imagehdu
 
