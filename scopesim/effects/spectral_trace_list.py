@@ -184,8 +184,11 @@ class SpectralTraceList(Effect):
                 # for MAAT
                 pass
             elif obj.hdu is None and obj.cube is None:
+                print("Making cube")
                 obj.cube = obj.make_cube_hdu()
 
+            print(obj.cube.shape)
+            print(obj.hdu.data.shape)
             # ..todo: obj will be changed to a single one covering the full field of view
             # covered by the image slicer (28 slices for LMS; for LSS still only a single slit)
             # We need a loop over spectral_traces that chops up obj into the single-slice fov before
