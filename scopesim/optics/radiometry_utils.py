@@ -157,8 +157,8 @@ def make_surface_dict_from_table(tbl):
     surf_dict = OrderedDict({})
     if tbl is not None and len(tbl) > 0:
         names = tbl[real_colname("name", tbl.colnames)]
-        for ii in range(len(tbl)):
-            surf_dict[names[ii]] = make_surface_from_row(tbl[ii], **tbl.meta)
+        for ii, row in enumerate(tbl):
+            surf_dict[names[ii]] = make_surface_from_row(row, **tbl.meta)
 
     return surf_dict
 
