@@ -1,11 +1,12 @@
 """Effects related to field masks, including spectroscopic slits"""
-from os import path as pth
+
+from pathlib import Path
 from copy import deepcopy
 import logging
 import yaml
 
 import numpy as np
-from matplotlib.path import Path
+from matplotlib.path import Path as MPLPath  # rename to avoid conflict with pathlib
 from astropy.io import fits
 from astropy import units as u
 from astropy.table import Table
@@ -433,12 +434,12 @@ class SlitWheel(Effect):
         self.meta.update(params)
         self.meta.update(kwargs)
 
-        path = pth.join(self.meta["path"],
-                        from_currsys(self.meta["filename_format"]))
+        path = Path(self.meta["path"], from_currsys(self.meta["filename_format"]))
+        fname = str(path).format(name)
         self.slits = {}
         for name in from_currsys(self.meta["slit_names"]):
             kwargs["name"] = name
-            self.slits[name] = ApertureMask(filename=path.format(name),
+            self.slits[name] = ApertureMask(filename=fname,
                                             **kwargs)
 
         self.table = self.get_table()
@@ -569,7 +570,7 @@ def mask_from_coords(x, y, pixel_scale):
     coords = [(xi, yi) for xi in xrange for yi in yrange]
 
     corners = [(xi, yi) for xi, yi in zip(x, y)]
-    path = Path(corners)
+    path = MPLPath(corners)
     # ..todo: known issue - for super thin apertures, the first row is masked
     # rad = 0.005
     rad = 0  # increase this to include slightly more points within the polygon

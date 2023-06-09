@@ -1,4 +1,4 @@
-import os
+from pathlib import Path
 
 from astropy.table import TableFormatter
 from docutils.core import publish_doctree, publish_parts
@@ -169,7 +169,7 @@ def process_code(context_code, code, options):
 
             fname = options.get("name", "untitled").split(".")[0]
             fname = ".".join([fname, fmt])
-            fname = os.path.join(img_path, fname)
+            fname = Path(img_path, fname)
             context_code += f"\nplt.savefig(\"{fname}\")"
 
     return context_code
@@ -311,8 +311,7 @@ def latexify_rst_text(rst_text, filename=None, path=None, title_char="=",
         parts["body"] = parts["body"].replace("end{alltt}",
                                               "end{lstlisting}\n\\end{alltt}")
 
-    filename = filename.split(".")[0] + ".tex"
-    file_path = os.path.join(path, filename)
+    file_path = Path(path, filename).with_suffix(".tex")
     with open(file_path, "w") as f:
         f.write(parts["body"])
 
@@ -329,8 +328,7 @@ def rstify_rst_text(rst_text, filename=None, path=None, title_char="="):
     if filename is None:
         filename = rst_text.split(title_char)[0].strip().replace(" ", "_")
 
-    filename = filename.split(".")[0] + ".rst"
-    file_path = os.path.join(path, filename)
+    file_path = Path(path, filename).with_suffix(".rst")
     with open(file_path, "w") as f:
         f.write(rst_text)
 
