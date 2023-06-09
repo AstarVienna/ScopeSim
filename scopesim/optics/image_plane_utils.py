@@ -43,20 +43,18 @@ def get_canvas_header(hdu_or_table_list, pixel_scale=1 * u.arcsec):
                                                    pixel_scale=pixel_scale)
         headers += [tbl_hdr]
 
-    if len(headers) > 0:
-        hdr = _make_bounding_header_from_imagehdus(headers,
-                                                   pixel_scale=pixel_scale)
-        num_pix = hdr["NAXIS1"] * hdr["NAXIS2"]
-        if num_pix > 2 ** 25:  # 2 * 4096**2
-            logging.warning(size_warning.format(adverb="", num_pix=num_pix,
-                                                size="256 MB"))
-        elif num_pix > 2 ** 28:
-            raise MemoryError(size_warning.format(adverb="too", num_pix=num_pix,
-                                                  size="8 GB"))
-    else:
+    if not headers:
         logging.warning("No tables or ImageHDUs were passed")
-        hdr = None
+        return None
 
+    hdr = _make_bounding_header_from_imagehdus(headers, pixel_scale=pixel_scale)
+    num_pix = hdr["NAXIS1"] * hdr["NAXIS2"]
+    if num_pix > 2 ** 28:
+        raise MemoryError(size_warning.format(adverb="too", num_pix=num_pix,
+                                              size="8 GB"))
+    if num_pix > 2 ** 25:  # 2 * 4096**2
+        logging.warning(size_warning.format(adverb="", num_pix=num_pix,
+                                            size="256 MB"))
     return hdr
 
 
