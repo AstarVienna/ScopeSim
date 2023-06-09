@@ -92,5 +92,3 @@ class RadiometryTable:
 
     def __repr__(self):
         return self.table.__repr__()
-
-
