@@ -24,8 +24,7 @@ class Shift3D(Effect):
             col_names = ["wavelength", "dx", "dy"]
             waves, dx, dy = [self.get_table(**kwargs)[col] for col in col_names]
             return waves, dx, dy
-        else:
-            return None
+        return None
 
     def get_table(self, **kwargs):
         if self.table is None:
@@ -223,8 +222,7 @@ class AtmosphericDispersionCorrection(Shift3D):
             dx *= -(1 - self.meta["efficiency"])
             dy *= -(1 - self.meta["efficiency"])
             return waves, dx, dy
-        else:
-            return None
+        return None
 
     def plot(self):
         return None

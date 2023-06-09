@@ -40,8 +40,7 @@ class SystemDict(object):
             for item in item_chunks:
                 entry = entry[item]
             return entry
-        else:
-            return self.dic[item]
+        return self.dic[item]
 
     def __setitem__(self, key, value):
         if isinstance(key, str) and key.startswith("!"):
@@ -64,8 +63,7 @@ class SystemDict(object):
                     return False
                 entry = entry[item]
             return True
-        else:
-            return item in self.dic
+        return item in self.dic
 
     def __repr__(self):
         msg = "<SystemDict> contents:"
