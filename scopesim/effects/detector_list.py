@@ -133,7 +133,7 @@ class DetectorList(Effect):
             hdr = self.image_plane_header
             x_mm, y_mm = calc_footprint(hdr, "D")
             pixel_size = hdr["CDELT1D"]              # mm
-            pixel_scale = (kwargs.get("pixel_scale", self.meta["pixel_scale"]))   # ["]
+            pixel_scale = kwargs.get("pixel_scale", self.meta["pixel_scale"])   # ["]
             pixel_scale = utils.from_currsys(pixel_scale)
             x_sky = x_mm * pixel_scale / pixel_size  # x["] = x[mm] * ["] / [mm]
             y_sky = y_mm * pixel_scale / pixel_size  # y["] = y[mm] * ["] / [mm]
