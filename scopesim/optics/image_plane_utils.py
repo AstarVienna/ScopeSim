@@ -41,7 +41,7 @@ def get_canvas_header(hdu_or_table_list, pixel_scale=1 * u.arcsec):
         tbls = [ht for ht in hdu_or_table_list if isinstance(ht, Table)]
         tbl_hdr = _make_bounding_header_for_tables(tbls,
                                                    pixel_scale=pixel_scale)
-        headers += [tbl_hdr]
+        headers.append(tbl_hdr)
 
     if not headers:
         logging.warning("No tables or ImageHDUs were passed")
@@ -847,6 +847,6 @@ def split_header(hdr, chunk_size, wcs_suffix=""):
 
             hdr_sky = header_from_list_of_xy([x1_sky, x2_sky], [y1_sky, y2_sky],
                                              pixel_scale=x_delt, wcs_suffix=s)
-            hdr_list += [hdr_sky]
+            hdr_list.append(hdr_sky)
 
     return hdr_list

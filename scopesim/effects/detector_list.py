@@ -247,7 +247,7 @@ class DetectorList(Effect):
 
             row_dict = {col: row[col] for col in row.colnames}
             hdr.update(row_dict)
-            hdrs += [hdr]
+            hdrs.append(hdr)
 
         return hdrs
 

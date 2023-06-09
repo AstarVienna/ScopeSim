@@ -337,7 +337,7 @@ class ApertureList(Effect):
                       "x_unit": "arcsec",
                       "y_unit": "arcsec",
                       "angle_unit": "arcsec"}
-            apertures_list += [ApertureMask(array_dict=array_dict, **params)]
+            apertures_list.append(ApertureMask(array_dict=array_dict, **params))
 
         return apertures_list
 

@@ -230,26 +230,26 @@ class ExtraFitsKeywords(Effect):
             with open(yaml_file) as f:
                 # possible multiple yaml docs in a file
                 # --> returns list even for a single doc
-                tmp_dicts += [dic for dic in yaml.full_load_all(f)]
+                tmp_dicts.extend(dic for dic in yaml.full_load_all(f))
 
         if self.meta["yaml_string"] is not None:
             yml = self.meta["yaml_string"]
-            tmp_dicts += [dic for dic in yaml.full_load_all(yml)]
+            tmp_dicts.extend(dic for dic in yaml.full_load_all(yml))
 
         if self.meta["header_dict"] is not None:
             if not isinstance(self.meta["header_dict"], list):
-                tmp_dicts += [self.meta["header_dict"]]
+                tmp_dicts.extend(self.meta["header_dict"])
             else:
-                tmp_dicts += self.meta["header_dict"]
+                tmp_dicts.extend(self.meta["header_dict"])
 
         self.dict_list = []
         for dic in tmp_dicts:
             # format says yaml file contains list of dicts
             if isinstance(dic, list):
-                self.dict_list += dic
+                self.dict_list.extend(dic)
             # catch case where user forgets the list
             elif isinstance(dic, dict):
-                self.dict_list += [dic]
+                self.dict_list.append(dic)
 
     def apply_to(self, hdul, **kwargs):
         """
@@ -283,18 +283,18 @@ class ExtraFitsKeywords(Effect):
 def get_relevant_extensions(dic, hdul):
     exts = []
     if dic.get("ext_name") is not None:
-        exts += [i for i, hdu in enumerate(hdul)
-                 if hdu.header["EXTNAME"] == dic["ext_name"]]
+        exts.extend(i for i, hdu in enumerate(hdul)
+                    if hdu.header["EXTNAME"] == dic["ext_name"])
     elif dic.get("ext_number") is not None:
         ext_n = np.array(dic["ext_number"])
-        exts += list(ext_n[ext_n<len(hdul)])
+        exts.extend(ext_n[ext_n<len(hdul)])
     elif dic.get("ext_type") is not None:
         if isinstance(dic["ext_type"], list):
             ext_type_list = dic["ext_type"]
         else:
             ext_type_list = [dic["ext_type"]]
         cls = tuple(getattr(fits, cls_str) for cls_str in ext_type_list)
-        exts += [i for i, hdu in enumerate(hdul) if isinstance(hdu, cls)]
+        exts.extend(i for i, hdu in enumerate(hdul) if isinstance(hdu, cls))
 
     return exts
 
