@@ -139,7 +139,7 @@ class PSF(Effect):
         plt.gcf().clf()
 
         kernel = self.get_kernel(obj)
-        plt.imshow(kernel, norm=LogNorm(), origin='lower', **kwargs)
+        plt.imshow(kernel, norm=LogNorm(), origin="lower", **kwargs)
 
         return plt.gcf()
 
@@ -519,7 +519,7 @@ class AnisocadoConstPSF(SemiAnalyticalPSF):
         plt.subplot2grid((2, 2), (0, 0))
         im = kernel
         r_sky = pixel_scale * im.shape[0]
-        plt.imshow(im, norm=LogNorm(), origin='lower',
+        plt.imshow(im, norm=LogNorm(), origin="lower",
                    extent= [-r_sky, r_sky, -r_sky, r_sky], **kwargs)
         plt.ylabel("[arcsec]")
 
@@ -529,10 +529,10 @@ class AnisocadoConstPSF(SemiAnalyticalPSF):
         r = 16
         im = kernel[y-r:y+r, x-r:x+r]
         r_sky = pixel_scale * im.shape[0]
-        plt.imshow(im, norm=LogNorm(), origin='lower',
+        plt.imshow(im, norm=LogNorm(), origin="lower",
                    extent= [-r_sky, r_sky, -r_sky, r_sky], **kwargs)
         plt.ylabel("[arcsec]")
-        plt.gca().yaxis.set_label_position('right')
+        plt.gca().yaxis.set_label_position("right")
 
         plt.subplot2grid((2, 2), (1, 0), colspan=2)
         hdr = self._file[0].header
@@ -599,7 +599,7 @@ class FieldConstantPSF(DiscretePSF):
         ii = pu.nearest_index(fov.wavelength, self._waveset)
         ext = self.kernel_indexes[ii]
         if ext != self.current_layer_id:
-            if fov.hdu.header['NAXIS'] == 3:
+            if fov.hdu.header["NAXIS"] == 3:
                 self.current_layer_id = ext
                 self.make_psf_cube(fov)
             else:

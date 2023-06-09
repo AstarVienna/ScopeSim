@@ -190,7 +190,7 @@ class SpectralTraceList(Effect):
             # covered by the image slicer (28 slices for LMS; for LSS still only a single slit)
             # We need a loop over spectral_traces that chops up obj into the single-slice fov before
             # calling map_spectra...
-            trace_id = obj.meta['trace_id']
+            trace_id = obj.meta["trace_id"]
             spt = self.spectral_traces[trace_id]
             obj.hdu = spt.map_spectra_to_focal_plane(obj)
 
@@ -257,8 +257,8 @@ class SpectralTraceList(Effect):
         return "\n".join([spt.__repr__() for spt in self.spectral_traces])
 
     def __str__(self):
-        msg = 'SpectralTraceList: "{}" : {} traces' \
-              ''.format(self.meta.get("name"), len(self.spectral_traces))
+        msg = "SpectralTraceList: \"{}\" : {} traces" \
+              "".format(self.meta.get("name"), len(self.spectral_traces))
         return msg
 
 
@@ -358,4 +358,4 @@ class SpectralTraceListWheel(Effect):
     @property
     def display_name(self):
         name = self.meta.get("name", self.meta.get("filename", "<untitled>"))
-        return f'{name} : [{from_currsys(self.meta["current_trace_list"])}]'
+        return f"{name} : [{from_currsys(self.meta['current_trace_list'])}]"

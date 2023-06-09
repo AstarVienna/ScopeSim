@@ -170,7 +170,7 @@ def process_code(context_code, code, options):
             fname = options.get("name", "untitled").split(".")[0]
             fname = ".".join([fname, fmt])
             fname = os.path.join(img_path, fname)
-            context_code += '\nplt.savefig("{}")'.format(fname)
+            context_code += "\nplt.savefig(\"{}\")".format(fname)
 
     return context_code
 
@@ -302,14 +302,14 @@ def latexify_rst_text(rst_text, filename=None, path=None, title_char="=",
     parts = publish_parts(text + rst_text, writer_name="latex")
 
     if not float_figures:
-        parts["body"] = parts["body"].replace('begin{figure}',
-                                              'begin{figure}[H]')
+        parts["body"] = parts["body"].replace("begin{figure}",
+                                              "begin{figure}[H]")
 
     if use_code_box:
-        parts["body"] = parts["body"].replace('begin{alltt}',
-                                              'begin{alltt}\n\\begin{lstlisting}[frame=single]')
-        parts["body"] = parts["body"].replace('end{alltt}',
-                                              'end{lstlisting}\n\\end{alltt}')
+        parts["body"] = parts["body"].replace("begin{alltt}",
+                                              "begin{alltt}\n\\begin{lstlisting}[frame=single]")
+        parts["body"] = parts["body"].replace("end{alltt}",
+                                              "end{lstlisting}\n\\end{alltt}")
 
     filename = filename.split(".")[0] + ".tex"
     file_path = os.path.join(path, filename)
@@ -340,8 +340,8 @@ def rstify_rst_text(rst_text, filename=None, path=None, title_char="="):
 def table_to_rst(tbl, indent=0, rounding=None):
     if isinstance(rounding, int):
         for col in tbl.itercols():
-            if col.info.dtype.kind == 'f':
-                col.info.format = '.{}f'.format(rounding)
+            if col.info.dtype.kind == "f":
+                col.info.format = ".{}f".format(rounding)
     
     tbl_fmtr = TableFormatter()
     lines, outs = tbl_fmtr._pformat_table(tbl, max_width=-1, max_lines=-1,

@@ -444,7 +444,7 @@ class EffectsMetaKeywords(ExtraFitsKeywords):
                         eff_meta[key] = f"Table object of length: {len(value)}"
 
                 # add effect under the EFFn keyword
-                prefix = self.meta['keyword_prefix']
+                prefix = self.meta["keyword_prefix"]
                 class_name = opt_train[eff_name].__class__.__name__
                 self.dict_list = [{"ext_number": self.meta["ext_number"],
                                    "keywords": {
@@ -501,7 +501,7 @@ class SourceDescriptionFitsKeywords(ExtraFitsKeywords):
             src = opt_train._last_source
             src_dicts = []
             if src is not None:
-                prefix = self.meta['keyword_prefix']
+                prefix = self.meta["keyword_prefix"]
                 for i, field in enumerate(src.fields):
 
                     src_class = field.__class__.__name__
@@ -584,7 +584,7 @@ class SimulationConfigFitsKeywords(ExtraFitsKeywords):
         opt_train = kwargs.get("optical_train")
         if isinstance(hdul, fits.HDUList) and opt_train is not None:
             cmds = opt_train.cmds.cmds.dic
-            sim_prefix = self.meta['keyword_prefix']
+            sim_prefix = self.meta["keyword_prefix"]
             resolve_prefix = "unresolved_" if not self.meta["resolve"] else ""
             # needed for the super().apply_to method
             self.dict_list = [{"ext_number": self.meta["ext_number"],

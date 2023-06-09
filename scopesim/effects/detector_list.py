@@ -244,7 +244,7 @@ class DetectorList(Effect):
             # hdr["GAIN"] = row["gain"]
             if "id" in row:
                 hdr["DET_ID"] = row["id"]
-                hdr["EXTNAME"] = f'DET_{row["id"]}'
+                hdr["EXTNAME"] = f"DET_{row['id']}"
 
             row_dict = {col: row[col] for col in row.colnames}
             hdr.update(row_dict)

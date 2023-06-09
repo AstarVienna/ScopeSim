@@ -453,7 +453,7 @@ class SlitWheel(Effect):
     def change_slit(self, slitname=None):
         """Change the current slit"""
         if not slitname or slitname in self.slits.keys():
-            self.meta['current_slit'] = slitname
+            self.meta["current_slit"] = slitname
             self.include = slitname
         else:
             raise ValueError("Unknown slit requested: " + slitname)
@@ -483,8 +483,8 @@ class SlitWheel(Effect):
 
     @property
     def display_name(self):
-        return f'{self.meta["name"]} : ' \
-               f'[{from_currsys(self.meta["current_slit"])}]'
+        return f"{self.meta['name']} : " \
+               f"[{from_currsys(self.meta['current_slit'])}]"
 
 
     def __getattr__(self, item):
@@ -499,13 +499,13 @@ class SlitWheel(Effect):
         """
         names = list(self.slits.keys())
         slits = self.slits.values()
-        xmax = np.array([slit.data['x'].max() * u.Unit(slit.meta['x_unit'])
+        xmax = np.array([slit.data["x"].max() * u.Unit(slit.meta["x_unit"])
                          .to(u.mas) for slit in slits])
-        xmin = np.array([slit.data['x'].min() * u.Unit(slit.meta['x_unit'])
+        xmin = np.array([slit.data["x"].min() * u.Unit(slit.meta["x_unit"])
                          .to(u.mas) for slit in slits])
-        ymax = np.array([slit.data['y'].max() * u.Unit(slit.meta['y_unit'])
+        ymax = np.array([slit.data["y"].max() * u.Unit(slit.meta["y_unit"])
                          .to(u.mas) for slit in slits])
-        ymin = np.array([slit.data['y'].min() * u.Unit(slit.meta['y_unit'])
+        ymin = np.array([slit.data["y"].min() * u.Unit(slit.meta["y_unit"])
                          .to(u.mas) for slit in slits])
         xmax = quantify(xmax, u.mas)
         xmin = quantify(xmin, u.mas)
