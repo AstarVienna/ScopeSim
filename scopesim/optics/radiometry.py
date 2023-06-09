@@ -85,7 +85,7 @@ class RadiometryTable:
         return self.get_throughput()
 
     def plot(self, what="all", rows=None):
-        raise NotImplemented
+        raise NotImplementedError()
 
     def __getitem__(self, item):
         return self.surfaces[item]
