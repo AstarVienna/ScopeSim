@@ -75,7 +75,7 @@ class RadiometryTable:
     @property
     def emission(self):
         if "etendue" not in self.meta:
-            raise ValueError("self.meta['etendue'] must be set")
+            raise ValueError("self.meta[\"etendue\"] must be set")
         etendue = quantify(self.meta["etendue"], "m2 arcsec2")
 
         return self.get_emission(etendue)
