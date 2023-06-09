@@ -293,7 +293,7 @@ def get_relevant_extensions(dic, hdul):
             ext_type_list = dic["ext_type"]
         else:
             ext_type_list = [dic["ext_type"]]
-        cls = tuple([getattr(fits, cls_str) for cls_str in ext_type_list])
+        cls = tuple(getattr(fits, cls_str) for cls_str in ext_type_list)
         exts += [i for i, hdu in enumerate(hdul) if isinstance(hdu, cls)]
 
     return exts

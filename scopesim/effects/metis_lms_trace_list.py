@@ -69,8 +69,8 @@ class MetisLMSSpectralTraceList(SpectralTraceList):
             # the maximum wavelength range of LMS
             volumes = [self.spectral_traces[key].fov_grid()
                        for key in self.spectral_traces]
-            wave_min = min([vol["wave_min"] for vol in volumes])
-            wave_max = max([vol["wave_max"] for vol in volumes])
+            wave_min = min(vol["wave_min"] for vol in volumes)
+            wave_max = max(vol["wave_max"] for vol in volumes)
             extracted_vols = obj.extract(axes=["wave"],
                                          edges=([[wave_min, wave_max]]))
             obj.volumes = extracted_vols

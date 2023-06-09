@@ -37,7 +37,7 @@ def get_canvas_header(hdu_or_table_list, pixel_scale=1 * u.arcsec):
 
     headers = [ht.header for ht in hdu_or_table_list
                if isinstance(ht, fits.ImageHDU)]
-    if sum([isinstance(ht, Table) for ht in hdu_or_table_list]) > 0:
+    if sum(isinstance(ht, Table) for ht in hdu_or_table_list):
         tbls = [ht for ht in hdu_or_table_list if isinstance(ht, Table)]
         tbl_hdr = _make_bounding_header_for_tables(tbls,
                                                    pixel_scale=pixel_scale)
@@ -553,7 +553,7 @@ def reorient_imagehdu(imagehdu, wcs_suffix="", conserve_flux=True,
             hdr.remove(card)
         imagehdu.header = hdr
 
-    elif any(["PC1_1" in key for key in imagehdu.header]):
+    elif any("PC1_1" in key for key in imagehdu.header):
         logging.warning(("PC Keywords were found, but not used due to different "
                          "wcs_suffix given: %s \n %s"),
                         wcs_suffix, dict(imagehdu.header))

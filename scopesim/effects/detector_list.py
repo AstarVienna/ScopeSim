@@ -215,7 +215,7 @@ class DetectorList(Effect):
         return tbl
 
     def detector_headers(self, ids=None):
-        if ids is not None and all([isinstance(ii, int) for ii in ids]):
+        if ids is not None and all(isinstance(ii, int) for ii in ids):
             self.meta["active_detectors"] = list(ids)
 
         tbl = utils.from_currsys(self.active_table)
