@@ -258,8 +258,8 @@ class NonCommonPathAberration(AnalyticalPSF):
         strehl = pu.wfe2strehl(wfe=wfe, wave=waves)
 
         plt.plot(waves, strehl)
-        plt.xlabel("Wavelength [{}]".format(waves.unit))
-        plt.ylabel("Strehl Ratio \n[Total WFE = {}]".format(wfe))
+        plt.xlabel(f"Wavelength [{waves.unit}]")
+        plt.ylabel(f"Strehl Ratio \n[Total WFE = {wfe}]")
 
         return plt.gcf()
 
@@ -545,7 +545,7 @@ class AnisocadoConstPSF(SemiAnalyticalPSF):
         waves = np.arange(hdr["NAXIS2"]) * hdr["CDELT2"] + hdr["CRVAL2"]
         for i in np.arange(len(waves))[::-1]:
             plt.plot(wfes, data[i, :],
-                     label=r"{} $\mu m$".format(round(waves[i], 3)))
+                     label=f"{waves[i]:.3f} " + r"$\mu m$")
 
         plt.xlabel("RMS Wavefront Error [um]")
         plt.ylabel("Strehl Ratio")

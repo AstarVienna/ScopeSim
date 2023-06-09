@@ -170,7 +170,7 @@ def process_code(context_code, code, options):
             fname = options.get("name", "untitled").split(".")[0]
             fname = ".".join([fname, fmt])
             fname = os.path.join(img_path, fname)
-            context_code += "\nplt.savefig(\"{}\")".format(fname)
+            context_code += f"\nplt.savefig(\"{fname}\")"
 
     return context_code
 
@@ -341,7 +341,7 @@ def table_to_rst(tbl, indent=0, rounding=None):
     if isinstance(rounding, int):
         for col in tbl.itercols():
             if col.info.dtype.kind == "f":
-                col.info.format = ".{}f".format(rounding)
+                col.info.format = f".{rounding}f"
     
     tbl_fmtr = TableFormatter()
     lines, outs = tbl_fmtr._pformat_table(tbl, max_width=-1, max_lines=-1,

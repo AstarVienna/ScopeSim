@@ -371,11 +371,9 @@ class MetisLMSSpectralTrace(SpectralTrace):
 
 
     def __repr__(self):
-        msg = "<MetisLMSSpectralTrace> \"{}\" : {} um : Order {} : Angle {}"\
-            "".format(self.meta["description"],
-                      from_currsys(self.meta["wavelen"]),
-                      self.meta["order"],
-                      self.meta["angle"])
+        msg = (f"<MetisLMSSpectralTrace> \"{self.meta['description']}\" : "
+               f"{from_currsys(self.meta['wavelen'])} um : "
+               f"Order {self.meta['order']} : Angle {self.meta['angle']}")
         return msg
 
 

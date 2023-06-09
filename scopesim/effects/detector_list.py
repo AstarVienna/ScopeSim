@@ -209,8 +209,7 @@ class DetectorList(Effect):
             tbl = self.table[mask]
         else:
             raise ValueError("Could not determine which detectors are active: "
-                             "{}, {}, ".format(self.meta["active_detectors"],
-                                               self.table))
+                             f"{self.meta['active_detectors']}, {self.table}, ")
         tbl = utils.from_currsys(tbl)
 
         return tbl

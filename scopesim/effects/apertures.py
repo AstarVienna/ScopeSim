@@ -370,8 +370,8 @@ class ApertureList(Effect):
 
             return self
         else:
-            raise ValueError("Secondary argument not of type ApertureList: {}"
-                             "".format(type(other)))
+            raise ValueError("Secondary argument not of type ApertureList: "
+                             f"{type(other) = }")
 
     # def __getitem__(self, item):
     #     return self.get_apertures(item)[0]

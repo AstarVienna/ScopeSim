@@ -409,12 +409,11 @@ class SpectralTrace:
             plt.gca().set_aspect("equal")
 
     def __repr__(self):
-        msg = "<SpectralTrace> \"{}\" : [{}, {}]um : Ext {} : Aperture {} : " \
-              "ImagePlane {}" \
-              "".format(self.meta["trace_id"],
-                        round(self.wave_min, 4), round(self.wave_max, 4),
-                        self.meta["extension_id"], self.meta["aperture_id"],
-                        self.meta["image_plane_id"])
+        msg = ("<SpectralTrace> \"{self.meta['trace_id']}\" : "
+               f"[{self.wave_min:.4f}, {self.wave_max:.4f}]um : "
+               f"Ext {self.meta['extension_id']} : "
+               f"Aperture {self.meta['aperture_id']} : "
+               f"ImagePlane {self.meta['image_plane_id']}")
         return msg
 
 

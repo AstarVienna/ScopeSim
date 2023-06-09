@@ -257,8 +257,8 @@ class SpectralTraceList(Effect):
         return "\n".join([spt.__repr__() for spt in self.spectral_traces])
 
     def __str__(self):
-        msg = "SpectralTraceList: \"{}\" : {} traces" \
-              "".format(self.meta.get("name"), len(self.spectral_traces))
+        msg = (f"SpectralTraceList: \"{self.meta.get('name')}\" : "
+               f"{len(self.spectral_traces)} traces")
         return msg
 
 

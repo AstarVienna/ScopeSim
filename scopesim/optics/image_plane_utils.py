@@ -239,8 +239,7 @@ def add_table_to_imagehdu(table, canvas_hdu, sub_pixel=True, wcs_suffix=""):
 
     s = wcs_suffix
     if not utils.has_needed_keywords(canvas_hdu.header, s):
-        raise ValueError("canvas_hdu must include an appropriate WCS: {}"
-                         "".format(s))
+        raise ValueError("canvas_hdu must include an appropriate WCS: {s}")
 
     f = utils.quantity_from_table("flux", table, default_unit=u.Unit("ph s-1"))
     if s == "D":
@@ -271,8 +270,7 @@ def add_table_to_imagehdu(table, canvas_hdu, sub_pixel=True, wcs_suffix=""):
 
 
 def _add_intpixel_sources_to_canvas(canvas_hdu, xpix, ypix, flux, mask):
-    canvas_hdu.header["comment"] = "Adding {} int-pixel files" \
-                                   "".format(len(flux))
+    canvas_hdu.header["comment"] = f"Adding {len(flux)} int-pixel files"
     xpix = xpix.astype(int)
     ypix = ypix.astype(int)
     for ii in range(len(xpix)):
@@ -283,8 +281,7 @@ def _add_intpixel_sources_to_canvas(canvas_hdu, xpix, ypix, flux, mask):
 
 
 def _add_subpixel_sources_to_canvas(canvas_hdu, xpix, ypix, flux, mask):
-    canvas_hdu.header["comment"] = "Adding {} sub-pixel files" \
-                                   "".format(len(flux))
+    canvas_hdu.header["comment"] = f"Adding {len(flux)} sub-pixel files"
     canvas_shape = canvas_hdu.data.shape
     for ii in range(len(xpix)):
         if mask[ii]:
