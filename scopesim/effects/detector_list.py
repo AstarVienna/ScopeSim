@@ -118,10 +118,10 @@ class DetectorList(Effect):
         new_colnames = {"xhw": "x_size", "yhw": "y_size", "pixsize": "pixel_size"}
         mult_cols = {"xhw": 2., "yhw": 2., "pixsize": 1.}
         if isinstance(self.table, Table):
-            for col in new_colnames:
+            for col, new_name in new_colnames.items():
                 if col in self.table.colnames:
                     self.table[col] = self.table[col] * mult_cols[col]
-                    self.table.rename_column(col, new_colnames[col])
+                    self.table.rename_column(col, new_name)
         if not "x_size_unit" in self.meta and "xhw_unit" in self.meta:
             self.meta["x_size_unit"] = self.meta["xhw_unit"]
         if not "y_size_unit" in self.meta and "yhw_unit" in self.meta:
