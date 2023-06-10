@@ -1,7 +1,7 @@
 import logging
 
 
-class SystemDict(object):
+class SystemDict():
     def __init__(self, new_dict=None):
         self.dic = {}
         if isinstance(new_dict, dict):
