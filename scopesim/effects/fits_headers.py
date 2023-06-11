@@ -497,40 +497,38 @@ class SourceDescriptionFitsKeywords(ExtraFitsKeywords):
 
     def apply_to(self, hdul, **kwargs):
         opt_train = kwargs.get("optical_train")
-        if isinstance(hdul, fits.HDUList) and opt_train is not None:
-            src = opt_train._last_source
-            src_dicts = []
-            if src is not None:
-                prefix = self.meta["keyword_prefix"]
-                for i, field in enumerate(src.fields):
+        if not isinstance(hdul, fits.HDUList) or opt_train is None:
+            return hdul
 
-                    src_class = field.__class__.__name__
-                    src_dic = deepcopy(src._meta_dicts[i])
-                    if isinstance(field, fits.ImageHDU):
-                        hdr = field.header
-                        for key in hdr:
-                            src_dic = {key: [hdr[key], hdr.comments[key]]}
+        if (src := opt_train._last_source) is not None:
+            prefix = self.meta["keyword_prefix"]
+            for i, field in enumerate(src.fields):
+                src_class = field.__class__.__name__
+                src_dic = deepcopy(src._meta_dicts[i])
+                if isinstance(field, fits.ImageHDU):
+                    hdr = field.header
+                    for key in hdr:
+                        src_dic = {key: [hdr[key], hdr.comments[key]]}
 
-                    elif isinstance(field, Table):
-                        src_dic.update(field.meta)
-                        src_dic["length"] = len(field)
-                        for j, name in enumerate(field.colnames):
-                            src_dic[f"col{j}_name"] = name
-                            src_dic[f"col{j}_unit"] = str(field[name].unit)
+                elif isinstance(field, Table):
+                    src_dic.update(field.meta)
+                    src_dic["length"] = len(field)
+                    for j, name in enumerate(field.colnames):
+                        src_dic[f"col{j}_name"] = name
+                        src_dic[f"col{j}_unit"] = str(field[name].unit)
 
-                    self.dict_list = [{"ext_number": self.meta["ext_number"],
-                                       "keywords": {
-                                           f"{prefix} SRC{i} class": src_class,
-                                           f"{prefix} SRC{i}": src_dic}
-                                       }]
-                    super_apply_to = super(SourceDescriptionFitsKeywords, self).apply_to
-                    hdul = super_apply_to(hdul=hdul, optical_train=opt_train)
+                self.dict_list = [{"ext_number": self.meta["ext_number"],
+                                   "keywords": {
+                                       f"{prefix} SRC{i} class": src_class,
+                                       f"{prefix} SRC{i}": src_dic}
+                                   }]
+                hdul = super().apply_to(hdul=hdul, optical_train=opt_train)
 
-            # catch the function call
-            for hdu in hdul:
-                for key in hdu.header:
-                    if "function_call" in key:
-                        hdu.header[f"FN{key.split()[1]}"] = hdu.header.pop(key)
+        # catch the function call
+        for hdu in hdul:
+            for key in hdu.header:
+                if "function_call" in key:
+                    hdu.header[f"FN{key.split()[1]}"] = hdu.header.pop(key)
 
         return hdul
 
