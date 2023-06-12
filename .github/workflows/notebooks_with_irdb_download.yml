@@ -1,23 +1,12 @@
-name: Notebooks
+name: Notebooks with IRDB download
 
 on:
-  push:
-    branches:
-      - master
-      - dev_master
-      - dev_spectroscopy
-  pull_request:
-    branches:
-      - master
-      - dev_master
-      - dev_spectroscopy
-
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
-  # Run every day at 2:00 UTC
+  # Run every night
   schedule:
-    - cron: "0 2 * * *"
+    - cron: "0 3 * * *"
 
 
 jobs:
@@ -25,7 +14,9 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest]
+        # Run on the full matrix, because this is the first interaction
+        # that users have with ScopeSim / IRDB.
+        os: [ubuntu-latest, windows-latest, macos-latest]
         python-version: ['3.8', '3.9', '3.10', '3.11']
 
     steps:
@@ -44,4 +35,5 @@ jobs:
           pip install .
           pip install .[dev,test]
       - name: Run notebooks
-        run: ./runnotebooks.sh --checkout-irdb --delete
+        # No --checkout-irdb to download the IRDB as a normal end user would.
+        run: ./runnotebooks.sh --delete
