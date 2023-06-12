@@ -38,9 +38,9 @@ class SpectralEfficiency(Effect):
         for hdu in hdul[2:]:
             name = hdu.header['EXTNAME']
             lam = hdu.data['wavelength'] * u.um   # check units explicitely
-            trans = hdu.data['transmission']
-            effic = TERCurve(wavelength=lam, transmission=trans)
-            efficiencies[name] = effic
+            efficiency = hdu.data['efficiency']
+            effic_curve = TERCurve(wavelength=lam, transmission=efficiency)
+            efficiencies[name] = effic_curve
 
         hdul.close()
         return efficiencies
@@ -76,10 +76,7 @@ class SpectralEfficiency(Effect):
             wave_cube = (wave_cube * u.Unit(wcs.wcs.cunit[0])).to(u.AA)
             print(wave_cube)
             print(effic.throughput(wave_cube))
-            np.savetxt(f"efficcurve_{trace_id}.txt", (wave_cube, effic.throughput(wave_cube)))
-            obj.hdu.writeto(f"before_{trace_id}.fits")
             obj.hdu = apply_throughput_to_cube(obj.hdu, effic.throughput)
-            obj.hdu.writeto(f"after_{trace_id}.fits")
         return obj
 
     def plot(self):

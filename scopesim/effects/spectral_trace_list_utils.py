@@ -437,7 +437,6 @@ class XiLamImage():
         #         add_cube_layer method
         cube_wcs = WCS(fov.cube.header, key=' ')
         wcs_lam = cube_wcs.sub([3])
-        fits.writeto(f"xilam_cube_{fov.meta['trace_id']}.fits", data=fov.cube.data)
         d_xi = fov.cube.header['CDELT1']
         d_xi *= u.Unit(fov.cube.header['CUNIT1']).to(u.arcsec)
         d_eta = fov.cube.header['CDELT2']
