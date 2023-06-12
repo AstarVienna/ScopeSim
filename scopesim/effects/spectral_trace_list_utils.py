@@ -107,13 +107,6 @@ class SpectralTrace:
         xi_arr = self.table[self.meta['s_colname']]
         lam_arr = self.table[self.meta['wave_colname']]
 
-        if self.dispersion_axis == 'unknown':
-            # ..todo: replace with gradient based method
-            wi0, wi1 = lam_arr.argmin(), lam_arr.argmax()
-            x_disp_length = np.diff([x_arr[wi0], x_arr[wi1]])
-            y_disp_length = np.diff([y_arr[wi0], y_arr[wi1]])
-            self.dispersion_axis = "x" if x_disp_length > y_disp_length else "y"
-
         self.wave_min = quantify(np.min(lam_arr), u.um).value
         self.wave_max = quantify(np.max(lam_arr), u.um).value
 
@@ -124,6 +117,18 @@ class SpectralTrace:
         self._xiy2x = Transform2D.fit(xi_arr, y_arr, x_arr)
         self._xiy2lam = Transform2D.fit(xi_arr, y_arr, lam_arr)
 
+        if self.dispersion_axis == 'unknown':
+            dlam_dx, dlam_dy = self.xy2lam.gradient()
+            wave_mid = 0.5 * (self.wave_min + self.wave_max)
+            xi_mid = np.mean(xi_arr)
+            x_mid = self.xilam2x(xi_mid, wave_mid)
+            y_mid = self.xilam2y(xi_mid, wave_mid)
+            if dlam_dx(x_mid, y_mid) > dlam_dy(x_mid, y_mid):
+                self.dispersion_axis = "x"
+            else:
+                self.dispersion_axis = "y"
+            logging.warning("Dispersion axis determined to be %s",
+                            self.dispersion_axis)
 
 
     def map_spectra_to_focal_plane(self, fov):
