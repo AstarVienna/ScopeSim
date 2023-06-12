@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-if [[ "${1}x" == "--clone-irdbx" ]] ; then
+if [[ "x${1}" == "x--clone-irdb" ]] ; then
   # Cloning IRDB
   if [[ ! -e irdb ]] ; then
     git clone https://github.com/AstarVienna/irdb.git
@@ -11,11 +11,16 @@ if [[ "${1}x" == "--clone-irdbx" ]] ; then
     echo "${dirnotebooks}"
     dirinstpkgs="${dirnotebooks}/inst_pkgs"
     if [[ (! -e ./docs/source/examples/inst_pkgs) && (! -L ./docs/source/examples/inst_pkgs) ]] ; then
-      echo "Cretaing symlink to irdb: ${dirinstpkgs}"
+      echo "Creating symlink to irdb: ${dirinstpkgs}"
       ln -s irdb "${dirinstpkgs}"
     else
-      echo "Dericetory exists, not creating symlink: ${dirinstpkgs}"
+      echo "Directory exists, not creating symlink: ${dirinstpkgs}"
     fi
+
+    # Comment out any download_package[s] in the notebooks.
+    pusd "${dirnotebooks}" || exit 1
+      sed -i -E 's|"(.*\.download_package)|"#\1|g' -- *.ipynb
+    popd || exit 1
   done
 fi
 
