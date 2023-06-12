@@ -183,7 +183,6 @@ class OpticalTrain:
         # [3D - Atmospheric shifts, PSF, NCPAs, Grating shift/distortion]
         fovs = self.fov_manager.fovs
         for fov in fovs:
-            print("Extracting from", fov.meta['trace_id'])
             # print("FOV", fov_i+1, "of", n_fovs, flush=True)
             # .. todo: possible bug with bg flux not using plate_scale
             #          see fov_utils.combine_imagehdu_fields

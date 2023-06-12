@@ -141,7 +141,7 @@ class SpectralTrace:
         The method returns a section of the fov image along with info on
         where this image lies in the focal plane.
         """
-
+        print("Mapping", fov.meta['trace_id'])
         # Initialise the image based on the footprint of the spectral
         # trace and the focal plane WCS
         wave_min = fov.meta['wave_min'].value       # [um]
@@ -213,9 +213,6 @@ class SpectralTrace:
             dlam_grad = self.xy2lam.gradient()[1]  # dlam_by_dy
         self.dlam_per_pix = interp1d(lam, dlam_grad(x_mm, y_mm) * pixsize,
                                 fill_value="extrapolate")
-        print("Mean dispersion:", np.mean(self.dlam_per_pix(lam)))
-        print("Pixel size:", pixsize)
-        print("Dispersion direction:", self.dispersion_axis)
         try:
             xilam = XiLamImage(fov, self.dlam_per_pix)
             self._xilamimg = xilam   # ..todo: remove or make available with a debug flag?
