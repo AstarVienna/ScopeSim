@@ -141,7 +141,7 @@ class SpectralTrace:
         The method returns a section of the fov image along with info on
         where this image lies in the focal plane.
         """
-        print("Mapping", fov.meta['trace_id'])
+        logging.info("Mapping %s", fov.meta['trace_id'])
         # Initialise the image based on the footprint of the spectral
         # trace and the focal plane WCS
         wave_min = fov.meta['wave_min'].value       # [um]
@@ -174,7 +174,8 @@ class SpectralTrace:
 
         ## Check if spectral trace footprint is outside FoV
         if xmax < 0 or xmin > naxis1d or ymax < 0 or ymin > naxis2d:
-            logging.warning("Spectral trace footprint is outside FoV")
+            logging.warning("Spectral trace %s: footprint is outside FoV",
+                            fov.meta['trace_id'])
             return None
 
         # Only work on parts within the FoV
@@ -461,11 +462,10 @@ class XiLamImage():
             dlam_per_pix_val = dlam_per_pix(np.asarray(self.lam))
         except TypeError:
             dlam_per_pix_val = dlam_per_pix
-            logging.warning("Using scalar dlam_per_pix = %.2g", dlam_per_pix_val)
+            logging.warning("Using scalar dlam_per_pix = %.2g",
+                            dlam_per_pix_val)
 
         for i, eta in enumerate(cube_eta):
-            #if abs(eta) > fov.slit_width / 2:   # ..todo: needed?
-            #    continue
             lam0 = self.lam + dlam_per_pix_val * eta / d_eta
 
             # lam0 is the target wavelength. We need to check that this
