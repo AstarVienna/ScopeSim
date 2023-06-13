@@ -625,7 +625,7 @@ class Transform2D():
             # corresponding column in temp. This gives the diagonal of the
             # expression in the "grid" branch.
             result = (yvec * temp).sum(axis=0)
-            if orig_shape == () or orig_shape is None:
+            if not orig_shape:
                 result = np.float32(result)
             else:
                 result = result.reshape(orig_shape)
