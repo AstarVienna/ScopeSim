@@ -45,8 +45,7 @@ def is_field_in_fov(fov_header, field, wcs_suffix=""):
         elif isinstance(field, (fits.ImageHDU, fits.PrimaryHDU)):
             field_header = field.header
         else:
-            logging.warning("Input was neither Table nor ImageHDU: {}"
-                          "".format(field))
+            logging.warning("Input was neither Table nor ImageHDU: %s", field)
             return False
 
         ext_xsky, ext_ysky = imp_utils.calc_footprint(field_header, wcs_suffix)
@@ -230,8 +229,8 @@ def extract_common_field(field, fov_volume):
     elif isinstance(field, fits.ImageHDU):
         field_new = extract_area_from_imagehdu(field, fov_volume)
     else:
-        raise ValueError("field must be either Table or ImageHDU: {}"
-                         "".format(type(field)))
+        raise ValueError("field must be either Table or ImageHDU, but is "
+                         f"{type(field)}")
 
     return field_new
 
@@ -326,7 +325,7 @@ def extract_area_from_imagehdu(imagehdu, fov_volume):
 
         # OC [2021-12-14] if fov range is not covered by the source return nothing
         if not np.any(mask):
-            print("FOV {} um - {} um: not covered by Source".format(fov_waves[0], fov_waves[1]))
+            print(f"FOV {fov_waves[0]} um - {fov_waves[1]} um: not covered by Source")
             return None
 
         i0p, i1p = np.where(mask)[0][0], np.where(mask)[0][-1]
@@ -393,13 +392,13 @@ def extract_range_from_spectrum(spectrum, waverange):
     mask = (spec_waveset > wave_min) * (spec_waveset < wave_max)
 
     if sum(mask) == 0:
-        logging.info(f"Waverange does not overlap with Spectrum waveset: "
-                      f"{[wave_min, wave_max]} <> {spec_waveset} "
-                      f"for spectrum {spectrum}")
+        logging.info(("Waverange does not overlap with Spectrum waveset: "
+                      "%s <> %s for spectrum %s"),
+                     [wave_min, wave_max], spec_waveset, spectrum)
     if wave_min < min(spec_waveset) or wave_max > max(spec_waveset):
-        logging.info(f"Waverange only partially overlaps with Spectrum waveset: "
-                      f"{[wave_min, wave_max]} <> {spec_waveset} "
-                      f"for spectrum {spectrum}")
+        logging.info(("Waverange only partially overlaps with Spectrum waveset: "
+                      "%s <> %s for spectrum %s"),
+                     [wave_min, wave_max], spec_waveset, spectrum)
 
     wave = np.r_[wave_min, spec_waveset[mask], wave_max]
     flux = spectrum(wave)

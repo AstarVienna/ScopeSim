@@ -80,3 +80,5 @@ Contact
 
   - `astar.astro@univie.ac.at <astar.astro@univie.ac.at>`_ or
   - `kieran.leschinski@univie.ac.at <kieran.leschinski@univie.ac.at>`_
+
+- For friendly chat, join the slack at https://join.slack.com/t/scopesim/shared_invite/zt-143s42izo-LnyqoG7gH5j~aGn51Z~4IA

@@ -1,10 +1,11 @@
 import os
 import shutil
+from pathlib import Path
 import pytest
 from tempfile import TemporaryDirectory
 
 from scopesim import rc
-from scopesim.commands.user_commands import UserCommands
+from scopesim.commands.user_commands import UserCommands, patch_fake_symlinks
 from scopesim.server import database as db
 
 tmpdir = TemporaryDirectory()
@@ -114,3 +115,67 @@ class TestListLocalPackages:
 class TestTrackIpAddress:
     def test_see_if_theres_an_entry_on_the_server_log_file(self):
         cmds = UserCommands(use_instrument="test_package")
+
+
+def test_patch_fake_symlinks(tmp_path):
+    """Setup a temporary directory with files and links."""
+    # tmp_path is a fixture
+
+    dircwd = Path.cwd()
+    os.chdir(tmp_path)
+
+    dir1 = tmp_path / "H1"
+    dir1.mkdir()
+
+    dir2 = dir1 / "H2"
+    dir2.mkdir()
+
+    # Normal file
+    file1 = dir2 / "F1.txt"
+    with open(file1, 'w') as f1:
+        f1.write("Hello world!")
+
+    # Empty file
+    file2 = tmp_path / "F2.txt"
+    with open(file2, 'w') as f2:
+        f2.write("")
+
+    # File with a line that is too long to be a link
+    file3 = tmp_path / "F3.txt"
+    with open(file3, 'w') as f3:
+        f3.write("10 print hello; 20 goto 10" * 50)
+
+    # A file with multiple lines
+    file4 = tmp_path / "F4.txt"
+    with open(file4, 'w') as f4:
+        f4.write("Hello\nWorld\n")
+
+    # With slashes. Backslashes would also work on windows,
+    # but not on linux, so we just do not include that case.
+    fakelink1 = tmp_path / "L1"
+    with open(fakelink1, 'w') as f:
+        f.write("H1/H2")
+
+    # A real link
+    reallink1 = tmp_path / "R1"
+    try:
+        reallink1.symlink_to(dir2)
+    except OSError:
+        # "A required privilege is not held by the client"
+        # That is, developer mode is off.
+        reallink1 = dir2
+
+    root = list(tmp_path.parents)[-1]
+
+    assert patch_fake_symlinks(dir1) == dir1.resolve()
+    assert patch_fake_symlinks(dir2) == dir2.resolve()
+    assert patch_fake_symlinks(file1) == file1.resolve()
+    assert patch_fake_symlinks(file3) == file3.resolve()
+    assert patch_fake_symlinks(file4) == file4.resolve()
+    assert patch_fake_symlinks(fakelink1) == dir2.resolve()
+    assert patch_fake_symlinks(reallink1) == dir2.resolve()
+    assert patch_fake_symlinks(fakelink1 / "F1.txt") == file1.resolve()
+    assert patch_fake_symlinks(reallink1 / "F1.txt") == file1.resolve()
+    assert patch_fake_symlinks(root) == root.resolve()
+
+    os.chdir(dircwd)

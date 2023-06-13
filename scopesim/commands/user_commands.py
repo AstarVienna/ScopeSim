@@ -1,6 +1,7 @@
 import os
 import logging
 import copy
+from pathlib import Path
 
 import numpy as np
 import yaml
@@ -180,11 +181,11 @@ class UserCommands:
                         if yaml_input == "default.yaml":
                             self.default_yamls = yaml_dict
                     else:
-                        logging.warning("{} could not be found".format(yaml_input))
+                        logging.warning("%s could not be found", yaml_input)
 
                 elif isinstance(yaml_input, dict):
                     self.cmds.update(yaml_input)
-                    self.yaml_dicts += [yaml_input]
+                    self.yaml_dicts.append(yaml_input)
 
                     for key in ["packages", "yamls", "mode_yamls"]:
                         if key in yaml_input:
@@ -192,7 +193,7 @@ class UserCommands:
 
                 else:
                     raise ValueError("yaml_dicts must be a filename or a "
-                                     "dictionary: {}".format(yaml_input))
+                                     f"dictionary: {yaml_input}")
 
         if "mode_yamls" in kwargs:
             # Convert the yaml list of modes to a dict object
@@ -229,10 +230,9 @@ class UserCommands:
                 defyam["properties"]["modes"] = []
                 for mode in modes:
                     if mode in self.modes_dict:
-                        defyam["properties"]["modes"] += [mode]
+                        defyam["properties"]["modes"].append(mode)
                     else:
-                        raise ValueError("mode '{}' was not recognised"
-                                         "".format(mode))
+                        raise ValueError(f"mode '{mode}' was not recognised")
 
         self.__init__(yamls=self.default_yamls)
 
@@ -244,7 +244,7 @@ class UserCommands:
                 desc = dic["description"] if "description" in dic else "<None>"
                 modes[mode_name] = desc
 
-            msg = "\n".join(["{}: {}".format(key, modes[key]) for key in modes])
+            msg = "\n".join([f"{key}: {value}" for key, value in modes.items()])
         else:
             msg = "No modes found"
         return msg
@@ -276,13 +276,58 @@ def check_for_updates(package_name):
     if rc.__currsys__["!SIM.reports.ip_tracking"] and \
             "TRAVIS" not in os.environ:
         front_matter = rc.__currsys__["!SIM.file.server_base_url"]
-        back_matter = "api.php?package_name={}".format(package_name)
+        back_matter = f"api.php?package_name={package_name}"
         try:
             response = requests.get(url=front_matter+back_matter).json()
         except:
-            print("Offline. Cannot check for updates for {}"
-                  "".format(package_name))
+            print(f"Offline. Cannot check for updates for {package_name}")
     return response
+
+
+def patch_fake_symlinks(path: Path):
+    """Fixes broken symlinks in path.
+
+    The irdb has some symlinks in it, which work fine under linux, but not
+    always under windows, see https://stackoverflow.com/a/11664406 .
+
+    "This makes symlinks created and committed e.g. under Linux appear as
+    plain text files that contain the link text under Windows"
+
+    It is therefore necessary to assume that these can be regular files.
+
+    E.g. when Path.cwd() is
+    WindowsPath('C:/Users/hugo/hugo/repos/irdb/MICADO/docs/example_notebooks')
+    and path is WindowsPath('inst_pkgs/MICADO')
+    then this function should return
+    WindowsPath('C:/Users/hugo/hugo/repos/irdb/MICADO')
+    """
+    path = path.resolve()
+    if path.exists() and path.is_dir():
+        # A normal directory.
+        return path
+    if path.exists() and path.is_file():
+        # Could be a regular file, or a broken symlink.
+        size = path.stat().st_size
+        if size > 250 or size == 0:
+            # A symlink is probably not longer than 250 characters.
+            return path
+        line = open(path).readline()
+        if len(line) != size:
+            # There is more content in the file, so probably not a link.
+            return path
+        pline = Path(line)
+        if pline.exists():
+            # The file contains exactly a path that exists. So it is
+            # probably a link.
+            return pline.resolve()
+    if path.exists():
+        # The path exists, but is not a file or directory. Just return it.
+        return path
+    # The path does not exist.
+    parent = path.parent
+    pathup = patch_fake_symlinks(parent)
+    assert pathup != parent, ValueError("Cannot find path")
+    return patch_fake_symlinks(pathup / path.name)
 
 
 def add_packages_to_rc_search(local_path, package_list):
@@ -299,13 +344,13 @@ def add_packages_to_rc_search(local_path, package_list):
         A list of the package names to add
 
     """
-
+    plocal_path = patch_fake_symlinks(Path(local_path))
     for pkg in package_list:
-        pkg_dir = os.path.abspath(os.path.join(local_path, pkg))
-        if not os.path.exists(pkg_dir):
+        pkg_dir = plocal_path / pkg
+        if not pkg_dir.exists():
             # todo: keep here, but add test for this by downloading test_package
             # raise ValueError("Package could not be found: {}".format(pkg_dir))
-            logging.warning("Package could not be found: {}".format(pkg_dir))
+            logging.warning("Package could not be found: %s", pkg_dir)
 
         if pkg_dir in rc.__search_path__:
             # if package is already in search_path, move it to the first place
@@ -371,19 +416,17 @@ def list_local_packages(action="display"):
 
     """
 
-    local_path = os.path.abspath(rc.__config__["!SIM.file.local_packages_path"])
-    pkgs = [d for d in os.listdir(local_path) if
-            os.path.isdir(os.path.join(local_path, d))]
+    local_path = Path(rc.__config__["!SIM.file.local_packages_path"]).absolute()
+    pkgs = [d for d in local_path.iterdir() if d.is_dir()]
 
-    main_pkgs = [pkg for pkg in pkgs if
-                 os.path.exists(os.path.join(local_path, pkg, "default.yaml"))]
-    ext_pkgs = [pkg for pkg in pkgs if not
-                os.path.exists(os.path.join(local_path, pkg, "default.yaml"))]
+    main_pkgs = [pkg for pkg in pkgs if (pkg/"default.yaml").exists()]
+    ext_pkgs = [pkg for pkg in pkgs if not (pkg/"default.yaml").exists()]
 
     if action == "display":
-        msg = "\nLocal package directory:\n  {}\n" \
-              "Full packages [can be used with 'use_instrument=...']\n  {}\n" \
-              "Support packages\n  {}".format(local_path, main_pkgs, ext_pkgs)
+        msg = (f"\nLocal package directory:\n  {local_path}\n"
+               "Full packages [can be used with 'use_instrument=...']\n"
+               f"{main_pkgs}\n"
+               f"Support packages\n  {ext_pkgs}")
         print(msg)
     else:
         return main_pkgs, ext_pkgs

@@ -107,13 +107,6 @@ class SpectralTrace:
         xi_arr = self.table[self.meta['s_colname']]
         lam_arr = self.table[self.meta['wave_colname']]
 
-        if self.dispersion_axis == 'unknown':
-            # ..todo: replace with gradient based method
-            wi0, wi1 = lam_arr.argmin(), lam_arr.argmax()
-            x_disp_length = np.diff([x_arr[wi0], x_arr[wi1]])
-            y_disp_length = np.diff([y_arr[wi0], y_arr[wi1]])
-            self.dispersion_axis = "x" if x_disp_length > y_disp_length else "y"
-
         self.wave_min = quantify(np.min(lam_arr), u.um).value
         self.wave_max = quantify(np.max(lam_arr), u.um).value
 
@@ -124,6 +117,18 @@ class SpectralTrace:
         self._xiy2x = Transform2D.fit(xi_arr, y_arr, x_arr)
         self._xiy2lam = Transform2D.fit(xi_arr, y_arr, lam_arr)
 
+        if self.dispersion_axis == 'unknown':
+            dlam_dx, dlam_dy = self.xy2lam.gradient()
+            wave_mid = 0.5 * (self.wave_min + self.wave_max)
+            xi_mid = np.mean(xi_arr)
+            x_mid = self.xilam2x(xi_mid, wave_mid)
+            y_mid = self.xilam2y(xi_mid, wave_mid)
+            if dlam_dx(x_mid, y_mid) > dlam_dy(x_mid, y_mid):
+                self.dispersion_axis = "x"
+            else:
+                self.dispersion_axis = "y"
+            logging.warning("Dispersion axis determined to be %s",
+                            self.dispersion_axis)
 
 
     def map_spectra_to_focal_plane(self, fov):
@@ -136,7 +141,7 @@ class SpectralTrace:
         The method returns a section of the fov image along with info on
         where this image lies in the focal plane.
         """
-
+        logging.info("Mapping %s", fov.meta['trace_id'])
         # Initialise the image based on the footprint of the spectral
         # trace and the focal plane WCS
         wave_min = fov.meta['wave_min'].value       # [um]
@@ -169,7 +174,8 @@ class SpectralTrace:
 
         ## Check if spectral trace footprint is outside FoV
         if xmax < 0 or xmin > naxis1d or ymax < 0 or ymin > naxis2d:
-            logging.warning("Spectral trace footprint is outside FoV")
+            logging.info("Spectral trace %s: footprint is outside FoV",
+                         fov.meta['trace_id'])
             return None
 
         # Only work on parts within the FoV
@@ -208,9 +214,6 @@ class SpectralTrace:
             dlam_grad = self.xy2lam.gradient()[1]  # dlam_by_dy
         self.dlam_per_pix = interp1d(lam, dlam_grad(x_mm, y_mm) * pixsize,
                                 fill_value="extrapolate")
-        print("Mean dispersion:", np.mean(self.dlam_per_pix(lam)))
-        print("Pixel size:", pixsize)
-        print("Dispersion direction:", self.dispersion_axis)
         try:
             xilam = XiLamImage(fov, self.dlam_per_pix)
             self._xilamimg = xilam   # ..todo: remove or make available with a debug flag?
@@ -461,11 +464,10 @@ class XiLamImage():
             dlam_per_pix_val = dlam_per_pix(np.asarray(self.lam))
         except TypeError:
             dlam_per_pix_val = dlam_per_pix
-            logging.warning("Using scalar dlam_per_pix = %.2g", dlam_per_pix_val)
+            logging.warning("Using scalar dlam_per_pix = %.2g",
+                            dlam_per_pix_val)
 
         for i, eta in enumerate(cube_eta):
-            #if abs(eta) > fov.slit_width / 2:   # ..todo: needed?
-            #    continue
             lam0 = self.lam + dlam_per_pix_val * eta / d_eta
 
             # lam0 is the target wavelength. We need to check that this
@@ -625,7 +627,7 @@ class Transform2D():
             # corresponding column in temp. This gives the diagonal of the
             # expression in the "grid" branch.
             result = (yvec * temp).sum(axis=0)
-            if orig_shape == () or orig_shape is None:
+            if not orig_shape:
                 result = np.float32(result)
             else:
                 result = result.reshape(orig_shape)

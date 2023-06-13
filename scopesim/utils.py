@@ -2,10 +2,8 @@
 Helper functions for ScopeSim
 """
 import math
-import os
 from pathlib import Path
 import sys
-import logging
 import logging
 from collections import OrderedDict
 from docutils.core import publish_string
@@ -251,14 +249,15 @@ def add_SED_to_scopesim(file_in, file_out=None, wave_units="um"):
 
     """
 
-    file_name, file_ext = os.path.basename(file_in).split(".")
+    path = Path(file_in)
 
     if file_out is None:
-        if "SED_" not in file_name:
-            file_out = rc.__data_dir__ + "SED_" + file_name + ".dat"
-        else: file_out = rc.__data_dir__ + file_name + ".dat"
+        if "SED_" not in path.name:
+            file_out = rc.__data_dir__ + f"SED_{path.name}.dat"
+        else:
+            file_out = rc.__data_dir__ + f"{path.name}.dat"
 
-    if file_ext.lower() in "fits":
+    if path.suffix.lower() == ".fits":
         data = fits.getdata(file_in)
         lam, val = data[data.columns[0].name], data[data.columns[1].name]
     else:
@@ -335,14 +334,14 @@ def seq(start, stop, step=1):
         # integer sequence
         npts = int(npts)
         return start + np.asarray(range(npts + 1)) * step
+
+    npts = int(npts + feps)
+    sequence = start + np.asarray(range(npts + 1)) * step
+    # correct for possible overshot because of fuzz (from seq.R)
+    if step > 0:
+        return np.minimum(sequence, stop)
     else:
-        npts = int(npts + feps)
-        sequence = start + np.asarray(range(npts + 1)) * step
-        # correct for possible overshot because of fuzz (from seq.R)
-        if step > 0:
-            return np.minimum(sequence, stop)
-        else:
-            return np.maximum(sequence, stop)
+        return np.maximum(sequence, stop)
 
 
 def add_mags(mags):
@@ -542,28 +541,34 @@ def find_file(filename, path=None, silent=False):
     if filename is None or filename.lower() == "none":
         return None
 
-    if filename[0] == "!":
+    if filename.startswith("!"):
         filename = from_currsys(filename)
+    # Turn into pathlib.Path object for better manipulation afterwards
+    filename = Path(filename)
 
     if path is None:
         path = rc.__search_path__
 
-    if os.path.isabs(filename):
+    if filename.is_absolute():
         # absolute path: only path to try
         trynames = [filename]
     else:
         # try to find the file in a search path
-        trynames = [os.path.join(trydir, *os.path.split(filename))
+        trynames = [Path(trydir, filename)
                     for trydir in path if trydir is not None]
 
     for fname in trynames:
-        if os.path.exists(fname):   # success
+        if fname.exists():   # success
             # strip leading ./
-            while fname[:2] == './':
-                fname = fname[2:]
-            return fname
-        else:
-            continue
+            # Path should take care of this automatically!
+            # while fname[:2] == './':
+            #     fname = fname[2:]
+            # Nevertheless, make sure this is actually the case...
+            assert not str(fname).startswith("./")
+            # HACK: Turn Path object back into string, because not everything
+            #       that depends on this function can handle Path objects (yet)
+            return str(fname)
+            
 
     # no file found
     msg = f"File cannot be found: {filename}"
@@ -656,7 +661,7 @@ def real_colname(name, colnames, silent=True):
     if len(real_name) == 0:
         real_name = None
         if not silent:
-            logging.warning("None of {} were found in {}".format(names, colnames))
+            logging.warning("None of %s were found in %s", names, colnames)
     else:
         real_name = real_name[0]
 
@@ -847,9 +852,8 @@ def quantity_from_table(colname, table, default_unit=""):
             else:
                 col = col * u.Unit(default_unit)
                 tbl_name = table.meta.get("name", table.meta.get("filename"))
-                logging.info("{}_unit was not found in table.meta: {}. "
-                             "Default to: {}"
-                             "".format(colname, tbl_name, default_unit))
+                logging.info(("%s_unit was not found in table.meta: %s. "
+                              "Default to: %s"), colname, tbl_name, default_unit)
 
     return col
 
@@ -870,9 +874,8 @@ def unit_from_table(colname, table, default_unit=""):
             unit = u.Unit(com_tbl[colname_u])
         else:
             tbl_name = table.meta.get("name", table.meta.get("filename"))
-            logging.info("{}_unit was not found in table.meta: {}. "
-                         "Default to: {}"
-                         "".format(colname, tbl_name, default_unit))
+            logging.info(("%s_unit was not found in table.meta: %s. "
+                          "Default to: %s"), colname, tbl_name, default_unit)
             unit = u.Unit(default_unit)
 
     return unit
@@ -891,8 +894,8 @@ def has_needed_keywords(header, suffix=""):
     Check to see if the WCS keywords are in the header
     """
     keys = ["CDELT1", "CRVAL1", "CRPIX1"]
-    return sum([key + suffix in header.keys() for key in keys]) == 3 and \
-           "NAXIS1" in header.keys()
+    return (sum(key + suffix in header.keys() for key in keys) == 3 and
+            "NAXIS1" in header.keys())
 
 
 def stringify_dict(dic, ignore_types=(str, int, float)):
@@ -926,7 +929,7 @@ def clean_dict(orig_dict, new_entries):
 
     """
     for key in orig_dict:
-        if type(orig_dict[key]) is str and orig_dict[key] in new_entries:
+        if isinstance(orig_dict[key], str) and orig_dict[key] in new_entries:
             orig_dict[key] = new_entries[orig_dict[key]]
 
     return orig_dict
@@ -954,11 +957,11 @@ def from_currsys(item):
         for key in item:
             item[key] = from_currsys(item[key])
 
-    if isinstance(item, str) and len(item) and item[0] == "!":
+    if isinstance(item, str) and len(item) and item.startswith("!"):
         if item in rc.__currsys__:
             item = rc.__currsys__[item]
         else:
-            raise ValueError("{} was not found in rc.__currsys__".format(item))
+            raise ValueError(f"{item} was not found in rc.__currsys__")
 
     if isinstance(item, str) and item.lower() == "none":
         item = None
@@ -973,21 +976,20 @@ def check_keys(input_dict, required_keys, action="error", all_any="all"):
         input_dict = {key: None for key in input_dict}
 
     if all_any == "all":
-        keys_present = all([key in input_dict for key in required_keys])
+        keys_present = all(key in input_dict for key in required_keys)
     elif all_any == "any":
-        keys_present = any([key in input_dict for key in required_keys])
+        keys_present = any(key in input_dict for key in required_keys)
     else:
         raise ValueError("all_any must be either 'all' or 'any'")
 
     if not keys_present:
         if "error" in action:
-            raise ValueError("One or more of the following keys missing "
-                             "from input_dict: \n{} \n{}"
-                             "".format(required_keys, input_dict.keys()))
-        elif "warn" in action:
-            logging.warning("One or more of the following keys missing "
-                          "from input_dict: \n{} \n{}"
-                          "".format(required_keys, input_dict.keys()))
+            raise ValueError("One or more of the following keys missing from "
+                             f"input_dict: \n{required_keys} \n{input_dict.keys()}")
+        if "warn" in action:
+            logging.warning(("One or more of the following keys missing "
+                             "from input_dict: \n%s \n%s"), required_keys,
+                            input_dict.keys())
 
     return keys_present
 
@@ -1016,10 +1018,8 @@ def write_report(text, filename=None, output=["rst"]):
                 out_text = out_text.decode("utf-8")
 
             suffix = {"rst": ".rst", "latex": ".tex"}[fmt]
-            fname = Path(filename)
-            fname = os.path.join(*fname.parts[:-1], fname.stem + suffix)
-            with open(fname, "w") as f:
-                f.write(out_text)
+            fname = Path(filename).with_suffix(suffix)
+            fname.write_text(out_text, encoding="utf-8")
 
 
 def pretty_print_dict(dic, indent=0):
@@ -1061,6 +1061,6 @@ def return_latest_github_actions_jobs_status(owner_name="AstarVienna", repo_name
         colour = "brightgreen" if job['conclusion'] == "success" else "red"
         badge_url = f"https://img.shields.io/badge/{key}-{value}-{colour}"
         params["badge_url"] = badge_url
-        params_list += [params]
+        params_list.append(params)
 
     return params_list

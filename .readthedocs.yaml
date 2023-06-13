@@ -10,12 +10,14 @@ build:
     python: "3.9"
 
 sphinx:
-   configuration: docs/source/conf.py
+  configuration: docs/source/conf.py
 
 python:
-   install:
-     - requirements: requirements.readthedocs.txt
-     - path: .
+  install:
+   - method: pip
+     path: .
+     extra_requirements:
+       - docs
 
 # If using Sphinx, optionally build your docs in additional formats such as PDF
 # formats: []     # ignore htmlzip. html is always run
