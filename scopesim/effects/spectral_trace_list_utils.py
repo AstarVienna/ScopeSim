@@ -174,8 +174,8 @@ class SpectralTrace:
 
         ## Check if spectral trace footprint is outside FoV
         if xmax < 0 or xmin > naxis1d or ymax < 0 or ymin > naxis2d:
-            logging.warning("Spectral trace %s: footprint is outside FoV",
-                            fov.meta['trace_id'])
+            logging.info("Spectral trace %s: footprint is outside FoV",
+                         fov.meta['trace_id'])
             return None
 
         # Only work on parts within the FoV
