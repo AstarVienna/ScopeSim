@@ -1,8 +1,8 @@
 """
 Effect for mapping spectral cubes to the detector plane
 
-The Effect is called SpectralTraceList, it applies a list of
-optics.spectral_trace_SpectralTrace objects to a FieldOfView.
+The Effect is called `SpectralTraceList`, it applies a list of
+`spectral_trace_list_utils.SpectralTrace` objects to a `FieldOfView`.
 """
 
 from os import path as pth
@@ -13,7 +13,7 @@ from astropy.table import Table
 
 from .effects import Effect
 from .spectral_trace_list_utils import SpectralTrace
-from ..utils import from_currsys, check_keys, interp2
+from ..utils import from_currsys, check_keys
 from ..optics.image_plane_utils import header_from_list_of_xy
 from ..base_classes import FieldOfViewBase, FOVSetupBase
 

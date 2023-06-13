@@ -570,7 +570,7 @@ class DiscretePSF(PSF):
 class FieldConstantPSF(DiscretePSF):
     """A PSF that is constant across the field.
 
-    For spectroscopy, the a wavelength-dependent PSF cube is built, where for each
+    For spectroscopy, a wavelength-dependent PSF cube is built, where for each
     wavelength the reference PSF is scaled proportional to wavelength.
     """
     def __init__(self, **kwargs):
