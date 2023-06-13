@@ -1,7 +1,6 @@
 """Effects related to field masks, including spectroscopic slits"""
 
 from pathlib import Path
-from copy import deepcopy
 import logging
 import yaml
 

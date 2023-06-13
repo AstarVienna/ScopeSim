@@ -42,12 +42,10 @@
 #
 # """
 
-from copy import deepcopy, copy
+from copy import deepcopy
 import numpy as np
-from astropy.table import Table
 from astropy import units as u
 
-from . import fov_manager_utils as fmu
 from . import image_plane_utils as ipu
 from ..effects import DetectorList
 from ..effects import effects_utils as eu

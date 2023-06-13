@@ -1,12 +1,15 @@
-import yaml
 from copy import deepcopy
 import datetime
+
+import yaml
 import numpy as np
+
 from astropy.io import fits
 from astropy import units as u
 from astropy.table import Table
+
 from . import Effect
-from ..utils import check_keys, from_currsys, find_file
+from ..utils import from_currsys, find_file
 
 
 class ExtraFitsKeywords(Effect):

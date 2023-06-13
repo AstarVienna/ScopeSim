@@ -2,13 +2,12 @@ from collections import OrderedDict
 from copy import deepcopy
 import logging
 
-import numpy as np
 from astropy import units as u
 from astropy.io import ascii as ioascii
 from astropy.table import Table, vstack
 
 from .surface import SpectralSurface
-from ..utils import real_colname, insert_into_ordereddict, quantify, \
+from ..utils import real_colname, insert_into_ordereddict, \
     change_table_entry, convert_table_comments_to_dict, from_currsys
 
 
