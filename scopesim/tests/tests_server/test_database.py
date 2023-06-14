@@ -11,6 +11,23 @@ from scopesim.server import database as db
 from scopesim import rc
 
 
+def test_packages_are_there():
+    package_list = db.get_server_package_list()
+    missing_packages = []
+    for package_name, package_dict in package_list.items():
+        fns_expected = {
+            f"{package_dict[ver]}.zip"
+            for ver in {"latest", "stable"}
+        }
+
+        packages_available = db.list_packages(package_name)
+
+        missing_packages += [fn for fn in fns_expected if fn not in packages_available]
+
+    msg = f"Missing packages: {' '.join(missing_packages)}"
+    assert not missing_packages, msg
+
+
 def test_package_list_loads():
     pkgs = db.get_server_package_list()
     assert isinstance(pkgs, dict)
