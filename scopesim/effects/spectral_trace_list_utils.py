@@ -439,14 +439,6 @@ class XiLamImage():
         #         add_cube_layer method
         cube_wcs = WCS(fov.cube.header, key=" ")
         wcs_lam = cube_wcs.sub([3])
-<<<<<<< HEAD
-        d_xi = fov.cube.header['CDELT1']
-        d_xi *= u.Unit(fov.cube.header['CUNIT1']).to(u.arcsec)
-        d_eta = fov.cube.header['CDELT2']
-        d_eta *= u.Unit(fov.cube.header['CUNIT2']).to(u.arcsec)
-        d_lam = fov.cube.header['CDELT3']
-        d_lam *= u.Unit(fov.cube.header['CUNIT3']).to(u.um)
-=======
 
         d_xi = fov.cube.header["CDELT1"]
         d_xi *= u.Unit(fov.cube.header["CUNIT1"]).to(u.arcsec)
@@ -454,7 +446,6 @@ class XiLamImage():
         d_eta *= u.Unit(fov.cube.header["CUNIT2"]).to(u.arcsec)
         d_lam = fov.cube.header["CDELT3"]
         d_lam *= u.Unit(fov.cube.header["CUNIT3"]).to(u.um)
->>>>>>> dev_master
 
         # This is based on the cube shape and assumes that the cube's spatial
         # dimensions are set by the slit aperture
