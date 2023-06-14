@@ -75,7 +75,7 @@ class RadiometryTable:
     @property
     def emission(self):
         if "etendue" not in self.meta:
-            raise ValueError("self.meta['etendue'] must be set")
+            raise ValueError("self.meta[\"etendue\"] must be set")
         etendue = quantify(self.meta["etendue"], "m2 arcsec2")
 
         return self.get_emission(etendue)
@@ -85,12 +85,10 @@ class RadiometryTable:
         return self.get_throughput()
 
     def plot(self, what="all", rows=None):
-        raise NotImplemented
+        raise NotImplementedError()
 
     def __getitem__(self, item):
         return self.surfaces[item]
 
     def __repr__(self):
         return self.table.__repr__()
-
-

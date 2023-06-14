@@ -50,10 +50,10 @@ class ImagePlane(ImagePlaneBase):
         self.meta.update(kwargs)
         self.id = header["IMGPLANE"] if "IMGPLANE" in header else 0
 
-        if not any([utils.has_needed_keywords(header, s)
-                    for s in ["", "D", "S"]]):
-            raise ValueError("header must have a valid image-plane WCS: {}"
-                             "".format(dict(header)))
+        if not any(utils.has_needed_keywords(header, s)
+                   for s in ["", "D", "S"]):
+            raise ValueError(f"header must have a valid image-plane WCS: "
+                             f"{dict(header)}")
 
         image = np.zeros((header["NAXIS2"]+1, header["NAXIS1"]+1))
         self.hdu = fits.ImageHDU(data=image, header=header)

@@ -5,7 +5,7 @@ The Effect is called `SpectralTraceList`, it applies a list of
 `spectral_trace_list_utils.SpectralTrace` objects to a `FieldOfView`.
 """
 
-from os import path as pth
+from pathlib import Path
 import numpy as np
 
 from astropy.io import fits
@@ -190,7 +190,7 @@ class SpectralTraceList(Effect):
             # covered by the image slicer (28 slices for LMS; for LSS still only a single slit)
             # We need a loop over spectral_traces that chops up obj into the single-slice fov before
             # calling map_spectra...
-            trace_id = obj.meta['trace_id']
+            trace_id = obj.meta["trace_id"]
             spt = self.spectral_traces[trace_id]
             obj.hdu = spt.map_spectra_to_focal_plane(obj)
 
@@ -257,8 +257,8 @@ class SpectralTraceList(Effect):
         return "\n".join([spt.__repr__() for spt in self.spectral_traces])
 
     def __str__(self):
-        msg = 'SpectralTraceList: "{}" : {} traces' \
-              ''.format(self.meta.get("name"), len(self.spectral_traces))
+        msg = (f"SpectralTraceList: \"{self.meta.get('name')}\" : "
+               f"{len(self.spectral_traces)} traces")
         return msg
 
 
@@ -335,12 +335,12 @@ class SpectralTraceListWheel(Effect):
         self.meta.update(params)
         self.meta.update(kwargs)
 
-        path = pth.join(self.meta["path"],
-                        from_currsys(self.meta["filename_format"]))
+        path = Path(self.meta["path"], from_currsys(self.meta["filename_format"]))
+        fname = str(path).format(name)
         self.trace_lists = {}
         for name in from_currsys(self.meta["trace_list_names"]):
             kwargs["name"] = name
-            self.trace_lists[name] = SpectralTraceList(filename=path.format(name),
+            self.trace_lists[name] = SpectralTraceList(filename=fname,
                                                        **kwargs)
 
     def apply_to(self, obj, **kwargs):
@@ -358,4 +358,4 @@ class SpectralTraceListWheel(Effect):
     @property
     def display_name(self):
         name = self.meta.get("name", self.meta.get("filename", "<untitled>"))
-        return f'{name} : [{from_currsys(self.meta["current_trace_list"])}]'
+        return f"{name} : [{from_currsys(self.meta['current_trace_list'])}]"
