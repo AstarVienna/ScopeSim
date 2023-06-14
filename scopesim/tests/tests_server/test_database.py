@@ -12,6 +12,7 @@ from scopesim import rc
 
 
 def test_packages_are_there():
+    """Test whether all listed packages are actually on the server."""
     package_list = db.get_server_package_list()
     missing_packages = []
     for package_name, package_dict in package_list.items():
