@@ -241,7 +241,7 @@ class ExtraFitsKeywords(Effect):
 
         if self.meta["header_dict"] is not None:
             if not isinstance(self.meta["header_dict"], list):
-                tmp_dicts.extend(self.meta["header_dict"])
+                tmp_dicts.append(self.meta["header_dict"])
             else:
                 tmp_dicts.extend(self.meta["header_dict"])
 
@@ -290,7 +290,7 @@ def get_relevant_extensions(dic, hdul):
                     if hdu.header["EXTNAME"] == dic["ext_name"])
     elif dic.get("ext_number") is not None:
         ext_n = np.array(dic["ext_number"])
-        exts.extend(list(ext_n[ext_n<len(hdul)]))
+        exts.extend(ext_n[ext_n<len(hdul)])
     elif dic.get("ext_type") is not None:
         if isinstance(dic["ext_type"], list):
             ext_type_list = dic["ext_type"]
