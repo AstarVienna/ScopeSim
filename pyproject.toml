@@ -64,3 +64,9 @@ docs = [
 
 [tool.setuptools.packages]
 find = {}
+
+[tool.pytest.ini_options]
+addopts = "--strict-markers"
+markers = [
+    "webtest: marks tests as requiring network (deselect with '-m \"not webtest\"')",
+]
