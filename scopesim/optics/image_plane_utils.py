@@ -239,7 +239,7 @@ def add_table_to_imagehdu(table, canvas_hdu, sub_pixel=True, wcs_suffix=""):
 
     s = wcs_suffix
     if not utils.has_needed_keywords(canvas_hdu.header, s):
-        raise ValueError("canvas_hdu must include an appropriate WCS: {s}")
+        raise ValueError(f"canvas_hdu must include an appropriate WCS: {s}")
 
     f = utils.quantity_from_table("flux", table, default_unit=u.Unit("ph s-1"))
     if s == "D":
