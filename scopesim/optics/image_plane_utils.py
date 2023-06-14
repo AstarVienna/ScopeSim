@@ -37,7 +37,7 @@ def get_canvas_header(hdu_or_table_list, pixel_scale=1 * u.arcsec):
 
     headers = [ht.header for ht in hdu_or_table_list
                if isinstance(ht, fits.ImageHDU)]
-    if sum(isinstance(ht, Table) for ht in hdu_or_table_list):
+    if any(isinstance(ht, Table) for ht in hdu_or_table_list):
         tbls = [ht for ht in hdu_or_table_list if isinstance(ht, Table)]
         tbl_hdr = _make_bounding_header_for_tables(tbls,
                                                    pixel_scale=pixel_scale)
