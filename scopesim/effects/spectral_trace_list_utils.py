@@ -61,11 +61,11 @@ class SpectralTrace:
 
         if isinstance(trace_tbl, (fits.BinTableHDU, fits.TableHDU)):
             self.table = Table.read(trace_tbl)
-            self.meta["trace_id"] = trace_tbl.header.get('EXTNAME', "<unknown trace id>")
-            self.dispersion_axis = trace_tbl.header.get('DISPDIR', 'unknown')
+            self.meta["trace_id"] = trace_tbl.header.get("EXTNAME", "<unknown trace id>")
+            self.dispersion_axis = trace_tbl.header.get("DISPDIR", "unknown")
         elif isinstance(trace_tbl, Table):
             self.table = trace_tbl
-            self.dispersion_axis = 'unknown'
+            self.dispersion_axis = "unknown"
         else:
             raise ValueError("trace_tbl must be one of (fits.BinTableHDU, "
                              f"fits.TableHDU, astropy.Table) but is {type(trace_tbl)}")
@@ -85,15 +85,15 @@ class SpectralTrace:
         Spatial limits are determined by the `ApertureMask` effect
         and are not returned here.
         """
-        trace_id = self.meta['trace_id']
-        aperture_id = self.meta['aperture_id']
-        lam_arr = self.table[self.meta['wave_colname']]
+        trace_id = self.meta["trace_id"]
+        aperture_id = self.meta["aperture_id"]
+        lam_arr = self.table[self.meta["wave_colname"]]
 
         wave_max = np.max(lam_arr)
         wave_min = np.min(lam_arr)
 
-        return {'wave_min': wave_min, 'wave_max': wave_max,
-                'trace_id': trace_id, 'aperture_id': aperture_id}
+        return {"wave_min": wave_min, "wave_max": wave_max,
+                "trace_id": trace_id, "aperture_id": aperture_id}
 
     def compute_interpolation_functions(self):
         """
@@ -102,10 +102,10 @@ class SpectralTrace:
         Focal plane coordinates are `x` and `y`, in mm. Slit coordinates are
         `xi` (spatial coordinate along the slit, in arcsec) and `lam` (wavelength, in um).
         """
-        x_arr = self.table[self.meta['x_colname']]
-        y_arr = self.table[self.meta['y_colname']]
-        xi_arr = self.table[self.meta['s_colname']]
-        lam_arr = self.table[self.meta['wave_colname']]
+        x_arr = self.table[self.meta["x_colname"]]
+        y_arr = self.table[self.meta["y_colname"]]
+        xi_arr = self.table[self.meta["s_colname"]]
+        lam_arr = self.table[self.meta["wave_colname"]]
 
         self.wave_min = quantify(np.min(lam_arr), u.um).value
         self.wave_max = quantify(np.max(lam_arr), u.um).value
@@ -144,10 +144,10 @@ class SpectralTrace:
         logging.info("Mapping %s", fov.meta['trace_id'])
         # Initialise the image based on the footprint of the spectral
         # trace and the focal plane WCS
-        wave_min = fov.meta['wave_min'].value       # [um]
-        wave_max = fov.meta['wave_max'].value       # [um]
-        xi_min = fov.meta['xi_min'].value           # [arcsec]
-        xi_max = fov.meta['xi_max'].value           # [arcsec]
+        wave_min = fov.meta["wave_min"].value       # [um]
+        wave_max = fov.meta["wave_max"].value       # [um]
+        xi_min = fov.meta["xi_min"].value           # [arcsec]
+        xi_max = fov.meta["xi_max"].value           # [arcsec]
         xlim_mm, ylim_mm = self.footprint(wave_min=wave_min, wave_max=wave_max,
                                           xi_min=xi_min, xi_max=xi_max)
 
@@ -159,13 +159,13 @@ class SpectralTrace:
         det_header = fov.detector_header
 
         # WCSD from the FieldOfView - this is the full detector plane
-        pixsize = fov_header['CDELT1D'] * u.Unit(fov_header['CUNIT1D'])
+        pixsize = fov_header["CDELT1D"] * u.Unit(fov_header["CUNIT1D"])
         pixsize = pixsize.to(u.mm).value
-        pixscale = fov_header['CDELT1'] * u.Unit(fov_header['CUNIT1'])
+        pixscale = fov_header["CDELT1"] * u.Unit(fov_header["CUNIT1"])
         pixscale = pixscale.to(u.arcsec).value
 
-        fpa_wcsd = WCS(det_header, key='D')
-        naxis1d, naxis2d = det_header['NAXIS1'], det_header['NAXIS2']
+        fpa_wcsd = WCS(det_header, key="D")
+        naxis1d, naxis2d = det_header["NAXIS1"], det_header["NAXIS2"]
         xlim_px, ylim_px = fpa_wcsd.all_world2pix(xlim_mm, ylim_mm, 0)
         xmin = np.floor(xlim_px.min()).astype(int)
         xmax = np.ceil(xlim_px.max()).astype(int)
@@ -304,11 +304,11 @@ class SpectralTrace:
         ## range of the spectral trace
         ## This is only relevant if the trace is given by a table of reference
         ## points. Otherwise (METIS LMS!) we assume that the range is valid.
-        if ('wave_colname' in self.meta and
-            self.meta['wave_colname'] in self.table.colnames):
+        if ("wave_colname" in self.meta and
+            self.meta["wave_colname"] in self.table.colnames):
             # Here, the parameters are obtained from a table of reference points
-            wave_unit = self.table[self.meta['wave_colname']].unit
-            wave_val = quantify(self.table[self.meta['wave_colname']].data,
+            wave_unit = self.table[self.meta["wave_colname"]].unit
+            wave_val = quantify(self.table[self.meta["wave_colname"]].data,
                                 wave_unit)
 
             if wave_min is None:
@@ -332,11 +332,11 @@ class SpectralTrace:
             ## between the requested range (by method args) and the definition
             ## range of the spectral trace
             try:
-                xi_unit = self.table[self.meta['s_colname']].unit
+                xi_unit = self.table[self.meta["s_colname"]].unit
             except KeyError:
                 xi_unit = u.arcsec
 
-            xi_val = quantify(self.table[self.meta['s_colname']].data,
+            xi_val = quantify(self.table[self.meta["s_colname"]].data,
                               xi_unit)
 
             if xi_min is None:
@@ -398,26 +398,25 @@ class SpectralTrace:
 
             x = self.table[self.meta["x_colname"]][mask]
             y = self.table[self.meta["y_colname"]][mask]
-            plt.plot(x, y, 'o', c=c)
+            plt.plot(x, y, "o", c=c)
 
             for wave in np.unique(w):
                 xx = x[w==wave]
                 xx.sort()
                 dx = xx[-1] - xx[-2]
+
                 plt.text(x[w==wave].max() + 0.5 * dx,
                          y[w==wave].mean(),
                          str(wave), va='center', ha='left')
 
-
             plt.gca().set_aspect("equal")
 
     def __repr__(self):
-        msg = '<SpectralTrace> "{}" : [{}, {}]um : Ext {} : Aperture {} : ' \
-              'ImagePlane {}' \
-              ''.format(self.meta["trace_id"],
-                        round(self.wave_min, 4), round(self.wave_max, 4),
-                        self.meta["extension_id"], self.meta["aperture_id"],
-                        self.meta["image_plane_id"])
+        msg = ("<SpectralTrace> \"{self.meta['trace_id']}\" : "
+               f"[{self.wave_min:.4f}, {self.wave_max:.4f}]um : "
+               f"Ext {self.meta['extension_id']} : "
+               f"Aperture {self.meta['aperture_id']} : "
+               f"ImagePlane {self.meta['image_plane_id']}")
         return msg
 
 
@@ -438,21 +437,31 @@ class XiLamImage():
     def __init__(self, fov, dlam_per_pix):
         # ..todo: we assume that we always have a cube. We use SpecCADO's
         #         add_cube_layer method
-        cube_wcs = WCS(fov.cube.header, key=' ')
+        cube_wcs = WCS(fov.cube.header, key=" ")
         wcs_lam = cube_wcs.sub([3])
+<<<<<<< HEAD
         d_xi = fov.cube.header['CDELT1']
         d_xi *= u.Unit(fov.cube.header['CUNIT1']).to(u.arcsec)
         d_eta = fov.cube.header['CDELT2']
         d_eta *= u.Unit(fov.cube.header['CUNIT2']).to(u.arcsec)
         d_lam = fov.cube.header['CDELT3']
         d_lam *= u.Unit(fov.cube.header['CUNIT3']).to(u.um)
+=======
+
+        d_xi = fov.cube.header["CDELT1"]
+        d_xi *= u.Unit(fov.cube.header["CUNIT1"]).to(u.arcsec)
+        d_eta = fov.cube.header["CDELT2"]
+        d_eta *= u.Unit(fov.cube.header["CUNIT2"]).to(u.arcsec)
+        d_lam = fov.cube.header["CDELT3"]
+        d_lam *= u.Unit(fov.cube.header["CUNIT3"]).to(u.um)
+>>>>>>> dev_master
 
         # This is based on the cube shape and assumes that the cube's spatial
         # dimensions are set by the slit aperture
         (n_lam, n_eta, n_xi) = fov.cube.data.shape
 
         # arrays of cube coordinates
-        cube_xi = d_xi * np.arange(n_xi) + fov.meta['xi_min'].value
+        cube_xi = d_xi * np.arange(n_xi) + fov.meta["xi_min"].value
         cube_eta = d_eta * (np.arange(n_eta) - (n_eta - 1) / 2)
         cube_lam = wcs_lam.all_pix2world(np.arange(n_lam), 1)[0]
         cube_lam *= u.Unit(wcs_lam.wcs.cunit[0]).to(u.um)
@@ -484,12 +493,12 @@ class XiLamImage():
         # Default WCS with xi in arcsec
         self.wcs = WCS(naxis=2)
         self.wcs.wcs.crpix = [1, 1]
-        self.wcs.wcs.crval = [self.lam[0], fov.meta['xi_min'].value]
+        self.wcs.wcs.crval = [self.lam[0], fov.meta["xi_min"].value]
         self.wcs.wcs.pc = [[1, 0], [0, 1]]
         self.wcs.wcs.cdelt = [d_lam, d_xi]
-        self.wcs.wcs.ctype = ['LINEAR', 'LINEAR']
-        self.wcs.wcs.cname = ['WAVELEN', 'SLITPOS']
-        self.wcs.wcs.cunit = ['um', 'arcsec']
+        self.wcs.wcs.ctype = ["LINEAR", "LINEAR"]
+        self.wcs.wcs.cname = ["WAVELEN", "SLITPOS"]
+        self.wcs.wcs.cunit = ["um", "arcsec"]
 
         # Alternative: xi = [0, 1], dimensionless
         self.wcsa = WCS(naxis=2)
@@ -497,9 +506,9 @@ class XiLamImage():
         self.wcsa.wcs.crval = [self.lam[0], 0]
         self.wcsa.wcs.pc = [[1, 0], [0, 1]]
         self.wcsa.wcs.cdelt = [d_lam, 1./n_xi]
-        self.wcsa.wcs.ctype = ['LINEAR', 'LINEAR']
-        self.wcsa.wcs.cname = ['WAVELEN', 'SLITPOS']
-        self.wcs.wcs.cunit = ['um', '']
+        self.wcsa.wcs.ctype = ["LINEAR", "LINEAR"]
+        self.wcsa.wcs.cname = ["WAVELEN", "SLITPOS"]
+        self.wcs.wcs.cunit = ["um", ""]
 
         self.xi = self.wcs.all_pix2world(self.lam[0], np.arange(n_xi), 0)[1]
         self.npix_xi = n_xi
@@ -684,10 +693,10 @@ def xilam2xy_fit(layout, params):
 
     Fits are of degree 4 as a function of slit position and wavelength.
     """
-    xi_arr = layout[params['s_colname']]
-    lam_arr = layout[params['wave_colname']]
-    x_arr = layout[params['x_colname']]
-    y_arr = layout[params['y_colname']]
+    xi_arr = layout[params["s_colname"]]
+    lam_arr = layout[params["wave_colname"]]
+    x_arr = layout[params["x_colname"]]
+    y_arr = layout[params["y_colname"]]
 
     ## Filter the lists: remove any points with x==0
     ## ..todo: this may not be necessary after sanitising the table
@@ -713,10 +722,10 @@ def xy2xilam_fit(layout, params):
     Fits are of degree 4 as a function of focal plane position
     """
 
-    xi_arr = layout[params['s_colname']]
-    lam_arr = layout[params['wave_colname']]
-    x_arr = layout[params['x_colname']]
-    y_arr = layout[params['y_colname']]
+    xi_arr = layout[params["s_colname"]]
+    lam_arr = layout[params["wave_colname"]]
+    x_arr = layout[params["x_colname"]]
+    y_arr = layout[params["y_colname"]]
 
     pinit_xi = Polynomial2D(degree=4)
     pinit_lam = Polynomial2D(degree=4)
@@ -736,10 +745,10 @@ def _xiy2xlam_fit(layout, params):
     # These are helper functions to allow fitting of left/right edges
     # for the purpose of checking whether a trace is on a chip or not.
 
-    xi_arr = layout[params['s_colname']]
-    lam_arr = layout[params['wave_colname']]
-    x_arr = layout[params['x_colname']]
-    y_arr = layout[params['y_colname']]
+    xi_arr = layout[params["s_colname"]]
+    lam_arr = layout[params["wave_colname"]]
+    x_arr = layout[params["x_colname"]]
+    y_arr = layout[params["y_colname"]]
 
     pinit_x = Polynomial2D(degree=4)
     pinit_lam = Polynomial2D(degree=4)

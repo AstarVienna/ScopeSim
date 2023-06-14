@@ -32,7 +32,7 @@ def empty_sky(flux=0):
     return sky
 
 
-@deprecated_renamed_argument('mag', 'flux', '0.1.5')
+@deprecated_renamed_argument("mag", "flux", "0.1.5")
 def star(x=0, y=0, flux=0):
     """
     Source object for a single star in either vega, AB magnitudes, or Jansky

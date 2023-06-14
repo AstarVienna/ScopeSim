@@ -1,7 +1,7 @@
 import logging
 
 
-class SystemDict(object):
+class SystemDict():
     def __init__(self, new_dict=None):
         self.dic = {}
         if isinstance(new_dict, dict):
@@ -21,7 +21,7 @@ class SystemDict(object):
             else:
                 self.dic[alias] = new_dict["properties"]
         else:
-            "Catch any bang-string properties keys"
+            # Catch any bang-string properties keys
             to_pop = []
             for key in new_dict:
                 if key.startswith("!"):
@@ -40,8 +40,7 @@ class SystemDict(object):
             for item in item_chunks:
                 entry = entry[item]
             return entry
-        else:
-            return self.dic[item]
+        return self.dic[item]
 
     def __setitem__(self, key, value):
         if isinstance(key, str) and key.startswith("!"):
@@ -64,8 +63,7 @@ class SystemDict(object):
                     return False
                 entry = entry[item]
             return True
-        else:
-            return item in self.dic
+        return item in self.dic
 
     def __repr__(self):
         msg = "<SystemDict> contents:"

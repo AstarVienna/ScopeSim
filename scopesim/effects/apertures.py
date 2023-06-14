@@ -1,11 +1,11 @@
 """Effects related to field masks, including spectroscopic slits"""
-from os import path as pth
-from copy import deepcopy
+
+from pathlib import Path
 import logging
 import yaml
 
 import numpy as np
-from matplotlib.path import Path
+from matplotlib.path import Path as MPLPath  # rename to avoid conflict with pathlib
 from astropy.io import fits
 from astropy import units as u
 from astropy.table import Table
@@ -337,7 +337,7 @@ class ApertureList(Effect):
                       "x_unit": "arcsec",
                       "y_unit": "arcsec",
                       "angle_unit": "arcsec"}
-            apertures_list += [ApertureMask(array_dict=array_dict, **params)]
+            apertures_list.append(ApertureMask(array_dict=array_dict, **params))
 
         return apertures_list
 
@@ -370,8 +370,8 @@ class ApertureList(Effect):
 
             return self
         else:
-            raise ValueError("Secondary argument not of type ApertureList: {}"
-                             "".format(type(other)))
+            raise ValueError("Secondary argument not of type ApertureList: "
+                             f"{type(other) = }")
 
     # def __getitem__(self, item):
     #     return self.get_apertures(item)[0]
@@ -433,13 +433,12 @@ class SlitWheel(Effect):
         self.meta.update(params)
         self.meta.update(kwargs)
 
-        path = pth.join(self.meta["path"],
-                        from_currsys(self.meta["filename_format"]))
+        path = Path(self.meta["path"], from_currsys(self.meta["filename_format"]))
         self.slits = {}
         for name in from_currsys(self.meta["slit_names"]):
             kwargs["name"] = name
-            self.slits[name] = ApertureMask(filename=path.format(name),
-                                            **kwargs)
+            fname = str(path).format(name)
+            self.slits[name] = ApertureMask(filename=fname, **kwargs)
 
         self.table = self.get_table()
 
@@ -453,7 +452,7 @@ class SlitWheel(Effect):
     def change_slit(self, slitname=None):
         """Change the current slit"""
         if not slitname or slitname in self.slits.keys():
-            self.meta['current_slit'] = slitname
+            self.meta["current_slit"] = slitname
             self.include = slitname
         else:
             raise ValueError("Unknown slit requested: " + slitname)
@@ -483,8 +482,8 @@ class SlitWheel(Effect):
 
     @property
     def display_name(self):
-        return f'{self.meta["name"]} : ' \
-               f'[{from_currsys(self.meta["current_slit"])}]'
+        return f"{self.meta['name']} : " \
+               f"[{from_currsys(self.meta['current_slit'])}]"
 
 
     def __getattr__(self, item):
@@ -499,13 +498,13 @@ class SlitWheel(Effect):
         """
         names = list(self.slits.keys())
         slits = self.slits.values()
-        xmax = np.array([slit.data['x'].max() * u.Unit(slit.meta['x_unit'])
+        xmax = np.array([slit.data["x"].max() * u.Unit(slit.meta["x_unit"])
                          .to(u.mas) for slit in slits])
-        xmin = np.array([slit.data['x'].min() * u.Unit(slit.meta['x_unit'])
+        xmin = np.array([slit.data["x"].min() * u.Unit(slit.meta["x_unit"])
                          .to(u.mas) for slit in slits])
-        ymax = np.array([slit.data['y'].max() * u.Unit(slit.meta['y_unit'])
+        ymax = np.array([slit.data["y"].max() * u.Unit(slit.meta["y_unit"])
                          .to(u.mas) for slit in slits])
-        ymin = np.array([slit.data['y'].min() * u.Unit(slit.meta['y_unit'])
+        ymin = np.array([slit.data["y"].min() * u.Unit(slit.meta["y_unit"])
                          .to(u.mas) for slit in slits])
         xmax = quantify(xmax, u.mas)
         xmin = quantify(xmin, u.mas)
@@ -569,7 +568,7 @@ def mask_from_coords(x, y, pixel_scale):
     coords = [(xi, yi) for xi in xrange for yi in yrange]
 
     corners = [(xi, yi) for xi, yi in zip(x, y)]
-    path = Path(corners)
+    path = MPLPath(corners)
     # ..todo: known issue - for super thin apertures, the first row is masked
     # rad = 0.005
     rad = 0  # increase this to include slightly more points within the polygon
