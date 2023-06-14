@@ -434,12 +434,11 @@ class SlitWheel(Effect):
         self.meta.update(kwargs)
 
         path = Path(self.meta["path"], from_currsys(self.meta["filename_format"]))
-        fname = str(path).format(name)
         self.slits = {}
         for name in from_currsys(self.meta["slit_names"]):
             kwargs["name"] = name
-            self.slits[name] = ApertureMask(filename=fname,
-                                            **kwargs)
+            fname = str(path).format(name)
+            self.slits[name] = ApertureMask(filename=fname, **kwargs)
 
         self.table = self.get_table()
 

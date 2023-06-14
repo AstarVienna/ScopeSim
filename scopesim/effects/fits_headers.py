@@ -290,7 +290,7 @@ def get_relevant_extensions(dic, hdul):
                     if hdu.header["EXTNAME"] == dic["ext_name"])
     elif dic.get("ext_number") is not None:
         ext_n = np.array(dic["ext_number"])
-        exts.extend(ext_n[ext_n<len(hdul)])
+        exts.extend(list(ext_n[ext_n<len(hdul)]))
     elif dic.get("ext_type") is not None:
         if isinstance(dic["ext_type"], list):
             ext_type_list = dic["ext_type"]
