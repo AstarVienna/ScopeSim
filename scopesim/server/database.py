@@ -8,6 +8,8 @@ import os
 import urllib.request
 import zipfile
 import logging
+from warnings import warn
+
 from urllib3.exceptions import HTTPError
 
 import yaml
@@ -202,6 +204,8 @@ def download_packages(pkg_names, release="stable", save_dir=None, from_cache=Non
 # for backwards compatibility
 def download_package(pkg_path, save_dir=None, url=None, from_cache=None):
     """
+    DEPRECATED -- only kept for backwards compatibility
+
     Downloads a package to the local disk
 
     Parameters
@@ -228,10 +232,8 @@ def download_package(pkg_path, save_dir=None, url=None, from_cache=None):
         The absolute path to the saved ``.zip`` package
 
     """
-    # todo: add proper depreciation warning
-    text = "Function Depreciated --> please use scopesim.download_package-s-()"
-    logging.warning(text)
-    print(text)
+    warn("Function Depreciated --> please use scopesim.download_package-s-()",
+         DeprecationWarning, stacklevel=2)
 
     if isinstance(pkg_path, str):
         pkg_path = [pkg_path]
