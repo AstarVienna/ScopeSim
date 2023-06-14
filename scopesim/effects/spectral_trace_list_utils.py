@@ -3,7 +3,8 @@ Utility classes and functions for SpectralTraceList
 
 This module contains
    - the definition of the `SpectralTrace` class. The visible effect should
-     always be a `SpectralTraceList`, even if that contains only one `SpectralTrace`.
+     always be a `SpectralTraceList`, even if that contains only one
+     `SpectralTrace`.
    - the definition of the `XiLamImage` class
    - utility functions for use with spectral traces
 """
@@ -213,7 +214,7 @@ class SpectralTrace:
         else:
             dlam_grad = self.xy2lam.gradient()[1]  # dlam_by_dy
         self.dlam_per_pix = interp1d(lam, dlam_grad(x_mm, y_mm) * pixsize,
-                                fill_value="extrapolate")
+                                     fill_value="extrapolate")
         try:
             xilam = XiLamImage(fov, self.dlam_per_pix)
             self._xilamimg = xilam   # ..todo: remove or make available with a debug flag?
@@ -283,6 +284,66 @@ class SpectralTrace:
 
         image_hdu = fits.ImageHDU(header=img_header, data=image)
         return image_hdu
+
+    def rectify_trace(self, hdulist, interps=None, wcs=None, nlam=None,
+                      nxi=None, **kwargs):
+        """Create 2D spectrum for a trace
+
+        Parameters
+        ----------
+        hdulist : HDUList
+           The result of scopesim readout
+        interps : list of interpolation functions
+           If provided, there must be one for each image extension in `hdulist`.
+           The functions go from pixels to the images and can be created with,
+           e.g., RectBivariateSpline.
+        wcs : The WCS describing the rectified XiLamImage. This can be created
+           in a simple way from the fov included in the `OpticalTrain` used in
+           the simulation run producing `hdulist`.
+        nlam, nxi : int
+           Number of pixels in the rectified 2D spectrum.
+        """
+        if interps is None:
+            logging.info("Computing image interpolations")
+            interps = make_image_interpolations(hdulist, kx=1, ky=1)
+
+        # ..todo: build wcs if not provided
+
+        # Create Xi, Lam images (do I need Iarr and Jarr or can I build Xi, Lam directly?)
+        Iarr, Jarr = np.meshgrid(np.arange(nlam, dtype=np.float32),
+                                 np.arange(nxi, dtype=np.float32))
+        Lam, Xi = wcs.all_pix2world(Iarr, Jarr, 0)
+
+        # Make sure that we do have microns
+        Lam = Lam * u.Unit(wcs.wcs.cunit[0]).to(u.um)
+
+        print("lambda:", Lam.min(), Lam.max())
+        print("xi:    ", Xi.min(), Xi.max())
+
+        # Convert Xi, Lam to focal plane units
+        Xarr = self.xilam2x(Xi, Lam)
+        Yarr = self.xilam2y(Xi, Lam)
+
+        rect_spec = np.zeros_like(Xarr, dtype=np.float32)
+
+        ihdu = 0
+        for hdu in hdulist:
+            if not isinstance(hdu, fits.ImageHDU):
+                continue
+
+            wcs_fp = WCS(hdu.header, key="D")
+            n_x = hdu.header['NAXIS1']
+            n_y = hdu.header['NAXIS2']
+            iarr, jarr = wcs_fp.all_world2pix(Xarr, Yarr, 0)
+            mask = (iarr > 0) * (iarr < n_x) * (jarr > 0) * (jarr < n_y)
+            if np.any(mask):
+                specpart = interps[ihdu](jarr, iarr, grid=False)
+                rect_spec += specpart * mask
+
+            ihdu += 1
+
+        return rect_spec
+
 
     def footprint(self, wave_min=None, wave_max=None, xi_min=None, xi_max=None):
         """
@@ -744,6 +805,20 @@ def _xiy2xlam_fit(layout, params):
     xiy2x = fitter(pinit_x, xi_arr, y_arr, x_arr)
     xiy2lam = fitter(pinit_lam, xi_arr, y_arr, lam_arr)
     return xiy2x, xiy2lam
+
+def make_image_interpolations(hdulist, **kwargs):
+    """
+    Create 2D interpolation functions for images
+    """
+    interps = []
+    for hdu in hdulist:
+        if isinstance(hdu, fits.ImageHDU):
+            interps.append(
+                RectBivariateSpline(np.arange(hdu.header['NAXIS1']),
+                                    np.arange(hdu.header['NAXIS2']),
+                                    hdu.data, **kwargs)
+            )
+    return interps
 
 
 # ..todo: Check whether the following functions are actually used
