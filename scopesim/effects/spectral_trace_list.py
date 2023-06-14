@@ -6,6 +6,7 @@ The Effect is called `SpectralTraceList`, it applies a list of
 """
 
 from os import path as pth
+import logging
 import numpy as np
 
 from astropy.io import fits
@@ -61,17 +62,21 @@ class SpectralTraceList(Effect):
 
     Required Table columns:
 
-    - description : str : description of each each trace
+    - description : str : identifier of each trace
     - extension_id : int : which extension is each trace in
     - aperture_id : int : which aperture matches this trace (e.g. MOS / IFU)
     - image_plane_id : int : on which image plane is this trace projected
 
     EXT 2 : BinTableHDU : Individual traces
     +++++++++++++++++++++++++++++++++++++++
-    No special header keywords are required in this extension
+    Required header keywords:
+    - EXTNAME : must be identical to the `description` in EXT 1
+
+    Recommended header keywords:
+    - DISPDIR : 'x' or 'y' : dispersion axis. If not present, Scopesim tries
+      to determine this automatically; this may be unreliable in some cases.
 
     Required Table columns:
-
     - wavelength : float : [um] : wavelength of monochromatic aperture image
     - s : float : [arcsec] : position along aperture perpendicular to trace
     - x : float : [mm] : x position of aperture image on focal plane
@@ -184,11 +189,9 @@ class SpectralTraceList(Effect):
                 # for MAAT
                 pass
             elif obj.hdu is None and obj.cube is None:
-                print("Making cube")
+                logging.info("Making cube")
                 obj.cube = obj.make_cube_hdu()
 
-            print(obj.cube.shape)
-            print(obj.hdu.data.shape)
             # ..todo: obj will be changed to a single one covering the full field of view
             # covered by the image slicer (28 slices for LMS; for LSS still only a single slit)
             # We need a loop over spectral_traces that chops up obj into the single-slice fov before
