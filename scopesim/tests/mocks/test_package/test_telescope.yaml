@@ -1,0 +1,15 @@
+# Telescope
+object : telescope
+alias : TEL
+name : test_telescope
+
+properties :
+  temperature : 9001
+
+effects :
+- name : tc_from_arrays
+  class : TERCurve
+  kwargs :
+    wavelength : [0.99, 1, 2, 2.01]
+    transmission : [0, 1, 1, 0]
+    wavelength_unit : um
