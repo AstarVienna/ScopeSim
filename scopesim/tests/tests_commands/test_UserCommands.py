@@ -11,6 +11,12 @@ from scopesim.server import database as db
 tmpdir = TemporaryDirectory()
 
 
+pytestmark = pytest.mark.webtest
+# Entire module is marked as webtest because it downloads the test_package
+# IRDB package in setup_module()
+# TODO: Include in ScopeSim_Data?
+
+
 def setup_module():
     db.download_packages(["test_package"], release="stable",
                          save_dir=tmpdir.name, from_cache=False)
