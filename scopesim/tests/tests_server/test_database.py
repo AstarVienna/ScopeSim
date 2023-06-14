@@ -11,6 +11,10 @@ from scopesim.server import database as db
 from scopesim import rc
 
 
+pytestmark = pytest.mark.webtest
+# Entire module is marked as webtest because it primarily fetches data.
+
+
 def test_package_list_loads():
     pkgs = db.get_server_package_list()
     assert isinstance(pkgs, dict)
