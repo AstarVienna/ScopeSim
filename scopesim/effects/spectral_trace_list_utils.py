@@ -439,6 +439,9 @@ class SpectralTrace:
 
         # Footprint (rectangle enclosing the trace)
         xlim, ylim  = self.footprint(wave_min=wave_min, wave_max=wave_max)
+        if xlim is None:
+            return
+
         xlim.append(xlim[0])
         ylim.append(ylim[0])
         plt.plot(xlim, ylim)
@@ -458,19 +461,19 @@ class SpectralTrace:
             y = self.table[self.meta["y_colname"]][mask]
             plt.plot(x, y, "o", c=c)
 
-            for wave in np.unique(waves):
-                xx = x[waves==wave]
+            for wave in np.unique(w):
+                xx = x[w==wave]
                 xx.sort()
                 dx = xx[-1] - xx[-2]
-                plt.text(x[waves==wave].max() + 0.5 * dx,
-                         y[waves==wave].mean(),
-                         str(wave), va="center", ha="left")
 
+                plt.text(x[w==wave].max() + 0.5 * dx,
+                         y[w==wave].mean(),
+                         str(wave), va='center', ha='left')
 
             plt.gca().set_aspect("equal")
 
     def __repr__(self):
-        msg = ("<SpectralTrace> \"{self.meta['trace_id']}\" : "
+        msg = (f"<SpectralTrace> \"{self.meta['trace_id']}\" : "
                f"[{self.wave_min:.4f}, {self.wave_max:.4f}]um : "
                f"Ext {self.meta['extension_id']} : "
                f"Aperture {self.meta['aperture_id']} : "
