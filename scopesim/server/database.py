@@ -186,7 +186,7 @@ def download_packages(pkg_names, release="stable", save_dir=None, from_cache=Non
                         zip_ref.extractall(save_dir)
 
                 except (HTTPError, HTTPError3) as error:
-                    raise ValueError(f"Unable to find file: {url + pkg_path}") from error
+                    raise ValueError(f"Unable to find file: {pkg_url + pkg_name}") from error
             else:
                 download_github_folder(repo_url=pkg_url, output_dir=save_dir)
                 save_path = save_dir
