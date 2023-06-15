@@ -148,54 +148,54 @@ def download_packages(pkg_names, release="stable", save_dir=None, from_cache=Non
 
     save_paths = []
     for pkg_name in pkg_names:
-        if pkg_name in pkgs_dict:
-            pkg_dict = pkgs_dict[pkg_name]
-            path = pkg_dict["path"] + "/"
+        if pkg_name not in pkgs_dict:
+            raise HTTPError3(f"Unable to find {release} release for package: "
+                             f"{base_url + pkg_name}")
 
-            from_github = False
-            if release in ["stable", "latest"]:
-                zip_name = pkg_dict[release]
-                pkg_url = f"{base_url}{path}/{zip_name}.zip"
-            elif "github" in release:
-                base_url = "https://github.com/AstarVienna/irdb/tree/"
-                github_hash = release.split(":")[-1].split("@")[-1]
-                pkg_url = f"{base_url}{github_hash}/{pkg_name}"
-                from_github = True
-            else:
-                zip_name = f"{pkg_name}.{release}.zip"
-                pkg_variants = get_server_folder_contents(path)
-                if zip_name not in pkg_variants:
-                    raise ValueError(f"{zip_name} is not amoung the hosted "
-                                     f"variants: {pkg_variants}")
-                pkg_url = f"{base_url}{path}/{zip_name}"
+        pkg_dict = pkgs_dict[pkg_name]
+        path = pkg_dict["path"] + "/"
 
-            if save_dir is None:
-                save_dir = rc.__config__["!SIM.file.local_packages_path"]
-            save_dir = Path(save_dir)
-            save_dir.mkdir(parents=True, exist_ok=True)
-
-            if not from_github:
-                try:
-                    if from_cache is None:
-                        from_cache = rc.__config__["!SIM.file.use_cached_downloads"]
-                    cache_path = download_file(pkg_url, cache=from_cache)
-                    save_path = save_dir / f"{pkg_name}.zip"
-                    file_path = shutil.copy2(cache_path, str(save_path))
-
-                    with zipfile.ZipFile(file_path, "r") as zip_ref:
-                        zip_ref.extractall(save_dir)
-
-                except (HTTPError, HTTPError3) as error:
-                    raise ValueError(f"Unable to find file: "
-                                     "{pkg_url + pkg_name}") from error
-            else:
-                download_github_folder(repo_url=pkg_url, output_dir=save_dir)
-                save_path = save_dir
-
-            save_paths.append(save_path.absolute())
-
+        from_github = False
+        if release in ["stable", "latest"]:
+            zip_name = pkg_dict[release]
+            pkg_url = f"{base_url}{path}/{zip_name}.zip"
+        elif "github" in release:
+            base_url = "https://github.com/AstarVienna/irdb/tree/"
+            github_hash = release.split(":")[-1].split("@")[-1]
+            pkg_url = f"{base_url}{github_hash}/{pkg_name}"
+            from_github = True
         else:
-            raise HTTPError3(f"Unable to find package: {base_url + pkg_name}")
+            zip_name = f"{pkg_name}.{release}.zip"
+            pkg_variants = get_server_folder_contents(path)
+            if zip_name not in pkg_variants:
+                raise ValueError(f"{zip_name} is not amoung the hosted "
+                                 f"variants: {pkg_variants}")
+            pkg_url = f"{base_url}{path}/{zip_name}"
+
+        if save_dir is None:
+            save_dir = rc.__config__["!SIM.file.local_packages_path"]
+        save_dir = Path(save_dir)
+        save_dir.mkdir(parents=True, exist_ok=True)
+
+        if not from_github:
+            try:
+                if from_cache is None:
+                    from_cache = rc.__config__["!SIM.file.use_cached_downloads"]
+                cache_path = download_file(pkg_url, cache=from_cache)
+                save_path = save_dir / f"{pkg_name}.zip"
+                file_path = shutil.copy2(cache_path, str(save_path))
+
+                with zipfile.ZipFile(file_path, "r") as zip_ref:
+                    zip_ref.extractall(save_dir)
+
+            except (HTTPError, HTTPError3) as error:
+                raise ValueError(f"Unable to find file: "
+                                 "{pkg_url + pkg_name}") from error
+        else:
+            download_github_folder(repo_url=pkg_url, output_dir=save_dir)
+            save_path = save_dir
+
+        save_paths.append(save_path.absolute())
 
     return save_paths
 
