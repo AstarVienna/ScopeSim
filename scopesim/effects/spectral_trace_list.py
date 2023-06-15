@@ -336,12 +336,11 @@ class SpectralTraceListWheel(Effect):
         self.meta.update(kwargs)
 
         path = Path(self.meta["path"], from_currsys(self.meta["filename_format"]))
-        fname = str(path).format(name)
         self.trace_lists = {}
         for name in from_currsys(self.meta["trace_list_names"]):
             kwargs["name"] = name
-            self.trace_lists[name] = SpectralTraceList(filename=fname,
-                                                       **kwargs)
+            fname = str(path).format(name)
+            self.trace_lists[name] = SpectralTraceList(filename=fname, **kwargs)
 
     def apply_to(self, obj, **kwargs):
         """Use apply_to of current trace list"""
