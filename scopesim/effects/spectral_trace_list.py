@@ -203,22 +203,6 @@ class SpectralTraceList(Effect):
 
         return obj
 
-    def get_waveset(self, pixel_size=None):
-        if pixel_size is None:
-            pixel_size = self.meta["pixel_scale"] / self.meta["plate_scale"]
-
-        wavesets = [spt.get_pixel_wavelength_edges(pixel_size)
-                    for spt in self.spectral_traces]
-
-        return wavesets
-
-    def get_fov_headers(self, sky_header, **kwargs):
-        fov_headers = []
-        for spt in self.spectral_traces:
-            fov_headers += spt.fov_headers(sky_header=sky_header, **kwargs)
-
-        return fov_headers
-
 
     @property
     def footprint(self):
@@ -267,6 +251,12 @@ class SpectralTraceList(Effect):
         msg = (f"SpectralTraceList: \"{self.meta.get('name')}\" : "
                f"{len(self.spectral_traces)} traces")
         return msg
+
+    def __getitem__(self, item):
+        return self.spectral_traces[item]
+
+    def __setitem__(self, key, value):
+        self.spectral_traces[key] = value
 
 
 class SpectralTraceListWheel(Effect):

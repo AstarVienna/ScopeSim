@@ -412,7 +412,7 @@ class SpectralTrace:
             plt.gca().set_aspect("equal")
 
     def __repr__(self):
-        msg = ("<SpectralTrace> \"{self.meta['trace_id']}\" : "
+        msg = (f"<SpectralTrace> \"{self.meta['trace_id']}\" : "
                f"[{self.wave_min:.4f}, {self.wave_max:.4f}]um : "
                f"Ext {self.meta['extension_id']} : "
                f"Aperture {self.meta['aperture_id']} : "
