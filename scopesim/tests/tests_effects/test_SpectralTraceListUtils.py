@@ -6,7 +6,6 @@
 import pytest
 
 import numpy as np
-from scopesim import rc
 from scopesim.effects.spectral_trace_list_utils import SpectralTrace
 from scopesim.effects.spectral_trace_list_utils import Transform2D, power_vector
 from scopesim.tests.mocks.py_objects import trace_list_objects as tlo
