@@ -10,7 +10,8 @@ import zipfile
 import logging
 from warnings import warn
 
-from urllib3.exceptions import HTTPError
+from urllib3.exceptions import HTTPError as HTTPError3
+from urllib.error import HTTPError
 
 import yaml
 import requests
@@ -184,7 +185,7 @@ def download_packages(pkg_names, release="stable", save_dir=None, from_cache=Non
                     with zipfile.ZipFile(file_path, 'r') as zip_ref:
                         zip_ref.extractall(save_dir)
 
-                except HTTPError as error:
+                except (HTTPError, HTTPError3) as error:
                     raise ValueError(f"Unable to find file: {url + pkg_path}") from error
             else:
                 download_github_folder(repo_url=pkg_url, output_dir=save_dir)
@@ -193,7 +194,7 @@ def download_packages(pkg_names, release="stable", save_dir=None, from_cache=Non
             save_paths += [os.path.abspath(save_path)]
 
         else:
-            raise HTTPError(f"Unable to find package: {base_url + pkg_name}")
+            raise HTTPError3(f"Unable to find package: {base_url + pkg_name}")
 
     return save_paths
 
@@ -370,7 +371,7 @@ def download_example_data(file_path, save_dir=None, url=None, from_cache=None):
                                        cache=from_cache)
             save_path = os.path.join(save_dir, os.path.basename(file_path))
             file_path = shutil.copy2(cache_path, save_path)
-        except HTTPError:
+        except (HTTPError, HTTPError3):
             ValueError(f"Unable to find file: {url + 'example_data/' + file_path}")
 
         save_path = os.path.abspath(save_path)
