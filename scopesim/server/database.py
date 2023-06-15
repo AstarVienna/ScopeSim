@@ -361,35 +361,39 @@ def download_example_data(file_path: Union[Iterable[str], str],
 
     Returns
     -------
-    save_path : str
-        The absolute path to the saved files
+    save_path : Path or list of Paths
+        The absolute path(s) to the saved files
     """
     if isinstance(file_path, Iterable) and not isinstance(file_path, str):
+        # Recursive
         save_path = [download_example_data(thefile, save_dir, url)
                      for thefile in file_path]
-    elif isinstance(file_path, str):
+        return save_path
 
-        if url is None:
-            url = rc.__config__["!SIM.file.server_base_url"]
-        if save_dir is None:
-            save_dir = Path.cwd()
-        save_dir = Path(save_dir)
-        save_dir.mkdir(parents=True, exist_ok=True)
-        file_path = Path(file_path)
+    if not isinstance(file_path, str):
+        raise TypeError("file_path must be str or iterable of str, found "
+                        f"{type(file_path) = }")
 
-        try:
-            if from_cache is None:
-                from_cache = rc.__config__["!SIM.file.use_cached_downloads"]
-            cache_path = download_file(f"{url}example_data/{file_path}",
-                                       cache=from_cache)
-            save_path = save_dir / file_path.name
-            file_path = shutil.copy2(cache_path, str(save_path))
-        except (HTTPError, HTTPError3) as error:
-            raise ValueError(f"Unable to find file: "
-                             "{url + 'example_data/' + file_path}") from error
+    if url is None:
+        url = rc.__config__["!SIM.file.server_base_url"]
+    if save_dir is None:
+        save_dir = Path.cwd()
+    save_dir = Path(save_dir)
+    save_dir.mkdir(parents=True, exist_ok=True)
+    file_path = Path(file_path)
 
-        save_path = save_path.absolute()
+    try:
+        if from_cache is None:
+            from_cache = rc.__config__["!SIM.file.use_cached_downloads"]
+        cache_path = download_file(f"{url}example_data/{file_path}",
+                                   cache=from_cache)
+        save_path = save_dir / file_path.name
+        file_path = shutil.copy2(cache_path, str(save_path))
+    except (HTTPError, HTTPError3) as error:
+        raise ValueError(f"Unable to find file: "
+                         "{url + 'example_data/' + file_path}") from error
 
+    save_path = save_path.absolute()
     return save_path
 
 
@@ -456,25 +460,24 @@ def download_github_folder(repo_url: str,
     with open(response[0], "r") as f:
         data = json.load(f)
 
-        for entry in data:
-            # if the entry is a further folder, walk through it
-            if entry["type"] == "dir":
-                download_github_folder(repo_url=entry["html_url"],
-                                       output_dir=output_dir)
+    for entry in data:
+        # if the entry is a further folder, walk through it
+        if entry["type"] == "dir":
+            download_github_folder(repo_url=entry["html_url"],
+                                   output_dir=output_dir)
 
-            # if the entry is a file, download it
-            elif entry["type"] == "file":
-                try:
-                    opener = urllib.request.build_opener()
-                    opener.addheaders = [("User-agent", "Mozilla/5.0")]
-                    urllib.request.install_opener(opener)
-                    # download the file
-                    save_path = output_dir / entry["path"]
-                    urllib.request.urlretrieve(entry["download_url"],
-                                               str(save_path))
-                    logging.info("Downloaded: %s", entry["path"])
+        # if the entry is a file, download it
+        elif entry["type"] == "file":
+            try:
+                opener = urllib.request.build_opener()
+                opener.addheaders = [("User-agent", "Mozilla/5.0")]
+                urllib.request.install_opener(opener)
+                # download the file
+                save_path = output_dir / entry["path"]
+                urllib.request.urlretrieve(entry["download_url"], str(save_path))
+                logging.info("Downloaded: %s", entry["path"])
 
-                except KeyboardInterrupt:
-                    # when CTRL+C is pressed during the execution of this script
-                    logging.error(user_interrupt_text)
-                    raise ValueError(user_interrupt_text)
+            except KeyboardInterrupt:
+                # when CTRL+C is pressed during the execution of this script
+                logging.error(user_interrupt_text)
+                raise ValueError(user_interrupt_text)
