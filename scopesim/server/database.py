@@ -9,8 +9,8 @@ import zipfile
 import logging
 from warnings import warn
 from pathlib import Path
-from typing import Optional, Union, List
-from collections.abc import Iterable
+from typing import Optional, Union, List, Tuple, Set
+from collections.abc import Iterator, Iterable
 
 from urllib.error import HTTPError
 from urllib3.exceptions import HTTPError as HTTPError3
@@ -43,9 +43,54 @@ def get_server_folder_contents(dir_name: str,
     soup = bs4.BeautifulSoup(result, features="lxml")
     hrefs = soup.findAll("a", href=True)
     pkgs = [href.string for href in hrefs
-            if href.string is not None and ".zip" in href.string]
+            if href.string is not None and unique_str in href.string]
 
     return pkgs
+
+
+def get_server_folder_package_names(dir_name: str) -> Set[str]:
+    """
+    Retrieve all unique package names present on server in `dir_name` folder.
+
+    Parameters
+    ----------
+    dir_name : str
+        Name of the folder on the server.
+
+    Returns
+    -------
+    package_names : set of str
+        Set of unique package names in `dir_name` folder.
+
+    """
+    package_names = {package.split(".", maxsplit=1)[0] for package
+                     in get_server_folder_contents(dir_name)}
+    return package_names
+
+
+def get_all_packages_on_server() -> Iterator[Tuple[str, set]]:
+    """
+    Retrieve all unique package names present on server in known folders.
+
+    Currently hardcoded to look in folders "locations", "telescopes" and
+    "instruments". Any packages not in these folders are not returned.
+
+    This generator function yields key-value pairs, containing the folder name
+    as the key and the set of unique package names in value. Recommended useage
+    is to turn the generator into a dictionary, i.e.:
+
+    ::
+        package_dict = dict(get_all_packages_on_server())
+
+    Yields
+    ------
+    Iterator[Tuple[str, set]]
+        Key-value pairs of folder and corresponding package names.
+
+    """
+    for dir_name in ("locations", "telescopes", "instruments"):
+        package_names = get_server_folder_package_names(dir_name)
+        yield dir_name, package_names
 
 
 def list_packages(pkg_name: Optional[str] = None) -> List[str]:
