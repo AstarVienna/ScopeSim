@@ -182,7 +182,7 @@ def download_packages(pkg_names, release="stable", save_dir=None, from_cache=Non
                     save_path = save_dir / f"{pkg_name}.zip"
                     file_path = shutil.copy2(cache_path, str(save_path))
 
-                    with zipfile.ZipFile(file_path, 'r') as zip_ref:
+                    with zipfile.ZipFile(file_path, "r") as zip_ref:
                         zip_ref.extractall(save_dir)
 
                 except (HTTPError, HTTPError3) as error:
@@ -389,7 +389,9 @@ def download_example_data(file_path, save_dir=None, url=None, from_cache=None):
 
 def create_github_url(url):
     """
-    From the given url, produce a URL that is compatible with Github's REST API. Can handle blob or tree paths.
+    From the given url, produce a URL that is compatible with Github's REST API.
+
+    Can handle blob or tree paths.
     """
     repo_only_url = re.compile(r"https:\/\/github\.com\/[a-z\d](?:[a-z\d]|-(?=[a-z\d])){0,38}\/[a-zA-Z0-9]+$")
     re_branch = re.compile("/(tree|blob)/(.+?)/")
@@ -397,7 +399,8 @@ def create_github_url(url):
     # Check if the given url is a url to a GitHub repo. If it is, tell the
     # user to use 'git clone' to download it
     if re.match(repo_only_url,url):
-        message = "✘ The given url is a complete repository. Use 'git clone' to download the repository"
+        message = ("✘ The given url is a complete repository. Use 'git clone'"
+                   " to download the repository")
         logging.error(message)
         raise ValueError(message)
 
@@ -413,7 +416,8 @@ def download_github_folder(repo_url, output_dir="./"):
     """
     Downloads the files and directories in repo_url.
 
-    Re-written based on the on the download function `here <https://github.com/sdushantha/gitdir/blob/f47ce9d85ee29f8612ce5ae804560a12b803ddf3/gitdir/gitdir.py#L55>`_
+    Re-written based on the on the download function
+    `here <https://github.com/sdushantha/gitdir/blob/f47ce9d85ee29f8612ce5ae804560a12b803ddf3/gitdir/gitdir.py#L55>`_
     """
     output_dir = Path(output_dir)
 
@@ -424,7 +428,7 @@ def download_github_folder(repo_url, output_dir="./"):
     user_interrupt_text = "GitHub download interrupted by User"
     try:
         opener = urllib.request.build_opener()
-        opener.addheaders = [('User-agent', 'Mozilla/5.0')]
+        opener.addheaders = [("User-agent', 'Mozilla/5.0")]
         urllib.request.install_opener(opener)
         response = urllib.request.urlretrieve(api_url)
     except KeyboardInterrupt:
@@ -448,10 +452,10 @@ def download_github_folder(repo_url, output_dir="./"):
             elif entry["type"] == "file":
                 try:
                     opener = urllib.request.build_opener()
-                    opener.addheaders = [('User-agent', 'Mozilla/5.0')]
+                    opener.addheaders = [("User-agent", "Mozilla/5.0")]
                     urllib.request.install_opener(opener)
                     # download the file
-                    save_path = output_dir / entry['path']
+                    save_path = output_dir / entry["path"]
                     urllib.request.urlretrieve(entry["download_url"],
                                                str(save_path))
                     logging.info(f"Downloaded: {entry['path']}")
