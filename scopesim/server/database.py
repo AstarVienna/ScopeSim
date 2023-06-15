@@ -10,8 +10,8 @@ import logging
 from warnings import warn
 from pathlib import Path
 
-from urllib3.exceptions import HTTPError as HTTPError3
 from urllib.error import HTTPError
+from urllib3.exceptions import HTTPError as HTTPError3
 
 import yaml
 import requests
@@ -186,7 +186,8 @@ def download_packages(pkg_names, release="stable", save_dir=None, from_cache=Non
                         zip_ref.extractall(save_dir)
 
                 except (HTTPError, HTTPError3) as error:
-                    raise ValueError(f"Unable to find file: {pkg_url + pkg_name}") from error
+                    raise ValueError(f"Unable to find file: "
+                                     "{pkg_url + pkg_name}") from error
             else:
                 download_github_folder(repo_url=pkg_url, output_dir=save_dir)
                 save_path = save_dir
@@ -372,8 +373,9 @@ def download_example_data(file_path, save_dir=None, url=None, from_cache=None):
                                        cache=from_cache)
             save_path = save_dir / file_path.name
             file_path = shutil.copy2(cache_path, str(save_path))
-        except (HTTPError, HTTPError3):
-            ValueError(f"Unable to find file: {url + 'example_data/' + file_path}")
+        except (HTTPError, HTTPError3) as error:
+            raise ValueError(f"Unable to find file: "
+                             "{url + 'example_data/' + file_path}") from error
 
         save_path = save_path.absolute()
 
