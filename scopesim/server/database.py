@@ -458,7 +458,7 @@ def download_github_folder(repo_url, output_dir="./"):
                     save_path = output_dir / entry["path"]
                     urllib.request.urlretrieve(entry["download_url"],
                                                str(save_path))
-                    logging.info(f"Downloaded: {entry['path']}")
+                    logging.info("Downloaded: %s", entry["path"])
 
                 except KeyboardInterrupt:
                     # when CTRL+C is pressed during the execution of this script
