@@ -4,11 +4,11 @@ Functions to download instrument packages and example data
 import json
 import re
 import shutil
-import os
 import urllib.request
 import zipfile
 import logging
 from warnings import warn
+from pathlib import Path
 
 from urllib3.exceptions import HTTPError as HTTPError3
 from urllib.error import HTTPError
@@ -171,16 +171,16 @@ def download_packages(pkg_names, release="stable", save_dir=None, from_cache=Non
 
             if save_dir is None:
                 save_dir = rc.__config__["!SIM.file.local_packages_path"]
-            if not os.path.exists(save_dir):
-                os.mkdir(save_dir)
+            save_dir = Path(save_dir)
+            save_dir.mkdir(parents=True, exist_ok=True)
 
             if not from_github:
                 try:
                     if from_cache is None:
                         from_cache = rc.__config__["!SIM.file.use_cached_downloads"]
                     cache_path = download_file(pkg_url, cache=from_cache)
-                    save_path = os.path.join(save_dir, f"{pkg_name}.zip")
-                    file_path = shutil.copy2(cache_path, save_path)
+                    save_path = save_dir / f"{pkg_name}.zip"
+                    file_path = shutil.copy2(cache_path, str(save_path))
 
                     with zipfile.ZipFile(file_path, 'r') as zip_ref:
                         zip_ref.extractall(save_dir)
@@ -191,7 +191,7 @@ def download_packages(pkg_names, release="stable", save_dir=None, from_cache=Non
                 download_github_folder(repo_url=pkg_url, output_dir=save_dir)
                 save_path = save_dir
 
-            save_paths += [os.path.abspath(save_path)]
+            save_paths.append(save_path.absolute())
 
         else:
             raise HTTPError3(f"Unable to find package: {base_url + pkg_name}")
@@ -360,21 +360,22 @@ def download_example_data(file_path, save_dir=None, url=None, from_cache=None):
         if url is None:
             url = rc.__config__["!SIM.file.server_base_url"]
         if save_dir is None:
-            save_dir = os.getcwd()
-        if not os.path.exists(save_dir):
-            os.mkdir(save_dir)
+            save_dir = Path.cwd()
+        save_dir = Path(save_dir)
+        save_dir.mkdir(parents=True, exist_ok=True)
+        file_path = Path(file_path)
 
         try:
             if from_cache is None:
                 from_cache = rc.__config__["!SIM.file.use_cached_downloads"]
-            cache_path = download_file(url + "example_data/" + file_path,
+            cache_path = download_file(f"{url}example_data/{file_path}",
                                        cache=from_cache)
-            save_path = os.path.join(save_dir, os.path.basename(file_path))
-            file_path = shutil.copy2(cache_path, save_path)
+            save_path = save_dir / file_path.name
+            file_path = shutil.copy2(cache_path, str(save_path))
         except (HTTPError, HTTPError3):
             ValueError(f"Unable to find file: {url + 'example_data/' + file_path}")
 
-        save_path = os.path.abspath(save_path)
+        save_path = save_path.absolute()
 
     return save_path
 
@@ -404,7 +405,7 @@ def create_github_url(url):
     branch = re_branch.search(url)
     download_dirs = url[branch.end():]
     api_url = (url[:branch.start()].replace("github.com", "api.github.com/repos", 1) +
-              "/contents/" + download_dirs + "?ref=" + branch.group(2))
+               f"/contents/{download_dirs}?ref={branch.group(2)}")
     return api_url, download_dirs
 
 
@@ -414,6 +415,8 @@ def download_github_folder(repo_url, output_dir="./"):
 
     Re-written based on the on the download function `here <https://github.com/sdushantha/gitdir/blob/f47ce9d85ee29f8612ce5ae804560a12b803ddf3/gitdir/gitdir.py#L55>`_
     """
+    output_dir = Path(output_dir)
+
     # convert repo_url into an api_url
     api_url, download_dirs = create_github_url(repo_url)
 
@@ -430,7 +433,7 @@ def download_github_folder(repo_url, output_dir="./"):
         raise ValueError(user_interrupt_text)
 
     # Make the base directories for this GitHub folder
-    os.makedirs(os.path.join(output_dir, download_dirs), exist_ok=True)
+    (output_dir / download_dirs).mkdir(parents=True, exist_ok=True)
 
     with open(response[0], "r") as f:
         data = json.load(f)
@@ -448,8 +451,9 @@ def download_github_folder(repo_url, output_dir="./"):
                     opener.addheaders = [('User-agent', 'Mozilla/5.0')]
                     urllib.request.install_opener(opener)
                     # download the file
-                    save_path = os.path.join(output_dir, entry['path'])
-                    urllib.request.urlretrieve(entry["download_url"], save_path)
+                    save_path = output_dir / entry['path']
+                    urllib.request.urlretrieve(entry["download_url"],
+                                               str(save_path))
                     logging.info(f"Downloaded: {entry['path']}")
 
                 except KeyboardInterrupt:
