@@ -3,7 +3,6 @@
 # pylint: disable=missing-function-docstring
 # pylint: disable=invalid-name
 # pylint: disable=too-few-public-methods
-import os
 import pytest
 
 import numpy as np
@@ -11,11 +10,6 @@ from scopesim import rc
 from scopesim.effects.spectral_trace_list_utils import SpectralTrace
 from scopesim.effects.spectral_trace_list_utils import Transform2D, power_vector
 from scopesim.tests.mocks.py_objects import trace_list_objects as tlo
-
-MOCK_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),
-                                         "../mocks/MICADO_SPEC/"))
-if MOCK_PATH not in rc.__search_path__:
-    rc.__search_path__ += [MOCK_PATH]
 
 class TestSpectralTrace:
     """Tests not covered in test_SpectralTraceList.py"""
