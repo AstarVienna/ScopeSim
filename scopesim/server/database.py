@@ -9,6 +9,8 @@ import zipfile
 import logging
 from warnings import warn
 from pathlib import Path
+from typing import Optional, Union, List
+from collections.abc import Iterable
 
 from urllib.error import HTTPError
 from urllib3.exceptions import HTTPError as HTTPError3
@@ -29,7 +31,8 @@ def get_server_package_list():
     return pkgs_dict
 
 
-def get_server_folder_contents(dir_name, unique_str=".zip"):
+def get_server_folder_contents(dir_name: str,
+                               unique_str: str = ".zip") -> List[str]:
     url = rc.__config__["!SIM.file.server_base_url"] + dir_name
 
     try:
@@ -45,7 +48,7 @@ def get_server_folder_contents(dir_name, unique_str=".zip"):
     return pkgs
 
 
-def list_packages(pkg_name=None):
+def list_packages(pkg_name: Optional[str] = None) -> List[str]:
     """
     List all packages, or all variants of a single package
 
@@ -83,7 +86,10 @@ def list_packages(pkg_name=None):
     return pkg_names
 
 
-def download_packages(pkg_names, release="stable", save_dir=None, from_cache=None):
+def download_packages(pkg_names: Union[Iterable[str], str],
+                      release: str = "stable",
+                      save_dir: Optional[str] = None,
+                      from_cache: Optional[bool] = None) -> List[Path]:
     """
     Download one or more packages to the local disk
 
@@ -244,7 +250,7 @@ def download_package(pkg_path, save_dir=None, url=None, from_cache=None):
     return download_packages(pkg_names, release="stable", save_dir=save_dir,
                              from_cache=from_cache)
 
-def get_server_elements(url, unique_str="/"):
+def get_server_elements(url: str, unique_str: str = "/") -> List[str]:
     """
     Returns a list of file and/or directory paths on the HTTP server ``url``
 
@@ -280,7 +286,9 @@ def get_server_elements(url, unique_str="/"):
     return select_paths
 
 
-def list_example_data(url=None, return_files=False, silent=False):
+def list_example_data(url: Optional[str] = None,
+                      return_files: bool = False,
+                      silent: bool = False) -> List[str]:
     """
     List all example files found under ``url``
 
@@ -327,7 +335,10 @@ def list_example_data(url=None, return_files=False, silent=False):
     return None
 
 
-def download_example_data(file_path, save_dir=None, url=None, from_cache=None):
+def download_example_data(file_path: Union[Iterable[str], str],
+                          save_dir: Optional[Union[Path, str]] = None,
+                          url: Optional[str] = None,
+                          from_cache: Optional[bool] = None) -> List[Path]:
     """
     Downloads example fits files to the local disk
 
@@ -353,7 +364,7 @@ def download_example_data(file_path, save_dir=None, url=None, from_cache=None):
     save_path : str
         The absolute path to the saved files
     """
-    if isinstance(file_path, (list, tuple)):
+    if isinstance(file_path, Iterable) and not isinstance(file_path, str):
         save_path = [download_example_data(thefile, save_dir, url)
                      for thefile in file_path]
     elif isinstance(file_path, str):
@@ -389,7 +400,7 @@ def download_example_data(file_path, save_dir=None, url=None, from_cache=None):
 # Many thanks to the authors!
 # """
 
-def create_github_url(url):
+def create_github_url(url: str) -> None:
     """
     From the given url, produce a URL that is compatible with Github's REST API.
 
@@ -414,7 +425,8 @@ def create_github_url(url):
     return api_url, download_dirs
 
 
-def download_github_folder(repo_url, output_dir="./"):
+def download_github_folder(repo_url: str,
+                           output_dir: Union[Path, str] = "./") -> None:
     """
     Downloads the files and directories in repo_url.
 
