@@ -261,6 +261,12 @@ class SpectralTraceList(Effect):
                f"{len(self.spectral_traces)} traces")
         return msg
 
+    def __getitem__(self, item):
+        return self.spectral_traces[item]
+
+    def __setitem__(self, key, value):
+        self.spectral_traces[key] = value
+
 
 class SpectralTraceListWheel(Effect):
     """
