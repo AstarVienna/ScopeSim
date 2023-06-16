@@ -63,3 +63,15 @@ class TestInit:
         spt = tlo.trace_1()
         slist["New trace"] = spt
         assert len(slist.spectral_traces) == n_trace + 1
+
+
+@pytest.fixture(name="spectral_trace_list", scope="class")
+def fixture_spectral_trace_list():
+    """Instantiate a SpectralTraceList"""
+    return SpectralTraceList(hdulist=tlo.make_trace_hdulist())
+
+class TestRectification:
+    def test_rectify_cube_not_implemented(self, spectral_trace_list):
+        hdulist = fits.HDUList()
+        with pytest.raises(NotImplementedError):
+            spectral_trace_list.rectify_cube(hdulist)

@@ -24,7 +24,7 @@ from astropy import units as u
 from astropy.wcs import WCS
 from astropy.modeling.models import Polynomial2D
 
-from ..utils import power_vector, quantify
+from ..utils import power_vector, quantify, from_currsys
 
 
 class SpectralTrace:
@@ -285,8 +285,7 @@ class SpectralTrace:
         image_hdu = fits.ImageHDU(header=img_header, data=image)
         return image_hdu
 
-    def rectify_trace(self, hdulist, interps=None, wcs=None, nlam=None,
-                      nxi=None, **kwargs):
+    def rectify_trace(self, hdulist, interps=None, wcs=None, **kwargs):
         """Create 2D spectrum for a trace
 
         Parameters
@@ -300,14 +299,54 @@ class SpectralTrace:
         wcs : The WCS describing the rectified XiLamImage. This can be created
            in a simple way from the fov included in the `OpticalTrain` used in
            the simulation run producing `hdulist`.
-        nlam, nxi : int
-           Number of pixels in the rectified 2D spectrum.
+
+        The WCS can also be set up via the following keywords:
+
+        bin_width : float [um]
+           The spectral bin width.
+        wave_min, wave_max : float [um]
+           Limits of the wavelength range to extract. The default is the
+           the full range on which the `SpectralTrace` is defined. This may
+           extend significantly beyond the filter window.
         """
+
+        # ..todo: build wcs if not provided
+        bin_width = kwargs.get(
+            "bin_width",
+            from_currsys(self.meta["spectral_bin_width"]))
+        wave_min = kwargs.get(
+            "wave_min",
+            self.wave_min)
+        wave_max = kwargs.get(
+            "wave_max",
+            self.wave_max)
+        if wave_max < self.wave_min or wave_min > self.wave_max:
+            return None
+        pixscale = from_currsys(self.meta['pixel_scale'])
+
+        # Temporary solution to get slit length
+        xi_min = hdulist[0].header["HIERARCH INS SLIT XIMIN"]
+        xi_max = hdulist[0].header["HIERARCH INS SLIT XIMAX"]
+
+        if wcs is None:
+            wcs = WCS(naxis=2)
+            wcs.wcs.ctype = ['WAVE', 'LINEAR']
+            wcs.wcs.cunit = ['um', 'arcsec']
+            wcs.wcs.crpix = [1, 1]
+            wcs.wcs.cdelt = [bin_width, pixscale] # PIXSCALE
+
+        # crval set to wave_min to catch explicitely set value
+        wcs.wcs.crval = [wave_min, xi_min]   # XIMIN
+
+        nlam = int((wave_max - wave_min) / bin_width)
+        nxi = int((xi_max - xi_min) / pixscale)
+
+        print(wcs)
+
+        # Create interpolation functions if not provided
         if interps is None:
             logging.info("Computing image interpolations")
             interps = make_image_interpolations(hdulist, kx=1, ky=1)
-
-        # ..todo: build wcs if not provided
 
         # Create Xi, Lam images (do I need Iarr and Jarr or can I build Xi, Lam directly?)
         Iarr, Jarr = np.meshgrid(np.arange(nlam, dtype=np.float32),

@@ -14,7 +14,7 @@ from astropy.io import fits
 from astropy.table import Table
 
 from .effects import Effect
-from .spectral_trace_list_utils import SpectralTrace
+from .spectral_trace_list_utils import SpectralTrace, make_image_interpolations
 from ..utils import from_currsys, check_keys
 from ..optics.image_plane_utils import header_from_list_of_xy
 from ..base_classes import FieldOfViewBase, FOVSetupBase
@@ -103,6 +103,7 @@ class SpectralTraceList(Effect):
         params = {"z_order": [70, 270, 670],
                   "pixel_scale": "!INST.pixel_scale",  # [arcsec / pix]}
                   "plate_scale": "!INST.plate_scale",  # [arcsec / mm]
+                  "spectral_bin_width": "!SIM.spectral.spectral_bin_width", # [um]
                   "wave_min": "!SIM.spectral.wave_min",  # [um]
                   "wave_mid": "!SIM.spectral.wave_mid",  # [um]
                   "wave_max": "!SIM.spectral.wave_max",  # [um]
@@ -225,6 +226,35 @@ class SpectralTraceList(Effect):
         hdr = header_from_list_of_xy(x, y, pixel_scale, "D")
 
         return hdr
+
+    def rectify_traces(self, hdulist):
+        """Create rectified 2D spectra for all traces in the list
+
+        This method creates an HDU list with one extension per spectral
+        trace, i.e. it essentially treats all traces independently.
+        For the case of an IFU where the traces correspond to spatial
+        slices for the same wavelength range, use method `rectify_cube`
+        (not yet implemented).
+
+        Parameters
+        ----------
+        hdulist : str or fits.HDUList
+        """
+        try:
+            inhdul = fits.open(hdulist)
+        except TypeError:
+            inhdul = hdulist
+
+        interps = make_image_interpolations(hdulist)
+        outhdul = fits.HDUList()  # needs a primary DU
+        for trace in self.spectral_traces:
+            hdu = trace.rectify(interps=interps)
+            if hdu is not None:   # ..todo: rectify does not do that yet
+                outhdul.append(hdu)
+
+    def rectify_cube(self, hdulist):
+        """Rectify traces and combine into a cube"""
+        raise(NotImplementedError)
 
     def plot(self, wave_min=None, wave_max=None, **kwargs):
         if wave_min is None:
