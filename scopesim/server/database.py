@@ -56,6 +56,11 @@ def get_server_folder_package_names(dir_name: str) -> Set[str]:
     dir_name : str
         Name of the folder on the server.
 
+    Raises
+    ------
+    ValueError
+        Raised if no valid packages are found in the given folder.
+
     Returns
     -------
     package_names : set of str
