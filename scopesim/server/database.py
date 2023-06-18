@@ -64,6 +64,10 @@ def get_server_folder_package_names(dir_name: str) -> Set[str]:
     """
     package_names = {package.split(".", maxsplit=1)[0] for package
                      in get_server_folder_contents(dir_name)}
+
+    if not package_names:
+        raise ValueError(f"No packages found in directory \"{dir_name}\".")
+
     return package_names
 
 
