@@ -32,7 +32,7 @@ def get_server_package_list():
 
 
 def get_server_folder_contents(dir_name: str,
-                               unique_str: str = ".zip") -> List[str]:
+                               unique_str: str = ".zip$") -> Iterator[str]:
     url = rc.__config__["!SIM.file.server_base_url"] + dir_name
 
     try:
@@ -41,9 +41,8 @@ def get_server_folder_contents(dir_name: str,
         raise ValueError(f"URL returned error: {url}") from error
 
     soup = bs4.BeautifulSoup(result, features="lxml")
-    hrefs = soup.findAll("a", href=True)
-    pkgs = [href.string for href in hrefs
-            if href.string is not None and unique_str in href.string]
+    hrefs = soup.find_all("a", href=True, string=re.compile(unique_str))
+    pkgs = (href.string for href in hrefs)
 
     return pkgs
 
@@ -217,7 +216,7 @@ def download_packages(pkg_names: Union[Iterable[str], str],
             from_github = True
         else:
             zip_name = f"{pkg_name}.{release}.zip"
-            pkg_variants = get_server_folder_contents(path)
+            pkg_variants = list(get_server_folder_contents(path))
             if zip_name not in pkg_variants:
                 raise ValueError(f"{zip_name} is not amoung the hosted "
                                  f"variants: {pkg_variants}")
