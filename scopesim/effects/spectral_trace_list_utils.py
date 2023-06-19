@@ -308,25 +308,29 @@ class SpectralTrace:
            Limits of the wavelength range to extract. The default is the
            the full range on which the `SpectralTrace` is defined. This may
            extend significantly beyond the filter window.
+        xi_min, xi_max : float [arcsec]
+           Spatial limits of the slit on the sky. This should be taken from
+           the header of the hdulist, but is not yet provided by scopesim
         """
 
         # ..todo: build wcs if not provided
         bin_width = kwargs.get(
             "bin_width",
             from_currsys(self.meta["spectral_bin_width"]))
-        wave_min = kwargs.get(
-            "wave_min",
-            self.wave_min)
-        wave_max = kwargs.get(
-            "wave_max",
-            self.wave_max)
+        wave_min = kwargs.get("wave_min",
+                              self.wave_min)
+        wave_max = kwargs.get("wave_max",
+                              self.wave_max)
         if wave_max < self.wave_min or wave_min > self.wave_max:
             return None
+
         pixscale = from_currsys(self.meta['pixel_scale'])
 
         # Temporary solution to get slit length
-        xi_min = hdulist[0].header["HIERARCH INS SLIT XIMIN"]
-        xi_max = hdulist[0].header["HIERARCH INS SLIT XIMAX"]
+        xi_min = kwargs.get("xi_min",
+                            hdulist[0].header["HIERARCH INS SLIT XIMIN"])
+        xi_max = kwargs.get("xi_max",
+                            hdulist[0].header["HIERARCH INS SLIT XIMAX"])
 
         if wcs is None:
             wcs = WCS(naxis=2)
@@ -338,8 +342,8 @@ class SpectralTrace:
         # crval set to wave_min to catch explicitely set value
         wcs.wcs.crval = [wave_min, xi_min]   # XIMIN
 
-        nlam = int((wave_max - wave_min) / bin_width)
-        nxi = int((xi_max - xi_min) / pixscale)
+        nlam = int((wave_max - wave_min) / bin_width) + 1
+        nxi = int((xi_max - xi_min) / pixscale) + 1
 
         print(wcs)
 
@@ -381,7 +385,9 @@ class SpectralTrace:
 
             ihdu += 1
 
-        return rect_spec
+        header = wcs.to_header()
+        header['EXTNAME'] = self.trace_id
+        return fits.ImageHDU(data=rect_spec, header=header)
 
 
     def footprint(self, wave_min=None, wave_max=None, xi_min=None, xi_max=None):
@@ -510,6 +516,11 @@ class SpectralTrace:
                          str(wave), va='center', ha='left')
 
             plt.gca().set_aspect("equal")
+
+    @property
+    def trace_id(self):
+        """Return the name of the trace"""
+        return self.meta['trace_id']
 
     def __repr__(self):
         msg = (f"<SpectralTrace> \"{self.meta['trace_id']}\" : "
