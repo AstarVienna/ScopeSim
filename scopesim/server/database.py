@@ -7,10 +7,14 @@ import shutil
 import urllib.request
 import zipfile
 import logging
+from datetime import date
 from warnings import warn
 from pathlib import Path
-from typing import Optional, Union, List, Tuple, Set
-from collections.abc import Iterator, Iterable
+from typing import Optional, Union, List, Tuple, Set, Dict
+from collections.abc import Iterator, Iterable, Mapping
+
+from datetime import date
+from more_itertools import first, last, groupby_transform
 
 from urllib.error import HTTPError
 from urllib3.exceptions import HTTPError as HTTPError3
@@ -23,10 +27,29 @@ from astropy.utils.data import download_file
 from scopesim import rc
 
 
+GrpVerType = Mapping[str, Iterable[str]]
+GrpItrType = Iterator[Tuple[str, List[str]]]
+
+
 def get_server_package_list():
-    url = rc.__config__["!SIM.file.server_base_url"]
-    response = requests.get(url + "packages.yaml")
-    pkgs_dict = yaml.full_load(response.text)
+    warn("Function Depreciated", DeprecationWarning, stacklevel=2)
+
+    # Emulate legacy API without using the problematic yaml file
+    folders = list(dict(crawl_server_dirs()).keys())
+    pkgs_dict = {}
+    for dir_name in folders:
+        p_list = [_parse_package_version(package) for package
+                  in get_server_folder_contents(dir_name)]
+        grouped = dict(group_package_versions(p_list))
+        for p_name in grouped:
+            p_dict = {
+            "latest": _unparse_raw_version(get_latest(grouped[p_name]),
+                                           p_name).strip(".zip"),
+            "path": dir_name.strip("/"),
+            "stable": _unparse_raw_version(get_stable(grouped[p_name]),
+                                           p_name).strip(".zip"),
+            }
+            pkgs_dict[p_name] = p_dict
 
     return pkgs_dict
 
@@ -45,6 +68,120 @@ def get_server_folder_contents(dir_name: str,
     pkgs = (href.string for href in hrefs)
 
     return pkgs
+
+
+def _get_package_name(package: str) -> str:
+    return package.split(".", maxsplit=1)[0]
+
+
+def _parse_raw_version(raw_version: str) -> str:
+    """Catch initial package version which has no date info
+
+    Set initial package version to basically "minus infinity".
+    """
+    if raw_version == "zip":
+        return str(date(1, 1, 1))
+    return raw_version.strip(".zip")
+
+
+def _unparse_raw_version(raw_version: str, package_name: str) -> str:
+    """Turn version string back into full zip folder name
+    
+    If initial version was set with `_parse_raw_version`, revert that.
+    """
+    if raw_version == str(date(1, 1, 1)):
+        return f"{package_name}.zip"
+    return f"{package_name}.{raw_version}.zip"
+
+
+def _parse_package_version(package: str) -> Tuple[str, str]:
+    p_name, p_version = package.split(".", maxsplit=1)
+    return p_name, _parse_raw_version(p_version)
+
+
+def _is_stable(package_version: str) -> bool:
+    return not package_version.endswith("dev")
+
+
+def get_stable(versions: Iterable[str]) -> str:
+    """Return the most recent stable (not "dev") version."""
+    return max(version for version in versions if _is_stable(version))
+
+
+def get_latest(versions: Iterable[str]) -> str:
+    """Return the most recent version (stable or dev)."""
+    return max(versions)
+
+
+def get_all_stable(version_groups: GrpVerType) -> Iterator[Tuple[str, str]]:
+    """
+    Yield the most recent version (stable or dev) of each package.
+
+    Parameters
+    ----------
+    version_groups : Mapping[str, Iterable[str]]
+        DESCRIPTION.
+
+    Yields
+    ------
+    Iterator[Tuple[str, str]]
+        Iterator of package name - latest stable version pairs.
+
+    """
+    for package_name, versions in version_groups.items():
+        yield (package_name, get_stable(versions))
+
+
+def get_all_latest(version_groups: GrpVerType) -> Iterator[Tuple[str, str]]:
+    """
+    Yield the most recent stable (not "dev") version of each package.
+
+    Parameters
+    ----------
+    version_groups : Mapping[str, Iterable[str]]
+        DESCRIPTION.
+
+    Yields
+    ------
+    Iterator[Tuple[str, str]]
+        Iterator of package name - latest version pairs.
+
+    """
+    for package_name, versions in version_groups.items():
+        yield (package_name, get_latest(versions))
+
+
+def group_package_versions(all_packages: Iterable[Tuple[str, str]]) -> GrpItrType:
+    """Group different versions of packages by package name"""
+    version_groups = groupby_transform(sorted(all_packages),
+                                       keyfunc=first,
+                                       valuefunc=last,
+                                       reducefunc=list)
+    return version_groups
+
+
+def crawl_server_dirs() -> Iterator[Tuple[str, Set[str]]]:
+    """Search all folders on server for .zip files"""
+    for dir_name in get_server_folder_contents("", "/"):
+        logging.info("Searching folder '%s'", dir_name)
+        try:
+            p_dir = get_server_folder_package_names(dir_name)
+        except ValueError as err:
+            logging.info(err)
+            continue
+        logging.info("Found packages %s.", p_dir)
+        yield dir_name, p_dir
+
+
+def get_all_package_versions() -> Dict[str, List[str]]:
+    """Gather all versions for all packages present in any folder on server"""
+    grouped = {}
+    folders = list(dict(crawl_server_dirs()).keys())
+    for dir_name in folders:
+        p_list = [_parse_package_version(package) for package
+                  in get_server_folder_contents(dir_name)]
+        grouped.update(group_package_versions(p_list))
+    return grouped
 
 
 def get_server_folder_package_names(dir_name: str) -> Set[str]:
@@ -127,16 +264,19 @@ def list_packages(pkg_name: Optional[str] = None) -> List[str]:
         list_packages("Armazones")
 
     """
-    pkgs_dict = get_server_package_list()
+    all_grouped = get_all_package_versions()
 
     if pkg_name is None:
-        pkg_names = list(pkgs_dict.keys())
-    elif pkg_name in pkgs_dict:
-        path = pkgs_dict[pkg_name]["path"]
-        pkgs = get_server_folder_contents(path)
-        pkg_names = [pkg for pkg in pkgs if pkg_name in pkg]
+        # Return all packages with any stable version
+        all_stable = list(dict(get_all_stable(all_grouped)).keys())
+        return all_stable
 
-    return pkg_names
+    if not pkg_name in all_grouped:
+        raise ValueError(f"Package name {pkg_name} not found on server.")
+
+    p_versions = [_unparse_raw_version(version, pkg_name)
+                  for version in all_grouped[pkg_name]]
+    return p_versions
 
 
 def download_packages(pkg_names: Union[Iterable[str], str],
