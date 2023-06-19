@@ -8,6 +8,7 @@ import os
 import urllib.request
 import zipfile
 import logging
+import time
 from urllib.error import ContentTooShortError
 
 from urllib3.exceptions import HTTPError
@@ -57,6 +58,7 @@ def download_file_with_retry(url: str, cache: bool = False) -> str:
         try:
             return download_file(url, cache=cache)
         except ContentTooShortError:
+            time.sleep(4 - countdown)
             countdown -= 1
 
 
