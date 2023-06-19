@@ -254,8 +254,16 @@ class SpectralTraceList(Effect):
             inhdul = hdulist
 
         # Crude attempt to get a useful wavelength range
+        # Problematic because different instruments use different
+        # keywords for the filter... We try to make it work for METIS
+        # and MICADO for the time being.
+        try:
+            filter_name = from_currsys("!OBS.filter_name")
+        except ValueError:
+            filter_name = from_currsys("!OBS.filter_name_fw1")
+
         filtcurve = FilterCurve(
-            filter_name=from_currsys("!OBS.filter_name_fw1"),
+            filter_name=filter_name,
             filename_format=from_currsys("!INST.filter_file_format"))
         filtwaves = filtcurve.table['wavelength']
         filtwave = filtwaves[filtcurve.table['transmission'] > 0.01]
@@ -287,8 +295,8 @@ class SpectralTraceList(Effect):
 
         pdu = fits.PrimaryHDU()
         pdu.header['FILETYPE'] = "Rectified spectra"
-        pdu.header['INSTRUME'] = inhdul[0].header['HIERARCH ESO OBS INSTRUME']
-        pdu.header['FILTER'] = from_currsys("!OBS.filter_name_fw1")
+        #pdu.header['INSTRUME'] = inhdul[0].header['HIERARCH ESO OBS INSTRUME']
+        #pdu.header['FILTER'] = from_currsys("!OBS.filter_name_fw1")
         outhdul = fits.HDUList([pdu])
 
         for i, trace_id in enumerate(self.spectral_traces):

@@ -291,7 +291,8 @@ class SpectralTrace:
         The WCS can also be set up via the following keywords:
 
         bin_width : float [um]
-           The spectral bin width.
+           The spectral bin width. This is best computed automatically from the
+           spectral dispersion of the trace.
         wave_min, wave_max : float [um]
            Limits of the wavelength range to extract. The default is the
            the full range on which the `SpectralTrace` is defined. This may
@@ -317,7 +318,7 @@ class SpectralTrace:
         bin_width = kwargs.get("bin_width", None)
         if bin_width is None:
             self._set_dispersion(wave_min, wave_max)
-            bin_width = self.dlam_per_pix.y.min()
+            bin_width = np.abs(self.dlam_per_pix.y).min()
         logging.info("   Bin width %.02g um", bin_width)
 
         pixscale = from_currsys(self.meta['pixel_scale'])
