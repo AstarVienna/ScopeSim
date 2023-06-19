@@ -290,8 +290,13 @@ class SpectralTraceList(Effect):
             logging.info("Computing interpolation functions")
             interps = make_image_interpolations(hdulist)
 
-        outhdul = fits.HDUList()  # needs a primary DU
-        for trace_id in self.spectral_traces:
+        pdu = fits.PrimaryHDU()
+        pdu.header['FILETYPE'] = "Rectified spectra"
+        pdu.header['INSTRUME'] = inhdul[0].header['HIERARCH ESO OBS INSTRUME']
+        pdu.header['FILTER'] = from_currsys("!OBS.filter_name_fw1")
+        outhdul = fits.HDUList([pdu])
+
+        for i, trace_id in enumerate(self.spectral_traces):
             hdu = self[trace_id].rectify(hdulist,
                                          interps=interps,
                                          bin_width=bin_width,
@@ -299,6 +304,9 @@ class SpectralTraceList(Effect):
                                          wave_min=wave_min, wave_max=wave_max)
             if hdu is not None:   # ..todo: rectify does not do that yet
                 outhdul.append(hdu)
+                outhdul[0].header[f"EXTNAME{i}"] = trace_id
+
+        outhdul[0].header.update(inhdul[0].header)
 
         return outhdul
 
