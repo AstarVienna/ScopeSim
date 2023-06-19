@@ -497,7 +497,7 @@ def download_github_folder(repo_url: str,
     user_interrupt_text = "GitHub download interrupted by User"
     try:
         opener = urllib.request.build_opener()
-        opener.addheaders = [("User-agent', 'Mozilla/5.0")]
+        opener.addheaders = [("User-agent", "Mozilla/5.0")]
         urllib.request.install_opener(opener)
         response = urllib.request.urlretrieve(api_url)
     except KeyboardInterrupt:
