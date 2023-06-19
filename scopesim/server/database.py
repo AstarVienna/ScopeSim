@@ -214,15 +214,22 @@ def download_packages(pkg_names: Union[Iterable[str], str],
         pkg_dict = pkgs_dict[pkg_name]
         path = pkg_dict["path"] + "/"
 
-        from_github = False
-        if release in ["stable", "latest"]:
-            zip_name = pkg_dict[release]
-            pkg_url = f"{base_url}{path}/{zip_name}.zip"
-        elif "github" in release:
+        if save_dir is None:
+            save_dir = rc.__config__["!SIM.file.local_packages_path"]
+        save_dir = Path(save_dir)
+        save_dir.mkdir(parents=True, exist_ok=True)
+
+        if "github" in release:
             base_url = "https://github.com/AstarVienna/irdb/tree/"
             github_hash = release.split(":")[-1].split("@")[-1]
             pkg_url = f"{base_url}{github_hash}/{pkg_name}"
-            from_github = True
+            download_github_folder(repo_url=pkg_url, output_dir=save_dir)
+            save_paths.append(save_dir.absolute())
+            continue
+
+        if release in ["stable", "latest"]:
+            zip_name = pkg_dict[release]
+            pkg_url = f"{base_url}{path}/{zip_name}.zip"
         else:
             zip_name = f"{pkg_name}.{release}.zip"
             pkg_variants = list(get_server_folder_contents(path))
@@ -231,28 +238,19 @@ def download_packages(pkg_names: Union[Iterable[str], str],
                                  f"variants: {pkg_variants}")
             pkg_url = f"{base_url}{path}/{zip_name}"
 
-        if save_dir is None:
-            save_dir = rc.__config__["!SIM.file.local_packages_path"]
-        save_dir = Path(save_dir)
-        save_dir.mkdir(parents=True, exist_ok=True)
+        try:
+            if from_cache is None:
+                from_cache = rc.__config__["!SIM.file.use_cached_downloads"]
+            cache_path = download_file(pkg_url, cache=from_cache)
+            save_path = save_dir / f"{pkg_name}.zip"
+            file_path = shutil.copy2(cache_path, str(save_path))
 
-        if not from_github:
-            try:
-                if from_cache is None:
-                    from_cache = rc.__config__["!SIM.file.use_cached_downloads"]
-                cache_path = download_file(pkg_url, cache=from_cache)
-                save_path = save_dir / f"{pkg_name}.zip"
-                file_path = shutil.copy2(cache_path, str(save_path))
+            with zipfile.ZipFile(file_path, "r") as zip_ref:
+                zip_ref.extractall(save_dir)
 
-                with zipfile.ZipFile(file_path, "r") as zip_ref:
-                    zip_ref.extractall(save_dir)
-
-            except (HTTPError, HTTPError3) as error:
-                raise ValueError(f"Unable to find file: "
-                                 "{pkg_url + pkg_name}") from error
-        else:
-            download_github_folder(repo_url=pkg_url, output_dir=save_dir)
-            save_path = save_dir
+        except (HTTPError, HTTPError3) as error:
+            raise ValueError(f"Unable to find file: "
+                             "{pkg_url + pkg_name}") from error
 
         save_paths.append(save_path.absolute())
 
