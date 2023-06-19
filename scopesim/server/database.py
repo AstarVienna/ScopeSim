@@ -8,6 +8,8 @@ import os
 import urllib.request
 import zipfile
 import logging
+from urllib.error import ContentTooShortError
+
 from urllib3.exceptions import HTTPError
 
 import yaml
@@ -16,6 +18,46 @@ import bs4
 from astropy.utils.data import download_file
 
 from scopesim import rc
+
+
+def download_file_with_retry(url: str, cache: bool = False) -> str:
+    """
+    Running the notebooks in the CI would often fail with an error like:
+
+    Traceback (most recent call last):
+      File "[..]/2_multiple_telescopes.py", line 37, in <module>
+        sim.download_packages(["Armazones", "ELT", "MICADO", "MAORY"])
+      File "[..]/scopesim/server/database.py", line 178, in download_packages
+        cache_path = download_file(pkg_url, cache=from_cache)
+      File "[..]/astropy/utils/data.py", line 1532, in download_file
+        raise errors[sources[0]]
+      File "[..]/astropy/utils/data.py", line 1500, in download_file
+        f_name = _download_file_from_source(
+      File "[..]/astropy/utils/data.py", line 1335, in _download_file_from_source
+        raise urllib.error.ContentTooShortError(
+
+    urllib.error.ContentTooShortError: <urlopen error File was supposed to be
+    1450546 bytes but we only got 1450139 bytes. Download failed.>
+    Error: Process completed with exit code 1.
+
+    This wrapper catches the ContentTooShortError and tries again 3 times.
+
+    Parameters
+    ----------
+    url: url to download
+    cache: whether to use cache
+
+    Returns
+    -------
+    local_path : str
+        Returns the local path that the file was download to.
+    """
+    countdown = 3
+    while countdown:
+        try:
+            return download_file(url, cache=cache)
+        except ContentTooShortError:
+            countdown -= 1
 
 
 def get_server_package_list():
@@ -175,7 +217,7 @@ def download_packages(pkg_names, release="stable", save_dir=None, from_cache=Non
                 try:
                     if from_cache is None:
                         from_cache = rc.__config__["!SIM.file.use_cached_downloads"]
-                    cache_path = download_file(pkg_url, cache=from_cache)
+                    cache_path = download_file_with_retry(pkg_url, cache=from_cache)
                     save_path = os.path.join(save_dir, f"{pkg_name}.zip")
                     file_path = shutil.copy2(cache_path, save_path)
 
@@ -364,7 +406,7 @@ def download_example_data(file_path, save_dir=None, url=None, from_cache=None):
         try:
             if from_cache is None:
                 from_cache = rc.__config__["!SIM.file.use_cached_downloads"]
-            cache_path = download_file(url + "example_data/" + file_path,
+            cache_path = download_file_with_retry(url + "example_data/" + file_path,
                                        cache=from_cache)
             save_path = os.path.join(save_dir, os.path.basename(file_path))
             file_path = shutil.copy2(cache_path, save_path)
