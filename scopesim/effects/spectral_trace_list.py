@@ -195,10 +195,6 @@ class SpectralTraceList(Effect):
                 logging.info("Making cube")
                 obj.cube = obj.make_cube_hdu()
 
-            # ..todo: obj will be changed to a single one covering the full field of view
-            # covered by the image slicer (28 slices for LMS; for LSS still only a single slit)
-            # We need a loop over spectral_traces that chops up obj into the single-slice fov before
-            # calling map_spectra...
             trace_id = obj.meta["trace_id"]
             spt = self.spectral_traces[trace_id]
             obj.hdu = spt.map_spectra_to_focal_plane(obj)
@@ -264,7 +260,7 @@ class SpectralTraceList(Effect):
         filtwaves = filtcurve.table['wavelength']
         filtwave = filtwaves[filtcurve.table['transmission'] > 0.01]
         wave_min, wave_max = min(filtwave), max(filtwave)
-        logging.info("Extracted wavelength range: %.02f .. %.02f um",
+        logging.info("Full wavelength range: %.02f .. %.02f um",
                      wave_min, wave_max)
 
         if xi_min is None or xi_max is None:
@@ -282,9 +278,8 @@ class SpectralTraceList(Effect):
                 """)
                 return None
 
-        bin_width = kwargs.get(
-            "bin_width",
-            from_currsys(self.meta["spectral_bin_width"]))
+
+        bin_width = kwargs.get("bin_width", None)
 
         if interps is None:
             logging.info("Computing interpolation functions")
@@ -300,11 +295,11 @@ class SpectralTraceList(Effect):
             hdu = self[trace_id].rectify(hdulist,
                                          interps=interps,
                                          bin_width=bin_width,
-                                         xi_min=xi_min, x_max=xi_max,
+                                         xi_min=xi_min, xi_max=xi_max,
                                          wave_min=wave_min, wave_max=wave_max)
             if hdu is not None:   # ..todo: rectify does not do that yet
                 outhdul.append(hdu)
-                outhdul[0].header[f"EXTNAME{i}"] = trace_id
+                outhdul[0].header[f"EXTNAME{i+1}"] = trace_id
 
         outhdul[0].header.update(inhdul[0].header)
 

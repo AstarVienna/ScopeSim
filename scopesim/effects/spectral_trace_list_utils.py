@@ -202,19 +202,7 @@ class SpectralTrace:
         xmin_mm, ymin_mm = fpa_wcsd.all_pix2world(xmin, ymin, 0)
         xmax_mm, ymax_mm = fpa_wcsd.all_pix2world(xmax, ymax, 0)
 
-        # Computation of dispersion dlam_per_pix along xi=0
-        # ..todo: This may have to be generalised - xi=0 is at the centre of METIS slits
-        #         and the short MICADO slit.
-        xi = np.array([0] * 1001)
-        lam = np.linspace(wave_min, wave_max, 1001)
-        x_mm = self.xilam2x(xi, lam)
-        y_mm = self.xilam2y(xi, lam)
-        if self.dispersion_axis == "x":
-            dlam_grad = self.xy2lam.gradient()[0]  # dlam_by_dx
-        else:
-            dlam_grad = self.xy2lam.gradient()[1]  # dlam_by_dy
-        self.dlam_per_pix = interp1d(lam, dlam_grad(x_mm, y_mm) * pixsize,
-                                     fill_value="extrapolate")
+        self._set_dispersion(wave_min, wave_max, pixsize=pixsize)
         try:
             xilam = XiLamImage(fov, self.dlam_per_pix)
             self._xilamimg = xilam   # ..todo: remove or make available with a debug flag?
@@ -313,10 +301,7 @@ class SpectralTrace:
            the header of the hdulist, but this is not yet provided by scopesim
         """
         logging.info("Rectifying %s", self.trace_id)
-        # ..todo: build wcs if not provided
-        bin_width = kwargs.get(
-            "bin_width",
-            from_currsys(self.meta["spectral_bin_width"]))
+
         wave_min = kwargs.get("wave_min",
                               self.wave_min)
         wave_max = kwargs.get("wave_max",
@@ -328,13 +313,30 @@ class SpectralTrace:
         wave_max = min(wave_max, self.wave_max)
         logging.info("   %.02f .. %.02f um", wave_min, wave_max)
 
+        # bin_width is taken as the minimum dispersion of the trace
+        bin_width = kwargs.get("bin_width", None)
+        if bin_width is None:
+            self._set_dispersion(wave_min, wave_max)
+            bin_width = self.dlam_per_pix.y.min()
+        logging.info("   Bin width %.02g um", bin_width)
+
         pixscale = from_currsys(self.meta['pixel_scale'])
 
         # Temporary solution to get slit length
-        xi_min = kwargs.get("xi_min",
-                            hdulist[0].header["HIERARCH INS SLIT XIMIN"])
-        xi_max = kwargs.get("xi_max",
-                            hdulist[0].header["HIERARCH INS SLIT XIMAX"])
+        xi_min = kwargs.get("xi_min", None)
+        if xi_min is None:
+            try:
+                xi_min = hdulist[0].header["HIERARCH INS SLIT XIMIN"]
+            except KeyError:
+                logging.error("xi_min not found")
+                return None
+        xi_max = kwargs.get("xi_max", None)
+        if xi_max is None:
+            try:
+                xi_max = hdulist[0].header["HIERARCH INS SLIT XIMAX"]
+            except KeyError:
+                logging.error("xi_max not found")
+                return None
 
         if wcs is None:
             wcs = WCS(naxis=2)
@@ -520,6 +522,26 @@ class SpectralTrace:
     def trace_id(self):
         """Return the name of the trace"""
         return self.meta['trace_id']
+
+    def _set_dispersion(self, wave_min, wave_max, pixsize=None):
+        """Computation of dispersion dlam_per_pix along xi=0
+        """
+        #..todo: This may have to be generalised - xi=0 is at the centre
+        #of METIS slits and the short MICADO slit.
+
+        xi = np.array([0] * 1001)
+        lam = np.linspace(wave_min, wave_max, 1001)
+        x_mm = self.xilam2x(xi, lam)
+        y_mm = self.xilam2y(xi, lam)
+        if self.dispersion_axis == "x":
+            dlam_grad = self.xy2lam.gradient()[0]  # dlam_by_dx
+        else:
+            dlam_grad = self.xy2lam.gradient()[1]  # dlam_by_dy
+        pixsize = (from_currsys(self.meta['pixel_scale']) /
+                   from_currsys(self.meta['plate_scale']))
+        self.dlam_per_pix = interp1d(lam,
+                                     dlam_grad(x_mm, y_mm) * pixsize,
+                                     fill_value="extrapolate")
 
     def __repr__(self):
         msg = (f"<SpectralTrace> \"{self.meta['trace_id']}\" : "
