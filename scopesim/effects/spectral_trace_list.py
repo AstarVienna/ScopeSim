@@ -14,6 +14,7 @@ from astropy.io import fits
 from astropy.table import Table
 
 from .effects import Effect
+from .ter_curves import FilterCurve
 from .spectral_trace_list_utils import SpectralTrace, make_image_interpolations
 from ..utils import from_currsys, check_keys
 from ..optics.image_plane_utils import header_from_list_of_xy
@@ -227,7 +228,8 @@ class SpectralTraceList(Effect):
 
         return hdr
 
-    def rectify_traces(self, hdulist):
+    def rectify_traces(self, hdulist, xi_min=None, xi_max=None, interps=None,
+                       **kwargs):
         """Create rectified 2D spectra for all traces in the list
 
         This method creates an HDU list with one extension per spectral
@@ -239,18 +241,67 @@ class SpectralTraceList(Effect):
         Parameters
         ----------
         hdulist : str or fits.HDUList
+           The result of scopesim readout()
+        xi_min, xi_max : float [arcsec]
+           Spatial limits of the slit on the sky. This should be taken
+           from the header of the hdulist, but this is not yet provided by
+           scopesim. For the time being, these limits *must* be provided by
+           the user.
+        interps :  list of interpolation functions
+           If provided, there must be one for each image extension in `hdulist`.
+           The functions go from pixels to the images and can be created with,
+           e.g., RectBivariateSpline.
         """
         try:
             inhdul = fits.open(hdulist)
         except TypeError:
             inhdul = hdulist
 
-        interps = make_image_interpolations(hdulist)
+        # Crude attempt to get a useful wavelength range
+        filtcurve = FilterCurve(
+            filter_name=from_currsys("!OBS.filter_name_fw1"),
+            filename_format=from_currsys("!INST.filter_file_format"))
+        filtwaves = filtcurve.table['wavelength']
+        filtwave = filtwaves[filtcurve.table['transmission'] > 0.01]
+        wave_min, wave_max = min(filtwave), max(filtwave)
+        logging.info("Extracted wavelength range: %.02f .. %.02f um",
+                     wave_min, wave_max)
+
+        if xi_min is None or xi_max is None:
+            try:
+                xi_min = inhdul[0].header["HIERARCH INS SLIT XIMIN"]
+                xi_max = inhdul[0].header["HIERARCH INS SLIT XIMAX"]
+                logging.info(
+                    "Slit limits taken from header: %.02f .. %.02f arcsec",
+                    xi_min, xi_max)
+            except KeyError:
+                logging.error("""
+                Spatial slit limits (in arcsec) must be provided:
+                - either as method parameters xi_min and xi_max
+                - or as header keywords HIERARCH INS SLIT XIMIN/XIMAX
+                """)
+                return None
+
+        bin_width = kwargs.get(
+            "bin_width",
+            from_currsys(self.meta["spectral_bin_width"]))
+
+        if interps is None:
+            logging.info("Computing interpolation functions")
+            interps = make_image_interpolations(hdulist)
+
         outhdul = fits.HDUList()  # needs a primary DU
-        for trace in self.spectral_traces:
-            hdu = trace.rectify(interps=interps)
+        for trace_id in self.spectral_traces:
+            hdu = self[trace_id].rectify(hdulist,
+                                         interps=interps,
+                                         bin_width=bin_width,
+                                         xi_min=xi_min, x_max=xi_max,
+                                         wave_min=wave_min, wave_max=wave_max)
             if hdu is not None:   # ..todo: rectify does not do that yet
                 outhdul.append(hdu)
+
+        return outhdul
+
 
     def rectify_cube(self, hdulist):
         """Rectify traces and combine into a cube"""

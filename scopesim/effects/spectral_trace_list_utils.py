@@ -285,7 +285,7 @@ class SpectralTrace:
         image_hdu = fits.ImageHDU(header=img_header, data=image)
         return image_hdu
 
-    def rectify_trace(self, hdulist, interps=None, wcs=None, **kwargs):
+    def rectify(self, hdulist, interps=None, wcs=None, **kwargs):
         """Create 2D spectrum for a trace
 
         Parameters
@@ -310,9 +310,9 @@ class SpectralTrace:
            extend significantly beyond the filter window.
         xi_min, xi_max : float [arcsec]
            Spatial limits of the slit on the sky. This should be taken from
-           the header of the hdulist, but is not yet provided by scopesim
+           the header of the hdulist, but this is not yet provided by scopesim
         """
-
+        logging.info("Rectifying %s", self.trace_id)
         # ..todo: build wcs if not provided
         bin_width = kwargs.get(
             "bin_width",
@@ -322,7 +322,11 @@ class SpectralTrace:
         wave_max = kwargs.get("wave_max",
                               self.wave_max)
         if wave_max < self.wave_min or wave_min > self.wave_max:
+            logging.info("   Outside filter range")
             return None
+        wave_min = max(wave_min, self.wave_min)
+        wave_max = min(wave_max, self.wave_max)
+        logging.info("   %.02f .. %.02f um", wave_min, wave_max)
 
         pixscale = from_currsys(self.meta['pixel_scale'])
 
@@ -345,8 +349,6 @@ class SpectralTrace:
         nlam = int((wave_max - wave_min) / bin_width) + 1
         nxi = int((xi_max - xi_min) / pixscale) + 1
 
-        print(wcs)
-
         # Create interpolation functions if not provided
         if interps is None:
             logging.info("Computing image interpolations")
@@ -359,9 +361,6 @@ class SpectralTrace:
 
         # Make sure that we do have microns
         Lam = Lam * u.Unit(wcs.wcs.cunit[0]).to(u.um)
-
-        print("lambda:", Lam.min(), Lam.max())
-        print("xi:    ", Xi.min(), Xi.max())
 
         # Convert Xi, Lam to focal plane units
         Xarr = self.xilam2x(Xi, Lam)
