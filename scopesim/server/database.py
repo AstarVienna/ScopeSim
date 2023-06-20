@@ -5,30 +5,39 @@ import json
 import re
 import shutil
 import urllib.request
-import zipfile
+from zipfile import ZipFile
 import logging
 from datetime import date
 from warnings import warn
 from pathlib import Path
 from typing import Optional, Union, List, Tuple, Set, Dict
 from collections.abc import Iterator, Iterable, Mapping
-
-from datetime import date
-from more_itertools import first, last, groupby_transform
+from shutil import get_terminal_size
 
 from urllib.error import HTTPError
 from urllib3.exceptions import HTTPError as HTTPError3
+from more_itertools import first, last, groupby_transform
 
-import yaml
 import requests
+from requests.packages.urllib3.util.retry import Retry
+from requests.adapters import HTTPAdapter
+from requests_cache import CachedSession
 import bs4
 from astropy.utils.data import download_file
+from tqdm import tqdm
+# from tqdm.contrib.logging import logging_redirect_tqdm
 
 from scopesim import rc
 
 
 GrpVerType = Mapping[str, Iterable[str]]
 GrpItrType = Iterator[Tuple[str, List[str]]]
+
+
+width, _ = get_terminal_size((50, 20))
+width = int(.8 * width)
+bar_width = max(width - 50, 10)
+tqdm_fmt = f"{{l_bar}}{{bar:{bar_width}}}{{r_bar}}{{bar:-{bar_width}b}}"
 
 
 def get_server_package_list():
@@ -79,7 +88,7 @@ def _parse_raw_version(raw_version: str) -> str:
 
     Set initial package version to basically "minus infinity".
     """
-    if raw_version == "zip":
+    if raw_version in ("", "zip"):
         return str(date(1, 1, 1))
     return raw_version.strip(".zip")
 
@@ -184,6 +193,13 @@ def get_all_package_versions() -> Dict[str, List[str]]:
     return grouped
 
 
+def get_package_folders() -> Dict[str, str]:
+    folder_dict = {pkg: path.strip("/")
+                   for path, pkgs in dict(crawl_server_dirs()).items()
+                   for pkg in pkgs}
+    return folder_dict
+
+
 def get_server_folder_package_names(dir_name: str) -> Set[str]:
     """
     Retrieve all unique package names present on server in `dir_name` folder.
@@ -279,6 +295,36 @@ def list_packages(pkg_name: Optional[str] = None) -> List[str]:
     return p_versions
 
 
+def _create_session(cached: bool = False, cache_name: str = ""):
+    if cached:
+        return CachedSession(cache_name)
+    return requests.Session()
+
+
+def _handle_download(response, save_path: Path, pkg_name: str,
+                     padlen: int, chunk_size: int = 128) -> None:
+    try:
+        with tqdm.wrapattr(save_path.open("wb"), "write", miniters=1,
+                           total=int(response.headers.get("content-length", 0)),
+                           desc=f"Downloading {pkg_name:<{padlen}}",
+                           bar_format=tqdm_fmt) as file:
+            for chunk in response.iter_content(chunk_size=chunk_size):
+                file.write(chunk)
+    except Exception as error:
+        raise error
+    finally:
+        file.close()
+
+
+def _handle_unzipping(save_path: Path, pkg_name: str, padlen: int) -> None:
+    with ZipFile(save_path, "r") as zip_ref:
+        namelist = zip_ref.namelist()
+        for file in tqdm(iterable=namelist, total=len(namelist),
+                         desc=f"Extracting  {pkg_name:<{padlen}}",
+                         bar_format=tqdm_fmt):
+            zip_ref.extract(member=file)
+
+
 def download_packages(pkg_names: Union[Iterable[str], str],
                       release: str = "stable",
                       save_dir: Optional[str] = None,
@@ -340,19 +386,18 @@ def download_packages(pkg_names: Union[Iterable[str], str],
     """
     base_url = rc.__config__["!SIM.file.server_base_url"]
 
-    pkgs_dict = get_server_package_list()
+    all_versions = get_all_package_versions()
+    folder_dict = get_package_folders()
 
     if isinstance(pkg_names, str):
         pkg_names = [pkg_names]
 
+    padlen = len(max(pkg_names, key=len))
     save_paths = []
     for pkg_name in pkg_names:
-        if pkg_name not in pkgs_dict:
+        if pkg_name not in all_versions:
             raise HTTPError3(f"Unable to find {release} release for package: "
                              f"{base_url + pkg_name}")
-
-        pkg_dict = pkgs_dict[pkg_name]
-        path = pkg_dict["path"] + "/"
 
         if save_dir is None:
             save_dir = rc.__config__["!SIM.file.local_packages_path"]
@@ -367,30 +412,41 @@ def download_packages(pkg_names: Union[Iterable[str], str],
             save_paths.append(save_dir.absolute())
             continue
 
-        if release in ["stable", "latest"]:
-            zip_name = pkg_dict[release]
-            pkg_url = f"{base_url}{path}/{zip_name}.zip"
+        if release == "stable":
+            zip_name = get_stable(all_versions[pkg_name])
+        elif release == "latest":
+            zip_name = get_latest(all_versions[pkg_name])
         else:
-            zip_name = f"{pkg_name}.{release}.zip"
-            pkg_variants = list(get_server_folder_contents(path))
-            if zip_name not in pkg_variants:
-                raise ValueError(f"{zip_name} is not amoung the hosted "
-                                 f"variants: {pkg_variants}")
-            pkg_url = f"{base_url}{path}/{zip_name}"
+            release = _parse_raw_version(release)
+            if release not in all_versions[pkg_name]:
+                msg = (f"Requested version '{release}' of '{pkg_name}' package"
+                       " could not be found on the server. Available versions "
+                       f"are: {all_versions[pkg_name]}")
+                raise ValueError(msg)
+            zip_name = release
+
+        zip_name = _unparse_raw_version(zip_name, pkg_name)
+        pkg_url = f"{base_url}{folder_dict[pkg_name]}/{zip_name}"
 
         try:
             if from_cache is None:
                 from_cache = rc.__config__["!SIM.file.use_cached_downloads"]
-            cache_path = download_file(pkg_url, cache=from_cache)
-            save_path = save_dir / f"{pkg_name}.zip"
-            file_path = shutil.copy2(cache_path, str(save_path))
 
-            with zipfile.ZipFile(file_path, "r") as zip_ref:
-                zip_ref.extractall(save_dir)
+            retry_strategy = Retry(total=5, backoff_factor=2,
+                                   status_forcelist=[429, 500, 501, 502, 503],
+                                   allowed_methods=["GET"])
+            adapter = HTTPAdapter(max_retries=retry_strategy)
+            with _create_session(from_cache, "foo") as session:
+                session.mount("https://", adapter)
+                response = session.get(pkg_url, stream=True)
+
+            save_path = save_dir / f"{pkg_name}.zip"
+            _handle_download(response, save_path, pkg_name, padlen)
+            _handle_unzipping(save_path, pkg_name, padlen)
 
         except (HTTPError, HTTPError3) as error:
-            raise ValueError(f"Unable to find file: "
-                             "{pkg_url + pkg_name}") from error
+            msg = f"Unable to find file: {pkg_url + pkg_name}"
+            raise ValueError(msg) from error
 
         save_paths.append(save_path.absolute())
 
@@ -581,8 +637,8 @@ def download_example_data(file_path: Union[Iterable[str], str],
         save_path = save_dir / file_path.name
         file_path = shutil.copy2(cache_path, str(save_path))
     except (HTTPError, HTTPError3) as error:
-        raise ValueError(f"Unable to find file: "
-                         "{url + 'example_data/' + file_path}") from error
+        msg = f"Unable to find file: {url + 'example_data/' + file_path}"
+        raise ValueError(msg) from error
 
     save_path = save_path.absolute()
     return save_path
