@@ -696,10 +696,9 @@ def download_github_folder(repo_url: str,
         opener.addheaders = [("User-agent", "Mozilla/5.0")]
         urllib.request.install_opener(opener)
         response = urllib.request.urlretrieve(api_url)
-    except KeyboardInterrupt:
-        # when CTRL+C is pressed during the execution of this script
+    except KeyboardInterrupt as error:
         logging.error(user_interrupt_text)
-        raise ValueError(user_interrupt_text)
+        raise error
 
     # Make the base directories for this GitHub folder
     (output_dir / download_dirs).mkdir(parents=True, exist_ok=True)
@@ -724,7 +723,6 @@ def download_github_folder(repo_url: str,
                 urllib.request.urlretrieve(entry["download_url"], str(save_path))
                 logging.info("Downloaded: %s", entry["path"])
 
-            except KeyboardInterrupt:
-                # when CTRL+C is pressed during the execution of this script
+            except KeyboardInterrupt as error:
                 logging.error(user_interrupt_text)
-                raise ValueError(user_interrupt_text)
+                raise error
