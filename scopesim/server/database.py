@@ -295,10 +295,39 @@ def list_packages(pkg_name: Optional[str] = None) -> List[str]:
     return p_versions
 
 
+def _get_zipname(pkg_name: str, release: str, all_versions) -> str:
+    if release == "stable":
+        zip_name = get_stable(all_versions[pkg_name])
+    elif release == "latest":
+        zip_name = get_latest(all_versions[pkg_name])
+    else:
+        release = _parse_raw_version(release)
+        if release not in all_versions[pkg_name]:
+            msg = (f"Requested version '{release}' of '{pkg_name}' package"
+                   " could not be found on the server. Available versions "
+                   f"are: {all_versions[pkg_name]}")
+            raise ValueError(msg)
+        zip_name = release
+    return _unparse_raw_version(zip_name, pkg_name)
+
+
 def _create_session(cached: bool = False, cache_name: str = ""):
     if cached:
         return CachedSession(cache_name)
     return requests.Session()
+
+
+def _initiate_download(pkg_url: str,
+                       cached: bool = False, cache_name: str = "",
+                       total: int = 5, backoff_factor: int = 2):
+    retry_strategy = Retry(total=total, backoff_factor=backoff_factor,
+                           status_forcelist=[429, 500, 501, 502, 503],
+                           allowed_methods=["GET"])
+    adapter = HTTPAdapter(max_retries=retry_strategy)
+    with _create_session(cached, cache_name) as session:
+        session.mount("https://", adapter)
+        response = session.get(pkg_url, stream=True)
+    return response
 
 
 def _handle_download(response, save_path: Path, pkg_name: str,
@@ -412,34 +441,14 @@ def download_packages(pkg_names: Union[Iterable[str], str],
             save_paths.append(save_dir.absolute())
             continue
 
-        if release == "stable":
-            zip_name = get_stable(all_versions[pkg_name])
-        elif release == "latest":
-            zip_name = get_latest(all_versions[pkg_name])
-        else:
-            release = _parse_raw_version(release)
-            if release not in all_versions[pkg_name]:
-                msg = (f"Requested version '{release}' of '{pkg_name}' package"
-                       " could not be found on the server. Available versions "
-                       f"are: {all_versions[pkg_name]}")
-                raise ValueError(msg)
-            zip_name = release
-
-        zip_name = _unparse_raw_version(zip_name, pkg_name)
+        zip_name = _get_zipname(pkg_name, release, all_versions)
         pkg_url = f"{base_url}{folder_dict[pkg_name]}/{zip_name}"
 
         try:
             if from_cache is None:
                 from_cache = rc.__config__["!SIM.file.use_cached_downloads"]
 
-            retry_strategy = Retry(total=5, backoff_factor=2,
-                                   status_forcelist=[429, 500, 501, 502, 503],
-                                   allowed_methods=["GET"])
-            adapter = HTTPAdapter(max_retries=retry_strategy)
-            with _create_session(from_cache, "foo") as session:
-                session.mount("https://", adapter)
-                response = session.get(pkg_url, stream=True)
-
+            response = _initiate_download(pkg_url, from_cache, "test_cache")
             save_path = save_dir / f"{pkg_name}.zip"
             _handle_download(response, save_path, pkg_name, padlen)
             _handle_unzipping(save_path, pkg_name, padlen)
