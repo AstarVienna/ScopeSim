@@ -65,7 +65,7 @@ class TestGetServerFolderContents:
         pkgs = list(db.get_server_folder_contents("locations"))
         assert "Armazones" in pkgs[0]
 
-    def throws_for_wrong_url_server(self):
+    def test_throws_for_wrong_url_server(self):
         original_url = rc.__config__["!SIM.file.server_base_url"]
         rc.__config__["!SIM.file.server_base_url"] = "https://scopesim.univie.ac.at/bogus/"
         with pytest.raises(db.ServerError):
@@ -100,6 +100,10 @@ class TestListPackages:
     def test_lists_only_packages_with_qualifier(self):
         pkgs = db.list_packages("Armazones")
         assert np.all(["Armazones" in pkg for pkg in pkgs])
+
+    def test_throws_for_nonexisting_pkgname(self):
+        with pytest.raises(ValueError):
+            db.list_packages("bogus")
 
 
 class TestDownloadPackage:
