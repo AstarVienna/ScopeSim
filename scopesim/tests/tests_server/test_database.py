@@ -20,10 +20,57 @@ def test_package_list_loads():
     assert "latest" in pkgs["test_package"]
 
 
-def test_get_server_folder_contents():
-    pkgs = list(db.get_server_folder_contents("locations"))
-    assert len(pkgs) > 0
-    assert "Armazones" in pkgs[0]
+def test_get_package_name():
+    pkg_name = db._get_package_name("Packagename.2022-01-01.dev.zip")
+    assert pkg_name == "Packagename"
+
+
+def test_get_all_latest():
+    all_pkg = db.get_all_package_versions()
+    assert dict(db.get_all_latest(all_pkg))["test_package"].endswith(".dev")
+
+
+class TestGetZipname:
+    all_pkg = db.get_all_package_versions()
+
+    def test_gets_stable(self):
+        zipname = db._get_zipname("test_package", "stable", self.all_pkg)
+        assert zipname.startswith("test_package.")
+        assert zipname.endswith(".zip")
+
+    def test_gets_latest(self):
+        zipname = db._get_zipname("test_package", "latest", self.all_pkg)
+        assert zipname.startswith("test_package.")
+        assert zipname.endswith(".dev.zip")
+
+    def test_throws_for_nonexisting_release(self):
+        with pytest.raises(ValueError):
+            db._get_zipname("test_package", "bogus", self.all_pkg)
+
+
+class TestGetServerFolderContents:
+    def test_downloads_locations(self):
+        pkgs = list(db.get_server_folder_contents("locations"))
+        assert len(pkgs) > 0
+
+    def test_downloads_telescopes(self):
+        pkgs = list(db.get_server_folder_contents("telescopes"))
+        assert len(pkgs) > 0
+
+    def test_downloads_instruments(self):
+        pkgs = list(db.get_server_folder_contents("instruments"))
+        assert len(pkgs) > 0
+
+    def test_finds_armazones(self):
+        pkgs = list(db.get_server_folder_contents("locations"))
+        assert "Armazones" in pkgs[0]
+
+    def throws_for_wrong_url_server(self):
+        original_url = rc.__config__["!SIM.file.server_base_url"]
+        rc.__config__["!SIM.file.server_base_url"] = "https://scopesim.univie.ac.at/bogus/"
+        with pytest.raises(db.ServerError):
+            list(db.get_server_folder_contents("locations"))
+        rc.__config__["!SIM.file.server_base_url"] = original_url
 
 
 class TestGetServerElements:
@@ -67,6 +114,7 @@ class TestDownloadPackage:
 
     # This no longer raises, but logs an error. This is intended.
     # TODO: Change test to capture log and assert if error log is present.
+    # Actually, the new single download function should be tested here instead
     # def test_raise_error_when_package_not_found(self):
     #     if sys.version_info.major >= 3:
     #         with pytest.raises(HTTPError):
