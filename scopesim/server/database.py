@@ -47,6 +47,8 @@ tqdm_kwargs = {
 class ServerError(Exception):
     """Some error with the server or connection to the server."""
 
+class PkgNotFoundError(Exception):
+    """Unable to find given package or given release of that package."""
 
 def get_server_package_list():
     warn("Function Depreciated", DeprecationWarning, stacklevel=2)
@@ -81,8 +83,8 @@ def get_server_folder_contents(dir_name: str,
         logging.error(error)
         raise ServerError("Cannot connect to server.") from error
     except Exception as error:
-        logging.error("Unhandled exception occured while accessing server."
-                      f"Attempted URL was: {url}.")
+        logging.error(("Unhandled exception occured while accessing server."
+                      "Attempted URL was: %s."), url)
         logging.error(error)
         raise error
 
@@ -368,6 +370,57 @@ def _handle_unzipping(save_path: Path, save_dir: Path,
             zip_ref.extract(file, save_dir)
 
 
+def _download_single_package(pkg_name: str, release: str, all_versions,
+                             folder_dict: Path, base_url: str, save_dir: Path,
+                             padlen: int, from_cache: bool) -> Path:
+    if pkg_name not in all_versions:
+        raise PkgNotFoundError(f"Unable to find {release} release for "
+                               f"package '{pkg_name}' on server {base_url}.")
+
+    if save_dir is None:
+        save_dir = rc.__config__["!SIM.file.local_packages_path"]
+    save_dir = Path(save_dir)
+    save_dir.mkdir(parents=True, exist_ok=True)
+
+    if "github" in release:
+        base_url = "https://github.com/AstarVienna/irdb/tree/"
+        github_hash = release.split(":")[-1].split("@")[-1]
+        pkg_url = f"{base_url}{github_hash}/{pkg_name}"
+        download_github_folder(repo_url=pkg_url, output_dir=save_dir)
+        return save_dir.absolute()
+
+    zip_name = _get_zipname(pkg_name, release, all_versions)
+    pkg_url = f"{base_url}{folder_dict[pkg_name]}/{zip_name}"
+
+    try:
+        if from_cache is None:
+            from_cache = rc.__config__["!SIM.file.use_cached_downloads"]
+
+        response = _initiate_download(pkg_url, from_cache, "test_cache")
+        save_path = save_dir / f"{pkg_name}.zip"
+        _handle_download(response, save_path, pkg_name, padlen)
+        _handle_unzipping(save_path, save_dir, pkg_name, padlen)
+
+    except HTTPError3 as error:
+        logging.error(error)
+        msg = f"Unable to find file: {pkg_url + pkg_name}"
+        raise ValueError(msg) from error
+    except HTTPError as error:
+        logging.error("urllib (not urllib3) error was raised, this should "
+                      "not happen anymore!")
+        logging.error(error)
+    except requests.exceptions.ConnectionError as error:
+        logging.error(error)
+        raise ServerError("Cannot connect to server.") from error
+    except Exception as error:
+        logging.error(("Unhandled exception occured while accessing server."
+                      "Attempted URL was: %s."), base_url)
+        logging.error(error)
+        raise error
+
+    return save_path.absolute()
+
+
 def download_packages(pkg_names: Union[Iterable[str], str],
                       release: str = "stable",
                       save_dir: Optional[str] = None,
@@ -438,53 +491,16 @@ def download_packages(pkg_names: Union[Iterable[str], str],
     padlen = len(max(pkg_names, key=len))
     save_paths = []
     for pkg_name in pkg_names:
-        if pkg_name not in all_versions:
-            raise HTTPError3(f"Unable to find {release} release for package: "
-                             f"{base_url + pkg_name}")
-
-        if save_dir is None:
-            save_dir = rc.__config__["!SIM.file.local_packages_path"]
-        save_dir = Path(save_dir)
-        save_dir.mkdir(parents=True, exist_ok=True)
-
-        if "github" in release:
-            base_url = "https://github.com/AstarVienna/irdb/tree/"
-            github_hash = release.split(":")[-1].split("@")[-1]
-            pkg_url = f"{base_url}{github_hash}/{pkg_name}"
-            download_github_folder(repo_url=pkg_url, output_dir=save_dir)
-            save_paths.append(save_dir.absolute())
-            continue
-
-        zip_name = _get_zipname(pkg_name, release, all_versions)
-        pkg_url = f"{base_url}{folder_dict[pkg_name]}/{zip_name}"
-
         try:
-            if from_cache is None:
-                from_cache = rc.__config__["!SIM.file.use_cached_downloads"]
-
-            response = _initiate_download(pkg_url, from_cache, "test_cache")
-            save_path = save_dir / f"{pkg_name}.zip"
-            _handle_download(response, save_path, pkg_name, padlen)
-            _handle_unzipping(save_path, save_dir, pkg_name, padlen)
-
-        except HTTPError3 as error:
+            pkg_path = _download_single_package(pkg_name, release, all_versions,
+                                                folder_dict, base_url, save_dir,
+                                                padlen, from_cache)
+        except PkgNotFoundError as error:
+            logging.error("\n")  # needed until tqdm redirect is implemented
             logging.error(error)
-            msg = f"Unable to find file: {pkg_url + pkg_name}"
-            raise ValueError(msg) from error
-        except HTTPError as error:
-            logging.error("urllib (not urllib3) error was raised, this should "
-                          "not happen anymore!")
-            logging.error(error)
-        except requests.exceptions.ConnectionError as error:
-            logging.error(error)
-            raise ServerError("Cannot connect to server.") from error
-        except Exception as error:
-            logging.error("Unhandled exception occured while accessing server."
-                          f"Attempted URL was: {url}.")
-            logging.error(error)
-            raise error
-
-        save_paths.append(save_path.absolute())
+            logging.error("Skipping download of package '%s'", pkg_name)
+            continue
+        save_paths.append(pkg_path)
 
     return save_paths
 
