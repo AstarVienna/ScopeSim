@@ -27,6 +27,7 @@ from tqdm import tqdm
 
 from scopesim import rc
 from .github_utils import download_github_folder
+from .example_data_utils import download_example_data, list_example_data
 
 GrpVerType = Mapping[str, Iterable[str]]
 GrpItrType = Iterator[Tuple[str, List[str]]]
