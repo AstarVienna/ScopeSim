@@ -9,7 +9,9 @@ from datetime import date
 from warnings import warn
 from pathlib import Path
 from typing import Optional, Union, List, Tuple, Set, Dict
-from collections.abc import Iterator, Iterable, Mapping
+# Python 3.8 doesn't yet know these things.......
+# from collections.abc import Iterator, Iterable, Mapping
+from typing import Iterator, Iterable, Mapping
 from shutil import get_terminal_size
 
 from urllib.error import HTTPError
