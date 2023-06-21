@@ -26,6 +26,7 @@ import bs4
 from astropy.utils.data import download_file
 from tqdm import tqdm
 # from tqdm.contrib.logging import logging_redirect_tqdm
+# put with logging_redirect_tqdm(loggers=all_loggers): around tqdm
 
 from scopesim import rc
 
@@ -37,7 +38,14 @@ GrpItrType = Iterator[Tuple[str, List[str]]]
 width, _ = get_terminal_size((50, 20))
 width = int(.8 * width)
 bar_width = max(width - 50, 10)
-tqdm_fmt = f"{{l_bar}}{{bar:{bar_width}}}{{r_bar}}{{bar:-{bar_width}b}}"
+tqdm_kwargs = {
+    "bar_format": f"{{l_bar}}{{bar:{bar_width}}}{{r_bar}}{{bar:-{bar_width}b}}",
+    "colour": "green"
+    }
+
+
+class ServerError(Exception):
+    """Some error with the server or connection to the server."""
 
 
 def get_server_package_list():
@@ -69,8 +77,14 @@ def get_server_folder_contents(dir_name: str,
 
     try:
         result = requests.get(url).content
+    except requests.exceptions.ConnectionError as error:
+        logging.error(error)
+        raise ServerError("Cannot connect to server.") from error
     except Exception as error:
-        raise ValueError(f"URL returned error: {url}") from error
+        logging.error("Unhandled exception occured while accessing server."
+                      f"Attempted URL was: {url}.")
+        logging.error(error)
+        raise error
 
     soup = bs4.BeautifulSoup(result, features="lxml")
     hrefs = soup.find_all("a", href=True, string=re.compile(unique_str))
@@ -333,10 +347,10 @@ def _initiate_download(pkg_url: str,
 def _handle_download(response, save_path: Path, pkg_name: str,
                      padlen: int, chunk_size: int = 128) -> None:
     try:
+        tqdm_kwargs["desc"] = f"Downloading {pkg_name:<{padlen}}"
         with tqdm.wrapattr(save_path.open("wb"), "write", miniters=1,
                            total=int(response.headers.get("content-length", 0)),
-                           desc=f"Downloading {pkg_name:<{padlen}}",
-                           bar_format=tqdm_fmt) as file:
+                           **tqdm_kwargs) as file:
             for chunk in response.iter_content(chunk_size=chunk_size):
                 file.write(chunk)
     except Exception as error:
@@ -345,13 +359,13 @@ def _handle_download(response, save_path: Path, pkg_name: str,
         file.close()
 
 
-def _handle_unzipping(save_path: Path, pkg_name: str, padlen: int) -> None:
+def _handle_unzipping(save_path: Path, save_dir: Path,
+                      pkg_name: str, padlen: int) -> None:
     with ZipFile(save_path, "r") as zip_ref:
         namelist = zip_ref.namelist()
-        for file in tqdm(iterable=namelist, total=len(namelist),
-                         desc=f"Extracting  {pkg_name:<{padlen}}",
-                         bar_format=tqdm_fmt):
-            zip_ref.extract(member=file)
+        tqdm_kwargs["desc"] = f"Extracting  {pkg_name:<{padlen}}"
+        for file in tqdm(iterable=namelist, total=len(namelist), **tqdm_kwargs):
+            zip_ref.extract(file, save_dir)
 
 
 def download_packages(pkg_names: Union[Iterable[str], str],
@@ -451,11 +465,24 @@ def download_packages(pkg_names: Union[Iterable[str], str],
             response = _initiate_download(pkg_url, from_cache, "test_cache")
             save_path = save_dir / f"{pkg_name}.zip"
             _handle_download(response, save_path, pkg_name, padlen)
-            _handle_unzipping(save_path, pkg_name, padlen)
+            _handle_unzipping(save_path, save_dir, pkg_name, padlen)
 
-        except (HTTPError, HTTPError3) as error:
+        except HTTPError3 as error:
+            logging.error(error)
             msg = f"Unable to find file: {pkg_url + pkg_name}"
             raise ValueError(msg) from error
+        except HTTPError as error:
+            logging.error("urllib (not urllib3) error was raised, this should "
+                          "not happen anymore!")
+            logging.error(error)
+        except requests.exceptions.ConnectionError as error:
+            logging.error(error)
+            raise ServerError("Cannot connect to server.") from error
+        except Exception as error:
+            logging.error("Unhandled exception occured while accessing server."
+                          f"Attempted URL was: {url}.")
+            logging.error(error)
+            raise error
 
         save_paths.append(save_path.absolute())
 
