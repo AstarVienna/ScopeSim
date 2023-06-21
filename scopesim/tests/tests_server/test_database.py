@@ -8,6 +8,8 @@ import yaml
 import numpy as np
 
 from scopesim.server import database as db
+from scopesim.server import example_data_utils as dbex
+from scopesim.server import github_utils as dbgh
 from scopesim import rc
 
 
@@ -128,7 +130,7 @@ class TestDownloadGithubFolder:
         with TemporaryDirectory() as tmpdir:
             # tmpdir = "."
             url = "https://github.com/AstarVienna/irdb/tree/dev_master/MICADO"
-            db.download_github_folder(url, output_dir=tmpdir)
+            dbgh.download_github_folder(url, output_dir=tmpdir)
             filename = os.path.join(tmpdir, "MICADO", "default.yaml")
 
             assert os.path.exists(filename)
@@ -136,7 +138,7 @@ class TestDownloadGithubFolder:
     def test_downloads_with_old_commit_hash(self):
         with TemporaryDirectory() as tmpdir:
             url = "https://github.com/AstarVienna/irdb/tree/728761fc76adb548696205139e4e9a4260401dfc/ELT"
-            db.download_github_folder(url, output_dir=tmpdir)
+            dbgh.download_github_folder(url, output_dir=tmpdir)
             filename = os.path.join(tmpdir, "ELT", "EC_sky_25.tbl")
 
             assert os.path.exists(filename)
