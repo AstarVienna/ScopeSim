@@ -78,11 +78,20 @@ def get_server_folder_contents(dir_name: str,
                                unique_str: str = ".zip$") -> Iterator[str]:
     url = rc.__config__["!SIM.file.server_base_url"] + dir_name
 
+    retry_strategy = Retry(total=2,
+                           status_forcelist=[404, 429, 500, 501, 502, 503],
+                           allowed_methods=["GET"])
+    adapter = HTTPAdapter(max_retries=retry_strategy)
+
     try:
-        result = requests.get(url).content
-    except requests.exceptions.ConnectionError as error:
+        with requests.Session() as session:
+            session.mount("https://", adapter)
+            result = session.get(url).content
+    except (requests.exceptions.ConnectionError,
+            requests.exceptions.RetryError) as error:
         logging.error(error)
-        raise ServerError("Cannot connect to server.") from error
+        raise ServerError("Cannot connect to server. "
+                          f"Attempted URL was: {url}.") from error
     except Exception as error:
         logging.error(("Unhandled exception occured while accessing server."
                       "Attempted URL was: %s."), url)
