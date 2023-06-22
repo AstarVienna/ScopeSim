@@ -35,14 +35,15 @@ from .example_data_utils import (download_example_data, list_example_data,
 _GrpVerType = Mapping[str, Iterable[str]]
 _GrpItrType = Iterator[Tuple[str, List[str]]]
 
-
-width, _ = get_terminal_size((50, 20))
-width = int(.8 * width)
-bar_width = max(width - 50, 10)
-tqdm_kwargs = {
-    "bar_format": f"{{l_bar}}{{bar:{bar_width}}}{{r_bar}}{{bar:-{bar_width}b}}",
-    "colour": "green"
-    }
+def _make_tqdm_kwargs(desc: str = ""):
+    width, _ = get_terminal_size((50, 20))
+    bar_width = max(int(.8 * width) - 30 - len(desc), 10)
+    tqdm_kwargs = {
+        "bar_format": f"{{l_bar}}{{bar:{bar_width}}}{{r_bar}}{{bar:-{bar_width}b}}",
+        "colour": "green",
+        "desc": desc
+        }
+    return tqdm_kwargs
 
 
 class ServerError(Exception):
@@ -360,7 +361,7 @@ def _initiate_download(pkg_url: str,
 def _handle_download(response, save_path: Path, pkg_name: str,
                      padlen: int, chunk_size: int = 128) -> None:
     try:
-        tqdm_kwargs["desc"] = f"Downloading {pkg_name:<{padlen}}"
+        tqdm_kwargs = _make_tqdm_kwargs(f"Downloading {pkg_name:<{padlen}}")
         with tqdm.wrapattr(save_path.open("wb"), "write", miniters=1,
                            total=int(response.headers.get("content-length", 0)),
                            **tqdm_kwargs) as file:
@@ -376,7 +377,7 @@ def _handle_unzipping(save_path: Path, save_dir: Path,
                       pkg_name: str, padlen: int) -> None:
     with ZipFile(save_path, "r") as zip_ref:
         namelist = zip_ref.namelist()
-        tqdm_kwargs["desc"] = f"Extracting  {pkg_name:<{padlen}}"
+        tqdm_kwargs = _make_tqdm_kwargs(f"Extracting  {pkg_name:<{padlen}}")
         for file in tqdm(iterable=namelist, total=len(namelist), **tqdm_kwargs):
             zip_ref.extract(file, save_dir)
 
