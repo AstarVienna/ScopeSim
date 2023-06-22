@@ -362,11 +362,12 @@ def _handle_download(response, save_path: Path, pkg_name: str,
                      padlen: int, chunk_size: int = 128) -> None:
     tqdm_kwargs = _make_tqdm_kwargs(f"Downloading {pkg_name:<{padlen}}")
     total = int(response.headers.get("content-length", 0))
-    with (save_path.open("wb") as file_outer,
-          tqdm.wrapattr(file_outer, "write", miniters=1, total=total,
-                        **tqdm_kwargs) as file_inner):
-        for chunk in response.iter_content(chunk_size=chunk_size):
-            file_inner.write(chunk)
+    # Turn this into non-nested double with block in Python 3.9 or 10 (?)
+    with save_path.open("wb") as file_outer:
+        with tqdm.wrapattr(file_outer, "write", miniters=1, total=total,
+                           **tqdm_kwargs) as file_inner:
+            for chunk in response.iter_content(chunk_size=chunk_size):
+                file_inner.write(chunk)
 
 
 def _handle_unzipping(save_path: Path, save_dir: Path,
