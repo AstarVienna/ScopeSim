@@ -490,8 +490,12 @@ def download_packages(pkg_names: Union[Iterable[str], str],
     """
     base_url = rc.__config__["!SIM.file.server_base_url"]
 
+    print("Gathering information from server ...")
+
     all_versions = get_all_package_versions()
     folder_dict = get_package_folders()
+
+    print("Connection successful, starting download ...")
 
     if isinstance(pkg_names, str):
         pkg_names = [pkg_names]
