@@ -32,8 +32,8 @@ from .github_utils import download_github_folder
 from .example_data_utils import (download_example_data, list_example_data,
                                  get_server_elements)
 
-GrpVerType = Mapping[str, Iterable[str]]
-GrpItrType = Iterator[Tuple[str, List[str]]]
+_GrpVerType = Mapping[str, Iterable[str]]
+_GrpItrType = Iterator[Tuple[str, List[str]]]
 
 
 width, _ = get_terminal_size((50, 20))
@@ -148,7 +148,7 @@ def get_latest(versions: Iterable[str]) -> str:
     return max(versions)
 
 
-def get_all_stable(version_groups: GrpVerType) -> Iterator[Tuple[str, str]]:
+def get_all_stable(version_groups: _GrpVerType) -> Iterator[Tuple[str, str]]:
     """
     Yield the most recent version (stable or dev) of each package.
 
@@ -167,7 +167,7 @@ def get_all_stable(version_groups: GrpVerType) -> Iterator[Tuple[str, str]]:
         yield (package_name, get_stable(versions))
 
 
-def get_all_latest(version_groups: GrpVerType) -> Iterator[Tuple[str, str]]:
+def get_all_latest(version_groups: _GrpVerType) -> Iterator[Tuple[str, str]]:
     """
     Yield the most recent stable (not "dev") version of each package.
 
@@ -186,7 +186,7 @@ def get_all_latest(version_groups: GrpVerType) -> Iterator[Tuple[str, str]]:
         yield (package_name, get_latest(versions))
 
 
-def group_package_versions(all_packages: Iterable[Tuple[str, str]]) -> GrpItrType:
+def group_package_versions(all_packages: Iterable[Tuple[str, str]]) -> _GrpItrType:
     """Group different versions of packages by package name"""
     version_groups = groupby_transform(sorted(all_packages),
                                        keyfunc=first,
