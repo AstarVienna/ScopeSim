@@ -360,17 +360,13 @@ def _initiate_download(pkg_url: str,
 
 def _handle_download(response, save_path: Path, pkg_name: str,
                      padlen: int, chunk_size: int = 128) -> None:
-    try:
-        tqdm_kwargs = _make_tqdm_kwargs(f"Downloading {pkg_name:<{padlen}}")
-        with tqdm.wrapattr(save_path.open("wb"), "write", miniters=1,
-                           total=int(response.headers.get("content-length", 0)),
-                           **tqdm_kwargs) as file:
-            for chunk in response.iter_content(chunk_size=chunk_size):
-                file.write(chunk)
-    except Exception as error:
-        raise error
-    finally:
-        file.close()
+    tqdm_kwargs = _make_tqdm_kwargs(f"Downloading {pkg_name:<{padlen}}")
+    total = int(response.headers.get("content-length", 0))
+    with (save_path.open("wb") as file_outer,
+          tqdm.wrapattr(file_outer, "write", miniters=1, total=total,
+                        **tqdm_kwargs) as file_inner):
+        for chunk in response.iter_content(chunk_size=chunk_size):
+            file_inner.write(chunk)
 
 
 def _handle_unzipping(save_path: Path, save_dir: Path,
