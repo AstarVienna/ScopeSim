@@ -68,7 +68,6 @@ def download_github_folder(repo_url: str,
     api_url, download_dirs = create_github_url(repo_url)
 
     # get the contents of the github folder
-    user_interrupt_text = "GitHub download interrupted by User"
     try:
         retry_strategy = Retry(total=3, backoff_factor=2,
                                status_forcelist=HTTP_RETRY_CODES,
@@ -82,9 +81,6 @@ def download_github_folder(repo_url: str,
         logging.error(error)
         raise ServerError("Cannot connect to server. "
                           f"Attempted URL was: {api_url}.") from error
-    except KeyboardInterrupt as error:
-        logging.error(user_interrupt_text)
-        raise error
     except Exception as error:
         logging.error(("Unhandled exception occured while accessing server."
                       "Attempted URL was: %s."), api_url)
@@ -110,6 +106,13 @@ def download_github_folder(repo_url: str,
                                 padlen=0, disable_bar=True)
                 logging.info("Downloaded: %s", entry["path"])
 
-            except KeyboardInterrupt as error:
-                logging.error(user_interrupt_text)
+            except (requests.exceptions.ConnectionError,
+                    requests.exceptions.RetryError) as error:
+                logging.error(error)
+                raise ServerError("Cannot connect to server. "
+                                  f"Attempted URL was: {api_url}.") from error
+            except Exception as error:
+                logging.error(("Unhandled exception occured while accessing "
+                              "server. Attempted URL was: %s."), api_url)
+                logging.error(error)
                 raise error
