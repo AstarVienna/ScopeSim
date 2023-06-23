@@ -12,11 +12,22 @@ Original comment for these functions:
 
 import logging
 import re
-import json
 from pathlib import Path
 from typing import Union
 
-import urllib
+import requests
+from requests.packages.urllib3.util.retry import Retry
+from requests.adapters import HTTPAdapter
+
+from .download_utils import initiate_download, handle_download
+
+
+HTTP_RETRY_CODES = [403, 404, 429, 500, 501, 502, 503]
+
+
+class ServerError(Exception):
+    """Some error with the server or connection to the server."""
+
 
 def create_github_url(url: str) -> None:
     """
@@ -59,19 +70,29 @@ def download_github_folder(repo_url: str,
     # get the contents of the github folder
     user_interrupt_text = "GitHub download interrupted by User"
     try:
-        opener = urllib.request.build_opener()
-        opener.addheaders = [("User-agent", "Mozilla/5.0")]
-        urllib.request.install_opener(opener)
-        response = urllib.request.urlretrieve(api_url)
+        retry_strategy = Retry(total=3, backoff_factor=2,
+                               status_forcelist=HTTP_RETRY_CODES,
+                               allowed_methods=["GET"])
+        adapter = HTTPAdapter(max_retries=retry_strategy)
+        with requests.Session() as session:
+            session.mount("https://", adapter)
+            data = session.get(api_url).json()
+    except (requests.exceptions.ConnectionError,
+            requests.exceptions.RetryError) as error:
+        logging.error(error)
+        raise ServerError("Cannot connect to server. "
+                          f"Attempted URL was: {api_url}.") from error
     except KeyboardInterrupt as error:
         logging.error(user_interrupt_text)
+        raise error
+    except Exception as error:
+        logging.error(("Unhandled exception occured while accessing server."
+                      "Attempted URL was: %s."), api_url)
+        logging.error(error)
         raise error
 
     # Make the base directories for this GitHub folder
     (output_dir / download_dirs).mkdir(parents=True, exist_ok=True)
-
-    with open(response[0], "r") as f:
-        data = json.load(f)
 
     for entry in data:
         # if the entry is a further folder, walk through it
@@ -82,12 +103,11 @@ def download_github_folder(repo_url: str,
         # if the entry is a file, download it
         elif entry["type"] == "file":
             try:
-                opener = urllib.request.build_opener()
-                opener.addheaders = [("User-agent", "Mozilla/5.0")]
-                urllib.request.install_opener(opener)
                 # download the file
                 save_path = output_dir / entry["path"]
-                urllib.request.urlretrieve(entry["download_url"], str(save_path))
+                response = initiate_download(entry["download_url"])
+                handle_download(response, save_path, entry["path"],
+                                padlen=0, disable_bar=True)
                 logging.info("Downloaded: %s", entry["path"])
 
             except KeyboardInterrupt as error:
