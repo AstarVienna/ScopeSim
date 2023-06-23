@@ -35,6 +35,10 @@ from .example_data_utils import (download_example_data, list_example_data,
 _GrpVerType = Mapping[str, Iterable[str]]
 _GrpItrType = Iterator[Tuple[str, List[str]]]
 
+
+HTTP_RETRY_CODES = [403, 404, 429, 500, 501, 502, 503]
+
+
 def _make_tqdm_kwargs(desc: str = ""):
     width, _ = get_terminal_size((50, 20))
     bar_width = max(int(.8 * width) - 30 - len(desc), 10)
@@ -80,7 +84,7 @@ def get_server_folder_contents(dir_name: str,
     url = rc.__config__["!SIM.file.server_base_url"] + dir_name
 
     retry_strategy = Retry(total=2,
-                           status_forcelist=[404, 429, 500, 501, 502, 503],
+                           status_forcelist=HTTP_RETRY_CODES,
                            allowed_methods=["GET"])
     adapter = HTTPAdapter(max_retries=retry_strategy)
 
@@ -349,7 +353,7 @@ def _initiate_download(pkg_url: str,
                        cached: bool = False, cache_name: str = "",
                        total: int = 5, backoff_factor: int = 2):
     retry_strategy = Retry(total=total, backoff_factor=backoff_factor,
-                           status_forcelist=[429, 500, 501, 502, 503],
+                           status_forcelist=HTTP_RETRY_CODES,
                            allowed_methods=["GET"])
     adapter = HTTPAdapter(max_retries=retry_strategy)
     with _create_session(cached, cache_name) as session:
