@@ -3,7 +3,6 @@
 Functions to download instrument packages and example data
 """
 import re
-from zipfile import ZipFile
 import logging
 from datetime import date
 from warnings import warn
@@ -12,7 +11,6 @@ from typing import Optional, Union, List, Tuple, Set, Dict
 # Python 3.8 doesn't yet know these things.......
 # from collections.abc import Iterator, Iterable, Mapping
 from typing import Iterator, Iterable, Mapping
-from shutil import get_terminal_size
 
 from urllib.error import HTTPError
 from urllib3.exceptions import HTTPError as HTTPError3
@@ -21,29 +19,19 @@ from more_itertools import first, last, groupby_transform
 import requests
 from requests.packages.urllib3.util.retry import Retry
 from requests.adapters import HTTPAdapter
-from requests_cache import CachedSession
 import bs4
-from tqdm import tqdm
-# from tqdm.contrib.logging import logging_redirect_tqdm
-# put with logging_redirect_tqdm(loggers=all_loggers): around tqdm
 
 from scopesim import rc
 from .github_utils import download_github_folder
 from .example_data_utils import (download_example_data, list_example_data,
                                  get_server_elements)
+from .download_utils import initiate_download, handle_download, handle_unzipping
 
 _GrpVerType = Mapping[str, Iterable[str]]
 _GrpItrType = Iterator[Tuple[str, List[str]]]
 
-def _make_tqdm_kwargs(desc: str = ""):
-    width, _ = get_terminal_size((50, 20))
-    bar_width = max(int(.8 * width) - 30 - len(desc), 10)
-    tqdm_kwargs = {
-        "bar_format": f"{{l_bar}}{{bar:{bar_width}}}{{r_bar}}{{bar:-{bar_width}b}}",
-        "colour": "green",
-        "desc": desc
-        }
-    return tqdm_kwargs
+
+HTTP_RETRY_CODES = [403, 404, 429, 500, 501, 502, 503]
 
 
 class ServerError(Exception):
@@ -80,7 +68,7 @@ def get_server_folder_contents(dir_name: str,
     url = rc.__config__["!SIM.file.server_base_url"] + dir_name
 
     retry_strategy = Retry(total=2,
-                           status_forcelist=[404, 429, 500, 501, 502, 503],
+                           status_forcelist=HTTP_RETRY_CODES,
                            allowed_methods=["GET"])
     adapter = HTTPAdapter(max_retries=retry_strategy)
 
@@ -339,46 +327,6 @@ def _get_zipname(pkg_name: str, release: str, all_versions) -> str:
     return _unparse_raw_version(zip_name, pkg_name)
 
 
-def _create_session(cached: bool = False, cache_name: str = ""):
-    if cached:
-        return CachedSession(cache_name)
-    return requests.Session()
-
-
-def _initiate_download(pkg_url: str,
-                       cached: bool = False, cache_name: str = "",
-                       total: int = 5, backoff_factor: int = 2):
-    retry_strategy = Retry(total=total, backoff_factor=backoff_factor,
-                           status_forcelist=[429, 500, 501, 502, 503],
-                           allowed_methods=["GET"])
-    adapter = HTTPAdapter(max_retries=retry_strategy)
-    with _create_session(cached, cache_name) as session:
-        session.mount("https://", adapter)
-        response = session.get(pkg_url, stream=True)
-    return response
-
-
-def _handle_download(response, save_path: Path, pkg_name: str,
-                     padlen: int, chunk_size: int = 128) -> None:
-    tqdm_kwargs = _make_tqdm_kwargs(f"Downloading {pkg_name:<{padlen}}")
-    total = int(response.headers.get("content-length", 0))
-    # Turn this into non-nested double with block in Python 3.9 or 10 (?)
-    with save_path.open("wb") as file_outer:
-        with tqdm.wrapattr(file_outer, "write", miniters=1, total=total,
-                           **tqdm_kwargs) as file_inner:
-            for chunk in response.iter_content(chunk_size=chunk_size):
-                file_inner.write(chunk)
-
-
-def _handle_unzipping(save_path: Path, save_dir: Path,
-                      pkg_name: str, padlen: int) -> None:
-    with ZipFile(save_path, "r") as zip_ref:
-        namelist = zip_ref.namelist()
-        tqdm_kwargs = _make_tqdm_kwargs(f"Extracting  {pkg_name:<{padlen}}")
-        for file in tqdm(iterable=namelist, total=len(namelist), **tqdm_kwargs):
-            zip_ref.extract(file, save_dir)
-
-
 def _download_single_package(pkg_name: str, release: str, all_versions,
                              folder_dict: Path, base_url: str, save_dir: Path,
                              padlen: int, from_cache: bool) -> Path:
@@ -405,10 +353,10 @@ def _download_single_package(pkg_name: str, release: str, all_versions,
         if from_cache is None:
             from_cache = rc.__config__["!SIM.file.use_cached_downloads"]
 
-        response = _initiate_download(pkg_url, from_cache, "test_cache")
+        response = initiate_download(pkg_url, from_cache, "test_cache")
         save_path = save_dir / f"{pkg_name}.zip"
-        _handle_download(response, save_path, pkg_name, padlen)
-        _handle_unzipping(save_path, save_dir, pkg_name, padlen)
+        handle_download(response, save_path, pkg_name, padlen)
+        handle_unzipping(save_path, save_dir, pkg_name, padlen)
 
     except HTTPError3 as error:
         logging.error(error)
