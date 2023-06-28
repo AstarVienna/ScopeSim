@@ -273,7 +273,7 @@ def extract_area_from_imagehdu(imagehdu, fov_volume):
     Parameters
     ----------
     imagehdu : fits.ImageHDU
-        The field ImageHDU, either an image of a wavelength [um] cube
+        The field ImageHDU, either an image or a cube with wavelength [um]
     fov_volume : dict
         Contains {"xs": [xmin, xmax], "ys": [ymin, ymax],
                   "waves": [wave_min, wave_max],
@@ -294,7 +294,11 @@ def extract_area_from_imagehdu(imagehdu, fov_volume):
     y0s, y1s = max(min(y_hdu), min(y_fov)), min(max(y_hdu), max(y_fov))
 
     xp, yp = imp_utils.val2pix(hdr, np.array([x0s, x1s]), np.array([y0s, y1s]))
-    (x0p, x1p), (y0p, y1p) = np.round(xp).astype(int), np.round(yp).astype(int)
+    x0p = np.floor(xp[0]).astype(int)
+    x1p = np.ceil(xp[1]).astype(int)
+    y0p = np.floor(yp[0]).astype(int)
+    y1p = np.ceil(yp[1]).astype(int)
+    # (x0p, x1p), (y0p, y1p) = np.round(xp).astype(int), np.round(yp).astype(int)
     if x0p == x1p:
         x1p += 1
     if y0p == y1p:
@@ -331,7 +335,7 @@ def extract_area_from_imagehdu(imagehdu, fov_volume):
         i0p, i1p = np.where(mask)[0][0], np.where(mask)[0][-1]
         f0 = (abs(hdu_waves[i0p] - fov_waves[0] + 0.5 * wdel) % wdel) / wdel    # blue edge
         f1 = (abs(hdu_waves[i1p] - fov_waves[1] - 0.5 * wdel) % wdel) / wdel    # red edge
-        data = imagehdu.data[i0p:i1p+1, y0p:y1p, x0p:x1p]
+        data = imagehdu.data[i0p:i1p+1, y0p:y1p+1, x0p:x1p+1]
         data[0, :, :] *= f0
         if i1p > i0p:
             data[-1, :, :] *= f1
@@ -353,7 +357,7 @@ def extract_area_from_imagehdu(imagehdu, fov_volume):
                         "BUNIT":  hdr["BUNIT"]})
 
     else:
-        data = imagehdu.data[y0p:y1p, x0p:x1p]
+        data = imagehdu.data[y0p:y1p+1, x0p:x1p+1]
         new_hdr["SPEC_REF"] = hdr.get("SPEC_REF")
 
     new_imagehdu = fits.ImageHDU(data=data)
