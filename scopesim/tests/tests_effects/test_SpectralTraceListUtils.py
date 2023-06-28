@@ -17,6 +17,21 @@ class TestSpectralTrace:
         spt = SpectralTrace(trace_tbl)
         assert isinstance(spt, SpectralTrace)
 
+    def test_fails_without_table(self):
+        a_number = 1
+        with pytest.raises(ValueError):
+            SpectralTrace(a_number)
+
+    def test_determines_correct_dispersion_axis_x(self):
+        trace_tbl = tlo.trace_6()
+        spt = SpectralTrace(trace_tbl)
+        assert spt.dispersion_axis == 'x'
+
+    def test_determines_correct_dispersion_axis_y(self):
+        trace_tbl = tlo.trace_5()
+        spt = SpectralTrace(trace_tbl)
+        assert spt.dispersion_axis == 'y'
+
 class TestPowerVec:
     """Test function power_vector()"""
     def test_gives_correct_result(self):
