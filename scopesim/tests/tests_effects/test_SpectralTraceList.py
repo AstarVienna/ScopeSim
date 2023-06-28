@@ -75,3 +75,8 @@ class TestRectification:
         hdulist = fits.HDUList()
         with pytest.raises(NotImplementedError):
             spectral_trace_list.rectify_cube(hdulist)
+
+    #def test_rectify_traces_needs_ximin_and_ximax(self, spectral_trace_list):
+    #    hdulist = fits.HDUList([fits.PrimaryHDU()])
+    #    with pytest.raises(KeyError):
+    #        spectral_trace_list.rectify_traces(hdulist)
