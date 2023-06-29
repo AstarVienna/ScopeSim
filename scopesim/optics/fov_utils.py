@@ -273,7 +273,7 @@ def extract_area_from_imagehdu(imagehdu, fov_volume):
     Parameters
     ----------
     imagehdu : fits.ImageHDU
-        The field ImageHDU, either an image of a wavelength [um] cube
+        The field ImageHDU, either an image or a cube with wavelength [um]
     fov_volume : dict
         Contains {"xs": [xmin, xmax], "ys": [ymin, ymax],
                   "waves": [wave_min, wave_max],
@@ -286,7 +286,7 @@ def extract_area_from_imagehdu(imagehdu, fov_volume):
     """
     hdr = imagehdu.header
     new_hdr = {}
-
+    naxis1, naxis2 = hdr["NAXIS1"], hdr["NAXIS2"]
     x_hdu, y_hdu = imp_utils.calc_footprint(imagehdu)  # field edges in "deg"
     x_fov, y_fov = fov_volume["xs"], fov_volume["ys"]
 
@@ -294,7 +294,11 @@ def extract_area_from_imagehdu(imagehdu, fov_volume):
     y0s, y1s = max(min(y_hdu), min(y_fov)), min(max(y_hdu), max(y_fov))
 
     xp, yp = imp_utils.val2pix(hdr, np.array([x0s, x1s]), np.array([y0s, y1s]))
-    (x0p, x1p), (y0p, y1p) = np.round(xp).astype(int), np.round(yp).astype(int)
+    x0p = max(0, np.floor(xp[0]).astype(int))
+    x1p = min(naxis1, np.ceil(xp[1]).astype(int))
+    y0p = max(0, np.floor(yp[0]).astype(int))
+    y1p = min(naxis2, np.ceil(yp[1]).astype(int))
+    # (x0p, x1p), (y0p, y1p) = np.round(xp).astype(int), np.round(yp).astype(int)
     if x0p == x1p:
         x1p += 1
     if y0p == y1p:
