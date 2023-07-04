@@ -1,25 +1,20 @@
 """Transmission, emissivity, reflection curves"""
-import numpy as np
-from astropy import units as u
 import logging
 from pathlib import Path
 
+import numpy as np
+import skycalc_ipy
+from astropy import units as u
 from astropy.io import fits
 from astropy.table import Table
-from astropy import units as u
 
-from synphot import SourceSpectrum
-from synphot.units import PHOTLAM
-import skycalc_ipy
-
+from .effects import Effect
+from .ter_curves_utils import add_edge_zeros
 from .ter_curves_utils import combine_two_spectra, apply_throughput_to_cube
 from .ter_curves_utils import download_svo_filter, download_svo_filter_list
-from .ter_curves_utils import add_edge_zeros
-from .effects import Effect
-from ..optics.surface import SpectralSurface
-from ..source.source_utils import make_imagehdu_from_table
-from ..source.source import Source
 from ..base_classes import SourceBase, FOVSetupBase
+from ..optics.surface import SpectralSurface
+from ..source.source import Source
 from ..utils import from_currsys, quantify, check_keys, find_file
 
 
