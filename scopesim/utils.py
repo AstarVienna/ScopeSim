@@ -714,10 +714,8 @@ def extract_type_from_unit(unit, unit_type):
         Any base units corresponding to ``unit_type``
 
     """
-
-    unit = unit ** 1
     extracted_units = u.Unit("")
-    for base, power in zip(unit._bases, unit._powers):
+    for base, power in zip(unit.bases, unit.powers):
         if unit_type == (base ** abs(power)).physical_type:
             extracted_units *= base ** power
 
