@@ -742,9 +742,8 @@ def extract_base_from_unit(unit, base_unit):
 
     """
 
-    unit = unit ** 1
     extracted_units = u.Unit("")
-    for base, power in zip(unit._bases, unit._powers):
+    for base, power in zip(unit.bases, unit.powers):
         if base == base_unit:
             extracted_units *= base ** power
 
