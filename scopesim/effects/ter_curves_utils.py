@@ -1,4 +1,3 @@
-import logging
 from pathlib import Path
 
 import numpy as np
@@ -44,6 +43,7 @@ FILTER_DEFAULTS = {"U": "Generic/Bessell.U",
 PATH_HERE = Path(__file__).parent
 PATH_SVO_DATA = PATH_HERE.parent / "data" / "svo"
 
+
 def get_filter_effective_wavelength(filter_name):
     if isinstance(filter_name, str):
         filter_name = from_currsys(filter_name)
@@ -83,6 +83,8 @@ def download_svo_filter(filter_name, return_style="synphot"):
         Astronomical filter object.
 
     """
+    # The SVO is only accessible over http, not over https.
+    # noinspection HttpUrlsUsage
     url = f"http://svo2.cab.inta-csic.es/theory/fps3/fps.php?ID={filter_name}"
     path = find_file(
         filter_name,
@@ -143,6 +145,8 @@ def download_svo_filter_list(observatory, instrument, short_names=False,
         A list of filter names
 
     """
+    # The SVO is only accessible over http, not over https.
+    # noinspection HttpUrlsUsage
     base_url = "http://svo2.cab.inta-csic.es/theory/fps3/fps.php?"
     url = base_url + f"Facility={observatory}&Instrument={instrument}"
     fn = f"{observatory}/{instrument}"
@@ -182,7 +186,7 @@ def get_filter(filter_name):
     else:
         try:
             filt = download_svo_filter(filter_name)
-        except:
+        except ConnectionError:
             filt = None
 
     return filt
@@ -315,6 +319,7 @@ def scale_spectrum(spectrum, filter_name, amplitude):
 
     return spectrum
 
+
 def apply_throughput_to_cube(cube, thru):
     """
     Apply throughput curve to a spectroscopic cube
@@ -336,6 +341,7 @@ def apply_throughput_to_cube(cube, thru):
     wave_cube = (wave_cube * u.Unit(wcs.wcs.cunit[0])).to(u.AA)
     cube.data *= thru(wave_cube).value[:, None, None]
     return cube
+
 
 def combine_two_spectra(spec_a, spec_b, action, wave_min, wave_max):
     """
@@ -367,7 +373,7 @@ def combine_two_spectra(spec_a, spec_b, action, wave_min, wave_max):
     wave = ([wave_min.value] + list(wave_val[mask]) + [wave_max.value]) * u.AA
     if "mult" in action.lower():
         spec_c = spec_a(wave) * spec_b(wave)
-        ## Diagnostic plots - not for general use
+        # Diagnostic plots - not for general use
         # from matplotlib import pyplot as plt
         # plt.plot(wave, spec_a(wave), label="spec_a")
         # plt.plot(wave, spec_b(wave), label="spec_b")
