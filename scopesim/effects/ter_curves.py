@@ -342,7 +342,7 @@ class SkycalcTERCurve(AtmosphericTERCurve):
 
         try:
             tbl = self.skycalc_conn.get_sky_spectrum(return_type="table")
-        except:
+        except ConnectionError:
             msg = "Could not connect to skycalc server"
             logging.exception(msg)
             raise ValueError(msg)
