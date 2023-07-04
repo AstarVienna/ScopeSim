@@ -186,8 +186,8 @@ def deriv_polynomial2d(poly):
     ----------
     poly : astropy.modeling.models.Polynomial2D
 
-    Output
-    ------
+    Returns
+    -------
     gradient : tuple of Polynomial2d
     """
     import re
