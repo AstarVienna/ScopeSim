@@ -178,6 +178,8 @@ class TERCurve(Effect):
             "x" plots throughput. "t","e","r" plot trans/emission/refl
         wavelength : list, np.ndarray
         ax : matplotlib.Axis
+        new_figure : start a new figure (or add to the existing one)
+        label : the label to use (ignored)
         kwargs
 
         Returns
@@ -275,8 +277,11 @@ class SkycalcTERCurve(AtmosphericTERCurve):
         self.meta.update(kwargs)
 
         self.skycalc_table = None
+        self.skycalc_conn = None
 
         if self.include is True:
+            # Only query the database if the effect is actually included.
+            # Sets skycalc_conn and skycalc_table.
             self.load_skycalc_table()
 
     @property
@@ -593,7 +598,6 @@ class FilterWheel(Effect):
 
         self.table = self.get_table()
 
-
     def apply_to(self, obj, **kwargs):
         """Use apply_to of current filter"""
         return self.current_filter.apply_to(obj, **kwargs)
@@ -809,7 +813,7 @@ class SpanishVOFilterWheel(FilterWheel):
         self.meta.update(kwargs)
 
         obs, inst = self.meta["observatory"], self.meta["instrument"]
-        inc, exc =  self.meta["include_str"], self.meta["exclude_str"]
+        inc, exc = self.meta["include_str"], self.meta["exclude_str"]
         filter_names = download_svo_filter_list(obs, inst, short_names=True,
                                                 include=inc, exclude=exc)
 
