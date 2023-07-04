@@ -231,45 +231,6 @@ def add_keyword(filename, keyword, value, comment="", ext=0):
     f.close()
 
 
-def add_SED_to_scopesim(file_in, file_out=None, wave_units="um"):
-    """
-    Adds the SED given in ``file_in`` to the ScopeSim data directory
-
-    Parameters
-    ----------
-    file_in : str
-        path to the SED file. Can be either FITS or ASCII format with 2 columns
-        Column 1 is the wavelength, column 2 is the flux
-    file_out : str, optional
-        Default is None. The file path to save the ASCII file. If ``None``, the SED
-        is saved to the ScopeSim data directory i.e. to ``rc.__data_dir__``
-    wave_units : str, astropy.Units
-        Units for the wavelength column, either as a string or as astropy units
-        Default is [um]
-
-    """
-
-    path = Path(file_in)
-
-    if file_out is None:
-        if "SED_" not in path.name:
-            file_out = rc.__data_dir__ + f"SED_{path.name}.dat"
-        else:
-            file_out = rc.__data_dir__ + f"{path.name}.dat"
-
-    if path.suffix.lower() == ".fits":
-        data = fits.getdata(file_in)
-        lam, val = data[data.columns[0].name], data[data.columns[1].name]
-    else:
-        lam, val = ioascii.read(file_in)[:2]
-
-    lam = (lam * u.Unit(wave_units)).to(u.um)
-    mask = (lam > 0.3*u.um) * (lam < 5.0*u.um)
-
-    np.savetxt(file_out, np.array((lam[mask], val[mask]), dtype=np.float32).T,
-               header="wavelength    value \n [um]         [flux]")
-
-
 def airmass_to_zenith_dist(airmass):
     """
     returns zenith distance in degrees
