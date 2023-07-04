@@ -14,7 +14,6 @@ import yaml
 import numpy as np
 from astropy import units as u
 from astropy.io import fits
-from astropy.io import ascii as ioascii
 from astropy.table import Column, Table
 
 from . import rc
@@ -129,7 +128,7 @@ def moffat(r, alpha, beta):
     -------
     eta
     """
-    return (beta - 1)/(np.pi * alpha**2) * (1 + (r/alpha)**2)**(-beta)
+    return (beta - 1) / (np.pi * alpha ** 2) * (1 + (r / alpha) ** 2) ** (-beta)
 
 
 def poissonify(arr):
@@ -172,12 +171,14 @@ def nearest(arr, val):
 
     return np.argmin(abs(arr - val))
 
+
 def power_vector(val, degree):
     """Return the vector of powers of val up to a degree"""
     if degree < 0 or not isinstance(degree, int):
         raise ValueError("degree must be a positive integer")
 
-    return np.array([val**exp for exp in range(degree + 1)])
+    return np.array([val ** exp for exp in range(degree + 1)])
+
 
 def deriv_polynomial2d(poly):
     """Derivatives (gradient) of a Polynomial2D model
@@ -202,8 +203,8 @@ def deriv_polynomial2d(poly):
         i = int(match.group(1))
         j = int(match.group(2))
         cij = getattr(poly, pname)
-        pname_x = "c%d_%d" % (i-1, j)
-        pname_y = "c%d_%d" % (i, j-1)
+        pname_x = "c%d_%d" % (i - 1, j)
+        pname_y = "c%d_%d" % (i, j - 1)
         setattr(dpoly_dx, pname_x, i * cij)
         setattr(dpoly_dy, pname_y, j * cij)
 
@@ -268,7 +269,7 @@ def seq(start, stop, step=1):
         increment of the sequence, defaults to 1
 
     """
-    feps = 1e-10     # value used in R seq.default
+    feps = 1e-10  # value used in R seq.default
 
     delta = stop - start
     if delta == 0 and stop == 0:
@@ -309,7 +310,7 @@ def add_mags(mags):
     """
     Returns a combined magnitude for a group of py_objects with ``mags``
     """
-    return -2.5*np.log10((10**(-0.4*np.array(mags))).sum())
+    return -2.5 * np.log10((10 ** (-0.4 * np.array(mags))).sum())
 
 
 def dist_mod_from_distance(d):
@@ -326,7 +327,7 @@ def distance_from_dist_mod(mu):
     d = 10**(1 + mu / 5)
     """
 
-    d = 10**(1 + mu / 5)
+    d = 10 ** (1 + mu / 5)
     return d
 
 
@@ -355,7 +356,7 @@ def telescope_diffraction_limit(aperture_size, wavelength, distance=None):
 
     """
 
-    diff_limit = (((wavelength*u.um)/(aperture_size*u.m))*u.rad).to(u.arcsec).value
+    diff_limit = (((wavelength * u.um) / (aperture_size * u.m)) * u.rad).to(u.arcsec).value
 
     if distance is not None:
         diff_limit *= distance / u.pc.to(u.AU)
@@ -436,7 +437,6 @@ def set_logger_level(which="console", level="ERROR"):
         ["ON", "OFF", "DEBUG", "INFO", "WARN", "ERROR", "CRITICAL"]
 
     """
-
 
     hdlr_name = f"scopesim_{which}_logger"
     level = {"ON": "INFO", "OFF": "CRITICAL"}.get(level.upper(), level)
@@ -519,7 +519,7 @@ def find_file(filename, path=None, silent=False):
                     for trydir in path if trydir is not None]
 
     for fname in trynames:
-        if fname.exists():   # success
+        if fname.exists():  # success
             # strip leading ./
             # Path should take care of this automatically!
             # while fname[:2] == './':
@@ -529,7 +529,6 @@ def find_file(filename, path=None, silent=False):
             # HACK: Turn Path object back into string, because not everything
             #       that depends on this function can handle Path objects (yet)
             return str(fname)
-            
 
     # no file found
     msg = f"File cannot be found: {filename}"
@@ -570,7 +569,7 @@ def airmass2zendist(airmass):
     zenith distance in degrees
     """
 
-    return np.rad2deg(np.arccos(1/airmass))
+    return np.rad2deg(np.arccos(1 / airmass))
 
 
 def convert_table_comments_to_dict(tbl):
@@ -647,8 +646,10 @@ def insert_into_ordereddict(dic, new_entry, pos):
 
 
 def empty_type(x):
-    type_dict = {int: 0, float: 0., bool: False, str: " ",
-                 list: [], tuple: (), dict: {}}
+    type_dict = {
+        int: 0, float: 0., bool: False, str: " ",
+        list: [], tuple: (), dict: {}
+    }
     if "<U" in str(x):
         x = str
 
@@ -713,7 +714,6 @@ def quantify(item, unit):
     return quant
 
 
-
 def extract_type_from_unit(unit, unit_type):
     """
     Extract ``astropy`` physical type from a compound unit
@@ -733,11 +733,11 @@ def extract_type_from_unit(unit, unit_type):
 
     """
 
-    unit = unit**1
+    unit = unit ** 1
     extracted_units = u.Unit("")
     for base, power in zip(unit._bases, unit._powers):
-        if unit_type == (base**abs(power)).physical_type:
-            extracted_units *= base**power
+        if unit_type == (base ** abs(power)).physical_type:
+            extracted_units *= base ** power
 
     new_unit = unit / extracted_units
 
@@ -762,13 +762,13 @@ def extract_base_from_unit(unit, base_unit):
 
     """
 
-    unit = unit**1
+    unit = unit ** 1
     extracted_units = u.Unit("")
     for base, power in zip(unit._bases, unit._powers):
         if base == base_unit:
-            extracted_units *= base**power
+            extracted_units *= base ** power
 
-    new_unit = unit * extracted_units**-1
+    new_unit = unit * extracted_units ** -1
 
     return new_unit, extracted_units
 
@@ -966,9 +966,11 @@ def interp2(x_new, x_orig, y_orig):
     return y_new
 
 
-def write_report(text, filename=None, output=["rst"]):
+def write_report(text, filename=None, output=None):
     """ Writes a report string to file in latex or rst format"""
-    if isinstance(output, str):
+    if output is None:
+        output = ["rst"]
+    elif isinstance(output, str):
         output = [output]
 
     if filename is not None:
@@ -1009,13 +1011,15 @@ def return_latest_github_actions_jobs_status(owner_name="AstarVienna", repo_name
     dic = response.json()
     params_list = []
     for job in dic["jobs"]:
-        params = {"name": job['name'],
-                  "status": job['status'],
-                  "conclusion": job['conclusion'],
-                  "started_at": job['started_at'],
-                  "completed_at": job['completed_at'],
-                  "url": job['html_url'],
-                  "badge_url": None}
+        params = {
+            "name": job['name'],
+            "status": job['status'],
+            "conclusion": job['conclusion'],
+            "started_at": job['started_at'],
+            "completed_at": job['completed_at'],
+            "url": job['html_url'],
+            "badge_url": None
+        }
 
         key = "Python_" + job['name'].split()[-1][:-1]
         value = "passing" if job['conclusion'] == "success" else "failing"
