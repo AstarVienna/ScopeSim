@@ -438,6 +438,7 @@ class FilterCurve(TERCurve):
     @property
     def fwhm(self):
         wave = self.surface.wavelength
+        # noinspection PyProtectedMember
         thru = self.surface._get_ter_property("transmission", fmt="array")
         mask = thru >= 0.5
         if any(mask):
@@ -450,6 +451,7 @@ class FilterCurve(TERCurve):
     @property
     def centre(self):
         wave = self.surface.wavelength
+        # noinspection PyProtectedMember
         thru = self.surface._get_ter_property("transmission", fmt="array")
         num = np.trapz(thru * wave**2, x=wave)
         den = np.trapz(thru * wave, x=wave)
