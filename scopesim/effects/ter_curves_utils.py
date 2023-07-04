@@ -107,6 +107,8 @@ def download_svo_filter(filter_name, return_style="synphot"):
         filt = [wave.value, trans]
     elif return_style == "vo_table":
         filt = tbl
+    else:
+        raise ValueError("return_style %s unknown.", return_style)
 
     return filt
 
@@ -193,6 +195,8 @@ def get_zero_mag_spectrum(system_name="AB"):
         spec = ab_spectrum()
     elif system_name.lower() in ["st", "hst"]:
         spec = st_spectrum()
+    else:
+        raise ValueError("system_name %s is unknown", system_name)
 
     return spec
 
@@ -373,6 +377,8 @@ def combine_two_spectra(spec_a, spec_b, action, wave_min, wave_max):
         # plt.show()
     elif "add" in action.lower():
         spec_c = spec_a(wave) + spec_b(wave)
+    else:
+        raise ValueError("action %s unknown", action)
 
     new_source = SourceSpectrum(Empirical1D, points=wave, lookup_table=spec_c)
     new_source.meta.update(spec_b.meta)
