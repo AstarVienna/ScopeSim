@@ -19,24 +19,6 @@ from astropy.table import Column, Table
 from . import rc
 
 
-def msg(cmds, message, level=3):
-    """
-    Prints a message based on the level of verbosity given in cmds
-
-    Parameters
-    ----------
-    cmds : UserCommands
-        just for the SIM_VERBOSE and SIM_MESSAGE_LEVEL keywords
-    message : str
-        message to be printed
-    level : int, optional
-        all messages with level <= SIM_MESSAGE_LEVEL are printed. I.e. level=5
-        messages are not important, level=1 are very important
-    """
-    if cmds["SIM_VERBOSE"] == "yes" and level <= cmds["SIM_MESSAGE_LEVEL"]:
-        print(message)
-
-
 def unify(x, unit, length=1):
     """
     Convert all types of input to an astropy array/unit pair
@@ -108,7 +90,7 @@ def parallactic_angle(ha, de, lat=-24.589167):
     lat = np.deg2rad(lat)
 
     eta = np.arctan2(np.cos(lat) * np.sin(ha),
-                     np.sin(lat) * np.cos(de) - \
+                     np.sin(lat) * np.cos(de) -
                      np.cos(lat) * np.sin(de) * np.cos(ha))
 
     return np.rad2deg(eta)
