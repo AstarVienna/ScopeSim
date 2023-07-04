@@ -554,9 +554,7 @@ class SpanishVOFilterCurve(FilterCurve):
         kwargs["name"] = kwargs["filter_name"]
         kwargs["svo_id"] = filt_str
 
-        raise_error = kwargs.get("error_on_wrong_name", True)
-        tbl = download_svo_filter(filt_str, return_style="table",
-                                  error_on_wrong_name=raise_error)
+        tbl = download_svo_filter(filt_str, return_style="table")
         super(SpanishVOFilterCurve, self).__init__(table=tbl, **kwargs)
 
 
