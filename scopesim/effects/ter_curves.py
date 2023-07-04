@@ -24,7 +24,7 @@ class TERCurve(Effect):
 
     Must contain a wavelength column, and one or more of the following:
     ``transmission``, ``emissivity``, ``reflection``.
-    Additionally in the header there
+    Additionally, in the header there
     should be the following keywords: wavelength_unit
 
     kwargs that can be passed::
@@ -45,7 +45,7 @@ class TERCurve(Effect):
             wavelength_unit: um
             emission_unit: ph s-1 m-2 um-1
             rescale_emission:
-                filter_name: "Paranal/HAWKI.Ks"
+                filter_name: "Paranal/HAWK.Ks"
                 value: 15.5
                 unit: ABmag
 
@@ -697,10 +697,10 @@ class TopHatFilterWheel(FilterWheel):
     filter_names: list of string
 
     transmissions: list of floats
-        [0..1] Peak transmissions inside the cuttoff limits
+        [0..1] Peak transmissions inside the cutoff limits
 
     wing_transmissions: list of floats
-        [0..1] Wing transmissions outside the cuttoff limits
+        [0..1] Wing transmissions outside the cutoff limits
 
     blue_cutoffs: list of floats
         [um]
@@ -763,7 +763,7 @@ class SpanishVOFilterWheel(FilterWheel):
        This use ``astropy.download_file(..., cache=True)``.
 
     The filter transmission curves probably won't change, but if you notice
-    discrepancies, try clearing the astopy cache::
+    discrepancies, try clearing the astropy cache::
 
         >> from astropy.utils.data import clear_download_cache
         >> clear_download_cache()
@@ -924,7 +924,7 @@ class ADCWheel(Effect):
         return getattr(self.current_adc, item)
 
     def get_table(self):
-        """Create a table of ADCs with maximimum througput"""
+        """Create a table of ADCs with maximum throughput"""
         names = list(self.adcs.keys())
         adcs = self.adcs.values()
         tmax = np.array([adc.data["transmission"].max() for adc in adcs])
