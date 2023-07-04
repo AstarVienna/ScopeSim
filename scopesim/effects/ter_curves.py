@@ -87,6 +87,8 @@ class TERCurve(Effect):
         if self.meta["ignore_wings"]:
             data = add_edge_zeros(data, "wavelength")
         if data is not None:
+            # Assert that get_data() did not give us an image.
+            assert isinstance(data, Table), "TER Curves must be tables."
             self.surface.table = data
             self.surface.table.meta.update(self.meta)
 
@@ -94,6 +96,7 @@ class TERCurve(Effect):
 
     def apply_to(self, obj, **kwargs):
         if isinstance(obj, SourceBase):
+            assert isinstance(obj, Source), "Only Source supported."
             self.meta = from_currsys(self.meta)
             wave_min = quantify(self.meta["wave_min"], u.um).to(u.AA)
             wave_max = quantify(self.meta["wave_max"], u.um).to(u.AA)
@@ -114,6 +117,8 @@ class TERCurve(Effect):
                 obj.append(self.background_source)
 
         if isinstance(obj, FOVSetupBase):
+            from ..optics.fov_manager import FovVolumeList
+            assert isinstance(obj, FovVolumeList), "Only FovVolumeList supported."
             wave = self.surface.throughput.waveset
             thru = self.surface.throughput(wave)
             valid_waves = np.argwhere(thru > 0)
