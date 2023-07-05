@@ -1,6 +1,6 @@
 # This table is used in
 # test_SkycalcTERCurve.py::TestRescalingAndUnitConversion::test_rescaling
-# It is essential that this table goes al the way to 2.500 for the
+# It is essential that this table goes all the way to 2.500 for the
 # test to work properly.
 #
 wavelength      transmission
