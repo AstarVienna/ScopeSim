@@ -384,7 +384,7 @@ def combine_two_spectra(spec_a, spec_b, action, wave_min, wave_max):
     elif "add" in action.lower():
         spec_c = spec_a(wave) + spec_b(wave)
     else:
-        raise ValueError("action %s unknown", action)
+        raise ValueError(f"action {action} unknown")
 
     new_source = SourceSpectrum(Empirical1D, points=wave, lookup_table=spec_c)
     new_source.meta.update(spec_b.meta)
