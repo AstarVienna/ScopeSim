@@ -355,14 +355,15 @@ class SkycalcTERCurve(AtmosphericTERCurve):
             logging.exception(msg)
             raise ValueError(msg)
 
-        # The last row is probably just short of wmax. So just copy
-        # the last row, but then with lam=wmax.
-        tbl_last_row = tbl[-1:].copy()
-        lam_last = tbl_last_row[-1]["lam"] * tbl_last_row["lam"].unit
-        lam_wmax = self.meta["wmax"] * u.Unit(self.meta["wunit"])
-        if lam_last < lam_wmax:
-            tbl_last_row[-1]["lam"] = lam_wmax.to(tbl_last_row["lam"].unit).value
-            tbl = vstack([tbl, tbl_last_row])
+        if "wunit" in self.meta:
+            # The last row is probably just short of wmax. So just copy
+            # the last row, but then with lam=wmax.
+            tbl_last_row = tbl[-1:].copy()
+            lam_last = tbl_last_row[-1]["lam"] * tbl_last_row["lam"].unit
+            lam_wmax = self.meta["wmax"] * u.Unit(self.meta["wunit"])
+            if lam_last < lam_wmax:
+                tbl_last_row[-1]["lam"] = lam_wmax.to(tbl_last_row["lam"].unit).value
+                tbl = vstack([tbl, tbl_last_row])
 
         return tbl
 
