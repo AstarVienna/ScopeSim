@@ -189,7 +189,9 @@ class FovVolumeList(FOVSetupBase):
 
     """
 
-    def __init__(self, initial_volume={}):
+    def __init__(self, initial_volume=None):
+        if initial_volume is None:
+            initial_volume = {}
 
         self.volumes = [{"wave_min": 0.3,
                          "wave_max": 30,

@@ -30,7 +30,7 @@ class OpticsManager:
 
     """
 
-    def __init__(self, yaml_dicts=[], **kwargs):
+    def __init__(self, yaml_dicts=None, **kwargs):
         self.optical_elements = []
         self.meta = {}
         self.meta.update(kwargs)
