@@ -91,4 +91,4 @@ class RadiometryTable:
         return self.surfaces[item]
 
     def __repr__(self):
-        return self.table.__repr__()
+        return f"{self.__class__.__name__}({self.table!r}, **{self.meta})"

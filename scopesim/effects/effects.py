@@ -292,8 +292,7 @@ Meta-data
         """
         Prints basic information on the effect, notably the description
         """
-        name = self.meta.get("name", self.meta.get("filename", "<empty>"))
-        text = f"{type(self).__name__}: \"{name}\""
+        text = str(self)
 
         desc = self.meta.get("description")
         if desc is not None:
@@ -302,10 +301,10 @@ Meta-data
         print(text)
 
     def __repr__(self):
-        return f"{type(self).__name__}: \"{self.display_name}\""
+        return f"{self.__class__.__name__}(**{self.meta!r})"
 
     def __str__(self):
-        return self.__repr__()
+        return f"{self.__class__.__name__}: \"{self.display_name}\""
 
     def __getitem__(self, item):
         if isinstance(item, str) and item.startswith("#"):

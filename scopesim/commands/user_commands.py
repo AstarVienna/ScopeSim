@@ -263,7 +263,7 @@ class UserCommands:
         return self.cmds.__contains__(item)
 
     def __repr__(self):
-        return self.cmds.__repr__()
+        return f"{self.__class__.__name__}(**{self.kwargs!r})"
 
 
 def check_for_updates(package_name):
