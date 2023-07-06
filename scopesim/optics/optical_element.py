@@ -204,10 +204,11 @@ class OpticalElement:
     def properties_str(self):
         prop_str = ""
         max_key_len = max(len(key) for key in self.properties.keys())
+        padlen = max_key_len + 4
         for key in self.properties:
             if key not in {"comments", "changes", "description", "history",
                            "report"}:
-                prop_str += f"    {key.rjust(max_key_len)} : {self.properties[key]}\n"
+                prop_str += f"{key:>{padlen}} : {self.properties[key]}\n"
 
         return prop_str
 

@@ -115,11 +115,12 @@ class Effect(DataContainer):
     def meta_string(self):
         meta_str = ""
         max_key_len = max(len(key) for key in self.meta.keys())
+        padlen = max_key_len + 4
         for key in self.meta:
             if key not in {"comments", "changes", "description", "history",
                            "report_table_caption", "report_plot_caption",
                            "table"}:
-                meta_str += f"    {key.rjust(max_key_len)} : {self.meta[key]}\n"
+                meta_str += f"{key:>{padlen}} : {self.meta[key]}\n"
 
         return meta_str
 
