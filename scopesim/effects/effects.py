@@ -1,12 +1,9 @@
 from pathlib import Path
 
-from astropy.table import Table
-
 from ..effects.data_container import DataContainer
 from .. import base_classes as bc
 from ..utils import from_currsys, write_report
 from ..reports.rst_utils import table_to_rst
-from .. import rc
 
 
 class Effect(DataContainer):
