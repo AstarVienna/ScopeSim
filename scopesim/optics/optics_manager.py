@@ -45,7 +45,7 @@ class OpticsManager:
     def set_derived_parameters(self):
 
         if "!INST.pixel_scale" not in rc.__currsys__:
-            raise ValueError("!INST.pixel_scale is missing from the current"
+            raise ValueError("'!INST.pixel_scale' is missing from the current"
                              "system. Please add this to the instrument (INST)"
                              "properties dict for the system.")
         pixel_scale = rc.__currsys__["!INST.pixel_scale"] * u.arcsec
@@ -82,10 +82,10 @@ class OpticsManager:
 
         """
 
-        if isinstance(yaml_dicts, dict):
+        if not isinstance(yaml_dicts, Sequence):
             yaml_dicts = [yaml_dicts]
-        self.optical_elements += [OpticalElement(dic, **kwargs)
-                                  for dic in yaml_dicts if "effects" in dic]
+        self.optical_elements.extend(OpticalElement(dic, **kwargs)
+                                     for dic in yaml_dicts if "effects" in dic)
 
     def add_effect(self, effect, ext=0):
         """
@@ -176,7 +176,7 @@ class OpticsManager:
         detector_lists = self.detector_setup_effects
         headers = [det_list.image_plane_header for det_list in detector_lists]
 
-        if len(detector_lists) == 0:
+        if not detector_lists:
             raise ValueError(f"No DetectorList objects found. {detector_lists}")
 
         return headers
@@ -314,7 +314,7 @@ Summary of Effects in Optical Elements:
             obj = self.optical_elements[item]
         elif isinstance(item, str):
             # check for hash-string for getting Effect.meta values
-            if item[0] == "#" and "." in item:
+            if item.startswith("#") and "." in item:
                 opt_el_name = item.replace("#", "").split(".")[0]
                 new_item = item.replace(f"{opt_el_name}.", "")
                 obj = self[opt_el_name][new_item]

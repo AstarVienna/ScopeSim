@@ -174,7 +174,7 @@ class OpticalElement:
         elif isinstance(item, int):
             obj = self.effects[item]
         elif isinstance(item, str):
-            if item[0] == "#" and "." in item:
+            if item.startswith("#") and "." in item:
                 eff, meta = item.replace("#", "").split(".")
                 obj = self[eff][f"#{meta}"]
             else:
