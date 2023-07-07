@@ -41,16 +41,18 @@ class SystemDict(MutableMapping):
             if len(new_dict) > 0:
                 self.dic = recursive_update(self.dic, new_dict)
 
-    def __getitem__(self, item):
-        if isinstance(item, str) and item.startswith("!"):
-            # TODO: these should be replaced with item.removeprefix("!")
+    def __getitem__(self, key):
+        if isinstance(key, str) and key.startswith("!"):
+            # TODO: these should be replaced with key.removeprefix("!")
             #       once we can finally drop support for Python 3.8 UwU
-            item_chunks = item[1:].split(".")
+            key_chunks = key[1:].split(".")
             entry = self.dic
-            for item in item_chunks:
-                entry = entry[item]
+            for key in key_chunks:
+                if not isinstance(entry, Mapping):
+                    raise KeyError(key)
+                entry = entry[key]
             return entry
-        return self.dic[item]
+        return self.dic[key]
 
     def __setitem__(self, key, value):
         if isinstance(key, str) and key.startswith("!"):
@@ -66,23 +68,9 @@ class SystemDict(MutableMapping):
         else:
             self.dic[key] = value
 
-    def __delitem__(self, item):
+    def __delitem__(self, key):
         raise NotImplementedError("item deletion is not yet implemented for "
                                   f"{self.__class__.__name__}")
-
-    # def __contains__(self, item):
-          # method is redundant when inheriting from abc
-    #     if isinstance(item, str) and item.startswith("!"):
-    #         # TODO: these should be replaced with item.removeprefix("!")
-    #         #       once we can finally drop support for Python 3.8 UwU
-    #         item_chunks = item[1:].split(".")
-    #         entry = self.dic
-    #         for item in item_chunks:
-    #             if not isinstance(entry, Mapping) or item not in entry:
-    #                 return False
-    #             entry = entry[item]
-    #         return True
-    #     return item in self.dic
 
     def _yield_subkeys(self, key, value):
         for subkey, subvalue in value.items():
@@ -122,8 +110,6 @@ class SystemDict(MutableMapping):
         return f"{self.__class__.__name__}({self.dic!r})"
 
     def __str__(self) -> str:
-        # SystemDict({"foo":5, "bar":{"bogus": {"a":42, "b":69}, "baz":"meh"}, "moo":"yolo", "yeet": {"x":0, "y":420}})
-        # "SystemDict contents:\n├─foo: 5\n├─bar: \n│ ├─bogus: \n│ │ ├─a: 42\n│ │ └─b: 69\n│ └─baz: meh\n├─moo: yolo\n└─yeet: \n  ├─x: 0\n  └─y: 420"
         with StringIO() as str_stream:
             self.write_string(str_stream)
             output = str_stream.getvalue()
