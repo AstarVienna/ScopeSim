@@ -1,5 +1,8 @@
 import logging
 from inspect import isclass
+from typing import TextIO
+from io import StringIO
+from collections.abc import Sequence
 
 import numpy as np
 from astropy import units as u
@@ -344,15 +347,26 @@ Summary of Effects in Optical Elements:
         elif isinstance(obj, efs.Effect) and isinstance(value, dict):
             obj.meta.update(value)
 
-    def __repr__(self):
-        msg = (f"\nOpticsManager contains {len(self.optical_elements)} "
-               "OpticalElements \n")
-        for ii, opt_el in enumerate(self.optical_elements):
-            msg += (f"[{ii}] \"{opt_el.meta['name']}\" contains "
-                    f"{len(opt_el.effects)} effects \n")
+    def write_string(self, stream: TextIO) -> None:
+        """Write formatted string representation to I/O stream"""
+        stream.write(f"{self!s} contains {len(self.optical_elements)} "
+                     "OpticalElements\n")
+        for opt_elem in enumerate(self.optical_elements):
+            opt_elem.write_string(stream, list_effects=False)
 
-        return msg
+    def pretty_str(self) -> str:
+        """Return formatted string representation as str"""
+        with StringIO() as str_stream:
+            self.write_string(str_stream)
+            output = str_stream.getvalue()
+        return output
+
+    @property
+    def display_name(self):
+        return self.meta.get("name", self.meta.get("filename", "<empty>"))
+
+    def __repr__(self):
+        return f"<{self.__class__.__name__}>"
 
     def __str__(self):
-        name = self.meta.get("name", self.meta.get("filename", "<empty>"))
-        return f"{type(self).__name__}: \"{name}\""
+        return f"{self.__class__.__name__}: \"{self.display_name}\""

@@ -44,6 +44,9 @@
 
 from copy import deepcopy
 import numpy as np
+from typing import TextIO
+from io import StringIO
+
 from astropy import units as u
 
 from . import image_plane_utils as ipu
@@ -375,6 +378,30 @@ class FovVolumeList(FOVSetupBase):
     def __delitem__(self, key):
         del self.volumes[key]
 
+    def write_string(self, stream: TextIO) -> None:
+        """Write formatted string representation to I/O stream"""
+        n_vol = len(self.volumes)
+        stream.write(f"FovVolumeList with {n_vol} volumes:")
+        max_digits = len(str(n_vol))
+
+        for i_vol, vol in enumerate(self.volumes):
+            pre = "\n└─" if i_vol == n_vol - 1 else "\n├─"
+            stream.write(f"{pre}[{i_vol:>{max_digits}}]:")
+
+            pre = "\n  " if i_vol == n_vol - 1 else "\n│ "
+            n_key = len(vol)
+            for i_key, (key, val) in enumerate(vol.items()):
+                subpre = "└─" if i_key == n_key - 1 else "├─"
+                stream.write(f"{pre}{subpre}{key}: {val}")
+
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}({self.volumes[0]})"
+
+    def __str__(self) -> str:
+        with StringIO() as str_stream:
+            self.write_string(str_stream)
+            output = str_stream.getvalue()
+        return output
 
     def __iadd__(self, other):
         if isinstance(other, list):

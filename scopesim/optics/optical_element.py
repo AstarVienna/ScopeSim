@@ -1,5 +1,7 @@
 import logging
 from inspect import isclass
+from typing import TextIO
+from io import StringIO
 
 from astropy.table import Table
 
@@ -189,16 +191,29 @@ class OpticalElement:
 
         return obj
 
+    def write_string(self, stream: TextIO, list_effects: bool = True) -> None:
+        """Write formatted string representation to I/O stream"""
+        stream.write(f"{self!s} contains {len(self.effects)} Effects\n")
+        if list_effects:
+            for i_eff, eff in enumerate(self.effects):
+                stream.write(f"[{i_eff}] {eff!r}\n")
+
+    def pretty_str(self) -> str:
+        """Return formatted string representation as str"""
+        with StringIO() as str_stream:
+            self.write_string(str_stream)
+            output = str_stream.getvalue()
+        return output
+
+    @property
+    def display_name(self):
+        return self.meta.get("name", self.meta.get("filename", "<empty>"))
+
     def __repr__(self):
-        msg = (f"\nOpticalElement : \"{self.meta['name']}\" contains "
-               f"{len(self.effects)} Effects: \n")
-        eff_str = "\n".join([f"[{i}] {eff.__repr__()}" for i, eff
-                             in enumerate(self.effects)])
-        return msg + eff_str
+        return f"<{self.__class__.__name__}>"
 
     def __str__(self):
-        name = self.meta.get("name", self.meta.get("filename", "<empty>"))
-        return f"{type(self).__name__}: \"{name}\""
+        return f"{self.__class__.__name__}: \"{self.display_name}\""
 
     @property
     def properties_str(self):
