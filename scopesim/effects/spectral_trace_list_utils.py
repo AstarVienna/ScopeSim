@@ -3,7 +3,8 @@ Utility classes and functions for SpectralTraceList
 
 This module contains
    - the definition of the `SpectralTrace` class. The visible effect should
-     always be a `SpectralTraceList`, even if that contains only one `SpectralTrace`.
+     always be a `SpectralTraceList`, even if that contains only one
+     `SpectralTrace`.
    - the definition of the `XiLamImage` class
    - utility functions for use with spectral traces
 """
@@ -23,7 +24,7 @@ from astropy import units as u
 from astropy.wcs import WCS
 from astropy.modeling.models import Polynomial2D
 
-from ..utils import power_vector, quantify
+from ..utils import power_vector, quantify, from_currsys
 
 
 class SpectralTrace:
@@ -201,19 +202,7 @@ class SpectralTrace:
         xmin_mm, ymin_mm = fpa_wcsd.all_pix2world(xmin, ymin, 0)
         xmax_mm, ymax_mm = fpa_wcsd.all_pix2world(xmax, ymax, 0)
 
-        # Computation of dispersion dlam_per_pix along xi=0
-        # ..todo: This may have to be generalised - xi=0 is at the centre of METIS slits
-        #         and the short MICADO slit.
-        xi = np.array([0] * 1001)
-        lam = np.linspace(wave_min, wave_max, 1001)
-        x_mm = self.xilam2x(xi, lam)
-        y_mm = self.xilam2y(xi, lam)
-        if self.dispersion_axis == "x":
-            dlam_grad = self.xy2lam.gradient()[0]  # dlam_by_dx
-        else:
-            dlam_grad = self.xy2lam.gradient()[1]  # dlam_by_dy
-        self.dlam_per_pix = interp1d(lam, dlam_grad(x_mm, y_mm) * pixsize,
-                                fill_value="extrapolate")
+        self._set_dispersion(wave_min, wave_max, pixsize=pixsize)
         try:
             xilam = XiLamImage(fov, self.dlam_per_pix)
             self._xilamimg = xilam   # ..todo: remove or make available with a debug flag?
@@ -283,6 +272,125 @@ class SpectralTrace:
 
         image_hdu = fits.ImageHDU(header=img_header, data=image)
         return image_hdu
+
+    def rectify(self, hdulist, interps=None, wcs=None, **kwargs):
+        """Create 2D spectrum for a trace
+
+        Parameters
+        ----------
+        hdulist : HDUList
+           The result of scopesim readout
+        interps : list of interpolation functions
+           If provided, there must be one for each image extension in `hdulist`.
+           The functions go from pixels to the images and can be created with,
+           e.g., RectBivariateSpline.
+        wcs : The WCS describing the rectified XiLamImage. This can be created
+           in a simple way from the fov included in the `OpticalTrain` used in
+           the simulation run producing `hdulist`.
+
+        The WCS can also be set up via the following keywords:
+
+        bin_width : float [um]
+           The spectral bin width. This is best computed automatically from the
+           spectral dispersion of the trace.
+        wave_min, wave_max : float [um]
+           Limits of the wavelength range to extract. The default is the
+           the full range on which the `SpectralTrace` is defined. This may
+           extend significantly beyond the filter window.
+        xi_min, xi_max : float [arcsec]
+           Spatial limits of the slit on the sky. This should be taken from
+           the header of the hdulist, but this is not yet provided by scopesim
+        """
+        logging.info("Rectifying %s", self.trace_id)
+
+        wave_min = kwargs.get("wave_min",
+                              self.wave_min)
+        wave_max = kwargs.get("wave_max",
+                              self.wave_max)
+        if wave_max < self.wave_min or wave_min > self.wave_max:
+            logging.info("   Outside filter range")
+            return None
+        wave_min = max(wave_min, self.wave_min)
+        wave_max = min(wave_max, self.wave_max)
+        logging.info("   %.02f .. %.02f um", wave_min, wave_max)
+
+        # bin_width is taken as the minimum dispersion of the trace
+        bin_width = kwargs.get("bin_width", None)
+        if bin_width is None:
+            self._set_dispersion(wave_min, wave_max)
+            bin_width = np.abs(self.dlam_per_pix.y).min()
+        logging.info("   Bin width %.02g um", bin_width)
+
+        pixscale = from_currsys(self.meta['pixel_scale'])
+
+        # Temporary solution to get slit length
+        xi_min = kwargs.get("xi_min", None)
+        if xi_min is None:
+            try:
+                xi_min = hdulist[0].header["HIERARCH INS SLIT XIMIN"]
+            except KeyError:
+                logging.error("xi_min not found")
+                return None
+        xi_max = kwargs.get("xi_max", None)
+        if xi_max is None:
+            try:
+                xi_max = hdulist[0].header["HIERARCH INS SLIT XIMAX"]
+            except KeyError:
+                logging.error("xi_max not found")
+                return None
+
+        if wcs is None:
+            wcs = WCS(naxis=2)
+            wcs.wcs.ctype = ['WAVE', 'LINEAR']
+            wcs.wcs.cunit = ['um', 'arcsec']
+            wcs.wcs.crpix = [1, 1]
+            wcs.wcs.cdelt = [bin_width, pixscale] # PIXSCALE
+
+        # crval set to wave_min to catch explicitely set value
+        wcs.wcs.crval = [wave_min, xi_min]   # XIMIN
+
+        nlam = int((wave_max - wave_min) / bin_width) + 1
+        nxi = int((xi_max - xi_min) / pixscale) + 1
+
+        # Create interpolation functions if not provided
+        if interps is None:
+            logging.info("Computing image interpolations")
+            interps = make_image_interpolations(hdulist, kx=1, ky=1)
+
+        # Create Xi, Lam images (do I need Iarr and Jarr or can I build Xi, Lam directly?)
+        Iarr, Jarr = np.meshgrid(np.arange(nlam, dtype=np.float32),
+                                 np.arange(nxi, dtype=np.float32))
+        Lam, Xi = wcs.all_pix2world(Iarr, Jarr, 0)
+
+        # Make sure that we do have microns
+        Lam = Lam * u.Unit(wcs.wcs.cunit[0]).to(u.um)
+
+        # Convert Xi, Lam to focal plane units
+        Xarr = self.xilam2x(Xi, Lam)
+        Yarr = self.xilam2y(Xi, Lam)
+
+        rect_spec = np.zeros_like(Xarr, dtype=np.float32)
+
+        ihdu = 0
+        for hdu in hdulist:
+            if not isinstance(hdu, fits.ImageHDU):
+                continue
+
+            wcs_fp = WCS(hdu.header, key="D")
+            n_x = hdu.header['NAXIS1']
+            n_y = hdu.header['NAXIS2']
+            iarr, jarr = wcs_fp.all_world2pix(Xarr, Yarr, 0)
+            mask = (iarr > 0) * (iarr < n_x) * (jarr > 0) * (jarr < n_y)
+            if np.any(mask):
+                specpart = interps[ihdu](jarr, iarr, grid=False)
+                rect_spec += specpart * mask
+
+            ihdu += 1
+
+        header = wcs.to_header()
+        header['EXTNAME'] = self.trace_id
+        return fits.ImageHDU(data=rect_spec, header=header)
+
 
     def footprint(self, wave_min=None, wave_max=None, xi_min=None, xi_max=None):
         """
@@ -378,6 +486,9 @@ class SpectralTrace:
 
         # Footprint (rectangle enclosing the trace)
         xlim, ylim  = self.footprint(wave_min=wave_min, wave_max=wave_max)
+        if xlim is None:
+            return
+
         xlim.append(xlim[0])
         ylim.append(ylim[0])
         plt.plot(xlim, ylim)
@@ -397,19 +508,44 @@ class SpectralTrace:
             y = self.table[self.meta["y_colname"]][mask]
             plt.plot(x, y, "o", c=c)
 
-            for wave in np.unique(waves):
-                xx = x[waves==wave]
+            for wave in np.unique(w):
+                xx = x[w==wave]
                 xx.sort()
                 dx = xx[-1] - xx[-2]
-                plt.text(x[waves==wave].max() + 0.5 * dx,
-                         y[waves==wave].mean(),
-                         str(wave), va="center", ha="left")
 
+                plt.text(x[w==wave].max() + 0.5 * dx,
+                         y[w==wave].mean(),
+                         str(wave), va='center', ha='left')
 
             plt.gca().set_aspect("equal")
 
+    @property
+    def trace_id(self):
+        """Return the name of the trace"""
+        return self.meta['trace_id']
+
+    def _set_dispersion(self, wave_min, wave_max, pixsize=None):
+        """Computation of dispersion dlam_per_pix along xi=0
+        """
+        #..todo: This may have to be generalised - xi=0 is at the centre
+        #of METIS slits and the short MICADO slit.
+
+        xi = np.array([0] * 1001)
+        lam = np.linspace(wave_min, wave_max, 1001)
+        x_mm = self.xilam2x(xi, lam)
+        y_mm = self.xilam2y(xi, lam)
+        if self.dispersion_axis == "x":
+            dlam_grad = self.xy2lam.gradient()[0]  # dlam_by_dx
+        else:
+            dlam_grad = self.xy2lam.gradient()[1]  # dlam_by_dy
+        pixsize = (from_currsys(self.meta['pixel_scale']) /
+                   from_currsys(self.meta['plate_scale']))
+        self.dlam_per_pix = interp1d(lam,
+                                     dlam_grad(x_mm, y_mm) * pixsize,
+                                     fill_value="extrapolate")
+
     def __repr__(self):
-        msg = ("<SpectralTrace> \"{self.meta['trace_id']}\" : "
+        msg = (f"<SpectralTrace> \"{self.meta['trace_id']}\" : "
                f"[{self.wave_min:.4f}, {self.wave_max:.4f}]um : "
                f"Ext {self.meta['extension_id']} : "
                f"Aperture {self.meta['aperture_id']} : "
@@ -744,6 +880,20 @@ def _xiy2xlam_fit(layout, params):
     xiy2x = fitter(pinit_x, xi_arr, y_arr, x_arr)
     xiy2lam = fitter(pinit_lam, xi_arr, y_arr, lam_arr)
     return xiy2x, xiy2lam
+
+def make_image_interpolations(hdulist, **kwargs):
+    """
+    Create 2D interpolation functions for images
+    """
+    interps = []
+    for hdu in hdulist:
+        if isinstance(hdu, fits.ImageHDU):
+            interps.append(
+                RectBivariateSpline(np.arange(hdu.header['NAXIS1']),
+                                    np.arange(hdu.header['NAXIS2']),
+                                    hdu.data, **kwargs)
+            )
+    return interps
 
 
 # ..todo: Check whether the following functions are actually used

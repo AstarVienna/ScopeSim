@@ -15,8 +15,6 @@ from .source_utils import make_img_wcs_header
 from .source import Source
 from .. import rc
 
-__all__ = ["empty_sky", "star", "star_field"]
-
 
 def empty_sky(flux=0):
     """
