@@ -363,19 +363,18 @@ class FovVolumeList(FOVSetupBase):
     def __len__(self):
         return len(self.volumes)
 
-    def __getitem__(self, item):
-        return self.volumes[item]
+    def __iter__(self):
+        return iter(self.volumes)
+
+    def __getitem__(self, key):
+        return self.volumes[key]
 
     def __setitem__(self, key, value):
         self.volumes[item] = value
 
-    def __repr__(self):
-        text = f"FovVolumeList with [{len(self.volumes)}] volumes:\n"
-        for i, vol in enumerate(self.volumes):
-            mini_text = ", ".join([f"{key}: {val}" for key, val in vol.items()])
-            text += f"  [{i}] {mini_text} \n"
+    def __delitem__(self, key):
+        del self.volumes[key]
 
-        return text
 
     def __iadd__(self, other):
         if isinstance(other, list):
