@@ -87,8 +87,8 @@ class FieldOfView(FieldOfViewBase):
     def pixel_area(self):
         if self.meta["pixel_area"] is None:
             hdr = self.header
-            pixarea = (hdr['CDELT1'] * u.Unit(hdr['CUNIT1']) *
-                       hdr['CDELT2'] * u.Unit(hdr['CUNIT2'])).to(u.arcsec ** 2)
+            pixarea = (hdr["CDELT1"] * u.Unit(hdr["CUNIT1"]) *
+                       hdr["CDELT2"] * u.Unit(hdr["CUNIT2"])).to(u.arcsec ** 2)
             self.meta["pixel_area"] = pixarea.value     # [arcsec]
 
         return self.meta["pixel_area"]
@@ -297,10 +297,10 @@ class FieldOfView(FieldOfViewBase):
             # cube_fields come in with units of photlam/arcsec2, need to convert to ph/s
             # We need to the voxel volume (spectral and solid angle) for that.
             # ..todo: implement branch for use_photlam is True
-            spectral_bin_width = (field.header['CDELT3'] *
-                                  u.Unit(field.header['CUNIT3'])).to(u.Angstrom)
-            pixarea = (field.header['CDELT1'] * u.Unit(field.header['CUNIT1']) *
-                       field.header['CDELT2'] * u.Unit(field.header['CUNIT2'])).to(u.arcsec**2)
+            spectral_bin_width = (field.header["CDELT3"] *
+                                  u.Unit(field.header["CUNIT3"])).to(u.Angstrom)
+            pixarea = (field.header["CDELT1"] * u.Unit(field.header["CUNIT1"]) *
+                       field.header["CDELT2"] * u.Unit(field.header["CUNIT2"])).to(u.arcsec**2)
 
             # First collapse to image, then convert units
             image = np.sum(field.data, axis=0) * PHOTLAM/u.arcsec**2
@@ -465,10 +465,10 @@ class FieldOfView(FieldOfViewBase):
             field_data = field_interp(fov_waveset.value)
 
             # Pixel scale conversion
-            field_pixarea = (field.header['CDELT1']
-                             * field.header['CDELT2']
-                             * u.Unit(field.header['CUNIT1'])
-                             * u.Unit(field.header['CUNIT2'])).to(u.arcsec**2)
+            field_pixarea = (field.header["CDELT1"]
+                             * field.header["CDELT2"]
+                             * u.Unit(field.header["CUNIT1"])
+                             * u.Unit(field.header["CUNIT2"])).to(u.arcsec**2)
             field_pixarea = field_pixarea.value
             field_data *= field_pixarea / self.pixel_area
             field_hdu = fits.ImageHDU(data=field_data, header=field.header)
@@ -485,8 +485,8 @@ class FieldOfView(FieldOfViewBase):
             # ..todo: Add a catch to get ImageHDU with BUNITs
             canvas_image_hdu = fits.ImageHDU(data=np.zeros((naxis2, naxis1)),
                                              header=self.header)
-            pixarea = (field.header['CDELT1'] * u.Unit(field.header['CUNIT1']) *
-                       field.header['CDELT2'] * u.Unit(field.header['CUNIT2'])).to(u.arcsec**2)
+            pixarea = (field.header["CDELT1"] * u.Unit(field.header["CUNIT1"]) *
+                       field.header["CDELT2"] * u.Unit(field.header["CUNIT2"])).to(u.arcsec**2)
 
             field.data = field.data / self.pixel_area
             canvas_image_hdu = imp_utils.add_imagehdu_to_imagehdu(field,
@@ -645,14 +645,18 @@ class FieldOfView(FieldOfViewBase):
                 and field.header.get("BG_SRC", False) is True]
 
     def __repr__(self):
-        msg = "FOV id: {}, with dimensions ({}, {})\n" \
-              "".format(self.meta["id"], self.header["NAXIS1"],
-                        self.header["NAXIS2"])
-        msg += "Sky centre: ({}, {})\n" \
-               "".format(self.header["CRVAL1"], self.header["CRVAL2"])
-        msg += "Image centre: ({}, {})\n" \
-               "".format(self.header["CRVAL1D"], self.header["CRVAL2D"])
-        msg += "Wavelength range: ({}, {})um\n" \
-               "".format(self.meta["wave_min"], self.meta["wave_max"])
+        waverange = [self.meta["wave_min"].value, self.meta["wave_max"].value]
+        msg = (f"{self.__class__.__name__}({self.header!r}, {waverange!r}, "
+               f"{self.detector_header!r}, **{self.meta!r})")
+        return msg
 
+    def __str__(self):
+        msg = (f"FOV id: {self.meta['id']}, with dimensions "
+               f"({self.header['NAXIS1']}, {self.header['NAXIS2']})\n"
+               f"Sky centre: ({self.header['CRVAL1']}, "
+               f"{self.header['CRVAL2']})\n"
+               f"Image centre: ({self.header['CRVAL1D']}, "
+               f"{self.header['CRVAL2D']})\n"
+               f"Wavelength range: ({self.meta['wave_min']}, "
+               f"{self.meta['wave_max']})um\n")
         return msg

@@ -24,8 +24,7 @@ class Shift3D(Effect):
             col_names = ["wavelength", "dx", "dy"]
             waves, dx, dy = [self.get_table(**kwargs)[col] for col in col_names]
             return waves, dx, dy
-        else:
-            return None
+        return None
 
     def get_table(self, **kwargs):
         if self.table is None:
@@ -45,8 +44,8 @@ class Shift3D(Effect):
         tbl = self.get_table()
         plt.scatter(x=tbl["dx"], y=tbl["dy"], c=tbl["wavelength"])
         plt.colorbar()
-        plt.xlabel("dx [{}]".format(quantify(tbl["dx"], u.arcsec).unit))
-        plt.ylabel("dy [{}]".format(quantify(tbl["dy"], u.arcsec).unit))
+        plt.xlabel(f"dx [{quantify(tbl['dx'], u.arcsec).unit}]")
+        plt.ylabel(f"dy [{quantify(tbl['dy'], u.arcsec).unit}]")
         plt.axvline(0, ls=":")
         plt.axhline(0, ls=":")
         # plt.gca().set_aspect("equal")
@@ -223,8 +222,7 @@ class AtmosphericDispersionCorrection(Shift3D):
             dx *= -(1 - self.meta["efficiency"])
             dy *= -(1 - self.meta["efficiency"])
             return waves, dx, dy
-        else:
-            return None
+        return None
 
     def plot(self):
         return None

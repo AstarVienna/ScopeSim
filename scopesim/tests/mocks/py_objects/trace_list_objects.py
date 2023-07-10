@@ -192,6 +192,15 @@ def trace_5(xn=3, yn=16, wmin=2.1, wmax=2.4,
 
     return tbl
 
+def trace_6(xn=16, yn=3, wmin=2.1, wmax=2.4,
+            x0=1750, y0=-1750):
+    """As trace_5 but with dispersion in x direction"""
+    tbl = trace_5()
+    tmp = tbl['x']
+    tbl['x'] = tbl['y']
+    tbl['y'] = tmp
+    return tbl
+
 
 def id_table(traces_ids, descriptions=None):
     """

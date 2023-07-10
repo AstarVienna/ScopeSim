@@ -1,6 +1,19 @@
-version = '0.5.6'
-date    = '2023-03-13 16:00:00 GMT'
+from importlib import metadata
+version = metadata.version(__package__)
+date = '2023-07-10 10:00:00 GMT'
 yaml_descriptions = """
+- version : 0.6.0
+  date : 2023-07-10
+  comment : Summer 2023
+  changes :
+  - Rename MAORY to MORFEO #195
+  - Fix NCPA and PSF affecting spectroscopy #238
+  - Fix line widths bug #213
+  - Add rectification utilities #237
+  - Include grating efficiencies #215
+  - Improve downloading of IRDB #234
+  - Improve Windows support
+
 - version : 0.5.6
   date : 2023-03-13
   comment : Hotfix to include minimal set of SVO data

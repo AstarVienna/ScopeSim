@@ -17,6 +17,8 @@ class Rotate90CCD(Effect):
     """
     Rotates CCD by integer multiples of 90 degrees
     rotations kwarg is number of counter-clockwise rotations
+    
+    Author: Dave jones
 
     """
     def __init__(self, **kwargs):

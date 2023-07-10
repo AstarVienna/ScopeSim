@@ -1,25 +1,20 @@
-'''Transmission, emissivity, reflection curves'''
-import numpy as np
-from astropy import units as u
-from os import path as pth
+"""Transmission, emissivity, reflection curves"""
 import logging
+from pathlib import Path
 
+import numpy as np
+import skycalc_ipy
+from astropy import units as u
 from astropy.io import fits
 from astropy.table import Table
-from astropy import units as u
 
-from synphot import SourceSpectrum
-from synphot.units import PHOTLAM
-import skycalc_ipy
-
+from .effects import Effect
+from .ter_curves_utils import add_edge_zeros
 from .ter_curves_utils import combine_two_spectra, apply_throughput_to_cube
 from .ter_curves_utils import download_svo_filter, download_svo_filter_list
-from .ter_curves_utils import add_edge_zeros
-from .effects import Effect
-from ..optics.surface import SpectralSurface
-from ..source.source_utils import make_imagehdu_from_table
-from ..source.source import Source
 from ..base_classes import SourceBase, FOVSetupBase
+from ..optics.surface import SpectralSurface
+from ..source.source import Source
 from ..utils import from_currsys, quantify, check_keys, find_file
 
 
@@ -29,7 +24,7 @@ class TERCurve(Effect):
 
     Must contain a wavelength column, and one or more of the following:
     ``transmission``, ``emissivity``, ``reflection``.
-    Additionally in the header there
+    Additionally, in the header there
     should be the following keywords: wavelength_unit
 
     kwargs that can be passed::
@@ -50,7 +45,7 @@ class TERCurve(Effect):
             wavelength_unit: um
             emission_unit: ph s-1 m-2 um-1
             rescale_emission:
-                filter_name: "Paranal/HAWKI.Ks"
+                filter_name: "Paranal/HAWK.Ks"
                 value: 15.5
                 unit: ABmag
 
@@ -92,6 +87,8 @@ class TERCurve(Effect):
         if self.meta["ignore_wings"]:
             data = add_edge_zeros(data, "wavelength")
         if data is not None:
+            # Assert that get_data() did not give us an image.
+            assert isinstance(data, Table), "TER Curves must be tables."
             self.surface.table = data
             self.surface.table.meta.update(self.meta)
 
@@ -99,6 +96,7 @@ class TERCurve(Effect):
 
     def apply_to(self, obj, **kwargs):
         if isinstance(obj, SourceBase):
+            assert isinstance(obj, Source), "Only Source supported."
             self.meta = from_currsys(self.meta)
             wave_min = quantify(self.meta["wave_min"], u.um).to(u.AA)
             wave_max = quantify(self.meta["wave_max"], u.um).to(u.AA)
@@ -119,6 +117,8 @@ class TERCurve(Effect):
                 obj.append(self.background_source)
 
         if isinstance(obj, FOVSetupBase):
+            from ..optics.fov_manager import FovVolumeList
+            assert isinstance(obj, FovVolumeList), "Only FovVolumeList supported."
             wave = self.surface.throughput.waveset
             thru = self.surface.throughput(wave)
             valid_waves = np.argwhere(thru > 0)
@@ -143,9 +143,17 @@ class TERCurve(Effect):
         if self._background_source is None:
             # add a single pixel ImageHDU for the extended background with a
             # size of 1 degree
-            bg_cell_width = from_currsys(self.meta["bg_cell_width"])
+            # bg_cell_width = from_currsys(self.meta["bg_cell_width"])
+
             flux = self.emission
             bg_hdu = fits.ImageHDU()
+            # TODO: The make_imagehdu_from_table below has been replaced with
+            #       the empty ImageHDU above in fbca416. That change might,
+            #       have been fine (or not?), but now there is no use anywhere
+            #       in the code of make_imagehdu_from_table or bg_cell_width,
+            #       so maybe these need to be removed?
+            # bg_hdu = make_imagehdu_from_table([0], [0], [1], bg_cell_width * u.arcsec)
+
             bg_hdu.header.update({"BG_SRC": True,
                                   "BG_SURF": self.display_name,
                                   "CUNIT1": "ARCSEC",
@@ -170,6 +178,8 @@ class TERCurve(Effect):
             "x" plots throughput. "t","e","r" plot trans/emission/refl
         wavelength : list, np.ndarray
         ax : matplotlib.Axis
+        new_figure : start a new figure (or add to the existing one)
+        label : the label to use (ignored)
         kwargs
 
         Returns
@@ -213,10 +223,10 @@ class TERCurve(Effect):
             plt.plot(wave, y, **plot_kwargs)
 
             wave_unit = self.meta.get("wavelength_unit")
-            plt.xlabel("Wavelength [{}]".format(wave_unit))
+            plt.xlabel(f"Wavelength [{wave_unit}]")
             y_str = {"t": "Transmission", "e": "Emission",
                      "r": "Reflectivity", "x": "Throughput"}
-            plt.ylabel("{} [{}]".format(y_str[ter], y.unit))
+            plt.ylabel(f"{y_str[ter]} [{y.unit}]")
 
         return plt.gcf()
 
@@ -267,8 +277,11 @@ class SkycalcTERCurve(AtmosphericTERCurve):
         self.meta.update(kwargs)
 
         self.skycalc_table = None
+        self.skycalc_conn = None
 
         if self.include is True:
+            # Only query the database if the effect is actually included.
+            # Sets skycalc_conn and skycalc_table.
             self.load_skycalc_table()
 
     @property
@@ -329,7 +342,7 @@ class SkycalcTERCurve(AtmosphericTERCurve):
 
         try:
             tbl = self.skycalc_conn.get_sky_spectrum(return_type="table")
-        except:
+        except ConnectionError:
             msg = "Could not connect to skycalc server"
             logging.exception(msg)
             raise ValueError(msg)
@@ -376,8 +389,7 @@ class FilterCurve(TERCurve):
             else:
                 raise ValueError("FilterCurve must be passed one of (`filename`"
                                  " `array_dict`, `table`) or both "
-                                 "(`filter_name`, `filename_format`):"
-                                 "{}".format(kwargs))
+                                 f"(`filter_name`, `filename_format`): {kwargs}")
 
         super(FilterCurve, self).__init__(**kwargs)
         if self.table is None:
@@ -426,6 +438,7 @@ class FilterCurve(TERCurve):
     @property
     def fwhm(self):
         wave = self.surface.wavelength
+        # noinspection PyProtectedMember
         thru = self.surface._get_ter_property("transmission", fmt="array")
         mask = thru >= 0.5
         if any(mask):
@@ -438,6 +451,7 @@ class FilterCurve(TERCurve):
     @property
     def centre(self):
         wave = self.surface.wavelength
+        # noinspection PyProtectedMember
         thru = self.surface._get_ter_property("transmission", fmt="array")
         num = np.trapz(thru * wave**2, x=wave)
         den = np.trapz(thru * wave, x=wave)
@@ -540,9 +554,7 @@ class SpanishVOFilterCurve(FilterCurve):
         kwargs["name"] = kwargs["filter_name"]
         kwargs["svo_id"] = filt_str
 
-        raise_error = kwargs.get("error_on_wrong_name", True)
-        tbl = download_svo_filter(filt_str, return_style="table",
-                                  error_on_wrong_name=raise_error)
+        tbl = download_svo_filter(filt_str, return_style="table")
         super(SpanishVOFilterCurve, self).__init__(table=tbl, **kwargs)
 
 
@@ -577,16 +589,14 @@ class FilterWheel(Effect):
         self.meta.update(params)
         self.meta.update(kwargs)
 
-        path = pth.join(self.meta["path"],
-                        from_currsys(self.meta["filename_format"]))
+        path = Path(self.meta["path"], from_currsys(self.meta["filename_format"]))
         self.filters = {}
         for name in from_currsys(self.meta["filter_names"]):
             kwargs["name"] = name
-            self.filters[name] = FilterCurve(filename=path.format(name),
+            self.filters[name] = FilterCurve(filename=str(path).format(name),
                                              **kwargs)
 
         self.table = self.get_table()
-
 
     def apply_to(self, obj, **kwargs):
         """Use apply_to of current filter"""
@@ -598,9 +608,9 @@ class FilterWheel(Effect):
     def change_filter(self, filtername=None):
         """Change the current filter"""
         if filtername in self.filters.keys():
-            self.meta['current_filter'] = filtername
+            self.meta["current_filter"] = filtername
         else:
-            raise ValueError("Unknown filter requested: " + filtername)
+            raise ValueError(f"Unknown filter requested: {filtername}")
 
     def add_filter(self, newfilter, name=None):
         """
@@ -627,8 +637,8 @@ class FilterWheel(Effect):
 
     @property
     def display_name(self):
-        return f'{self.meta["name"]} : ' \
-               f'[{from_currsys(self.meta["current_filter"])}]'
+        return (f"{self.meta['name']} : "
+                f"[{from_currsys(self.meta['current_filter'])}]")
 
     def __getattr__(self, item):
         return getattr(self.current_filter, item)
@@ -652,10 +662,10 @@ class FilterWheel(Effect):
 
         for ii, ter in enumerate(which):
             ax = plt.subplot(len(which), 1, ii+1)
-            for name in self.filters:
-                self.filters[name].plot(which=ter, wavelength=wavelength,
-                                        ax=ax, new_figure=False,
-                                        plot_kwargs={"label": name}, **kwargs)
+            for name, _filter in self.filters.items():
+                _filter.plot(which=ter, wavelength=wavelength, ax=ax,
+                             new_figure=False, plot_kwargs={"label": name},
+                             **kwargs)
 
         # plt.semilogy()
         plt.legend()
@@ -685,10 +695,10 @@ class TopHatFilterWheel(FilterWheel):
     filter_names: list of string
 
     transmissions: list of floats
-        [0..1] Peak transmissions inside the cuttoff limits
+        [0..1] Peak transmissions inside the cutoff limits
 
     wing_transmissions: list of floats
-        [0..1] Wing transmissions outside the cuttoff limits
+        [0..1] Wing transmissions outside the cutoff limits
 
     blue_cutoffs: list of floats
         [um]
@@ -751,7 +761,7 @@ class SpanishVOFilterWheel(FilterWheel):
        This use ``astropy.download_file(..., cache=True)``.
 
     The filter transmission curves probably won't change, but if you notice
-    discrepancies, try clearing the astopy cache::
+    discrepancies, try clearing the astropy cache::
 
         >> from astropy.utils.data import clear_download_cache
         >> clear_download_cache()
@@ -803,7 +813,7 @@ class SpanishVOFilterWheel(FilterWheel):
         self.meta.update(kwargs)
 
         obs, inst = self.meta["observatory"], self.meta["instrument"]
-        inc, exc =  self.meta["include_str"], self.meta["exclude_str"]
+        inc, exc = self.meta["include_str"], self.meta["exclude_str"]
         filter_names = download_svo_filter_list(obs, inst, short_names=True,
                                                 include=inc, exclude=exc)
 
@@ -832,13 +842,6 @@ class PupilTransmission(TERCurve):
         self.params = {"wave_min": "!SIM.spectral.wave_min",
                        "wave_max": "!SIM.spectral.wave_max"}
         self.params.update(kwargs)
-        self.make_ter_curve(transmission)
-
-    def update_transmission(self, transmission, **kwargs):
-        self.params.update(kwargs)
-        self.make_ter_curve(transmission)
-
-    def make_ter_curve(self, transmission):
         wave_min = from_currsys(self.params["wave_min"]) * u.um
         wave_max = from_currsys(self.params["wave_max"]) * u.um
         transmission = from_currsys(transmission)
@@ -846,6 +849,9 @@ class PupilTransmission(TERCurve):
         super().__init__(wavelength=[wave_min, wave_max],
                          transmission=[transmission, transmission],
                          emissivity=[0., 0.], **self.params)
+
+    def update_transmission(self, transmission, **kwargs):
+        self.__init__(transmission, **kwargs)
 
 
 class ADCWheel(Effect):
@@ -878,12 +884,11 @@ class ADCWheel(Effect):
         self.meta.update(params)
         self.meta.update(kwargs)
 
-        path = pth.join(self.meta["path"],
-                        from_currsys(self.meta["filename_format"]))
+        path = Path(self.meta["path"], from_currsys(self.meta["filename_format"]))
         self.adcs = {}
         for name in from_currsys(self.meta["adc_names"]):
             kwargs["name"] = name
-            self.adcs[name] = TERCurve(filename=path.format(name),
+            self.adcs[name] = TERCurve(filename=str(path).format(name),
                                        **kwargs)
 
         self.table = self.get_table()
@@ -895,32 +900,32 @@ class ADCWheel(Effect):
     def change_adc(self, adcname=None):
         """Change the current ADC"""
         if not adcname or adcname in self.adcs.keys():
-            self.meta['current_adc'] = adcname
+            self.meta["current_adc"] = adcname
             self.include = adcname
         else:
-            raise ValueError("Unknown ADC requested: " + adcname)
+            raise ValueError(f"Unknown ADC requested: {adcname}")
 
     @property
     def current_adc(self):
         """Return the currently used ADC"""
-        curradc = from_currsys(self.meta['current_adc'])
+        curradc = from_currsys(self.meta["current_adc"])
         if not curradc:
             return False
         return self.adcs[curradc]
 
     @property
     def display_name(self):
-        return f'{self.meta["name"]} : ' \
-               f'[{from_currsys(self.meta["current_adc"])}]'
+        return (f"{self.meta['name']} : "
+                f"[{from_currsys(self.meta['current_adc'])}]")
 
     def __getattr__(self, item):
         return getattr(self.current_adc, item)
 
     def get_table(self):
-        """Create a table of ADCs with maximimum througput"""
+        """Create a table of ADCs with maximum throughput"""
         names = list(self.adcs.keys())
         adcs = self.adcs.values()
-        tmax = np.array([adc.data['transmission'].max() for adc in adcs])
+        tmax = np.array([adc.data["transmission"].max() for adc in adcs])
 
         tbl = Table(names=["name", "max_transmission"],
                     data=[names, tmax])
