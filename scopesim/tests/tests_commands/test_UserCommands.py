@@ -1,25 +1,22 @@
 import os
-import shutil
 from pathlib import Path
 import pytest
 from tempfile import TemporaryDirectory
 
 from scopesim import rc
 from scopesim.commands.user_commands import UserCommands, patch_fake_symlinks
-from scopesim.server import database as db
 
 tmpdir = TemporaryDirectory()
 
+FILES_PATH = str(Path(__file__).parent.parent / "mocks")
+
 
 def setup_module():
-    db.download_packages(["test_package"], release="stable",
-                         save_dir=tmpdir.name, from_cache=False)
     rc.__config__["local_packages_path_OLD"] = rc.__config__["!SIM.file.local_packages_path"]
-    rc.__config__["!SIM.file.local_packages_path"] = tmpdir.name
+    rc.__config__["!SIM.file.local_packages_path"] = FILES_PATH
 
 
 def teardown_module():
-    tmpdir.cleanup()
     rc.__config__["!SIM.file.local_packages_path"] = rc.__config__["local_packages_path_OLD"]
     # TODO: something like rc.__config__.pop("local_packages_path_OLD")
 

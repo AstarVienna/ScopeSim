@@ -1,0 +1,15 @@
+# Instrument
+object : instrument
+alias : INST
+name : test_instrument
+
+properties :
+  pixel_scale : 0.5    # arcsec per pixel
+
+effects :
+- name : tc_from_file
+  class : TERCurve
+  kwargs :
+    filename : TC_filter_Ks.dat
+
+
