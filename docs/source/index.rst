@@ -14,8 +14,6 @@ ScopeSim_ is on pip::
 
     pip install scopesim_templates
 
-.. note:: ScopeSim only supports python 3.6 and above
-
 .. warning:: July 2022: The downloadable content server was retired and the data migrated to a new server.
 
    ScopeSim v0.5.1 and above have been redirected to a new server URL.
