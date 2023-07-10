@@ -6,7 +6,7 @@ import numpy as np
 import skycalc_ipy
 from astropy import units as u
 from astropy.io import fits
-from astropy.table import Table
+from astropy.table import Table, vstack
 
 from .effects import Effect
 from .ter_curves_utils import add_edge_zeros
@@ -15,7 +15,7 @@ from .ter_curves_utils import download_svo_filter, download_svo_filter_list
 from ..base_classes import SourceBase, FOVSetupBase
 from ..optics.surface import SpectralSurface
 from ..source.source import Source
-from ..utils import from_currsys, quantify, check_keys, find_file
+from ..utils import from_currsys, quantify, check_keys, find_file, save_unit_to
 
 
 class TERCurve(Effect):
@@ -326,14 +326,22 @@ class SkycalcTERCurve(AtmosphericTERCurve):
         self.surface.meta.update(tbl.meta)
         self.skycalc_table = tbl
 
-    def query_server(self, **kwargs):
-        self.meta.update(kwargs)
+    def convert_to_nm(self):
+        """The Skycalc server talks in nm, so convert to that.
 
+        It talks back in um though.
+        """
         if "wunit" in self.meta:
-            scale_factor = u.Unit(from_currsys(self.meta["wunit"])).to(u.nm)
+            scale_factor = save_unit_to(u.Unit(from_currsys(self.meta["wunit"])), u.nm)
             for key in ["wmin", "wmax", "wdelta"]:
                 if key in self.meta:
                     self.meta[key] = from_currsys(self.meta[key]) * scale_factor
+            self.meta["wunit"] = "nm"
+
+    def query_server(self, **kwargs):
+        self.meta.update(kwargs)
+
+        self.convert_to_nm()
 
         conn_kwargs = {key: self.meta[key] for key in self.meta
                        if key in self.skycalc_conn.defaults}
@@ -346,6 +354,16 @@ class SkycalcTERCurve(AtmosphericTERCurve):
             msg = "Could not connect to skycalc server"
             logging.exception(msg)
             raise ValueError(msg)
+
+        if "wunit" in self.meta:
+            # The last row is probably just short of wmax. So just copy
+            # the last row, but then with lam=wmax.
+            tbl_last_row = tbl[-1:].copy()
+            lam_last = tbl_last_row[-1]["lam"] * tbl_last_row["lam"].unit
+            lam_wmax = self.meta["wmax"] * u.Unit(self.meta["wunit"])
+            if lam_last < lam_wmax:
+                tbl_last_row[-1]["lam"] = lam_wmax.to(tbl_last_row["lam"].unit).value
+                tbl = vstack([tbl, tbl_last_row])
 
         return tbl
 

@@ -1008,3 +1008,14 @@ def return_latest_github_actions_jobs_status(owner_name="AstarVienna", repo_name
         params_list.append(params)
 
     return params_list
+
+
+def save_unit_to(unit_from: u.Unit, unit_to: u.Unit):
+    """Like unit_from.to(unit_to), but u.um to u.nm == 1000, not 999.999.."""
+    to1 = unit_from.to(unit_to)
+    sto1 = str(to1)
+    to2 = 1 / unit_to.to(unit_from)
+    sto2 = str(to2)
+    if len(sto2) < len(sto1):
+        return to2
+    return to1
