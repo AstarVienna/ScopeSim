@@ -42,7 +42,7 @@ class PoorMansHeader:
             self.dic.update(dict(obj))
 
         if isinstance(obj, dict):
-            if any([isinstance(obj[key], (tuple, list)) for key in obj]):
+            if any(isinstance(obj[key], (tuple, list)) for key in obj):
                 for key in obj:
                     if isinstance(obj[key], (tuple, list)):
                         self.comments[key] = obj[key][1]
@@ -54,8 +54,8 @@ class PoorMansHeader:
 
     def as_header(self):
         hdr = Header(self.dic)
-        for key in self.comments:
-            hdr.comments[key] = self.comments[key]
+        for key, value in self.comments.items():
+            hdr.comments[key] = value
 
         return hdr
 
@@ -80,24 +80,20 @@ class PoorMansHeader:
 
     def __repr__(self):
         msgs = ""
-        for key in self.dic:
+        for key, value in self.dic.items():
             cmt_msg = ""
             if key in self.comments:
-                cmt_msg = " / {}".format(self.comments[key])
-
-            msg = "{} = {}".format(key.upper().ljust(9),
-                                   str(self.dic[key]).rjust(16))
-            msgs += msg + cmt_msg + "\n"
-
+                cmt_msg = " / {self.comments[key]}"
+            msgs += f"{key.upper():<9} = {value!s:>16}{cmt_msg}\n"
         return msgs
 
     def items(self):
         items_dict = []
-        for key in self.dic:
+        for key, value in self.dic.items():
             if key in self.comments:
-                items_dict += [(key, (self.dic[key], self.comments[key]))]
+                items_dict.append((key, (value, self.comments[key])))
             else:
-                items_dict += [(key, self.dic[key])]
+                items_dict.append((key, value))
         return items_dict
 
     def keys(self):

@@ -105,8 +105,7 @@ def get_imaging_waveset(effects_list, **kwargs):
     wave_bin_edges = [[kwargs["wave_min"], kwargs["wave_max"]]]
 
     if kwargs["wave_min"] > kwargs["wave_max"]:
-        raise ValueError("Filter wavelength ranges do not overlap: {}"
-                         "".format(wave_bin_edges))
+        raise ValueError(f"Filter wavelength ranges do not overlap: {wave_bin_edges}")
 
     # ..todo: add in Atmospheric dispersion and ADC here
     for effect_class in [efs.PSF]:
@@ -173,7 +172,7 @@ def get_imaging_headers(effects, **kwargs):
         else:
             raise ValueError("No ApertureMask or DetectorList was provided. At "
                              "least one must be passed to make an ImagePlane: "
-                             "{}".format(effects))
+                             f"{effects}")
 
     # get aperture headers from fov_grid()
     # - for-loop catches mutliple headers from ApertureList.fov_grid()
@@ -247,8 +246,7 @@ def get_imaging_fovs(headers, waveset, shifts, **kwargs):
     counter = 0
     fovs = []
 
-    print("Preparing {} FieldOfViews".format((len(waveset)-1)*len(headers)),
-          flush=True)
+    print(f"Preparing {(len(waveset)-1)*len(headers)} FieldOfViews", flush=True)
 
     for ii in range(len(waveset) - 1):
         for hdr in headers:
@@ -302,8 +300,8 @@ def get_spectroscopy_headers(effects, **kwargs):
 
     # ..todo: deal with multiple trace lists
     if len(spec_trace_effects) != 1:
-        raise ValueError("More than one SpectralTraceList was found: {}"
-                         "".format(spec_trace_effects))
+        raise ValueError("More than one SpectralTraceList was found: "
+                         f"{spec_trace_effects}")
     spec_trace = spec_trace_effects[0]
 
     sky_hdrs = []
@@ -334,7 +332,7 @@ def get_spectroscopy_fovs(headers, shifts, effects=[], **kwargs):
     shift_dx = shifts["x_shifts"]           # in [deg]
     shift_dy = shifts["y_shifts"]
 
-    print("Preparing {} FieldOfViews".format(len(headers)), flush=True)
+    print(f"Preparing {len(headers)} FieldOfViews", flush=True)
 
     apertures = get_all_effects(effects, (efs.ApertureList, efs.ApertureMask))
     masks = [ap.fov_grid(which="masks") for ap in apertures]

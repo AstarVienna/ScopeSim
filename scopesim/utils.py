@@ -2,10 +2,8 @@
 Helper functions for ScopeSim
 """
 import math
-import os
 from pathlib import Path
 import sys
-import logging
 import logging
 from collections import OrderedDict
 from docutils.core import publish_string
@@ -16,28 +14,9 @@ import yaml
 import numpy as np
 from astropy import units as u
 from astropy.io import fits
-from astropy.io import ascii as ioascii
 from astropy.table import Column, Table
 
 from . import rc
-
-
-def msg(cmds, message, level=3):
-    """
-    Prints a message based on the level of verbosity given in cmds
-
-    Parameters
-    ----------
-    cmds : UserCommands
-        just for the SIM_VERBOSE and SIM_MESSAGE_LEVEL keywords
-    message : str
-        message to be printed
-    level : int, optional
-        all messages with level <= SIM_MESSAGE_LEVEL are printed. I.e. level=5
-        messages are not important, level=1 are very important
-    """
-    if cmds["SIM_VERBOSE"] == "yes" and level <= cmds["SIM_MESSAGE_LEVEL"]:
-        print(message)
 
 
 def unify(x, unit, length=1):
@@ -111,7 +90,7 @@ def parallactic_angle(ha, de, lat=-24.589167):
     lat = np.deg2rad(lat)
 
     eta = np.arctan2(np.cos(lat) * np.sin(ha),
-                     np.sin(lat) * np.cos(de) - \
+                     np.sin(lat) * np.cos(de) -
                      np.cos(lat) * np.sin(de) * np.cos(ha))
 
     return np.rad2deg(eta)
@@ -131,7 +110,7 @@ def moffat(r, alpha, beta):
     -------
     eta
     """
-    return (beta - 1)/(np.pi * alpha**2) * (1 + (r/alpha)**2)**(-beta)
+    return (beta - 1) / (np.pi * alpha ** 2) * (1 + (r / alpha) ** 2) ** (-beta)
 
 
 def poissonify(arr):
@@ -174,12 +153,14 @@ def nearest(arr, val):
 
     return np.argmin(abs(arr - val))
 
+
 def power_vector(val, degree):
     """Return the vector of powers of val up to a degree"""
     if degree < 0 or not isinstance(degree, int):
         raise ValueError("degree must be a positive integer")
 
-    return np.array([val**exp for exp in range(degree + 1)])
+    return np.array([val ** exp for exp in range(degree + 1)])
+
 
 def deriv_polynomial2d(poly):
     """Derivatives (gradient) of a Polynomial2D model
@@ -188,8 +169,8 @@ def deriv_polynomial2d(poly):
     ----------
     poly : astropy.modeling.models.Polynomial2D
 
-    Output
-    ------
+    Returns
+    -------
     gradient : tuple of Polynomial2d
     """
     import re
@@ -204,8 +185,8 @@ def deriv_polynomial2d(poly):
         i = int(match.group(1))
         j = int(match.group(2))
         cij = getattr(poly, pname)
-        pname_x = "c%d_%d" % (i-1, j)
-        pname_y = "c%d_%d" % (i, j-1)
+        pname_x = "c%d_%d" % (i - 1, j)
+        pname_y = "c%d_%d" % (i, j - 1)
         setattr(dpoly_dx, pname_x, i * cij)
         setattr(dpoly_dy, pname_y, j * cij)
 
@@ -231,44 +212,6 @@ def add_keyword(filename, keyword, value, comment="", ext=0):
     f[ext].header[keyword] = (value, comment)
     f.flush()
     f.close()
-
-
-def add_SED_to_scopesim(file_in, file_out=None, wave_units="um"):
-    """
-    Adds the SED given in ``file_in`` to the ScopeSim data directory
-
-    Parameters
-    ----------
-    file_in : str
-        path to the SED file. Can be either FITS or ASCII format with 2 columns
-        Column 1 is the wavelength, column 2 is the flux
-    file_out : str, optional
-        Default is None. The file path to save the ASCII file. If ``None``, the SED
-        is saved to the ScopeSim data directory i.e. to ``rc.__data_dir__``
-    wave_units : str, astropy.Units
-        Units for the wavelength column, either as a string or as astropy units
-        Default is [um]
-
-    """
-
-    file_name, file_ext = os.path.basename(file_in).split(".")
-
-    if file_out is None:
-        if "SED_" not in file_name:
-            file_out = rc.__data_dir__ + "SED_" + file_name + ".dat"
-        else: file_out = rc.__data_dir__ + file_name + ".dat"
-
-    if file_ext.lower() in "fits":
-        data = fits.getdata(file_in)
-        lam, val = data[data.columns[0].name], data[data.columns[1].name]
-    else:
-        lam, val = ioascii.read(file_in)[:2]
-
-    lam = (lam * u.Unit(wave_units)).to(u.um)
-    mask = (lam > 0.3*u.um) * (lam < 5.0*u.um)
-
-    np.savetxt(file_out, np.array((lam[mask], val[mask]), dtype=np.float32).T,
-               header="wavelength    value \n [um]         [flux]")
 
 
 def airmass_to_zenith_dist(airmass):
@@ -308,7 +251,7 @@ def seq(start, stop, step=1):
         increment of the sequence, defaults to 1
 
     """
-    feps = 1e-10     # value used in R seq.default
+    feps = 1e-10  # value used in R seq.default
 
     delta = stop - start
     if delta == 0 and stop == 0:
@@ -335,21 +278,21 @@ def seq(start, stop, step=1):
         # integer sequence
         npts = int(npts)
         return start + np.asarray(range(npts + 1)) * step
+
+    npts = int(npts + feps)
+    sequence = start + np.asarray(range(npts + 1)) * step
+    # correct for possible overshot because of fuzz (from seq.R)
+    if step > 0:
+        return np.minimum(sequence, stop)
     else:
-        npts = int(npts + feps)
-        sequence = start + np.asarray(range(npts + 1)) * step
-        # correct for possible overshot because of fuzz (from seq.R)
-        if step > 0:
-            return np.minimum(sequence, stop)
-        else:
-            return np.maximum(sequence, stop)
+        return np.maximum(sequence, stop)
 
 
 def add_mags(mags):
     """
     Returns a combined magnitude for a group of py_objects with ``mags``
     """
-    return -2.5*np.log10((10**(-0.4*np.array(mags))).sum())
+    return -2.5 * np.log10((10 ** (-0.4 * np.array(mags))).sum())
 
 
 def dist_mod_from_distance(d):
@@ -366,7 +309,7 @@ def distance_from_dist_mod(mu):
     d = 10**(1 + mu / 5)
     """
 
-    d = 10**(1 + mu / 5)
+    d = 10 ** (1 + mu / 5)
     return d
 
 
@@ -395,7 +338,7 @@ def telescope_diffraction_limit(aperture_size, wavelength, distance=None):
 
     """
 
-    diff_limit = (((wavelength*u.um)/(aperture_size*u.m))*u.rad).to(u.arcsec).value
+    diff_limit = (((wavelength * u.um) / (aperture_size * u.m)) * u.rad).to(u.arcsec).value
 
     if distance is not None:
         diff_limit *= distance / u.pc.to(u.AU)
@@ -477,7 +420,6 @@ def set_logger_level(which="console", level="ERROR"):
 
     """
 
-
     hdlr_name = f"scopesim_{which}_logger"
     level = {"ON": "INFO", "OFF": "CRITICAL"}.get(level.upper(), level)
     logger = logging.getLogger()
@@ -542,28 +484,33 @@ def find_file(filename, path=None, silent=False):
     if filename is None or filename.lower() == "none":
         return None
 
-    if filename[0] == "!":
+    if filename.startswith("!"):
         filename = from_currsys(filename)
+    # Turn into pathlib.Path object for better manipulation afterwards
+    filename = Path(filename)
 
     if path is None:
         path = rc.__search_path__
 
-    if os.path.isabs(filename):
+    if filename.is_absolute():
         # absolute path: only path to try
         trynames = [filename]
     else:
         # try to find the file in a search path
-        trynames = [os.path.join(trydir, *os.path.split(filename))
+        trynames = [Path(trydir, filename)
                     for trydir in path if trydir is not None]
 
     for fname in trynames:
-        if os.path.exists(fname):   # success
+        if fname.exists():  # success
             # strip leading ./
-            while fname[:2] == './':
-                fname = fname[2:]
-            return fname
-        else:
-            continue
+            # Path should take care of this automatically!
+            # while fname[:2] == './':
+            #     fname = fname[2:]
+            # Nevertheless, make sure this is actually the case...
+            assert not str(fname).startswith("./")
+            # HACK: Turn Path object back into string, because not everything
+            #       that depends on this function can handle Path objects (yet)
+            return str(fname)
 
     # no file found
     msg = f"File cannot be found: {filename}"
@@ -604,7 +551,7 @@ def airmass2zendist(airmass):
     zenith distance in degrees
     """
 
-    return np.rad2deg(np.arccos(1/airmass))
+    return np.rad2deg(np.arccos(1 / airmass))
 
 
 def convert_table_comments_to_dict(tbl):
@@ -614,13 +561,13 @@ def convert_table_comments_to_dict(tbl):
         try:
             comments_str = "\n".join(tbl.meta["comments"])
             comments_dict = yaml.full_load(comments_str)
-        except:
+        except yaml.error.YAMLError:
             logging.warning("Couldn't convert <table>.meta['comments'] to dict")
             comments_dict = tbl.meta["comments"]
     elif "COMMENT" in tbl.meta:
         try:
             comments_dict = yaml.full_load("\n".join(tbl.meta["COMMENT"]))
-        except:
+        except yaml.error.YAMLError:
             logging.warning("Couldn't convert <table>.meta['COMMENT'] to dict")
             comments_dict = tbl.meta["COMMENT"]
     else:
@@ -656,7 +603,7 @@ def real_colname(name, colnames, silent=True):
     if len(real_name) == 0:
         real_name = None
         if not silent:
-            logging.warning("None of {} were found in {}".format(names, colnames))
+            logging.warning("None of %s were found in %s", names, colnames)
     else:
         real_name = real_name[0]
 
@@ -681,8 +628,10 @@ def insert_into_ordereddict(dic, new_entry, pos):
 
 
 def empty_type(x):
-    type_dict = {int: 0, float: 0., bool: False, str: " ",
-                 list: [], tuple: (), dict: {}}
+    type_dict = {
+        int: 0, float: 0., bool: False, str: " ",
+        list: [], tuple: (), dict: {}
+    }
     if "<U" in str(x):
         x = str
 
@@ -747,7 +696,6 @@ def quantify(item, unit):
     return quant
 
 
-
 def extract_type_from_unit(unit, unit_type):
     """
     Extract ``astropy`` physical type from a compound unit
@@ -766,12 +714,10 @@ def extract_type_from_unit(unit, unit_type):
         Any base units corresponding to ``unit_type``
 
     """
-
-    unit = unit**1
     extracted_units = u.Unit("")
-    for base, power in zip(unit._bases, unit._powers):
-        if unit_type == (base**abs(power)).physical_type:
-            extracted_units *= base**power
+    for base, power in zip(unit.bases, unit.powers):
+        if unit_type == (base ** abs(power)).physical_type:
+            extracted_units *= base ** power
 
     new_unit = unit / extracted_units
 
@@ -796,13 +742,12 @@ def extract_base_from_unit(unit, base_unit):
 
     """
 
-    unit = unit**1
     extracted_units = u.Unit("")
-    for base, power in zip(unit._bases, unit._powers):
+    for base, power in zip(unit.bases, unit.powers):
         if base == base_unit:
-            extracted_units *= base**power
+            extracted_units *= base ** power
 
-    new_unit = unit * extracted_units**-1
+    new_unit = unit * extracted_units ** -1
 
     return new_unit, extracted_units
 
@@ -847,9 +792,8 @@ def quantity_from_table(colname, table, default_unit=""):
             else:
                 col = col * u.Unit(default_unit)
                 tbl_name = table.meta.get("name", table.meta.get("filename"))
-                logging.info("{}_unit was not found in table.meta: {}. "
-                             "Default to: {}"
-                             "".format(colname, tbl_name, default_unit))
+                logging.info(("%s_unit was not found in table.meta: %s. "
+                              "Default to: %s"), colname, tbl_name, default_unit)
 
     return col
 
@@ -870,9 +814,8 @@ def unit_from_table(colname, table, default_unit=""):
             unit = u.Unit(com_tbl[colname_u])
         else:
             tbl_name = table.meta.get("name", table.meta.get("filename"))
-            logging.info("{}_unit was not found in table.meta: {}. "
-                         "Default to: {}"
-                         "".format(colname, tbl_name, default_unit))
+            logging.info(("%s_unit was not found in table.meta: %s. "
+                          "Default to: %s"), colname, tbl_name, default_unit)
             unit = u.Unit(default_unit)
 
     return unit
@@ -891,8 +834,8 @@ def has_needed_keywords(header, suffix=""):
     Check to see if the WCS keywords are in the header
     """
     keys = ["CDELT1", "CRVAL1", "CRPIX1"]
-    return sum([key + suffix in header.keys() for key in keys]) == 3 and \
-           "NAXIS1" in header.keys()
+    return (sum(key + suffix in header.keys() for key in keys) == 3 and
+            "NAXIS1" in header.keys())
 
 
 def stringify_dict(dic, ignore_types=(str, int, float)):
@@ -926,7 +869,7 @@ def clean_dict(orig_dict, new_entries):
 
     """
     for key in orig_dict:
-        if type(orig_dict[key]) is str and orig_dict[key] in new_entries:
+        if isinstance(orig_dict[key], str) and orig_dict[key] in new_entries:
             orig_dict[key] = new_entries[orig_dict[key]]
 
     return orig_dict
@@ -954,11 +897,11 @@ def from_currsys(item):
         for key in item:
             item[key] = from_currsys(item[key])
 
-    if isinstance(item, str) and len(item) and item[0] == "!":
+    if isinstance(item, str) and len(item) and item.startswith("!"):
         if item in rc.__currsys__:
             item = rc.__currsys__[item]
         else:
-            raise ValueError("{} was not found in rc.__currsys__".format(item))
+            raise ValueError(f"{item} was not found in rc.__currsys__")
 
     if isinstance(item, str) and item.lower() == "none":
         item = None
@@ -973,21 +916,20 @@ def check_keys(input_dict, required_keys, action="error", all_any="all"):
         input_dict = {key: None for key in input_dict}
 
     if all_any == "all":
-        keys_present = all([key in input_dict for key in required_keys])
+        keys_present = all(key in input_dict for key in required_keys)
     elif all_any == "any":
-        keys_present = any([key in input_dict for key in required_keys])
+        keys_present = any(key in input_dict for key in required_keys)
     else:
         raise ValueError("all_any must be either 'all' or 'any'")
 
     if not keys_present:
         if "error" in action:
-            raise ValueError("One or more of the following keys missing "
-                             "from input_dict: \n{} \n{}"
-                             "".format(required_keys, input_dict.keys()))
-        elif "warn" in action:
-            logging.warning("One or more of the following keys missing "
-                          "from input_dict: \n{} \n{}"
-                          "".format(required_keys, input_dict.keys()))
+            raise ValueError("One or more of the following keys missing from "
+                             f"input_dict: \n{required_keys} \n{input_dict.keys()}")
+        if "warn" in action:
+            logging.warning(("One or more of the following keys missing "
+                             "from input_dict: \n%s \n%s"), required_keys,
+                            input_dict.keys())
 
     return keys_present
 
@@ -1003,9 +945,11 @@ def interp2(x_new, x_orig, y_orig):
     return y_new
 
 
-def write_report(text, filename=None, output=["rst"]):
+def write_report(text, filename=None, output=None):
     """ Writes a report string to file in latex or rst format"""
-    if isinstance(output, str):
+    if output is None:
+        output = ["rst"]
+    elif isinstance(output, str):
         output = [output]
 
     if filename is not None:
@@ -1016,10 +960,8 @@ def write_report(text, filename=None, output=["rst"]):
                 out_text = out_text.decode("utf-8")
 
             suffix = {"rst": ".rst", "latex": ".tex"}[fmt]
-            fname = Path(filename)
-            fname = os.path.join(*fname.parts[:-1], fname.stem + suffix)
-            with open(fname, "w") as f:
-                f.write(out_text)
+            fname = Path(filename).with_suffix(suffix)
+            fname.write_text(out_text, encoding="utf-8")
 
 
 def pretty_print_dict(dic, indent=0):
@@ -1048,19 +990,21 @@ def return_latest_github_actions_jobs_status(owner_name="AstarVienna", repo_name
     dic = response.json()
     params_list = []
     for job in dic["jobs"]:
-        params = {"name": job['name'],
-                  "status": job['status'],
-                  "conclusion": job['conclusion'],
-                  "started_at": job['started_at'],
-                  "completed_at": job['completed_at'],
-                  "url": job['html_url'],
-                  "badge_url": None}
+        params = {
+            "name": job['name'],
+            "status": job['status'],
+            "conclusion": job['conclusion'],
+            "started_at": job['started_at'],
+            "completed_at": job['completed_at'],
+            "url": job['html_url'],
+            "badge_url": None
+        }
 
         key = "Python_" + job['name'].split()[-1][:-1]
         value = "passing" if job['conclusion'] == "success" else "failing"
         colour = "brightgreen" if job['conclusion'] == "success" else "red"
         badge_url = f"https://img.shields.io/badge/{key}-{value}-{colour}"
         params["badge_url"] = badge_url
-        params_list += [params]
+        params_list.append(params)
 
     return params_list

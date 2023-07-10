@@ -42,12 +42,10 @@
 #
 # """
 
-from copy import deepcopy, copy
+from copy import deepcopy
 import numpy as np
-from astropy.table import Table
 from astropy import units as u
 
-from . import fov_manager_utils as fmu
 from . import image_plane_utils as ipu
 from ..effects import DetectorList
 from ..effects import effects_utils as eu
@@ -160,8 +158,8 @@ class FOVManager:
                 det_eff = eu.get_all_effects(self.effects, DetectorList)[0]
                 dethdr = det_eff.image_plane_header
 
-            fovs += [FieldOfView(skyhdr, waverange, detector_header=dethdr,
-                                 **vol["meta"])]
+            fovs.append(FieldOfView(skyhdr, waverange, detector_header=dethdr,
+                                    **vol["meta"]))
 
         return fovs
 
@@ -290,7 +288,7 @@ class FovVolumeList(FOVSetupBase):
                 for i, vol in enumerate(self.volumes):
                     if aperture_id in (vol["meta"]["aperture_id"], None):
                         if vol[f"{axis}_max"] <= values[0]:
-                            to_pop += [i]
+                            to_pop.append(i)
                         elif vol[f"{axis}_min"] < values[0]:
                             vol[f"{axis}_min"] = values[0]
 
@@ -298,7 +296,7 @@ class FovVolumeList(FOVSetupBase):
                 for i, vol in enumerate(self.volumes):
                     if aperture_id in (vol["meta"]["aperture_id"], None):
                         if vol[f"{axis}_min"] >= values[1]:
-                            to_pop += [i]
+                            to_pop.append(i)
                         if vol[f"{axis}_max"] > values[1]:
                             vol[f"{axis}_max"] = values[1]
 
@@ -356,7 +354,7 @@ class FovVolumeList(FOVSetupBase):
                         add_flag = False
 
                 if add_flag is True:
-                    new_vols += [new_vol]
+                    new_vols.append(new_vol)
 
         return new_vols
 

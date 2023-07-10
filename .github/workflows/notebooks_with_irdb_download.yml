@@ -1,27 +1,25 @@
-name: Tests
+name: Notebooks with IRDB download
 
 on:
-  push:
-    branches:
-      - master
-      - dev_master
-      - dev_spectroscopy
-  pull_request:
-    branches:
-      - master
-      - dev_master
-      - dev_spectroscopy
-
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
+
+  # Run every night
+  schedule:
+    - cron: "0 3 * * *"
+
 
 jobs:
   build:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest]
-        python-version: ['3.8', '3.9', '3.10', '3.11']
+        # Run all operating systems, because this is the first interaction
+        # that users have with ScopeSim / IRDB.
+        # However, only use minimum and maximum supported Python version,
+        # as the IRDB download often fails.
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: ['3.8', '3.11']
 
     steps:
       - uses: actions/checkout@v3
@@ -38,7 +36,6 @@ jobs:
           # ScopeSim_Templates.
           pip install .
           pip install .[dev,test]
-      - name: Run Pytest
-        run: pytest --cov=scopesim
-      - name: Upload coverage reports to Codecov
-        uses: codecov/codecov-action@v3
+      - name: Run notebooks
+        # No --checkout-irdb to download the IRDB as a normal end user would.
+        run: ./runnotebooks.sh --delete

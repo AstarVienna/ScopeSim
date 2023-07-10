@@ -1,4 +1,3 @@
-from copy import deepcopy
 import numpy as np
 from scipy.signal import convolve
 from scipy.interpolate import RectBivariateSpline
@@ -139,7 +138,7 @@ class PSF(Effect):
         plt.gcf().clf()
 
         kernel = self.get_kernel(obj)
-        plt.imshow(kernel, norm=LogNorm(), origin='lower', **kwargs)
+        plt.imshow(kernel, norm=LogNorm(), origin="lower", **kwargs)
 
         return plt.gcf()
 
@@ -258,8 +257,8 @@ class NonCommonPathAberration(AnalyticalPSF):
         strehl = pu.wfe2strehl(wfe=wfe, wave=waves)
 
         plt.plot(waves, strehl)
-        plt.xlabel("Wavelength [{}]".format(waves.unit))
-        plt.ylabel("Strehl Ratio \n[Total WFE = {}]".format(wfe))
+        plt.xlabel(f"Wavelength [{waves.unit}]")
+        plt.ylabel(f"Strehl Ratio \n[Total WFE = {wfe}]")
 
         return plt.gcf()
 
@@ -519,7 +518,7 @@ class AnisocadoConstPSF(SemiAnalyticalPSF):
         plt.subplot2grid((2, 2), (0, 0))
         im = kernel
         r_sky = pixel_scale * im.shape[0]
-        plt.imshow(im, norm=LogNorm(), origin='lower',
+        plt.imshow(im, norm=LogNorm(), origin="lower",
                    extent= [-r_sky, r_sky, -r_sky, r_sky], **kwargs)
         plt.ylabel("[arcsec]")
 
@@ -529,10 +528,10 @@ class AnisocadoConstPSF(SemiAnalyticalPSF):
         r = 16
         im = kernel[y-r:y+r, x-r:x+r]
         r_sky = pixel_scale * im.shape[0]
-        plt.imshow(im, norm=LogNorm(), origin='lower',
+        plt.imshow(im, norm=LogNorm(), origin="lower",
                    extent= [-r_sky, r_sky, -r_sky, r_sky], **kwargs)
         plt.ylabel("[arcsec]")
-        plt.gca().yaxis.set_label_position('right')
+        plt.gca().yaxis.set_label_position("right")
 
         plt.subplot2grid((2, 2), (1, 0), colspan=2)
         hdr = self._file[0].header
@@ -545,7 +544,7 @@ class AnisocadoConstPSF(SemiAnalyticalPSF):
         waves = np.arange(hdr["NAXIS2"]) * hdr["CDELT2"] + hdr["CRVAL2"]
         for i in np.arange(len(waves))[::-1]:
             plt.plot(wfes, data[i, :],
-                     label=r"{} $\mu m$".format(round(waves[i], 3)))
+                     label=f"{waves[i]:.3f} " + r"$\mu m$")
 
         plt.xlabel("RMS Wavefront Error [um]")
         plt.ylabel("Strehl Ratio")
@@ -570,7 +569,7 @@ class DiscretePSF(PSF):
 class FieldConstantPSF(DiscretePSF):
     """A PSF that is constant across the field.
 
-    For spectroscopy, the a wavelength-dependent PSF cube is built, where for each
+    For spectroscopy, a wavelength-dependent PSF cube is built, where for each
     wavelength the reference PSF is scaled proportional to wavelength.
     """
     def __init__(self, **kwargs):
@@ -599,7 +598,7 @@ class FieldConstantPSF(DiscretePSF):
         ii = pu.nearest_index(fov.wavelength, self._waveset)
         ext = self.kernel_indexes[ii]
         if ext != self.current_layer_id:
-            if fov.hdu.header['NAXIS'] == 3:
+            if fov.hdu.header["NAXIS"] == 3:
                 self.current_layer_id = ext
                 self.make_psf_cube(fov)
             else:
