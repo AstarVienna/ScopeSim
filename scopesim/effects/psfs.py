@@ -555,7 +555,7 @@ class AnisocadoConstPSF(SemiAnalyticalPSF):
 
 
 ################################################################################
-# Discrete PSFs - MAORY and co PSFs
+# Discrete PSFs - MORFEO and co PSFs
 
 
 class DiscretePSF(PSF):
