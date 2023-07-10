@@ -44,6 +44,9 @@
 
 from copy import deepcopy
 import numpy as np
+from typing import TextIO
+from io import StringIO
+
 from astropy import units as u
 
 from . import image_plane_utils as ipu
@@ -189,7 +192,9 @@ class FovVolumeList(FOVSetupBase):
 
     """
 
-    def __init__(self, initial_volume={}):
+    def __init__(self, initial_volume=None):
+        if initial_volume is None:
+            initial_volume = {}
 
         self.volumes = [{"wave_min": 0.3,
                          "wave_max": 30,
@@ -361,19 +366,42 @@ class FovVolumeList(FOVSetupBase):
     def __len__(self):
         return len(self.volumes)
 
-    def __getitem__(self, item):
-        return self.volumes[item]
+    def __iter__(self):
+        return iter(self.volumes)
+
+    def __getitem__(self, key):
+        return self.volumes[key]
 
     def __setitem__(self, key, value):
         self.volumes[item] = value
 
-    def __repr__(self):
-        text = f"FovVolumeList with [{len(self.volumes)}] volumes:\n"
-        for i, vol in enumerate(self.volumes):
-            mini_text = ", ".join([f"{key}: {val}" for key, val in vol.items()])
-            text += f"  [{i}] {mini_text} \n"
+    def __delitem__(self, key):
+        del self.volumes[key]
 
-        return text
+    def write_string(self, stream: TextIO) -> None:
+        """Write formatted string representation to I/O stream"""
+        n_vol = len(self.volumes)
+        stream.write(f"FovVolumeList with {n_vol} volumes:")
+        max_digits = len(str(n_vol))
+
+        for i_vol, vol in enumerate(self.volumes):
+            pre = "\n└─" if i_vol == n_vol - 1 else "\n├─"
+            stream.write(f"{pre}[{i_vol:>{max_digits}}]:")
+
+            pre = "\n  " if i_vol == n_vol - 1 else "\n│ "
+            n_key = len(vol)
+            for i_key, (key, val) in enumerate(vol.items()):
+                subpre = "└─" if i_key == n_key - 1 else "├─"
+                stream.write(f"{pre}{subpre}{key}: {val}")
+
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}({self.volumes[0]})"
+
+    def __str__(self) -> str:
+        with StringIO() as str_stream:
+            self.write_string(str_stream)
+            output = str_stream.getvalue()
+        return output
 
     def __iadd__(self, other):
         if isinstance(other, list):

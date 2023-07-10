@@ -337,7 +337,8 @@ class SpectralTraceList(Effect):
         return plt.gcf()
 
     def __repr__(self):
-        return "\n".join([spt.__repr__() for spt in self.spectral_traces])
+        # "\n".join([spt.__repr__() for spt in self.spectral_traces])
+        return f"{self.__class__.__name__}(**{self.meta!r})"
 
     def __str__(self):
         msg = (f"SpectralTraceList: \"{self.meta.get('name')}\" : "

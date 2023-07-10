@@ -645,6 +645,12 @@ class FieldOfView(FieldOfViewBase):
                 and field.header.get("BG_SRC", False) is True]
 
     def __repr__(self):
+        waverange = [self.meta["wave_min"].value, self.meta["wave_max"].value]
+        msg = (f"{self.__class__.__name__}({self.header!r}, {waverange!r}, "
+               f"{self.detector_header!r}, **{self.meta!r})")
+        return msg
+
+    def __str__(self):
         msg = (f"FOV id: {self.meta['id']}, with dimensions "
                f"({self.header['NAXIS1']}, {self.header['NAXIS2']})\n"
                f"Sky centre: ({self.header['CRVAL1']}, "

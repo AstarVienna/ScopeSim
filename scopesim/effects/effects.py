@@ -1,12 +1,9 @@
 from pathlib import Path
 
-from astropy.table import Table
-
 from ..effects.data_container import DataContainer
 from .. import base_classes as bc
 from ..utils import from_currsys, write_report
 from ..reports.rst_utils import table_to_rst
-from .. import rc
 
 
 class Effect(DataContainer):
@@ -118,11 +115,12 @@ class Effect(DataContainer):
     def meta_string(self):
         meta_str = ""
         max_key_len = max(len(key) for key in self.meta.keys())
+        padlen = max_key_len + 4
         for key in self.meta:
             if key not in {"comments", "changes", "description", "history",
                            "report_table_caption", "report_plot_caption",
                            "table"}:
-                meta_str += f"    {key.rjust(max_key_len)} : {self.meta[key]}\n"
+                meta_str += f"{key:>{padlen}} : {self.meta[key]}\n"
 
         return meta_str
 
@@ -292,8 +290,7 @@ Meta-data
         """
         Prints basic information on the effect, notably the description
         """
-        name = self.meta.get("name", self.meta.get("filename", "<empty>"))
-        text = f"{type(self).__name__}: \"{name}\""
+        text = str(self)
 
         desc = self.meta.get("description")
         if desc is not None:
@@ -302,10 +299,10 @@ Meta-data
         print(text)
 
     def __repr__(self):
-        return f"{type(self).__name__}: \"{self.display_name}\""
+        return f"{self.__class__.__name__}(**{self.meta!r})"
 
     def __str__(self):
-        return self.__repr__()
+        return f"{self.__class__.__name__}: \"{self.display_name}\""
 
     def __getitem__(self, item):
         if isinstance(item, str) and item.startswith("#"):

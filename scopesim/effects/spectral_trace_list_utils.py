@@ -545,6 +545,9 @@ class SpectralTrace:
                                      fill_value="extrapolate")
 
     def __repr__(self):
+        return f"{self.__class__.__name__}({self.table!r}, **{self.meta!r})"
+
+    def __str__(self):
         msg = (f"<SpectralTrace> \"{self.meta['trace_id']}\" : "
                f"[{self.wave_min:.4f}, {self.wave_max:.4f}]um : "
                f"Ext {self.meta['extension_id']} : "

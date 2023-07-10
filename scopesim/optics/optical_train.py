@@ -83,9 +83,8 @@ class OpticalTrain:
 
     """
     def __init__(self, cmds=None):
-
-        self._description = self.__repr__()
         self.cmds = cmds
+        self._description = self.__repr__()
         self.optics_manager = None
         self.fov_manager = None
         self.image_planes = []
@@ -491,6 +490,9 @@ class OpticalTrain:
     @property
     def effects(self):
         return self.optics_manager.list_effects()
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}({self.cmds!r})"
 
     def __str__(self):
         return self._description
