@@ -87,6 +87,14 @@ class TestInit:
         assert cmd["!OBS.airmass"] == 2
         assert cmd.yaml_dicts[-1]["effects"][0]["kwargs"]["meaning_of_life"] == 42
 
+    def test_init_through_repr(self):
+        """Check whether we can recreate a UserCommand by evaluating its __repr__."""
+        cmd1 = UserCommands(use_instrument="test_package")
+        cmd2 = eval(repr(cmd1))
+        # TODO: Create a proper __eq__ so we can assert cmd1 == cmd2
+        assert str(cmd1) == str(cmd2)
+        assert cmd1.cmds == cmd2.cmds
+
 
 class TestMiscFeatures:
     def test_updates_with_yaml_dict(self):
@@ -100,6 +108,11 @@ class TestMiscFeatures:
         cmd = UserCommands(use_instrument="test_package")
         cmd["!TEL.gigawatts"] = 1.21
         assert cmd["!TEL.gigawatts"] == 1.21
+
+    def test_str(self):
+        """Test whether __str__ gives a pretty result."""
+        cmd = UserCommands(use_instrument="test_package")
+        assert "├─" in str(cmd)
 
 
 class TestListLocalPackages:
