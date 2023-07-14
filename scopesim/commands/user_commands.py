@@ -265,6 +265,9 @@ class UserCommands:
     def __repr__(self):
         return f"{self.__class__.__name__}(**{self.kwargs!r})"
 
+    def __str__(self):
+        return str(self.cmds)
+
 
 def check_for_updates(package_name):
     """
