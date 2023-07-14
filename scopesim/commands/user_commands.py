@@ -268,6 +268,12 @@ class UserCommands:
     def __str__(self):
         return str(self.cmds)
 
+    def _repr_pretty_(self, p, cycle):
+        """For ipython"""
+        if cycle:
+            p.text("UserCommands(...)")
+        else:
+            p.text(str(self.cmds))
 
 def check_for_updates(package_name):
     """
