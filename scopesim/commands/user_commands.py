@@ -273,7 +273,7 @@ class UserCommands:
         if cycle:
             p.text("UserCommands(...)")
         else:
-            p.text(str(self.cmds))
+            p.text(str(self))
 
 def check_for_updates(package_name):
     """
