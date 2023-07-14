@@ -58,6 +58,7 @@ docs = [
     "sphinxcontrib-apidoc",
     "nbsphinx",
     "numpydoc",
+    "scopesim_templates>=0.4.4",
 ]
 
 [project.urls]
