@@ -231,6 +231,8 @@ class UserCommands:
                 for mode in modes:
                     if mode in self.modes_dict:
                         defyam["properties"]["modes"].append(mode)
+                        if "deprecate" in self.modes_dict[mode]:
+                            logging.warning(self.modes_dict[mode]["deprecate"])
                     else:
                         raise ValueError(f"mode '{mode}' was not recognised")
 
@@ -243,6 +245,8 @@ class UserCommands:
                 dic = self.modes_dict[mode_name]
                 desc = dic["description"] if "description" in dic else "<None>"
                 modes[mode_name] = desc
+                if "deprecate" in dic:
+                    modes[mode_name] += " (deprecated)"
 
             msg = "\n".join([f"{key}: {value}" for key, value in modes.items()])
         else:
