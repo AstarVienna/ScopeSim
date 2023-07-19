@@ -114,8 +114,7 @@ class DataContainer:
         self.meta.update(hdr_dict)
         # self.table.meta.update(hdr_dict)
         self.table.meta.update(self.meta)
-        self.meta["history"] += ["ASCII table read from {}"
-                                 "".format(self.meta["filename"])]
+        self.meta["history"] += [f"ASCII table read from {self.meta['filename']}"]
 
     def _load_fits(self):
         self._file = fits.open(self.meta["filename"])
@@ -123,8 +122,7 @@ class DataContainer:
             self.headers += [ext.header]
 
         self.meta.update(dict(self._file[0].header))
-        self.meta["history"] += ["Opened handle to FITS file {}"
-                                 "".format(self.meta["filename"])]
+        self.meta["history"] += [f"Opened handle to FITS file {self.meta['filename']}"]
 
     def get_data(self, ext=0, layer=None):
         """

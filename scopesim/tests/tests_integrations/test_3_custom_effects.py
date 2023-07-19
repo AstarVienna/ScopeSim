@@ -4,7 +4,7 @@
 # 3: Writing and including custom Effects
 # =======================================
 # 
-# In this tutorial, we will load the model of MICADO (including Armazones, ELT, MAORY) and then turn off all effect that modify the spatial extent of the stars. The purpose here is to see in detail what happens to the **distribution of the stars flux on a sub-pixel level** when we add a plug-in astrometric Effect to the optical system.
+# In this tutorial, we will load the model of MICADO (including Armazones, ELT, MORFEO) and then turn off all effect that modify the spatial extent of the stars. The purpose here is to see in detail what happens to the **distribution of the stars flux on a sub-pixel level** when we add a plug-in astrometric Effect to the optical system.
 # 
 # For real simulation, we will obviously leave all normal MICADO effects turned on, while still adding the plug-in Effect. Hopefully this tutorial will serve as a refernce for those who want to see **how to create Plug-ins** and how to manipulate the effects in the MICADO optical train model.
 # 

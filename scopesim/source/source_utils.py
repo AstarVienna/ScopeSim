@@ -13,27 +13,27 @@ def validate_source_input(**kwargs):
     if "filename" in kwargs and kwargs["filename"] is not None:
         filename = kwargs["filename"]
         if utils.find_file(filename) is None:
-            logging.warning("filename was not found: {}".format(filename))
+            logging.warning("filename was not found: %s", filename)
 
     if "image" in kwargs and kwargs["image"] is not None:
         image_hdu = kwargs["image"]
         if not isinstance(image_hdu, (fits.PrimaryHDU, fits.ImageHDU)):
             raise ValueError("image must be fits.HDU object with a WCS."
-                             "type(image) == {}".format(type(image_hdu)))
+                             f"{type(image_hdu) = }")
 
         if len(wcs.find_all_wcs(image_hdu.header)) == 0:
-            logging.warning("image does not contain valid WCS. {}"
-                          "".format(wcs.WCS(image_hdu)))
+            logging.warning("image does not contain valid WCS. %s",
+                            wcs.WCS(image_hdu))
 
     if "table" in kwargs and kwargs["table"] is not None:
         tbl = kwargs["table"]
         if not isinstance(tbl, Table):
             raise ValueError("table must be an astropy.Table object:"
-                             "{}".format(type(tbl)))
+                             f"{type(tbl) = }")
 
         if not np.all([col in tbl.colnames for col in ["x", "y", "ref"]]):
             raise ValueError("table must contain at least column names: "
-                             "'x, y, ref': {}".format(tbl.colnames))
+                             f"'x, y, ref': {tbl.colnames}")
 
     return True
 
@@ -259,5 +259,3 @@ def make_img_wcs_header(pixel_scale, image_size):
 #                       "FLUXUNIT to the header.")
 #
 #     return unit
-
-

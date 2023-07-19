@@ -1,4 +1,4 @@
-import os
+from pathlib import Path
 
 from astropy.table import TableFormatter
 from docutils.core import publish_doctree, publish_parts
@@ -169,8 +169,8 @@ def process_code(context_code, code, options):
 
             fname = options.get("name", "untitled").split(".")[0]
             fname = ".".join([fname, fmt])
-            fname = os.path.join(img_path, fname)
-            context_code += '\nplt.savefig("{}")'.format(fname)
+            fname = Path(img_path, fname)
+            context_code += f"\nplt.savefig(\"{fname}\")"
 
     return context_code
 
@@ -302,17 +302,16 @@ def latexify_rst_text(rst_text, filename=None, path=None, title_char="=",
     parts = publish_parts(text + rst_text, writer_name="latex")
 
     if not float_figures:
-        parts["body"] = parts["body"].replace('begin{figure}',
-                                              'begin{figure}[H]')
+        parts["body"] = parts["body"].replace("begin{figure}",
+                                              "begin{figure}[H]")
 
     if use_code_box:
-        parts["body"] = parts["body"].replace('begin{alltt}',
-                                              'begin{alltt}\n\\begin{lstlisting}[frame=single]')
-        parts["body"] = parts["body"].replace('end{alltt}',
-                                              'end{lstlisting}\n\\end{alltt}')
+        parts["body"] = parts["body"].replace("begin{alltt}",
+                                              "begin{alltt}\n\\begin{lstlisting}[frame=single]")
+        parts["body"] = parts["body"].replace("end{alltt}",
+                                              "end{lstlisting}\n\\end{alltt}")
 
-    filename = filename.split(".")[0] + ".tex"
-    file_path = os.path.join(path, filename)
+    file_path = Path(path, filename).with_suffix(".tex")
     with open(file_path, "w") as f:
         f.write(parts["body"])
 
@@ -329,8 +328,7 @@ def rstify_rst_text(rst_text, filename=None, path=None, title_char="="):
     if filename is None:
         filename = rst_text.split(title_char)[0].strip().replace(" ", "_")
 
-    filename = filename.split(".")[0] + ".rst"
-    file_path = os.path.join(path, filename)
+    file_path = Path(path, filename).with_suffix(".rst")
     with open(file_path, "w") as f:
         f.write(rst_text)
 
@@ -340,8 +338,8 @@ def rstify_rst_text(rst_text, filename=None, path=None, title_char="="):
 def table_to_rst(tbl, indent=0, rounding=None):
     if isinstance(rounding, int):
         for col in tbl.itercols():
-            if col.info.dtype.kind == 'f':
-                col.info.format = '.{}f'.format(rounding)
+            if col.info.dtype.kind == "f":
+                col.info.format = f".{rounding}f"
     
     tbl_fmtr = TableFormatter()
     lines, outs = tbl_fmtr._pformat_table(tbl, max_width=-1, max_lines=-1,

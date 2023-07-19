@@ -1,17 +1,37 @@
 """Unit tests for spectral_trace_list_utils.py"""
 
-# pylint: disable=no-self-use
 # pylint: disable=missing-function-docstring
 # pylint: disable=invalid-name
-
+# pylint: disable=too-few-public-methods
 import pytest
 
 import numpy as np
 
-from astropy.io import fits
-
+from scopesim.effects.spectral_trace_list_utils import SpectralTrace
 from scopesim.effects.spectral_trace_list_utils import Transform2D, power_vector
-from scopesim.effects.spectral_trace_list_utils import make_image_interpolations
+from scopesim.tests.mocks.py_objects import trace_list_objects as tlo
+
+class TestSpectralTrace:
+    """Tests not covered in test_SpectralTraceList.py"""
+    def test_initialises_with_table(self):
+        trace_tbl = tlo.trace_1()
+        spt = SpectralTrace(trace_tbl)
+        assert isinstance(spt, SpectralTrace)
+
+    def test_fails_without_table(self):
+        a_number = 1
+        with pytest.raises(ValueError):
+            SpectralTrace(a_number)
+
+    def test_determines_correct_dispersion_axis_x(self):
+        trace_tbl = tlo.trace_6()
+        spt = SpectralTrace(trace_tbl)
+        assert spt.dispersion_axis == 'x'
+
+    def test_determines_correct_dispersion_axis_y(self):
+        trace_tbl = tlo.trace_5()
+        spt = SpectralTrace(trace_tbl)
+        assert spt.dispersion_axis == 'y'
 
 class TestPowerVec:
     """Test function power_vector()"""

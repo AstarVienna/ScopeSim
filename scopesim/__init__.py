@@ -7,6 +7,7 @@ import sys
 import logging
 import warnings
 import yaml
+from importlib import metadata
 from astropy.utils.exceptions import AstropyWarning
 
 warnings.simplefilter('ignore', UserWarning)
@@ -75,7 +76,4 @@ from .tests.mocks.load_basic_instrument import load_example_optical_train
 #                          VERSION INFORMATION                                 #
 ################################################################################
 
-try:
-    from .version import version as __version__
-except ImportError:
-    __version__ = "Version number is not available"
+__version__ = metadata.version(__package__)
