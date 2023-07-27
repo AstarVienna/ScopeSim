@@ -7,8 +7,11 @@ import pytest
 
 import numpy as np
 
+from astropy.io import fits
+
 from scopesim.effects.spectral_trace_list_utils import SpectralTrace
 from scopesim.effects.spectral_trace_list_utils import Transform2D, power_vector
+from scopesim.effects.spectral_trace_list_utils import make_image_interpolations
 from scopesim.tests.mocks.py_objects import trace_list_objects as tlo
 
 class TestSpectralTrace:
