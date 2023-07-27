@@ -346,66 +346,6 @@ class SpectralTraceList(Effect):
 
         return outhdul
 
-    def rectify_cube(self, hdul):
-        """
-        Rectify an IFU observation into a data cube
-
-        The HDU list (or fits file) must have been created with the
-        present OpticalTrain (or an identically configured one).
-
-        Parameters
-        ----------
-        hdul : HDUList, file name
-           an ifu observation created with the present OpticalTrain
-        """
-        if not isinstance(hdul, fits.HDUList):
-            hdul = fits.open(hdul)
-
-        # Create interpolation functions
-        ip_funcs = make_image_interpolations(hdul, kx=1, ky=1)
-
-        # Create a common wcs for the rectification
-        dwave = from_currsys("!SIM.spectral.spectral_bin_width")
-        pixscale = self.meta['pixel_scale']
-        naxis1 = int((self.meta['x_max'] - self.meta['x_min']) / pixscale)
-        naxis2 = len(self.spectral_traces)
-        naxis3 = int((self.meta['wave_max'] - self.meta['wave_min'])/dwave)
-        slicewidth = (self.meta['y_max'] - self.meta['y_min']) / naxis2
-
-        rectwcs = WCS(naxis=2)
-        rectwcs.wcs.ctype = ['WAVE', 'LINEAR']
-        rectwcs.wcs.crpix = [1, (naxis1 + 1)/2]
-        rectwcs.wcs.crval = [self.meta['wave_min'], 0]
-        rectwcs.wcs.cdelt = [dwave, pixscale]
-        rectwcs.wcs.cunit = ['um', 'arcsec']
-
-        cube = np.zeros((naxis3, naxis2, naxis1), dtype=np.float32)
-        for i, (sptid, spt) in enumerate(self.spectral_traces.items()):
-            result = spt.rectify_trace(hdul, interps=ip_funcs,
-                                       wcs=rectwcs, nlam=naxis3, nxi=naxis1)
-            cube[:, i, :] = result.T
-
-        cubehdr = fits.Header()
-        cubehdr['INSMODE'] = from_currsys(self.meta['element_name'])
-        cubehdr['WAVELEN'] = from_currsys(self.meta['wavelen'])
-        cubehdr['CTYPE1'] = 'LINEAR'
-        cubehdr['CTYPE2'] = 'LINEAR'
-        cubehdr['CTYPE3'] = 'WAVE'
-        cubehdr['CRPIX1'] = (naxis1 + 1)/2
-        cubehdr['CRPIX2'] = (naxis2 + 1)/2
-        cubehdr['CRPIX3'] = 1.
-        cubehdr['CRVAL1'] = 0.
-        cubehdr['CRVAL2'] = 0.
-        cubehdr['CRVAL3'] = self.meta['wave_min']
-        cubehdr['CDELT1'] = pixscale
-        cubehdr['CDELT2'] = slicewidth
-        cubehdr['CDELT3'] = dwave
-        cubehdr['CUNIT1'] = 'arcsec'
-        cubehdr['CUNIT2'] = 'arcsec'
-        cubehdr['CUNIT3'] = 'um'
-
-        cubehdu = fits.ImageHDU(data=cube, header=cubehdr)
-        return cubehdu
 
 
 

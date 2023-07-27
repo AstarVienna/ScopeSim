@@ -1,5 +1,7 @@
 """SpectralTraceList and SpectralTrace for the METIS LM spectrograph"""
 from copy import deepcopy
+import logging
+
 import numpy as np
 from scipy.interpolate import RectBivariateSpline
 
@@ -13,6 +15,7 @@ from ..utils import from_currsys, find_file, quantify
 from .spectral_trace_list import SpectralTraceList
 from .spectral_trace_list_utils import SpectralTrace
 from .spectral_trace_list_utils import Transform2D
+from .spectral_trace_list_utils import make_image_interpolations
 from .apertures import ApertureMask
 from .ter_curves import TERCurve
 from ..base_classes import FieldOfViewBase, FOVSetupBase
@@ -163,6 +166,90 @@ class MetisLMSSpectralTraceList(SpectralTraceList):
                 spslice=sli, params=self.meta)
 
         self.spectral_traces = spec_traces
+
+    def rectify_cube(self, hdulist, xi_min=None, xi_max=None, interps=None,
+                     **kwargs):
+        """
+        Rectify an IFU observation into a data cube
+
+        The HDU list (or fits file) must have been created with the
+        present OpticalTrain (or an identically configured one).
+
+        Parameters
+        ----------
+        hdulist : str or fits.HDUList
+           an ifu observation created with the present OpticalTrain
+        xi_min, xi_max : float [arcsec]
+           Spatial limits of the image slicer on the sky. For METIS LMS,
+           these values need not be provided by the user.
+        interps : list of interpolation functions
+           If provided, there must be one for each image extension in `hdulist`.
+           The functions go from pixels to the images and can be created with,
+           e.g., RectBivariateSpline.
+        """
+        try:
+            inhdul = fits.open(hdulist)
+        except TypeError:
+            inhdul = hdulist
+
+        # Create interpolation functions
+        if interps is None:
+            logging.info("Computing interpolation functions")
+            interps = make_image_interpolations(inhdul, kx=1, ky=1)
+
+        # Create a common wcs for the rectification
+        dwave = from_currsys("!SIM.spectral.spectral_bin_width")
+        xi_min = np.min(self.slicelist['left'])
+        xi_max = np.max(self.slicelist['right'])
+        wave_min = self.meta['wave_min']
+        wave_max = self.meta['wave_max']
+        pixscale = self.meta['pixel_scale']
+        naxis1 = int((xi_max - xi_min) / pixscale) + 1
+        naxis2 = len(self.spectral_traces)
+        naxis3 = int((wave_max - wave_min)/dwave) + 1
+        logging.debug(f"Cube: {naxis1}, {naxis2}, {naxis3}")
+        logging.debug(f"Xi: {xi_min}, {xi_max}")
+        logging.debug(f"Wavelength: {wave_min}, {wave_max}")
+        slicewidth = (self.meta['y_max'] - self.meta['y_min']) / naxis2
+
+        rectwcs = WCS(naxis=2)
+        rectwcs.wcs.ctype = ['WAVE', 'LINEAR']
+        rectwcs.wcs.crpix = [1, 1]
+        rectwcs.wcs.crval = [wave_min, xi_min]
+        rectwcs.wcs.cdelt = [dwave, pixscale]
+        rectwcs.wcs.cunit = ['um', 'arcsec']
+
+        cube = np.zeros((naxis3, naxis2, naxis1), dtype=np.float32)
+        for i, (sptid, spt) in enumerate(self.spectral_traces.items()):
+            spt.wave_min = wave_min
+            spt.wave_max = wave_max
+            result = spt.rectify(hdulist, interps=interps,
+                                 wave_min=wave_min, wave_max=wave_max,
+                                 xi_min=xi_min, xi_max=xi_max,
+                                 bin_width=dwave)
+            cube[:, i, :] = result.data.T
+
+        cubehdr = fits.Header()
+        cubehdr['INSMODE'] = from_currsys(self.meta['element_name'])
+        cubehdr['WAVELEN'] = from_currsys(self.meta['wavelen'])
+        cubehdr['CTYPE1'] = 'LINEAR'
+        cubehdr['CTYPE2'] = 'LINEAR'
+        cubehdr['CTYPE3'] = 'WAVE'
+        cubehdr['CRPIX1'] = (naxis1 + 1)/2
+        cubehdr['CRPIX2'] = (naxis2 + 1)/2
+        cubehdr['CRPIX3'] = 1.
+        cubehdr['CRVAL1'] = 0.
+        cubehdr['CRVAL2'] = 0.
+        cubehdr['CRVAL3'] = self.meta['wave_min']
+        cubehdr['CDELT1'] = pixscale
+        cubehdr['CDELT2'] = slicewidth
+        cubehdr['CDELT3'] = dwave
+        cubehdr['CUNIT1'] = 'arcsec'
+        cubehdr['CUNIT2'] = 'arcsec'
+        cubehdr['CUNIT3'] = 'um'
+
+        cubehdu = fits.ImageHDU(data=cube, header=cubehdr)
+        return cubehdu
 
     def _angle_from_lambda(self):
         """

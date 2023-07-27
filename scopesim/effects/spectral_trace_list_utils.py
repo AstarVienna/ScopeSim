@@ -312,14 +312,15 @@ class SpectralTrace:
             return None
         wave_min = max(wave_min, self.wave_min)
         wave_max = min(wave_max, self.wave_max)
-        logging.info("   %.02f .. %.02f um", wave_min, wave_max)
+        logging.debug("   %.02f .. %.02f um", wave_min, wave_max)
 
         # bin_width is taken as the minimum dispersion of the trace
+        # ..todo: if wcs is given take bin width from cdelt1
         bin_width = kwargs.get("bin_width", None)
         if bin_width is None:
             self._set_dispersion(wave_min, wave_max)
             bin_width = np.abs(self.dlam_per_pix.y).min()
-        logging.info("   Bin width %.02g um", bin_width)
+        logging.debug("   Bin width %.02g um", bin_width)
 
         pixscale = from_currsys(self.meta['pixel_scale'])
 
@@ -882,21 +883,6 @@ def _xiy2xlam_fit(layout, params):
     xiy2x = fitter(pinit_x, xi_arr, y_arr, x_arr)
     xiy2lam = fitter(pinit_lam, xi_arr, y_arr, lam_arr)
     return xiy2x, xiy2lam
-
-def make_image_interpolations(hdulist, **kwargs):
-    """
-    Create 2D interpolation functions for images
-    """
-    interps = []
-    for hdu in hdulist:
-        if isinstance(hdu, fits.ImageHDU):
-            interps.append(
-                RectBivariateSpline(np.arange(hdu.header['NAXIS1']),
-                                    np.arange(hdu.header['NAXIS2']),
-                                    hdu.data, **kwargs)
-            )
-    return interps
-
 
 def make_image_interpolations(hdulist, **kwargs):
     """
