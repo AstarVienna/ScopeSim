@@ -37,31 +37,15 @@ class MetisLMSSpectralTraceList(SpectralTraceList):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        #self.params = {"wavelen": "!OBS.wavelen"}
-        #self.params.update(kwargs)
 
         self.wavelen = self.meta["wavelen"]
 
         # field of view of the instrument
-        # ..todo: get this from aperture list
-
         self.slicelist = self._file["Aperture List"].data
-        #self.view = np.array([self.meta["naxis1"] * self.meta["pixscale"],
-        #                      self.meta["nslice"] * self.meta["slicewidth"]])
         self.view = np.array([self.slicelist["right"].max() -
                               self.slicelist["left"].min(),
                               self.slicelist["top"].max() -
                               self.slicelist["bottom"].min()])
-
-        #for sli, spt in enumerate(self.spectral_traces.values()):
-        #    spt.meta["xmin"] = self.slicelist["left"][sli]
-        #    spt.meta["xmax"] = self.slicelist["right"][sli]
-        #    spt.meta["ymin"] = self.slicelist["bottom"][sli]
-        #    spt.meta["ymax"] = self.slicelist["top"][sli]
-
-        #if self._file is not None:
-        #    print(self._file)
-        #    self.make_spectral_traces()
 
     def apply_to(self, obj, **kwargs):
         """
@@ -70,8 +54,8 @@ class MetisLMSSpectralTraceList(SpectralTraceList):
         if isinstance(obj, FOVSetupBase):
             # Create a single volume that covers the aperture and
             # the maximum wavelength range of LMS
-            volumes = [self.spectral_traces[key].fov_grid()
-                       for key in self.spectral_traces]
+            volumes = [spt.fov_grid()
+                       for spt in self.spectral_traces.values()]
             wave_min = min(vol["wave_min"] for vol in volumes)
             wave_max = max(vol["wave_max"] for vol in volumes)
             extracted_vols = obj.extract(axes=["wave"],
@@ -207,9 +191,9 @@ class MetisLMSSpectralTraceList(SpectralTraceList):
         naxis1 = int((xi_max - xi_min) / pixscale) + 1
         naxis2 = len(self.spectral_traces)
         naxis3 = int((wave_max - wave_min)/dwave) + 1
-        logging.debug(f"Cube: {naxis1}, {naxis2}, {naxis3}")
-        logging.debug(f"Xi: {xi_min}, {xi_max}")
-        logging.debug(f"Wavelength: {wave_min}, {wave_max}")
+        logging.debug("Cube: %d, %d, %d", naxis1, naxis2, naxis3)
+        logging.debug("Xi: %.2f, %.2f", xi_min, xi_max)
+        logging.debug("Wavelength: %.3f, %.3f", wave_min, wave_max)
         slicewidth = (self.meta['y_max'] - self.meta['y_min']) / naxis2
 
         rectwcs = WCS(naxis=2)
@@ -220,7 +204,7 @@ class MetisLMSSpectralTraceList(SpectralTraceList):
         rectwcs.wcs.cunit = ['um', 'arcsec']
 
         cube = np.zeros((naxis3, naxis2, naxis1), dtype=np.float32)
-        for i, (sptid, spt) in enumerate(self.spectral_traces.items()):
+        for i, spt in enumerate(self.spectral_traces.values()):
             spt.wave_min = wave_min
             spt.wave_max = wave_max
             result = spt.rectify(hdulist, interps=interps,

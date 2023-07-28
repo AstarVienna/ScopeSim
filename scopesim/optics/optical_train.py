@@ -225,14 +225,15 @@ class OpticalTrain:
 
         for ispec, spec in enumerate(source.spectra):
             # Put on fov wavegrid
-            wave_min = min([fov.meta["wave_min"] for fov in self.fov_manager.fovs])
-            wave_max = max([fov.meta["wave_max"] for fov in self.fov_manager.fovs])
+            wave_min = min(fov.meta["wave_min"] for fov in self.fov_manager.fovs)
+            wave_max = max(fov.meta["wave_max"] for fov in self.fov_manager.fovs)
             wave_unit = u.Unit(from_currsys("!SIM.spectral.wave_unit"))
             dwave = from_currsys("!SIM.spectral.spectral_bin_width")  # Not a quantity
             fov_waveset = np.arange(wave_min.value, wave_max.value, dwave) * wave_unit
             fov_waveset = fov_waveset.to(u.um)
 
-            source.spectra[ispec] = SourceSpectrum(Empirical1D, points=fov_waveset,
+            source.spectra[ispec] = SourceSpectrum(Empirical1D,
+                                                   points=fov_waveset,
                                                    lookup_table=spec(fov_waveset))
 
         for cube in source.cube_fields:

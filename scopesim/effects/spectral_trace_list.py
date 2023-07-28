@@ -15,7 +15,6 @@ from matplotlib._pylab_helpers import Gcf
 
 from astropy.io import fits
 from astropy.table import Table
-from astropy.wcs import WCS
 
 from .effects import Effect
 from .ter_curves import FilterCurve
@@ -164,13 +163,13 @@ class SpectralTraceList(Effect):
             if 'y_min' in fov:
                 ylim.extend([fov['y_min'], fov['y_max']])
 
-        if wlim != []:
+        if wlim:
             self.meta['wave_min'] = np.min(wlim)
             self.meta['wave_max'] = np.max(wlim)
-        if xlim != []:
+        if xlim:
             self.meta['x_min'] = np.min(xlim)
             self.meta['x_max'] = np.max(xlim)
-        if ylim != []:
+        if ylim:
             self.meta['y_min'] = np.min(ylim)
             self.meta['y_max'] = np.max(ylim)
 
@@ -190,10 +189,13 @@ class SpectralTraceList(Effect):
         """
         if isinstance(obj, FOVSetupBase):
             # Setup of FieldOfView object
-            volumes = [self.spectral_traces[key].fov_grid()
-                       for key in self.spectral_traces]
+            #volumes = [self.spectral_traces[key].fov_grid()
+            #           for key in self.spectral_traces]
+            #volumes = [spt.fov_grid() for spt in self.spectral_traces.values()]
             new_vols_list = []
-            for vol in volumes:
+            #for vol in volumes:
+            for spt in self.spectral_traces.values():
+                vol = spt.fov_grid()
                 wave_edges = [vol["wave_min"], vol["wave_max"]]
                 if "x_min" in vol:
                     x_edges = [vol["x_min"], vol["x_max"]]
@@ -251,6 +253,7 @@ class SpectralTraceList(Effect):
 
     @property
     def image_plane_header(self):
+        """Create and return header for the ImagePlane"""
         x, y = self.footprint
         pixel_scale = from_currsys(self.meta["pixel_scale"])
         hdr = header_from_list_of_xy(x, y, pixel_scale, "D")
