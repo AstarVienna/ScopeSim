@@ -17,7 +17,7 @@ from scipy.interpolate import RectBivariateSpline
 from scipy.interpolate import interp1d
 from matplotlib import pyplot as plt
 
-from astropy.table import Table
+from astropy.table import Table, vstack
 from astropy.modeling import fitting
 from astropy.io import fits
 from astropy import units as u
@@ -481,43 +481,80 @@ class SpectralTrace:
         return ([x_edge.min(), x_edge.max(), x_edge.max(), x_edge.min()],
                 [y_edge.min(), y_edge.min(), y_edge.max(), y_edge.max()])
 
-    def plot(self, wave_min=None, wave_max=None, c="r"):
+    def plot(self, wave_min=None, wave_max=None, xi_min=None, xi_max=None, *,
+             c="r", axes=None, plot_footprint=True, plot_text=True,
+             plot_ctrlpnts=True, plot_outline=False, plot_trace_id=False):
         """Plot control points of the SpectralTrace"""
+        if axes is None:
+            _, axes = plt.subplots()
 
         # Footprint (rectangle enclosing the trace)
         xlim, ylim  = self.footprint(wave_min=wave_min, wave_max=wave_max)
         if xlim is None:
-            return
+            return axes
 
         xlim.append(xlim[0])
         ylim.append(ylim[0])
-        plt.plot(xlim, ylim)
+        if plot_footprint:
+            axes.plot(xlim, ylim)
+
+        # for convenience...
+        xname = self.meta["x_colname"]
+        yname = self.meta["y_colname"]
+        wname = self.meta["wave_colname"]
+        sname = self.meta["s_colname"]
 
         # Control points
-        waves = self.table[self.meta["wave_colname"]]
+        waves = self.table[wname]
         if wave_min is None:
             wave_min = waves.min()
         if wave_max is None:
             wave_max = waves.max()
+        xis = self.table[sname]
+        if xi_min is None:
+            xi_min = xis.min()
+        if xi_max is None:
+            xi_max = xis.max()
 
-        mask = (waves >= wave_min) * (waves <= wave_max)
-        if sum(mask) > 2:
-            w = waves[mask]
+        mask = ((waves >= wave_min) & (waves <= wave_max)
+                & (xis >= xi_min)& (xis <= xi_max))
+        if sum(mask) <= 2:
+            return axes
 
-            x = self.table[self.meta["x_colname"]][mask]
-            y = self.table[self.meta["y_colname"]][mask]
-            plt.plot(x, y, "o", c=c)
+        w = waves[mask]
 
-            for wave in np.unique(w):
-                xx = x[w==wave]
-                xx.sort()
-                dx = xx[-1] - xx[-2]
+        x = self.table[xname][mask]
+        y = self.table[yname][mask]
+        if plot_ctrlpnts:
+            axes.plot(x, y, "o", c=c)
 
-                plt.text(x[w==wave].max() + 0.5 * dx,
-                         y[w==wave].mean(),
-                         str(wave), va='center', ha='left')
+        if plot_outline:
+            blue_end = self.table[mask][w == w.min()]
+            red_end = self.table[mask][w == w.max()]
+            blue_end.sort(sname)
+            red_end.sort(sname)
+            corners = vstack([blue_end[[0, -1]][xname, yname],
+                              red_end[[-1, 0]][xname, yname],
+                              blue_end[0][xname, yname]])
+            axes.plot(corners[xname], corners[yname], c=c)
 
-            plt.gca().set_aspect("equal")
+        if plot_trace_id:
+            axes.text(corners[xname][:-1].mean(), corners[yname][:-1].mean(),
+                      self.meta["trace_id"], c=c, rotation="vertical",
+                      ha="center", va="center")
+
+        for wave in np.unique(w):
+            xx = x[w==wave]
+            xx.sort()
+            dx = xx[-1] - xx[-2]
+
+            if plot_text:
+                axes.text(x[w==wave].max() + 0.5 * dx,
+                          y[w==wave].mean(),
+                          str(wave), va="center", ha="left")
+
+        axes.set_aspect("equal")
+        return axes
 
     @property
     def trace_id(self):

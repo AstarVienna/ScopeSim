@@ -4,6 +4,8 @@ import numpy as np
 from astropy import units as u
 from astropy.table import Table
 
+from matplotlib import pyplot as plt
+
 from ..base_classes import FOVSetupBase
 from .effects import Effect
 from .apertures import ApertureMask
@@ -251,22 +253,21 @@ class DetectorList(Effect):
 
         return hdrs
 
-    def plot(self):
-        import matplotlib.pyplot as plt
-        plt.gcf().clf()
+    def plot(self, axes=None):
+        if axes is None:
+            _, axes = plt.subplots()
 
         for hdr in self.detector_headers():
             x_mm, y_mm = calc_footprint(hdr, "D")
-            x_cen, y_cen = np.average(x_mm), np.average(y_mm)
-            x_mm = list(x_mm) + [x_mm[0]]
-            y_mm = list(y_mm) + [y_mm[0]]
-            plt.gca().plot(x_mm, y_mm)
-            plt.gca().text(x_cen, y_cen, hdr["ID"])
+            axes.plot(np.append(x_mm, x_mm[0]), np.append(y_mm, y_mm[0]))
+            axes.text(*np.mean((x_mm, y_mm), axis=1), hdr["ID"],
+                      ha="center", va="center")
 
-        plt.gca().set_aspect("equal")
-        plt.ylabel("Size [mm]")
+        axes.set_aspect("equal")
+        axes.set_xlabel("Size [mm]")
+        axes.set_ylabel("Size [mm]")
 
-        return plt.gcf()
+        return axes
 
 
 class DetectorWindow(DetectorList):

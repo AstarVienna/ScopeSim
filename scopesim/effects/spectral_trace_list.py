@@ -7,8 +7,10 @@ The Effect is called `SpectralTraceList`, it applies a list of
 
 from pathlib import Path
 import logging
+from itertools import cycle
 
 import numpy as np
+from matplotlib import pyplot as plt
 
 from astropy.io import fits
 from astropy.table import Table
@@ -318,23 +320,22 @@ class SpectralTraceList(Effect):
         """Rectify traces and combine into a cube"""
         raise(NotImplementedError)
 
-    def plot(self, wave_min=None, wave_max=None, **kwargs):
+    def plot(self, wave_min=None, wave_max=None, axes=None, **kwargs):
         if wave_min is None:
             wave_min = from_currsys("!SIM.spectral.wave_min")
         if wave_max is None:
             wave_max = from_currsys("!SIM.spectral.wave_max")
 
-        from matplotlib import pyplot as plt
-        from matplotlib._pylab_helpers import Gcf
-        if len(Gcf.figs) == 0:
-            plt.figure(figsize=(12, 12))
+        if axes is None:
+            fig, axes = plt.subplots(figsize=(12, 12))
+        else:
+            fig = axes.figure
 
         if self.spectral_traces is not None:
-            clrs = "rgbcymk" * (1 + len(self.spectral_traces) // 7)
-            for spt, c in zip(self.spectral_traces.values(), clrs):
-                spt.plot(wave_min, wave_max, c=c)
+            for spt, c in zip(self.spectral_traces.values(), cycle("rgbcymk")):
+                spt.plot(wave_min, wave_max, c=c, axes=axes, **kwargs)
 
-        return plt.gcf()
+        return fig
 
     def __repr__(self):
         # "\n".join([spt.__repr__() for spt in self.spectral_traces])
