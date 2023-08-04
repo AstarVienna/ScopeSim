@@ -314,12 +314,32 @@ class SpectralTraceList(Effect):
 
         return outhdul
 
-
     def rectify_cube(self, hdulist):
         """Rectify traces and combine into a cube"""
         raise(NotImplementedError)
 
     def plot(self, wave_min=None, wave_max=None, axes=None, **kwargs):
+        """Plot every spectral trace in the spectral trace list.
+
+        Parameters
+        ----------
+        wave_min : float, optional
+            Minimum wavelength, if any. If None, value from_currsys is used.
+        wave_max : float, optional
+            Maximum wavelength, if any. If None, value from_currsys is used.
+        axes : matplotlib axes, optional
+            The axes object to use for the plot. If None (default), a new
+            figure with one axes will be created.
+        **kwargs : dict
+            Any other parameters passed along to the plot method of the
+            individual spectral traces.
+
+        Returns
+        -------
+        fig : matplotlib figure
+            DESCRIPTION.
+
+        """
         if wave_min is None:
             wave_min = from_currsys("!SIM.spectral.wave_min")
         if wave_max is None:

@@ -482,9 +482,48 @@ class SpectralTrace:
                 [y_edge.min(), y_edge.min(), y_edge.max(), y_edge.max()])
 
     def plot(self, wave_min=None, wave_max=None, xi_min=None, xi_max=None, *,
-             c="r", axes=None, plot_footprint=True, plot_text=True,
+             c="r", axes=None, plot_footprint=True, plot_wave=True,
              plot_ctrlpnts=True, plot_outline=False, plot_trace_id=False):
-        """Plot control points of the SpectralTrace"""
+        """Plot control points (and/or footprint) of the SpectralTrace.
+
+        Parameters
+        ----------
+        wave_min : float, optional
+            Minimum wavelength, if any.
+        wave_max : float, optional
+            Maximum wavelength, if any.
+        xi_min : float, optional
+            Minimum slit, if any.
+        xi_max : float, optional
+            Maximum slit, if any.
+        c : str, optional
+            Colour, any valid matplotlib colour string. The default is "r".
+        axes : matplotlib axes, optional
+            The axes object to use for the plot. If None (default), a new
+            figure with one axes will be created.
+
+        Returns
+        -------
+        axes : matplotlib axes
+            The axes object containing the plot.
+
+        Other Parameters
+        ----------------
+        plot_footprint : bool, optional
+            Plot a rectangle encompassing all control points, which may be
+            larger than the area actually covered by the trace, if the trace is
+            not exactly perpendicular to the detector. The default is True.
+        plot_wave : bool, optional
+            Annotate the wavelength points. The default is True.
+        plot_ctrlpnts : bool, optional
+            Plot the individual control points as makers. The default is True.
+        plot_outline : bool, optional
+            Plot the smallest tetragon encompassing all control points.
+            The default is False.
+        plot_trace_id : bool, optional
+            Write the trace ID in the middle of the trace.
+            The default is False.
+        """
         if axes is None:
             _, axes = plt.subplots()
 
@@ -548,7 +587,7 @@ class SpectralTrace:
             xx.sort()
             dx = xx[-1] - xx[-2]
 
-            if plot_text:
+            if plot_wave:
                 axes.text(x[w==wave].max() + 0.5 * dx,
                           y[w==wave].mean(),
                           str(wave), va="center", ha="left")
