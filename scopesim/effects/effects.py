@@ -113,15 +113,12 @@ class Effect(DataContainer):
 
     @property
     def meta_string(self):
-        meta_str = ""
-        max_key_len = max(len(key) for key in self.meta.keys())
-        padlen = max_key_len + 4
-        for key in self.meta:
-            if key not in {"comments", "changes", "description", "history",
-                           "report_table_caption", "report_plot_caption",
-                           "table"}:
-                meta_str += f"{key:>{padlen}} : {self.meta[key]}\n"
-
+        padlen = 4 + len(max(self.meta, key=len))
+        exclude = {"comments", "changes", "description", "history",
+                   "report_table_caption", "report_plot_caption", "table"}
+        meta_str = "\n".join(f"{key:>{padlen}} : {value}"
+                             for key, value in self.meta.items()
+                             if key not in exclude)
         return meta_str
 
     def report(self, filename=None, output="rst", rst_title_chars="*+",
@@ -199,7 +196,7 @@ class Effect(DataContainer):
 
         """
         changes = self.meta.get("changes", [])
-        changes_str = "- " + "\n- ".join([str(entry) for entry in changes])
+        changes_str = "- " + "\n- ".join(str(entry) for entry in changes)
         cls_doc = self.__doc__ if self.__doc__ is not None else "<no docstring>"
         cls_descr = cls_doc.lstrip().splitlines()[0]
 
@@ -262,6 +259,9 @@ Data
                 #                            params["report_rst_path"])
                 # rel_file_path = os.path.join(rel_path, fname)
 
+                # TODO: fname is set in a loop above, so using it here in the
+                #       fstring will only access the last value from the loop,
+                #       is that intended?
                 rst_str += f"""
 .. figure:: {fname}
     :name: {"fig:" + params.get("name", "<unknown Effect>")}
@@ -292,16 +292,11 @@ Meta-data
         return rst_str
 
     def info(self):
-        """
-        Prints basic information on the effect, notably the description
-        """
-        text = str(self)
-
-        desc = self.meta.get("description")
-        if desc is not None:
-            text += f"\nDescription: {desc}"
-
-        print(text)
+        """Print basic information on the effect, notably the description."""
+        if (desc := self.meta.get("description")) is not None:
+            print(f"{self}\nDescription: {desc}")
+        else:
+            print(self)
 
     def __repr__(self):
         return f"{self.__class__.__name__}(**{self.meta!r})"

@@ -181,7 +181,7 @@ class SpectralTraceList(Effect):
                     ex_vol["meta"].update(vol)
                     ex_vol["meta"].pop("wave_min")
                     ex_vol["meta"].pop("wave_max")
-                new_vols_list += extracted_vols
+                new_vols_list.extend(extracted_vols)
 
             obj.volumes = new_vols_list
 
@@ -197,8 +197,7 @@ class SpectralTraceList(Effect):
                 logging.info("Making cube")
                 obj.cube = obj.make_cube_hdu()
 
-            trace_id = obj.meta["trace_id"]
-            spt = self.spectral_traces[trace_id]
+            spt = self.spectral_traces[obj.meta["trace_id"]]
             obj.hdu = spt.map_spectra_to_focal_plane(obj)
 
         return obj
@@ -210,11 +209,11 @@ class SpectralTraceList(Effect):
         xfoot, yfoot = [], []
         for spt in self.spectral_traces.values():
             xtrace, ytrace = spt.footprint()
-            xfoot += xtrace
-            yfoot += ytrace
+            xfoot.extend(xtrace)
+            yfoot.extend(ytrace)
 
-        xfoot = [np.min(xfoot), np.max(xfoot), np.max(xfoot), np.min(xfoot)]
-        yfoot = [np.min(yfoot), np.min(yfoot), np.max(yfoot), np.max(yfoot)]
+        xfoot = [min(xfoot), max(xfoot), max(xfoot), min(xfoot)]
+        yfoot = [min(yfoot), min(yfoot), max(yfoot), max(yfoot)]
 
         return xfoot, yfoot
 
@@ -301,7 +300,7 @@ class SpectralTraceList(Effect):
         #pdu.header['FILTER'] = from_currsys("!OBS.filter_name_fw1")
         outhdul = fits.HDUList([pdu])
 
-        for i, trace_id in enumerate(self.spectral_traces):
+        for i, trace_id in enumerate(self.spectral_traces, start=1):
             hdu = self[trace_id].rectify(hdulist,
                                          interps=interps,
                                          bin_width=bin_width,
@@ -309,7 +308,7 @@ class SpectralTraceList(Effect):
                                          wave_min=wave_min, wave_max=wave_max)
             if hdu is not None:   # ..todo: rectify does not do that yet
                 outhdul.append(hdu)
-                outhdul[0].header[f"EXTNAME{i+1}"] = trace_id
+                outhdul[0].header[f"EXTNAME{i}"] = trace_id
 
         outhdul[0].header.update(inhdul[0].header)
 
