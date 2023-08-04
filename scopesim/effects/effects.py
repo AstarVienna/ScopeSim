@@ -239,7 +239,12 @@ Data
 """
 
         if params["report_plot_include"] and hasattr(self, "plot"):
+            from matplotlib.figure import Figure
             fig = self.plot()
+            # HACK: plot methods should always return the same, while this is
+            #       not sorted out, deal with both fig and ax
+            if not isinstance(fig, Figure):
+                fig = fig.figure
 
             if fig is not None:
                 path = params["report_image_path"]
