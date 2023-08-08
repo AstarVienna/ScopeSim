@@ -3,7 +3,6 @@ Spectral grating efficiencies
 """
 import logging
 import numpy as np
-from matplotlib import pyplot as plt
 
 from astropy.io import fits
 from astropy import units as u
@@ -13,7 +12,7 @@ from astropy.table import Table
 from .effects import Effect
 from .ter_curves import TERCurve
 from .ter_curves_utils import apply_throughput_to_cube
-from ..utils import find_file
+from ..utils import find_file, figure_factory
 from ..base_classes import FieldOfViewBase, FOVSetupBase
 
 class SpectralEfficiency(Effect):
@@ -116,12 +115,14 @@ class SpectralEfficiency(Effect):
 
     def plot(self):
         """Plot the grating efficiencies"""
+        fig, ax = figure_factory()
         for name, effic in self.efficiencies.items():
             wave = effic.throughput.waveset
-            plt.plot(wave.to(u.um), effic.throughput(wave), label=name)
+            ax.plot(wave.to(u.um), effic.throughput(wave), label=name)
 
-        plt.xlabel("Wavelength [um]")
-        plt.ylabel("Grating efficiency")
-        plt.title(f"Grating efficiencies from {self.filename}")
-        plt.legend()
-        plt.show()
+        ax.set_xlabel("Wavelength [um]")
+        ax.set_ylabel("Grating efficiency")
+        ax.set_title(f"Grating efficiencies from {self.filename}")
+        ax.legend()
+
+        return fig

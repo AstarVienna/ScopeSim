@@ -14,7 +14,8 @@ from .effects import Effect
 from ..optics import image_plane_utils as imp_utils
 from ..base_classes import FOVSetupBase
 
-from ..utils import quantify, quantity_from_table, from_currsys, check_keys
+from ..utils import quantify, quantity_from_table, from_currsys, check_keys, \
+    figure_factory
 
 
 class ApertureMask(Effect):
@@ -175,17 +176,18 @@ class ApertureMask(Effect):
 
         return mask
 
-    def plot(self, new_figure=True):
-        import matplotlib.pyplot as plt
-        if new_figure:
-            plt.gcf().clf()
+    def plot(self, axes=None):
+        if axes is None:
+            fig, ax = figure_factory()
+        else:
+            fig = axes.figure
 
         x = list(self.table["x"].data)
         y = list(self.table["y"].data)
-        plt.plot(x + [x[0]], y + [y[0]])
-        plt.gca().set_aspect("equal")
+        ax.plot(x + [x[0]], y + [y[0]])
+        ax.set_aspect("equal")
 
-        return plt.gcf()
+        return fig
 
 
 class RectangularApertureMask(ApertureMask):
@@ -342,26 +344,27 @@ class ApertureList(Effect):
         return apertures_list
 
     def plot(self):
-        import matplotlib.pyplot as plt
-        plt.gcf().clf()
+        fig, ax = figure_factory()
 
         for ap in self.apertures:
-            ap.plot(new_figure=False)
+            ap.plot(ax)
 
-        return plt.gcf()
+        return fig
 
     def plot_masks(self):
-        import matplotlib.pyplot as plt
-
         aps = self.apertures
         n = len(aps)
         w = np.ceil(n ** 0.5).astype(int)
+        assert int(n ** 0.5) == w + 1
         h = np.ceil(n / w).astype(int)
+        assert int(n / w) == h + 1
+        # TODO: change these?
 
-        for ii, ap in enumerate(aps):
-            plt.subplot(w, h, ii + 1)
-            plt.imshow(ap.mask.T)
-        plt.show()
+        fig, axes = figure_factory(w, h)
+        for ap, ax in zip(aps, axes):
+            ax.imshow(ap.mask.T)
+        fig.show()
+        return fig
 
     def __add__(self, other):
         if isinstance(other, ApertureList):

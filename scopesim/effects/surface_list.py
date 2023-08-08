@@ -1,11 +1,12 @@
+from collections.abc import Collection
+
 import numpy as np
 from astropy import units as u
-import matplotlib.pyplot as plt
 
 from .ter_curves import TERCurve
 from ..optics import radiometry_utils as rad_utils
 from ..optics.surface import PoorMansSurface, SpectralSurface
-from ..utils import quantify, from_currsys
+from ..utils import quantify, from_currsys, figure_factory
 
 
 class SurfaceList(TERCurve):
@@ -135,41 +136,48 @@ class SurfaceList(TERCurve):
             self.table = rad_utils.combine_tables(surface_list.table,
                                                   self.table, prepend)
 
-    def plot(self, which="x", wavelength=None, ax=None, **kwargs):
-        """
+    def plot(self, which="x", wavelength=None, *, axes=None, **kwargs):
+        """Plot TER curves.
 
         Parameters
         ----------
-        which : str
-            "x" plots throughput. "t","e","r" plot trans/emission/refl
-        wavelength
-        kwargs
+        which : {"x", "t", "e", "r"}, optional
+            "x" plots throughput. "t","e","r" plot trans/emission/refl.
+            Can be a combination, e.g. "tr" or "tex" to plot each.
+        wavelength : array_like, optional
+            DESCRIPTION. The default is None.
+        axes : matplotlib axes, optional
+            If given, plot into existing axes. The default is None.
 
         Returns
         -------
+        fig : matplotlib figure
+            Figure containing plots.
 
         """
-        import matplotlib.pyplot as plt
-        plt.gcf().clf()
+        if axes is None:
+            fig, axes = figure_factory(len(which), 1)
+        else:
+            fig = axes.figure
+            self._axes_guard(which, axes)
 
-        for ii, which_part in enumerate(which):
-            ax = plt.subplot(len(which), 1, ii+1)
-
+        for ter, ax in zip(which, axes):
             # Plot the individual surfaces
-            for key in self.surfaces:
-                ter = TERCurve(**self.surfaces[key].meta)
-                ter.surface = self.surfaces[key]
-                ter.plot(which=which_part, wavelength=None, ax=None,
-                         new_figure=False,
-                         plot_kwargs={"ls": "-", "label": key}, **kwargs)
+            # TODO: do we want separate plots for these? if yes, how (row/col)?
+            for key, surface in self.surfaces.items():
+                curve = TERCurve(**surface.meta)
+                curve.surface = surface
+                kwargs.update(plot_kwargs={"ls": "-", "label": key})
+                curve.plot(ter, axes=ax, **kwargs)
 
             # Plot the system surface
-            ter = TERCurve(**self.meta)
-            ter.surface = self.surface
-            ter.plot(which=which_part, wavelength=None, ax=ax, new_figure=False,
-                     plot_kwargs={"ls": "-.", "label": "System Throughput"},
-                     **kwargs)
+            # TODO: self is a subclass of TERCurve, why create again??
+            curve = TERCurve(**self.meta)
+            curve.surface = self.surface
+            kwargs.update(plot_kwargs={"ls": "-.",
+                                       "label": "System Throughput"})
+            curve.plot(ter, axes=ax, **kwargs)
 
-        plt.legend()
+        fig.legend()
 
-        return plt.gcf()
+        return fig

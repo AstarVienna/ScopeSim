@@ -3,7 +3,6 @@
 - ChopNodCombiner: simulate chop-nod cycle
 """
 import numpy as np
-from matplotlib import pyplot as plt
 
 from scopesim.base_classes import DetectorBase
 from scopesim.effects import Effect
