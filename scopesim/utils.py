@@ -6,12 +6,15 @@ from pathlib import Path
 import sys
 import logging
 from collections import OrderedDict
+from collections.abc import Iterable, Generator
+from itertools import chain
 from docutils.core import publish_string
 from copy import deepcopy
 
 import requests
 import yaml
 import numpy as np
+from matplotlib import pyplot as plt
 from astropy import units as u
 from astropy.io import fits
 from astropy.table import Column, Table
@@ -1008,3 +1011,25 @@ def return_latest_github_actions_jobs_status(owner_name="AstarVienna", repo_name
         params_list.append(params)
 
     return params_list
+
+
+def close_loop(iterable: Iterable) -> Generator:
+    """x, y = zip(*close_loop(zip(x, y)))"""
+    iterator = iter(iterable)
+    first = next(iterator)
+    yield first
+    yield from iterator
+    yield first
+
+
+def figure_factory(nrows=1, ncols=1, **kwargs):
+    """Default way to init fig and ax, to easily modify later."""
+    fig, ax = plt.subplots(nrows, ncols, **kwargs)
+    return fig, ax
+
+
+def figure_grid_factory(nrows=1, ncols=1, **kwargs):
+    """Gridspec variant."""
+    fig = plt.figure()
+    gs = fig.add_gridspec(nrows, ncols, **kwargs)
+    return fig, gs

@@ -15,7 +15,6 @@ import numpy as np
 
 from scipy.interpolate import RectBivariateSpline
 from scipy.interpolate import interp1d
-from matplotlib import pyplot as plt
 
 from astropy.table import Table, vstack
 from astropy.modeling import fitting
@@ -24,7 +23,8 @@ from astropy import units as u
 from astropy.wcs import WCS
 from astropy.modeling.models import Polynomial2D
 
-from ..utils import power_vector, quantify, from_currsys
+from ..utils import power_vector, quantify, from_currsys, close_loop, \
+    figure_factory
 
 
 class SpectralTrace:
@@ -525,17 +525,15 @@ class SpectralTrace:
             The default is False.
         """
         if axes is None:
-            _, axes = plt.subplots()
+            _, axes = figure_factory()
 
         # Footprint (rectangle enclosing the trace)
         xlim, ylim  = self.footprint(wave_min=wave_min, wave_max=wave_max)
         if xlim is None:
             return axes
 
-        xlim.append(xlim[0])
-        ylim.append(ylim[0])
         if plot_footprint:
-            axes.plot(xlim, ylim)
+            axes.plot(list(close_loop(xlim)), list(close_loop(ylim)))
 
         # for convenience...
         xname = self.meta["x_colname"]

@@ -10,7 +10,6 @@ import logging
 from itertools import cycle
 
 import numpy as np
-from matplotlib import pyplot as plt
 
 from astropy.io import fits
 from astropy.table import Table
@@ -18,7 +17,7 @@ from astropy.table import Table
 from .effects import Effect
 from .ter_curves import FilterCurve
 from .spectral_trace_list_utils import SpectralTrace, make_image_interpolations
-from ..utils import from_currsys, check_keys
+from ..utils import from_currsys, check_keys, figure_factory
 from ..optics.image_plane_utils import header_from_list_of_xy
 from ..base_classes import FieldOfViewBase, FOVSetupBase
 
@@ -346,7 +345,7 @@ class SpectralTraceList(Effect):
             wave_max = from_currsys("!SIM.spectral.wave_max")
 
         if axes is None:
-            fig, axes = plt.subplots(figsize=(12, 12))
+            fig, axes = figure_factory()
         else:
             fig = axes.figure
 

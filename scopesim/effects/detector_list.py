@@ -4,12 +4,11 @@ import numpy as np
 from astropy import units as u
 from astropy.table import Table
 
-from matplotlib import pyplot as plt
-
 from ..base_classes import FOVSetupBase
 from .effects import Effect
 from .apertures import ApertureMask
 from .. import utils
+from ..utils import close_loop, figure_factory
 from ..optics.image_plane_utils import header_from_list_of_xy, calc_footprint
 
 __all__ = ["DetectorList", "DetectorWindow"]
@@ -255,11 +254,11 @@ class DetectorList(Effect):
 
     def plot(self, axes=None):
         if axes is None:
-            _, axes = plt.subplots()
+            _, axes = figure_factory()
 
         for hdr in self.detector_headers():
             x_mm, y_mm = calc_footprint(hdr, "D")
-            axes.plot(np.append(x_mm, x_mm[0]), np.append(y_mm, y_mm[0]))
+            axes.plot(list(close_loop(x_mm)), list(close_loop(y_mm)))
             axes.text(*np.mean((x_mm, y_mm), axis=1), hdr["ID"],
                       ha="center", va="center")
 
