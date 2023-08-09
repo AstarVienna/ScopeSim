@@ -556,7 +556,7 @@ class SpectralTrace:
             xi_max = xis.max()
 
         mask = ((waves >= wave_min) & (waves <= wave_max)
-                & (xis >= xi_min)& (xis <= xi_max))
+                & (xis >= xi_min) & (xis <= xi_max))
         if sum(mask) <= 2:
             return axes
 
