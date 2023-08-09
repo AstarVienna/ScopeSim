@@ -17,7 +17,7 @@ from scipy.interpolate import RectBivariateSpline
 from scipy.interpolate import interp1d
 from matplotlib import pyplot as plt
 
-from astropy.table import Table
+from astropy.table import Table, vstack
 from astropy.modeling import fitting
 from astropy.io import fits
 from astropy import units as u
@@ -86,7 +86,6 @@ class SpectralTrace:
         Spatial limits are determined by the `ApertureMask` effect
         and are not returned here.
         """
-        trace_id = self.meta["trace_id"]
         aperture_id = self.meta["aperture_id"]
         lam_arr = self.table[self.meta["wave_colname"]]
 
@@ -94,7 +93,7 @@ class SpectralTrace:
         wave_min = np.min(lam_arr)
 
         return {"wave_min": wave_min, "wave_max": wave_max,
-                "trace_id": trace_id, "aperture_id": aperture_id}
+                "trace_id": self.trace_id, "aperture_id": aperture_id}
 
     def compute_interpolation_functions(self):
         """
@@ -118,7 +117,7 @@ class SpectralTrace:
         self._xiy2x = Transform2D.fit(xi_arr, y_arr, x_arr)
         self._xiy2lam = Transform2D.fit(xi_arr, y_arr, lam_arr)
 
-        if self.dispersion_axis == 'unknown':
+        if self.dispersion_axis == "unknown":
             dlam_dx, dlam_dy = self.xy2lam.gradient()
             wave_mid = 0.5 * (self.wave_min + self.wave_max)
             xi_mid = np.mean(xi_arr)
@@ -142,7 +141,7 @@ class SpectralTrace:
         The method returns a section of the fov image along with info on
         where this image lies in the focal plane.
         """
-        logging.info("Mapping %s", fov.meta['trace_id'])
+        logging.info("Mapping %s", fov.meta["trace_id"])
         # Initialise the image based on the footprint of the spectral
         # trace and the focal plane WCS
         wave_min = fov.meta["wave_min"].value       # [um]
@@ -176,7 +175,7 @@ class SpectralTrace:
         ## Check if spectral trace footprint is outside FoV
         if xmax < 0 or xmin > naxis1d or ymax < 0 or ymin > naxis2d:
             logging.info("Spectral trace %s: footprint is outside FoV",
-                         fov.meta['trace_id'])
+                         fov.meta["trace_id"])
             return None
 
         # Only work on parts within the FoV
@@ -207,7 +206,7 @@ class SpectralTrace:
             xilam = XiLamImage(fov, self.dlam_per_pix)
             self._xilamimg = xilam   # ..todo: remove or make available with a debug flag?
         except ValueError:
-            print(f" ---> {self.meta['trace_id']} gave ValueError")
+            print(f" ---> {self.trace_id} gave ValueError")
 
         npix_xi, npix_lam = xilam.npix_xi, xilam.npix_lam
         xilam_wcs = xilam.wcs
@@ -321,7 +320,7 @@ class SpectralTrace:
             bin_width = np.abs(self.dlam_per_pix.y).min()
         logging.info("   Bin width %.02g um", bin_width)
 
-        pixscale = from_currsys(self.meta['pixel_scale'])
+        pixscale = from_currsys(self.meta["pixel_scale"])
 
         # Temporary solution to get slit length
         xi_min = kwargs.get("xi_min", None)
@@ -341,8 +340,8 @@ class SpectralTrace:
 
         if wcs is None:
             wcs = WCS(naxis=2)
-            wcs.wcs.ctype = ['WAVE', 'LINEAR']
-            wcs.wcs.cunit = ['um', 'arcsec']
+            wcs.wcs.ctype = ["WAVE", "LINEAR"]
+            wcs.wcs.cunit = ["um", "arcsec"]
             wcs.wcs.crpix = [1, 1]
             wcs.wcs.cdelt = [bin_width, pixscale] # PIXSCALE
 
@@ -372,13 +371,14 @@ class SpectralTrace:
         rect_spec = np.zeros_like(Xarr, dtype=np.float32)
 
         ihdu = 0
+        # TODO: make this more iteratory
         for hdu in hdulist:
             if not isinstance(hdu, fits.ImageHDU):
                 continue
 
             wcs_fp = WCS(hdu.header, key="D")
-            n_x = hdu.header['NAXIS1']
-            n_y = hdu.header['NAXIS2']
+            n_x = hdu.header["NAXIS1"]
+            n_y = hdu.header["NAXIS2"]
             iarr, jarr = wcs_fp.all_world2pix(Xarr, Yarr, 0)
             mask = (iarr > 0) * (iarr < n_x) * (jarr > 0) * (jarr < n_y)
             if np.any(mask):
@@ -388,7 +388,7 @@ class SpectralTrace:
             ihdu += 1
 
         header = wcs.to_header()
-        header['EXTNAME'] = self.trace_id
+        header["EXTNAME"] = self.trace_id
         return fits.ImageHDU(data=rect_spec, header=header)
 
 
@@ -481,48 +481,124 @@ class SpectralTrace:
         return ([x_edge.min(), x_edge.max(), x_edge.max(), x_edge.min()],
                 [y_edge.min(), y_edge.min(), y_edge.max(), y_edge.max()])
 
-    def plot(self, wave_min=None, wave_max=None, c="r"):
-        """Plot control points of the SpectralTrace"""
+    def plot(self, wave_min=None, wave_max=None, xi_min=None, xi_max=None, *,
+             c="r", axes=None, plot_footprint=True, plot_wave=True,
+             plot_ctrlpnts=True, plot_outline=False, plot_trace_id=False):
+        """Plot control points (and/or footprint) of the SpectralTrace.
+
+        Parameters
+        ----------
+        wave_min : float, optional
+            Minimum wavelength, if any.
+        wave_max : float, optional
+            Maximum wavelength, if any.
+        xi_min : float, optional
+            Minimum slit, if any.
+        xi_max : float, optional
+            Maximum slit, if any.
+        c : str, optional
+            Colour, any valid matplotlib colour string. The default is "r".
+        axes : matplotlib axes, optional
+            The axes object to use for the plot. If None (default), a new
+            figure with one axes will be created.
+
+        Returns
+        -------
+        axes : matplotlib axes
+            The axes object containing the plot.
+
+        Other Parameters
+        ----------------
+        plot_footprint : bool, optional
+            Plot a rectangle encompassing all control points, which may be
+            larger than the area actually covered by the trace, if the trace is
+            not exactly perpendicular to the detector. The default is True.
+        plot_wave : bool, optional
+            Annotate the wavelength points. The default is True.
+        plot_ctrlpnts : bool, optional
+            Plot the individual control points as makers. The default is True.
+        plot_outline : bool, optional
+            Plot the smallest tetragon encompassing all control points.
+            The default is False.
+        plot_trace_id : bool, optional
+            Write the trace ID in the middle of the trace.
+            The default is False.
+        """
+        if axes is None:
+            _, axes = plt.subplots()
 
         # Footprint (rectangle enclosing the trace)
         xlim, ylim  = self.footprint(wave_min=wave_min, wave_max=wave_max)
         if xlim is None:
-            return
+            return axes
 
         xlim.append(xlim[0])
         ylim.append(ylim[0])
-        plt.plot(xlim, ylim)
+        if plot_footprint:
+            axes.plot(xlim, ylim)
+
+        # for convenience...
+        xname = self.meta["x_colname"]
+        yname = self.meta["y_colname"]
+        wname = self.meta["wave_colname"]
+        sname = self.meta["s_colname"]
 
         # Control points
-        waves = self.table[self.meta["wave_colname"]]
+        waves = self.table[wname]
         if wave_min is None:
             wave_min = waves.min()
         if wave_max is None:
             wave_max = waves.max()
+        xis = self.table[sname]
+        if xi_min is None:
+            xi_min = xis.min()
+        if xi_max is None:
+            xi_max = xis.max()
 
-        mask = (waves >= wave_min) * (waves <= wave_max)
-        if sum(mask) > 2:
-            w = waves[mask]
+        mask = ((waves >= wave_min) & (waves <= wave_max)
+                & (xis >= xi_min) & (xis <= xi_max))
+        if sum(mask) <= 2:
+            return axes
 
-            x = self.table[self.meta["x_colname"]][mask]
-            y = self.table[self.meta["y_colname"]][mask]
-            plt.plot(x, y, "o", c=c)
+        w = waves[mask]
 
-            for wave in np.unique(w):
-                xx = x[w==wave]
-                xx.sort()
-                dx = xx[-1] - xx[-2]
+        x = self.table[xname][mask]
+        y = self.table[yname][mask]
+        if plot_ctrlpnts:
+            axes.plot(x, y, "o", c=c)
 
-                plt.text(x[w==wave].max() + 0.5 * dx,
-                         y[w==wave].mean(),
-                         str(wave), va='center', ha='left')
+        if plot_outline:
+            blue_end = self.table[mask][w == w.min()]
+            red_end = self.table[mask][w == w.max()]
+            blue_end.sort(sname)
+            red_end.sort(sname)
+            corners = vstack([blue_end[[0, -1]][xname, yname],
+                              red_end[[-1, 0]][xname, yname],
+                              blue_end[0][xname, yname]])
+            axes.plot(corners[xname], corners[yname], c=c)
 
-            plt.gca().set_aspect("equal")
+        if plot_trace_id:
+            axes.text(corners[xname][:-1].mean(), corners[yname][:-1].mean(),
+                      self.trace_id, c=c, rotation="vertical",
+                      ha="center", va="center")
+
+        for wave in np.unique(w):
+            xx = x[w==wave]
+            xx.sort()
+            dx = xx[-1] - xx[-2]
+
+            if plot_wave:
+                axes.text(x[w==wave].max() + 0.5 * dx,
+                          y[w==wave].mean(),
+                          str(wave), va="center", ha="left")
+
+        axes.set_aspect("equal")
+        return axes
 
     @property
     def trace_id(self):
         """Return the name of the trace"""
-        return self.meta['trace_id']
+        return self.meta["trace_id"]
 
     def _set_dispersion(self, wave_min, wave_max, pixsize=None):
         """Computation of dispersion dlam_per_pix along xi=0
@@ -538,8 +614,8 @@ class SpectralTrace:
             dlam_grad = self.xy2lam.gradient()[0]  # dlam_by_dx
         else:
             dlam_grad = self.xy2lam.gradient()[1]  # dlam_by_dy
-        pixsize = (from_currsys(self.meta['pixel_scale']) /
-                   from_currsys(self.meta['plate_scale']))
+        pixsize = (from_currsys(self.meta["pixel_scale"]) /
+                   from_currsys(self.meta["plate_scale"]))
         self.dlam_per_pix = interp1d(lam,
                                      dlam_grad(x_mm, y_mm) * pixsize,
                                      fill_value="extrapolate")
@@ -548,7 +624,7 @@ class SpectralTrace:
         return f"{self.__class__.__name__}({self.table!r}, **{self.meta!r})"
 
     def __str__(self):
-        msg = (f"<SpectralTrace> \"{self.meta['trace_id']}\" : "
+        msg = (f"<SpectralTrace> \"{self.trace_id}\" : "
                f"[{self.wave_min:.4f}, {self.wave_max:.4f}]um : "
                f"Ext {self.meta['extension_id']} : "
                f"Aperture {self.meta['aperture_id']} : "
@@ -892,8 +968,8 @@ def make_image_interpolations(hdulist, **kwargs):
     for hdu in hdulist:
         if isinstance(hdu, fits.ImageHDU):
             interps.append(
-                RectBivariateSpline(np.arange(hdu.header['NAXIS1']),
-                                    np.arange(hdu.header['NAXIS2']),
+                RectBivariateSpline(np.arange(hdu.header["NAXIS1"]),
+                                    np.arange(hdu.header["NAXIS2"]),
                                     hdu.data, **kwargs)
             )
     return interps

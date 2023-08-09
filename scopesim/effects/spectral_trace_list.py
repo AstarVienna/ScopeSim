@@ -7,8 +7,10 @@ The Effect is called `SpectralTraceList`, it applies a list of
 
 from pathlib import Path
 import logging
+from itertools import cycle
 
 import numpy as np
+from matplotlib import pyplot as plt
 
 from astropy.io import fits
 from astropy.table import Table
@@ -179,7 +181,7 @@ class SpectralTraceList(Effect):
                     ex_vol["meta"].update(vol)
                     ex_vol["meta"].pop("wave_min")
                     ex_vol["meta"].pop("wave_max")
-                new_vols_list += extracted_vols
+                new_vols_list.extend(extracted_vols)
 
             obj.volumes = new_vols_list
 
@@ -195,8 +197,7 @@ class SpectralTraceList(Effect):
                 logging.info("Making cube")
                 obj.cube = obj.make_cube_hdu()
 
-            trace_id = obj.meta["trace_id"]
-            spt = self.spectral_traces[trace_id]
+            spt = self.spectral_traces[obj.meta["trace_id"]]
             obj.hdu = spt.map_spectra_to_focal_plane(obj)
 
         return obj
@@ -208,11 +209,11 @@ class SpectralTraceList(Effect):
         xfoot, yfoot = [], []
         for spt in self.spectral_traces.values():
             xtrace, ytrace = spt.footprint()
-            xfoot += xtrace
-            yfoot += ytrace
+            xfoot.extend(xtrace)
+            yfoot.extend(ytrace)
 
-        xfoot = [np.min(xfoot), np.max(xfoot), np.max(xfoot), np.min(xfoot)]
-        yfoot = [np.min(yfoot), np.min(yfoot), np.max(yfoot), np.max(yfoot)]
+        xfoot = [min(xfoot), max(xfoot), max(xfoot), min(xfoot)]
+        yfoot = [min(yfoot), min(yfoot), max(yfoot), max(yfoot)]
 
         return xfoot, yfoot
 
@@ -299,7 +300,7 @@ class SpectralTraceList(Effect):
         #pdu.header['FILTER'] = from_currsys("!OBS.filter_name_fw1")
         outhdul = fits.HDUList([pdu])
 
-        for i, trace_id in enumerate(self.spectral_traces):
+        for i, trace_id in enumerate(self.spectral_traces, start=1):
             hdu = self[trace_id].rectify(hdulist,
                                          interps=interps,
                                          bin_width=bin_width,
@@ -307,34 +308,53 @@ class SpectralTraceList(Effect):
                                          wave_min=wave_min, wave_max=wave_max)
             if hdu is not None:   # ..todo: rectify does not do that yet
                 outhdul.append(hdu)
-                outhdul[0].header[f"EXTNAME{i+1}"] = trace_id
+                outhdul[0].header[f"EXTNAME{i}"] = trace_id
 
         outhdul[0].header.update(inhdul[0].header)
 
         return outhdul
 
-
     def rectify_cube(self, hdulist):
         """Rectify traces and combine into a cube"""
         raise(NotImplementedError)
 
-    def plot(self, wave_min=None, wave_max=None, **kwargs):
+    def plot(self, wave_min=None, wave_max=None, axes=None, **kwargs):
+        """Plot every spectral trace in the spectral trace list.
+
+        Parameters
+        ----------
+        wave_min : float, optional
+            Minimum wavelength, if any. If None, value from_currsys is used.
+        wave_max : float, optional
+            Maximum wavelength, if any. If None, value from_currsys is used.
+        axes : matplotlib axes, optional
+            The axes object to use for the plot. If None (default), a new
+            figure with one axes will be created.
+        **kwargs : dict
+            Any other parameters passed along to the plot method of the
+            individual spectral traces.
+
+        Returns
+        -------
+        fig : matplotlib figure
+            DESCRIPTION.
+
+        """
         if wave_min is None:
             wave_min = from_currsys("!SIM.spectral.wave_min")
         if wave_max is None:
             wave_max = from_currsys("!SIM.spectral.wave_max")
 
-        from matplotlib import pyplot as plt
-        from matplotlib._pylab_helpers import Gcf
-        if len(Gcf.figs) == 0:
-            plt.figure(figsize=(12, 12))
+        if axes is None:
+            fig, axes = plt.subplots(figsize=(12, 12))
+        else:
+            fig = axes.figure
 
         if self.spectral_traces is not None:
-            clrs = "rgbcymk" * (1 + len(self.spectral_traces) // 7)
-            for spt, c in zip(self.spectral_traces.values(), clrs):
-                spt.plot(wave_min, wave_max, c=c)
+            for spt, c in zip(self.spectral_traces.values(), cycle("rgbcymk")):
+                spt.plot(wave_min, wave_max, c=c, axes=axes, **kwargs)
 
-        return plt.gcf()
+        return fig
 
     def __repr__(self):
         # "\n".join([spt.__repr__() for spt in self.spectral_traces])
