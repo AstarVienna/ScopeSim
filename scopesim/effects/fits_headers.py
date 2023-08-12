@@ -326,7 +326,7 @@ def flatten_dict(dic, base_key="", flat_dict=None,
     if flat_dict is None:
         flat_dict = {}
     for key, val in dic.items():
-        flat_key = base_key + f"{key} "
+        flat_key = f"{base_key}{key} "
         if isinstance(val, dict):
             flatten_dict(val, flat_key, flat_dict, resolve, optics_manager)
         else:
@@ -340,17 +340,17 @@ def flatten_dict(dic, base_key="", flat_dict=None,
                 value = deepcopy(val)
 
             # resolve any bang or hash strings
-            if resolve and isinstance(value, str) and len(value) > 0:
-                if value[0] == "!":
+            if resolve and isinstance(value, str) and value:
+                if value.startswith("!"):
                     value = from_currsys(value)
-                elif value[0] == "#":
+                elif value.startswith("#"):
                     if optics_manager is None:
                         raise ValueError("An OpticsManager object must be "
                                          "passed in order to resolve #-strings")
                     value = optics_manager[value]
 
             if isinstance(value, u.Quantity):
-                comment = f"[{str(value.unit)}] " + comment
+                comment = f"[{str(value.unit)}] {comment}"
                 value = value.value
 
             # Convert e.g.  Unit(mag) to just "mag". Not sure how this will
@@ -362,13 +362,13 @@ def flatten_dict(dic, base_key="", flat_dict=None,
                 value = f"{value.__class__.__name__}:{str(list(value))}"
                 max_len = 80 - len(flat_key)
                 if len(value) > max_len:
-                    value = value[:max_len-4] + " ..."
+                    value = f"{value[:max_len-4]} ..."
 
             if isinstance(value, (datetime.time, datetime.date, datetime.datetime)):
                 value = value.isoformat()
 
             # Add the flattened KEYWORD = (value, comment) to the header dict
-            if len(comment) > 0:
+            if comment:
                 flat_dict[flat_key] = (value, str(comment))
             else:
                 flat_dict[flat_key] = value
@@ -449,11 +449,17 @@ class EffectsMetaKeywords(ExtraFitsKeywords):
                 # add effect under the EFFn keyword
                 prefix = self.meta["keyword_prefix"]
                 class_name = opt_train[eff_name].__class__.__name__
-                self.dict_list = [{"ext_number": self.meta["ext_number"],
-                                   "keywords": {
-                                       f"{prefix} EFF{i} class": [class_name, "ScopeSim class name"],
-                                       f"{prefix} EFF{i}": eff_meta}
-                                   }]
+                self.dict_list = [
+                    {"ext_number": self.meta["ext_number"],
+                     "keywords": {
+                         f"{prefix} EFF{i} class": [
+                             class_name,
+                             "ScopeSim class name"
+                             ],
+                         f"{prefix} EFF{i}": eff_meta
+                         }
+                     }
+                    ]
                 hdul = super().apply_to(hdul=hdul, optical_train=opt_train)
 
         return hdul
