@@ -231,7 +231,7 @@ class SummedExposure(Effect):
 
     """
     def __init__(self, **kwargs):
-        super(SummedExposure, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         params = {"z_order": [860]}
         self.meta.update(params)
         self.meta.update(kwargs)
@@ -255,7 +255,7 @@ class Bias(Effect):
 
     """
     def __init__(self, **kwargs):
-        super(Bias, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         params = {"z_order": [855]}
         self.meta.update(params)
         self.meta.update(kwargs)
@@ -272,7 +272,7 @@ class Bias(Effect):
 
 class PoorMansHxRGReadoutNoise(Effect):
     def __init__(self, **kwargs):
-        super(PoorMansHxRGReadoutNoise, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         params = {"z_order": [811],
                   "pedestal_fraction": 0.3,
                   "read_fraction": 0.4,
@@ -323,7 +323,7 @@ class PoorMansHxRGReadoutNoise(Effect):
 class BasicReadoutNoise(Effect):
     """Readout noise computed as: ron * sqrt(NDIT)"""
     def __init__(self, **kwargs):
-        super(BasicReadoutNoise, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         self.meta["z_order"] = [811]
         self.meta["random_seed"] = "!SIM.random.seed"
         self.meta.update(kwargs)
@@ -356,7 +356,7 @@ class BasicReadoutNoise(Effect):
 
 class ShotNoise(Effect):
     def __init__(self, **kwargs):
-        super(ShotNoise, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         self.meta["z_order"] = [820]
         self.meta["random_seed"] = "!SIM.random.seed"
         self.meta.update(kwargs)
@@ -404,7 +404,7 @@ class DarkCurrent(Effect):
     required: dit, ndit, value
     """
     def __init__(self, **kwargs):
-        super(DarkCurrent, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         self.meta["z_order"] = [830]
 
         required_keys = ["value", "dit", "ndit"]
@@ -511,7 +511,7 @@ class LinearityCurve(Effect):
 
 class ReferencePixelBorder(Effect):
     def __init__(self, **kwargs):
-        super(ReferencePixelBorder, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         self.meta["z_order"] = [780]
         val = 0
         if "all" in kwargs:
@@ -542,7 +542,7 @@ class ReferencePixelBorder(Effect):
 
 class BinnedImage(Effect):
     def __init__(self, **kwargs):
-        super(BinnedImage, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         self.meta["z_order"] = [870]
 
         self.required_keys = ["bin_size"]
@@ -560,7 +560,7 @@ class BinnedImage(Effect):
 
 class UnequalBinnedImage(Effect):
     def __init__(self, **kwargs):
-        super(UnequalBinnedImage, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         self.meta["z_order"] = [870]
 
         self.required_keys = ["binx","biny"]

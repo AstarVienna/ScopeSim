@@ -83,7 +83,7 @@ class ApertureMask(Effect):
                 w, h = kwargs["width"], kwargs["height"]
                 kwargs["filename"] = kwargs["filename_format"].format(w, h)
 
-        super(ApertureMask, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         params = {"pixel_scale": "!INST.pixel_scale",
                   "no_mask": True,
                   "angle": 0,
@@ -190,7 +190,7 @@ class ApertureMask(Effect):
 
 class RectangularApertureMask(ApertureMask):
     def __init__(self, **kwargs):
-        super(RectangularApertureMask, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         params = {"x_unit" : "arcsec",
                   "y_unit" : "arcsec"}
         self.meta.update(params)
@@ -268,7 +268,7 @@ class ApertureList(Effect):
 
     """
     def __init__(self, **kwargs):
-        super(ApertureList, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         params = {"pixel_scale": "!INST.pixel_scale",
                   "n_round_corners": 32,        # number of corners use to estimate ellipse
                   "no_mask": False,             # .. todo:: is this necessary when we have conserve_image?
@@ -423,7 +423,7 @@ class SlitWheel(Effect):
         required_keys = ["slit_names", "filename_format", "current_slit"]
         check_keys(kwargs, required_keys, action="error")
 
-        super(SlitWheel, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
         params = {"z_order": [80, 280, 580],
                   "path": "",

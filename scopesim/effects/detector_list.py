@@ -107,7 +107,7 @@ class DetectorList(Effect):
 
     """
     def __init__(self, **kwargs):
-        super(DetectorList, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         params = {"z_order": [90, 290, 390, 490],
                   "pixel_scale": "!INST.pixel_scale",      # arcsec
                   "active_detectors": "all",
@@ -315,4 +315,4 @@ class DetectorWindow(DetectorList):
                            "angle", "gain", "pixel_size"])
         tbl.meta.update(params)
 
-        super(DetectorWindow, self).__init__(table=tbl, **params)
+        super().__init__(table=tbl, **params)

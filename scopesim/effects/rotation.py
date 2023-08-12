@@ -22,7 +22,7 @@ class Rotate90CCD(Effect):
 
     """
     def __init__(self, **kwargs):
-        super(Rotate90CCD, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         params = {"z_order": [809]}
         self.meta.update(params)
         self.meta.update(kwargs)

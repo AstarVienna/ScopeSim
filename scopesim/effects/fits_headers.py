@@ -216,7 +216,7 @@ class ExtraFitsKeywords(Effect):
     """
     def __init__(self, **kwargs):
         # don't pass kwargs, as DataContainer can't handle yaml files
-        super(ExtraFitsKeywords, self).__init__()
+        super().__init__()
         params = {"name": "extra_fits_keywords",
                   "description": "Extra FITS headers",
                   "z_order": [999],
@@ -409,7 +409,7 @@ class EffectsMetaKeywords(ExtraFitsKeywords):
 
     """
     def __init__(self, **kwargs):
-        super(ExtraFitsKeywords, self).__init__()
+        super().__init__()
         params = {"name": "effects_fits_keywords",
                   "description": "Effect Meta FITS headers",
                   "z_order": [998],
@@ -454,8 +454,7 @@ class EffectsMetaKeywords(ExtraFitsKeywords):
                                        f"{prefix} EFF{i} class": [class_name, "ScopeSim class name"],
                                        f"{prefix} EFF{i}": eff_meta}
                                    }]
-                super_apply_to = super(EffectsMetaKeywords, self).apply_to
-                hdul = super_apply_to(hdul=hdul, optical_train=opt_train)
+                hdul = super().apply_to(hdul=hdul, optical_train=opt_train)
 
         return hdul
 
@@ -489,7 +488,7 @@ class SourceDescriptionFitsKeywords(ExtraFitsKeywords):
 
     """
     def __init__(self, **kwargs):
-        super(ExtraFitsKeywords, self).__init__()
+        super().__init__()
         params = {"name": "source_fits_keywords",
                   "description": "Source description FITS headers",
                   "z_order": [997],
@@ -571,7 +570,7 @@ class SimulationConfigFitsKeywords(ExtraFitsKeywords):
 
     """
     def __init__(self, **kwargs):
-        super(ExtraFitsKeywords, self).__init__()
+        super().__init__()
         params = {"name": "simulation_fits_keywords",
                   "description": "Simulation Config FITS headers",
                   "z_order": [996],
@@ -592,7 +591,6 @@ class SimulationConfigFitsKeywords(ExtraFitsKeywords):
                                f"{resolve_prefix}keywords": {
                                    f"{sim_prefix} CONFIG": cmds}
                                }]
-            super_apply_to = super(SimulationConfigFitsKeywords, self).apply_to
-            hdul = super_apply_to(hdul=hdul, optical_train=opt_train)
+            hdul = super().apply_to(hdul=hdul, optical_train=opt_train)
 
         return hdul

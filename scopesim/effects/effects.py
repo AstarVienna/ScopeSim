@@ -36,7 +36,7 @@ class Effect(DataContainer):
     """
 
     def __init__(self, **kwargs):
-        super(Effect, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         self.meta["z_order"] = []
         self.meta["include"] = True
         self.meta.update(kwargs)
