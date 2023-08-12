@@ -730,7 +730,7 @@ class TopHatFilterWheel(FilterWheel):
                          "blue_cutoffs", "red_cutoffs"]
         check_keys(kwargs, required_keys, action="error")
 
-        super().__init__(**kwargs)
+        super(FilterWheel, self).__init__(**kwargs)
 
         params = {"z_order": [124, 224, 524],
                   "report_plot_include": True,
@@ -800,7 +800,7 @@ class SpanishVOFilterWheel(FilterWheel):
         check_keys(kwargs, required_keys, action="error")
 
         # Call Effect.init, *NOT* FilterWheel.init --> different required_keys
-        super().__init__(**kwargs)
+        super(FilterWheel, self).__init__(**kwargs)
 
         params = {"z_order": [124, 224, 524],
                   "report_plot_include": True,
