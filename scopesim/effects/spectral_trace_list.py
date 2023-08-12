@@ -196,7 +196,7 @@ class SpectralTraceList(Effect):
                 logging.info("Making cube")
                 obj.cube = obj.make_cube_hdu()
 
-            spt = self.spectral_traces[obj.meta["trace_id"]]
+            spt = self.spectral_traces[obj.trace_id]
             obj.hdu = spt.map_spectra_to_focal_plane(obj)
 
         return obj

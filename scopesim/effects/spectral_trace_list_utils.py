@@ -76,6 +76,11 @@ class SpectralTrace:
         self._xilamimg = None
         self.dlam_per_pix = None
 
+    @property
+    def trace_id(self):
+        """Return the name of the trace"""
+        return self.meta["trace_id"]
+
     def fov_grid(self):
         """
         Provide information on the source space volume required by the effect
@@ -141,7 +146,7 @@ class SpectralTrace:
         The method returns a section of the fov image along with info on
         where this image lies in the focal plane.
         """
-        logging.info("Mapping %s", fov.meta["trace_id"])
+        logging.info("Mapping %s", fov.trace_id)
         # Initialise the image based on the footprint of the spectral
         # trace and the focal plane WCS
         wave_min = fov.meta["wave_min"].value       # [um]
@@ -175,7 +180,7 @@ class SpectralTrace:
         ## Check if spectral trace footprint is outside FoV
         if xmax < 0 or xmin > naxis1d or ymax < 0 or ymin > naxis2d:
             logging.info("Spectral trace %s: footprint is outside FoV",
-                         fov.meta["trace_id"])
+                         fov.trace_id)
             return None
 
         # Only work on parts within the FoV
@@ -592,11 +597,6 @@ class SpectralTrace:
 
         axes.set_aspect("equal")
         return axes
-
-    @property
-    def trace_id(self):
-        """Return the name of the trace"""
-        return self.meta["trace_id"]
 
     def _set_dispersion(self, wave_min, wave_max, pixsize=None):
         """Computation of dispersion dlam_per_pix along xi=0

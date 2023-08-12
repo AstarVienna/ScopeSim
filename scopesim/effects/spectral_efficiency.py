@@ -100,11 +100,11 @@ class SpectralEfficiency(Effect):
         """
         Interface between FieldOfView and SpectralEfficiency
         """
-        trace_id = obj.meta['trace_id']
+        trace_id = obj.trace_id
         try:
             effic = self.efficiencies[trace_id]
         except KeyError:
-            logging.warning("No grating efficiency for trace %s" % trace_id)
+            logging.warning("No grating efficiency for trace %s", trace_id)
             return obj
 
         wcs = WCS(obj.hdu.header).spectral
