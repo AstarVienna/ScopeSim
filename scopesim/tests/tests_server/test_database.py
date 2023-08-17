@@ -178,6 +178,7 @@ class TestDownloadPackages:
 
             assert version_dict["version"] == release
 
+    @pytest.mark.skip(reason="fails too often with timeout")
     @pytest.mark.webtest
     def test_downloads_github_version_of_package_with_semicolon(self):
         release = "github:728761fc76adb548696205139e4e9a4260401dfc"
@@ -188,6 +189,7 @@ class TestDownloadPackages:
 
             assert os.path.exists(filename)
 
+    @pytest.mark.skip(reason="fails too often with timeout")
     @pytest.mark.webtest
     def test_downloads_github_version_of_package_with_at_symbol(self):
         release = "github@728761fc76adb548696205139e4e9a4260401dfc"
