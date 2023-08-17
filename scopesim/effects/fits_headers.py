@@ -340,7 +340,7 @@ def flatten_dict(dic, base_key="", flat_dict=None,
                 value = deepcopy(val)
 
             # resolve any bang or hash strings
-            if resolve and isinstance(value, str) and value:
+            if resolve and isinstance(value, str):
                 if value.startswith("!"):
                     value = from_currsys(value)
                 elif value.startswith("#"):
