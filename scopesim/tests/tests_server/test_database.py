@@ -201,6 +201,7 @@ class TestDownloadPackages:
             assert os.path.exists(filename)
 
 
+@pytest.mark.skip(reason="fails too often with timeout")
 class TestDownloadGithubFolder:
     @pytest.mark.webtest
     def test_downloads_current_package(self):
