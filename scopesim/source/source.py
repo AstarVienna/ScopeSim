@@ -32,10 +32,10 @@
 # [WCS = CRPIXn, CRVALn = (0,0), CTYPEn, CDn_m, NAXISn, CUNITn
 """
 
-import os
 import pickle
 import logging
 from copy import deepcopy
+from pathlib import Path
 import numpy as np
 
 from astropy.table import Table, Column
@@ -181,8 +181,8 @@ class Source(SourceBase):
             if image_hdu.header.get("BUNIT") is not None:
                 self._from_imagehdu_only(image_hdu)
             else:
-                msg = f"image_hdu must be accompanied by either spectra or flux:\n" \
-                      f"spectra: {spectra}, flux: {flux}"
+                msg = ("image_hdu must be accompanied by either spectra or flux:\n"
+                       f"spectra: {spectra}, flux: {flux}")
                 logging.exception(msg)
                 raise ValueError(msg)
 
@@ -197,7 +197,7 @@ class Source(SourceBase):
             fits_type = utils.get_fits_type(filename)
             data = fits.getdata(filename)
             hdr = fits.getheader(filename)
-            hdr['FILENAME'] = os.path.basename(filename)
+            hdr["FILENAME"] = Path(filename).name
             if fits_type == "image":
                 image = fits.ImageHDU(data=data, header=hdr)
                 if spectra is not None:
@@ -221,7 +221,7 @@ class Source(SourceBase):
         if "weight" not in tbl.colnames:
             tbl.add_column(Column(name="weight", data=np.ones(len(tbl))))
         tbl["ref"] += len(self.spectra)
-        self.fields += [tbl]
+        self.fields.append(tbl)
         self.spectra += spectra
 
     def _from_imagehdu_and_spectra(self, image_hdu, spectra):
@@ -261,7 +261,7 @@ class Source(SourceBase):
             image_hdu.header["CUNIT"+str(i)] = "DEG"
             image_hdu.header["CDELT"+str(i)] = val * unit.to(u.deg)
 
-        self.fields += [image_hdu]
+        self.fields.append(image_hdu)
 
     def _from_imagehdu_and_flux(self, image_hdu, flux):
         if isinstance(flux, u.Unit):
@@ -281,9 +281,10 @@ class Source(SourceBase):
         try:
             bunit = u.Unit(bunit)
         except ValueError:
-            f"Astropy cannot parse BUNIT [{bunit}].\n" \
-            f"You can bypass this check by passing an astropy Unit to the flux parameter:\n" \
-            f">>> Source(image_hdu=..., flux=u.Unit(bunit), ...)"
+            print(f"Astropy cannot parse BUNIT [{bunit}].\n"
+                  "You can bypass this check by passing an astropy Unit to "
+                  "the flux parameter:\n"
+                  ">>> Source(image_hdu=..., flux=u.Unit(bunit), ...)")
 
         value = 0 if bunit in [u.mag, u.ABmag] else 1
         self._from_imagehdu_and_flux(image_hdu, value * bunit)
@@ -299,7 +300,7 @@ class Source(SourceBase):
         tbl.meta["x_unit"] = "arcsec"
         tbl.meta["y_unit"] = "arcsec"
 
-        self.fields += [tbl]
+        self.fields.append(tbl)
         self.spectra += spectra
 
     def _from_cube(self, cube, ext=0):
@@ -324,22 +325,23 @@ class Source(SourceBase):
             with fits.open(cube) as hdul:
                 data = hdul[ext].data
                 header = hdul[ext].header
-                header['FILENAME'] = os.path.basename(cube)
+                header["FILENAME"] = Path(cube).name
                 wcs = WCS(cube)
 
         try:
-            bunit = header['BUNIT']
+            bunit = header["BUNIT"]
             u.Unit(bunit)
         except KeyError:
             bunit = "erg / (s cm2 arcsec2)"
-            logging.warning("Keyword 'BUNIT' not found, setting to %s by default", bunit)
+            logging.warning("Keyword \"BUNIT\" not found, setting to %s by default",
+                            bunit)
         except ValueError as errcode:
-            print("'BUNIT' keyword is malformed:", errcode)
+            print("\"BUNIT\" keyword is malformed:", errcode)
             raise
 
         # Compute the wavelength vector. This will be attached to the cube_hdu
         # as a new `wave` attribute.  This is not optimal coding practice.
-        wave = wcs.all_pix2world(header['CRPIX1'], header['CRPIX2'],
+        wave = wcs.all_pix2world(header["CRPIX1"], header["CRPIX2"],
                                  np.arange(data.shape[0]), 0)[-1]
 
         wave = (wave * u.Unit(wcs.wcs.cunit[-1])).to(u.um,
@@ -355,7 +357,7 @@ class Source(SourceBase):
         cube_hdu = fits.ImageHDU(data=target_cube, header=target_hdr)
         cube_hdu.wave = wave          # ..todo: review wave attribute, bad practice
 
-        self.fields += [cube_hdu]
+        self.fields.append(cube_hdu)
 
     @property
     def table_fields(self):
@@ -462,13 +464,13 @@ class Source(SourceBase):
     @classmethod
     def load(cls, filename):
         """Load :class:'.Source' object from filename"""
-        with open(filename, 'rb') as fp1:
+        with open(filename, "rb") as fp1:
             src = pickle.load(fp1)
         return src
 
     def dump(self, filename):
         """Save to filename as a pickle"""
-        with open(filename, 'wb') as fp1:
+        with open(filename, "wb") as fp1:
             pickle.dump(self, fp1)
 
     # def collapse_spectra(self, wave_min=None, wave_max=None):
@@ -553,9 +555,9 @@ class Source(SourceBase):
         for field in self.fields:
             if isinstance(field, (fits.ImageHDU, fits.PrimaryHDU)) \
                     and field._file is not None:  # and field._data_loaded is False:
-                new_source.fields += [field]
+                new_source.fields.append(field)
             else:
-                new_source.fields += [deepcopy(field)]
+                new_source.fields.append(deepcopy(field))
 
         return new_source
 
@@ -572,19 +574,18 @@ class Source(SourceBase):
             for field in new_source.fields:
                 if isinstance(field, Table):
                     field["ref"] += len(self.spectra)
-                    self.fields += [field]
+                    self.fields.append(field)
 
                 elif isinstance(field, (fits.ImageHDU, fits.PrimaryHDU)):
                     if ("SPEC_REF" in field.header and
                         isinstance(field.header["SPEC_REF"], int)):
                         field.header["SPEC_REF"] += len(self.spectra)
-                    self.fields += [field]
+                    self.fields.append(field)
                 self.spectra += new_source.spectra
 
                 self._meta_dicts += source_to_add._meta_dicts
         else:
-            raise ValueError("Cannot add {} object to Source object"
-                             "".format(type(new_source)))
+            raise ValueError(f"Cannot add {type(new_source)} object to Source object")
 
     def __add__(self, new_source):
         self_copy = self.make_copy()

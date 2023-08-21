@@ -32,29 +32,29 @@ def get_canvas_header(hdu_or_table_list, pixel_scale=1 * u.arcsec):
 
     """
 
-    size_warning = "Header dimension are {} large: {}. Any image made from " \
-                   "this header will use more that >{} in memory"
+    size_warning = ("Header dimension are {adverb} large: {num_pix}. Any image "
+                    "made from this header will use more that >{size} in memory")
 
     headers = [ht.header for ht in hdu_or_table_list
                if isinstance(ht, fits.ImageHDU)]
-    if sum([isinstance(ht, Table) for ht in hdu_or_table_list]) > 0:
+    if any(isinstance(ht, Table) for ht in hdu_or_table_list):
         tbls = [ht for ht in hdu_or_table_list if isinstance(ht, Table)]
         tbl_hdr = _make_bounding_header_for_tables(tbls,
                                                    pixel_scale=pixel_scale)
-        headers += [tbl_hdr]
+        headers.append(tbl_hdr)
 
-    if len(headers) > 0:
-        hdr = _make_bounding_header_from_imagehdus(headers,
-                                                   pixel_scale=pixel_scale)
-        num_pix = hdr["NAXIS1"] * hdr["NAXIS2"]
-        if num_pix > 2 ** 25:  # 2 * 4096**2
-            logging.warning(size_warning.format("", num_pix, "256 MB"))
-        elif num_pix > 2 ** 28:
-            raise MemoryError(size_warning.format("too", num_pix, "8 GB"))
-    else:
+    if not headers:
         logging.warning("No tables or ImageHDUs were passed")
-        hdr = None
+        return None
 
+    hdr = _make_bounding_header_from_imagehdus(headers, pixel_scale=pixel_scale)
+    num_pix = hdr["NAXIS1"] * hdr["NAXIS2"]
+    if num_pix > 2 ** 28:
+        raise MemoryError(size_warning.format(adverb="too", num_pix=num_pix,
+                                              size="8 GB"))
+    if num_pix > 2 ** 25:  # 2 * 4096**2
+        logging.warning(size_warning.format(adverb="", num_pix=num_pix,
+                                            size="256 MB"))
     return hdr
 
 
@@ -239,8 +239,7 @@ def add_table_to_imagehdu(table, canvas_hdu, sub_pixel=True, wcs_suffix=""):
 
     s = wcs_suffix
     if not utils.has_needed_keywords(canvas_hdu.header, s):
-        raise ValueError("canvas_hdu must include an appropriate WCS: {}"
-                         "".format(s))
+        raise ValueError(f"canvas_hdu must include an appropriate WCS: {s}")
 
     f = utils.quantity_from_table("flux", table, default_unit=u.Unit("ph s-1"))
     if s == "D":
@@ -271,8 +270,7 @@ def add_table_to_imagehdu(table, canvas_hdu, sub_pixel=True, wcs_suffix=""):
 
 
 def _add_intpixel_sources_to_canvas(canvas_hdu, xpix, ypix, flux, mask):
-    canvas_hdu.header["comment"] = "Adding {} int-pixel files" \
-                                   "".format(len(flux))
+    canvas_hdu.header["comment"] = f"Adding {len(flux)} int-pixel files"
     xpix = xpix.astype(int)
     ypix = ypix.astype(int)
     for ii in range(len(xpix)):
@@ -283,8 +281,7 @@ def _add_intpixel_sources_to_canvas(canvas_hdu, xpix, ypix, flux, mask):
 
 
 def _add_subpixel_sources_to_canvas(canvas_hdu, xpix, ypix, flux, mask):
-    canvas_hdu.header["comment"] = "Adding {} sub-pixel files" \
-                                   "".format(len(flux))
+    canvas_hdu.header["comment"] = f"Adding {len(flux)} sub-pixel files"
     canvas_shape = canvas_hdu.data.shape
     for ii in range(len(xpix)):
         if mask[ii]:
@@ -497,8 +494,8 @@ def rescale_imagehdu(imagehdu, pixel_scale, wcs_suffix="", conserve_flux=True,
             imagehdu.header["CRPIX2"+si] *= zoom2
             imagehdu.header["CDELT1"+si] = pixel_scale
             imagehdu.header["CDELT2"+si] = pixel_scale
-            imagehdu.header["CUNIT1"+si] = "mm" if si == 'D' else "deg"
-            imagehdu.header["CUNIT2"+si] = "mm" if si == 'D' else "deg"
+            imagehdu.header["CUNIT1"+si] = "mm" if si == "D" else "deg"
+            imagehdu.header["CUNIT2"+si] = "mm" if si == "D" else "deg"
 
     return imagehdu
 
@@ -556,10 +553,10 @@ def reorient_imagehdu(imagehdu, wcs_suffix="", conserve_flux=True,
             hdr.remove(card)
         imagehdu.header = hdr
 
-    elif any(["PC1_1" in key for key in imagehdu.header]):
-        logging.warning("PC Keywords were found, but not used due to different "
-                      "wcs_suffix given: {} \n {}"
-                      "".format(wcs_suffix, dict(imagehdu.header)))
+    elif any("PC1_1" in key for key in imagehdu.header):
+        logging.warning(("PC Keywords were found, but not used due to different "
+                         "wcs_suffix given: %s \n %s"),
+                        wcs_suffix, dict(imagehdu.header))
 
     return imagehdu
 
@@ -850,6 +847,6 @@ def split_header(hdr, chunk_size, wcs_suffix=""):
 
             hdr_sky = header_from_list_of_xy([x1_sky, x2_sky], [y1_sky, y2_sky],
                                              pixel_scale=x_delt, wcs_suffix=s)
-            hdr_list += [hdr_sky]
+            hdr_list.append(hdr_sky)
 
     return hdr_list

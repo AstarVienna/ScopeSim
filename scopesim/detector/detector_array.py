@@ -101,6 +101,21 @@ class DetectorArray:
 
         return self.latest_exposure
 
+    def __repr__(self):
+        msg = (f"{self.__class__.__name__}"
+               f"({self.detector_list!r}, **{self.meta!r})")
+        return msg
+
+    def __str__(self):
+        return f"{self.__class__.__name__} with {self.detector_list!s}"
+
+    def _repr_pretty_(self, p, cycle):
+        """For ipython"""
+        if cycle:
+            p.text(f"{self.__class__.__name__}(...)")
+        else:
+            p.text(str(self))
+
 
 def make_primary_hdu(meta):
     """Create the primary header from meta data"""

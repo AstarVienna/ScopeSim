@@ -1,5 +1,5 @@
 include README.md
-include LICENCE
+include LICENSE
 include scopesim/defaults.yaml
 include scopesim/vega.fits
 recursive-include scopesim/data *

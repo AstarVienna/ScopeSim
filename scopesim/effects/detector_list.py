@@ -4,6 +4,8 @@ import numpy as np
 from astropy import units as u
 from astropy.table import Table
 
+from matplotlib import pyplot as plt
+
 from ..base_classes import FOVSetupBase
 from .effects import Effect
 from .apertures import ApertureMask
@@ -118,10 +120,10 @@ class DetectorList(Effect):
         new_colnames = {"xhw": "x_size", "yhw": "y_size", "pixsize": "pixel_size"}
         mult_cols = {"xhw": 2., "yhw": 2., "pixsize": 1.}
         if isinstance(self.table, Table):
-            for col in new_colnames:
+            for col, new_name in new_colnames.items():
                 if col in self.table.colnames:
                     self.table[col] = self.table[col] * mult_cols[col]
-                    self.table.rename_column(col, new_colnames[col])
+                    self.table.rename_column(col, new_name)
         if not "x_size_unit" in self.meta and "xhw_unit" in self.meta:
             self.meta["x_size_unit"] = self.meta["xhw_unit"]
         if not "y_size_unit" in self.meta and "yhw_unit" in self.meta:
@@ -133,7 +135,7 @@ class DetectorList(Effect):
             hdr = self.image_plane_header
             x_mm, y_mm = calc_footprint(hdr, "D")
             pixel_size = hdr["CDELT1D"]              # mm
-            pixel_scale = (kwargs.get("pixel_scale", self.meta["pixel_scale"]))   # ["]
+            pixel_scale = kwargs.get("pixel_scale", self.meta["pixel_scale"])   # ["]
             pixel_scale = utils.from_currsys(pixel_scale)
             x_sky = x_mm * pixel_scale / pixel_size  # x["] = x[mm] * ["] / [mm]
             y_sky = y_mm * pixel_scale / pixel_size  # y["] = y[mm] * ["] / [mm]
@@ -209,14 +211,13 @@ class DetectorList(Effect):
             tbl = self.table[mask]
         else:
             raise ValueError("Could not determine which detectors are active: "
-                             "{}, {}, ".format(self.meta["active_detectors"],
-                                               self.table))
+                             f"{self.meta['active_detectors']}, {self.table}, ")
         tbl = utils.from_currsys(tbl)
 
         return tbl
 
     def detector_headers(self, ids=None):
-        if ids is not None and all([isinstance(ii, int) for ii in ids]):
+        if ids is not None and all(isinstance(ii, int) for ii in ids):
             self.meta["active_detectors"] = list(ids)
 
         tbl = utils.from_currsys(self.active_table)
@@ -244,30 +245,29 @@ class DetectorList(Effect):
             # hdr["GAIN"] = row["gain"]
             if "id" in row:
                 hdr["DET_ID"] = row["id"]
-                hdr["EXTNAME"] = f'DET_{row["id"]}'
+                hdr["EXTNAME"] = f"DET_{row['id']}"
 
             row_dict = {col: row[col] for col in row.colnames}
             hdr.update(row_dict)
-            hdrs += [hdr]
+            hdrs.append(hdr)
 
         return hdrs
 
-    def plot(self):
-        import matplotlib.pyplot as plt
-        plt.gcf().clf()
+    def plot(self, axes=None):
+        if axes is None:
+            _, axes = plt.subplots()
 
         for hdr in self.detector_headers():
             x_mm, y_mm = calc_footprint(hdr, "D")
-            x_cen, y_cen = np.average(x_mm), np.average(y_mm)
-            x_mm = list(x_mm) + [x_mm[0]]
-            y_mm = list(y_mm) + [y_mm[0]]
-            plt.gca().plot(x_mm, y_mm)
-            plt.gca().text(x_cen, y_cen, hdr["ID"])
+            axes.plot(np.append(x_mm, x_mm[0]), np.append(y_mm, y_mm[0]))
+            axes.text(*np.mean((x_mm, y_mm), axis=1), hdr["ID"],
+                      ha="center", va="center")
 
-        plt.gca().set_aspect("equal")
-        plt.ylabel("Size [mm]")
+        axes.set_aspect("equal")
+        axes.set_xlabel("Size [mm]")
+        axes.set_ylabel("Size [mm]")
 
-        return plt.gcf()
+        return axes
 
 
 class DetectorWindow(DetectorList):

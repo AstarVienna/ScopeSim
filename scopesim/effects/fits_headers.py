@@ -1,12 +1,15 @@
-import yaml
 from copy import deepcopy
 import datetime
+
+import yaml
 import numpy as np
+
 from astropy.io import fits
 from astropy import units as u
 from astropy.table import Table
+
 from . import Effect
-from ..utils import check_keys, from_currsys, find_file
+from ..utils import from_currsys, find_file
 
 
 class ExtraFitsKeywords(Effect):
@@ -230,26 +233,26 @@ class ExtraFitsKeywords(Effect):
             with open(yaml_file) as f:
                 # possible multiple yaml docs in a file
                 # --> returns list even for a single doc
-                tmp_dicts += [dic for dic in yaml.full_load_all(f)]
+                tmp_dicts.extend(dic for dic in yaml.full_load_all(f))
 
         if self.meta["yaml_string"] is not None:
             yml = self.meta["yaml_string"]
-            tmp_dicts += [dic for dic in yaml.full_load_all(yml)]
+            tmp_dicts.extend(dic for dic in yaml.full_load_all(yml))
 
         if self.meta["header_dict"] is not None:
             if not isinstance(self.meta["header_dict"], list):
-                tmp_dicts += [self.meta["header_dict"]]
+                tmp_dicts.append(self.meta["header_dict"])
             else:
-                tmp_dicts += self.meta["header_dict"]
+                tmp_dicts.extend(self.meta["header_dict"])
 
         self.dict_list = []
         for dic in tmp_dicts:
             # format says yaml file contains list of dicts
             if isinstance(dic, list):
-                self.dict_list += dic
+                self.dict_list.extend(dic)
             # catch case where user forgets the list
             elif isinstance(dic, dict):
-                self.dict_list += [dic]
+                self.dict_list.append(dic)
 
     def apply_to(self, hdul, **kwargs):
         """
@@ -283,18 +286,18 @@ class ExtraFitsKeywords(Effect):
 def get_relevant_extensions(dic, hdul):
     exts = []
     if dic.get("ext_name") is not None:
-        exts += [i for i, hdu in enumerate(hdul)
-                 if hdu.header["EXTNAME"] == dic["ext_name"]]
+        exts.extend(i for i, hdu in enumerate(hdul)
+                    if hdu.header["EXTNAME"] == dic["ext_name"])
     elif dic.get("ext_number") is not None:
         ext_n = np.array(dic["ext_number"])
-        exts += list(ext_n[ext_n<len(hdul)])
+        exts.extend(ext_n[ext_n<len(hdul)])
     elif dic.get("ext_type") is not None:
         if isinstance(dic["ext_type"], list):
             ext_type_list = dic["ext_type"]
         else:
             ext_type_list = [dic["ext_type"]]
-        cls = tuple([getattr(fits, cls_str) for cls_str in ext_type_list])
-        exts += [i for i, hdu in enumerate(hdul) if isinstance(hdu, cls)]
+        cls = tuple(getattr(fits, cls_str) for cls_str in ext_type_list)
+        exts.extend(i for i, hdu in enumerate(hdul) if isinstance(hdu, cls))
 
     return exts
 
@@ -444,7 +447,7 @@ class EffectsMetaKeywords(ExtraFitsKeywords):
                         eff_meta[key] = f"Table object of length: {len(value)}"
 
                 # add effect under the EFFn keyword
-                prefix = self.meta['keyword_prefix']
+                prefix = self.meta["keyword_prefix"]
                 class_name = opt_train[eff_name].__class__.__name__
                 self.dict_list = [{"ext_number": self.meta["ext_number"],
                                    "keywords": {
@@ -497,40 +500,38 @@ class SourceDescriptionFitsKeywords(ExtraFitsKeywords):
 
     def apply_to(self, hdul, **kwargs):
         opt_train = kwargs.get("optical_train")
-        if isinstance(hdul, fits.HDUList) and opt_train is not None:
-            src = opt_train._last_source
-            src_dicts = []
-            if src is not None:
-                prefix = self.meta['keyword_prefix']
-                for i, field in enumerate(src.fields):
+        if not isinstance(hdul, fits.HDUList) or opt_train is None:
+            return hdul
 
-                    src_class = field.__class__.__name__
-                    src_dic = deepcopy(src._meta_dicts[i])
-                    if isinstance(field, fits.ImageHDU):
-                        hdr = field.header
-                        for key in hdr:
-                            src_dic = {key: [hdr[key], hdr.comments[key]]}
+        if (src := opt_train._last_source) is not None:
+            prefix = self.meta["keyword_prefix"]
+            for i, field in enumerate(src.fields):
+                src_class = field.__class__.__name__
+                src_dic = deepcopy(src._meta_dicts[i])
+                if isinstance(field, fits.ImageHDU):
+                    hdr = field.header
+                    for key in hdr:
+                        src_dic = {key: [hdr[key], hdr.comments[key]]}
 
-                    elif isinstance(field, Table):
-                        src_dic.update(field.meta)
-                        src_dic["length"] = len(field)
-                        for j, name in enumerate(field.colnames):
-                            src_dic[f"col{j}_name"] = name
-                            src_dic[f"col{j}_unit"] = str(field[name].unit)
+                elif isinstance(field, Table):
+                    src_dic.update(field.meta)
+                    src_dic["length"] = len(field)
+                    for j, name in enumerate(field.colnames):
+                        src_dic[f"col{j}_name"] = name
+                        src_dic[f"col{j}_unit"] = str(field[name].unit)
 
-                    self.dict_list = [{"ext_number": self.meta["ext_number"],
-                                       "keywords": {
-                                           f"{prefix} SRC{i} class": src_class,
-                                           f"{prefix} SRC{i}": src_dic}
-                                       }]
-                    super_apply_to = super(SourceDescriptionFitsKeywords, self).apply_to
-                    hdul = super_apply_to(hdul=hdul, optical_train=opt_train)
+                self.dict_list = [{"ext_number": self.meta["ext_number"],
+                                   "keywords": {
+                                       f"{prefix} SRC{i} class": src_class,
+                                       f"{prefix} SRC{i}": src_dic}
+                                   }]
+                hdul = super().apply_to(hdul=hdul, optical_train=opt_train)
 
-            # catch the function call
-            for hdu in hdul:
-                for key in hdu.header:
-                    if "function_call" in key:
-                        hdu.header[f"FN{key.split()[1]}"] = hdu.header.pop(key)
+        # catch the function call
+        for hdu in hdul:
+            for key in hdu.header:
+                if "function_call" in key:
+                    hdu.header[f"FN{key.split()[1]}"] = hdu.header.pop(key)
 
         return hdul
 
@@ -584,7 +585,7 @@ class SimulationConfigFitsKeywords(ExtraFitsKeywords):
         opt_train = kwargs.get("optical_train")
         if isinstance(hdul, fits.HDUList) and opt_train is not None:
             cmds = opt_train.cmds.cmds.dic
-            sim_prefix = self.meta['keyword_prefix']
+            sim_prefix = self.meta["keyword_prefix"]
             resolve_prefix = "unresolved_" if not self.meta["resolve"] else ""
             # needed for the super().apply_to method
             self.dict_list = [{"ext_number": self.meta["ext_number"],
