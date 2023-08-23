@@ -756,13 +756,14 @@ def val2pix(header, a, b, wcs_suffix=""):
     if isinstance(header, fits.ImageHDU):
         header = header.header
 
-    if "PC1_1"+s in header:
-        pc11 = header["PC1_1"+s]
-        pc12 = header["PC1_2"+s]
-        pc21 = header["PC2_1"+s]
-        pc22 = header["PC2_2"+s]
+    pckeys = [key + s for key in ["PC1_1", "PC1_2", "PC2_1", "PC2_2"]]
+    if all(key in header for key in pckeys):
+        pc11, pc12, pc21, pc22 = (header[key] for key in pckeys)
     else:
         pc11, pc12, pc21, pc22 = 1, 0, 0, 1
+
+    if (pc11 * pc22 + pc12 * pc21) != 1.0:
+        logging.error("PC matrix det != 1.0")
 
     da = float(header["CDELT1"+s])
     db = float(header["CDELT2"+s])

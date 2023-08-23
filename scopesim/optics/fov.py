@@ -1,4 +1,5 @@
 """Defines FieldOfView class"""
+import logging
 from copy import deepcopy
 
 import numpy as np
@@ -111,6 +112,8 @@ class FieldOfView(FieldOfViewBase):
 
         fields_in_fov = [field for field in src.fields
                          if fu.is_field_in_fov(self.header, field)]
+        if not fields_in_fov:
+            logging.warning("No fields in FOV.")
 
         spec_refs = []
         volume = self.volume()
