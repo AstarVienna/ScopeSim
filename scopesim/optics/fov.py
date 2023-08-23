@@ -157,6 +157,7 @@ class FieldOfView(FieldOfViewBase):
             self.meta["sub_pixel"] = sub_pixel
 
         if hdu_type == "image":
+            # FIXME: why not just make False the default value??
             use_photlam = False if use_photlam is None else use_photlam
             self.hdu = self.make_image_hdu(use_photlam=use_photlam)
         elif hdu_type == "cube":
@@ -292,7 +293,7 @@ class FieldOfView(FieldOfViewBase):
 
         # PHOTLAM * u.um * u.m2 --> ph / s
         specs = {ref: spec(fov_waveset) for ref, spec in self.spectra.items()}
-        if use_photlam is False:
+        if not use_photlam:
             for key in specs:
                 specs[key] = (specs[key] * bin_widths * area).to(u.ph / u.s)
 
@@ -632,14 +633,14 @@ class FieldOfView(FieldOfViewBase):
         return [field for field in self.fields
                 if isinstance(field, fits.ImageHDU)
                 and field.header["NAXIS"] == 3
-                and field.header.get("BG_SRC", False) is False]
+                and not field.header.get("BG_SRC", False)]
 
     @property
     def image_fields(self):
         return [field for field in self.fields
                 if isinstance(field, fits.ImageHDU)
                 and field.header["NAXIS"] == 2
-                and field.header.get("BG_SRC", False) is False]
+                and not field.header.get("BG_SRC", False)]
 
     @property
     def table_fields(self):
@@ -651,7 +652,7 @@ class FieldOfView(FieldOfViewBase):
     def background_fields(self):
         return [field for field in self.fields
                 if isinstance(field, fits.ImageHDU)
-                and field.header.get("BG_SRC", False) is True]
+                and field.header.get("BG_SRC", False)]
 
     def __repr__(self):
         waverange = [self.meta["wave_min"].value, self.meta["wave_max"].value]
