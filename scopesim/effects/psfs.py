@@ -427,7 +427,7 @@ class AnisocadoConstPSF(SemiAnalyticalPSF):
 
     """
     def __init__(self, **kwargs):
-        super(AnisocadoConstPSF, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         params = {"z_order": [42, 652],
                   "psf_side_length": 512,
                   "offset": (0, 0),
@@ -701,7 +701,7 @@ class FieldVaryingPSF(DiscretePSF):
     """
     def __init__(self, **kwargs):
         # sub_pixel_flag and flux_accuracy are taken care of in PSF base class
-        super(FieldVaryingPSF, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
         self.required_keys = ["filename"]
         utils.check_keys(self.meta, self.required_keys, action="error")

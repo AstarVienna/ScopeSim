@@ -10,7 +10,7 @@ from ..utils import quantify, from_currsys
 
 class SurfaceList(TERCurve):
     def __init__(self, **kwargs):
-        super(SurfaceList, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         params = {"z_order": [20, 120, 520],
                   "minimum_throughput": "!SIM.spectral.minimum_throughput",
                   "etendue": "!TEL.etendue",

@@ -66,7 +66,7 @@ class TERCurve(Effect):
 
     """
     def __init__(self, **kwargs):
-        super(TERCurve, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         params = {"z_order": [10, 110, 510],
                   "ignore_wings": False,
                   "wave_min": "!SIM.spectral.wave_min",
@@ -233,7 +233,7 @@ class TERCurve(Effect):
 
 class AtmosphericTERCurve(TERCurve):
     def __init__(self, **kwargs):
-        super(AtmosphericTERCurve, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         self.meta["z_order"] = [111, 511]
         self.meta["action"] = "transmission"
         self.meta["position"] = 0       # position in surface table
@@ -271,7 +271,7 @@ class SkycalcTERCurve(AtmosphericTERCurve):
                 outer_unit : "m"
 
         """
-        super(SkycalcTERCurve, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         self.meta["z_order"] = [112, 512]
         self.meta["use_local_skycalc_file"] = False
         self.meta.update(kwargs)
@@ -352,7 +352,7 @@ class SkycalcTERCurve(AtmosphericTERCurve):
 
 class QuantumEfficiencyCurve(TERCurve):
     def __init__(self, **kwargs):
-        super(QuantumEfficiencyCurve, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         self.meta["action"] = "transmission"
         self.meta["z_order"] = [113, 513]
         self.meta["position"] = -1          # position in surface table
@@ -391,7 +391,7 @@ class FilterCurve(TERCurve):
                                  " `array_dict`, `table`) or both "
                                  f"(`filter_name`, `filename_format`): {kwargs}")
 
-        super(FilterCurve, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         if self.table is None:
             raise ValueError("Could not initialise filter. Either filename not "
                              "found, or array are not compatible")
@@ -508,7 +508,7 @@ class TopHatFilterCurve(FilterCurve):
 
         tbl = Table(names=["wavelength", "transmission"],
                     data=[waveset, transmission])
-        super(TopHatFilterCurve, self).__init__(table=tbl,
+        super().__init__(table=tbl,
                                                 wavelength_unit="um",
                                                 action="transmission")
         self.meta.update(kwargs)
@@ -520,7 +520,7 @@ class DownloadableFilterCurve(FilterCurve):
         check_keys(kwargs, required_keys, action="error")
         filt_str = kwargs["filename_format"].format(kwargs["filter_name"])
         tbl = download_svo_filter(filt_str, return_style="table")
-        super(DownloadableFilterCurve, self).__init__(table=tbl, **kwargs)
+        super().__init__(table=tbl, **kwargs)
 
 
 class SpanishVOFilterCurve(FilterCurve):
@@ -555,7 +555,7 @@ class SpanishVOFilterCurve(FilterCurve):
         kwargs["svo_id"] = filt_str
 
         tbl = download_svo_filter(filt_str, return_style="table")
-        super(SpanishVOFilterCurve, self).__init__(table=tbl, **kwargs)
+        super().__init__(table=tbl, **kwargs)
 
 
 class FilterWheel(Effect):
@@ -579,7 +579,7 @@ class FilterWheel(Effect):
         required_keys = ["filter_names", "filename_format", "current_filter"]
         check_keys(kwargs, required_keys, action="error")
 
-        super(FilterWheel, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
         params = {"z_order": [124, 224, 524],
                   "path": "",

@@ -9,7 +9,7 @@ from ..base_classes import FieldOfViewBase
 
 class Shift3D(Effect):
     def __init__(self, **kwargs):
-        super(Shift3D, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         params = {"z_order": [30, 230],
                   "report_plot_include": True,
                   "report_table_include": False,}
@@ -93,7 +93,7 @@ class AtmosphericDispersion(Shift3D):
 
     """
     def __init__(self, **kwargs):
-        super(AtmosphericDispersion, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         params = {"z_order": [231],
                   "wave_min": "!SIM.spectral.wave_min",
                   "wave_mid": "!SIM.spectral.wave_mid",
@@ -161,7 +161,7 @@ class AtmosphericDispersionCorrection(Shift3D):
         ----------
         kwargs
         """
-        super(AtmosphericDispersionCorrection, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         self.meta["z_order"] = [632]
         if "quick_adc" in self.meta and self.meta["quick_adc"] is True:
             self.meta["z_order"] += [232]

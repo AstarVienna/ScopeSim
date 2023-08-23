@@ -435,7 +435,7 @@ class SpectralTraceListWheel(Effect):
                          "current_trace_list"]
         check_keys(kwargs, required_keys, action="error")
 
-        super(SpectralTraceListWheel, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
         params = {"z_order": [70, 270, 670],
                   "path": "",
