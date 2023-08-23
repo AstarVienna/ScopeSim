@@ -115,12 +115,13 @@ class FieldOfView(FieldOfViewBase):
         if not fields_in_fov:
             logging.warning("No fields in FOV.")
 
-        spec_refs = []
+        spec_refs = set()
         volume = self.volume()
         for ifld, fld in enumerate(fields_in_fov):
             if isinstance(fld, Table):
-                fields_in_fov[ifld] = fu.extract_area_from_table(fld, volume)
-                spec_refs += list(np.unique(fields_in_fov[ifld] ["ref"]))
+                extracted_field = fu.extract_area_from_table(fld, volume)
+                spec_refs.update(extracted_field["ref"])
+                fields_in_fov[ifld] = extracted_field
 
             elif isinstance(fld, fits.ImageHDU):
                 if fld.header["NAXIS"] in (2, 3):
@@ -128,11 +129,11 @@ class FieldOfView(FieldOfViewBase):
                 if fld.header["NAXIS"] == 2 or fld.header.get("BG_SRC"):
                     ref = fld.header.get("SPEC_REF")
                     if ref is not None:
-                        spec_refs += [ref]
+                        spec_refs.add(ref)
 
         waves = volume["waves"] * u.Unit(volume["wave_unit"])
         spectra = {ref: fu.extract_range_from_spectrum(src.spectra[ref], waves)
-                   for ref in np.unique(spec_refs)}
+                   for ref in spec_refs}
 
         self.fields = fields_in_fov
         self.spectra = spectra
@@ -225,9 +226,9 @@ class FieldOfView(FieldOfViewBase):
         for field in self.table_fields:
             refs = np.array(field["ref"])
             weights = np.array(field["weight"])
-            weight_sums = {ref: np.sum(weights[refs == ref])
-                           for ref in np.unique(refs)}
-            for ref, weight in weight_sums.items():
+            # TODO: could do grouping of table with both columns??
+            for ref in set(refs):
+                weight = weights.sum(where=refs==ref)
                 canvas_flux += self.spectra[ref](fov_waveset).value * weight
 
         for field in self.background_fields:
@@ -284,7 +285,7 @@ class FieldOfView(FieldOfViewBase):
         spline_order = utils.from_currsys("!SIM.computing.spline_order")
 
         # 1. Make waveset and canvas image
-        fov_waveset = np.unique(self.waveset)
+        fov_waveset = self.waveset
         bin_widths = np.diff(fov_waveset)       # u.um
         bin_widths = 0.5 * (np.r_[0, bin_widths] + np.r_[bin_widths, 0])
         area = utils.from_currsys(self.meta["area"])    # u.m2
