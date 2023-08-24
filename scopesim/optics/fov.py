@@ -1,6 +1,7 @@
 """Defines FieldOfView class"""
 import logging
 from copy import deepcopy
+from itertools import chain
 
 import numpy as np
 from scipy.interpolate import interp1d
@@ -84,6 +85,10 @@ class FieldOfView(FieldOfViewBase):
         self._wavelength = None
         self._volume = None
 
+    def _pixarea(self, hdr):
+        return (hdr["CDELT1"] * u.Unit(hdr["CUNIT1"]) *
+                hdr["CDELT2"] * u.Unit(hdr["CUNIT2"])).to(u.arcsec ** 2)
+
     @property
     def trace_id(self):
         """Return the name of the trace"""
@@ -92,11 +97,7 @@ class FieldOfView(FieldOfViewBase):
     @property
     def pixel_area(self):
         if self.meta["pixel_area"] is None:
-            hdr = self.header
-            pixarea = (hdr["CDELT1"] * u.Unit(hdr["CUNIT1"]) *
-                       hdr["CDELT2"] * u.Unit(hdr["CUNIT2"])).to(u.arcsec ** 2)
-            self.meta["pixel_area"] = pixarea.value     # [arcsec]
-
+            self.meta["pixel_area"] = self._pixarea(self.header).value  # [arcsec]
         return self.meta["pixel_area"]
 
     def extract_from(self, src):
@@ -172,30 +173,73 @@ class FieldOfView(FieldOfViewBase):
             image = np.sum(self.hdu.data, axis=0)
             self.hdu.data = image
 
+    def _evaluate_spectrum_with_weight(self, ref, waveset, weight):
+        return self.spectra[ref](waveset).value * weight
+
+    def _calc_area_factor(self, field):
+        bg_solid_angle = u.Unit(field.header["SOLIDANG"]).to(u.arcsec**-2)
+        area_factor = self.pixel_area * bg_solid_angle  # arcsec**2 * arcsec**-2
+        return area_factor
+
+    def _make_spectrum_cubefields(self, fov_waveset):
+        """
+        Find Cube fields.
+
+        * collapse cube along spatial dimensions --> spectrum vector
+        * convert vector to PHOTLAM
+        * interpolate at waveset
+        * yield scaled flux
+        """
+        for field in self.cube_fields:
+            hdu_waveset = fu.get_cube_waveset(field.header,
+                                              return_quantity=True)
+            fluxes = field.data.sum(axis=2).sum(axis=1)
+            fov_waveset_fluxes = np.interp(fov_waveset, hdu_waveset, fluxes)
+
+            field_unit = field.header.get("BUNIT", PHOTLAM)
+            flux_scale_factor = u.Unit(field_unit).to(PHOTLAM)
+
+            yield fov_waveset_fluxes * flux_scale_factor
+
+    def _make_spectrum_imagefields(self, waveset):
+        """
+        Find Image fields.
+
+        * sum image over both dimensions
+        * evaluate SPEC_REF spectum at waveset
+        * yield spectrum multiply by sum
+        """
+        for field in self.image_fields:
+            weight = np.sum(field.data)
+            yield self._evaluate_spectrum_with_weight(field.header["SPEC_REF"],
+                                                      waveset, weight)
+
+    def _make_spectrum_tablefields(self, waveset):
+        """
+        Find Table fields.
+
+        * evaluate all spectra at waveset
+        * for each unique ref, sum the weights
+        * yield each spectrum * sum of weights
+        """
+        for field in self.table_fields:
+            refs = np.array(field["ref"])
+            weights = np.array(field["weight"])
+            # TODO: could do grouping of table with both columns??
+            for ref in set(refs):
+                weight = weights.sum(where=refs==ref)
+                yield self._evaluate_spectrum_with_weight(ref, waveset, weight)
+
+    def _make_spectrum_backfields(self, waveset):
+        for field in self.background_fields:
+            yield self._evaluate_spectrum_with_weight(
+                field.header["SPEC_REF"], waveset,
+                self._calc_area_factor(field))
+
     def make_spectrum(self):
         """
         This is needed for when we do incoherent MOS instruments.
         Each fibre doesn't care about the spatial information.
-
-        1. Make waveset and zeros flux
-            make dict of spectra evaluated at waveset
-
-        2. Find Cube fields
-            collapse cube along spatial dimensions --> spectrum vector
-            convert vector to PHOTLAM
-            interpolate at waveset
-            add to zeros flux vector
-
-        3. Find Image fields
-            sum image over both dimensions
-            evaluate SPEC_REF spectum at waveset
-            multiply by sum
-            add to zeros flux vector
-
-        4. Find Table fields
-            evaluate all spectra at waveset
-            for each unique ref, sum the weights
-            add each spectra * sum of weights to zeros flux vector
 
         Returns
         -------
@@ -204,45 +248,92 @@ class FieldOfView(FieldOfViewBase):
 
         """
         fov_waveset = self.waveset
-        canvas_flux = np.zeros(len(fov_waveset))
+        # FIXME: this was in here but isn't used. Is that on purpose?
+        # old doc: make dict of spectra evaluated at waveset
+        # specs = {ref: spec(fov_waveset) for ref, spec in self.spectra.items()}
 
-        specs = {ref: spec(fov_waveset) for ref, spec in self.spectra.items()}
-
-        for field in self.cube_fields:
-            hdu_waveset = fu.get_cube_waveset(field.header, return_quantity=True)
-            fluxes = field.data.sum(axis=2).sum(axis=1)
-            fov_waveset_fluxes = np.interp(fov_waveset, hdu_waveset, fluxes)
-
-            field_unit = field.header.get("BUNIT", PHOTLAM)
-            flux_scale_factor = u.Unit(field_unit).to(PHOTLAM)
-
-            canvas_flux += fov_waveset_fluxes * flux_scale_factor
-
-        for field in self.image_fields:
-            ref = field.header["SPEC_REF"]
-            weight = np.sum(field.data)
-            canvas_flux += self.spectra[ref](fov_waveset).value * weight
-
-
-        for field in self.table_fields:
-            refs = np.array(field["ref"])
-            weights = np.array(field["weight"])
-            # TODO: could do grouping of table with both columns??
-            for ref in set(refs):
-                weight = weights.sum(where=refs==ref)
-                canvas_flux += self.spectra[ref](fov_waveset).value * weight
-
-        for field in self.background_fields:
-            bg_solid_angle = u.Unit(field.header["SOLIDANG"]).to(u.arcsec**-2)
-            area_factor = self.pixel_area * bg_solid_angle       # arcsec**2 * arcsec**-2
-
-            ref = field.header["SPEC_REF"]
-            canvas_flux += self.spectra[ref](fov_waveset).value * area_factor
+        # Start with zero flux no ensure correct array shape even if none of
+        # the sub-functions yield anything.
+        canvas_flux = sum(chain(
+            self._make_spectrum_cubefields(fov_waveset),
+            self._make_spectrum_imagefields(fov_waveset),
+            self._make_spectrum_tablefields(fov_waveset),
+            self._make_spectrum_backfields(fov_waveset),
+            ), start=np.zeros_like(fov_waveset.value))
 
         spectrum = SourceSpectrum(Empirical1D, points=fov_waveset,
                                   lookup_table=canvas_flux)
-
         return spectrum
+
+    def _make_image_cubefields(self, area):
+        """
+        Find Cube fields.
+
+        * collapse cube along wavelength axis
+        * rescale and reorient image
+        * add cube image to canvas image
+        """
+        for field in self.cube_fields:
+            # cube_fields come in with units of photlam/arcsec2, need to convert to ph/s
+            # We need to the voxel volume (spectral and solid angle) for that.
+            # ..todo: implement branch for use_photlam is True
+            spectral_bin_width = (field.header["CDELT3"] *
+                                  u.Unit(field.header["CUNIT3"])).to(u.Angstrom)
+            # First collapse to image, then convert units
+            image = np.sum(field.data, axis=0) * PHOTLAM/u.arcsec**2
+            image = (image * self._pixarea(field.header) * area *
+                     spectral_bin_width).to(u.ph/u.s)
+
+            tmp_hdu = fits.ImageHDU(data=image, header=field.header)
+            yield tmp_hdu
+
+    def _make_image_imagefields(self, fluxes):
+        """
+        Find Image fields.
+
+        * sum spectra between wavelength edges
+        * multiply image by summed spectrum
+        * add image to canvas image
+        """
+        for field in self.image_fields:
+            image = deepcopy(field.data)
+            image *= fluxes[field.header["SPEC_REF"]]  # ph / s
+
+            tmp_hdu = fits.ImageHDU(data=image, header=field.header)
+            yield tmp_hdu
+
+    def _make_image_tablefields(self, fluxes):
+        """
+        Find Table fields.
+
+        * sum spectra between wavelength edges
+        * add summed flux at x,y position in canvas image
+        """
+        for field in self.table_fields:
+            # x, y are ALWAYS in arcsec - crval is in deg
+            xpix, ypix = imp_utils.val2pix(self.header,
+                                           field["x"] / 3600,
+                                           field["y"] / 3600)
+            if utils.from_currsys(self.meta["sub_pixel"]):
+                for i, row in enumerate(field):
+                    xs, ys, fracs = imp_utils.sub_pixel_fractions(xpix[i],
+                                                                  ypix[i])
+                    ref, weight = row["ref"], row["weight"]
+                    for x, y, f in zip(xs, ys, fracs):
+                        yield fluxes[ref] * f, weight, x, y
+            else:
+                # Note: these had x/ypix+0.5 until a06ab75
+                # TODO: could these be something more numpythonic grid-ish?
+                x = np.array(xpix).astype(int)
+                y = np.array(ypix).astype(int)     # quickest way to round
+                f = np.array([fluxes[ref] for ref in field["ref"]])
+                weight = np.array(field["weight"])
+                yield f, weight, x, y
+
+    def _make_image_backfields(self, fluxes):
+        for field in self.background_fields:
+            flux = fluxes[field.header["SPEC_REF"]]
+            yield flux * self._calc_area_factor(field)
 
     def make_image_hdu(self, use_photlam=False):
         """
@@ -254,23 +345,7 @@ class FieldOfView(FieldOfViewBase):
 
             See make_cube for an explanation
 
-        1. Make waveset and canvas image
-            make canvas image from NAXIS1,2 from fov.header
-
-        2. Find Cube fields
-            collapse cube along wavelength axis
-            rescale and reorient image
-            add cube image to canvas image
-
-        3. Find Image fields
-            rescale and reorient images
-            sum spectra between wavelength edges
-            multiply image by summed spectrum
-            add image to canvas image
-
-        4. Find Table fields
-            sum spectra between wavelength edges
-            add summed flux at x,y position in canvas image
+        Make canvas image from NAXIS1,2 from fov.header
 
         Parameters
         ----------
@@ -285,91 +360,41 @@ class FieldOfView(FieldOfViewBase):
         """
         spline_order = utils.from_currsys("!SIM.computing.spline_order")
 
-        # 1. Make waveset and canvas image
+        # Make waveset and canvas image
         fov_waveset = self.waveset
         bin_widths = np.diff(fov_waveset)       # u.um
         bin_widths = 0.5 * (np.r_[0, bin_widths] + np.r_[bin_widths, 0])
         area = utils.from_currsys(self.meta["area"])    # u.m2
 
         # PHOTLAM * u.um * u.m2 --> ph / s
-        specs = {ref: spec(fov_waveset) for ref, spec in self.spectra.items()}
-        if not use_photlam:
-            for key in specs:
-                specs[key] = (specs[key] * bin_widths * area).to(u.ph / u.s)
-
+        specs = {ref: spec(fov_waveset) if use_photlam
+                 else (spec(fov_waveset) * bin_widths * area).to(u.ph / u.s)
+                 for ref, spec in self.spectra.items()}
         fluxes = {ref: np.sum(spec).value for ref, spec in specs.items()}
-        naxis1, naxis2 = self.header["NAXIS1"], self.header["NAXIS2"]
-        canvas_image_hdu = fits.ImageHDU(data=np.zeros((naxis2, naxis1)),
-                                         header=self.header)
+        canvas_image_hdu = fits.ImageHDU(
+            data=np.zeros((self.header["NAXIS2"], self.header["NAXIS1"])),
+            header=self.header)
 
-        # 2. Find Cube fields
-        for field in self.cube_fields:
-            # cube_fields come in with units of photlam/arcsec2, need to convert to ph/s
-            # We need to the voxel volume (spectral and solid angle) for that.
-            # ..todo: implement branch for use_photlam is True
-            spectral_bin_width = (field.header["CDELT3"] *
-                                  u.Unit(field.header["CUNIT3"])).to(u.Angstrom)
-            pixarea = (field.header["CDELT1"] * u.Unit(field.header["CUNIT1"]) *
-                       field.header["CDELT2"] * u.Unit(field.header["CUNIT2"])).to(u.arcsec**2)
-
-            # First collapse to image, then convert units
-            image = np.sum(field.data, axis=0) * PHOTLAM/u.arcsec**2
-            image = (image * pixarea * area * spectral_bin_width).to(u.ph/u.s)
-
-            tmp_hdu = fits.ImageHDU(data=image, header=field.header)
+        for tmp_hdu in chain(self._make_image_cubefields(area),
+                             self._make_image_imagefields(fluxes)):
             canvas_image_hdu = imp_utils.add_imagehdu_to_imagehdu(
                 tmp_hdu,
                 canvas_image_hdu,
                 conserve_flux=True,
                 spline_order=spline_order)
 
-        # 2. Find Image fields
-        for field in self.image_fields:
-            image = deepcopy(field.data)
-            tmp_hdu = fits.ImageHDU(data=image, header=field.header)
-            tmp_hdu.data *= fluxes[field.header["SPEC_REF"]]  # ph / s
-            canvas_image_hdu = imp_utils.add_imagehdu_to_imagehdu(
-                tmp_hdu,
-                canvas_image_hdu,
-                conserve_flux=True,
-                spline_order=spline_order)
-
-        # 3. Find Table fields
-        for field in self.table_fields:
-            # x, y are ALWAYS in arcsec - crval is in deg
-            xpix, ypix = imp_utils.val2pix(self.header,
-                                           field["x"] / 3600,
-                                           field["y"] / 3600)
+        for flux, weight, x, y in self._make_image_tablefields(fluxes):
             if utils.from_currsys(self.meta["sub_pixel"]):
-                for i, row in enumerate(field):
-                    xs, ys, fracs = imp_utils.sub_pixel_fractions(xpix[i],
-                                                                  ypix[i])
-                    ref, weight = row["ref"], row["weight"]
-                    for x, y, f in zip(xs, ys, fracs):
-                        canvas_image_hdu.data[y, x] += fluxes[ref] * weight * f
+                canvas_image_hdu.data[y, x] += flux * weight
             else:
-                # Note: these had x/ypix+0.5 until a06ab75
-                x = np.array(xpix).astype(int)
-                y = np.array(ypix).astype(int)     # quickest way to round
-                f = np.array([fluxes[ref] for ref in field["ref"]])
-                weight = np.array(field["weight"])
-
                 # Mask out any stars that were pushed out of the fov by rounding
                 m = (x < canvas_image_hdu.data.shape[1]) * \
                     (y < canvas_image_hdu.data.shape[0])
-                canvas_image_hdu.data[y[m], x[m]] += f[m] * weight[m]
+                canvas_image_hdu.data[y[m], x[m]] += flux[m] * weight[m]
 
-        # 4. Find Background fields
-        for field in self.background_fields:
-            bg_solid_angle = u.Unit(field.header["SOLIDANG"]).to(u.arcsec**-2)
-            area_factor = self.pixel_area * bg_solid_angle       # arcsec**2 * arcsec**-2
-
-            flux = fluxes[field.header["SPEC_REF"]] * area_factor
-            canvas_image_hdu.data += flux
-
-        image_hdu = canvas_image_hdu        # [ph s-1 pixel-1]
-
-        return image_hdu
+        canvas_image_hdu.data = sum(self._make_image_backfields(fluxes),
+                                    start=canvas_image_hdu.data)
+        return canvas_image_hdu  # [ph s-1 pixel-1]
 
     def make_cube_hdu(self):
         """
@@ -475,12 +500,7 @@ class FieldOfView(FieldOfViewBase):
             field_data = field_interp(fov_waveset.value)
 
             # Pixel scale conversion
-            field_pixarea = (field.header["CDELT1"]
-                             * field.header["CDELT2"]
-                             * u.Unit(field.header["CUNIT1"])
-                             * u.Unit(field.header["CUNIT2"])).to(u.arcsec**2)
-            field_pixarea = field_pixarea.value
-            field_data *= field_pixarea / self.pixel_area
+            field_data *= self._pixarea(field.header).value / self.pixel_area
             field_hdu = fits.ImageHDU(data=field_data, header=field.header)
             canvas_cube_hdu = imp_utils.add_imagehdu_to_imagehdu(
                 field_hdu,
@@ -495,10 +515,8 @@ class FieldOfView(FieldOfViewBase):
             # ..todo: Add a catch to get ImageHDU with BUNITs
             canvas_image_hdu = fits.ImageHDU(data=np.zeros((naxis2, naxis1)),
                                              header=self.header)
-            pixarea = (field.header["CDELT1"] * u.Unit(field.header["CUNIT1"]) *
-                       field.header["CDELT2"] * u.Unit(field.header["CUNIT2"])).to(u.arcsec**2)
-
-            field.data = field.data / self.pixel_area
+            # FIXME: Why here not "Pixel scale conversion" as above?
+            field.data /= self.pixel_area
             canvas_image_hdu = imp_utils.add_imagehdu_to_imagehdu(field,
                                                     canvas_image_hdu,
                                                     spline_order=spline_order)
@@ -529,6 +547,8 @@ class FieldOfView(FieldOfViewBase):
 
         # 5. Add Background fields
         for field in self.background_fields:
+            # TODO: The following would have been identical to the other two
+            #       make methods, but was commented out. Why?
             # bg_solid_angle = u.Unit(field.header["SOLIDANG"]).to(u.arcsec**-2)  # float [arcsec-2]
             # pixel_area = utils.from_currsys(self.meta["pixel_scale"]) ** 2      # float [arcsec2]
             # area_factor = pixel_area * bg_solid_angle                           # float [arcsec2 * arcsec-2]
@@ -564,7 +584,8 @@ class FieldOfView(FieldOfViewBase):
 
     def volume(self, wcs_prefix=""):
         xs, ys = imp_utils.calc_footprint(self.header, wcs_suffix=wcs_prefix)
-        wave_corners = self.waverange
+        # FIXME: This is unused!!
+        # wave_corners = self.waverange
         self._volume = {"xs": [min(xs), max(xs)],
                         "ys": [min(ys), max(ys)],
                         "waves": self.waverange,
@@ -575,17 +596,14 @@ class FieldOfView(FieldOfViewBase):
     @property
     def data(self):
         if self.hdu is not None:
-            data = self.hdu.data
-        elif self.image is not None:
-            data = self.image
-        elif self.cube is not None:
-            data = self.cube
-        elif self.spectrum is not None:
-            data = self.spectrum
-        else:
-            data = None
-
-        return data
+            return self.hdu.data
+        if self.image is not None:
+            return self.image
+        if self.cube is not None:
+            return self.cube
+        if self.spectrum is not None:
+            return self.spectrum
+        return None
 
     @property
     def corners(self):
