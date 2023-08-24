@@ -169,6 +169,7 @@ class FieldOfView(FieldOfViewBase):
         return self.hdu
 
     def flatten(self):
+        """If cube, collapse along first axis."""
         if self.hdu and self.hdu.header["NAXIS"] == 3:
             image = np.sum(self.hdu.data, axis=0)
             self.hdu.data = image
@@ -595,6 +596,7 @@ class FieldOfView(FieldOfViewBase):
 
     @property
     def data(self):
+        """Return either hdu.data, image, cube, spectrum or None."""
         if self.hdu is not None:
             return self.hdu.data
         if self.image is not None:
@@ -607,13 +609,14 @@ class FieldOfView(FieldOfViewBase):
 
     @property
     def corners(self):
+        """Return sky footprint, image plane footprint."""
         sky_corners = imp_utils.calc_footprint(self.header)
         imp_corners = imp_utils.calc_footprint(self.header, "D")
         return sky_corners, imp_corners
 
     @property
     def waverange(self):
-        """Returns wavelength range in um [wave_min, wave_max]"""
+        """Return wavelength range in um [wave_min, wave_max]."""
         if self._waverange is None:
             wave_min = utils.quantify(self.meta["wave_min"], u.um).value
             wave_max = utils.quantify(self.meta["wave_max"], u.um).value
@@ -622,14 +625,14 @@ class FieldOfView(FieldOfViewBase):
 
     @property
     def wavelength(self):
-        """Returns central wavelength in um"""
+        """Return central wavelength in um."""
         if self._wavelength is None:
             self._wavelength = np.average(self.waverange)
         return utils.quantify(self._wavelength, u.um)
 
     @property
     def waveset(self):
-        """Returns a wavelength vector in um"""
+        """Return a wavelength vector in um."""
 
         field_cubes = self.cube_fields
         if len(field_cubes) > 0:
@@ -648,6 +651,7 @@ class FieldOfView(FieldOfViewBase):
 
     @property
     def cube_fields(self):
+        """Return list of non-BG_SRC ImageHDU fields with NAXIS=3."""
         return [field for field in self.fields
                 if isinstance(field, fits.ImageHDU)
                 and field.header["NAXIS"] == 3
@@ -655,6 +659,7 @@ class FieldOfView(FieldOfViewBase):
 
     @property
     def image_fields(self):
+        """Return list of non-BG_SRC ImageHDU fields with NAXIS=2."""
         return [field for field in self.fields
                 if isinstance(field, fits.ImageHDU)
                 and field.header["NAXIS"] == 2
@@ -662,12 +667,13 @@ class FieldOfView(FieldOfViewBase):
 
     @property
     def table_fields(self):
+        """Return list of Table fields."""
         return [field for field in self.fields
                 if isinstance(field, Table)]
 
-
     @property
     def background_fields(self):
+        """Return list of BG_SRC ImageHDU fields."""
         return [field for field in self.fields
                 if isinstance(field, fits.ImageHDU)
                 and field.header.get("BG_SRC", False)]
