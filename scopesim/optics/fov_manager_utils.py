@@ -326,7 +326,9 @@ def get_spectroscopy_headers(effects, **kwargs):
     return fov_headers
 
 
-def get_spectroscopy_fovs(headers, shifts, effects=[], **kwargs):
+def get_spectroscopy_fovs(headers, shifts, effects=None, **kwargs):
+    if effects is None:
+        effects = []
 
     shift_waves = shifts["wavelengths"]     # in [um]
     shift_dx = shifts["x_shifts"]           # in [deg]
