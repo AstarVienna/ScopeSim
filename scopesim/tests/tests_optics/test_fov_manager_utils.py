@@ -14,8 +14,28 @@ from scopesim.tests.mocks.py_objects import trace_list_objects as tlo
 
 
 @pytest.fixture(scope="function")
+def wave_kwargs():
+    return {"wave_min": 0.5, "wave_max": 2.5}
+
+
+@pytest.fixture(scope="function")
+def th_filt():
+    return eo._filter_tophat_curve()
+
+
+@pytest.fixture(scope="function")
 def full_trace_list():
     return tlo.make_trace_hdulist()
+
+
+@pytest.fixture(scope="function")
+def spec_hdrs(full_trace_list):
+    params = {"pixel_scale": 0.1, "plate_scale": 0.1,
+              "wave_min": 0.7, "wave_max": 2.5}
+    spt = SpectralTraceList(hdulist=full_trace_list, **params)
+    apm = apo._basic_aperture()
+    hdrs = fm_utils.get_spectroscopy_headers(effects=[spt, apm], **params)
+    return list(hdrs)
 
 
 PLOTS = False
@@ -73,35 +93,35 @@ class TestGet3DShifts:
 
 
 class TestGetImagingWaveset:
-    def test_returns_default_wave_range_when_passed_no_effects(self):
-        kwargs = {"wave_min": 0.5, "wave_max": 2.5}
-        wave_bin_edges = fm_utils.get_imaging_waveset([], **kwargs)
+    @pytest.mark.usefixtures("wave_kwargs")
+    def test_returns_default_wave_range_when_passed_no_effects(self, wave_kwargs):
+        wave_bin_edges = fm_utils.get_imaging_waveset([], **wave_kwargs)
         assert len(wave_bin_edges) == 2
 
-    def test_returns_waveset_of_filter(self):
-        filt = eo._filter_tophat_curve()
-        kwargs = {"wave_min": 0.5, "wave_max": 2.5}
-        wave_bin_edges = fm_utils.get_imaging_waveset([filt], **kwargs)
+    @pytest.mark.usefixtures("wave_kwargs", "th_filt")
+    def test_returns_waveset_of_filter(self, wave_kwargs, th_filt):
+        wave_bin_edges = fm_utils.get_imaging_waveset([th_filt], **wave_kwargs)
         assert len(wave_bin_edges) == 2
 
-    def test_returns_waveset_of_psf(self):
+    @pytest.mark.usefixtures("wave_kwargs")
+    def test_returns_waveset_of_psf(self, wave_kwargs):
         psf = eo._const_psf()
-        kwargs = {"wave_min": 0.5, "wave_max": 2.5}
-        wave_bin_edges = fm_utils.get_imaging_waveset([psf], **kwargs)
+        wave_bin_edges = fm_utils.get_imaging_waveset([psf], **wave_kwargs)
         assert len(wave_bin_edges) == 4
 
-    def test_returns_waveset_of_psf_and_filter(self):
-        filt = eo._filter_tophat_curve()
+    @pytest.mark.usefixtures("wave_kwargs", "th_filt")
+    def test_returns_waveset_of_psf_and_filter(self, wave_kwargs, th_filt):
         psf = eo._const_psf()
-        kwargs = {"wave_min": 0.5, "wave_max": 2.5}
-        wave_bin_edges = fm_utils.get_imaging_waveset([filt, psf], **kwargs)
+        wave_bin_edges = fm_utils.get_imaging_waveset([th_filt, psf],
+                                                      **wave_kwargs)
         assert len(wave_bin_edges) == 4
 
-    def test_returns_waveset_of_ncpa_psf_inside_filter_edges(self):
-        filt = eo._filter_tophat_curve()
+    @pytest.mark.usefixtures("wave_kwargs", "th_filt")
+    def test_returns_waveset_of_ncpa_psf_inside_filter_edges(self, wave_kwargs,
+                                                             th_filt):
         psf = eo._ncpa_psf()
-        kwargs = {"wave_min": 0.5, "wave_max": 2.5}
-        wave_bin_edges = fm_utils.get_imaging_waveset([psf, filt], **kwargs)
+        wave_bin_edges = fm_utils.get_imaging_waveset([psf, th_filt],
+                                                      **wave_kwargs)
         assert min(wave_bin_edges) == 1.
         assert max(wave_bin_edges) == 2.
         assert len(wave_bin_edges) == 9
@@ -111,7 +131,7 @@ class TestGetImagingHeaders:
     def test_throws_error_if_not_all_keywords_are_passed(self):
         apm = eo._img_aperture_mask()
         with pytest.raises(ValueError):
-            fm_utils.get_imaging_headers([apm])
+            list(fm_utils.get_imaging_headers([apm]))
 
     def test_returns_set_of_headers_from_aperture_effects(self):
         apm = eo._img_aperture_mask(array_dict={"x": [-1.28, 1., 1., -1.28],
@@ -129,6 +149,8 @@ class TestGetImagingHeaders:
         kwargs = {"pixel_scale": 0.004, "plate_scale": 0.26666666666,
                   "max_segment_size": 2048 ** 2, "chunk_size": 1024}
         hdrs = fm_utils.get_imaging_headers([det], **kwargs)
+        # Evaluate generator for testing
+        hdrs = list(hdrs)
 
         area_sum = np.sum([hdr["NAXIS1"] * hdr["NAXIS2"] for hdr in hdrs])
         assert area_sum == 4096**2
@@ -161,6 +183,8 @@ class TestGetImagingFOVs:
                   "max_segment_size": 100 ** 2, "chunk_size": 100}
 
         hdrs = fm_utils.get_imaging_headers([apm], **kwargs)
+        # Evaluate generator for testing
+        hdrs = list(hdrs)
         waveset = np.linspace(1, 2, 6)
         shifts = {"wavelengths": np.array([1, 2]),
                   "x_shifts": np.zeros(2),
@@ -168,7 +192,10 @@ class TestGetImagingFOVs:
         fovs = fm_utils.get_imaging_fovs(headers=hdrs, waveset=waveset,
                                          shifts=shifts)
 
+        # Evaluate generator for testing
+        fovs = list(fovs)
         assert len(fovs) == (len(waveset)-1) * len(hdrs)
+        assert fovs
 
         if PLOTS:
             from scopesim.optics.image_plane_utils import calc_footprint
@@ -189,19 +216,13 @@ class TestGetImagingFOVs:
             plt.show()
 
 
-@pytest.mark.usefixtures("full_trace_list")
+@pytest.mark.usefixtures("spec_hdrs")
 class TestGetSpectroscopyHeaders:
-    def test_returns_headers(self, full_trace_list):
-        params = {"pixel_scale": 0.1, "plate_scale": 0.1,
-                  "wave_min": 0.7, "wave_max": 2.5}
-        spt = SpectralTraceList(hdulist=full_trace_list, **params)
-        apm = apo._basic_aperture()
-
-        hdrs = fm_utils.get_spectroscopy_headers(effects=[spt, apm], **params)
-        assert all([isinstance(hdr, PoorMansHeader) for hdr in hdrs])
+    def test_returns_headers(self, spec_hdrs):
+        assert all([isinstance(hdr, PoorMansHeader) for hdr in spec_hdrs])
 
         if PLOTS:
-            for hdr in hdrs:
+            for hdr in spec_hdrs:
                 x = np.array([0, hdr["NAXIS1"], hdr["NAXIS1"], 0])
                 y = np.array([0, 0, hdr["NAXIS2"], hdr["NAXIS2"]])
                 xw, yw = pix2val(hdr, x, y, "D")
@@ -210,19 +231,15 @@ class TestGetSpectroscopyHeaders:
             plt.show()
 
 
-@pytest.mark.usefixtures("full_trace_list")
+@pytest.mark.usefixtures("spec_hdrs")
 class TestGetSpectroscopyFOVs:
-    def test_returns_fovs(self, full_trace_list):
-        params = {"pixel_scale": 0.1, "plate_scale": 0.1,
-                  "wave_min": 0.7, "wave_max": 2.5}
-        spt = SpectralTraceList(hdulist=full_trace_list, **params)
-        apm = apo._basic_aperture()
-
+    def test_returns_fovs(self, spec_hdrs):
         shifts = {"wavelengths": np.array([0.7, 2.5]),
                   "x_shifts": np.array([0, 0]),
                   "y_shifts": np.array([0, 1/3600.])}
-        hdrs = fm_utils.get_spectroscopy_headers(effects=[spt, apm], **params)
-        fovs = fm_utils.get_spectroscopy_fovs(hdrs, shifts)
+        fovs = fm_utils.get_spectroscopy_fovs(spec_hdrs, shifts)
+        # Evaluate generator for testing
+        fovs = list(fovs)
 
         assert all([isinstance(fov, FieldOfView) for fov in fovs])
 
