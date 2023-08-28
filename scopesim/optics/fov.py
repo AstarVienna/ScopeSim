@@ -189,7 +189,7 @@ class FieldOfView(FieldOfViewBase):
         * collapse cube along spatial dimensions --> spectrum vector
         * convert vector to PHOTLAM
         * interpolate at waveset
-        * yield scaled flux
+        * yield scaled flux to be added to canvas flux
         """
         for field in self.cube_fields:
             hdu_waveset = fu.get_cube_waveset(field.header,
@@ -208,7 +208,7 @@ class FieldOfView(FieldOfViewBase):
 
         * sum image over both dimensions
         * evaluate SPEC_REF spectum at waveset
-        * yield spectrum multiply by sum
+        * yield spectrum multiply by sum to be added to canvas flux
         """
         for field in self.image_fields:
             weight = np.sum(field.data)
@@ -221,7 +221,7 @@ class FieldOfView(FieldOfViewBase):
 
         * evaluate all spectra at waveset
         * for each unique ref, sum the weights
-        * yield each spectrum * sum of weights
+        * yield each spectrum * sum of weights to be added to canvas flux
         """
         for field in self.table_fields:
             refs = np.array(field["ref"])
@@ -268,7 +268,7 @@ class FieldOfView(FieldOfViewBase):
 
         * collapse cube along wavelength axis
         * rescale and reorient image
-        * add cube image to canvas image
+        * yield cube image  to be added to canvas image
         """
         for field in self.cube_fields:
             # cube_fields come in with units of photlam/arcsec2, need to convert to ph/s
@@ -288,7 +288,7 @@ class FieldOfView(FieldOfViewBase):
 
         * sum spectra between wavelength edges
         * multiply image by summed spectrum
-        * add image to canvas image
+        * yield image  to be added to canvas image
         """
         for field in self.image_fields:
             image = deepcopy(field.data)
@@ -300,7 +300,7 @@ class FieldOfView(FieldOfViewBase):
         Find Table fields.
 
         * sum spectra between wavelength edges
-        * add summed flux at x,y position in canvas image
+        * yield summed flux at x,y position to be added to canvas image
         """
         for field in self.table_fields:
             # x, y are ALWAYS in arcsec - crval is in deg
@@ -387,6 +387,96 @@ class FieldOfView(FieldOfViewBase):
                                     start=canvas_image_hdu.data)
         return canvas_image_hdu  # [ph s-1 pixel-1]
 
+    def _make_cube_cubefields(self, fov_waveset):
+        """
+        Find Cube fields.
+
+        * rescale and reorient cubes
+        * interp1d smaller cubes with waveset
+        * yield cubes to be added to cavas cube
+        """
+        for field in self.cube_fields:
+            # Cube should be in PHOTLAM arcsec-2 for SpectralTrace mapping
+            # Assumption is that ImageHDUs have units of PHOTLAM arcsec-2
+            field_waveset = fu.get_cube_waveset(field.header,
+                                                return_quantity=True)
+
+            # ..todo: Deal with this bounds_error in a more elegant way
+            field_interp = interp1d(field_waveset.to(u.um).value,
+                                    field.data, axis=0, kind="linear",
+                                    bounds_error=False, fill_value=0)
+
+            field_data = field_interp(fov_waveset.value)
+
+            # Pixel scale conversion
+            field_data *= self._pixarea(field.header).value / self.pixel_area
+            field_hdu = fits.ImageHDU(data=field_data, header=field.header)
+            yield field_hdu
+
+    def _make_cube_imagefields(self, specs, spline_order):
+        """
+        Find Image fields.
+
+        * rescale and reorient images
+        * evaluate spectra at waveset
+        * expand image by spectra to 3D form
+        * yield image cubes to be added to cavas cube
+        """
+        for field in self.image_fields:
+            # Cube should be in PHOTLAM arcsec-2 for SpectralTrace mapping
+            # Assumption is that ImageHDUs have units of PHOTLAM arcsec-2
+            # ImageHDUs have photons/second/pixel.
+            # ..todo: Add a catch to get ImageHDU with BUNITs
+            canvas_image_hdu = fits.ImageHDU(
+                data=np.zeros((self.header["NAXIS2"], self.header["NAXIS1"])),
+                header=self.header)
+            # FIXME: Why here not "Pixel scale conversion" as above?
+            field.data /= self.pixel_area
+            canvas_image_hdu = imp_utils.add_imagehdu_to_imagehdu(
+                field,
+                canvas_image_hdu,
+                spline_order=spline_order)
+            spec = specs[field.header["SPEC_REF"]]
+            field_cube = canvas_image_hdu.data[None, :, :] * spec[:, None, None]  # 2D * 1D -> 3D
+            yield field_cube.value
+
+    def _make_cube_tablefields(self, specs):
+        """
+        Find Table fields.
+
+        * evaluate spectra at waveset
+        * yield spectrum at x,y position to be added cavas to cube
+        """
+        for field in self.table_fields:
+            # Cube should be in PHOTLAM arcsec-2 for SpectralTrace mapping
+            # Point sources are in PHOTLAM per pixel
+            # Point sources need to be scaled up by inverse pixel_area
+            for row in field:
+                xsky, ysky = row["x"] / 3600, row["y"] / 3600
+                # x, y are ALWAYS in arcsec - crval is in deg
+                xpix, ypix = imp_utils.val2pix(self.header, xsky, ysky)
+                flux_vector = specs[row["ref"]].value * row["weight"] / self.pixel_area
+
+                if utils.from_currsys(self.meta["sub_pixel"]):
+                    xs, ys, fracs = imp_utils.sub_pixel_fractions(xpix, ypix)
+                    for i, j, k in zip(xs, ys, fracs):
+                        yield flux_vector * k, i, j
+                else:
+                    yield flux_vector, int(xpix), int(ypix)
+
+    def _make_cube_backfields(self, specs):
+        for field in self.background_fields:
+            # TODO: The following would have been identical to the other two
+            #       make methods, but was commented out. Why?
+            # bg_solid_angle = u.Unit(field.header["SOLIDANG"]).to(u.arcsec**-2)  # float [arcsec-2]
+            # pixel_area = utils.from_currsys(self.meta["pixel_scale"]) ** 2      # float [arcsec2]
+            # area_factor = pixel_area * bg_solid_angle                           # float [arcsec2 * arcsec-2]
+
+            # Cube should be in PHOTLAM arcsec-2 for SpectralTrace mapping
+            # spec = specs[field.header["SPEC_REF"]] * area_factor
+            spec = specs[field.header["SPEC_REF"]]
+            yield spec[:, None, None].value
+
     def make_cube_hdu(self):
         """
         Used for IFUs, slit spectrographs, and coherent MOSs (e.g.KMOS)
@@ -412,23 +502,9 @@ class FieldOfView(FieldOfViewBase):
                 make waveset from self.meta values
             make canvas cube based on waveset of largest cube and NAXIS1,2 from fov.header
 
-        2. Find Cube fields::
-
-            rescale and reorient cubes
-            interp1d smaller cubes with waveset
-            add cubes to cavas cube
-
-        3. Find Image fields::
-
-            rescale and reorient images
-            evaluate spectra at waveset
-            expand image by spectra to 3D form
-            add image cubes to canvas cube
-
-        4. Find Table fields::
-
-            evaluate spectra at waveset
-            add spectrum at x,y position in canvas cube
+        2. Find Cube fields (see ``FieldOfView._make_cube_cubefields()``).
+        3. Find Image fields (see ``FieldOfView._make_cube_imagefields()``).
+        4. Find Table fields (see ``FieldOfView._make_cube_tablefields()``).
 
         ``PHOTLAM = ph/s/m2/um``.
         Original source fields are in units of:
@@ -476,78 +552,21 @@ class FieldOfView(FieldOfViewBase):
             header=self.header)
         canvas_cube_hdu.header["BUNIT"] = "ph s-1 cm-2 AA-1"
 
-        # 2. Add Cube fields
-        for field in self.cube_fields:
-            # Cube should be in PHOTLAM arcsec-2 for SpectralTrace mapping
-            # Assumption is that ImageHDUs have units of PHOTLAM arcsec-2
-            field_waveset = fu.get_cube_waveset(field.header,
-                                                return_quantity=True)
-
-            # ..todo: Deal with this bounds_error in a more elegant way
-            field_interp = interp1d(field_waveset.to(u.um).value,
-                                    field.data, axis=0, kind="linear",
-                                    bounds_error=False, fill_value=0)
-
-            field_data = field_interp(fov_waveset.value)
-
-            # Pixel scale conversion
-            field_data *= self._pixarea(field.header).value / self.pixel_area
-            field_hdu = fits.ImageHDU(data=field_data, header=field.header)
+        for field_hdu in self._make_cube_cubefields(fov_waveset):
             canvas_cube_hdu = imp_utils.add_imagehdu_to_imagehdu(
                 field_hdu,
                 canvas_cube_hdu,
                 spline_order=spline_order)
 
-        # 3. Find Image fields
-        for field in self.image_fields:
-            # Cube should be in PHOTLAM arcsec-2 for SpectralTrace mapping
-            # Assumption is that ImageHDUs have units of PHOTLAM arcsec-2
-            # ImageHDUs have photons/second/pixel.
-            # ..todo: Add a catch to get ImageHDU with BUNITs
-            canvas_image_hdu = fits.ImageHDU(
-                data=np.zeros((self.header["NAXIS2"], self.header["NAXIS1"])),
-                header=self.header)
-            # FIXME: Why here not "Pixel scale conversion" as above?
-            field.data /= self.pixel_area
-            canvas_image_hdu = imp_utils.add_imagehdu_to_imagehdu(
-                field,
-                canvas_image_hdu,
-                spline_order=spline_order)
-            spec = specs[field.header["SPEC_REF"]]
-            field_cube = canvas_image_hdu.data[None, :, :] * spec[:, None, None]  # 2D * 1D -> 3D
-            canvas_cube_hdu.data += field_cube.value
+        canvas_cube_hdu.data = sum(self._make_cube_imagefields(specs,
+                                                               spline_order),
+                                   start=canvas_cube_hdu.data)
 
-        # 4. Find Table fields
-        for field in self.table_fields:
-            # Cube should be in PHOTLAM arcsec-2 for SpectralTrace mapping
-            # Point sources are in PHOTLAM per pixel
-            # Point sources need to be scaled up by inverse pixel_area
-            for row in field:
-                xsky, ysky = row["x"] / 3600, row["y"] / 3600
-                # x, y are ALWAYS in arcsec - crval is in deg
-                xpix, ypix = imp_utils.val2pix(self.header, xsky, ysky)
-                if utils.from_currsys(self.meta["sub_pixel"]):
-                    xs, ys, fracs = imp_utils.sub_pixel_fractions(xpix, ypix)
-                    for i, j, k in zip(xs, ys, fracs):
-                        flux_vector = specs[row["ref"]].value * row["weight"] * k / self.pixel_area
-                        canvas_cube_hdu.data[:, j, i] +=  flux_vector
-                else:
-                    x, y = int(xpix), int(ypix)
-                    flux_vector = specs[row["ref"]].value * row["weight"] / self.pixel_area
-                    canvas_cube_hdu.data[:, y, x] += flux_vector
+        for flux, x, y in self._make_cube_tablefields(specs):
+            canvas_cube_hdu.data[:, y, x] += flux
 
-        # 5. Add Background fields
-        for field in self.background_fields:
-            # TODO: The following would have been identical to the other two
-            #       make methods, but was commented out. Why?
-            # bg_solid_angle = u.Unit(field.header["SOLIDANG"]).to(u.arcsec**-2)  # float [arcsec-2]
-            # pixel_area = utils.from_currsys(self.meta["pixel_scale"]) ** 2      # float [arcsec2]
-            # area_factor = pixel_area * bg_solid_angle                           # float [arcsec2 * arcsec-2]
-
-            # Cube should be in PHOTLAM arcsec-2 for SpectralTrace mapping
-            # spec = specs[field.header["SPEC_REF"]] * area_factor
-            spec = specs[field.header["SPEC_REF"]]
-            canvas_cube_hdu.data += spec[:, None, None].value
+        canvas_cube_hdu.data = sum(self._make_cube_backfields(specs),
+                                   start=canvas_cube_hdu.data)
 
         # TODO: what's with this code??
         # 6. Convert from PHOTLAM to ph/s/voxel
