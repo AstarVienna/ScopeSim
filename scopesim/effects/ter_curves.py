@@ -166,20 +166,6 @@ class TERCurve(Effect):
 
         return self._background_source
 
-    @staticmethod
-    def _guard_axes(which, axes):
-        # TODO: this method now exists twice in this module, fix that....
-        if len(which) > 1:
-            if not isinstance(axes, Collection):
-                raise TypeError(("axes must be collection of axes if which "
-                                 "contains more than one element"))
-            if not len(axes) == len(which):
-                raise ValueError("len of which and axes must match")
-        else:
-            if isinstance(axes, Collection):
-                raise TypeError(("axes must be a single axes object if which "
-                                 "contains only one element"))
-
     def plot(self, which="x", wavelength=None, *, axes=None, **kwargs):
         """Plot TER curves.
 
@@ -189,7 +175,7 @@ class TERCurve(Effect):
             "x" plots throughput. "t","e","r" plot trans/emission/refl.
             Can be a combination, e.g. "tr" or "tex" to plot each.
         wavelength : array_like, optional
-            DESCRIPTION. The default is None.
+            Wavelength on x-axis, taken from currsys if None (default).
         axes : matplotlib axes, optional
             If given, plot into existing axes. The default is None.
 
@@ -204,7 +190,7 @@ class TERCurve(Effect):
             # figsize=(10, 5)
         else:
             fig = axes.figure
-            self._guard_axes(which, axes)
+            _guard_plot_axes(which, axes)
 
         self.meta.update(kwargs)
         params = from_currsys(self.meta)
@@ -647,20 +633,6 @@ class FilterWheel(Effect):
     def __getattr__(self, item):
         return getattr(self.current_filter, item)
 
-    @staticmethod
-    def _guard_axes(which, axes):
-        # TODO: this method now exists twice in this module, fix that....
-        if len(which) > 1:
-            if not isinstance(axes, Collection):
-                raise TypeError(("axes must be collection of axes if which "
-                                 "contains more than one element"))
-            if not len(axes) == len(which):
-                raise ValueError("len of which and axes must match")
-        else:
-            if isinstance(axes, Collection):
-                raise TypeError(("axes must be a single axes object if which "
-                                 "contains only one element"))
-
     def plot(self, which="x", wavelength=None, *, axes=None, **kwargs):
         """Plot TER curves.
 
@@ -685,7 +657,7 @@ class FilterWheel(Effect):
             # figsize=(10, 5)
         else:
             fig = axes.figure
-            self._guard_axes(which, axes)
+            _guard_plot_axes(which, axes)
 
 
         for ter, ax in zip(which, axes):
@@ -954,3 +926,16 @@ class ADCWheel(Effect):
         tbl = Table(names=["name", "max_transmission"],
                     data=[names, tmax])
         return tbl
+
+
+def _guard_plot_axes(which, axes):
+    if len(which) > 1:
+        if not isinstance(axes, Collection):
+            raise TypeError(("axes must be collection of axes if which "
+                             "contains more than one element"))
+        if not len(axes) == len(which):
+            raise ValueError("len of which and axes must match")
+    else:
+        if isinstance(axes, Collection):
+            raise TypeError(("axes must be a single axes object if which "
+                             "contains only one element"))

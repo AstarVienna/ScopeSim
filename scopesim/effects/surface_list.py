@@ -145,7 +145,7 @@ class SurfaceList(TERCurve):
             "x" plots throughput. "t","e","r" plot trans/emission/refl.
             Can be a combination, e.g. "tr" or "tex" to plot each.
         wavelength : array_like, optional
-            DESCRIPTION. The default is None.
+            Passed to TERCurve.plot() for each surface. The default is None.
         axes : matplotlib axes, optional
             If given, plot into existing axes. The default is None.
 
@@ -168,7 +168,7 @@ class SurfaceList(TERCurve):
                 curve = TERCurve(**surface.meta)
                 curve.surface = surface
                 kwargs.update(plot_kwargs={"ls": "-", "label": key})
-                curve.plot(ter, axes=ax, **kwargs)
+                curve.plot(ter, wavelength, axes=ax, **kwargs)
 
             # Plot the system surface
             # TODO: self is a subclass of TERCurve, why create again??
