@@ -3,7 +3,8 @@ from astropy import units as u
 from astropy.table import Table
 
 from .effects import Effect
-from ..utils import airmass2zendist, from_currsys, check_keys, quantify
+from ..utils import airmass2zendist, from_currsys, check_keys, quantify, \
+    figure_factory
 from ..base_classes import FieldOfViewBase
 
 
@@ -38,19 +39,18 @@ class Shift3D(Effect):
         return tbl
 
     def plot(self):
-        import matplotlib.pyplot as plt
-        plt.gcf().clf()
+        fig, ax = figure_factory()
 
         tbl = self.get_table()
-        plt.scatter(x=tbl["dx"], y=tbl["dy"], c=tbl["wavelength"])
-        plt.colorbar()
-        plt.xlabel(f"dx [{quantify(tbl['dx'], u.arcsec).unit}]")
-        plt.ylabel(f"dy [{quantify(tbl['dy'], u.arcsec).unit}]")
-        plt.axvline(0, ls=":")
-        plt.axhline(0, ls=":")
-        # plt.gca().set_aspect("equal")
+        pnts = ax.scatter(x=tbl["dx"], y=tbl["dy"], c=tbl["wavelength"])
+        fig.colorbar(pnts)
+        ax.set_xlabel(f"dx [{quantify(tbl['dx'], u.arcsec).unit}]")
+        ax.set_ylabel(f"dy [{quantify(tbl['dy'], u.arcsec).unit}]")
+        ax.axvline(0, ls=":")
+        ax.axhline(0, ls=":")
+        # ax.set_aspect("equal")
 
-        return plt.gcf()
+        return fig
 
 
 class AtmosphericDispersion(Shift3D):

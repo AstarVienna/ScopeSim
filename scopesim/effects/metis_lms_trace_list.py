@@ -217,7 +217,6 @@ class MetisLMSSpectralTrace(SpectralTrace):
         x_max = aperture["right"]
         y_min = aperture["bottom"]
         y_max = aperture["top"]
-        trace_id = self.meta["trace_id"]
 
         layout = ioascii.read(find_file("!DET.layout.file_name"))
         det_lims = {}
@@ -237,7 +236,7 @@ class MetisLMSSpectralTrace(SpectralTrace):
                 "y_min": y_min, "y_max": y_max,
                 "xi_min": xi_min, "xi_max": xi_max,
                 "wave_min": wave_min, "wave_max": wave_max,
-                "trace_id": trace_id}
+                "trace_id": self.trace_id}
 
     def get_waverange(self, det_mm_lims):
         """Determine wavelength range that spectral trace covers on image plane"""

@@ -84,6 +84,11 @@ class FieldOfView(FieldOfViewBase):
         self._volume = None
 
     @property
+    def trace_id(self):
+        """Return the name of the trace"""
+        return self.meta["trace_id"]
+
+    @property
     def pixel_area(self):
         if self.meta["pixel_area"] is None:
             hdr = self.header

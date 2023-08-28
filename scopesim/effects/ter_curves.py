@@ -1,6 +1,7 @@
 """Transmission, emissivity, reflection curves"""
 import logging
 from pathlib import Path
+from collections.abc import Collection
 
 import numpy as np
 import skycalc_ipy
@@ -15,7 +16,8 @@ from .ter_curves_utils import download_svo_filter, download_svo_filter_list
 from ..base_classes import SourceBase, FOVSetupBase
 from ..optics.surface import SpectralSurface
 from ..source.source import Source
-from ..utils import from_currsys, quantify, check_keys, find_file
+from ..utils import from_currsys, quantify, check_keys, find_file, \
+    figure_factory
 
 
 class TERCurve(Effect):
@@ -92,8 +94,6 @@ class TERCurve(Effect):
             self.surface.table = data
             self.surface.table.meta.update(self.meta)
 
-    # ####### added in new branch
-
     def apply_to(self, obj, **kwargs):
         if isinstance(obj, SourceBase):
             assert isinstance(obj, Source), "Only Source supported."
@@ -166,69 +166,73 @@ class TERCurve(Effect):
 
         return self._background_source
 
-    # #######
+    @staticmethod
+    def _guard_axes(which, axes):
+        # TODO: this method now exists twice in this module, fix that....
+        if len(which) > 1:
+            if not isinstance(axes, Collection):
+                raise TypeError(("axes must be collection of axes if which "
+                                 "contains more than one element"))
+            if not len(axes) == len(which):
+                raise ValueError("len of which and axes must match")
+        else:
+            if isinstance(axes, Collection):
+                raise TypeError(("axes must be a single axes object if which "
+                                 "contains only one element"))
 
-    def plot(self, which="x", wavelength=None, ax=None, new_figure=True,
-             label=None, **kwargs):
-        """
+    def plot(self, which="x", wavelength=None, *, axes=None, **kwargs):
+        """Plot TER curves.
 
         Parameters
         ----------
-        which : str
-            "x" plots throughput. "t","e","r" plot trans/emission/refl
-        wavelength : list, np.ndarray
-        ax : matplotlib.Axis
-        new_figure : start a new figure (or add to the existing one)
-        label : the label to use (ignored)
-        kwargs
+        which : {"x", "t", "e", "r"}, optional
+            "x" plots throughput. "t","e","r" plot trans/emission/refl.
+            Can be a combination, e.g. "tr" or "tex" to plot each.
+        wavelength : array_like, optional
+            DESCRIPTION. The default is None.
+        axes : matplotlib axes, optional
+            If given, plot into existing axes. The default is None.
 
         Returns
         -------
+        fig : matplotlib figure
+            Figure containing plots.
 
         """
-        import matplotlib.pyplot as plt
-        if new_figure:
-            # from matplotlib import rcParams
-            # rcParams["axes.formatter.useoffset"] = False
-            plt.figure(figsize=(10, 5))
+        if axes is None:
+            fig, axes = figure_factory(len(which), 1)
+            # figsize=(10, 5)
+        else:
+            fig = axes.figure
+            self._guard_axes(which, axes)
 
         self.meta.update(kwargs)
         params = from_currsys(self.meta)
 
-        for ii, ter in enumerate(which):
-            if ax is None:
-                plt.subplot(len(which), 1, ii+1)
+        wave_unit = self.meta.get("wavelength_unit")
+        if wavelength is None:
+            wunit = params["wave_unit"]
+            # TODO: shouldn't need both, make sure they're equal
+            assert wunit == wave_unit
+            wave = np.arange(quantify(params["wave_min"], wunit).value,
+                             quantify(params["wave_max"], wunit).value,
+                             quantify(params["wave_bin"], wunit).value)
+            wave *= u.Unit(wunit)
+        else:
+            wave = wavelength
 
-            if wavelength is None:
-                wunit = params["wave_unit"]
-                wave = np.arange(quantify(params["wave_min"], wunit).value,
-                                 quantify(params["wave_max"], wunit).value,
-                                 quantify(params["wave_bin"], wunit).value)
-                wave *= u.Unit(wunit)
-            else:
-                wave = wavelength
+        plot_kwargs = self.meta.get("plot_kwargs", {})
+        abbrs = {"t": "transmission", "e": "emission",
+                 "r": "reflection", "x": "throughput"}
 
-            plot_kwargs = self.meta.get("plot_kwargs", {})
-            surf = self.surface
+        for ter, ax in zip(which, axes):
+            y_name = abbrs.get(ter, "throughput")
+            y = getattr(self.surface, y_name)
+            ax.plot(wave, y, **plot_kwargs)
+            ax.set_xlabel(f"Wavelength [{wave_unit}]")
+            ax.set_ylabel(f"{y_name.title()} [{y.unit}]")
 
-            if "t" in ter:
-                y = surf.transmission(wave)
-            elif "e" in ter:
-                y = surf.emission(wave)
-            elif "r" in ter:
-                y = surf.reflection(wave)
-            else:
-                y = surf.throughput(wave)
-
-            plt.plot(wave, y, **plot_kwargs)
-
-            wave_unit = self.meta.get("wavelength_unit")
-            plt.xlabel(f"Wavelength [{wave_unit}]")
-            y_str = {"t": "Transmission", "e": "Emission",
-                     "r": "Reflectivity", "x": "Throughput"}
-            plt.ylabel(f"{y_str[ter]} [{y.unit}]")
-
-        return plt.gcf()
+        return fig
 
 
 class AtmosphericTERCurve(TERCurve):
@@ -643,34 +647,54 @@ class FilterWheel(Effect):
     def __getattr__(self, item):
         return getattr(self.current_filter, item)
 
-    def plot(self, which="x", wavelength=None, **kwargs):
-        """
+    @staticmethod
+    def _guard_axes(which, axes):
+        # TODO: this method now exists twice in this module, fix that....
+        if len(which) > 1:
+            if not isinstance(axes, Collection):
+                raise TypeError(("axes must be collection of axes if which "
+                                 "contains more than one element"))
+            if not len(axes) == len(which):
+                raise ValueError("len of which and axes must match")
+        else:
+            if isinstance(axes, Collection):
+                raise TypeError(("axes must be a single axes object if which "
+                                 "contains only one element"))
+
+    def plot(self, which="x", wavelength=None, *, axes=None, **kwargs):
+        """Plot TER curves.
 
         Parameters
         ----------
-        which : str
-            "x" plots throughput. "t","e","r" plot trans/emission/refl
-        wavelength
-        kwargs
+        which : {"x", "t", "e", "r"}, optional
+            "x" plots throughput. "t","e","r" plot trans/emission/refl.
+            Can be a combination, e.g. "tr" or "tex" to plot each.
+        wavelength : array_like, optional
+            DESCRIPTION. The default is None.
+        axes : matplotlib axes, optional
+            If given, plot into existing axes. The default is None.
 
         Returns
         -------
+        fig : matplotlib figure
+            Figure containing plots.
 
         """
-        import matplotlib.pyplot as plt
-        plt.figure(figsize=(10, 5))
+        if axes is None:
+            fig, axes = figure_factory(len(which), 1)
+            # figsize=(10, 5)
+        else:
+            fig = axes.figure
+            self._guard_axes(which, axes)
 
-        for ii, ter in enumerate(which):
-            ax = plt.subplot(len(which), 1, ii+1)
+
+        for ter, ax in zip(which, axes):
             for name, _filter in self.filters.items():
-                _filter.plot(which=ter, wavelength=wavelength, ax=ax,
-                             new_figure=False, plot_kwargs={"label": name},
-                             **kwargs)
+                _filter.plot(which=ter, wavelength=wavelength, axes=ax,
+                             plot_kwargs={"label": name}, **kwargs)
 
-        # plt.semilogy()
-        plt.legend()
-
-        return plt.gcf()
+        fig.legend()
+        return fig
 
     def get_table(self):
         names = list(self.filters.keys())

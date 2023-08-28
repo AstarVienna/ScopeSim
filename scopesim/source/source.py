@@ -55,6 +55,8 @@ from . import source_templates as src_tmp
 
 from ..base_classes import SourceBase
 from .. import utils
+from ..utils import close_loop, figure_factory
+# TODO: explicit util imports above...
 
 
 class Source(SourceBase):
@@ -529,23 +531,21 @@ class Source(SourceBase):
         Source components instantiated from 2d or 3d ImageHDUs are represented by their
         spatial footprint. Source components instantiated from tables are shown as points.
         """
-        # pylint: disable=import-outside-toplevel
-        import matplotlib.pyplot as plt
+        _, axes = figure_factory()
 
         colours = "rgbcymk" * (len(self.fields) // 7 + 1)
         for col, field in zip(colours, self.fields):
             if isinstance(field, Table):
-                plt.plot(field["x"], field["y"], col+".")
+                axes.plot(field["x"], field["y"], col+".")
             elif isinstance(field, (fits.ImageHDU, fits.PrimaryHDU)):
                 xpts, ypts = imp_utils.calc_footprint(field.header)
-                xpts *= 3600   # Because ImageHDUs are always in CUNIT=DEG
-                ypts *= 3600
-                xpts = list(xpts) + [xpts[0]]
-                ypts = list(ypts) + [ypts[0]]
-                plt.plot(xpts, ypts, col)
-                plt.xlabel("x [arcsec]")
-                plt.ylabel("y [arcsec]")
-        plt.gca().set_aspect("equal")
+                # * 3600, because ImageHDUs are always in CUNIT=DEG
+                xpts = list(close_loop(xpts * 3600))
+                ypts = list(close_loop(ypts * 3600))
+                axes.plot(xpts, ypts, col)
+                axes.set_xlabel("x [arcsec]")
+                axes.set_ylabel("y [arcsec]")
+        axes.set_aspect("equal")
 
     def make_copy(self):
         new_source = Source()

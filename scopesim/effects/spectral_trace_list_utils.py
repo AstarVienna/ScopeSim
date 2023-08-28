@@ -15,7 +15,6 @@ import numpy as np
 
 from scipy.interpolate import RectBivariateSpline
 from scipy.interpolate import interp1d
-from matplotlib import pyplot as plt
 
 from astropy.table import Table, vstack
 from astropy.modeling import fitting
@@ -24,7 +23,8 @@ from astropy import units as u
 from astropy.wcs import WCS
 from astropy.modeling.models import Polynomial2D
 
-from ..utils import power_vector, quantify, from_currsys
+from ..utils import power_vector, quantify, from_currsys, close_loop, \
+    figure_factory
 
 
 class SpectralTrace:
@@ -75,6 +75,11 @@ class SpectralTrace:
         # Declaration of other attributes
         self._xilamimg = None
         self.dlam_per_pix = None
+
+    @property
+    def trace_id(self):
+        """Return the name of the trace"""
+        return self.meta["trace_id"]
 
     def fov_grid(self):
         """
@@ -141,7 +146,7 @@ class SpectralTrace:
         The method returns a section of the fov image along with info on
         where this image lies in the focal plane.
         """
-        logging.info("Mapping %s", fov.meta["trace_id"])
+        logging.info("Mapping %s", fov.trace_id)
         # Initialise the image based on the footprint of the spectral
         # trace and the focal plane WCS
         wave_min = fov.meta["wave_min"].value       # [um]
@@ -175,7 +180,7 @@ class SpectralTrace:
         ## Check if spectral trace footprint is outside FoV
         if xmax < 0 or xmin > naxis1d or ymax < 0 or ymin > naxis2d:
             logging.info("Spectral trace %s: footprint is outside FoV",
-                         fov.meta["trace_id"])
+                         fov.trace_id)
             return None
 
         # Only work on parts within the FoV
@@ -525,17 +530,15 @@ class SpectralTrace:
             The default is False.
         """
         if axes is None:
-            _, axes = plt.subplots()
+            _, axes = figure_factory()
 
         # Footprint (rectangle enclosing the trace)
         xlim, ylim  = self.footprint(wave_min=wave_min, wave_max=wave_max)
         if xlim is None:
             return axes
 
-        xlim.append(xlim[0])
-        ylim.append(ylim[0])
         if plot_footprint:
-            axes.plot(xlim, ylim)
+            axes.plot(list(close_loop(xlim)), list(close_loop(ylim)))
 
         # for convenience...
         xname = self.meta["x_colname"]
@@ -594,11 +597,6 @@ class SpectralTrace:
 
         axes.set_aspect("equal")
         return axes
-
-    @property
-    def trace_id(self):
-        """Return the name of the trace"""
-        return self.meta["trace_id"]
 
     def _set_dispersion(self, wave_min, wave_max, pixsize=None):
         """Computation of dispersion dlam_per_pix along xi=0

@@ -13,6 +13,9 @@ from . import ter_curves_utils as tu
 from . import psf_utils as pu
 from ..base_classes import ImagePlaneBase, FieldOfViewBase, FOVSetupBase
 from .. import utils
+from ..utils import figure_grid_factory
+
+# TODO: directly import currsys stuff, replace utils.
 
 
 class PoorMansFOV:
@@ -133,14 +136,13 @@ class PSF(Effect):
         return self.kernel
 
     def plot(self, obj=None, **kwargs):
-        import matplotlib.pyplot as plt
         from matplotlib.colors import LogNorm
-        plt.gcf().clf()
+        fig, ax = figure_factory()
 
         kernel = self.get_kernel(obj)
-        plt.imshow(kernel, norm=LogNorm(), origin="lower", **kwargs)
+        ax.imshow(kernel, norm=LogNorm(), origin="lower", **kwargs)
 
-        return plt.gcf()
+        return fig
 
 
 
@@ -247,8 +249,7 @@ class NonCommonPathAberration(AnalyticalPSF):
         return self._total_wfe
 
     def plot(self):
-        import matplotlib.pyplot as plt
-        plt.gcf().clf()
+        fig, ax = figure_factory()
 
         wave_min, wave_max = utils.from_currsys([self.meta["wave_min"],
                                                  self.meta["wave_max"]])
@@ -256,11 +257,11 @@ class NonCommonPathAberration(AnalyticalPSF):
         wfe = self.total_wfe
         strehl = pu.wfe2strehl(wfe=wfe, wave=waves)
 
-        plt.plot(waves, strehl)
-        plt.xlabel(f"Wavelength [{waves.unit}]")
-        plt.ylabel(f"Strehl Ratio \n[Total WFE = {wfe}]")
+        ax.plot(waves, strehl)
+        ax.set_xlabel(f"Wavelength [{waves.unit}]")
+        ax.set_ylabel(f"Strehl Ratio \n[Total WFE = {wfe}]")
 
-        return plt.gcf()
+        return fig
 
 
 class SeeingPSF(AnalyticalPSF):
@@ -507,51 +508,58 @@ class AnisocadoConstPSF(SemiAnalyticalPSF):
         return nm_rms
 
     def plot(self, obj=None, **kwargs):
-        import matplotlib.pyplot as plt
         from matplotlib.colors import LogNorm
-        plt.figure(figsize=(10, 10))
+        fig, gs = figure_grid_factory(2, 2, height_ratios=(3, 2),
+            left=0.3, right=0.7, bottom=0.15, top=0.85,
+            wspace=0.05, hspace=0.05)
+        # or no height_ratios and bottom=0.1, top=0.9
 
         pixel_scale = utils.from_currsys("!INST.pixel_scale")
-
         kernel = self.get_kernel(pixel_scale)
-        # subplot2grid((n_vert, n_horiz), (from_top, from_left), colspan=1, rowspan=1)
-        plt.subplot2grid((2, 2), (0, 0))
+
+        ax = fig.add_subplot(gs[0, 0])
         im = kernel
         r_sky = pixel_scale * im.shape[0]
-        plt.imshow(im, norm=LogNorm(), origin="lower",
-                   extent= [-r_sky, r_sky, -r_sky, r_sky], **kwargs)
-        plt.ylabel("[arcsec]")
+        ax.imshow(im, norm=LogNorm(), origin="lower",
+                  extent= [-r_sky, r_sky, -r_sky, r_sky], **kwargs)
+        ax.set_aspect("equal")
+        ax.set_xlabel("[arcsec]")
+        ax.set_ylabel("[arcsec]")
+        ax.xaxis.set_ticks_position("top")
+        ax.xaxis.set_label_position("top")
 
-        plt.subplot2grid((2, 2), (0, 1))
+        ax = fig.add_subplot(gs[0, 1])
         x = kernel.shape[1] // 2
         y = kernel.shape[0] // 2
         r = 16
         im = kernel[y-r:y+r, x-r:x+r]
         r_sky = pixel_scale * im.shape[0]
-        plt.imshow(im, norm=LogNorm(), origin="lower",
-                   extent= [-r_sky, r_sky, -r_sky, r_sky], **kwargs)
-        plt.ylabel("[arcsec]")
-        plt.gca().yaxis.set_label_position("right")
+        ax.imshow(im, norm=LogNorm(), origin="lower",
+                  extent= [-r_sky, r_sky, -r_sky, r_sky], **kwargs)
+        ax.set_aspect("equal")
+        ax.set_xlabel("[arcsec]")
+        ax.set_ylabel("[arcsec]")
+        ax.xaxis.set_ticks_position("top")
+        ax.xaxis.set_label_position("top")
+        ax.yaxis.set_ticks_position("right")
+        ax.yaxis.set_label_position("right")
 
-        plt.subplot2grid((2, 2), (1, 0), colspan=2)
+        ax = fig.add_subplot(gs[1, :])
         hdr = self._file[0].header
         data = self._file[0].data
-
-        hdr = self._file[0].header
-        data = self._file[0].data
-
         wfes = np.arange(hdr["NAXIS1"]) * hdr["CDELT1"] + hdr["CRVAL1"]
         waves = np.arange(hdr["NAXIS2"]) * hdr["CDELT2"] + hdr["CRVAL2"]
-        for i in np.arange(len(waves))[::-1]:
-            plt.plot(wfes, data[i, :],
-                     label=f"{waves[i]:.3f} " + r"$\mu m$")
 
-        plt.xlabel("RMS Wavefront Error [um]")
-        plt.ylabel("Strehl Ratio")
-        plt.legend()
+        # TODO: Get unit dynamically? Then again, it's hardcoded elsewhere in this module...
+        unit_str = u.Unit("um").to_string("latex")
+        for strehl, wav in reversed(list(zip(data, waves))):
+            ax.plot(wfes, strehl, label=f"{wav:.3f} {unit_str}")
 
-        return plt.gcf()
-
+        ax.set_xlabel(f"RMS Wavefront Error [{unit_str}]")
+        ax.set_ylabel("Strehl Ratio")
+        ax.legend()
+        fig.align_labels()
+        return fig
 
 
 ################################################################################

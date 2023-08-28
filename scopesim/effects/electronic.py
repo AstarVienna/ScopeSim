@@ -22,14 +22,13 @@ Functions:
 import logging
 
 import numpy as np
-import matplotlib.pyplot as plt
 
 from astropy.io import fits
 
 from .. import rc
 from . import Effect
 from ..base_classes import DetectorBase, ImagePlaneBase
-from ..utils import from_currsys
+from ..utils import from_currsys, figure_factory
 from .. import utils
 
 
@@ -311,13 +310,15 @@ class PoorMansHxRGReadoutNoise(Effect):
 
         return det
 
-    def plot(self, det, new_figure=False, **kwargs):
+    def plot(self, det, **kwargs):
         dtcr = self.apply_to(det)
-        plt.imshow(dtcr.data, origin="lower")
+        fig, ax = figure_factory()
+        ax.imshow(dtcr.data, origin="lower")
 
     def plot_hist(self, det, **kwargs):
         dtcr = self.apply_to(det)
-        plt.hist(dtcr.data.flatten())
+        fig, ax = figure_factory()
+        ax.hist(dtcr.data.flatten())
 
 
 class BasicReadoutNoise(Effect):
@@ -347,11 +348,13 @@ class BasicReadoutNoise(Effect):
 
     def plot(self, det):
         dtcr = self.apply_to(det)
-        plt.imshow(dtcr.data)
+        fig, ax = figure_factory()
+        ax.imshow(dtcr.data)
 
     def plot_hist(self, det, **kwargs):
         dtcr = self.apply_to(det)
-        plt.hist(dtcr.data.flatten())
+        fig, ax = figure_factory()
+        ax.hist(dtcr.data.flatten())
 
 
 class ShotNoise(Effect):
@@ -392,11 +395,13 @@ class ShotNoise(Effect):
 
     def plot(self, det):
         dtcr = self.apply_to(det)
-        plt.imshow(dtcr.data)
+        fig, ax = figure_factory()
+        ax.imshow(dtcr.data)
 
     def plot_hist(self, det, **kwargs):
         dtcr = self.apply_to(det)
-        plt.hist(dtcr.data.flatten())
+        fig, ax = figure_factory()
+        ax.hist(dtcr.data.flatten())
 
 
 class DarkCurrent(Effect):
@@ -436,9 +441,10 @@ class DarkCurrent(Effect):
         dtcr = self.apply_to(det)
         dark_level = dtcr.data[0, 0] / total_time  # just read one pixel
         levels = dark_level * times
-        plt.plot(times, levels, **kwargs)
-        plt.xlabel("time")
-        plt.ylabel("dark level")
+        fig, ax = figure_factory()
+        ax.plot(times, levels, **kwargs)
+        ax.set_xlabel("time")
+        ax.set_ylabel("dark level")
 
 
 class LinearityCurve(Effect):
@@ -496,17 +502,17 @@ class LinearityCurve(Effect):
         return obj
 
     def plot(self, **kwargs):
-        plt.gcf().clf()
+        fig, ax = figure_factory()
 
         ndit = from_currsys(self.meta["ndit"])
         incident = self.table["incident"] * ndit
         measured = self.table["measured"] * ndit
 
-        plt.loglog(incident, measured, **kwargs)
-        plt.xlabel("Incident [ph s$^-1$]")
-        plt.ylabel("Measured [e- s$^-1$]")
+        ax.loglog(incident, measured, **kwargs)
+        ax.set_xlabel("Incident [ph s$^-1$]")
+        ax.set_ylabel("Measured [e- s$^-1$]")
 
-        return plt.gcf()
+        return fig
 
 
 class ReferencePixelBorder(Effect):
@@ -536,8 +542,9 @@ class ReferencePixelBorder(Effect):
 
     def plot(self, implane, **kwargs):
         implane = self.apply_to(implane)
-        plt.imshow(implane.data, origin="bottom", **kwargs)
-        plt.show()
+        fig, ax = figure_factory()
+        ax.imshow(implane.data, origin="bottom", **kwargs)
+        # fig.show()
 
 
 class BinnedImage(Effect):
