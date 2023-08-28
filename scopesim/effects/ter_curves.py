@@ -604,11 +604,6 @@ class FilterWheelBase(Effect):
             filter_eff = self.filters[filt_name]
         return filter_eff
 
-    @property
-    def display_name(self):
-        return (f"{self.meta['name']} : "
-                f"[{from_currsys(self.meta['current_filter'])}]")
-
     def __getattr__(self, item):
         return getattr(self.current_filter, item)
 
@@ -870,11 +865,13 @@ class ADCWheel(Effect):
            filename_format: "TER_ADC_{}.dat"
            current_adc: "const_90"
     """
-    def __init__(self, **kwargs):
-        required_keys = ["adc_names", "filename_format", "current_adc"]
-        check_keys(kwargs, required_keys, action="error")
 
+    required_keys = {"adc_names", "filename_format", "current_adc"}
+    _current_str = "current_adc"
+
+    def __init__(self, **kwargs):
         super().__init__(**kwargs)
+        check_keys(kwargs, self.required_keys, action="error")
 
         params = {"z_order": [125, 225, 525],
                   "path": "",
@@ -884,7 +881,7 @@ class ADCWheel(Effect):
         self.meta.update(params)
         self.meta.update(kwargs)
 
-        path = Path(self.meta["path"], from_currsys(self.meta["filename_format"]))
+        path = self._get_path()
         self.adcs = {}
         for name in from_currsys(self.meta["adc_names"]):
             kwargs["name"] = name
@@ -912,11 +909,6 @@ class ADCWheel(Effect):
         if not curradc:
             return False
         return self.adcs[curradc]
-
-    @property
-    def display_name(self):
-        return (f"{self.meta['name']} : "
-                f"[{from_currsys(self.meta['current_adc'])}]")
 
     def __getattr__(self, item):
         return getattr(self.current_adc, item)
