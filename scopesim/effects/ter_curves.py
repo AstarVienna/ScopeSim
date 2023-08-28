@@ -499,8 +499,8 @@ class TopHatFilterCurve(FilterCurve):
         tbl = Table(names=["wavelength", "transmission"],
                     data=[waveset, transmission])
         super().__init__(table=tbl,
-                                                wavelength_unit="um",
-                                                action="transmission")
+                         wavelength_unit="um",
+                         action="transmission")
         self.meta.update(kwargs)
 
 
@@ -713,7 +713,7 @@ class TopHatFilterWheel(FilterWheelBase):
 
     current_filter: str, optional
         Name of current filter at initialisation. If no name is given, the
-        first entry in ``filter_names`` is used by default.
+        first entry in `filter_names` is used by default.
 
     Examples
     --------
