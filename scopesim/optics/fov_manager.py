@@ -258,7 +258,7 @@ class FovVolumeList(FOVSetupBase, MutableSequence):
                 continue
             if vol[f"{axis}_min"] >= value or vol[f"{axis}_max"] <= value:
                 continue
-            new_vol = vol.copy()
+            new_vol = deepcopy(vol)
             new_vol[f"{axis}_min"] = value
             vol[f"{axis}_max"] = value
             self.insert(self.index(vol) + 1, new_vol)
@@ -364,7 +364,7 @@ class FovVolumeList(FOVSetupBase, MutableSequence):
                 if not all(_volume_in_range(vol, axis, edge) for axis, edge
                            in zip(axes, edges)):
                     continue
-                new_vol = vol.copy()
+                new_vol = deepcopy(vol)
                 for axis, edge in zip(axes, edges):
                     new_vol[f"{axis}_min"] = max(edge[0], vol[f"{axis}_min"])
                     new_vol[f"{axis}_max"] = min(edge[1], vol[f"{axis}_max"])
