@@ -166,20 +166,6 @@ class TERCurve(Effect):
 
         return self._background_source
 
-    @staticmethod
-    def _guard_axes(which, axes):
-        # TODO: this method now exists twice in this module, fix that....
-        if len(which) > 1:
-            if not isinstance(axes, Collection):
-                raise TypeError(("axes must be collection of axes if which "
-                                 "contains more than one element"))
-            if not len(axes) == len(which):
-                raise ValueError("len of which and axes must match")
-        else:
-            if isinstance(axes, Collection):
-                raise TypeError(("axes must be a single axes object if which "
-                                 "contains only one element"))
-
     def plot(self, which="x", wavelength=None, *, axes=None, **kwargs):
         """Plot TER curves.
 
@@ -189,7 +175,7 @@ class TERCurve(Effect):
             "x" plots throughput. "t","e","r" plot trans/emission/refl.
             Can be a combination, e.g. "tr" or "tex" to plot each.
         wavelength : array_like, optional
-            DESCRIPTION. The default is None.
+            Wavelength on x-axis, taken from currsys if None (default).
         axes : matplotlib axes, optional
             If given, plot into existing axes. The default is None.
 
@@ -204,7 +190,7 @@ class TERCurve(Effect):
             # figsize=(10, 5)
         else:
             fig = axes.figure
-            self._guard_axes(which, axes)
+            _guard_plot_axes(which, axes)
 
         self.meta.update(kwargs)
         params = from_currsys(self.meta)
@@ -513,8 +499,8 @@ class TopHatFilterCurve(FilterCurve):
         tbl = Table(names=["wavelength", "transmission"],
                     data=[waveset, transmission])
         super().__init__(table=tbl,
-                                                wavelength_unit="um",
-                                                action="transmission")
+                         wavelength_unit="um",
+                         action="transmission")
         self.meta.update(kwargs)
 
 
@@ -562,45 +548,24 @@ class SpanishVOFilterCurve(FilterCurve):
         super().__init__(table=tbl, **kwargs)
 
 
-class FilterWheel(Effect):
-    """
-    This wheel holds a selection of predefined filters.
+class FilterWheelBase(Effect):
+    """Base class for Filter Wheels"""
 
-    Examples
-    --------
-    ::
-
-        name: filter_wheel
-        class: FilterWheel
-        kwargs:
-            filter_names: []
-            filename_format: "filters/{}.
-            current_filter: "Ks"
-
-    """
+    required_keys = set()
+    _current_str = "current_filter"
 
     def __init__(self, **kwargs):
-        required_keys = ["filter_names", "filename_format", "current_filter"]
-        check_keys(kwargs, required_keys, action="error")
-
         super().__init__(**kwargs)
+        check_keys(kwargs, self.required_keys, action="error")
 
         params = {"z_order": [124, 224, 524],
-                  "path": "",
                   "report_plot_include": True,
                   "report_table_include": True,
                   "report_table_rounding": 4}
         self.meta.update(params)
         self.meta.update(kwargs)
 
-        path = Path(self.meta["path"], from_currsys(self.meta["filename_format"]))
         self.filters = {}
-        for name in from_currsys(self.meta["filter_names"]):
-            kwargs["name"] = name
-            self.filters[name] = FilterCurve(filename=str(path).format(name),
-                                             **kwargs)
-
-        self.table = self.get_table()
 
     def apply_to(self, obj, **kwargs):
         """Use apply_to of current filter"""
@@ -639,27 +604,8 @@ class FilterWheel(Effect):
             filter_eff = self.filters[filt_name]
         return filter_eff
 
-    @property
-    def display_name(self):
-        return (f"{self.meta['name']} : "
-                f"[{from_currsys(self.meta['current_filter'])}]")
-
     def __getattr__(self, item):
         return getattr(self.current_filter, item)
-
-    @staticmethod
-    def _guard_axes(which, axes):
-        # TODO: this method now exists twice in this module, fix that....
-        if len(which) > 1:
-            if not isinstance(axes, Collection):
-                raise TypeError(("axes must be collection of axes if which "
-                                 "contains more than one element"))
-            if not len(axes) == len(which):
-                raise ValueError("len of which and axes must match")
-        else:
-            if isinstance(axes, Collection):
-                raise TypeError(("axes must be a single axes object if which "
-                                 "contains only one element"))
 
     def plot(self, which="x", wavelength=None, *, axes=None, **kwargs):
         """Plot TER curves.
@@ -685,7 +631,7 @@ class FilterWheel(Effect):
             # figsize=(10, 5)
         else:
             fig = axes.figure
-            self._guard_axes(which, axes)
+            _guard_plot_axes(which, axes)
 
 
         for ter, ax in zip(which, axes):
@@ -710,7 +656,42 @@ class FilterWheel(Effect):
         return tbl
 
 
-class TopHatFilterWheel(FilterWheel):
+class FilterWheel(FilterWheelBase):
+    """
+    This wheel holds a selection of predefined filters.
+
+    Examples
+    --------
+    ::
+
+        name: filter_wheel
+        class: FilterWheel
+        kwargs:
+            filter_names: []
+            filename_format: "filters/{}.
+            current_filter: "Ks"
+
+    """
+
+    required_keys = {"filter_names", "filename_format", "current_filter"}
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+        params = {"path": ""}
+        self.meta.update(params)
+        self.meta.update(kwargs)
+
+        path = self._get_path()
+        for name in from_currsys(self.meta["filter_names"]):
+            kwargs["name"] = name
+            self.filters[name] = FilterCurve(filename=str(path).format(name),
+                                             **kwargs)
+
+        self.table = self.get_table()
+
+
+class TopHatFilterWheel(FilterWheelBase):
     """
     A selection of top-hat filter curves as defined in the input lists
 
@@ -732,7 +713,7 @@ class TopHatFilterWheel(FilterWheel):
 
     current_filter: str, optional
         Name of current filter at initialisation. If no name is given, the
-        first entry in ``filter_names`` is used by default.
+        first entry in `filter_names` is used by default.
 
     Examples
     --------
@@ -749,35 +730,30 @@ class TopHatFilterWheel(FilterWheel):
             current_filter: "K"
 
     """
+
+    required_keys = {"filter_names", "transmissions", "wing_transmissions",
+                     "blue_cutoffs", "red_cutoffs"}
+
     def __init__(self, **kwargs):
-        required_keys = ["filter_names", "transmissions", "wing_transmissions",
-                         "blue_cutoffs", "red_cutoffs"]
-        check_keys(kwargs, required_keys, action="error")
+        super().__init__(**kwargs)
 
-        super(FilterWheel, self).__init__(**kwargs)
-
-        params = {"z_order": [124, 224, 524],
-                  "report_plot_include": True,
-                  "report_table_include": True,
-                  "report_table_rounding": 4,
-                  "current_filter": kwargs.get("current_filter",
-                                               kwargs["filter_names"][0])
-                  }
+        current_filter = kwargs.get("current_filter",
+                                    kwargs["filter_names"][0])
+        params = {"current_filter": current_filter}
         self.meta.update(params)
         self.meta.update(kwargs)
 
-        self.filters = {}
-        for i in range(len(self.meta["filter_names"])):
-            name = self.meta["filter_names"][i]
-            effect_kwargs = {"name": name,
-                             "transmission": self.meta["transmissions"][i],
-                             "wing_transmission": self.meta["wing_transmissions"][i],
-                             "blue_cutoff": self.meta["blue_cutoffs"][i],
-                             "red_cutoff": self.meta["red_cutoffs"][i]}
+        for i_filt, name in enumerate(self.meta["filter_names"]):
+            effect_kwargs = {
+                "name": name,
+                "transmission": self.meta["transmissions"][i_filt],
+                "wing_transmission": self.meta["wing_transmissions"][i_filt],
+                "blue_cutoff": self.meta["blue_cutoffs"][i_filt],
+                "red_cutoff": self.meta["red_cutoffs"][i_filt]}
             self.filters[name] = TopHatFilterCurve(**effect_kwargs)
 
 
-class SpanishVOFilterWheel(FilterWheel):
+class SpanishVOFilterWheel(FilterWheelBase):
     """
     A FilterWheel that loads all the filters from the Spanish VO service
 
@@ -819,37 +795,32 @@ class SpanishVOFilterWheel(FilterWheel):
             include_str: "_filter"
 
     """
-    def __init__(self, **kwargs):
-        required_keys = ["observatory", "instrument", "current_filter"]
-        check_keys(kwargs, required_keys, action="error")
 
-        # Call Effect.init, *NOT* FilterWheel.init --> different required_keys
-        super(FilterWheel, self).__init__(**kwargs)
+    required_keys = {"observatory", "instrument", "current_filter"}
 
-        params = {"z_order": [124, 224, 524],
-                  "report_plot_include": True,
-                  "report_table_include": True,
-                  "report_table_rounding": 4,
-                  "include_str": None,         # passed to
+    def __init__(self, **kwargs):        
+        super().__init__(**kwargs)
+
+        params = {"include_str": None,         # passed to
                   "exclude_str": None,
                   }
         self.meta.update(params)
         self.meta.update(kwargs)
 
         obs, inst = self.meta["observatory"], self.meta["instrument"]
-        inc, exc = self.meta["include_str"], self.meta["exclude_str"]
-        filter_names = download_svo_filter_list(obs, inst, short_names=True,
-                                                include=inc, exclude=exc)
+        filter_names = download_svo_filter_list(
+            obs, inst, short_names=True,
+            include=self.meta["include_str"], exclude=self.meta["exclude_str"])
 
         self.meta["filter_names"] = filter_names
-        self.filters = {name: SpanishVOFilterCurve(observatory=obs,
-                                                   instrument=inst,
-                                                   filter_name=name)
-                        for name in filter_names}
-        self.filters["open"] = FilterCurve(array_dict={"wavelength": [0.3, 3.0],
-                                                       "transmission": [1., 1.]},
-                                           wavelength_unit="um",
-                                           name="unity transmission")
+        for name in filter_names:
+            self.filters[name] = SpanishVOFilterCurve(observatory=obs,
+                                                      instrument=inst,
+                                                      filter_name=name)
+
+        self.filters["open"] = FilterCurve(
+            array_dict={"wavelength": [0.3, 3.0], "transmission": [1., 1.]},
+            wavelength_unit="um", name="unity transmission")
 
         self.table = self.get_table()
 
@@ -894,11 +865,13 @@ class ADCWheel(Effect):
            filename_format: "TER_ADC_{}.dat"
            current_adc: "const_90"
     """
-    def __init__(self, **kwargs):
-        required_keys = ["adc_names", "filename_format", "current_adc"]
-        check_keys(kwargs, required_keys, action="error")
 
+    required_keys = {"adc_names", "filename_format", "current_adc"}
+    _current_str = "current_adc"
+
+    def __init__(self, **kwargs):
         super().__init__(**kwargs)
+        check_keys(kwargs, self.required_keys, action="error")
 
         params = {"z_order": [125, 225, 525],
                   "path": "",
@@ -908,7 +881,7 @@ class ADCWheel(Effect):
         self.meta.update(params)
         self.meta.update(kwargs)
 
-        path = Path(self.meta["path"], from_currsys(self.meta["filename_format"]))
+        path = self._get_path()
         self.adcs = {}
         for name in from_currsys(self.meta["adc_names"]):
             kwargs["name"] = name
@@ -937,11 +910,6 @@ class ADCWheel(Effect):
             return False
         return self.adcs[curradc]
 
-    @property
-    def display_name(self):
-        return (f"{self.meta['name']} : "
-                f"[{from_currsys(self.meta['current_adc'])}]")
-
     def __getattr__(self, item):
         return getattr(self.current_adc, item)
 
@@ -954,3 +922,16 @@ class ADCWheel(Effect):
         tbl = Table(names=["name", "max_transmission"],
                     data=[names, tmax])
         return tbl
+
+
+def _guard_plot_axes(which, axes):
+    if len(which) > 1:
+        if not isinstance(axes, Collection):
+            raise TypeError(("axes must be collection of axes if which "
+                             "contains more than one element"))
+        if not len(axes) == len(which):
+            raise ValueError("len of which and axes must match")
+    else:
+        if isinstance(axes, Collection):
+            raise TypeError(("axes must be a single axes object if which "
+                             "contains only one element"))

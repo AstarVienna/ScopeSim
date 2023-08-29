@@ -109,7 +109,10 @@ class Effect(DataContainer):
 
     @property
     def display_name(self):
-        return self.meta.get("name", self.meta.get("filename", "<empty>"))
+        name = self.meta.get("name", self.meta.get("filename", "<untitled>"))
+        if not hasattr(self, "_current_str"):
+            return name
+        return f"{name} : [{from_currsys(self.meta[self._current_str])}]"
 
     @property
     def meta_string(self):
@@ -321,3 +324,9 @@ Meta-data
             raise ValueError(f"__getitem__ calls must start with '#': {item}")
 
         return value
+
+    def _get_path(self):
+        if any(key not in self.meta for key in ("path", "filename_format")):
+            return None
+        return Path(self.meta["path"],
+                    from_currsys(self.meta["filename_format"]))

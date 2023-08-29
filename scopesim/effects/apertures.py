@@ -422,11 +422,13 @@ class SlitWheel(Effect):
             current_slit: "C"
 
     """
-    def __init__(self, **kwargs):
-        required_keys = ["slit_names", "filename_format", "current_slit"]
-        check_keys(kwargs, required_keys, action="error")
 
+    required_keys = {"slit_names", "filename_format", "current_slit"}
+    _current_str = "current_slit"
+
+    def __init__(self, **kwargs):
         super().__init__(**kwargs)
+        check_keys(kwargs, self.required_keys, action="error")
 
         params = {"z_order": [80, 280, 580],
                   "path": "",
@@ -436,7 +438,7 @@ class SlitWheel(Effect):
         self.meta.update(params)
         self.meta.update(kwargs)
 
-        path = Path(self.meta["path"], from_currsys(self.meta["filename_format"]))
+        path = self._get_path()
         self.slits = {}
         for name in from_currsys(self.meta["slit_names"]):
             kwargs["name"] = name
@@ -482,12 +484,6 @@ class SlitWheel(Effect):
         if not currslit:
             return False
         return self.slits[currslit]
-
-    @property
-    def display_name(self):
-        return f"{self.meta['name']} : " \
-               f"[{from_currsys(self.meta['current_slit'])}]"
-
 
     def __getattr__(self, item):
         return getattr(self.current_slit, item)

@@ -428,13 +428,14 @@ class SpectralTraceListWheel(Effect):
               filter_names: "!INST.grism_names"
 
     """
-    def __init__(self, **kwargs):
-        required_keys = ["trace_list_names",
-                         "filename_format",
-                         "current_trace_list"]
-        check_keys(kwargs, required_keys, action="error")
 
+    required_keys = {"trace_list_names", "filename_format",
+                     "current_trace_list"}
+    _current_str = "current_trace_list"
+
+    def __init__(self, **kwargs):
         super().__init__(**kwargs)
+        check_keys(kwargs, self.required_keys, action="error")
 
         params = {"z_order": [70, 270, 670],
                   "path": "",
@@ -444,7 +445,7 @@ class SpectralTraceListWheel(Effect):
         self.meta.update(params)
         self.meta.update(kwargs)
 
-        path = Path(self.meta["path"], from_currsys(self.meta["filename_format"]))
+        path = self._get_path()
         self.trace_lists = {}
         for name in from_currsys(self.meta["trace_list_names"]):
             kwargs["name"] = name
@@ -462,8 +463,3 @@ class SpectralTraceListWheel(Effect):
         if trace_list_name is not None:
             trace_list_eff = self.trace_lists[trace_list_name]
         return trace_list_eff
-
-    @property
-    def display_name(self):
-        name = self.meta.get("name", self.meta.get("filename", "<untitled>"))
-        return f"{name} : [{from_currsys(self.meta['current_trace_list'])}]"

@@ -122,7 +122,7 @@ class SpectralEfficiency(Effect):
 
         ax.set_xlabel("Wavelength [um]")
         ax.set_ylabel("Grating efficiency")
-        ax.set_title(f"Grating efficiencies from {self.filename}")
+        ax.set_title(f"Grating efficiencies {self.display_name}")
         ax.legend()
 
         return fig
