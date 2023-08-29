@@ -652,8 +652,15 @@ class FieldOfView(FieldOfViewBase):
         else:
             _waveset = self.waverange * u.um
 
-        _waveset = np.unique(_waveset)
-        return _waveset.to(u.um)
+        # TODO: tie the round to a global precision setting (this is defined
+        #       better in another TODO somewhere...)
+        # The rounding is necessary to not end up with things like:
+        #   0.7 um
+        #   0.7000000000000001 um
+        #   0.7000000000000002 um
+        # and yes, that actually happend...
+        _waveset = np.unique(_waveset.to(u.um).round(10))
+        return _waveset
 
     @property
     def cube_fields(self):
