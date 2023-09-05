@@ -186,8 +186,7 @@ class TERCurve(Effect):
 
         """
         if axes is None:
-            fig, axes = figure_factory(len(which), 1)
-            # figsize=(10, 5)
+            fig, axes = figure_factory(len(which), 1, iterable_axes=True)
         else:
             fig = axes.figure
             _guard_plot_axes(which, axes)
@@ -627,8 +626,7 @@ class FilterWheelBase(Effect):
 
         """
         if axes is None:
-            fig, axes = figure_factory(len(which), 1)
-            # figsize=(10, 5)
+            fig, axes = figure_factory(len(which), 1, iterable_axes=True)
         else:
             fig = axes.figure
             _guard_plot_axes(which, axes)
