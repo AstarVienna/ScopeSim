@@ -156,7 +156,7 @@ class SurfaceList(TERCurve):
 
         """
         if axes is None:
-            fig, axes = figure_factory(len(which), 1)
+            fig, axes = figure_factory(len(which), 1, iterable_axes=True)
         else:
             fig = axes.figure
             self._axes_guard(which, axes)

@@ -1032,7 +1032,10 @@ def close_loop(iterable: Iterable) -> Generator:
 
 def figure_factory(nrows=1, ncols=1, **kwargs):
     """Default way to init fig and ax, to easily modify later."""
+    iterable_axes = kwargs.pop("iterable_axes", False)
     fig, ax = plt.subplots(nrows, ncols, **kwargs)
+    if iterable_axes and not isinstance(ax, Iterable):
+        ax = (ax,)
     return fig, ax
 
 
