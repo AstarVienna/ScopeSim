@@ -497,6 +497,36 @@ class OpticalTrain:
     def __str__(self):
         return self._description
 
+    def _repr_pretty_(self, p, cycle):
+        """For ipython"""
+        if cycle:
+            p.text(f"{self.__class__.__name__}(...)")
+        else:
+            p.text(f"{self.__class__.__name__} ")
+            p.text(f"for {self.cmds['!OBS.instrument']} ")
+            p.text(f"@ {self.cmds['!TEL.telescope']}:")
+            p.breakable()
+            p.text("UserCommands:")
+            p.breakable()
+            p.pretty(self.cmds)
+            p.breakable()
+            p.text("OpticalElements:")
+            with p.indent(2):
+                for item in self:
+                    p.breakable()
+                    p.pretty(item)
+            p.breakable()
+            p.text("DetectorArrays:")
+            with p.indent(2):
+                for item in self.detector_arrays:
+                    p.breakable()
+                    p.pretty(item)
+            p.breakable()
+            p.text("Effects:")
+            p.breakable()
+            with p.indent(2):
+                p.pretty(self.effects)
+
     def __getitem__(self, item):
         return self.optics_manager[item]
 

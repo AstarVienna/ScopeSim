@@ -5,11 +5,11 @@ from scipy.ndimage import zoom
 from astropy import units as u
 from astropy.convolution import Gaussian2DKernel
 from astropy.io import fits
-import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm
 
 from .. import rc, utils
 from ..optics import image_plane_utils as imp_utils
+from ..utils import figure_factory
 
 
 def round_kernel_edges(kernel):
@@ -74,9 +74,10 @@ def nmrms_from_strehl_and_wavelength(strehl, wavelength, strehl_hdu,
         nm = np.interp(strehl, strehls[::-1], nms[::-1])
 
     if plot:
-        plt.plot(nms, strehls)
-        plt.plot(nm, strehl, "ro")
-        plt.show()
+        fig, ax = figure_factory()
+        ax.plot(nms, strehls)
+        ax.plot(nm, strehl, "ro")
+        fig.show()
 
     return nm
 

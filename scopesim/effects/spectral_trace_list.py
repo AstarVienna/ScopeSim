@@ -7,6 +7,7 @@ The Effect is called `SpectralTraceList`, it applies a list of
 
 from pathlib import Path
 import logging
+from itertools import cycle
 
 import numpy as np
 
@@ -16,7 +17,7 @@ from astropy.table import Table
 from .effects import Effect
 from .ter_curves import FilterCurve
 from .spectral_trace_list_utils import SpectralTrace, make_image_interpolations
-from ..utils import from_currsys, check_keys
+from ..utils import from_currsys, check_keys, figure_factory
 from ..optics.image_plane_utils import header_from_list_of_xy
 from ..base_classes import FieldOfViewBase, FOVSetupBase
 
@@ -179,7 +180,7 @@ class SpectralTraceList(Effect):
                     ex_vol["meta"].update(vol)
                     ex_vol["meta"].pop("wave_min")
                     ex_vol["meta"].pop("wave_max")
-                new_vols_list += extracted_vols
+                new_vols_list.extend(extracted_vols)
 
             obj.volumes = new_vols_list
 
@@ -195,8 +196,7 @@ class SpectralTraceList(Effect):
                 logging.info("Making cube")
                 obj.cube = obj.make_cube_hdu()
 
-            trace_id = obj.meta["trace_id"]
-            spt = self.spectral_traces[trace_id]
+            spt = self.spectral_traces[obj.trace_id]
             obj.hdu = spt.map_spectra_to_focal_plane(obj)
 
         return obj
@@ -208,11 +208,11 @@ class SpectralTraceList(Effect):
         xfoot, yfoot = [], []
         for spt in self.spectral_traces.values():
             xtrace, ytrace = spt.footprint()
-            xfoot += xtrace
-            yfoot += ytrace
+            xfoot.extend(xtrace)
+            yfoot.extend(ytrace)
 
-        xfoot = [np.min(xfoot), np.max(xfoot), np.max(xfoot), np.min(xfoot)]
-        yfoot = [np.min(yfoot), np.min(yfoot), np.max(yfoot), np.max(yfoot)]
+        xfoot = [min(xfoot), max(xfoot), max(xfoot), min(xfoot)]
+        yfoot = [min(yfoot), min(yfoot), max(yfoot), max(yfoot)]
 
         return xfoot, yfoot
 
@@ -299,7 +299,7 @@ class SpectralTraceList(Effect):
         #pdu.header['FILTER'] = from_currsys("!OBS.filter_name_fw1")
         outhdul = fits.HDUList([pdu])
 
-        for i, trace_id in enumerate(self.spectral_traces):
+        for i, trace_id in enumerate(self.spectral_traces, start=1):
             hdu = self[trace_id].rectify(hdulist,
                                          interps=interps,
                                          bin_width=bin_width,
@@ -307,34 +307,53 @@ class SpectralTraceList(Effect):
                                          wave_min=wave_min, wave_max=wave_max)
             if hdu is not None:   # ..todo: rectify does not do that yet
                 outhdul.append(hdu)
-                outhdul[0].header[f"EXTNAME{i+1}"] = trace_id
+                outhdul[0].header[f"EXTNAME{i}"] = trace_id
 
         outhdul[0].header.update(inhdul[0].header)
 
         return outhdul
 
-
     def rectify_cube(self, hdulist):
         """Rectify traces and combine into a cube"""
         raise(NotImplementedError)
 
-    def plot(self, wave_min=None, wave_max=None, **kwargs):
+    def plot(self, wave_min=None, wave_max=None, axes=None, **kwargs):
+        """Plot every spectral trace in the spectral trace list.
+
+        Parameters
+        ----------
+        wave_min : float, optional
+            Minimum wavelength, if any. If None, value from_currsys is used.
+        wave_max : float, optional
+            Maximum wavelength, if any. If None, value from_currsys is used.
+        axes : matplotlib axes, optional
+            The axes object to use for the plot. If None (default), a new
+            figure with one axes will be created.
+        **kwargs : dict
+            Any other parameters passed along to the plot method of the
+            individual spectral traces.
+
+        Returns
+        -------
+        fig : matplotlib figure
+            DESCRIPTION.
+
+        """
         if wave_min is None:
             wave_min = from_currsys("!SIM.spectral.wave_min")
         if wave_max is None:
             wave_max = from_currsys("!SIM.spectral.wave_max")
 
-        from matplotlib import pyplot as plt
-        from matplotlib._pylab_helpers import Gcf
-        if len(Gcf.figs) == 0:
-            plt.figure(figsize=(12, 12))
+        if axes is None:
+            fig, axes = figure_factory()
+        else:
+            fig = axes.figure
 
         if self.spectral_traces is not None:
-            clrs = "rgbcymk" * (1 + len(self.spectral_traces) // 7)
-            for spt, c in zip(self.spectral_traces.values(), clrs):
-                spt.plot(wave_min, wave_max, c=c)
+            for spt, c in zip(self.spectral_traces.values(), cycle("rgbcymk")):
+                spt.plot(wave_min, wave_max, c=c, axes=axes, **kwargs)
 
-        return plt.gcf()
+        return fig
 
     def __repr__(self):
         # "\n".join([spt.__repr__() for spt in self.spectral_traces])
@@ -409,13 +428,14 @@ class SpectralTraceListWheel(Effect):
               filter_names: "!INST.grism_names"
 
     """
-    def __init__(self, **kwargs):
-        required_keys = ["trace_list_names",
-                         "filename_format",
-                         "current_trace_list"]
-        check_keys(kwargs, required_keys, action="error")
 
-        super(SpectralTraceListWheel, self).__init__(**kwargs)
+    required_keys = {"trace_list_names", "filename_format",
+                     "current_trace_list"}
+    _current_str = "current_trace_list"
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        check_keys(kwargs, self.required_keys, action="error")
 
         params = {"z_order": [70, 270, 670],
                   "path": "",
@@ -425,7 +445,7 @@ class SpectralTraceListWheel(Effect):
         self.meta.update(params)
         self.meta.update(kwargs)
 
-        path = Path(self.meta["path"], from_currsys(self.meta["filename_format"]))
+        path = self._get_path()
         self.trace_lists = {}
         for name in from_currsys(self.meta["trace_list_names"]):
             kwargs["name"] = name
@@ -443,8 +463,3 @@ class SpectralTraceListWheel(Effect):
         if trace_list_name is not None:
             trace_list_eff = self.trace_lists[trace_list_name]
         return trace_list_eff
-
-    @property
-    def display_name(self):
-        name = self.meta.get("name", self.meta.get("filename", "<untitled>"))
-        return f"{name} : [{from_currsys(self.meta['current_trace_list'])}]"

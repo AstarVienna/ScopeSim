@@ -19,7 +19,7 @@ class DetectorArray:
         self.detectors = []
         self.latest_exposure = None
 
-    def readout(self, image_planes, array_effects=[], dtcr_effects=[], **kwargs):
+    def readout(self, image_planes, array_effects=None, dtcr_effects=None, **kwargs):
         """
         Read out the detector array into a FITS file
 
@@ -54,8 +54,8 @@ class DetectorArray:
         # - add ImageHDUs
         # - add ASCIITableHDU with Effects meta data in final table extension
 
-        self.array_effects = array_effects
-        self.dtcr_effects = dtcr_effects
+        self.array_effects = array_effects or []
+        self.dtcr_effects = dtcr_effects or []
         self.meta.update(kwargs)
 
         # 0. Get the image plane that corresponds to this detector array
@@ -100,6 +100,21 @@ class DetectorArray:
         self.latest_exposure = hdu_list
 
         return self.latest_exposure
+
+    def __repr__(self):
+        msg = (f"{self.__class__.__name__}"
+               f"({self.detector_list!r}, **{self.meta!r})")
+        return msg
+
+    def __str__(self):
+        return f"{self.__class__.__name__} with {self.detector_list!s}"
+
+    def _repr_pretty_(self, p, cycle):
+        """For ipython"""
+        if cycle:
+            p.text(f"{self.__class__.__name__}(...)")
+        else:
+            p.text(str(self))
 
 
 def make_primary_hdu(meta):

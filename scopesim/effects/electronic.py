@@ -22,14 +22,13 @@ Functions:
 import logging
 
 import numpy as np
-import matplotlib.pyplot as plt
 
 from astropy.io import fits
 
 from .. import rc
 from . import Effect
 from ..base_classes import DetectorBase, ImagePlaneBase
-from ..utils import from_currsys
+from ..utils import from_currsys, figure_factory
 from .. import utils
 
 
@@ -231,7 +230,7 @@ class SummedExposure(Effect):
 
     """
     def __init__(self, **kwargs):
-        super(SummedExposure, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         params = {"z_order": [860]}
         self.meta.update(params)
         self.meta.update(kwargs)
@@ -255,7 +254,7 @@ class Bias(Effect):
 
     """
     def __init__(self, **kwargs):
-        super(Bias, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         params = {"z_order": [855]}
         self.meta.update(params)
         self.meta.update(kwargs)
@@ -272,7 +271,7 @@ class Bias(Effect):
 
 class PoorMansHxRGReadoutNoise(Effect):
     def __init__(self, **kwargs):
-        super(PoorMansHxRGReadoutNoise, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         params = {"z_order": [811],
                   "pedestal_fraction": 0.3,
                   "read_fraction": 0.4,
@@ -311,19 +310,21 @@ class PoorMansHxRGReadoutNoise(Effect):
 
         return det
 
-    def plot(self, det, new_figure=False, **kwargs):
+    def plot(self, det, **kwargs):
         dtcr = self.apply_to(det)
-        plt.imshow(dtcr.data, origin="lower")
+        fig, ax = figure_factory()
+        ax.imshow(dtcr.data, origin="lower")
 
     def plot_hist(self, det, **kwargs):
         dtcr = self.apply_to(det)
-        plt.hist(dtcr.data.flatten())
+        fig, ax = figure_factory()
+        ax.hist(dtcr.data.flatten())
 
 
 class BasicReadoutNoise(Effect):
     """Readout noise computed as: ron * sqrt(NDIT)"""
     def __init__(self, **kwargs):
-        super(BasicReadoutNoise, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         self.meta["z_order"] = [811]
         self.meta["random_seed"] = "!SIM.random.seed"
         self.meta.update(kwargs)
@@ -347,16 +348,18 @@ class BasicReadoutNoise(Effect):
 
     def plot(self, det):
         dtcr = self.apply_to(det)
-        plt.imshow(dtcr.data)
+        fig, ax = figure_factory()
+        ax.imshow(dtcr.data)
 
     def plot_hist(self, det, **kwargs):
         dtcr = self.apply_to(det)
-        plt.hist(dtcr.data.flatten())
+        fig, ax = figure_factory()
+        ax.hist(dtcr.data.flatten())
 
 
 class ShotNoise(Effect):
     def __init__(self, **kwargs):
-        super(ShotNoise, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         self.meta["z_order"] = [820]
         self.meta["random_seed"] = "!SIM.random.seed"
         self.meta.update(kwargs)
@@ -392,11 +395,13 @@ class ShotNoise(Effect):
 
     def plot(self, det):
         dtcr = self.apply_to(det)
-        plt.imshow(dtcr.data)
+        fig, ax = figure_factory()
+        ax.imshow(dtcr.data)
 
     def plot_hist(self, det, **kwargs):
         dtcr = self.apply_to(det)
-        plt.hist(dtcr.data.flatten())
+        fig, ax = figure_factory()
+        ax.hist(dtcr.data.flatten())
 
 
 class DarkCurrent(Effect):
@@ -404,7 +409,7 @@ class DarkCurrent(Effect):
     required: dit, ndit, value
     """
     def __init__(self, **kwargs):
-        super(DarkCurrent, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         self.meta["z_order"] = [830]
 
         required_keys = ["value", "dit", "ndit"]
@@ -436,9 +441,10 @@ class DarkCurrent(Effect):
         dtcr = self.apply_to(det)
         dark_level = dtcr.data[0, 0] / total_time  # just read one pixel
         levels = dark_level * times
-        plt.plot(times, levels, **kwargs)
-        plt.xlabel("time")
-        plt.ylabel("dark level")
+        fig, ax = figure_factory()
+        ax.plot(times, levels, **kwargs)
+        ax.set_xlabel("time")
+        ax.set_ylabel("dark level")
 
 
 class LinearityCurve(Effect):
@@ -496,22 +502,22 @@ class LinearityCurve(Effect):
         return obj
 
     def plot(self, **kwargs):
-        plt.gcf().clf()
+        fig, ax = figure_factory()
 
         ndit = from_currsys(self.meta["ndit"])
         incident = self.table["incident"] * ndit
         measured = self.table["measured"] * ndit
 
-        plt.loglog(incident, measured, **kwargs)
-        plt.xlabel("Incident [ph s$^-1$]")
-        plt.ylabel("Measured [e- s$^-1$]")
+        ax.loglog(incident, measured, **kwargs)
+        ax.set_xlabel("Incident [ph s$^-1$]")
+        ax.set_ylabel("Measured [e- s$^-1$]")
 
-        return plt.gcf()
+        return fig
 
 
 class ReferencePixelBorder(Effect):
     def __init__(self, **kwargs):
-        super(ReferencePixelBorder, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         self.meta["z_order"] = [780]
         val = 0
         if "all" in kwargs:
@@ -536,13 +542,14 @@ class ReferencePixelBorder(Effect):
 
     def plot(self, implane, **kwargs):
         implane = self.apply_to(implane)
-        plt.imshow(implane.data, origin="bottom", **kwargs)
-        plt.show()
+        fig, ax = figure_factory()
+        ax.imshow(implane.data, origin="bottom", **kwargs)
+        # fig.show()
 
 
 class BinnedImage(Effect):
     def __init__(self, **kwargs):
-        super(BinnedImage, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         self.meta["z_order"] = [870]
 
         self.required_keys = ["bin_size"]
@@ -560,7 +567,7 @@ class BinnedImage(Effect):
 
 class UnequalBinnedImage(Effect):
     def __init__(self, **kwargs):
-        super(UnequalBinnedImage, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         self.meta["z_order"] = [870]
 
         self.required_keys = ["binx","biny"]

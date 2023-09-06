@@ -3,13 +3,14 @@ from astropy import units as u
 from astropy.table import Table
 
 from .effects import Effect
-from ..utils import airmass2zendist, from_currsys, check_keys, quantify
+from ..utils import airmass2zendist, from_currsys, check_keys, quantify, \
+    figure_factory
 from ..base_classes import FieldOfViewBase
 
 
 class Shift3D(Effect):
     def __init__(self, **kwargs):
-        super(Shift3D, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         params = {"z_order": [30, 230],
                   "report_plot_include": True,
                   "report_table_include": False,}
@@ -38,19 +39,18 @@ class Shift3D(Effect):
         return tbl
 
     def plot(self):
-        import matplotlib.pyplot as plt
-        plt.gcf().clf()
+        fig, ax = figure_factory()
 
         tbl = self.get_table()
-        plt.scatter(x=tbl["dx"], y=tbl["dy"], c=tbl["wavelength"])
-        plt.colorbar()
-        plt.xlabel(f"dx [{quantify(tbl['dx'], u.arcsec).unit}]")
-        plt.ylabel(f"dy [{quantify(tbl['dy'], u.arcsec).unit}]")
-        plt.axvline(0, ls=":")
-        plt.axhline(0, ls=":")
-        # plt.gca().set_aspect("equal")
+        pnts = ax.scatter(x=tbl["dx"], y=tbl["dy"], c=tbl["wavelength"])
+        fig.colorbar(pnts)
+        ax.set_xlabel(f"dx [{quantify(tbl['dx'], u.arcsec).unit}]")
+        ax.set_ylabel(f"dy [{quantify(tbl['dy'], u.arcsec).unit}]")
+        ax.axvline(0, ls=":")
+        ax.axhline(0, ls=":")
+        # ax.set_aspect("equal")
 
-        return plt.gcf()
+        return fig
 
 
 class AtmosphericDispersion(Shift3D):
@@ -93,7 +93,7 @@ class AtmosphericDispersion(Shift3D):
 
     """
     def __init__(self, **kwargs):
-        super(AtmosphericDispersion, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         params = {"z_order": [231],
                   "wave_min": "!SIM.spectral.wave_min",
                   "wave_mid": "!SIM.spectral.wave_mid",
@@ -161,7 +161,7 @@ class AtmosphericDispersionCorrection(Shift3D):
         ----------
         kwargs
         """
-        super(AtmosphericDispersionCorrection, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         self.meta["z_order"] = [632]
         if "quick_adc" in self.meta and self.meta["quick_adc"] is True:
             self.meta["z_order"] += [232]

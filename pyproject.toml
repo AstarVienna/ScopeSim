@@ -1,6 +1,6 @@
 [project]
 name = "ScopeSim"
-version = "0.6.0"
+version = "0.6.1"
 description = "Generalised telescope observation simulator"
 readme = "README.md"
 requires-python = ">=3.8"
@@ -58,6 +58,7 @@ docs = [
     "sphinxcontrib-apidoc",
     "nbsphinx",
     "numpydoc",
+    "scopesim_templates>=0.4.4",
 ]
 
 [project.urls]

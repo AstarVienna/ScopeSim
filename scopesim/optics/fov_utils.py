@@ -329,7 +329,11 @@ def extract_area_from_imagehdu(imagehdu, fov_volume):
 
         # OC [2021-12-14] if fov range is not covered by the source return nothing
         if not np.any(mask):
-            print(f"FOV {fov_waves[0]} um - {fov_waves[1]} um: not covered by Source")
+            logging.warning("FOV %s um - %s um: not covered by Source",
+                            fov_waves[0], fov_waves[1])
+            # FIXME: returning None here breaks the principle that a function
+            #        should always return the same type. Maybe this should
+            #        instead raise an exception that's caught higher up...
             return None
 
         i0p, i1p = np.where(mask)[0][0], np.where(mask)[0][-1]
@@ -359,6 +363,9 @@ def extract_area_from_imagehdu(imagehdu, fov_volume):
     else:
         data = imagehdu.data[y0p:y1p, x0p:x1p]
         new_hdr["SPEC_REF"] = hdr.get("SPEC_REF")
+
+    if not data.size:
+        logging.warning("Empty image HDU.")
 
     new_imagehdu = fits.ImageHDU(data=data)
     new_imagehdu.header.update(new_hdr)

@@ -36,7 +36,7 @@ class Effect(DataContainer):
     """
 
     def __init__(self, **kwargs):
-        super(Effect, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         self.meta["z_order"] = []
         self.meta["include"] = True
         self.meta.update(kwargs)
@@ -109,19 +109,19 @@ class Effect(DataContainer):
 
     @property
     def display_name(self):
-        return self.meta.get("name", self.meta.get("filename", "<empty>"))
+        name = self.meta.get("name", self.meta.get("filename", "<untitled>"))
+        if not hasattr(self, "_current_str"):
+            return name
+        return f"{name} : [{from_currsys(self.meta[self._current_str])}]"
 
     @property
     def meta_string(self):
-        meta_str = ""
-        max_key_len = max(len(key) for key in self.meta.keys())
-        padlen = max_key_len + 4
-        for key in self.meta:
-            if key not in {"comments", "changes", "description", "history",
-                           "report_table_caption", "report_plot_caption",
-                           "table"}:
-                meta_str += f"{key:>{padlen}} : {self.meta[key]}\n"
-
+        padlen = 4 + len(max(self.meta, key=len))
+        exclude = {"comments", "changes", "description", "history",
+                   "report_table_caption", "report_plot_caption", "table"}
+        meta_str = "\n".join(f"{key:>{padlen}} : {value}"
+                             for key, value in self.meta.items()
+                             if key not in exclude)
         return meta_str
 
     def report(self, filename=None, output="rst", rst_title_chars="*+",
@@ -199,7 +199,7 @@ class Effect(DataContainer):
 
         """
         changes = self.meta.get("changes", [])
-        changes_str = "- " + "\n- ".join([str(entry) for entry in changes])
+        changes_str = "- " + "\n- ".join(str(entry) for entry in changes)
         cls_doc = self.__doc__ if self.__doc__ is not None else "<no docstring>"
         cls_descr = cls_doc.lstrip().splitlines()[0]
 
@@ -239,7 +239,12 @@ Data
 """
 
         if params["report_plot_include"] and hasattr(self, "plot"):
+            from matplotlib.figure import Figure
             fig = self.plot()
+            # HACK: plot methods should always return the same, while this is
+            #       not sorted out, deal with both fig and ax
+            if not isinstance(fig, Figure):
+                fig = fig.figure
 
             if fig is not None:
                 path = params["report_image_path"]
@@ -257,6 +262,9 @@ Data
                 #                            params["report_rst_path"])
                 # rel_file_path = os.path.join(rel_path, fname)
 
+                # TODO: fname is set in a loop above, so using it here in the
+                #       fstring will only access the last value from the loop,
+                #       is that intended?
                 rst_str += f"""
 .. figure:: {fname}
     :name: {"fig:" + params.get("name", "<unknown Effect>")}
@@ -287,16 +295,11 @@ Meta-data
         return rst_str
 
     def info(self):
-        """
-        Prints basic information on the effect, notably the description
-        """
-        text = str(self)
-
-        desc = self.meta.get("description")
-        if desc is not None:
-            text += f"\nDescription: {desc}"
-
-        print(text)
+        """Print basic information on the effect, notably the description."""
+        if (desc := self.meta.get("description")) is not None:
+            print(f"{self}\nDescription: {desc}")
+        else:
+            print(self)
 
     def __repr__(self):
         return f"{self.__class__.__name__}(**{self.meta!r})"
@@ -321,3 +324,9 @@ Meta-data
             raise ValueError(f"__getitem__ calls must start with '#': {item}")
 
         return value
+
+    def _get_path(self):
+        if any(key not in self.meta for key in ("path", "filename_format")):
+            return None
+        return Path(self.meta["path"],
+                    from_currsys(self.meta["filename_format"]))

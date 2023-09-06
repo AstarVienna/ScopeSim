@@ -215,6 +215,13 @@ class OpticalElement:
     def __str__(self):
         return f"{self.__class__.__name__}: \"{self.display_name}\""
 
+    def _repr_pretty_(self, p, cycle):
+        """For ipython"""
+        if cycle:
+            p.text(f"{self.__class__.__name__}(...)")
+        else:
+            p.text(str(self))
+
     @property
     def properties_str(self):
         prop_str = ""

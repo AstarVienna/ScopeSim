@@ -8,6 +8,7 @@ from ..base_classes import FOVSetupBase
 from .effects import Effect
 from .apertures import ApertureMask
 from .. import utils
+from ..utils import close_loop, figure_factory
 from ..optics.image_plane_utils import header_from_list_of_xy, calc_footprint
 
 __all__ = ["DetectorList", "DetectorWindow"]
@@ -105,7 +106,7 @@ class DetectorList(Effect):
 
     """
     def __init__(self, **kwargs):
-        super(DetectorList, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         params = {"z_order": [90, 290, 390, 490],
                   "pixel_scale": "!INST.pixel_scale",      # arcsec
                   "active_detectors": "all",
@@ -251,22 +252,21 @@ class DetectorList(Effect):
 
         return hdrs
 
-    def plot(self):
-        import matplotlib.pyplot as plt
-        plt.gcf().clf()
+    def plot(self, axes=None):
+        if axes is None:
+            _, axes = figure_factory()
 
         for hdr in self.detector_headers():
             x_mm, y_mm = calc_footprint(hdr, "D")
-            x_cen, y_cen = np.average(x_mm), np.average(y_mm)
-            x_mm = list(x_mm) + [x_mm[0]]
-            y_mm = list(y_mm) + [y_mm[0]]
-            plt.gca().plot(x_mm, y_mm)
-            plt.gca().text(x_cen, y_cen, hdr["ID"])
+            axes.plot(list(close_loop(x_mm)), list(close_loop(y_mm)))
+            axes.text(*np.mean((x_mm, y_mm), axis=1), hdr["ID"],
+                      ha="center", va="center")
 
-        plt.gca().set_aspect("equal")
-        plt.ylabel("Size [mm]")
+        axes.set_aspect("equal")
+        axes.set_xlabel("Size [mm]")
+        axes.set_ylabel("Size [mm]")
 
-        return plt.gcf()
+        return axes
 
 
 class DetectorWindow(DetectorList):
@@ -314,4 +314,4 @@ class DetectorWindow(DetectorList):
                            "angle", "gain", "pixel_size"])
         tbl.meta.update(params)
 
-        super(DetectorWindow, self).__init__(table=tbl, **params)
+        super().__init__(table=tbl, **params)

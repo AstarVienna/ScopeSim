@@ -1,7 +1,15 @@
 from importlib import metadata
 version = metadata.version(__package__)
-date = '2023-07-10 10:00:00 GMT'
+date = '2023-09-06 13:00:00 GMT'
 yaml_descriptions = """
+- version : 0.6.1
+  date : 2023-09-06
+  comment : Patch with visualisation improvements and general refactoring
+  changes :
+  - Improvements to console representation and plot methods of various classes: #252, #260, #263, #266
+  - Refactoring and changes to the inheritance of some classes: #261, #264, #265
+  - Changes to the CI configuration to reduce fails caused by web request timeouts #255, #262
+
 - version : 0.6.0
   date : 2023-07-10
   comment : Summer 2023
