@@ -213,9 +213,12 @@ class TERCurve(Effect):
         for ter, ax in zip(which, axes):
             y_name = abbrs.get(ter, "throughput")
             y = getattr(self.surface, y_name)
+            if not isinstance(y, u.Quantity):  # assume synphot spectrum
+                y = y(wave)
             ax.plot(wave, y, **plot_kwargs)
             ax.set_xlabel(f"Wavelength [{wave_unit}]")
-            ax.set_ylabel(f"{y_name.title()} [{y.unit}]")
+            y_unit = str(y.unit) or "dimensionless"
+            ax.set_ylabel(f"{y_name.title()} [{y_unit}]")
 
         return fig
 
