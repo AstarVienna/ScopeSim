@@ -43,6 +43,7 @@ dependencies = [
 dev = [
     "jupyter",
     "jupytext",
+    "ipykernel",
 ]
 test = [
     "pytest>=5.0.0",
@@ -50,6 +51,7 @@ test = [
     "scopesim_templates>=0.4.4",
     # Just so that readthedocs doesn't include the tests module - yes it's hacky
     "skycalc_cli",
+    "ipykernel",
 ]
 docs = [
     "sphinx>=4.3.0",
@@ -59,6 +61,7 @@ docs = [
     "nbsphinx",
     "numpydoc",
     "scopesim_templates>=0.4.4",
+    "ipykernel"
 ]
 
 [project.urls]
