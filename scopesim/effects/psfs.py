@@ -115,7 +115,6 @@ class PSF(Effect):
 
         return obj
 
-
     def fov_grid(self, which="waveset", **kwargs):
         """See parent docstring."""
         waveset = []
@@ -124,10 +123,11 @@ class PSF(Effect):
                 _waveset = self._waveset
                 waves = 0.5 * (np.array(_waveset)[1:] +
                                np.array(_waveset)[:-1])
-                wave_min = kwargs["wave_min"] if "wave_min" in kwargs else np.min(_waveset)
-                wave_max = kwargs["wave_max"] if "wave_max" in kwargs else np.max(_waveset)
+                wave_min = kwargs.get("wave_min", np.min(_waveset))
+                wave_max = kwargs.get("wave_max", np.max(_waveset))
                 mask = (wave_min < waves) * (waves < wave_max)
-                waveset = np.unique([wave_min] + list(waves[mask]) + [wave_max])
+                waveset = np.unique([wave_min] + list(waves[mask]) +
+                                    [wave_max])
 
         return waveset
 
