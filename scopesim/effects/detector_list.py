@@ -129,9 +129,9 @@ class DetectorList(Effect):
                 if col in self.table.colnames:
                     self.table[col] = self.table[col] * mult_cols[col]
                     self.table.rename_column(col, new_name)
-        if not "x_size_unit" in self.meta and "xhw_unit" in self.meta:
+        if "x_size_unit" not in self.meta and "xhw_unit" in self.meta:
             self.meta["x_size_unit"] = self.meta["xhw_unit"]
-        if not "y_size_unit" in self.meta and "yhw_unit" in self.meta:
+        if "y_size_unit" not in self.meta and "yhw_unit" in self.meta:
             self.meta["y_size_unit"] = self.meta["yhw_unit"]
 
     def apply_to(self, obj, **kwargs):

@@ -264,7 +264,7 @@ def add_table_to_imagehdu(table: Table, canvas_hdu: fits.ImageHDU,
     eps = -1e-7
     mask = (xpix >= eps) * (xpix < naxis1) * (ypix >= eps) * (ypix < naxis2)
 
-    if sub_pixel is True:
+    if sub_pixel:
         canvas_hdu = _add_subpixel_sources_to_canvas(canvas_hdu, xpix, ypix, f,
                                                      mask)
     else:
