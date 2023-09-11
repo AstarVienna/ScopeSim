@@ -1,5 +1,6 @@
 """Defines FieldOfView class."""
 
+import logging
 from copy import deepcopy
 from itertools import chain
 
