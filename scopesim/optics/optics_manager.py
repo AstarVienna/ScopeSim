@@ -20,7 +20,7 @@ from .. import rc
 
 class OpticsManager:
     """
-    The workhorse class for dealing with all externally defined Effect objects
+    The workhorse class for dealing with all externally defined Effect objects.
 
     Parameters
     ----------
@@ -62,7 +62,7 @@ class OpticsManager:
 
     def load_effects(self, yaml_dicts, **kwargs):
         """
-        Generate an OpticalElement for each section of the Optical System
+        Generate an OpticalElement for each section of the Optical System.
 
         Make an ``OpticalElement`` for each YAML document in the system.
         For example there should be a YAML document for each of the following:
@@ -80,11 +80,10 @@ class OpticsManager:
         Parameters
         ----------
         yaml_dicts : list of dicts
-            Each YAML dict should contain the descriptions of the Effects needed
-            by each ``OpticalElement``
+            Each YAML dict should contain the descriptions of the Effects
+            needed by each ``OpticalElement``.
 
         """
-
         if not isinstance(yaml_dicts, Sequence):
             yaml_dicts = [yaml_dicts]
         self.optical_elements.extend(OpticalElement(dic, **kwargs)
@@ -92,7 +91,7 @@ class OpticsManager:
 
     def add_effect(self, effect, ext=0):
         """
-        Add an Effect object to an OpticalElement at index ``ext``
+        Add an Effect object to an OpticalElement at index ``ext``.
 
         Parameters
         ----------
@@ -109,7 +108,7 @@ class OpticsManager:
 
     def update(self, **obs_dict):
         """
-        Update the meta dictionary with keyword-value pairs
+        Update the meta dictionary with keyword-value pairs.
 
         Parameters
         ----------
@@ -121,7 +120,7 @@ class OpticsManager:
 
     def get_all(self, class_type):
         """
-        Return a list of all effects from all optical elements with `class_type`
+        Return list of all effects from all optical elements with `class_type`.
 
         Parameters
         ----------
@@ -134,7 +133,6 @@ class OpticsManager:
         effects : list of Effect objects
 
         """
-
         effects = []
         for opt_el in self.optical_elements:
             effects += opt_el.get_all(class_type)
@@ -143,7 +141,7 @@ class OpticsManager:
 
     def get_z_order_effects(self, z_level):
         """
-        Return a list of all effects with a z_order keywords within z_level
+        Return a list of all effects with a z_order keywords within `z_level`.
 
         Effect z_order values are classified according to the following:
 
@@ -163,7 +161,6 @@ class OpticsManager:
         effects : list of Effect objects
 
         """
-
         effects = []
         for opt_el in self.optical_elements:
             effects += opt_el.get_z_order_effects(z_level)
@@ -355,7 +352,7 @@ Summary of Effects in Optical Elements:
             opt_elem.write_string(stream, list_effects=False)
 
     def pretty_str(self) -> str:
-        """Return formatted string representation as str"""
+        """Return formatted string representation as str."""
         with StringIO() as str_stream:
             self.write_string(str_stream)
             output = str_stream.getvalue()

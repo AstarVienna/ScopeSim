@@ -1,3 +1,5 @@
+"""Contains base class for effects."""
+
 from pathlib import Path
 
 from ..effects.data_container import DataContainer
@@ -8,7 +10,7 @@ from ..reports.rst_utils import table_to_rst
 
 class Effect(DataContainer):
     """
-    The base class for representing the effects (artifacts) in an optical system
+    Base class for representing the effects (artifacts) in an optical system.
 
     The ``Effect`` class is conceived to independently apply the changes that
     an optical component (or series thereof) has on an incoming 3D description
@@ -30,9 +32,6 @@ class Effect(DataContainer):
     ----------
     See :class:`DataContainer` for input parameters
 
-    Methods
-
-
     """
 
     def __init__(self, **kwargs):
@@ -42,6 +41,7 @@ class Effect(DataContainer):
         self.meta.update(kwargs)
 
     def apply_to(self, obj, **kwargs):
+        """TBA."""
         if not isinstance(obj, (bc.FOVSetupBase, bc.SourceBase,
                                 bc.FieldOfViewBase, bc.ImagePlaneBase,
                                 bc.DetectorBase)):
@@ -53,7 +53,7 @@ class Effect(DataContainer):
 
     def fov_grid(self, which="", **kwargs):
         """
-        Returns the edges needed to generate FieldOfViews for an observation
+        Return the edges needed to generate FieldOfViews for an observation.
 
         Parameters
         ----------
@@ -127,7 +127,7 @@ class Effect(DataContainer):
     def report(self, filename=None, output="rst", rst_title_chars="*+",
                **kwargs):
         """
-        For Effect objects, generates a report based on the data and meta-data
+        For Effect objects, generates a report based on the data and meta-data.
 
         This is to aid in the automation of the documentation process of the
         instrument packages in the IRDB.
@@ -170,7 +170,6 @@ class Effect(DataContainer):
 
         Notes
         -----
-
         The format of the RST output is as follows::
 
             <ClassType>: <effect name>

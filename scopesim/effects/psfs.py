@@ -24,7 +24,8 @@ class PoorMansFOV:
         self.header = {"CDELT1": pixel_scale / 3600.,
                        "CDELT2": pixel_scale / 3600.,
                        "NAXIS1": 128,
-                       "NAXIS2": 128,}
+                       "NAXIS2": 128,
+                       }
         self.meta = utils.from_currsys("!SIM.spectral")
         self.wavelength = self.meta["wave_mid"] * u.um
         if not recursion_call:
@@ -55,8 +56,7 @@ class PSF(Effect):
         self.convolution_classes = (FieldOfViewBase, ImagePlaneBase)
 
     def apply_to(self, obj, **kwargs):
-        """Apply the PSF"""
-
+        """Apply the PSF."""
         # 1. During setup of the FieldOfViews
         if isinstance(obj, FOVSetupBase) and self._waveset is not None:
             waveset = self._waveset
@@ -77,7 +77,7 @@ class PSF(Effect):
                     kernel = pu.rotational_blur(kernel, rot_blur_angle)
 
                 # normalise psf kernel      KERNEL SHOULD BE normalised within get_kernel()
-                #if utils.from_currsys(self.meta["normalise_kernel"]) is True:
+                # if utils.from_currsys(self.meta["normalise_kernel"]) is True:
                 #    kernel /= np.sum(kernel)
                 #    kernel[kernel < 0.] = 0.
 
@@ -99,8 +99,9 @@ class PSF(Effect):
                     bkg_level = bkg_level[:, None, None]
                     new_image = np.zeros(image.shape)  # assumes mode="same"
                     for iplane in range(image.shape[0]):
-                        new_image[iplane,] = convolve(image[iplane,] - bkg_level[iplane,],
-                                                      kernel[iplane,], mode=mode)
+                        new_image[iplane,] = convolve(
+                            image[iplane,] - bkg_level[iplane,],
+                            kernel[iplane,], mode=mode)
 
                 obj.hdu.data = new_image + bkg_level
 
@@ -116,6 +117,7 @@ class PSF(Effect):
 
 
     def fov_grid(self, which="waveset", **kwargs):
+        """See parent docstring."""
         waveset = []
         if which == "waveset":
             if self._waveset is not None:
@@ -137,16 +139,15 @@ class PSF(Effect):
 
     def plot(self, obj=None, **kwargs):
         from matplotlib.colors import LogNorm
-        fig, ax = figure_factory()
+        fig, axes = utils.figure_factory()
 
         kernel = self.get_kernel(obj)
-        ax.imshow(kernel, norm=LogNorm(), origin="lower", **kwargs)
+        axes.imshow(kernel, norm=LogNorm(), origin="lower", **kwargs)
 
         return fig
 
 
-
-################################################################################
+##############################################################################
 # Analytical PSFs - Vibration, Seeing, NCPAs
 
 class AnalyticalPSF(PSF):
@@ -157,9 +158,8 @@ class AnalyticalPSF(PSF):
 
 
 class Vibration(AnalyticalPSF):
-    """
-    Creates a wavelength independent kernel image
-    """
+    """Creates a wavelength independent kernel image."""
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.meta["z_order"] = [244, 744]
@@ -185,9 +185,12 @@ class Vibration(AnalyticalPSF):
 
 class NonCommonPathAberration(AnalyticalPSF):
     """
+    TBA.
+
     Needed: pixel_scale
     Accepted: kernel_width, strehl_drift
     """
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.meta["z_order"] = [241, 641]
@@ -205,7 +208,7 @@ class NonCommonPathAberration(AnalyticalPSF):
         utils.check_keys(self.meta, self.required_keys, action="error")
 
     def fov_grid(self, which="waveset", **kwargs):
-
+        """See parent docstring."""
         if which == "waveset":
             self.meta.update(kwargs)
             self.meta = utils.from_currsys(self.meta)
@@ -249,7 +252,7 @@ class NonCommonPathAberration(AnalyticalPSF):
         return self._total_wfe
 
     def plot(self):
-        fig, ax = figure_factory()
+        fig, axes = utils.figure_factory()
 
         wave_min, wave_max = utils.from_currsys([self.meta["wave_min"],
                                                  self.meta["wave_max"]])
@@ -257,16 +260,16 @@ class NonCommonPathAberration(AnalyticalPSF):
         wfe = self.total_wfe
         strehl = pu.wfe2strehl(wfe=wfe, wave=waves)
 
-        ax.plot(waves, strehl)
-        ax.set_xlabel(f"Wavelength [{waves.unit}]")
-        ax.set_ylabel(f"Strehl Ratio \n[Total WFE = {wfe}]")
+        axes.plot(waves, strehl)
+        axes.set_xlabel(f"Wavelength [{waves.unit}]")
+        axes.set_ylabel(f"Strehl Ratio \n[Total WFE = {wfe}]")
 
         return fig
 
 
 class SeeingPSF(AnalyticalPSF):
     """
-    Currently only returns gaussian kernel with a ``fwhm`` [arcsec]
+    Currently only returns gaussian kernel with a ``fwhm`` [arcsec].
 
     Parameters
     ----------
@@ -274,6 +277,7 @@ class SeeingPSF(AnalyticalPSF):
         [arcsec]
 
     """
+
     def __init__(self, fwhm=1.5, **kwargs):
         super().__init__(**kwargs)
 
@@ -297,7 +301,6 @@ class SeeingPSF(AnalyticalPSF):
 
         pixel_scale = fov.header["CDELT1"] * u.deg.to(u.arcsec)
         pixel_scale = utils.quantify(pixel_scale, u.arcsec)
-        wave = fov.wavelength
 
         # add in the conversion to fwhm from seeing and wavelength here
         fwhm = utils.from_currsys(self.meta["fwhm"]) * u.arcsec / pixel_scale
@@ -319,6 +322,7 @@ class GaussianDiffractionPSF(AnalyticalPSF):
         self.meta["z_order"] = [242, 642]
 
     def fov_grid(self, which="waveset", **kwargs):
+        """See parent docstring."""
         wavelengths = []
         if which == "waveset" and \
                 "waverange" in kwargs and \
@@ -361,7 +365,7 @@ class GaussianDiffractionPSF(AnalyticalPSF):
         return super().plot(PoorMansFOV())
 
 
-################################################################################
+##############################################################################
 # Semi-analytical PSFs - AnisoCADO PSFs
 
 
@@ -375,27 +379,28 @@ class SemiAnalyticalPSF(PSF):
 
 class AnisocadoConstPSF(SemiAnalyticalPSF):
     """
-    Makes a SCAO on-axis PSF with a desired Strehl ratio at a given wavelength
+    Makes a SCAO on-axis PSF with a desired Strehl ratio at a given wavelength.
 
-    To make the PSFs a map connecting Strehl, Wavelength, and residual wavefront
-    error is required
+    To make the PSFs a map connecting Strehl, Wavelength, and residual
+    wavefront error is required.
 
     Parameters
     ----------
     filename : str
-        Path to Strehl map with axes (x, y) = (wavelength, wavefront error)
+        Path to Strehl map with axes (x, y) = (wavelength, wavefront error).
     strehl : float
-        Desired Strehl ratio. Either percentage [1, 100] or fractional [1e-3, 1]
+        Desired Strehl ratio. Either percentage [1, 100] or fractional
+        [1e-3, 1].
     wavelength : float
-        [um] The given strehl is valid for this wavelength
+        [um] The given strehl is valid for this wavelength.
     psf_side_length : int
-        [pixel] Default is 512. Side length of the kernel images
+        [pixel] Default is 512. Side length of the kernel images.
     offset : tuple
-        [arcsec] SCAO guide star offset from centre (dx, dy)
+        [arcsec] SCAO guide star offset from centre (dx, dy).
     rounded_edges : bool
         Default is True. Sets all halo values below a threshold to zero.
         The threshold is determined from the max values of the edge rows of the
-        kernel image
+        kernel image.
 
     Other Parameters
     ----------------
@@ -427,6 +432,7 @@ class AnisocadoConstPSF(SemiAnalyticalPSF):
                 psf_side_length: 512
 
     """
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         params = {"z_order": [42, 652],
@@ -470,7 +476,7 @@ class AnisocadoConstPSF(SemiAnalyticalPSF):
 
     def remake_kernel(self, x):
         """
-        Remake the kernel based on either a pixel_scale of FieldOfView
+        Remake the kernel based on either a pixel_scale of FieldOfView.
 
         Parameters
         ----------
@@ -509,7 +515,8 @@ class AnisocadoConstPSF(SemiAnalyticalPSF):
 
     def plot(self, obj=None, **kwargs):
         from matplotlib.colors import LogNorm
-        fig, gs = figure_grid_factory(2, 2, height_ratios=(3, 2),
+        fig, gs = figure_grid_factory(
+            2, 2, height_ratios=(3, 2),
             left=0.3, right=0.7, bottom=0.15, top=0.85,
             wspace=0.05, hspace=0.05)
         # or no height_ratios and bottom=0.1, top=0.9
@@ -521,7 +528,7 @@ class AnisocadoConstPSF(SemiAnalyticalPSF):
         im = kernel
         r_sky = pixel_scale * im.shape[0]
         ax.imshow(im, norm=LogNorm(), origin="lower",
-                  extent= [-r_sky, r_sky, -r_sky, r_sky], **kwargs)
+                  extent=[-r_sky, r_sky, -r_sky, r_sky], **kwargs)
         ax.set_aspect("equal")
         ax.set_xlabel("[arcsec]")
         ax.set_ylabel("[arcsec]")
@@ -535,7 +542,7 @@ class AnisocadoConstPSF(SemiAnalyticalPSF):
         im = kernel[y-r:y+r, x-r:x+r]
         r_sky = pixel_scale * im.shape[0]
         ax.imshow(im, norm=LogNorm(), origin="lower",
-                  extent= [-r_sky, r_sky, -r_sky, r_sky], **kwargs)
+                  extent=[-r_sky, r_sky, -r_sky, r_sky], **kwargs)
         ax.set_aspect("equal")
         ax.set_xlabel("[arcsec]")
         ax.set_ylabel("[arcsec]")
@@ -550,7 +557,8 @@ class AnisocadoConstPSF(SemiAnalyticalPSF):
         wfes = np.arange(hdr["NAXIS1"]) * hdr["CDELT1"] + hdr["CRVAL1"]
         waves = np.arange(hdr["NAXIS2"]) * hdr["CDELT2"] + hdr["CRVAL2"]
 
-        # TODO: Get unit dynamically? Then again, it's hardcoded elsewhere in this module...
+        # TODO: Get unit dynamically? Then again, it's hardcoded elsewhere in
+        #       this module...
         unit_str = u.Unit("um").to_string("latex")
         for strehl, wav in reversed(list(zip(data, waves))):
             ax.plot(wfes, strehl, label=f"{wav:.3f} {unit_str}")
@@ -589,22 +597,16 @@ class FieldConstantPSF(DiscretePSF):
 
         self.meta["z_order"] = [262, 662]
         self._waveset, self.kernel_indexes = pu.get_psf_wave_exts(
-                                              self._file, self.meta["wave_key"])
+            self._file, self.meta["wave_key"])
         self.current_layer_id = None
         self.current_ext = None
         self.current_data = None
         self.kernel = None
 
-    # def apply_to(self, fov, **kwargs):
-    #   Taken care of by PSF base class
-
-    # def fov_grid(self, which="waveset", **kwargs):
-    #   Taken care of by PSF base class
-
     def get_kernel(self, fov):
         """Find nearest wavelength and build PSF kernel from file"""
-        ii = pu.nearest_index(fov.wavelength, self._waveset)
-        ext = self.kernel_indexes[ii]
+        idx = pu.nearest_index(fov.wavelength, self._waveset)
+        ext = self.kernel_indexes[idx]
         if ext != self.current_layer_id:
             if fov.hdu.header["NAXIS"] == 3:
                 self.current_layer_id = ext
@@ -700,6 +702,8 @@ class FieldConstantPSF(DiscretePSF):
 
 class FieldVaryingPSF(DiscretePSF):
     """
+    TBA.
+
     Parameters
     ----------
     sub_pixel_flag : bool, optional
@@ -707,6 +711,7 @@ class FieldVaryingPSF(DiscretePSF):
         Default 1e-3. Level of flux conservation during rescaling of kernel
 
     """
+
     def __init__(self, **kwargs):
         # sub_pixel_flag and flux_accuracy are taken care of in PSF base class
         super().__init__(**kwargs)
@@ -723,6 +728,7 @@ class FieldVaryingPSF(DiscretePSF):
         self._strehl_imagehdu = None
 
     def apply_to(self, fov, **kwargs):
+        """See parent docstring."""
         # .. todo: add in field rotation
         # .. todo: add in 3D cubes
         # accept "full", "dit", "none"
@@ -735,14 +741,14 @@ class FieldVaryingPSF(DiscretePSF):
 
                 old_shape = fov.image.shape
 
-                # Get the kernels that cover this fov, and their respective masks.
-                # Kernels and masks are returned by .get_kernel as a list of tuples.
+                # Get kernels that cover this fov, and their respective masks.
+                # Kernels and masks returned by .get_kernel as list of tuples.
                 canvas = None
                 kernels_masks = self.get_kernel(fov)
                 for kernel, mask in kernels_masks:
 
                     # renormalise the kernel if needs be
-                    kernel[kernel<0.] = 0.
+                    kernel[kernel < 0.] = 0.
                     sum_kernel = np.sum(kernel)
                     if abs(sum_kernel - 1) > self.meta["flux_accuracy"]:
                         kernel /= sum_kernel
@@ -776,9 +782,6 @@ class FieldVaryingPSF(DiscretePSF):
 
         return fov
 
-    # def fov_grid(self, which="waveset"):
-    #   This is taken care of by the PSF base class
-
     def get_kernel(self, fov):
         # 0. get file extension
         # 1. pull out strehl map for fov header
@@ -787,7 +790,7 @@ class FieldVaryingPSF(DiscretePSF):
         # 4. if more than one, make masks for the fov on the fov pixel scale
         # 5. make list of tuples with kernel and mask
 
-        # find which file extension to use - keep a pointer in self.current_data
+        # find which file extension to use - keep pointer in self.current_data
         fov_wave = 0.5 * (fov.meta["wave_min"] + fov.meta["wave_max"])
         jj = pu.nearest_index(fov_wave, self._waveset)
         ext = self.kernel_indexes[jj]
@@ -828,7 +831,7 @@ class FieldVaryingPSF(DiscretePSF):
 
     @property
     def strehl_imagehdu(self):
-        """ The HDU containing the positional info for kernel layers """
+        """The HDU containing the positional info for kernel layers."""
         if self._strehl_imagehdu is None:
             ecat = self._file[0].header["ECAT"]
             if isinstance(self._file[ecat], fits.ImageHDU):

@@ -1,5 +1,5 @@
 """
-Electronic detector effects - related to detector readout
+Electronic detector effects - related to detector readout.
 
 Classes:
 - DetectorModePropertiesSetter - set parameters for readout mode
@@ -19,6 +19,7 @@ Functions:
 - make_ron_frame
 - pseudo_random_field
 """
+
 import logging
 
 import numpy as np
@@ -34,7 +35,7 @@ from .. import utils
 
 class DetectorModePropertiesSetter(Effect):
     """
-    Sets mode specific curr_sys properties for different detector readout modes
+    Set mode specific curr_sys properties for different detector readout modes.
 
     A little class (``DetectorModePropertiesSetter``) that allows different
     ``"!DET"`` properties to be set on the fly.
@@ -108,15 +109,15 @@ class DetectorModePropertiesSetter(Effect):
         return obj
 
     def list_modes(self):
-        """Return list of available detector modes"""
+        """Return list of available detector modes."""
         return utils.pretty_print_dict(self.mode_properties)
 
     def select_mode(self, obj, **kwargs):
-        """Automatically select detector mode based on image plane peak value
+        """Automatically select detector mode based on image plane peak value.
 
-        Select the mode with lowest readnoise that does not saturate the detector.
-        When all modes saturate, select the mode with the lowest saturation level
-        (peak to full_well).
+        Select the mode with lowest readnoise that does not saturate the
+        detector. When all modes saturate, select the mode with the lowest
+        saturation level (peak to full_well).
         """
         immax = np.max(obj.data)
         fillfrac = kwargs.get("fill_frac",
@@ -144,7 +145,7 @@ class DetectorModePropertiesSetter(Effect):
 
 class AutoExposure(Effect):
     """
-    Determine DIT and NDIT automatically from ImagePlane
+    Determine DIT and NDIT automatically from ImagePlane.
 
     DIT is determined such that the maximum value in the incident photon flux
     (including astronomical source, sky and thermal backgrounds) fills
@@ -170,6 +171,7 @@ class AutoExposure(Effect):
            fill_frac: "!OBS.auto_exposure.fill_frac"
 
     """
+
     def __init__(self, **kwargs):
         """
         The effect is the first detector effect, hence essentially operates
@@ -225,10 +227,8 @@ class AutoExposure(Effect):
 
 
 class SummedExposure(Effect):
-    """
-    Simulates a summed stack of ``ndit`` exposures
+    """Simulates a summed stack of ``ndit`` exposures."""
 
-    """
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         params = {"z_order": [860]}
@@ -249,10 +249,8 @@ class SummedExposure(Effect):
 
 
 class Bias(Effect):
-    """
-    Adds a constant bias level to readout
+    """Adds a constant bias level to readout."""
 
-    """
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         params = {"z_order": [855]}
@@ -322,7 +320,8 @@ class PoorMansHxRGReadoutNoise(Effect):
 
 
 class BasicReadoutNoise(Effect):
-    """Readout noise computed as: ron * sqrt(NDIT)"""
+    """Readout noise computed as: ron * sqrt(NDIT)."""
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.meta["z_order"] = [811]
@@ -449,10 +448,10 @@ class DarkCurrent(Effect):
 
 class LinearityCurve(Effect):
     """
-    Detector linearity effect
+    Detector linearity effect.
 
-    The detector linearity curve is set in terms of `incident` flux (e/s) and `measured`
-    detector values (ADU).
+    The detector linearity curve is set in terms of `incident` flux (e/s) and
+    `measured` detector values (ADU).
 
     Examples
     --------
@@ -477,6 +476,7 @@ class LinearityCurve(Effect):
             measured: [0, 77000, 77000]
 
     """
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         params = {"z_order": [840],
@@ -583,8 +583,6 @@ class UnequalBinnedImage(Effect):
             det._hdu.data = new_image.sum(axis=3).sum(axis=1)
 
         return det
-
-################################################################################
 
 
 def make_ron_frame(image_shape, noise_std, n_channels, channel_fraction,

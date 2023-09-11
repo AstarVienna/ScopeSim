@@ -1,5 +1,4 @@
 import logging
-from copy import deepcopy
 
 import numpy as np
 from astropy import units as u
@@ -7,13 +6,13 @@ from astropy.io import fits
 from astropy.table import Table, Column
 from synphot import SourceSpectrum, Empirical1D
 
-from scopesim import utils, rc
+from scopesim import utils
 from scopesim.optics import image_plane_utils as imp_utils
 
 
 def is_field_in_fov(fov_header, field, wcs_suffix=""):
     """
-    Returns True if Source.field footprint is inside the FieldOfView footprint
+    Return True if Source.field footprint is inside the FieldOfView footprint.
 
     Parameters
     ----------
@@ -29,7 +28,6 @@ def is_field_in_fov(fov_header, field, wcs_suffix=""):
     is_inside_fov : bool
 
     """
-
     if isinstance(field, fits.ImageHDU) and \
             field.header.get("BG_SRC") is not None:
         is_inside_fov = True
@@ -51,10 +49,10 @@ def is_field_in_fov(fov_header, field, wcs_suffix=""):
         ext_xsky, ext_ysky = imp_utils.calc_footprint(field_header, wcs_suffix)
         fov_xsky, fov_ysky = imp_utils.calc_footprint(fov_header, wcs_suffix)
 
-        is_inside_fov = min(ext_xsky) < max(fov_xsky) and \
-                        max(ext_xsky) > min(fov_xsky) and \
-                        min(ext_ysky) < max(fov_ysky) and \
-                        max(ext_ysky) > min(fov_ysky)
+        is_inside_fov = (min(ext_xsky) < max(fov_xsky) and
+                         max(ext_xsky) > min(fov_xsky) and
+                         min(ext_ysky) < max(fov_ysky) and
+                         max(ext_ysky) > min(fov_ysky))
 
     return is_inside_fov
 
@@ -79,7 +77,7 @@ def make_flux_table(source_tbl, src, wave_min, wave_max, area):
 
 def combine_table_fields(fov_header, src, field_indexes):
     """
-    Combines a list of Table objects into a single one bounded by the Header WCS
+    Combine list of Table objects into a single one bounded by the Header WCS.
 
     Parameters
     ----------
@@ -93,7 +91,6 @@ def combine_table_fields(fov_header, src, field_indexes):
     tbl : Table
 
     """
-
     fov_xsky, fov_ysky = imp_utils.calc_footprint(fov_header)
 
     x, y, ref, weight = [], [], [], []
@@ -110,8 +107,8 @@ def combine_table_fields(fov_header, src, field_indexes):
 
     x = np.array(x)
     y = np.array(y)
-    mask = np.array(x < max(fov_xsky)) * np.array(x > min(fov_xsky)) * \
-           np.array(y < max(fov_ysky)) * np.array(y > min(fov_ysky))
+    mask = (np.array(x < max(fov_xsky)) * np.array(x > min(fov_xsky)) *
+            np.array(y < max(fov_ysky)) * np.array(y > min(fov_ysky)))
 
     x = x[mask]
     y = y[mask]
@@ -128,7 +125,7 @@ def combine_table_fields(fov_header, src, field_indexes):
 def combine_imagehdu_fields(fov_header, src, fields_indexes, wave_min, wave_max,
                             area, wcs_suffix=""):
     """
-    Combines a list of ImageHDUs into a single one bounded by the Header WCS
+    Combine list of ImageHDUs into a single one bounded by the Header WCS.
 
     Parameters
     ----------
@@ -153,18 +150,18 @@ def combine_imagehdu_fields(fov_header, src, fields_indexes, wave_min, wave_max,
     canvas_hdu : fits.ImageHDU
 
     """
-
     image = np.zeros((fov_header["NAXIS2"], fov_header["NAXIS1"]))
     canvas_hdu = fits.ImageHDU(header=fov_header, data=image)
     spline_order = utils.from_currsys("!SIM.computing.spline_order")
-    pixel_area = fov_header["CDELT1"] * fov_header["CDELT2"] * \
-                 u.Unit(fov_header["CUNIT1"].lower()).to(u.arcsec) ** 2
+    pixel_area = (fov_header["CDELT1"] * fov_header["CDELT2"] *
+                  u.Unit(fov_header["CUNIT1"].lower()).to(u.arcsec) ** 2)
 
     for ii in fields_indexes:
         field = src.fields[ii]
         if isinstance(field, fits.ImageHDU):
             ref = field.header["SPEC_REF"]
-            flux = src.photons_in_range(wave_min, wave_max, area, indexes=[ref])
+            flux = src.photons_in_range(wave_min, wave_max, area,
+                                        indexes=[ref])
             image = np.zeros((fov_header["NAXIS2"], fov_header["NAXIS1"]))
             temp_hdu = fits.ImageHDU(header=fov_header, data=image)
 
@@ -185,7 +182,7 @@ def combine_imagehdu_fields(fov_header, src, fields_indexes, wave_min, wave_max,
 
 def sky2fp(header, xsky, ysky):
     """
-    Convert sky coordinates to image plane coordinated
+    Convert sky coordinates to image plane coordinated.
 
     Parameters
     ----------
@@ -200,16 +197,14 @@ def sky2fp(header, xsky, ysky):
         [mm] The coordinated on the image plane
 
     """
-
     xpix, ypix = imp_utils.val2pix(header, xsky, ysky)
     xdet, ydet = imp_utils.pix2val(header, xpix, ypix, "D")
-
     return xdet, ydet
 
 
 def extract_common_field(field, fov_volume):
     """
-    Extracts the overlapping parts of a field within a FOV volume
+    Extract the overlapping parts of a field within a FOV volume.
 
     Parameters
     ----------
@@ -237,7 +232,7 @@ def extract_common_field(field, fov_volume):
 
 def extract_area_from_table(table, fov_volume):
     """
-    Extracts the entries of a Table that fits inside the fov_volume
+    Extract the entries of a ``Table`` that fits inside the `fov_volume`.
 
     Parameters
     ----------
@@ -257,10 +252,10 @@ def extract_area_from_table(table, fov_volume):
     fov_xs = (fov_volume["xs"] * fov_unit).to(table["x"].unit)
     fov_ys = (fov_volume["ys"] * fov_unit).to(table["y"].unit)
 
-    mask = (table["x"].data >= fov_xs[0].value) * \
-           (table["x"].data <  fov_xs[1].value) * \
-           (table["y"].data >= fov_ys[0].value) * \
-           (table["y"].data <  fov_ys[1].value)
+    mask = ((table["x"].data >= fov_xs[0].value) *
+            (table["x"].data < fov_xs[1].value) *
+            (table["y"].data >= fov_ys[0].value) *
+            (table["y"].data < fov_ys[1].value))
     table_new = table[mask]
 
     return table_new
@@ -268,7 +263,7 @@ def extract_area_from_table(table, fov_volume):
 
 def extract_area_from_imagehdu(imagehdu, fov_volume):
     """
-    Extracts the part of a ImageHDU that fits inside the fov_volume
+    Extract the part of a ``ImageHDU`` that fits inside the `fov_volume`.
 
     Parameters
     ----------

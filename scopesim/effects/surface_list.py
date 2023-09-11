@@ -1,11 +1,11 @@
-from collections.abc import Collection
+"""TBA."""
 
 import numpy as np
 from astropy import units as u
 
 from .ter_curves import TERCurve
 from ..optics import radiometry_utils as rad_utils
-from ..optics.surface import PoorMansSurface, SpectralSurface
+from ..optics.surface import PoorMansSurface
 from ..utils import quantify, from_currsys, figure_factory
 
 
@@ -78,7 +78,6 @@ class SurfaceList(TERCurve):
 
     def get_throughput(self, start=0, end=None, rows=None):
         """Copied directly from radiometry_table."""
-
         if self.table is None:
             return None
         if end is None:
