@@ -821,11 +821,11 @@ class FieldVaryingPSF(DiscretePSF):
         # rescale the pixel scale of the kernel to match the fov images
         pix_ratio = fov_pixel_scale / kernel_pixel_scale
         if abs(pix_ratio - 1) > self.meta["flux_accuracy"]:
-            for ii in range(len(self.kernel)):
-                self.kernel[ii][0] = pu.rescale_kernel(self.kernel[ii][0], pix_ratio)
+            for ii, kern in enumerate(self.kernel):
+                self.kernel[ii][0] = pu.rescale_kernel(kern[0], pix_ratio)
 
-        for i in range(len(self.kernel)):
-            self.kernel[i][0] /= np.sum(self.kernel[i][0])
+        for i, kern in enumerate(self.kernel):
+            self.kernel[i][0] /= np.sum(kern[0])
 
         return self.kernel
 
