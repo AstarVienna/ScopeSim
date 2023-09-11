@@ -1,15 +1,12 @@
 """
-Effect for mapping spectral cubes to the detector plane
+Effect for mapping spectral cubes to the detector plane.
 
 The Effect is called `SpectralTraceList`, it applies a list of
 `spectral_trace_list_utils.SpectralTrace` objects to a `FieldOfView`.
 """
 
-from pathlib import Path
 import logging
 from itertools import cycle
-
-import numpy as np
 
 from astropy.io import fits
 from astropy.table import Table
@@ -24,15 +21,15 @@ from ..base_classes import FieldOfViewBase, FOVSetupBase
 
 class SpectralTraceList(Effect):
     """
-    List of spectral trace geometries for the detector plane
+    List of spectral trace geometries for the detector plane.
 
     Should work in concert with an ApertureList (or ApertureMask) object and a
     DetectorList object
 
     Spectral trace patterns are to be kept in a ``fits.HDUList`` with one or
     more ``fits.BinTableHDU`` extensions, each one describing the geometry of a
-    single trace. The first extension should be a ``BinTableHDU`` connecting the
-    traces to the correct ``Aperture`` and ``ImagePlane`` objects.
+    single trace. The first extension should be a ``BinTableHDU`` connecting
+    the traces to the correct ``Aperture`` and ``ImagePlane`` objects.
 
     The ``fits.HDUList`` objects can be loaded using one of these two keywords:
 
@@ -76,7 +73,7 @@ class SpectralTraceList(Effect):
     - EXTNAME : must be identical to the `description` in EXT 1
 
     Recommended header keywords:
-    - DISPDIR : 'x' or 'y' : dispersion axis. If not present, Scopesim tries
+    - DISPDIR : "x" or "y" : dispersion axis. If not present, Scopesim tries
       to determine this automatically; this may be unreliable in some cases.
 
     Required Table columns:
@@ -86,13 +83,14 @@ class SpectralTraceList(Effect):
     - y : float : [mm] : y position of aperture image on focal plane
 
     """
+
     _class_params = {"x_colname": "x",
                      "y_colname": "y",
                      "s_colname": "s",
                      "wave_colname": "wavelength",
                      "col_number_start": 0,
                      "center_on_wave_mid": False,
-                     "dwave": 0.002,  # [um] for finding the best fit dispersion
+                     "dwave": 0.002,  # [um] for finding best fit dispersion
                      "invalid_value": None,  # for dodgy trace file values
                      }
 
@@ -129,7 +127,7 @@ class SpectralTraceList(Effect):
             self.make_spectral_traces()
 
     def make_spectral_traces(self):
-        """Returns a dictionary of spectral traces read in from a file"""
+        """Return a dictionary of spectral traces read in from a file."""
         self.ext_data = self._file[0].header["EDATA"]
         self.ext_cat = self._file[0].header["ECAT"]
         self.catalog = Table(self._file[self.ext_cat].data)
@@ -145,7 +143,7 @@ class SpectralTraceList(Effect):
 
     def apply_to(self, obj, **kwargs):
         """
-        Interface between FieldOfView and SpectralTraceList
+        Interface between ``FieldOfView`` and ``SpectralTraceList``.
 
         This is called twice:
         1. During setup of the required FieldOfView objects, the
@@ -154,7 +152,7 @@ class SpectralTraceList(Effect):
         2. During "observation" the method is passed a single FieldOfView
         object and applies the mapping to the image plane to it.
         The FieldOfView object is associated to one SpectralTrace from the
-        list, identified by meta['trace_id'].
+        list, identified by meta["trace_id"].
         """
         if isinstance(obj, FOVSetupBase):
             # Setup of FieldOfView object
@@ -166,15 +164,15 @@ class SpectralTraceList(Effect):
                 if "x_min" in vol:
                     x_edges = [vol["x_min"], vol["x_max"]]
                     y_edges = [vol["y_min"], vol["y_max"]]
-                    extracted_vols = obj.extract(axes=["wave", "x", "y"],
-                                                 edges=(wave_edges,
-                                                        x_edges,
-                                                        y_edges),
-                                                 aperture_id=vol["aperture_id"])
+                    extracted_vols = obj.extract(
+                        axes=["wave", "x", "y"],
+                        edges=(wave_edges, x_edges, y_edges),
+                        aperture_id=vol["aperture_id"])
                 else:
-                    extracted_vols = obj.extract(axes=["wave"],
-                                                 edges=(wave_edges, ),
-                                                 aperture_id=vol["aperture_id"])
+                    extracted_vols = obj.extract(
+                        axes=["wave"],
+                        edges=(wave_edges, ),
+                        aperture_id=vol["aperture_id"])
 
                 for ex_vol in extracted_vols:
                     ex_vol["meta"].update(vol)
@@ -201,10 +199,9 @@ class SpectralTraceList(Effect):
 
         return obj
 
-
     @property
     def footprint(self):
-        """Return the footprint of the entire SpectralTraceList"""
+        """Return the footprint of the entire SpectralTraceList."""
         xfoot, yfoot = [], []
         for spt in self.spectral_traces.values():
             xtrace, ytrace = spt.footprint()
@@ -226,7 +223,7 @@ class SpectralTraceList(Effect):
 
     def rectify_traces(self, hdulist, xi_min=None, xi_max=None, interps=None,
                        **kwargs):
-        """Create rectified 2D spectra for all traces in the list
+        """Create rectified 2D spectra for all traces in the list.
 
         This method creates an HDU list with one extension per spectral
         trace, i.e. it essentially treats all traces independently.
@@ -244,9 +241,9 @@ class SpectralTraceList(Effect):
            scopesim. For the time being, these limits *must* be provided by
            the user.
         interps :  list of interpolation functions
-           If provided, there must be one for each image extension in `hdulist`.
-           The functions go from pixels to the images and can be created with,
-           e.g., RectBivariateSpline.
+           If provided, there must be one for each image extension in
+           `hdulist`. The functions go from pixels to the images and can be
+           created with, e.g. ``RectBivariateSpline``.
         """
         try:
             inhdul = fits.open(hdulist)
@@ -265,8 +262,8 @@ class SpectralTraceList(Effect):
         filtcurve = FilterCurve(
             filter_name=filter_name,
             filename_format=from_currsys("!INST.filter_file_format"))
-        filtwaves = filtcurve.table['wavelength']
-        filtwave = filtwaves[filtcurve.table['transmission'] > 0.01]
+        filtwaves = filtcurve.table["wavelength"]
+        filtwave = filtwaves[filtcurve.table["transmission"] > 0.01]
         wave_min, wave_max = min(filtwave), max(filtwave)
         logging.info("Full wavelength range: %.02f .. %.02f um",
                      wave_min, wave_max)
@@ -286,7 +283,6 @@ class SpectralTraceList(Effect):
                 """)
                 return None
 
-
         bin_width = kwargs.get("bin_width", None)
 
         if interps is None:
@@ -294,9 +290,9 @@ class SpectralTraceList(Effect):
             interps = make_image_interpolations(hdulist)
 
         pdu = fits.PrimaryHDU()
-        pdu.header['FILETYPE'] = "Rectified spectra"
-        #pdu.header['INSTRUME'] = inhdul[0].header['HIERARCH ESO OBS INSTRUME']
-        #pdu.header['FILTER'] = from_currsys("!OBS.filter_name_fw1")
+        pdu.header["FILETYPE"] = "Rectified spectra"
+        # pdu.header["INSTRUME"] = inhdul[0].header["HIERARCH ESO OBS INSTRUME"]
+        # pdu.header["FILTER"] = from_currsys("!OBS.filter_name_fw1")
         outhdul = fits.HDUList([pdu])
 
         for i, trace_id in enumerate(self.spectral_traces, start=1):
@@ -314,8 +310,8 @@ class SpectralTraceList(Effect):
         return outhdul
 
     def rectify_cube(self, hdulist):
-        """Rectify traces and combine into a cube"""
-        raise(NotImplementedError)
+        """Rectify traces and combine into a cube."""
+        raise NotImplementedError()
 
     def plot(self, wave_min=None, wave_max=None, axes=None, **kwargs):
         """Plot every spectral trace in the spectral trace list.
@@ -355,11 +351,10 @@ class SpectralTraceList(Effect):
 
         return fig
 
-    def __repr__(self):
-        # "\n".join([spt.__repr__() for spt in self.spectral_traces])
+    def __repr__(self) -> str:
         return f"{self.__class__.__name__}(**{self.meta!r})"
 
-    def __str__(self):
+    def __str__(self) -> str:
         msg = (f"SpectralTraceList: \"{self.meta.get('name')}\" : "
                f"{len(self.spectral_traces)} traces")
         return msg
@@ -373,7 +368,7 @@ class SpectralTraceList(Effect):
 
 class SpectralTraceListWheel(Effect):
     """
-    A Wheel-Effect object for selecting between multiple gratings/grisms
+    A Wheel-Effect object for selecting between multiple gratings/grisms.
 
     See ``SpectralTraceList`` for the trace file format description.
 
@@ -450,10 +445,11 @@ class SpectralTraceListWheel(Effect):
         for name in from_currsys(self.meta["trace_list_names"]):
             kwargs["name"] = name
             fname = str(path).format(name)
-            self.trace_lists[name] = SpectralTraceList(filename=fname, **kwargs)
+            self.trace_lists[name] = SpectralTraceList(filename=fname,
+                                                       **kwargs)
 
     def apply_to(self, obj, **kwargs):
-        """Use apply_to of current trace list"""
+        """Use apply_to of current trace list."""
         return self.current_trace_list.apply_to(obj, **kwargs)
 
     @property

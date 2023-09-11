@@ -5,10 +5,11 @@ from ..base_classes import PoorMansHeader
 
 class MonochromeTraceCurve:
     """
-    Contains coordinates along a monochromatic section of a spectral trace
+    Contains coordinates along a monochromatic section of a spectral trace.
 
     Used to generate detector plane position WCS info for FOVs in spectral mode
     """
+
     def __init__(self, x, y, s, wave_min, wave_max, **kwargs):
         self.wave_min = wave_min
         self.wave_max = wave_max

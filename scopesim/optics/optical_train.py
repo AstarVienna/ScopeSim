@@ -1,15 +1,11 @@
 import copy
 import sys
-from copy import deepcopy
-from shutil import copyfileobj
 from pathlib import Path
 
 from datetime import datetime
 
 import numpy as np
 from scipy.interpolate import interp1d
-from astropy.io import fits
-from astropy.wcs import WCS
 from astropy import units as u
 
 from synphot.units import PHOTLAM
@@ -20,17 +16,14 @@ from .image_plane import ImagePlane
 from ..commands.user_commands import UserCommands
 from ..detector import DetectorArray
 from ..effects import ExtraFitsKeywords
-from ..source.source import Source
 from ..utils import from_currsys
 from ..version import version
-from .. import effects
 from .. import rc
-from . import fov_utils as fu
 
 
 class OpticalTrain:
     """
-    The main class for controlling a simulation
+    The main class for controlling a simulation.
 
     Parameters
     ----------
@@ -65,8 +58,8 @@ class OpticalTrain:
 
          >>> opt["dark_current"].include = False
 
-    Data used by an Effect object is contained in the ``.data`` attribute, while
-    other information is contained in the ``.meta`` attribute::
+    Data used by an Effect object is contained in the ``.data`` attribute,
+    while other information is contained in the ``.meta`` attribute::
 
         >>> opt["dark_current"].data
         >>> opt["dark_current"].meta
@@ -82,6 +75,7 @@ class OpticalTrain:
         >>> opt["dark_current"] = {"value": 0.75, "dit": 30}
 
     """
+
     def __init__(self, cmds=None):
         self.cmds = cmds
         self._description = self.__repr__()
@@ -97,14 +91,13 @@ class OpticalTrain:
 
     def load(self, user_commands):
         """
-        (Re)Loads an OpticalTrain with a new set of UserCommands
+        (Re)Load an OpticalTrain with a new set of UserCommands.
 
         Parameters
         ----------
         user_commands : UserCommands or str
 
         """
-
         if isinstance(user_commands, str):
             user_commands = UserCommands(use_instrument=user_commands)
         elif isinstance(user_commands, UserCommands):
@@ -121,7 +114,7 @@ class OpticalTrain:
 
     def update(self, **kwargs):
         """
-        Update the user-defined parameters and remake the main internal classes
+        Update the user-defined parameters and remake main internal classes.
 
         Parameters
         ----------
@@ -138,10 +131,9 @@ class OpticalTrain:
         self.detector_arrays = [DetectorArray(det_list, **kwargs)
                                 for det_list in opt_man.detector_setup_effects]
 
-
     def observe(self, orig_source, update=True, **kwargs):
         """
-        Main controlling method for observing ``Source`` objects
+        Main controlling method for observing ``Source`` objects.
 
         Parameters
         ----------
@@ -204,10 +196,9 @@ class OpticalTrain:
         self._last_fovs = fovs
         self._last_source = source
 
-
     def prepare_source(self, source):
         """
-        Prepare source for observation
+        Prepare source for observation.
 
         The method is currently applied to cube fields only.
         The source data are converted to internally used units (PHOTLAM).
@@ -284,7 +275,7 @@ class OpticalTrain:
 
     def readout(self, filename=None, **kwargs):
         """
-        Produces detector readouts for the observed image
+        Produce detector readouts for the observed image.
 
         Parameters
         ----------
@@ -301,7 +292,6 @@ class OpticalTrain:
         - Apply detector plane (0D, 2D) effects - z_order = 500..599
 
         """
-
         hduls = []
         for i, detector_array in enumerate(self.detector_arrays):
             array_effects = self.optics_manager.detector_array_effects
@@ -331,8 +321,7 @@ class OpticalTrain:
         return hduls
 
     def write_header(self, hdulist):
-        """Writes meaningful header to simulation product"""
-
+        """Write meaningful header to simulation product."""
         # Primary hdu
         pheader = hdulist[0].header
         pheader["DATE"] = datetime.now().isoformat(timespec="seconds")
@@ -470,13 +459,12 @@ class OpticalTrain:
             self.cmds.update(packages=self.default_yamls[0]["packages"])
         rc.__currsys__ = self.cmds
 
-
     def shutdown(self):
         """
         Shut down the instrument.
 
-        This method closes all open file handles and should be called when the optical train
-        is no longer needed.
+        This method closes all open file handles and should be called when the
+        optical train is no longer needed.
         """
         for effect_name in self.effects["name"]:
             try:
@@ -498,7 +486,7 @@ class OpticalTrain:
         return self._description
 
     def _repr_pretty_(self, p, cycle):
-        """For ipython"""
+        """For ipython."""
         if cycle:
             p.text(f"{self.__class__.__name__}(...)")
         else:

@@ -61,7 +61,7 @@ from ..base_classes import FOVSetupBase
 
 class FOVManager:
     """
-    A class to manage the (monochromatic) image windows covering the target
+    A class to manage the (monochromatic) image windows covering the target.
 
     Parameters
     ----------
@@ -73,6 +73,7 @@ class FOVManager:
     All observation parameters as passed from UserCommands
 
     """
+
     def __init__(self, effects=None, **kwargs):
         self.meta = {"area": "!TEL.area",
                      "pixel_scale": "!INST.pixel_scale",
@@ -104,14 +105,13 @@ class FOVManager:
 
     def generate_fovs_list(self):
         """
-        Generates a series of FieldOfViews objects based self.effects
+        Generate a series of FieldOfViews objects based self.effects.
 
         Returns
         -------
         fovs : list of FieldOfView objects
 
         """
-
         # Ask all the effects to alter the volume_
         params = {"pixel_scale": self.meta["pixel_scale"]}
 
@@ -180,7 +180,7 @@ class FOVManager:
 
 class FovVolumeList(FOVSetupBase, MutableSequence):
     """
-    List of FOV volumes for FOVManager
+    List of FOV volumes for FOVManager.
 
     Units
     -----
@@ -388,7 +388,7 @@ class FovVolumeList(FOVSetupBase, MutableSequence):
         self.volumes.insert(index, value)
 
     def write_string(self, stream: TextIO) -> None:
-        """Write formatted string representation to I/O stream"""
+        """Write formatted string representation to I/O stream."""
         n_vol = len(self.volumes)
         stream.write(f"FovVolumeList with {n_vol} volumes:")
         max_digits = len(str(n_vol))

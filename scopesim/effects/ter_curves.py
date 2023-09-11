@@ -1,6 +1,6 @@
-"""Transmission, emissivity, reflection curves"""
+"""Transmission, emissivity, reflection curves."""
+
 import logging
-from pathlib import Path
 from collections.abc import Collection
 
 import numpy as np
@@ -22,7 +22,7 @@ from ..utils import from_currsys, quantify, check_keys, find_file, \
 
 class TERCurve(Effect):
     """
-    Transmission, Emissivity, Reflection Curve
+    Transmission, Emissivity, Reflection Curve.
 
     Must contain a wavelength column, and one or more of the following:
     ``transmission``, ``emissivity``, ``reflection``.
@@ -67,6 +67,7 @@ class TERCurve(Effect):
         3.0         0.9             0.1
 
     """
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         params = {"z_order": [10, 110, 510],
@@ -234,35 +235,36 @@ class AtmosphericTERCurve(TERCurve):
 
 
 class SkycalcTERCurve(AtmosphericTERCurve):
+    """
+    Retrieve an atmospheric spectrum from ESO's skycalc server.
+
+    kwarg parameters
+    ----------------
+    skycalc parameters can be found by calling::
+
+        >>> import skycalc_ipy
+        >>> skycalc_ipy.SkyCalc().keys
+
+    .. note:: Different to ``skycalc_ipy``, `wmin` and `wmax` must be given in
+        units of ``um``
+
+    Examples
+    --------
+    ::
+
+        - name : skycalc_background
+          class : SkycalcTERCurve
+          kwargs :
+            wunit : "!SIM.spectral.wave_unit"
+            wmin : "!SIM.spectral.wave_min"
+            wmax : "!SIM.spectral.wave_max"
+            wdelta : 0.0001     # 0.1nm bin width
+            outer : 1
+            outer_unit : "m"
+
+    """
+
     def __init__(self, **kwargs):
-        """
-        Retrieves an atmospheric spectrum from ESO's skycalc server
-
-        kwarg parameters
-        ----------------
-        skycalc parameters can be found by calling::
-
-            >>> import skycalc_ipy
-            >>> skycalc_ipy.SkyCalc().keys
-
-        .. note:: Different to skycalc_ipy, wmin and wmax must be given in units
-            of ``um``
-
-        Examples
-        --------
-        ::
-
-            - name : skycalc_background
-              class : SkycalcTERCurve
-              kwargs :
-                wunit : "!SIM.spectral.wave_unit"
-                wmin : "!SIM.spectral.wave_min"
-                wmax : "!SIM.spectral.wave_max"
-                wdelta : 0.0001     # 0.1nm bin width
-                outer : 1
-                outer_unit : "m"
-
-        """
         super().__init__(**kwargs)
         self.meta["z_order"] = [112, 512]
         self.meta["use_local_skycalc_file"] = False
@@ -352,6 +354,8 @@ class QuantumEfficiencyCurve(TERCurve):
 
 class FilterCurve(TERCurve):
     """
+    Descripton TBA.
+
     Parameters
     ----------
     position : int, optional
@@ -371,6 +375,7 @@ class FilterCurve(TERCurve):
     also be a !bang string for a ``__currsys__`` entry: ``"!INST.filter_name"``
 
     """
+
     def __init__(self, **kwargs):
         if not np.any([key in kwargs for key in ["filename", "table",
                                                  "array_dict"]]):
@@ -379,14 +384,14 @@ class FilterCurve(TERCurve):
                 file_format = from_currsys(kwargs["filename_format"])
                 kwargs["filename"] = file_format.format(filt_name)
             else:
-                raise ValueError("FilterCurve must be passed one of (`filename`"
-                                 " `array_dict`, `table`) or both "
+                raise ValueError("FilterCurve must be passed one of "
+                                 "(`filename`, `array_dict`, `table`) or both "
                                  f"(`filter_name`, `filename_format`): {kwargs}")
 
         super().__init__(**kwargs)
         if self.table is None:
-            raise ValueError("Could not initialise filter. Either filename not "
-                             "found, or array are not compatible")
+            raise ValueError("Could not initialise filter. Either filename "
+                             "not found, or array are not compatible")
 
         params = {"minimum_throughput": "!SIM.spectral.minimum_throughput",
                   "action": "transmission",
@@ -416,8 +421,8 @@ class FilterCurve(TERCurve):
                 wave_edges = [min(wave[valid_waves].value),
                               max(wave[valid_waves].value)] * u.um
             else:
-                raise ValueError("No transmission found above the threshold {} "
-                                 "in this wavelength range {}. Did you open "
+                raise ValueError("No transmission found above the threshold {}"
+                                 " in this wavelength range {}. Did you open "
                                  "the shutter?"
                                  "".format(self.meta["minimum_throughput"],
                                            [self.meta["wave_min"],
@@ -457,7 +462,7 @@ class FilterCurve(TERCurve):
 
 class TopHatFilterCurve(FilterCurve):
     """
-    A simple Top-Hat filter profile
+    A simple Top-Hat filter profile.
 
     Parameters
     ----------
@@ -484,6 +489,7 @@ class TopHatFilterCurve(FilterCurve):
 
 
     """
+
     def __init__(self, **kwargs):
         required_keys = ["transmission", "blue_cutoff", "red_cutoff"]
         check_keys(kwargs, required_keys, action="error")
@@ -500,8 +506,7 @@ class TopHatFilterCurve(FilterCurve):
 
         tbl = Table(names=["wavelength", "transmission"],
                     data=[waveset, transmission])
-        super().__init__(table=tbl,
-                         wavelength_unit="um",
+        super().__init__(table=tbl, wavelength_unit="um",
                          action="transmission")
         self.meta.update(kwargs)
 
@@ -517,7 +522,7 @@ class DownloadableFilterCurve(FilterCurve):
 
 class SpanishVOFilterCurve(FilterCurve):
     """
-    Pulls a filter transmission curve down from the Spanish VO filter service
+    Pulls a filter transmission curve down from the Spanish VO filter service.
 
     Parameters
     ----------
@@ -537,6 +542,7 @@ class SpanishVOFilterCurve(FilterCurve):
             filter_name : Ks
 
     """
+
     def __init__(self, **kwargs):
         required_keys = ["observatory", "instrument", "filter_name"]
         check_keys(kwargs, required_keys, action="error")
@@ -551,7 +557,7 @@ class SpanishVOFilterCurve(FilterCurve):
 
 
 class FilterWheelBase(Effect):
-    """Base class for Filter Wheels"""
+    """Base class for Filter Wheels."""
 
     required_keys = set()
     _current_str = "current_filter"
@@ -570,14 +576,14 @@ class FilterWheelBase(Effect):
         self.filters = {}
 
     def apply_to(self, obj, **kwargs):
-        """Use apply_to of current filter"""
+        """Use apply_to of current filter."""
         return self.current_filter.apply_to(obj, **kwargs)
 
     def fov_grid(self, which="waveset", **kwargs):
         return self.current_filter.fov_grid(which=which, **kwargs)
 
     def change_filter(self, filtername=None):
-        """Change the current filter"""
+        """Change the current filter."""
         if filtername in self.filters.keys():
             self.meta["current_filter"] = filtername
         else:
@@ -585,10 +591,10 @@ class FilterWheelBase(Effect):
 
     def add_filter(self, newfilter, name=None):
         """
-        Add a filter to the FilterWheel
+        Add a filter to the FilterWheel.
 
         Parameters
-        ==========
+        ----------
         newfilter : FilterCurve
         name : string
            Name to be used for the new filter. If `None` a name from
@@ -634,7 +640,6 @@ class FilterWheelBase(Effect):
             fig = axes.figure
             _guard_plot_axes(which, axes)
 
-
         for ter, ax in zip(which, axes):
             for name, _filter in self.filters.items():
                 _filter.plot(which=ter, wavelength=wavelength, axes=ax,
@@ -659,7 +664,7 @@ class FilterWheelBase(Effect):
 
 class FilterWheel(FilterWheelBase):
     """
-    This wheel holds a selection of predefined filters.
+    Wheel holding a selection of predefined filters.
 
     Examples
     --------
@@ -694,7 +699,7 @@ class FilterWheel(FilterWheelBase):
 
 class TopHatFilterWheel(FilterWheelBase):
     """
-    A selection of top-hat filter curves as defined in the input lists
+    A selection of top-hat filter curves as defined in the input lists.
 
     Parameters
     ----------
@@ -756,7 +761,7 @@ class TopHatFilterWheel(FilterWheelBase):
 
 class SpanishVOFilterWheel(FilterWheelBase):
     """
-    A FilterWheel that loads all the filters from the Spanish VO service
+    A FilterWheel that loads all the filters from the Spanish VO service.
 
     .. warning::
        This use ``astropy.download_file(..., cache=True)``.
@@ -828,12 +833,13 @@ class SpanishVOFilterWheel(FilterWheelBase):
 
 class PupilTransmission(TERCurve):
     """
-    Wavelength-independent transmission curve
+    Wavelength-independent transmission curve.
 
     Use this class to describe a cold stop or pupil mask that is
     characterised by "grey" transmissivity.
     The emissivity is set to zero, assuming that the mask is cold.
     """
+
     def __init__(self, transmission, **kwargs):
         self.params = {"wave_min": "!SIM.spectral.wave_min",
                        "wave_max": "!SIM.spectral.wave_max"}
@@ -852,8 +858,7 @@ class PupilTransmission(TERCurve):
 
 class ADCWheel(Effect):
     """
-    This wheel holds a selection of predefined atmospheric dispersion
-    correctors.
+    Wheel holding a selection of predefined atmospheric dispersion correctors.
 
     Example
     -------
@@ -892,11 +897,11 @@ class ADCWheel(Effect):
         self.table = self.get_table()
 
     def apply_to(self, obj, **kwargs):
-        """Use apply_to of current adc"""
+        """Use ``apply_to`` of current ADC."""
         return self.current_adc.apply_to(obj, **kwargs)
 
     def change_adc(self, adcname=None):
-        """Change the current ADC"""
+        """Change the current ADC."""
         if not adcname or adcname in self.adcs.keys():
             self.meta["current_adc"] = adcname
             self.include = adcname
@@ -905,7 +910,7 @@ class ADCWheel(Effect):
 
     @property
     def current_adc(self):
-        """Return the currently used ADC"""
+        """Return the currently used ADC."""
         curradc = from_currsys(self.meta["current_adc"])
         if not curradc:
             return False
@@ -915,7 +920,7 @@ class ADCWheel(Effect):
         return getattr(self.current_adc, item)
 
     def get_table(self):
-        """Create a table of ADCs with maximum throughput"""
+        """Create a table of ADCs with maximum throughput."""
         names = list(self.adcs.keys())
         adcs = self.adcs.values()
         tmax = np.array([adc.data["transmission"].max() for adc in adcs])

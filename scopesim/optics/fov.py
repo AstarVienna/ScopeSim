@@ -1,5 +1,5 @@
-"""Defines FieldOfView class"""
-import logging
+"""Defines FieldOfView class."""
+
 from copy import deepcopy
 from itertools import chain
 
@@ -141,7 +141,7 @@ class FieldOfView(FieldOfViewBase):
 
     def view(self, hdu_type="image", sub_pixel=None, use_photlam=None):
         """
-        Forces the self.fields to be viewed as a single object
+        Force the self.fields to be viewed as a single object.
 
         Parameters
         ----------
@@ -228,7 +228,7 @@ class FieldOfView(FieldOfViewBase):
             weights = np.array(field["weight"])
             # TODO: could do grouping of table with both columns??
             for ref in set(refs):
-                weight = np.sum(weights, where=refs==ref)
+                weight = np.sum(weights, where=refs == ref)
                 yield self._evaluate_spectrum_with_weight(ref, waveset, weight)
 
     def _make_spectrum_backfields(self, waveset):
@@ -239,6 +239,8 @@ class FieldOfView(FieldOfViewBase):
 
     def make_spectrum(self):
         """
+        TBA.
+
         This is needed for when we do incoherent MOS instruments.
         Each fibre doesn't care about the spatial information.
 
@@ -328,7 +330,9 @@ class FieldOfView(FieldOfViewBase):
 
     def make_image_hdu(self, use_photlam=False):
         """
-        Used for imaging
+        TBA.
+
+        Used for imaging.
 
         Output image units are ph s-1 pixel-1
 
@@ -479,6 +483,8 @@ class FieldOfView(FieldOfViewBase):
 
     def make_cube_hdu(self):
         """
+        TBA.
+
         Used for IFUs, slit spectrographs, and coherent MOSs (e.g.KMOS)
 
         Returned cube units are ``ph s-1 voxel-1``

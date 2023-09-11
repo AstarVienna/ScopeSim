@@ -13,17 +13,21 @@ class Shift3D(Effect):
         super().__init__(**kwargs)
         params = {"z_order": [30, 230],
                   "report_plot_include": True,
-                  "report_table_include": False,}
+                  "report_table_include": False,
+                  }
         self.meta.update(params)
         self.meta.update(kwargs)
 
     def apply_to(self, obj, **kwargs):
+        """See parent docstring."""
         return obj
 
     def fov_grid(self, which="shifts", **kwargs):
+        """See parent docstring."""
         if which == "shifts":
             col_names = ["wavelength", "dx", "dy"]
-            waves, dx, dy = [self.get_table(**kwargs)[col] for col in col_names]
+            waves, dx, dy = [self.get_table(**kwargs)[col]
+                             for col in col_names]
             return waves, dx, dy
         return None
 
@@ -39,23 +43,23 @@ class Shift3D(Effect):
         return tbl
 
     def plot(self):
-        fig, ax = figure_factory()
+        fig, axes = figure_factory()
 
         tbl = self.get_table()
-        pnts = ax.scatter(x=tbl["dx"], y=tbl["dy"], c=tbl["wavelength"])
+        pnts = axes.scatter(x=tbl["dx"], y=tbl["dy"], c=tbl["wavelength"])
         fig.colorbar(pnts)
-        ax.set_xlabel(f"dx [{quantify(tbl['dx'], u.arcsec).unit}]")
-        ax.set_ylabel(f"dy [{quantify(tbl['dy'], u.arcsec).unit}]")
-        ax.axvline(0, ls=":")
-        ax.axhline(0, ls=":")
-        # ax.set_aspect("equal")
+        axes.set_xlabel(f"dx [{quantify(tbl['dx'], u.arcsec).unit}]")
+        axes.set_ylabel(f"dy [{quantify(tbl['dy'], u.arcsec).unit}]")
+        axes.axvline(0, ls=":")
+        axes.axhline(0, ls=":")
+        # axes.set_aspect("equal")
 
         return fig
 
 
 class AtmosphericDispersion(Shift3D):
     """
-    Used to generate the wavelength bins based on shifts due to the atmosphere
+    Used to generate the wavelength bins based on shifts due to the atmosphere.
 
     Doesn't contain an ``apply_to`` function, but provides information through
     the ``fov_grid`` function.
@@ -92,6 +96,7 @@ class AtmosphericDispersion(Shift3D):
         atmospheric dispersion curve
 
     """
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         params = {"z_order": [231],
@@ -109,7 +114,7 @@ class AtmosphericDispersion(Shift3D):
 
     def get_table(self, **kwargs):
         """
-        Called by the fov_grid method of Shift3D
+        Called by the fov_grid method of Shift3D.
 
         Returns
         -------
@@ -123,7 +128,6 @@ class AtmosphericDispersion(Shift3D):
         Success! Returns the same values as:
         http://gtc-phase2.gtc.iac.es/science/astroweb/atmosRefraction.php
         """
-
         if len(kwargs) > 0:
             self.meta.update(kwargs)
 
@@ -148,19 +152,20 @@ class AtmosphericDispersion(Shift3D):
 
 
 class AtmosphericDispersionCorrection(Shift3D):
+    """
+    Alters the position on the detector for a FOV object (WCS_prefix="D").
+
+    Only acts on FOVs during the main effects loop in OpticalTrain.
+    For the sake of computational efficiency, the ADC can be instructed to
+    counteract the atmospheric diffraction during the OpticalTrain setup
+    phase, by passing the kwarg: ``quick_adc=True``
+
+    Parameters
+    ----------
+    kwargs
+    """
+
     def __init__(self, **kwargs):
-        """
-        Alters the position on the detector for a FOV object (WCS_prefix="D")
-
-        Only acts on FOVs during the main effects loop in OpticalTrain.
-        For the sake of computational efficiency, the ADC can be instructed to
-        counteract the atmospheric diffraction during the OpticalTrain setup
-        phase, by passing the kwarg: ``quick_adc=True``
-
-        Parameters
-        ----------
-        kwargs
-        """
         super().__init__(**kwargs)
         self.meta["z_order"] = [632]
         if "quick_adc" in self.meta and self.meta["quick_adc"] is True:
@@ -178,6 +183,7 @@ class AtmosphericDispersionCorrection(Shift3D):
             self.table = self.get_table()
 
     def apply_to(self, fov, **kwargs):
+        """See parent docstring."""
         # .. todo:: Currently applying shift with pixel_scale to CRPIX-D
         # .. todo:: Change this to be applying to CRVAL-D using plate_scale
         # get mid wavelength of fov
@@ -188,12 +194,12 @@ class AtmosphericDispersionCorrection(Shift3D):
 
         if isinstance(fov, self.apply_to_classes):
             self.meta = from_currsys(self.meta)
-            atmo_params = {"z0":        airmass2zendist(self.meta["airmass"]),
-                           "temp":      self.meta["temperature"],  # in degC
-                           "rel_hum":   self.meta["humidity"] * 100,  # in %
-                           "pres":      self.meta["pressure"] * 1000, # in mbar
-                           "lat":       self.meta["latitude"],  # in deg
-                           "h":         self.meta["altitude"]}  # in m
+            atmo_params = {"z0": airmass2zendist(self.meta["airmass"]),
+                           "temp": self.meta["temperature"],  # in degC
+                           "rel_hum": self.meta["humidity"] * 100,  # in %
+                           "pres": self.meta["pressure"] * 1000,  # in mbar
+                           "lat": self.meta["latitude"],  # in deg
+                           "h": self.meta["altitude"]}  # in m
             fov_wave_mid = quantify(fov.wavelength, u.um).value
             # .. todo:: why are we comparing to shift_obs. Is this static?
             obs_wave_mid = self.meta["wave_mid"]
@@ -202,7 +208,7 @@ class AtmosphericDispersionCorrection(Shift3D):
             shift_rel_arcsec = shift_fov - shift_obs
             shift_rel_pixel = shift_rel_arcsec / self.meta["pixel_scale"]
 
-            # this assumes a one-to-one mapping of sky coords to detector coords
+            # this assumes one-to-one mapping of sky coords to detector coords
             # this won't work if there is appreciable distortion in the optics
             # .. todo:: think about this
             pup_ang = self.meta["pupil_angle"]
@@ -215,6 +221,7 @@ class AtmosphericDispersionCorrection(Shift3D):
         return fov
 
     def fov_grid(self, which="shifts", **kwargs):
+        """See parent docstring."""
         kwargs.update(self.meta)
         if "quick_adc" in self.meta:
             ad = AtmosphericDispersion(**self.meta)
@@ -230,7 +237,7 @@ class AtmosphericDispersionCorrection(Shift3D):
 
 def atmospheric_refraction(lam, z0=60, temp=0, rel_hum=60, pres=750,
                            lat=-24.5, h=3064):
-    """Compute atmospheric refraction
+    """Compute atmospheric refraction.
 
     The function computes the angular difference between the apparent position
     of a star seen from the ground and its true position.
@@ -262,7 +269,6 @@ def atmospheric_refraction(lam, z0=60, temp=0, rel_hum=60, pres=750,
     See Stone 1996 and the review by S. Pedraz -
     http://www.caha.es/newsletter/news03b/pedraz/newslet.html
     """
-
     # need T, P, RH for Ps, Pw Pa
     T = 273.15 + temp
 
@@ -304,13 +310,19 @@ def atmospheric_refraction(lam, z0=60, temp=0, rel_hum=60, pres=750,
 
 def get_pixel_border_waves_from_atmo_disp(**kwargs):
     """
+    TBA.
 
     Parameters
     ----------
-    kwargs
+    **kwargs : TYPE
+        DESCRIPTION.
 
     Returns
     -------
+    wave_pixel_edges : TYPE
+        DESCRIPTION.
+    shifts_angle_edges : TYPE
+        DESCRIPTION.
 
     """
     atmo_disp_dict = {key: kwargs[key] for key in ["z0", "temp", "rel_hum",
@@ -330,7 +342,7 @@ def get_pixel_border_waves_from_atmo_disp(**kwargs):
         # interpolate to get the edge wavelengths of the pixels
         # off_new is always increasing, thanks to np.unique
         off_new = np.unique(offset_pix.astype(int))
-        # add 1 pixel to either end of the range covered by (wave_min, wave_max)
+        # add 1 pixel to either end of range covered by (wave_min, wave_max)
         off_new = np.array([off_new[0]-1] + list(off_new) + [off_new[-1]+1])
 
         if offset_pix[0] > offset_pix[-1]:
