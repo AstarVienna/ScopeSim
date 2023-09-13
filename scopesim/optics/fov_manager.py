@@ -147,7 +147,8 @@ class FOVManager:
             waverange = (vol["wave_min"], vol["wave_max"])
             skyhdr = ipu.header_from_list_of_xy([xs_min, xs_max],
                                                 [ys_min, ys_max],
-                                                pixel_scale=pixel_scale / 3600.)
+                                                pixel_scale=pixel_scale / 3600.,
+                                                sky_offset=True)
 
             x_sky, y_sky = ipu.calc_footprint(skyhdr)
             x_det = x_sky / plate_scale_deg
