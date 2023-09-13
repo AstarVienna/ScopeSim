@@ -42,14 +42,14 @@ class TestAddImageHDUtoImageHDU:
         w, h = np.array(big_wh) // 2
         x = np.array([-w, -w, w, w]) + big_offsets[0]
         y = np.array([h, -h, -h, h]) + big_offsets[1]
-        big = imp_utils.header_from_list_of_xy(x, y, pixel_scale)
+        big = imp_utils.header_from_list_of_xy(x, y, pixel_scale, "X")
         im = np.ones([big["NAXIS2"], big["NAXIS1"]])
         big = fits.ImageHDU(header=big, data=im)
 
         w, h = np.array(small_wh) // 2
         x = np.array([-w, -w, w, w]) + small_offsets[0]
         y = np.array([h, -h, -h, h]) + small_offsets[1]
-        small = imp_utils.header_from_list_of_xy(x, y, pixel_scale)
+        small = imp_utils.header_from_list_of_xy(x, y, pixel_scale, "X")
         im = np.ones([small["NAXIS2"], small["NAXIS1"]])
         small = fits.ImageHDU(header=small, data=im)
 
@@ -60,7 +60,7 @@ class TestAddImageHDUtoImageHDU:
         big, small = self.big_small_hdus()
         big_sum, small_sum =  np.sum(big.data), np.sum(small.data)
 
-        new = imp_utils.add_imagehdu_to_imagehdu(small, big)
+        new = imp_utils.add_imagehdu_to_imagehdu(small, big, wcs_suffix="X")
 
         if PLOTS:
             plt.imshow(new.data, origin="lower")
@@ -76,7 +76,7 @@ class TestAddImageHDUtoImageHDU:
 
         big_sum, small_sum =  np.sum(big.data), np.sum(small.data)
 
-        new = imp_utils.add_imagehdu_to_imagehdu(small, big)
+        new = imp_utils.add_imagehdu_to_imagehdu(small, big, wcs_suffix="X")
 
         if PLOTS:
             plt.imshow(new.data[1, :, :], origin="lower")
@@ -89,7 +89,7 @@ class TestAddImageHDUtoImageHDU:
         big, small = self.big_small_hdus()
         big_sum, small_sum =  np.sum(big.data), np.sum(small.data)
 
-        new = imp_utils.add_imagehdu_to_imagehdu(big, small)
+        new = imp_utils.add_imagehdu_to_imagehdu(big, small, wcs_suffix="X")
 
         if PLOTS:
             plt.imshow(new.data, origin="lower")
@@ -102,7 +102,7 @@ class TestAddImageHDUtoImageHDU:
         big, small = self.big_small_hdus(small_wh=(20, 10), small_offsets=(10, 5))
         big_sum, small_sum =  np.sum(big.data), np.sum(small.data)
 
-        new = imp_utils.add_imagehdu_to_imagehdu(small, big)
+        new = imp_utils.add_imagehdu_to_imagehdu(small, big, wcs_suffix="X")
 
         if PLOTS:
             plt.imshow(new.data, origin="lower")
@@ -115,7 +115,7 @@ class TestAddImageHDUtoImageHDU:
         big, small = self.big_small_hdus(small_wh=(20, 10), small_offsets=(10, 5))
         big_sum, small_sum =  np.sum(big.data), np.sum(small.data)
 
-        new = imp_utils.add_imagehdu_to_imagehdu(big, small)
+        new = imp_utils.add_imagehdu_to_imagehdu(big, small, wcs_suffix="X")
 
         if PLOTS:
 
@@ -131,7 +131,7 @@ class TestAddImageHDUtoImageHDU:
         small.data = small.data[None, :, :] * np.ones(3)[:, None, None]
 
         big_sum, small_sum =  np.sum(big.data), np.sum(small.data)
-        new = imp_utils.add_imagehdu_to_imagehdu(big, small)
+        new = imp_utils.add_imagehdu_to_imagehdu(big, small, wcs_suffix="X")
 
         if PLOTS:
 
@@ -145,7 +145,7 @@ class TestAddImageHDUtoImageHDU:
         big, small = self.big_small_hdus(small_offsets=(15, 0))
         big_sum, small_sum = np.sum(big.data), np.sum(small.data)
 
-        new = imp_utils.add_imagehdu_to_imagehdu(big, small)
+        new = imp_utils.add_imagehdu_to_imagehdu(big, small, wcs_suffix="X")
 
         if PLOTS:
             plt.imshow(new.data, origin="lower")
@@ -333,5 +333,3 @@ class TestSubPixelFractions:
     #     x, y = np.array([1.1, 2.9]), np.array([0.0, 0.5])
     #     xs, ys, fracs = imp_utils.sub_pixel_fractions(x, y)
     #     print(xs)
-
-
