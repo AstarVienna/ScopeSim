@@ -1,6 +1,6 @@
 [project]
 name = "ScopeSim"
-version = "0.6.1"
+version = "0.6.2"
 description = "Generalised telescope observation simulator"
 readme = "README.md"
 requires-python = ">=3.8"
