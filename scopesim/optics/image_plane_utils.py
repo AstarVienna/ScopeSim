@@ -264,7 +264,7 @@ def add_table_to_imagehdu(table: Table, canvas_hdu: fits.ImageHDU,
     eps = -1e-7
     mask = (xpix >= eps) * (xpix < naxis1) * (ypix >= eps) * (ypix < naxis2)
 
-    if sub_pixel is True:
+    if sub_pixel:
         canvas_hdu = _add_subpixel_sources_to_canvas(canvas_hdu, xpix, ypix, f,
                                                      mask)
     else:
@@ -468,10 +468,9 @@ def rescale_imagehdu(imagehdu: fits.ImageHDU, pixel_scale: float,
     imagehdu : fits.ImageHDU
 
     """
-    wcs_suffix = wcs_suffix
-    s0 = wcs_suffix[0] if len(wcs_suffix) > 0 else ""
-    cdelt1 = imagehdu.header["CDELT1"+s0]
-    cdelt2 = imagehdu.header["CDELT2"+s0]
+    s0 = wcs_suffix[0] if wcs_suffix else ""
+    cdelt1 = imagehdu.header[f"CDELT1{s0}"]
+    cdelt2 = imagehdu.header[f"CDELT2{s0}"]
 
     # making sure that zoom1,zoom2 are positive
     zoom1 = np.abs(cdelt1 / pixel_scale)
@@ -494,13 +493,13 @@ def rescale_imagehdu(imagehdu: fits.ImageHDU, pixel_scale: float,
         imagehdu.data = new_im
 
         for ii in range(max(1, len(wcs_suffix))):
-            si = wcs_suffix[ii] if len(wcs_suffix) > 0 else ""
-            imagehdu.header["CRPIX1"+si] *= zoom1
-            imagehdu.header["CRPIX2"+si] *= zoom2
-            imagehdu.header["CDELT1"+si] = pixel_scale
-            imagehdu.header["CDELT2"+si] = pixel_scale
-            imagehdu.header["CUNIT1"+si] = "mm" if si == "D" else "deg"
-            imagehdu.header["CUNIT2"+si] = "mm" if si == "D" else "deg"
+            si = wcs_suffix[ii] if wcs_suffix else ""
+            imagehdu.header[f"CRPIX1{si}"] *= zoom1
+            imagehdu.header[f"CRPIX2{si}"] *= zoom2
+            imagehdu.header[f"CDELT1{si}"] = pixel_scale
+            imagehdu.header[f"CDELT2{si}"] = pixel_scale
+            imagehdu.header[f"CUNIT1{si}"] = "mm" if si == "D" else "deg"
+            imagehdu.header[f"CUNIT2{si}"] = "mm" if si == "D" else "deg"
 
     return imagehdu
 
@@ -552,9 +551,9 @@ def reorient_imagehdu(imagehdu: fits.ImageHDU, wcs_suffix: str = "",
             new_im *= np.sum(imagehdu.data) / np.sum(new_im)
 
         imagehdu.data = new_im
-        hdr["CRPIX1"+s] = hdr["NAXIS1"] / 2.
-        hdr["CRPIX2"+s] = hdr["NAXIS2"] / 2.
-        for card in ["PC1_1"+s, "PC1_2"+s, "PC2_1"+s, "PC2_2"+s]:
+        hdr[f"CRPIX1{s}"] = hdr["NAXIS1"] / 2.
+        hdr[f"CRPIX2{s}"] = hdr["NAXIS2"] / 2.
+        for card in [f"PC1_1{s}", f"PC1_2{s}", f"PC2_1{s}", f"PC2_2{s}"]:
             hdr.remove(card)
         imagehdu.header = hdr
 

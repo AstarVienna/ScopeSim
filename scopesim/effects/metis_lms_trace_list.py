@@ -65,8 +65,8 @@ class MetisLMSSpectralTraceList(SpectralTraceList):
         if isinstance(obj, FOVSetupBase):
             # Create a single volume that covers the aperture and
             # the maximum wavelength range of LMS
-            volumes = [self.spectral_traces[key].fov_grid()
-                       for key in self.spectral_traces]
+            volumes = [spectral_trace.fov_grid()
+                       for spectral_trace in self.spectral_traces.values()]
             wave_min = min(vol["wave_min"] for vol in volumes)
             wave_max = max(vol["wave_max"] for vol in volumes)
             extracted_vols = obj.extract(axes=["wave"],

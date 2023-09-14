@@ -156,8 +156,8 @@ class SpectralTraceList(Effect):
         """
         if isinstance(obj, FOVSetupBase):
             # Setup of FieldOfView object
-            volumes = [self.spectral_traces[key].fov_grid()
-                       for key in self.spectral_traces]
+            volumes = [spectral_trace.fov_grid()
+                       for spectral_trace in self.spectral_traces.values()]
             new_vols_list = []
             for vol in volumes:
                 wave_edges = [vol["wave_min"], vol["wave_max"]]

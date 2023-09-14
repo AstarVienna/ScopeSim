@@ -115,7 +115,6 @@ class PSF(Effect):
 
         return obj
 
-
     def fov_grid(self, which="waveset", **kwargs):
         """See parent docstring."""
         waveset = []
@@ -124,10 +123,11 @@ class PSF(Effect):
                 _waveset = self._waveset
                 waves = 0.5 * (np.array(_waveset)[1:] +
                                np.array(_waveset)[:-1])
-                wave_min = kwargs["wave_min"] if "wave_min" in kwargs else np.min(_waveset)
-                wave_max = kwargs["wave_max"] if "wave_max" in kwargs else np.max(_waveset)
+                wave_min = kwargs.get("wave_min", np.min(_waveset))
+                wave_max = kwargs.get("wave_max", np.max(_waveset))
                 mask = (wave_min < waves) * (waves < wave_max)
-                waveset = np.unique([wave_min] + list(waves[mask]) + [wave_max])
+                waveset = np.unique([wave_min] + list(waves[mask]) +
+                                    [wave_max])
 
         return waveset
 
@@ -821,11 +821,11 @@ class FieldVaryingPSF(DiscretePSF):
         # rescale the pixel scale of the kernel to match the fov images
         pix_ratio = fov_pixel_scale / kernel_pixel_scale
         if abs(pix_ratio - 1) > self.meta["flux_accuracy"]:
-            for ii in range(len(self.kernel)):
-                self.kernel[ii][0] = pu.rescale_kernel(self.kernel[ii][0], pix_ratio)
+            for ii, kern in enumerate(self.kernel):
+                self.kernel[ii][0] = pu.rescale_kernel(kern[0], pix_ratio)
 
-        for i in range(len(self.kernel)):
-            self.kernel[i][0] /= np.sum(self.kernel[i][0])
+        for i, kern in enumerate(self.kernel):
+            self.kernel[i][0] /= np.sum(kern[0])
 
         return self.kernel
 
