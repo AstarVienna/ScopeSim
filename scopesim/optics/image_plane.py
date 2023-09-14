@@ -13,7 +13,7 @@ from .. import utils
 
 class ImagePlane(ImagePlaneBase):
     """
-    A class to act as a canvas onto which to project `Source` images or tables
+    A class to act as a canvas onto which to project `Source` images or tables.
 
     Parameters
     ----------
@@ -46,7 +46,7 @@ class ImagePlane(ImagePlaneBase):
     def __init__(self, header, **kwargs):
 
         max_seg_size = rc.__config__["!SIM.computing.max_segment_size"]
-        self.meta = {"SIM_MAX_SEGMENT_SIZE" : max_seg_size}
+        self.meta = {"SIM_MAX_SEGMENT_SIZE": max_seg_size}
         self.meta.update(kwargs)
         self.id = header["IMGPLANE"] if "IMGPLANE" in header else 0
 
@@ -58,17 +58,19 @@ class ImagePlane(ImagePlaneBase):
         image = np.zeros((header["NAXIS2"]+1, header["NAXIS1"]+1))
         self.hdu = fits.ImageHDU(data=image, header=header)
 
-    def add(self, hdus_or_tables, sub_pixel=None, spline_order=None, wcs_suffix=""):
+    def add(self, hdus_or_tables, sub_pixel=None, spline_order=None,
+            wcs_suffix=""):
         """
-        Add a projection of an image or table files to the canvas
+        Add a projection of an image or table files to the canvas.
 
         .. note::
             If a Table is provided, it must include the following columns:
             `x_mm`, `y_mm`, and `flux`.
 
             Units for the columns should be provided in the
-            <Table>.unit attribute or as an entry in the table's meta dictionary
-            using this syntax: <Table>.meta["<colname>_unit"] = <unit>.
+            <Table>.unit attribute or as an entry in the table's meta
+            dictionary using this syntax:
+            <Table>.meta["<colname>_unit"] = <unit>.
 
             For example::
 

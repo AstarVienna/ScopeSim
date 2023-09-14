@@ -1,3 +1,5 @@
+"""TBA."""
+
 import logging
 
 import numpy as np
@@ -16,7 +18,7 @@ __all__ = ["DetectorList", "DetectorWindow"]
 
 class DetectorList(Effect):
     """
-    A description of detector positions and properties
+    A description of detector positions and properties.
 
     The list of detectors must have the following table columns
     ::
@@ -24,6 +26,7 @@ class DetectorList(Effect):
         id   x_cen   y_cen  x_size  y_size  pixel_size  angle    gain
 
     where:
+
     * "id" is a reference id for the chip (fits header EXTNAME)
     * "x_cen" and "y_cen" [mm] are the physical coordinates of centre of the chip on the detector plane
     * "x_size", "y_size" [mm, pixel] are the width/height of the chip
@@ -105,6 +108,7 @@ class DetectorList(Effect):
         3    63.94    0.00    4096    4096       0.015  180.0     1.0
 
     """
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         params = {"z_order": [90, 290, 390, 490],
@@ -116,16 +120,18 @@ class DetectorList(Effect):
         self.meta.update(kwargs)
 
         # for backwards compatibility
-        new_colnames = {"xhw": "x_size", "yhw": "y_size", "pixsize": "pixel_size"}
+        new_colnames = {"xhw": "x_size",
+                        "yhw": "y_size",
+                        "pixsize": "pixel_size"}
         mult_cols = {"xhw": 2., "yhw": 2., "pixsize": 1.}
         if isinstance(self.table, Table):
             for col, new_name in new_colnames.items():
                 if col in self.table.colnames:
                     self.table[col] = self.table[col] * mult_cols[col]
                     self.table.rename_column(col, new_name)
-        if not "x_size_unit" in self.meta and "xhw_unit" in self.meta:
+        if "x_size_unit" not in self.meta and "xhw_unit" in self.meta:
             self.meta["x_size_unit"] = self.meta["xhw_unit"]
-        if not "y_size_unit" in self.meta and "yhw_unit" in self.meta:
+        if "y_size_unit" not in self.meta and "yhw_unit" in self.meta:
             self.meta["y_size_unit"] = self.meta["yhw_unit"]
 
     def apply_to(self, obj, **kwargs):
@@ -149,7 +155,7 @@ class DetectorList(Effect):
         return obj
 
     def fov_grid(self, which="edges", **kwargs):
-        """Returns an ApertureMask object. kwargs are "pixel_scale" [arcsec]"""
+        """Return an ApertureMask object. kwargs are "pixel_scale" [arcsec]."""
         logging.warning("DetectorList.fov_grid will be depreciated in v1.0")
         aperture_mask = None
         if which == "edges":
@@ -210,7 +216,7 @@ class DetectorList(Effect):
             tbl = self.table[mask]
         else:
             raise ValueError("Could not determine which detectors are active: "
-                             f"{self.meta['active_detectors']}, {self.table}, ")
+                             f"{self.meta['active_detectors']}, {self.table},")
         tbl = utils.from_currsys(tbl)
 
         return tbl
@@ -231,8 +237,10 @@ class DetectorList(Effect):
             if "pix" in self.meta["x_size_unit"]:
                 dx, dy = dx * pixel_size, dy * pixel_size
 
-            hdr = header_from_list_of_xy([xcen-dx, xcen+dx], [ycen-dy, ycen+dy],
-                                         pixel_scale=pixel_size, wcs_suffix="D")
+            hdr = header_from_list_of_xy([xcen-dx, xcen+dx],
+                                         [ycen-dy, ycen+dy],
+                                         pixel_scale=pixel_size,
+                                         wcs_suffix="D")
             if abs(row["angle"]) > 1E-4:
                 sang = np.sin(row["angle"] / 57.29578)
                 cang = np.cos(row["angle"] / 57.29578)
@@ -271,7 +279,7 @@ class DetectorList(Effect):
 
 class DetectorWindow(DetectorList):
     """
-    For when a full DetectorList if too cumbersome
+    For when a full DetectorList if too cumbersome.
 
     Parameters
     ----------
@@ -291,6 +299,7 @@ class DetectorWindow(DetectorList):
         by ``pixel_size``
 
     """
+
     def __init__(self, pixel_size, x, y, width, height=None, angle=0, gain=1,
                  units="mm", **kwargs):
 

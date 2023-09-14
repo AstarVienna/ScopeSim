@@ -1,4 +1,5 @@
-"""Effects describing observing strategies
+"""
+Effects describing observing strategies.
 
 - ChopNodCombiner: simulate chop-nod cycle
 """
@@ -11,7 +12,7 @@ from scopesim.utils import from_currsys, check_keys
 
 class ChopNodCombiner(Effect):
     """
-    Creates and combines 4 images for each of the chop/nod positions
+    Creates and combines 4 images for each of the chop/nod positions.
 
     - AA : original position ``(dx, dy) = (0, 0)``
     - AB : chop position ``(dx, dy) = chop_offsets``
@@ -27,7 +28,7 @@ class ChopNodCombiner(Effect):
     ``ChopNodCombiner`` is a detector effect and should be placed last in the
      detector yaml (after the noise effects).
 
-    Keyword arguments
+    Keyword Arguments
     -----------------
     chop_offsets : tuple, optional
         [arcsec] (dx, dy) offset of chop position relative to AA
@@ -82,15 +83,15 @@ class ChopNodCombiner(Effect):
 
 
 def chop_nod_image(img, chop_offsets, nod_offsets=None):
-    """Create four copies and combine in chop-nod pattern"""
+    """Create four copies and combine in chop-nod pattern."""
     if nod_offsets is None:
         nod_offsets = tuple(-np.array(chop_offsets))
 
-    im_AA = np.copy(img)
-    im_AB = np.roll(im_AA, chop_offsets, (1, 0))
-    im_BA = np.roll(im_AA, nod_offsets, (1, 0))
-    im_BB = np.roll(im_BA, chop_offsets, (1, 0))
+    im_aa = np.copy(img)
+    im_ab = np.roll(im_aa, chop_offsets, (1, 0))
+    im_ba = np.roll(im_aa, nod_offsets, (1, 0))
+    im_bb = np.roll(im_ba, chop_offsets, (1, 0))
 
-    im_comb = (im_AA - im_AB) - (im_BA - im_BB)
+    im_comb = (im_aa - im_ab) - (im_ba - im_bb)
 
     return im_comb

@@ -1,13 +1,10 @@
-"""
-Helper functions for ScopeSim
-"""
+"""Helper functions for ScopeSim."""
 import math
 from pathlib import Path
 import sys
 import logging
 from collections import OrderedDict
 from collections.abc import Iterable, Generator
-from itertools import chain
 from copy import deepcopy
 
 from docutils.core import publish_string
@@ -24,22 +21,21 @@ from . import rc
 
 def unify(x, unit, length=1):
     """
-    Convert all types of input to an astropy array/unit pair
+    Convert all types of input to an astropy array/unit pair.
 
     Parameters
     ----------
     x : int, float, np.ndarray, astropy.Quantity
-        The array to be turned into an astropy.Quantity
+        The array to be turned into an ``astropy.Quantity``
     unit : astropy.Quantity
         The units to attach to the array
     length : int, optional
-        If ``x`` is a scalar, and the desired output is an array with ``length``
+        If `x` is a scalar, and the desired output is an array with `length`.
 
     Returns
     -------
     y : astropy.Quantity
     """
-
     if isinstance(x, u.quantity.Quantity):
         if isinstance(x.value, np.ndarray):
             y = x.to(unit)
@@ -60,7 +56,7 @@ def unify(x, unit, length=1):
 
 def parallactic_angle(ha, de, lat=-24.589167):
     r"""
-    Compute the parallactic angle
+    Compute the parallactic angle.
 
     Parameters
     ----------
@@ -81,7 +77,7 @@ def parallactic_angle(ha, de, lat=-24.589167):
     The parallactic angle is defined as the angle PTZ, where P is the
     .. math::
     \tan\eta = \frac{\cos\phi\sin H}{\sin\phi \cos\delta - \cos\phi \sin\delta \cos H}
-    It is negative (positive) if the target point is east (west) of the meridian.
+    It is negative (positive) if target point is east (west) of the meridian.
 
     References
     ----------
@@ -101,7 +97,7 @@ def parallactic_angle(ha, de, lat=-24.589167):
 
 def moffat(r, alpha, beta):
     """
-    !!Unfinished!! Return a Moffat function
+    !!Unfinished!! Return a Moffat function.
 
     Parameters
     ----------
@@ -113,12 +109,13 @@ def moffat(r, alpha, beta):
     -------
     eta
     """
-    return (beta - 1) / (np.pi * alpha ** 2) * (1 + (r / alpha) ** 2) ** (-beta)
+    return ((beta - 1) / (np.pi * alpha ** 2) *
+            (1 + (r / alpha) ** 2) ** (-beta))
 
 
 def poissonify(arr):
     """
-    Add a realisation of the poisson process to the array 'arr'.
+    Add a realisation of the poisson process to the array `arr`.
 
     Parameters
     ----------
@@ -136,19 +133,19 @@ def poissonify(arr):
 
 def nearest(arr, val):
     """
-    Return the index of the value from 'arr' which is closest to 'val'
+    Return the index of the value from `arr` which is closest to `val`.
 
     Parameters
     ----------
     arr : np.ndarray, list, tuple
         Array to be searched
     val : float, int
-        Value to find in ``arr``
+        Value to find in `arr`
 
     Returns
     -------
     i : int
-        index of array where the nearest value to ``val`` is
+        index of array where the nearest value to `val` is
     """
     if isinstance(val, (list, tuple, np.ndarray)):
         arr = np.array(arr)
@@ -158,7 +155,7 @@ def nearest(arr, val):
 
 
 def power_vector(val, degree):
-    """Return the vector of powers of val up to a degree"""
+    """Return the vector of powers of val up to a degree."""
     if degree < 0 or not isinstance(degree, int):
         raise ValueError("degree must be a positive integer")
 
@@ -166,7 +163,7 @@ def power_vector(val, degree):
 
 
 def deriv_polynomial2d(poly):
-    """Derivatives (gradient) of a Polynomial2D model
+    """Derive (gradient) of a Polynomial2D model.
 
     Parameters
     ----------
@@ -198,7 +195,7 @@ def deriv_polynomial2d(poly):
 
 def add_keyword(filename, keyword, value, comment="", ext=0):
     """
-    Add a keyword, value pair to an extension header in a FITS file
+    Add a keyword, value pair to an extension header in a FITS file.
 
     Parameters
     ----------
@@ -219,7 +216,7 @@ def add_keyword(filename, keyword, value, comment="", ext=0):
 
 def airmass_to_zenith_dist(airmass):
     """
-    returns zenith distance in degrees
+    Return zenith distance in degrees.
 
     Z = arccos(1/X)
     """
@@ -228,7 +225,7 @@ def airmass_to_zenith_dist(airmass):
 
 def zenith_dist_to_airmass(zenith_dist):
     """
-    ``zenith_dist`` is in degrees
+    `zenith_dist` is in degrees.
 
     X = sec(Z)
     """
@@ -236,17 +233,17 @@ def zenith_dist_to_airmass(zenith_dist):
 
 
 def seq(start, stop, step=1):
-    """Replacement for numpy.arange modelled after R's seq function
+    """Replacement for numpy.arange modelled after R's seq function.
 
-    Returns an evenly spaced sequence from start to stop. stop is included if the difference
-    between start and stop is an integer multiple of step.
+    Returns an evenly spaced sequence from start to stop. stop is included if
+    the difference between start and stop is an integer multiple of step.
 
-    From the documentation of numpy.range: "When using a non-integer step, such as 0.1, the
-    results will often not be consistent." This replacement aims to avoid these inconsistencies.
+    From the documentation of numpy.range: "When using a non-integer step, such
+    as 0.1, the results will often not be consistent." This replacement aims to
+    avoid these inconsistencies.
 
     Parameters
     ----------
-
     start, stop: [int, float]
         the starting and (maximal) end values of the sequence.
 
@@ -291,33 +288,25 @@ def seq(start, stop, step=1):
 
 
 def add_mags(mags):
-    """
-    Returns a combined magnitude for a group of py_objects with ``mags``
-    """
+    """Return a combined magnitude for a group of py_objects with `mags`."""
     return -2.5 * np.log10((10 ** (-0.4 * np.array(mags))).sum())
 
 
 def dist_mod_from_distance(d):
-    """
-    mu = 5 * np.log10(d) - 5
-    """
-
+    """Use mu = 5 * np.log10(d) - 5 formula."""
     mu = 5 * np.log10(d) - 5
     return mu
 
 
 def distance_from_dist_mod(mu):
-    """
-    d = 10**(1 + mu / 5)
-    """
-
+    """Use d = 10**(1 + mu / 5) formula."""
     d = 10 ** (1 + mu / 5)
     return d
 
 
 def telescope_diffraction_limit(aperture_size, wavelength, distance=None):
     """
-    Returns the diffraction limit of a telescope
+    Return the diffraction limit of a telescope.
 
     Parameters
     ----------
@@ -339,9 +328,8 @@ def telescope_diffraction_limit(aperture_size, wavelength, distance=None):
         If distance is not None, diff_limit is in the same units as distance
 
     """
-
-    diff_limit = (((wavelength * u.um) / (aperture_size * u.m))
-                  * u.rad).to(u.arcsec).value
+    diff_limit = (((wavelength * u.um) / (aperture_size * u.m)) *
+                  u.rad).to(u.arcsec).value
 
     if distance is not None:
         diff_limit *= distance / u.pc.to(u.AU)
@@ -351,7 +339,7 @@ def telescope_diffraction_limit(aperture_size, wavelength, distance=None):
 
 def transverse_distance(angle, distance):
     """
-    Turn an angular distance into a proper transverse distance
+    Turn an angular distance into a proper transverse distance.
 
     Parameters
     ----------
@@ -367,7 +355,6 @@ def transverse_distance(angle, distance):
         proper transverse distance. Has the same Units as ``distance``
 
     """
-
     trans_distance = angle * distance * u.AU.to(u.pc)
 
     return trans_distance
@@ -375,17 +362,16 @@ def transverse_distance(angle, distance):
 
 def angle_in_arcseconds(distance, width):
     """
-    Returns the angular distance of an object in arcseconds.
+    Return the angular distance of an object in arcseconds.
 
     Units must be consistent!
     """
-
     return np.arctan2(width, distance) * u.rad.to(u.arcsec)
 
 
 def setup_loggers(**kwargs):
     """
-    Sets up both console and file loggers.
+    Set up both console and file loggers.
 
     Acceptable parameters are the same as the ``!SIM.logging`` sub dictionary
 
@@ -412,17 +398,13 @@ def setup_loggers(**kwargs):
 
 def set_logger_level(which="console", level="ERROR"):
     """
-    Sets the level of logging for either the console or file logger
+    Set the level of logging for either the console or file logger.
 
     Parameters
     ----------
-    which : str
-        ["console", "file"]
-    level : str
-        ["ON", "OFF", "DEBUG", "INFO", "WARN", "ERROR", "CRITICAL"]
-
+    which : {"console", "file"}
+    level : {"ON", "OFF", "DEBUG", "INFO", "WARN", "ERROR", "CRITICAL"}
     """
-
     hdlr_name = f"scopesim_{which}_logger"
     level = {"ON": "INFO", "OFF": "CRITICAL"}.get(level.upper(), level)
     logger = logging.getLogger()
@@ -433,8 +415,7 @@ def set_logger_level(which="console", level="ERROR"):
 
 
 def bug_report():
-    """Get versions of dependencies for inclusion in bug report"""
-
+    """Get versions of dependencies for inclusion in bug report."""
     try:
         from importlib import import_module
     except ImportError:
@@ -468,7 +449,7 @@ def bug_report():
 
 
 def find_file(filename, path=None, silent=False):
-    """Find a file in search path
+    """Find a file in search path.
 
     Parameters
     ----------
@@ -483,7 +464,6 @@ def find_file(filename, path=None, silent=False):
     -------
     Absolute path of the file
     """
-
     if filename is None or filename.lower() == "none":
         return None
 
@@ -527,7 +507,7 @@ def find_file(filename, path=None, silent=False):
 
 
 def zendist2airmass(zendist):
-    """Convert zenith distance to airmass
+    """Convert zenith distance to airmass.
 
     Parameters
     ----------
@@ -538,12 +518,11 @@ def zendist2airmass(zendist):
     -------
     airmass in sec(z) approximation
     """
-
     return 1. / np.cos(np.deg2rad(zendist))
 
 
 def airmass2zendist(airmass):
-    """Convert airmass to zenith distance
+    """Convert airmass to zenith distance.
 
     Parameters
     ----------
@@ -553,7 +532,6 @@ def airmass2zendist(airmass):
     -------
     zenith distance in degrees
     """
-
     return np.rad2deg(np.arccos(1 / airmass))
 
 
@@ -643,7 +621,7 @@ def empty_type(x):
 
 def get_meta_quantity(meta_dict, name, fallback_unit=""):
     """
-    Extract a Quantity from a dictionary
+    Extract a Quantity from a dictionary.
 
     Parameters
     ----------
@@ -656,7 +634,6 @@ def get_meta_quantity(meta_dict, name, fallback_unit=""):
     quant : Quantity
 
     """
-
     if isinstance(meta_dict[name], str) and meta_dict[name].startswith("!"):
         meta_dict[name] = from_currsys(meta_dict[name])
 
@@ -674,7 +651,7 @@ def get_meta_quantity(meta_dict, name, fallback_unit=""):
 
 def quantify(item, unit):
     """
-    Ensure an item is a Quantity
+    Ensure an item is a Quantity.
 
     Parameters
     ----------
@@ -686,7 +663,6 @@ def quantify(item, unit):
     quant : Quantity
 
     """
-
     if isinstance(item, str) and item.startswith("!"):
         item = from_currsys(item)
     if isinstance(item, u.Quantity):
@@ -701,7 +677,7 @@ def quantify(item, unit):
 
 def extract_type_from_unit(unit, unit_type):
     """
-    Extract ``astropy`` physical type from a compound unit
+    Extract ``astropy`` physical type from a compound unit.
 
     Parameters
     ----------
@@ -712,9 +688,9 @@ def extract_type_from_unit(unit, unit_type):
     Returns
     -------
     new_unit : Unit
-        The input unit minus any base units corresponding to ``unit_type``
+        The input unit minus any base units corresponding to `unit_type`.
     extracted_units : Unit
-        Any base units corresponding to ``unit_type``
+        Any base units corresponding to `unit_type`.
 
     """
     extracted_units = u.Unit("")
@@ -729,7 +705,7 @@ def extract_type_from_unit(unit, unit_type):
 
 def extract_base_from_unit(unit, base_unit):
     """
-    Extract ``astropy`` base unit from a compound unit
+    Extract ``astropy`` base unit from a compound unit.
 
     Parameters
     ----------
@@ -739,12 +715,11 @@ def extract_base_from_unit(unit, base_unit):
    Returns
     -------
     new_unit : Unit
-        The input unit minus any base units corresponding to ``base_unit``
+        The input unit minus any base units corresponding to `base_unit`.
     extracted_units : Unit
-        Any base units corresponding to ``base_unit``
+        Any base units corresponding to `base_unit`.
 
     """
-
     extracted_units = u.Unit("")
     for base, power in zip(unit.bases, unit.powers):
         if base == base_unit:
@@ -799,7 +774,7 @@ def quantity_from_table(colname, table, default_unit=""):
 
 def unit_from_table(colname, table, default_unit=""):
     """
-    Looks for the unit for a column based on the meta dict keyword "<col>_unit"
+    Look for the unit for a column based on the meta dict keyword "<col>_unit".
     """
     colname_u = f"{colname}_unit"
     col = table[colname]
@@ -829,9 +804,7 @@ def rad2deg(theta):
 
 
 def has_needed_keywords(header, suffix=""):
-    """
-    Check to see if the WCS keywords are in the header
-    """
+    """Check to see if the WCS keywords are in the header."""
     keys = {"CDELT1", "CRVAL1", "CRPIX1"}
     keys = {key + suffix for key in keys}
     keys.add("NAXIS1")
@@ -839,9 +812,7 @@ def has_needed_keywords(header, suffix=""):
 
 
 def stringify_dict(dic, ignore_types=(str, int, float)):
-    """
-    Turns a dict entries into strings for addition to FITS headers
-    """
+    """Turn a dict entries into strings for addition to FITS headers."""
     dic_new = deepcopy(dic)
     for key in dic_new:
         if not isinstance(dic_new[key], ignore_types):
@@ -852,7 +823,7 @@ def stringify_dict(dic, ignore_types=(str, int, float)):
 
 def clean_dict(orig_dict, new_entries):
     """
-    Used for replacing OBS_DICT keywords with actual values
+    Replace OBS_DICT keywords with actual values.
 
     Parameters
     ----------
@@ -875,9 +846,7 @@ def clean_dict(orig_dict, new_entries):
 
 
 def from_currsys(item):
-    """
-    Returns the current value of a bang-string from rc.__currsys__
-    """
+    """Return the current value of a bang-string from ``rc.__currsys__``."""
     if isinstance(item, Table):
         tbl_dict = {col: item[col].data for col in item.colnames}
         tbl_dict = from_currsys(tbl_dict)
@@ -909,8 +878,7 @@ def from_currsys(item):
 
 
 def check_keys(input_dict, required_keys, action="error", all_any="all"):
-    """ Checks to see if all/any of the required keys are present in a dict """
-
+    """Check to see if all/any of the required keys are present in a dict."""
     if isinstance(input_dict, (list, tuple)):
         input_dict = {key: None for key in input_dict}
 
@@ -935,8 +903,7 @@ def check_keys(input_dict, required_keys, action="error", all_any="all"):
 
 
 def interp2(x_new, x_orig, y_orig):
-    """Checks and corrects for decreasing x_orig values"""
-
+    """Check and correct for decreasing x_orig values."""
     if x_orig[0] < x_orig[-1]:
         y_new = np.interp(x_new, x_orig, y_orig)
     else:
@@ -946,7 +913,7 @@ def interp2(x_new, x_orig, y_orig):
 
 
 def write_report(text, filename=None, output=None):
-    """ Writes a report string to file in latex or rst format"""
+    """Write a report string to file in latex or rst format."""
     if output is None:
         output = ["rst"]
     elif isinstance(output, str):
@@ -982,9 +949,7 @@ def return_latest_github_actions_jobs_status(
         branch="dev_master",
         actions_yaml_name="tests.yml",
     ):
-    """
-    Gets the status of the latest test run
-    """
+    """Get the status of the latest test run."""
     response = requests.get(
         f"https://api.github.com/repos/{owner_name}/{repo_name}/actions/"
         f"workflows/{actions_yaml_name}/runs?branch={branch}&per_page=1"

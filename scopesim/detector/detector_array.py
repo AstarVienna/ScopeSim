@@ -21,7 +21,7 @@ class DetectorArray:
 
     def readout(self, image_planes, array_effects=None, dtcr_effects=None, **kwargs):
         """
-        Read out the detector array into a FITS file
+        Read out the detector array into a FITS file.
 
         Parameters
         ----------
@@ -39,7 +39,6 @@ class DetectorArray:
         self.latest_exposure : fits.HDUList
 
         """
-
         # .. note:: Detector is what used to be called Chip
         #           DetectorArray is the old Detector
 
@@ -95,8 +94,6 @@ class DetectorArray:
         for effect in self.array_effects:
             image_plane = effect.apply_to(image_plane, **self.meta)
 
-
-
         self.latest_exposure = hdu_list
 
         return self.latest_exposure
@@ -110,7 +107,7 @@ class DetectorArray:
         return f"{self.__class__.__name__} with {self.detector_list!s}"
 
     def _repr_pretty_(self, p, cycle):
-        """For ipython"""
+        """For ipython."""
         if cycle:
             p.text(f"{self.__class__.__name__}(...)")
         else:
@@ -118,7 +115,7 @@ class DetectorArray:
 
 
 def make_primary_hdu(meta):
-    """Create the primary header from meta data"""
+    """Create the primary header from meta data."""
     new_meta = utils.stringify_dict(meta)
     prihdu = fits.PrimaryHDU()
     prihdu.header.update(new_meta)
