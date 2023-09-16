@@ -1,11 +1,12 @@
 import logging
+from itertools import product
 
 import numpy as np
 from astropy import units as u
 from astropy.wcs import WCS
 from astropy.io import fits
 from astropy.table import Table
-from scipy.ndimage import interpolation as ndi
+from scipy import ndimage as ndi
 
 from .. import utils
 
@@ -50,6 +51,7 @@ def get_canvas_header(hdu_or_table_list, pixel_scale=1 * u.arcsec):
 
     hdr = _make_bounding_header_from_imagehdus(headers,
                                                pixel_scale=pixel_scale)
+
     num_pix = hdr["NAXIS1"] * hdr["NAXIS2"]
     if num_pix > 2 ** 28:
         raise MemoryError(size_warning.format(adverb="too", num_pix=num_pix,
@@ -82,18 +84,32 @@ def _make_bounding_header_from_imagehdus(imagehdus, pixel_scale=1*u.arcsec):
     elif pixel_scale.unit.physical_type == "length":
         s = "D"
 
-    for imagehdu in imagehdus:
-        if isinstance(imagehdu, fits.ImageHDU):
-            x_foot, y_foot = calc_footprint(imagehdu.header, s)
-        else:
-            x_foot, y_foot = calc_footprint(imagehdu, s)
+    headers = [hdu.header if isinstance(hdu, fits.ImageHDU) else hdu
+               for hdu in imagehdus]
+
+    for header in headers:
+        x_foot, y_foot = calc_footprint(header, s)
         x += list(x_foot)
         y += list(y_foot)
-    unit = u.mm if s == "D" else u.deg
-    pixel_scale = pixel_scale.to(unit).value
+
+    # unit = u.mm if s == "D" else u.deg
+    unit = headers[0][f"CUNIT1{s}"]
+    assert all(header[f"CUNIT{i}{s}"] == unit
+               for header, i in product(headers, range(1, 3)))
+    unit = u.Unit(unit)
+    if unit.physical_type == "angle":
+        factor = unit.to(u.deg)
+        x = [xx * factor for xx in x]
+        y = [yy * factor for yy in y]
+        pixel_scale = pixel_scale.to(u.deg).value
+    else:
+        pixel_scale = pixel_scale.to(unit).value
+
     hdr = header_from_list_of_xy(x, y, pixel_scale, s)
-    hdr["NAXIS1"] += 2
-    hdr["NAXIS2"] += 2
+    hdr["NAXIS1"] += 1
+    hdr["NAXIS2"] += 1
+    hdr[f"CRVAL1{s}"] -= 0.5 * pixel_scale
+    hdr[f"CRVAL2{s}"] -= 0.5 * pixel_scale
 
     return hdr
 
@@ -119,7 +135,7 @@ def _make_bounding_header_for_tables(tables, pixel_scale=1*u.arcsec):
     y = []
 
     s = "D" if pixel_scale.unit.physical_type == "length" else ""
-    unit_new = u.mm if s == "D" else u.deg
+    unit_new = u.mm if s == "D" else u.arcsec#u.deg
     unit_orig = u.mm if s == "D" else u.arcsec
     x_name = "x_mm" if s == "D" else "x"
     y_name = "y_mm" if s == "D" else "y"
@@ -132,15 +148,18 @@ def _make_bounding_header_for_tables(tables, pixel_scale=1*u.arcsec):
                                           unit_orig).to(unit_new)
         x_col = list(x_col.value)
         y_col = list(y_col.value)
-        x += [np.min(x_col), np.max(x_col) + 2 * pixel_scale]
-        y += [np.min(y_col), np.max(y_col) + 2 * pixel_scale]
+        x += [np.min(x_col) - pixel_scale,
+              np.max(x_col) + pixel_scale]
+        y += [np.min(y_col) - pixel_scale,
+              np.max(y_col) + pixel_scale]
 
-    hdr = header_from_list_of_xy(x, y, pixel_scale, s)
+    hdr = header_from_list_of_xy(x, y, pixel_scale, s, arcsec=True)
 
     return hdr
 
 
-def header_from_list_of_xy(x, y, pixel_scale, wcs_suffix="", sky_offset=False):
+def header_from_list_of_xy(x, y, pixel_scale, wcs_suffix="", sky_offset=False,
+                           arcsec=False):
     """
     Make a header large enough to contain all x,y on-sky coordinates.
 
@@ -157,7 +176,7 @@ def header_from_list_of_xy(x, y, pixel_scale, wcs_suffix="", sky_offset=False):
 
     """
     s = wcs_suffix
-    if wcs_suffix != "D":
+    if wcs_suffix != "D" and not arcsec:
         x = np.array(x)
         x[x > 270] -= 360
         x[x <= -90] += 360
@@ -192,14 +211,20 @@ def header_from_list_of_xy(x, y, pixel_scale, wcs_suffix="", sky_offset=False):
     offset2 = 0.5 * pixel_scale if s == "D" or sky_offset  else 0.0
 
     ctype = "LINEAR" if s in "DX" else "RA---TAN"
+    if s == "D":
+        cunit = "mm"
+    elif arcsec:
+        cunit = "arcsec"
+    else:
+        cunit = "deg"
 
     hdr["NAXIS"] = 2
     hdr["NAXIS1"] = naxis1
     hdr["NAXIS2"] = naxis2
     hdr["CTYPE1"+s] = ctype
     hdr["CTYPE2"+s] = ctype
-    hdr["CUNIT1"+s] = "mm" if s == "D" else "deg"
-    hdr["CUNIT2"+s] = "mm" if s == "D" else "deg"
+    hdr["CUNIT1"+s] = cunit
+    hdr["CUNIT2"+s] = cunit
     hdr["CDELT1"+s] = pixel_scale
     hdr["CDELT2"+s] = pixel_scale
     hdr["CRVAL1"+s] = crval1 + offset1
@@ -264,10 +289,13 @@ def add_table_to_imagehdu(table: Table, canvas_hdu: fits.ImageHDU,
                                       default_unit=u.mm).to(u.mm)
     else:
         arcsec = u.arcsec
+        canvas_unit = u.Unit(canvas_hdu.header[f"CUNIT1{s}"])
         x = utils.quantity_from_table("x", table,
-                                      default_unit=arcsec).to(u.deg)
+                                      default_unit=arcsec.to(canvas_unit))
         y = utils.quantity_from_table("y", table,
-                                      default_unit=arcsec).to(u.deg)
+                                      default_unit=arcsec.to(canvas_unit))
+        x *= arcsec.to(canvas_unit)
+        y *= arcsec.to(canvas_unit)
 
     xpix, ypix = val2pix(canvas_hdu.header, x.value, y.value, s)
 
@@ -706,8 +734,9 @@ def add_imagehdu_to_imagehdu(image_hdu: fits.ImageHDU,
         "canvas must have equal pixel scale on both axes"
 
     canvas_pixel_scale = float(canvas_wcs.wcs.cdelt[0])
+    conv_fac = u.Unit(image_hdu.header[f"CUNIT1{wcs_suffix}"]).to(canvas_wcs.wcs.cunit[0])
 
-    new_hdu = rescale_imagehdu(image_hdu, pixel_scale=canvas_pixel_scale,
+    new_hdu = rescale_imagehdu(image_hdu, pixel_scale=canvas_pixel_scale / conv_fac,
                                wcs_suffix=canvas_wcs.wcs.alt,
                                spline_order=spline_order,
                                conserve_flux=conserve_flux)
@@ -721,7 +750,7 @@ def add_imagehdu_to_imagehdu(image_hdu: fits.ImageHDU,
     img_center = (img_center - 1) / 2
 
     new_wcs = WCS(new_hdu.header, key=canvas_wcs.wcs.alt, naxis=2)
-    sky_center = new_wcs.wcs_pix2world(img_center, 0)
+    sky_center = new_wcs.wcs_pix2world(img_center, 0) * conv_fac
     # xsky0, ysky0 = pix2val(new_hdu.header, xcen_im, ycen_im, wcs_suffix)
     # sky_center = np.array([[xsky0, ysky0]])
     pix_center = canvas_wcs.wcs_world2pix(sky_center, 0)
@@ -856,13 +885,14 @@ def calc_footprint(header, wcs_suffix=" "):
     if xy1 is None:
         xy1 = coords.wcs_pix2world(np.column_stack((x0, y0)), 0)
 
-    for i, corner in enumerate(xy1):
-        if corner[0] < -90:
-            xy1[i, 0] += 360
-        if corner[1] < -90:
-            xy1[i, 1] += 360
+    if header[f"CUNIT1{wcs_suffix}"] == "deg":
+        for i, corner in enumerate(xy1):
+            if corner[0] < -90:
+                xy1[i, 0] += 360
+            if corner[1] < -90:
+                xy1[i, 1] += 360
     x1 = xy1[:, 0]
-    y1 = xy1[:, 0]
+    y1 = xy1[:, 1]
 
     return x1, y1
 

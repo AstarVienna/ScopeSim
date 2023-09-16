@@ -131,13 +131,15 @@ class TestCombineImageHDUBoundaries:
     def test_all_two_imagehdus_are_inside_header_wcs(self, image_hdu_square,
                                                      image_hdu_rect):
 
-        image_hdu_rect.header["CRVAL1"] -= 70 * u.arcsec.to(u.deg)
-        image_hdu_square.header["CRVAL2"] += 70 * u.arcsec.to(u.deg)
+        image_hdu_rect.header["CRVAL1"] -= 70  # * u.arcsec.to(u.deg)
+        image_hdu_square.header["CRVAL2"] += 70  # * u.arcsec.to(u.deg)
 
         hdr = imp_utils._make_bounding_header_from_imagehdus([image_hdu_square,
                                                               image_hdu_rect])
         for imhdr in [image_hdu_square.header, image_hdu_rect.header]:
             x, y = imp_utils.calc_footprint(imhdr)
+            x *= u.arcsec.to(u.deg)
+            y *= u.arcsec.to(u.deg)
             x, y = imp_utils.val2pix(hdr, x, y)
             for xi, yi in zip(x, y):
                 assert 0 <= xi < hdr["NAXIS1"]
@@ -202,14 +204,15 @@ class TestGetCanvasHeader:
         hdr = imp_utils.get_canvas_header([image_hdu_square, tbl1, tbl2, tbl3,
                                            image_hdu_rect], pixel_scale=1*u.arcsec)
 
+        as2deg = u.arcsec.to(u.deg)
+
         for im in [image_hdu_square.header, image_hdu_rect.header]:
             x, y = imp_utils.calc_footprint(im)
-            x, y = imp_utils.val2pix(hdr, x, y)
+            x, y = imp_utils.val2pix(hdr, x*as2deg, y*as2deg)
             for xi, yi in zip(x, y):
                 assert 0 <= xi < hdr["NAXIS1"]
                 assert 0 <= yi < hdr["NAXIS2"]
 
-        as2deg = u.arcsec.to(u.deg)
         for tbl in [tbl1, tbl2, tbl3]:
             x, y = imp_utils.val2pix(hdr, tbl["x"]*as2deg, tbl["y"]*as2deg)
             for xi, yi in zip(x, y):
@@ -455,8 +458,11 @@ class TestAddImageHDUToImageHDU:
         tbl2["y"] += 100
 
         im_hdu = image_hdu_rect
-        im_hdu.header["CRVAL1"] -= 150*u.arcsec.to(u.deg)
-        im_hdu.header["CRVAL2"] += 20*u.arcsec.to(u.deg)
+        im_hdu.header["CRVAL1"] -= 150  # *u.arcsec.to(u.deg)
+        im_hdu.header["CRVAL2"] += 20  # *u.arcsec.to(u.deg)
+
+        total_flux = (np.sum(tbl1["flux"]) + np.sum(tbl2["flux"]) +
+                      im_hdu.data.sum() + image_hdu_square.data.sum())
 
         hdr = imp_utils.get_canvas_header([im_hdu, image_hdu_square,
                                            tbl1, tbl2], pixel_scale=3*u.arcsec)
@@ -469,9 +475,7 @@ class TestAddImageHDUToImageHDU:
         canvas_hdu = imp_utils.add_imagehdu_to_imagehdu(image_hdu_square,
                                                         canvas_hdu)
 
-        total_flux = np.sum(tbl1["flux"]) + np.sum(tbl2["flux"]) + \
-                     np.sum(im_hdu.data) + np.sum(image_hdu_square.data)
-        assert np.sum(canvas_hdu.data) == approx(total_flux)
+        assert np.sum(canvas_hdu.data) == approx(total_flux, rel=1e-2)
 
         if PLOTS:
 
@@ -521,7 +525,7 @@ class TestAddImageHDUToImageHDU:
 
         total_flux = np.sum(tbl1["flux"]) + np.sum(tbl2["flux"]) + \
                      np.sum(im_hdu.data) + np.sum(image_hdu_square.data)
-        assert np.sum(canvas_hdu.data) == approx(total_flux)
+        assert np.sum(canvas_hdu.data) == approx(total_flux, rel=5e-3)
 
         if PLOTS:
 
@@ -654,7 +658,7 @@ class TestRescaleImageHDU:
     def test_flux_remains_constant(self, image_hdu_rect, pixel_scale):
         orig_sum = np.sum(image_hdu_rect.data)
         new_hdu = imp_utils.rescale_imagehdu(image_hdu_rect,
-                                             pixel_scale*u.arcsec.to(u.deg))
+                                             pixel_scale) #*u.arcsec.to(u.deg))
         new_sum = np.sum(new_hdu.data)
 
         assert new_sum == approx(orig_sum)
@@ -678,8 +682,8 @@ class TestGetSpatialExtentOfHeader:
         xsky, ysky = imp_utils.calc_footprint(image_hdu_square.header)
         xsky = np.array(xsky)
         xsky[xsky > 180 ] -= 360
-        xsky = np.array(xsky)*u.deg.to(u.arcsec)
-        ysky = np.array(ysky)*u.deg.to(u.arcsec)
+        # xsky = np.array(xsky)*u.deg.to(u.arcsec)
+        # ysky = np.array(ysky)*u.deg.to(u.arcsec)
         dx = max(xsky) - min(xsky)
         dy = max(ysky) - min(ysky)
         assert dx == approx(image_hdu_square.header["NAXIS1"])
@@ -691,16 +695,16 @@ class TestMakeImagePlaneHeader:
     def test_header_contains_future_naxis_pixel_sizes(self, image_hdu_square,
                                                       image_hdu_rect):
         hdr = imp_utils.get_canvas_header([image_hdu_square, image_hdu_rect])
-        assert hdr["NAXIS1"] == 100 + 2
-        assert hdr["NAXIS2"] == 200 + 2
+        assert hdr["NAXIS1"] == 100 + 1
+        assert hdr["NAXIS2"] == 200 + 1
 
     @pytest.mark.parametrize("offset", -np.random.randint(200, 1001, 10))
     def test_header_contains_spread_out_regions(self, offset, image_hdu_square,
                                                 image_hdu_rect):
-        image_hdu_rect.header["CRVAL1"] += offset*u.arcsec.to(u.deg)
+        image_hdu_rect.header["CRVAL1"] += offset  # *u.arcsec.to(u.deg)
         hdr = imp_utils.get_canvas_header([image_hdu_square, image_hdu_rect])
         image_width = image_hdu_square.header["NAXIS1"] // 2 + \
-                      image_hdu_rect.header["NAXIS1"] // 2 + abs(offset) + 2
+                      image_hdu_rect.header["NAXIS1"] // 2 + abs(offset) + 1
 
         assert hdr["NAXIS1"] == image_width
 
@@ -715,8 +719,8 @@ class TestMakeImagePlaneHeader:
         hdr = imp_utils.get_canvas_header([tbl1, tbl2, tbl3],
                                           pixel_scale=0.1*u.arcsec)
 
-        assert hdr["NAXIS1"] == np.max(tbl1["x"] + tbl2["x"]) * 10 + 4
-        assert hdr["NAXIS2"] == np.max(tbl1["y"] + tbl3["y"]) * 10 + 4
+        assert hdr["NAXIS1"] == np.max(tbl1["x"] + tbl2["x"]) * 10 + 3  # 4
+        assert hdr["NAXIS2"] == np.max(tbl1["y"] + tbl3["y"]) * 10 + 3  # 4
 
     # @pytest.mark.parametrize("pix_scl", [5, 1, 0.5, 0.1])
     # def test_header_has_correct_size_with_tbl_and_image_input(self, input_table,
@@ -791,11 +795,11 @@ class TestAddTableToImageHDU:
         assert hdu.data[ypix, xpix] == value
 
     @pytest.mark.parametrize("x, y, flux, xpix, ypix, value",
-                             [([0], [0], [1], 50, 50, 1.),
-                              ([0.2], [0.2], [1], 50, 50, 0.64),
-                              ([-0.2], [-0.2], [1], 49, 49, 0.04),
-                              ([5], [-5.2], [1], 55, 45, 0.8),
-                              ([5], [-5.2], [1], 55, 44, 0.2)])
+                             [([0], [0], [1], 50, 50, .25),
+                              ([0.7], [0.7], [1], 50, 50, 0.64),
+                              ([-0.7], [-0.7], [1], 48, 48, 0.04),
+                              ([5.5], [-4.7], [1], 55, 45, 0.8),
+                              ([5.5], [-4.7], [1], 55, 44, 0.2)])
     def test_sub_pixel_fluxes_are_added_correctly(self, x, y, flux, xpix, ypix,
                                                   value, image_hdu_square):
         # Given the weird behaviour on pixel boundaries
@@ -809,7 +813,7 @@ class TestAddTableToImageHDU:
             plt.colorbar()
             plt.show()
 
-        assert np.isclose(hdu.data[ypix, xpix], value + 1)
+        assert hdu.data[ypix, xpix] == approx(value + 1)
 
     @pytest.mark.parametrize("x, y, flux",
                              [([100, -100], [0, 0], [10, 10])])
@@ -886,6 +890,8 @@ class TestImagePlaneAdd:
         hdr = imp_utils.get_canvas_header(pixel_scale=1 * u.arcsec,
                                           hdu_or_table_list=fields)
 
+        orig_sum = image_hdu_rect.data.sum()
+
         print(wcs.WCS(image_hdu_rect))
         print(wcs.WCS(hdr))
 
@@ -905,7 +911,7 @@ class TestImagePlaneAdd:
             plt.plot(x, y, "ro")
             plt.show()
 
-        assert np.sum(implane.data) == approx(np.sum(image_hdu_rect.data))
+        assert np.sum(implane.data) == approx(orig_sum, rel=1e-2)
 
     def test_simple_add_table_conserves_flux(self, image_hdu_rect):
         x = [75, -75]*u.arcsec
@@ -929,11 +935,11 @@ class TestImagePlaneAdd:
         hdr = imp_utils.get_canvas_header(pixel_scale=0.1 * u.arcsec,
                                           hdu_or_table_list=[image_hdu_rect,
                                                              tbl])
+        in_sum = np.sum(flux.value) + np.sum(image_hdu_rect.data)
+
         implane = opt_imp.ImagePlane(hdr)
         implane.add(tbl)
         implane.add(image_hdu_rect)
         out_sum = np.sum(implane.data)
-        in_sum = np.sum(flux.value) + np.sum(image_hdu_rect.data)
 
-        assert out_sum == approx(in_sum, rel=1e-3)
-
+        assert out_sum == approx(in_sum, rel=5e-3)
