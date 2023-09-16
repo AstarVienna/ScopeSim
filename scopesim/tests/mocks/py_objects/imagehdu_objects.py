@@ -15,7 +15,7 @@ def _image_hdu_square(wcs_suffix=""):
         the_wcs.wcs.cunit = ["mm", "mm"]
     the_wcs.wcs.cdelt = [1, 1]
     the_wcs.wcs.crval = [0, 0]
-    the_wcs.wcs.crpix = [(width - 1) / 2 + 1, (width - 1) / 2 + 1]
+    the_wcs.wcs.crpix = [(width + 1) / 2, (width + 1) / 2]
 
     # theta = 24
     # ca, sa = np.cos(np.deg2rad(theta)), np.sin(np.deg2rad(theta))
@@ -42,7 +42,7 @@ def _image_hdu_rect(wcs_suffix=""):
         the_wcs.wcs.cunit = ["mm", "mm"]
     the_wcs.wcs.cdelt = [1, 1]
     the_wcs.wcs.crval = [0, 0]
-    the_wcs.wcs.crpix = [(width - 1) / 2 + 1, (height - 1) / 2 + 1]
+    the_wcs.wcs.crpix = [(width + 1) / 2, (height + 1) / 2]
     the_wcs.wcs.pc = [[ca, sa], [-sa, ca]]
 
     image = np.random.random(size=(height, width))
