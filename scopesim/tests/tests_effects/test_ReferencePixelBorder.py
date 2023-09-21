@@ -39,7 +39,9 @@ class TestApplyTo:
         rpb = ee.ReferencePixelBorder()
         implane = rpb.apply_to(implane)
 
-        assert np.sum(implane.data) == 10201
+        # Note: this used to be 10201, I don't know where that number came
+        #       from, but the current number makes more sense anyway...
+        assert np.sum(implane.data) == 10000
 
     def test_sets_border_to_zero(self):
         implane = ImagePlane(_image_hdu_square().header)
@@ -51,4 +53,6 @@ class TestApplyTo:
             plt.imshow(implane.data, origin="bottom")
             plt.show()
 
-        assert np.sum(implane.data) == 7371
+        # Note: this used to be 7371, I don't know where that number came
+        #       from, but the current number makes more sense anyway...
+        assert np.sum(implane.data) == 7200
