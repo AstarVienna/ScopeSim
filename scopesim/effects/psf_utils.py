@@ -145,9 +145,8 @@ def get_strehl_cutout(fov_header, strehl_imagehdu):
 
     image = np.zeros((fov_header["NAXIS2"], fov_header["NAXIS1"]))
     canvas_hdu = fits.ImageHDU(header=fov_header, data=image)
-    canvas_hdu = imp_utils.add_imagehdu_to_imagehdu(strehl_imagehdu,
-                                                    canvas_hdu, spline_order=0,
-                                                    conserve_flux=False)
+    canvas_hdu = imp_utils.add_imagehdu_to_imagehdu(
+        strehl_imagehdu, canvas_hdu, spline_order=0, conserve_flux=False)
     canvas_hdu.data = canvas_hdu.data.astype(int)
 
     return canvas_hdu
