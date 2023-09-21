@@ -93,9 +93,11 @@ def _make_bounding_header_from_imagehdus(imagehdus, pixel_scale=1*u.arcsec):
         y += list(y_foot)
 
     # unit = u.mm if s == "D" else u.deg
-    unit = headers[0][f"CUNIT1{s}"]
-    assert all(header[f"CUNIT{i}{s}"] == unit
-               for header, i in product(headers, range(1, 3)))
+    unit = headers[0][f"CUNIT1{s}"].lower()
+    assert all(header[f"CUNIT{i}{s}"].lower() == unit
+               for header, i in product(headers, range(1, 3))), \
+        [header[f"CUNIT{i}{s}"] for header, i in product(headers, range(1, 3))]
+
     unit = u.Unit(unit)
     if unit.physical_type == "angle":
         factor = unit.to(u.deg)
@@ -734,7 +736,7 @@ def add_imagehdu_to_imagehdu(image_hdu: fits.ImageHDU,
         "canvas must have equal pixel scale on both axes"
 
     canvas_pixel_scale = float(canvas_wcs.wcs.cdelt[0])
-    conv_fac = u.Unit(image_hdu.header[f"CUNIT1{wcs_suffix}"]).to(canvas_wcs.wcs.cunit[0])
+    conv_fac = u.Unit(image_hdu.header[f"CUNIT1{wcs_suffix}"].lower()).to(canvas_wcs.wcs.cunit[0])
 
     new_hdu = rescale_imagehdu(image_hdu, pixel_scale=canvas_pixel_scale / conv_fac,
                                wcs_suffix=canvas_wcs.wcs.alt,
@@ -750,7 +752,12 @@ def add_imagehdu_to_imagehdu(image_hdu: fits.ImageHDU,
     img_center = (img_center - 1) / 2
 
     new_wcs = WCS(new_hdu.header, key=canvas_wcs.wcs.alt, naxis=2)
-    sky_center = new_wcs.wcs_pix2world(img_center, 0) * conv_fac
+    sky_center = new_wcs.wcs_pix2world(img_center, 0)
+    if new_wcs.wcs.cunit[0] == "deg":
+        for i, c in enumerate(sky_center[0]):
+            if c > 180:
+                sky_center[0][i] -= 360
+    sky_center *= conv_fac
     # xsky0, ysky0 = pix2val(new_hdu.header, xcen_im, ycen_im, wcs_suffix)
     # sky_center = np.array([[xsky0, ysky0]])
     pix_center = canvas_wcs.wcs_world2pix(sky_center, 0)

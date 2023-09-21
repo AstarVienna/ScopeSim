@@ -600,12 +600,13 @@ class FieldOfView(FieldOfViewBase):
 
     def volume(self, wcs_prefix=""):
         xs, ys = imp_utils.calc_footprint(self.header, wcs_suffix=wcs_prefix)
+        unit = self.header[f"CUNIT1{wcs_prefix}"].lower()
         # FIXME: This is unused!!
         # wave_corners = self.waverange
         self._volume = {"xs": [min(xs), max(xs)],
                         "ys": [min(ys), max(ys)],
                         "waves": self.waverange,
-                        "xy_unit": "mm" if wcs_prefix == "D" else "deg",
+                        "xy_unit": unit,
                         "wave_unit": "um"}
         return self._volume
 

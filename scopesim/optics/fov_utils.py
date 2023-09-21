@@ -6,8 +6,8 @@ from astropy.io import fits
 from astropy.table import Table, Column
 from synphot import SourceSpectrum, Empirical1D
 
-from scopesim import utils
-from scopesim.optics import image_plane_utils as imp_utils
+from .. import utils
+from ...optics import image_plane_utils as imp_utils
 
 
 def is_field_in_fov(fov_header, field, wcs_suffix=""):
@@ -48,6 +48,8 @@ def is_field_in_fov(fov_header, field, wcs_suffix=""):
 
         ext_xsky, ext_ysky = imp_utils.calc_footprint(field_header, wcs_suffix)
         fov_xsky, fov_ysky = imp_utils.calc_footprint(fov_header, wcs_suffix)
+        fov_xsky *= u.Unit(fov_header["CUNIT1"].lower()).to(u.deg)
+        fov_ysky *= u.Unit(fov_header["CUNIT2"].lower()).to(u.deg)
 
         is_inside_fov = (min(ext_xsky) < max(fov_xsky) and
                          max(ext_xsky) > min(fov_xsky) and
@@ -283,7 +285,14 @@ def extract_area_from_imagehdu(imagehdu, fov_volume):
     new_hdr = {}
     naxis1, naxis2 = hdr["NAXIS1"], hdr["NAXIS2"]
     x_hdu, y_hdu = imp_utils.calc_footprint(imagehdu)  # field edges in "deg"
-    x_fov, y_fov = fov_volume["xs"], fov_volume["ys"]
+    x_fov, y_fov = np.array(fov_volume["xs"]), np.array(fov_volume["ys"])
+
+    if hdr["CUNIT1"] == "arcsec":
+        x_hdu *= u.arcsec.to(u.deg)
+        y_hdu *= u.arcsec.to(u.deg)
+    if fov_volume["xy_unit"] == "arcsec":
+        x_fov *= u.arcsec.to(u.deg)
+        y_fov *= u.arcsec.to(u.deg)
 
     x0s, x1s = max(min(x_hdu), min(x_fov)), min(max(x_hdu), max(x_fov))
     y0s, y1s = max(min(y_hdu), min(y_fov)), min(max(y_hdu), max(y_fov))
