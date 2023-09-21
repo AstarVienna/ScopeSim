@@ -1,15 +1,16 @@
+from pathlib import Path
+
 import pytest
 import os
 from synphot import SpectralElement, SourceSpectrum
 
 from scopesim.effects import SkycalcTERCurve
 from scopesim import rc
-from scopesim.utils import from_currsys
 
 if rc.__config__["!SIM.tests.run_skycalc_ter_tests"] is False:
     pytestmark = pytest.mark.skip("Ignoring SkyCalc integration tests")
 
-FILES_PATH = os.path.join(os.path.dirname(__file__), "../MOCKS/files/")
+FILES_PATH = str(Path(__file__).parent.parent / "mocks" / "files")
 if FILES_PATH not in rc.__search_path__:
     rc.__search_path__ += [FILES_PATH]
 

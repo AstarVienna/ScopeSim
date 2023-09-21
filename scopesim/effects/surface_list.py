@@ -1,16 +1,17 @@
+"""TBA."""
+
 import numpy as np
 from astropy import units as u
-import matplotlib.pyplot as plt
 
 from .ter_curves import TERCurve
 from ..optics import radiometry_utils as rad_utils
-from ..optics.surface import PoorMansSurface, SpectralSurface
-from ..utils import quantify, from_currsys
+from ..optics.surface import PoorMansSurface
+from ..utils import quantify, from_currsys, figure_factory
 
 
 class SurfaceList(TERCurve):
     def __init__(self, **kwargs):
-        super(SurfaceList, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         params = {"z_order": [20, 120, 520],
                   "minimum_throughput": "!SIM.spectral.minimum_throughput",
                   "etendue": "!TEL.etendue",
@@ -25,6 +26,7 @@ class SurfaceList(TERCurve):
         self._emission = None
 
     def fov_grid(self, which="waveset", **kwargs):
+        wave_edges = []
         if which == "waveset":
             self.meta.update(kwargs)
             self.meta = from_currsys(self.meta)
@@ -35,18 +37,15 @@ class SurfaceList(TERCurve):
             throughput = self.throughput(wave)
             threshold = self.meta["minimum_throughput"]
             valid_waves = np.where(throughput >= threshold)[0]
-            if len(valid_waves) > 0:
-                wave_edges = [min(wave[valid_waves]), max(wave[valid_waves])]
-            else:
-                raise ValueError("No transmission found above the threshold {} "
-                                 "in this wavelength range {}. Did you open "
-                                 "the shutter?"
-                                 "".format(self.meta["minimum_throughput"],
-                                           [self.meta["wave_min"],
-                                            self.meta["wave_max"]]))
-        else:
-            wave_edges = []
 
+            if not len(valid_waves):
+                msg = ("No transmission found above the threshold "
+                       f"{self.meta['minimum_throughput']} in this wavelength "
+                       f"range {[self.meta['wave_min'], self.meta['wave_max']]}."
+                       " Did you open the shutter?")
+                raise ValueError(msg)
+
+            wave_edges = [min(wave[valid_waves]), max(wave[valid_waves])]
         return wave_edges
 
     @property
@@ -78,17 +77,17 @@ class SurfaceList(TERCurve):
         self._surface = item
 
     def get_throughput(self, start=0, end=None, rows=None):
-        """ Copied directly from radiometry_table """
-
+        """Copied directly from radiometry_table."""
         if self.table is None:
             return None
-        end = len(self.table) if end is None else end
-        end = end + len(self.table) if end < 0 else end
-        rows = np.arange(start, end) if rows is None else rows
+        if end is None:
+            end = len(self.table)
+        if end < 0:
+            end += len(self.table)
+        if rows is None:
+            rows = np.arange(start, end)
 
-        thru = rad_utils.combine_throughputs(self.table, self.surfaces, rows)
-
-        return thru
+        return rad_utils.combine_throughputs(self.table, self.surfaces, rows)
 
     def get_emission(self, etendue, start=0, end=None, rows=None,
                      use_area=False):
@@ -136,41 +135,48 @@ class SurfaceList(TERCurve):
             self.table = rad_utils.combine_tables(surface_list.table,
                                                   self.table, prepend)
 
-    def plot(self, which="x", wavelength=None, ax=None, **kwargs):
-        """
+    def plot(self, which="x", wavelength=None, *, axes=None, **kwargs):
+        """Plot TER curves.
 
         Parameters
         ----------
-        which : str
-            "x" plots throughput. "t","e","r" plot trans/emission/refl
-        wavelength
-        kwargs
+        which : {"x", "t", "e", "r"}, optional
+            "x" plots throughput. "t","e","r" plot trans/emission/refl.
+            Can be a combination, e.g. "tr" or "tex" to plot each.
+        wavelength : array_like, optional
+            Passed to TERCurve.plot() for each surface. The default is None.
+        axes : matplotlib axes, optional
+            If given, plot into existing axes. The default is None.
 
         Returns
         -------
+        fig : matplotlib figure
+            Figure containing plots.
 
         """
-        import matplotlib.pyplot as plt
-        plt.gcf().clf()
+        if axes is None:
+            fig, axes = figure_factory(len(which), 1, iterable_axes=True)
+        else:
+            fig = axes.figure
+            self._axes_guard(which, axes)
 
-        for ii, which_part in enumerate(which):
-            ax = plt.subplot(len(which), 1, ii+1)
-
+        for ter, ax in zip(which, axes):
             # Plot the individual surfaces
-            for key in self.surfaces:
-                ter = TERCurve(**self.surfaces[key].meta)
-                ter.surface = self.surfaces[key]
-                ter.plot(which=which_part, wavelength=None, ax=None,
-                         new_figure=False,
-                         plot_kwargs={"ls": "-", "label": key}, **kwargs)
+            # TODO: do we want separate plots for these? if yes, how (row/col)?
+            for key, surface in self.surfaces.items():
+                curve = TERCurve(**surface.meta)
+                curve.surface = surface
+                kwargs.update(plot_kwargs={"ls": "-", "label": key})
+                curve.plot(ter, wavelength, axes=ax, **kwargs)
 
             # Plot the system surface
-            ter = TERCurve(**self.meta)
-            ter.surface = self.surface
-            ter.plot(which=which_part, wavelength=None, ax=ax, new_figure=False,
-                     plot_kwargs={"ls": "-.", "label": "System Throughput"},
-                     **kwargs)
+            # TODO: self is a subclass of TERCurve, why create again??
+            curve = TERCurve(**self.meta)
+            curve.surface = self.surface
+            kwargs.update(plot_kwargs={"ls": "-.",
+                                       "label": "System Throughput"})
+            curve.plot(ter, axes=ax, **kwargs)
 
-        plt.legend()
+        fig.legend()
 
-        return plt.gcf()
+        return fig

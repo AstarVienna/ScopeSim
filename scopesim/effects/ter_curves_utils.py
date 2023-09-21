@@ -1,4 +1,5 @@
-import logging
+"""TBA."""
+
 from pathlib import Path
 
 import numpy as np
@@ -44,6 +45,7 @@ FILTER_DEFAULTS = {"U": "Generic/Bessell.U",
 PATH_HERE = Path(__file__).parent
 PATH_SVO_DATA = PATH_HERE.parent / "data" / "svo"
 
+
 def get_filter_effective_wavelength(filter_name):
     if isinstance(filter_name, str):
         filter_name = from_currsys(filter_name)
@@ -57,10 +59,9 @@ def get_filter_effective_wavelength(filter_name):
     return eff_wave
 
 
-def download_svo_filter(filter_name, return_style="synphot",
-                        error_on_wrong_name=True):
+def download_svo_filter(filter_name, return_style="synphot"):
     """
-    Query the SVO service for the true transmittance for a given filter
+    Query the SVO service for the true transmittance for a given filter.
 
     Copied 1 to 1 from tynt by Brett Morris
 
@@ -78,15 +79,14 @@ def download_svo_filter(filter_name, return_style="synphot",
         - array: np.ndarray [wave, trans], where wave is in Angstrom
         - vo_table : astropy.table.Table - original output from SVO service
 
-    error_on_wrong_name : bool
-        Default True. Raises an exception if filter_name is as incorrect SVO ID
-
     Returns
     -------
     filt_curve : See return_style
         Astronomical filter object.
 
     """
+    # The SVO is only accessible over http, not over https.
+    # noinspection HttpUrlsUsage
     url = f"http://svo2.cab.inta-csic.es/theory/fps3/fps.php?ID={filter_name}"
     path = find_file(
         filter_name,
@@ -96,18 +96,9 @@ def download_svo_filter(filter_name, return_style="synphot",
     if not path:
         path = download_file(url, cache=True)
 
-    try:
-        tbl = Table.read(path, format='votable')
-        wave = u.Quantity(tbl['Wavelength'].data.data, u.Angstrom, copy=False)
-        trans = tbl['Transmission'].data.data
-    except:
-        if error_on_wrong_name:
-            raise ValueError(f"{filter_name} is an incorrect SVO identiier")
-        else:
-            logging.warning(f"'{filter_name}' was not found in the SVO. "
-                            f"Defaulting to a unity transmission curve.")
-            wave = [3e3, 3e5] << u.Angstrom
-            trans = np.array([1., 1.])
+    tbl = Table.read(path, format='votable')
+    wave = u.Quantity(tbl['Wavelength'].data.data, u.Angstrom, copy=False)
+    trans = tbl['Transmission'].data.data
 
     if return_style == "synphot":
         filt = SpectralElement(Empirical1D, points=wave, lookup_table=trans)
@@ -120,6 +111,8 @@ def download_svo_filter(filter_name, return_style="synphot",
         filt = [wave.value, trans]
     elif return_style == "vo_table":
         filt = tbl
+    else:
+        raise ValueError("return_style %s unknown.", return_style)
 
     return filt
 
@@ -127,7 +120,7 @@ def download_svo_filter(filter_name, return_style="synphot",
 def download_svo_filter_list(observatory, instrument, short_names=False,
                              include=None, exclude=None):
     """
-    Query the SVO service for a list of filter names for an instrument
+    Query the SVO service for a list of filter names for an instrument.
 
     Parameters
     ----------
@@ -154,7 +147,9 @@ def download_svo_filter_list(observatory, instrument, short_names=False,
         A list of filter names
 
     """
-    base_url = f"http://svo2.cab.inta-csic.es/theory/fps3/fps.php?"
+    # The SVO is only accessible over http, not over https.
+    # noinspection HttpUrlsUsage
+    base_url = "http://svo2.cab.inta-csic.es/theory/fps3/fps.php?"
     url = base_url + f"Facility={observatory}&Instrument={instrument}"
     fn = f"{observatory}/{instrument}"
     path = find_file(
@@ -193,7 +188,7 @@ def get_filter(filter_name):
     else:
         try:
             filt = download_svo_filter(filter_name)
-        except:
+        except ConnectionError:
             filt = None
 
     return filt
@@ -206,18 +201,20 @@ def get_zero_mag_spectrum(system_name="AB"):
         spec = ab_spectrum()
     elif system_name.lower() in ["st", "hst"]:
         spec = st_spectrum()
+    else:
+        raise ValueError("system_name %s is unknown", system_name)
 
     return spec
 
 
 def zero_mag_flux(filter_name, photometric_system, return_filter=False):
     """
-    Returns the zero magnitude photon flux for a filter
+    Return the zero magnitude photon flux for a filter.
 
     Acceptable filter names are those given in
     ``scopesim.effects.ter_curves_utils.FILTER_DEFAULTS`` or a string with an
-    appropriate name for a filter in the Spanish-VO filter-service. Such strings
-    must use the naming convention: observatory/instrument.filter. E.g:
+    appropriate name for a filter in the Spanish-VO filter-service. Such
+    strings must use the naming convention: observatory/instrument.filter. E.g:
     ``paranal/HAWKI.Ks``, or ``Gemini/GMOS-N.CaT``.
 
     Parameters
@@ -239,7 +236,6 @@ def zero_mag_flux(filter_name, photometric_system, return_filter=False):
         If ``return_filter`` is True
 
     """
-
     filt = get_filter(filter_name)
     spec = get_zero_mag_spectrum(photometric_system)
 
@@ -254,7 +250,7 @@ def zero_mag_flux(filter_name, photometric_system, return_filter=False):
 
 def scale_spectrum(spectrum, filter_name, amplitude):
     """
-    Scales a SourceSpectrum to a value in a filter
+    Scale a SourceSpectrum to a value in a filter.
 
     Parameters
     ----------
@@ -294,7 +290,6 @@ def scale_spectrum(spectrum, filter_name, amplitude):
         >>> jy_3630 = ter_utils.scale_spectrum(spec, "Ks", 3630 * u.Jy)
 
     """
-
     if isinstance(amplitude, u.Quantity):
         if amplitude.unit.physical_type == "spectral flux density":
             if amplitude.unit != u.ABmag:
@@ -324,9 +319,10 @@ def scale_spectrum(spectrum, filter_name, amplitude):
 
     return spectrum
 
+
 def apply_throughput_to_cube(cube, thru):
     """
-    Apply throughput curve to a spectroscopic cube
+    Apply throughput curve to a spectroscopic cube.
 
     Parameters
     ----------
@@ -337,8 +333,8 @@ def apply_throughput_to_cube(cube, thru):
 
     Returns
     -------
-    cube : ImageHDU, header unchanged, data multiplied with wavelength-dependent
-         throughput
+    cube : ImageHDU, header unchanged, data multiplied with
+         wavelength-dependent throughput.
     """
     wcs = WCS(cube.header).spectral
     wave_cube = wcs.all_pix2world(np.arange(cube.data.shape[0]), 0)[0]
@@ -346,9 +342,10 @@ def apply_throughput_to_cube(cube, thru):
     cube.data *= thru(wave_cube).value[:, None, None]
     return cube
 
+
 def combine_two_spectra(spec_a, spec_b, action, wave_min, wave_max):
     """
-    Combines transmission and/or emission spectrum with a common waverange
+    Combine transmission and/or emission spectrum with a common waverange.
 
     Spec_A is the source spectrum
     Spec_B is either the transmission or emission that should be applied
@@ -376,7 +373,7 @@ def combine_two_spectra(spec_a, spec_b, action, wave_min, wave_max):
     wave = ([wave_min.value] + list(wave_val[mask]) + [wave_max.value]) * u.AA
     if "mult" in action.lower():
         spec_c = spec_a(wave) * spec_b(wave)
-        ## Diagnostic plots - not for general use
+        # Diagnostic plots - not for general use
         # from matplotlib import pyplot as plt
         # plt.plot(wave, spec_a(wave), label="spec_a")
         # plt.plot(wave, spec_b(wave), label="spec_b")
@@ -386,6 +383,8 @@ def combine_two_spectra(spec_a, spec_b, action, wave_min, wave_max):
         # plt.show()
     elif "add" in action.lower():
         spec_c = spec_a(wave) + spec_b(wave)
+    else:
+        raise ValueError(f"action {action} unknown")
 
     new_source = SourceSpectrum(Empirical1D, points=wave, lookup_table=spec_c)
     new_source.meta.update(spec_b.meta)

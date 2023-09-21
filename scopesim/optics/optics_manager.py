@@ -1,5 +1,8 @@
 import logging
 from inspect import isclass
+from typing import TextIO
+from io import StringIO
+from collections.abc import Sequence
 
 import numpy as np
 from astropy import units as u
@@ -17,7 +20,7 @@ from .. import rc
 
 class OpticsManager:
     """
-    The workhorse class for dealing with all externally defined Effect objects
+    The workhorse class for dealing with all externally defined Effect objects.
 
     Parameters
     ----------
@@ -30,7 +33,7 @@ class OpticsManager:
 
     """
 
-    def __init__(self, yaml_dicts=[], **kwargs):
+    def __init__(self, yaml_dicts=None, **kwargs):
         self.optical_elements = []
         self.meta = {}
         self.meta.update(kwargs)
@@ -45,7 +48,7 @@ class OpticsManager:
     def set_derived_parameters(self):
 
         if "!INST.pixel_scale" not in rc.__currsys__:
-            raise ValueError("!INST.pixel_scale is missing from the current"
+            raise ValueError("'!INST.pixel_scale' is missing from the current"
                              "system. Please add this to the instrument (INST)"
                              "properties dict for the system.")
         pixel_scale = rc.__currsys__["!INST.pixel_scale"] * u.arcsec
@@ -59,7 +62,7 @@ class OpticsManager:
 
     def load_effects(self, yaml_dicts, **kwargs):
         """
-        Generate an OpticalElement for each section of the Optical System
+        Generate an OpticalElement for each section of the Optical System.
 
         Make an ``OpticalElement`` for each YAML document in the system.
         For example there should be a YAML document for each of the following:
@@ -77,19 +80,18 @@ class OpticsManager:
         Parameters
         ----------
         yaml_dicts : list of dicts
-            Each YAML dict should contain the descriptions of the Effects needed
-            by each ``OpticalElement``
+            Each YAML dict should contain the descriptions of the Effects
+            needed by each ``OpticalElement``.
 
         """
-
-        if isinstance(yaml_dicts, dict):
+        if not isinstance(yaml_dicts, Sequence):
             yaml_dicts = [yaml_dicts]
-        self.optical_elements += [OpticalElement(dic, **kwargs)
-                                  for dic in yaml_dicts if "effects" in dic]
+        self.optical_elements.extend(OpticalElement(dic, **kwargs)
+                                     for dic in yaml_dicts if "effects" in dic)
 
     def add_effect(self, effect, ext=0):
         """
-        Add an Effect object to an OpticalElement at index ``ext``
+        Add an Effect object to an OpticalElement at index ``ext``.
 
         Parameters
         ----------
@@ -106,7 +108,7 @@ class OpticsManager:
 
     def update(self, **obs_dict):
         """
-        Update the meta dictionary with keyword-value pairs
+        Update the meta dictionary with keyword-value pairs.
 
         Parameters
         ----------
@@ -118,7 +120,7 @@ class OpticsManager:
 
     def get_all(self, class_type):
         """
-        Return a list of all effects from all optical elements with `class_type`
+        Return list of all effects from all optical elements with `class_type`.
 
         Parameters
         ----------
@@ -131,7 +133,6 @@ class OpticsManager:
         effects : list of Effect objects
 
         """
-
         effects = []
         for opt_el in self.optical_elements:
             effects += opt_el.get_all(class_type)
@@ -140,7 +141,7 @@ class OpticsManager:
 
     def get_z_order_effects(self, z_level):
         """
-        Return a list of all effects with a z_order keywords within z_level
+        Return a list of all effects with a z_order keywords within `z_level`.
 
         Effect z_order values are classified according to the following:
 
@@ -160,7 +161,6 @@ class OpticsManager:
         effects : list of Effect objects
 
         """
-
         effects = []
         for opt_el in self.optical_elements:
             effects += opt_el.get_z_order_effects(z_level)
@@ -176,9 +176,8 @@ class OpticsManager:
         detector_lists = self.detector_setup_effects
         headers = [det_list.image_plane_header for det_list in detector_lists]
 
-        if len(detector_lists) == 0:
-            raise ValueError("No DetectorList objects found. {}"
-                             "".format(detector_lists))
+        if not detector_lists:
+            raise ValueError(f"No DetectorList objects found. {detector_lists}")
 
         return headers
 
@@ -283,20 +282,18 @@ class OpticsManager:
     def report(self, filename=None, output="rst", rst_title_chars="_^#*+",
                **kwargs):
 
-        rst_str = """
+        rst_str = f"""
 List of Optical Elements
-{}
+{rst_title_chars[0] * 24}
 
 Summary of Effects in Optical Elements:
-{}
+{rst_title_chars[1] * 39}
 
 .. table::
     :name: tbl:effects_summary
 
-{}
-""".format(rst_title_chars[0] * 24,
-           rst_title_chars[1] * 39,
-           table_to_rst(self.list_effects(), indent=4))
+{table_to_rst(self.list_effects(), indent=4)}
+"""
 
         reports = [opt_el.report(rst_title_chars=rst_title_chars[-4:], **kwargs)
                    for opt_el in self.optical_elements]
@@ -317,7 +314,7 @@ Summary of Effects in Optical Elements:
             obj = self.optical_elements[item]
         elif isinstance(item, str):
             # check for hash-string for getting Effect.meta values
-            if item[0] == "#" and "." in item:
+            if item.startswith("#") and "." in item:
                 opt_el_name = item.replace("#", "").split(".")[0]
                 new_item = item.replace(f"{opt_el_name}.", "")
                 obj = self[opt_el_name][new_item]
@@ -343,20 +340,30 @@ Summary of Effects in Optical Elements:
     def __setitem__(self, key, value):
         obj = self.__getitem__(key)
         if isinstance(obj, list) and len(obj) > 1:
-            logging.warning("{} does not return a singular object:\n {}"
-                          "".format(key, obj))
+            logging.warning("%s does not return a singular object:\n %s", key, obj)
         elif isinstance(obj, efs.Effect) and isinstance(value, dict):
             obj.meta.update(value)
 
-    def __repr__(self):
-        msg = f"\nOpticsManager contains {len(self.optical_elements)} " \
-              f"OpticalElements \n"
-        for ii, opt_el in enumerate(self.optical_elements):
-            msg += f'[{ii}] "{opt_el.meta["name"]}" contains ' \
-                   f'{len(opt_el.effects)} effects \n'
+    def write_string(self, stream: TextIO) -> None:
+        """Write formatted string representation to I/O stream"""
+        stream.write(f"{self!s} contains {len(self.optical_elements)} "
+                     "OpticalElements\n")
+        for opt_elem in enumerate(self.optical_elements):
+            opt_elem.write_string(stream, list_effects=False)
 
-        return msg
+    def pretty_str(self) -> str:
+        """Return formatted string representation as str."""
+        with StringIO() as str_stream:
+            self.write_string(str_stream)
+            output = str_stream.getvalue()
+        return output
+
+    @property
+    def display_name(self):
+        return self.meta.get("name", self.meta.get("filename", "<empty>"))
+
+    def __repr__(self):
+        return f"<{self.__class__.__name__}>"
 
     def __str__(self):
-        name = self.meta.get("name", self.meta.get("filename", "<empty>"))
-        return f'{type(self).__name__}: "{name}"'
+        return f"{self.__class__.__name__}: \"{self.display_name}\""

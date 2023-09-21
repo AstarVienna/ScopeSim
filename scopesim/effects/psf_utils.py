@@ -5,11 +5,10 @@ from scipy.ndimage import zoom
 from astropy import units as u
 from astropy.convolution import Gaussian2DKernel
 from astropy.io import fits
-import matplotlib.pyplot as plt
-from matplotlib.colors import LogNorm
 
-from .. import rc, utils
+from .. import utils
 from ..optics import image_plane_utils as imp_utils
+from ..utils import figure_factory
 
 
 def round_kernel_edges(kernel):
@@ -21,10 +20,10 @@ def round_kernel_edges(kernel):
     return kernel
 
 
-def nmrms_from_strehl_and_wavelength(strehl, wavelength, strehl_hdu,
-                                     plot=False):
+def nmrms_from_strehl_and_wavelength(strehl: float, wavelength, strehl_hdu,
+                                     plot=False) -> float:
     """
-    Returns the wavefront error needed to make a PSF with a desired strehl ratio
+    Return the wavefront error needed to make a PSF with desired strehl ratio.
 
     Parameters
     ----------
@@ -44,7 +43,6 @@ def nmrms_from_strehl_and_wavelength(strehl, wavelength, strehl_hdu,
         with the desired strehl ratio at a given wavelength
 
     """
-
     if 1. < strehl < 100.:
         strehl *= 0.01
 
@@ -58,15 +56,13 @@ def nmrms_from_strehl_and_wavelength(strehl, wavelength, strehl_hdu,
     w1 = strehl_hdu.header["NAXIS2"] * dw + w0
     ws = np.arange(w0, w1, dw)
 
-    strehl_map = strehl_hdu.data
-
-    nms_spline = RectBivariateSpline(ws, nms, strehl_map, kx=1, ky=1)
+    nms_spline = RectBivariateSpline(ws, nms, strehl_hdu.data, kx=1, ky=1)
     strehls = nms_spline(wavelength, nms)[0]
 
     if strehl > np.max(strehls):
-        raise ValueError("Strehl ratio ({}) is impossible at this wavelength "
-                         "({}). Maximum Strehl possible is {}."
-                         "".format(strehl, wavelength, np.max(strehls)))
+        raise ValueError(f"Strehl ratio ({strehl}) is impossible at this "
+                         f"wavelength ({wavelength}). Maximum Strehl possible "
+                         f"is {np.max(strehls)}.")
 
     if strehls[0] < strehls[-1]:
         nm = np.interp(strehl, strehls, nms)
@@ -74,16 +70,15 @@ def nmrms_from_strehl_and_wavelength(strehl, wavelength, strehl_hdu,
         nm = np.interp(strehl, strehls[::-1], nms[::-1])
 
     if plot:
-        plt.plot(nms, strehls)
-        plt.plot(nm, strehl, "ro")
-        plt.show()
+        fig, ax = figure_factory()
+        ax.plot(nms, strehls)
+        ax.plot(nm, strehl, "ro")
+        fig.show()
 
     return nm
 
 
 def make_strehl_map_from_table(tbl, pixel_scale=1*u.arcsec):
-
-
     # pixel_scale = utils.quantify(pixel_scale, u.um).to(u.deg)
     # coords = np.array([tbl["x"], tbl["y"]]).T
     #
@@ -91,20 +86,20 @@ def make_strehl_map_from_table(tbl, pixel_scale=1*u.arcsec):
     # ymin, ymax = np.min(tbl["y"]), np.max(tbl["y"])
     # mesh = np.array(np.meshgrid(np.arange(xmin, xmax, pixel_scale),
     #                             np.arange(np.min(tbl["y"]), np.max(tbl["y"]))))
-    # map = griddata(coords, tbl["layer"], mesh, method="nearest")
+    # smap = griddata(coords, tbl["layer"], mesh, method="nearest")
     #
 
-    map = griddata(np.array([tbl.data["x"], tbl.data["y"]]).T,
-                   tbl.data["layer"],
-                   np.array(np.meshgrid(np.arange(-25, 26),
-                                        np.arange(-25, 26))).T,
-                   method="nearest")
+    smap = griddata(np.array([tbl.data["x"], tbl.data["y"]]).T,
+                    tbl.data["layer"],
+                    np.array(np.meshgrid(np.arange(-25, 26),
+                                         np.arange(-25, 26))).T,
+                    method="nearest")
 
     hdr = imp_utils.header_from_list_of_xy(np.array([-25, 25]) / 3600.,
                                            np.array([-25, 25]) / 3600.,
                                            pixel_scale=1/3600)
 
-    map_hdu = fits.ImageHDU(header=hdr, data=map)
+    map_hdu = fits.ImageHDU(header=hdr, data=smap)
 
     return map_hdu
 
@@ -165,7 +160,7 @@ def nearest_index(x, x_array):
 
 def get_psf_wave_exts(hdu_list, wave_key="WAVE0"):
     """
-    Returns a dict of {extension : wavelength}
+    Return a dict of {extension : wavelength}.
 
     Parameters
     ----------
@@ -176,10 +171,8 @@ def get_psf_wave_exts(hdu_list, wave_key="WAVE0"):
     wave_set, wave_ext
 
     """
-
     if not isinstance(hdu_list, fits.HDUList):
-        raise ValueError("psf_effect must be a PSF object: {}"
-                         "".format(type(hdu_list)))
+        raise ValueError(f"psf_effect must be a PSF object: {type(hdu_list)}")
 
     tmp = np.array([[ii, hdu.header[wave_key]]
                     for ii, hdu in enumerate(hdu_list)
@@ -222,9 +215,10 @@ def wfe2strehl(wfe, wave):
 
 
 def strehl2sigma(strehl):
-    amplitudes = [0.00465, 0.00480, 0.00506, 0.00553, 0.00637, 0.00793, 0.01092,
-                  0.01669, 0.02736, 0.04584, 0.07656, 0.12639, 0.20474, 0.32156,
-                  0.48097, 0.66895, 0.84376, 0.95514, 0.99437, 0.99982, 0.99999]
+    amplitudes = [0.00465, 0.00480, 0.00506, 0.00553, 0.00637, 0.00793,
+                  0.01092, 0.01669, 0.02736, 0.04584, 0.07656, 0.12639,
+                  0.20474, 0.32156, 0.48097, 0.66895, 0.84376, 0.95514,
+                  0.99437, 0.99982, 0.99999]
     sigmas = [19.9526, 15.3108, 11.7489, 9.01571, 6.91830, 5.30884, 4.07380,
               3.12607, 2.39883, 1.84077, 1.41253, 1.08392, 0.83176, 0.63826,
               0.48977, 0.37583, 0.28840, 0.22130, 0.16982, 0.13031, 0.1]
@@ -241,7 +235,7 @@ def sigma2gauss(sigma, x_size=15, y_size=15):
 
 def rotational_blur(image, angle):
     """
-    Rotates and coadds an image over a given angle to imitate a blur
+    Rotate and coadd an image over a given angle to imitate a blur.
 
     Parameters
     ----------
@@ -269,27 +263,29 @@ def rotational_blur(image, angle):
 
     return image_rot / n_angles
 
+
 def get_bkg_level(obj, bg_w):
     """
-    Determine the background level of image or cube slices
+    Determine the background level of image or cube slices.
 
     Returns a scalar if obj is a 2d image or a vector if obj is a 3D cube (one
     value for each plane).
-    The method for background determination is decided by self.meta["bkg_width"]:
-    If 0, the background is returned as zero (implying no background subtraction).
+    The method for background determination is decided by
+    self.meta["bkg_width"]:
+    If 0, the background is returned as zero (implying no background
+    subtraction).
     If -1, the background is estimated as the median of the entire image (or
     cube plane).
     If positive, the background is estimated as the median of a frame of width
     `bkg_width` around the edges.
     """
-
     if obj.ndim == 2:
         if bg_w == 0:
             bkg_level = 0
         else:
             mask = np.zeros_like(obj, dtype=bool)
             if bg_w > 0:
-                mask[bg_w:-bg_w,bg_w:-bg_w] = True
+                mask[bg_w:-bg_w, bg_w:-bg_w] = True
             bkg_level = np.ma.median(np.ma.masked_array(obj, mask=mask))
 
     elif obj.ndim == 3:

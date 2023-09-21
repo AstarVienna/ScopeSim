@@ -1,16 +1,16 @@
-import os
-from astropy.table import Table
+"""Contains base class for effects."""
+
+from pathlib import Path
 
 from ..effects.data_container import DataContainer
 from .. import base_classes as bc
 from ..utils import from_currsys, write_report
 from ..reports.rst_utils import table_to_rst
-from .. import rc
 
 
 class Effect(DataContainer):
     """
-    The base class for representing the effects (artifacts) in an optical system
+    Base class for representing the effects (artifacts) in an optical system.
 
     The ``Effect`` class is conceived to independently apply the changes that
     an optical component (or series thereof) has on an incoming 3D description
@@ -32,30 +32,28 @@ class Effect(DataContainer):
     ----------
     See :class:`DataContainer` for input parameters
 
-    Methods
-
-
     """
 
     def __init__(self, **kwargs):
-        super(Effect, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         self.meta["z_order"] = []
         self.meta["include"] = True
         self.meta.update(kwargs)
 
     def apply_to(self, obj, **kwargs):
+        """TBA."""
         if not isinstance(obj, (bc.FOVSetupBase, bc.SourceBase,
                                 bc.FieldOfViewBase, bc.ImagePlaneBase,
                                 bc.DetectorBase)):
-            raise ValueError(f"object must one of the following: FOVSetupBase, "
-                             f"Source, FieldOfView, ImagePlane, Detector: "
+            raise ValueError("object must one of the following: FOVSetupBase, "
+                             "Source, FieldOfView, ImagePlane, Detector: "
                              f"{type(obj)}")
 
         return obj
 
     def fov_grid(self, which="", **kwargs):
         """
-        Returns the edges needed to generate FieldOfViews for an observation
+        Return the edges needed to generate FieldOfViews for an observation.
 
         Parameters
         ----------
@@ -111,25 +109,25 @@ class Effect(DataContainer):
 
     @property
     def display_name(self):
-        return self.meta.get("name", self.meta.get("filename", "<empty>"))
+        name = self.meta.get("name", self.meta.get("filename", "<untitled>"))
+        if not hasattr(self, "_current_str"):
+            return name
+        return f"{name} : [{from_currsys(self.meta[self._current_str])}]"
 
     @property
     def meta_string(self):
-        meta_str = ""
-        max_key_len = max([len(key) for key in self.meta.keys()])
-        for key in self.meta:
-            if key not in ["comments", "changes", "description", "history",
-                           "report_table_caption", "report_plot_caption",
-                           "table"]:
-                meta_str += "    {} : {}\n".format(key.rjust(max_key_len),
-                                                   self.meta[key])
-
+        padlen = 4 + len(max(self.meta, key=len))
+        exclude = {"comments", "changes", "description", "history",
+                   "report_table_caption", "report_plot_caption", "table"}
+        meta_str = "\n".join(f"{key:>{padlen}} : {value}"
+                             for key, value in self.meta.items()
+                             if key not in exclude)
         return meta_str
 
     def report(self, filename=None, output="rst", rst_title_chars="*+",
                **kwargs):
         """
-        For Effect objects, generates a report based on the data and meta-data
+        For Effect objects, generates a report based on the data and meta-data.
 
         This is to aid in the automation of the documentation process of the
         instrument packages in the IRDB.
@@ -172,7 +170,6 @@ class Effect(DataContainer):
 
         Notes
         -----
-
         The format of the RST output is as follows::
 
             <ClassType>: <effect name>
@@ -201,7 +198,7 @@ class Effect(DataContainer):
 
         """
         changes = self.meta.get("changes", [])
-        changes_str = "- " + "\n- ".join([str(entry) for entry in changes])
+        changes_str = "- " + "\n- ".join(str(entry) for entry in changes)
         cls_doc = self.__doc__ if self.__doc__ is not None else "<no docstring>"
         cls_descr = cls_doc.lstrip().splitlines()[0]
 
@@ -223,31 +220,30 @@ class Effect(DataContainer):
         params.update(kwargs)
         params = from_currsys(params)
 
-        rst_str = """
-{}
-{}
-**Included by default**: ``{}``
+        rst_str = f"""
+{str(self)}
+{rst_title_chars[0] * len(str(self))}
+**Included by default**: ``{params["include"]}``
 
-**File Description**: {}
+**File Description**: {params["file_description"]}
 
-**Class Description**: {}
+**Class Description**: {params["class_description"]}
 
 **Changes**:
 
-{}
+{params["changes_str"]}
 
 Data
-{}
-""".format(str(self),
-           rst_title_chars[0] * len(str(self)),
-           params["include"],
-           params["file_description"],
-           params["class_description"],
-           params["changes_str"],
-           rst_title_chars[1] * 4)
+{rst_title_chars[1] * 4}
+"""
 
         if params["report_plot_include"] and hasattr(self, "plot"):
+            from matplotlib.figure import Figure
             fig = self.plot()
+            # HACK: plot methods should always return the same, while this is
+            #       not sorted out, deal with both fig and ax
+            if not isinstance(fig, Figure):
+                fig = fig.figure
 
             if fig is not None:
                 path = params["report_image_path"]
@@ -257,7 +253,7 @@ Data
 
                 for fmt in params["report_plot_file_formats"]:
                     fname = ".".join((fname.split(".")[0], fmt))
-                    file_path = os.path.join(path, fname)
+                    file_path = Path(path, fname)
 
                     fig.savefig(fname=file_path)
 
@@ -265,64 +261,55 @@ Data
                 #                            params["report_rst_path"])
                 # rel_file_path = os.path.join(rel_path, fname)
 
-                rst_str += """
-.. figure:: {}
-    :name: {}
+                # TODO: fname is set in a loop above, so using it here in the
+                #       fstring will only access the last value from the loop,
+                #       is that intended?
+                rst_str += f"""
+.. figure:: {fname}
+    :name: {"fig:" + params.get("name", "<unknown Effect>")}
 
-    {}
-""".format(fname,
-           "fig:" + params.get("name", "<unknown Effect>"),
-           params["report_plot_caption"])
+    {params["report_plot_caption"]}
+"""
 
         if params["report_table_include"]:
-            rst_str += """
+            rst_str += f"""
 .. table::
-    :name: {}
+    :name: {"tbl:" + params.get("name")}
 
-{}
+{table_to_rst(self.table, indent=4, rounding=params["report_table_rounding"])}
 
-{}
-""".format("tbl:" + params.get("name"),
-           table_to_rst(self.table, indent=4,
-                        rounding=params["report_table_rounding"]),
-           params["report_table_caption"])
+{params["report_table_caption"]}
+"""
 
-        rst_str += """
+        rst_str += f"""
 Meta-data
-{}
+{rst_title_chars[1] * 9}
 ::
 
-{}
-""".format(rst_title_chars[1] * 9,
-           self.meta_string)
+{self.meta_string}
+"""
 
         write_report(rst_str, filename, output)
 
         return rst_str
 
     def info(self):
-        """
-        Prints basic information on the effect, notably the description
-        """
-        name = self.meta.get("name", self.meta.get("filename", "<empty>"))
-        text = f'{type(self).__name__}: "{name}"'
-
-        desc = self.meta.get("description")
-        if desc is not None:
-             text += f"\nDescription: {desc}"
-
-        print(text)
+        """Print basic information on the effect, notably the description."""
+        if (desc := self.meta.get("description")) is not None:
+            print(f"{self}\nDescription: {desc}")
+        else:
+            print(self)
 
     def __repr__(self):
-        return f'{type(self).__name__}: "{self.display_name}"'
+        return f"{self.__class__.__name__}(**{self.meta!r})"
 
     def __str__(self):
-        return self.__repr__()
+        return f"{self.__class__.__name__}: \"{self.display_name}\""
 
     def __getitem__(self, item):
-        if isinstance(item, str) and item[0] == "#":
+        if isinstance(item, str) and item.startswith("#"):
             if len(item) > 1:
-                if item[-1] == "!":
+                if item.endswith("!"):
                     key = item[1:-1]
                     if len(key) > 0:
                         value = from_currsys(self.meta[key])
@@ -336,3 +323,9 @@ Meta-data
             raise ValueError(f"__getitem__ calls must start with '#': {item}")
 
         return value
+
+    def _get_path(self):
+        if any(key not in self.meta for key in ("path", "filename_format")):
+            return None
+        return Path(self.meta["path"],
+                    from_currsys(self.meta["filename_format"]))

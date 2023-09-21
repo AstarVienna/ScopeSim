@@ -16,6 +16,12 @@ def basic_yaml():
     return yaml.full_load(_basic_yaml)
 
 
+@pytest.fixture(scope="class")
+def nested_dict():
+    return {"foo": 5, "bar": {"bogus": {"a": 42, "b": 69},
+        "baz": "meh"}, "moo": "yolo", "yeet": {"x": 0, "y": 420}}
+
+
 @pytest.mark.usefixtures("basic_yaml")
 class TestInit:
     def test_initialises_with_nothing(self):
@@ -104,3 +110,30 @@ class TestFunctionRecursiveUpdate:
         f = {"a": {"b": {"c": "world"}}}
         recursive_update(e, f)
         assert e["a"]["b"]["c"] == "world"
+
+
+@pytest.mark.usefixtures("nested_dict")
+class TestRepresentation:
+    def test_str_conversion(self, nested_dict):
+        desired = ("SystemDict contents:\n├─foo: 5\n├─bar: \n│ ├─bogus: "
+                   "\n│ │ ├─a: 42\n│ │ └─b: 69\n│ └─baz: meh\n├─moo: "
+                   "yolo\n└─yeet: \n  ├─x: 0\n  └─y: 420")
+        sys_dict = SystemDict(nested_dict)
+        assert str(sys_dict) == desired
+
+    def test_repr_conversion(self, nested_dict):
+        desired = ("SystemDict({'foo': 5, 'bar': {'bogus': "
+                   "{'a': 42, 'b': 69}, 'baz': 'meh'}, 'moo': 'yolo', "
+                   "'yeet': {'x': 0, 'y': 420}})")
+        sys_dict = SystemDict(nested_dict)
+        assert sys_dict.__repr__() == desired
+
+    def test_len_works(self, nested_dict):
+        sys_dict = SystemDict(nested_dict)
+        assert len(sys_dict) == 7
+
+    def test_list_returns_keys(self, nested_dict):
+        desired = ["foo", "!bar.bogus.a", "!bar.bogus.b", "!bar.baz", "moo",
+                   "!yeet.x", "!yeet.y"]
+        sys_dict = SystemDict(nested_dict)
+        assert list(sys_dict) == desired

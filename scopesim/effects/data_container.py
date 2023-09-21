@@ -7,7 +7,7 @@ from .. import utils
 
 class DataContainer:
     """
-    A class to hold data files needed by all Effects objects
+    A class to hold data files needed by all Effects objects.
 
     Parameters
     ----------
@@ -27,8 +27,9 @@ class DataContainer:
 
     Notes
     -----
-    If a table is to be generated from an ``array_dict`` parameter, column units
-    can be passed as keyword arguments (kwargs) using the following format::
+    If a table is to be generated from an ``array_dict`` parameter, column
+    units can be passed as keyword arguments (kwargs) using the following
+    format::
 
         Datacontainer(... , <column name>_unit="<unit string>")
 
@@ -43,8 +44,8 @@ class DataContainer:
         function calling this should be prepared to handle both data formats
 
     meta : dict
-        Contains all meta data read in from the file's header, and/or passed via
-        kwargs
+        Contains all meta data read in from the file's header, and/or passed
+        via kwargs.
 
     table : astropy.Table
         If the file has a table format (ASCII of FITS) it is read in
@@ -56,6 +57,7 @@ class DataContainer:
         to the data open FITS file.
 
     """
+
     def __init__(self, filename=None, table=None, array_dict=None, **kwargs):
 
         if filename is None and "file_name" in kwargs:
@@ -114,8 +116,8 @@ class DataContainer:
         self.meta.update(hdr_dict)
         # self.table.meta.update(hdr_dict)
         self.table.meta.update(self.meta)
-        self.meta["history"] += ["ASCII table read from {}"
-                                 "".format(self.meta["filename"])]
+        self.meta["history"] += ["ASCII table read from "
+                                 f"{self.meta['filename']}"]
 
     def _load_fits(self):
         self._file = fits.open(self.meta["filename"])
@@ -123,12 +125,12 @@ class DataContainer:
             self.headers += [ext.header]
 
         self.meta.update(dict(self._file[0].header))
-        self.meta["history"] += ["Opened handle to FITS file {}"
-                                 "".format(self.meta["filename"])]
+        self.meta["history"] += ["Opened handle to FITS file "
+                                 f"{self.meta['filename']}"]
 
     def get_data(self, ext=0, layer=None):
         """
-        Returns either a table or a ImageHDU object
+        Return either a table or a ImageHDU object.
 
         .. note:: Use this call for reading in individual FITS extensions.
 

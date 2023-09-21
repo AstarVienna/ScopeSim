@@ -19,6 +19,7 @@ on:
   workflow_dispatch:
 
 jobs:
+<<<<<<< HEAD
   build:
     runs-on: ${{ matrix.os }}
     strategy:
@@ -47,3 +48,7 @@ jobs:
         run: ./runnotebooks.sh
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v3
+=======
+  call-tests:
+    uses: AstarVienna/DevOps/.github/workflows/tests.yml@master
+>>>>>>> dev_master

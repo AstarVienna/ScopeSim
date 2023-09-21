@@ -104,11 +104,11 @@ effects :
 
 ---
 
-### MAORY RELAY OPTICS
+### MORFEO RELAY OPTICS
 object : relay_optics
-name : MAORY
+name : MORFEO
 alias : RO
-description : MAORY AO relay module
+description : MORFEO AO relay module
 
 properties :
     temperature : !ATMO.temperature
@@ -123,10 +123,10 @@ effects :
 
 effects :
 -   name: relay_surface_list
-    description : list of surfaces in MAORY
+    description : list of surfaces in MORFEO
     class: SurfaceList
     kwargs:
-        filename: LIST_mirrors_MCAO_MAORY.tbl
+        filename: LIST_mirrors_MCAO_MORFEO.tbl
 
 ---
 
