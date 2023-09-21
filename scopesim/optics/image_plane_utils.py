@@ -161,7 +161,7 @@ def _make_bounding_header_for_tables(tables, pixel_scale=1*u.arcsec):
 
 
 def header_from_list_of_xy(x, y, pixel_scale, wcs_suffix="", sky_offset=False,
-                           arcsec=False):
+                           arcsec=False, force_center=False):
     """
     Make a header large enough to contain all x,y on-sky coordinates.
 
@@ -235,7 +235,7 @@ def header_from_list_of_xy(x, y, pixel_scale, wcs_suffix="", sky_offset=False,
     hdr["CRPIX2"+s] = 1.  # 0.
 
     # Set reference to center if not linear
-    if ctype != "LINEAR":
+    if ctype != "LINEAR" or force_center:
         xpcen, ypcen = (naxis1 - 1) / 2, (naxis2 - 1) / 2
         xscen, yscen = pix2val(hdr, xpcen, ypcen, s)
         hdr["CRVAL1"+s] = round(float(xscen), 12)
