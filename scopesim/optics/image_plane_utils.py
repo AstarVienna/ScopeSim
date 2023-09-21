@@ -720,8 +720,9 @@ def add_imagehdu_to_imagehdu(image_hdu: fits.ImageHDU,
     canvas_hdu : fits.ImageHDU
 
     """
-    # .. todo: Add a catch for projecting a large image onto a small canvas
-
+    # TODO: Add a catch for projecting a large image onto a small canvas
+    # FIXME: This can mutate the input HDUs, investigate this and deepcopy
+    #        if necessary.
     # TODO: rename wcs_suffix to wcs, ideally always pass WCS in the future...
     if isinstance(wcs_suffix, WCS):
         canvas_wcs = wcs_suffix
@@ -887,8 +888,12 @@ def calc_footprint(header, wcs_suffix=" "):
     x0 = np.array([0, w, w, 0])
     y0 = np.array([0, 0, h, h])
 
-    coords = WCS(header, key=wcs_suffix)
-    xy1 = coords.calc_footprint(center=False)
+    # TODO: maybe celestial instead??
+    coords = WCS(header, key=wcs_suffix, naxis=2)
+    if header["NAXIS"] == 3:
+        xy1 = coords.calc_footprint(center=False, axes=(header["NAXIS1"], header["NAXIS2"]))
+    else:
+        xy1 = coords.calc_footprint(center=False)
     if xy1 is None:
         xy1 = coords.wcs_pix2world(np.column_stack((x0, y0)), 0)
 
