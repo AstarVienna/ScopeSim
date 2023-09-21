@@ -170,7 +170,20 @@ def process_code(context_code, code, options):
             fname = options.get("name", "untitled").split(".")[0]
             fname = ".".join([fname, fmt])
             fname = Path(img_path, fname)
-            context_code += f"\nplt.savefig(\"{fname}\")"
+            # This commented out code will not work in windows in the future:
+            #   context_code += f"\nplt.savefig(\"{fname}\")"
+            # Because on windows it results in context_code like
+            #   plt.savefig("images_temp\my_fug3.png")
+            # which has a '\m' in it, which is an invalid escape sequence,
+            # which will be a SyntaxError in the future.
+            # (The code probably already creates figures with incorrect paths
+            # if the name of the file would lead to a valid escape sequence
+            # like \t or \n.)
+            # Therefor it is necessary to first convert fname to a string, and
+            # then use `repr` on that to (on windows) escape the slashes. repr
+            # also adds its own (single) quotes, so it is not necessary to
+            # include them in the context_code.
+            context_code += f"\nplt.savefig({repr(str(fname))})"
 
     return context_code
 
