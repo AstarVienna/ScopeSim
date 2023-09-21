@@ -541,8 +541,10 @@ def rescale_imagehdu(imagehdu: fits.ImageHDU, pixel_scale: float,
 
     for ii in range(max(1, len(wcs_suffix))):
         si = wcs_suffix[ii] if wcs_suffix else ""
-        imagehdu.header[f"CRPIX1{si}"] *= zoom[0]
-        imagehdu.header[f"CRPIX2{si}"] *= zoom[1]
+        if imagehdu.header[f"CTYPE1{si}"] != "LINEAR":
+            logging.warning("Non-linear WCS rescaled using linear procedure.")
+        imagehdu.header[f"CRPIX1{si}"] = (zoom[0] + 1) / 2 + (imagehdu.header[f"CRPIX1{si}"] - 1) * zoom[0]
+        imagehdu.header[f"CRPIX2{si}"] = (zoom[1] + 1) / 2 + (imagehdu.header[f"CRPIX2{si}"] - 1) * zoom[1]
         imagehdu.header[f"CDELT1{si}"] = pixel_scale
         imagehdu.header[f"CDELT2{si}"] = pixel_scale
         imagehdu.header[f"CUNIT1{si}"] = "mm" if si == "D" else "deg"
