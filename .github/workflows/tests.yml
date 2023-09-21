@@ -19,36 +19,5 @@ on:
   workflow_dispatch:
 
 jobs:
-<<<<<<< HEAD
-  build:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-latest]
-        python-version: ['3.8', '3.9', '3.10', '3.11']
-
-    steps:
-      - uses: actions/checkout@v3
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: ${{ matrix.python-version }}
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          # Install this version of ScopeSim. Otherwise the PyPI version of
-          # ScopeSim will be installed when the github_actions requirements
-          # are installed, because ScopeSim is a dependency of
-          # ScopeSim_Templates.
-          pip install .
-          pip install -r requirements.github_actions.txt
-      - name: Run Pytest
-        run: pytest --cov=scopesim
-      - name: Run notebooks
-        run: ./runnotebooks.sh
-      - name: Upload coverage reports to Codecov
-        uses: codecov/codecov-action@v3
-=======
   call-tests:
     uses: AstarVienna/DevOps/.github/workflows/tests.yml@master
->>>>>>> dev_master
