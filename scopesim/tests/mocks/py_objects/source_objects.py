@@ -58,19 +58,20 @@ def _image_source(dx=0, dy=0, angle=0, weight=1):
     specs = [SourceSpectrum(Empirical1D, points=wave,
                             lookup_table=np.linspace(0, 4, n) * unit)]
 
-    n = 50
+    n = 51
     im_wcs = wcs.WCS(naxis=2)
     im_wcs.wcs.cunit = [u.arcsec, u.arcsec]
     im_wcs.wcs.cdelt = [0.2, 0.2]
     im_wcs.wcs.crval = [0, 0]
-    im_wcs.wcs.crpix = [n//2, n//2]
-    im_wcs.wcs.ctype = ["RA---TAN", "DEC--TAN"]
+    im_wcs.wcs.crpix = [(n + 1) / 2, (n + 1) / 2]
+    # im_wcs.wcs.ctype = ["RA---TAN", "DEC--TAN"]
+    im_wcs.wcs.ctype = ["LINEAR", "LINEAR"]
 
-    im = np.random.random(size=(n+1, n+1)) * 1e-9 * weight
+    im = np.random.random(size=(n, n)) * 1e-9 * weight
     im[n-1, 1] += 5 * weight
     im[1, 1] += 5 * weight
-    im[n//2, n//2] += 10 * weight
-    im[n//2, n-1] += 5 * weight
+    im[n // 2, n // 2] += 10 * weight
+    im[n // 2, n-1] += 5 * weight
 
     im_hdu = fits.ImageHDU(data=im, header=im_wcs.to_header())
     im_hdu.header["SPEC_REF"] = 0
@@ -125,6 +126,9 @@ def _cube_source(**kwargs):
     im_src.fields[0].data = data[None, :, :] * np.linspace(0, 4, n)[:, None, None]
     im_src.spectra = []
 
+    # FIXME: CRPIX might be wrong here, aka off-by-one!!
+    # But all other code assumes it like this, so I'm keeping it for now.
+    # astropy WCS spectral would need 51 to work correctly...
     cube_hdr_dict = {"CUNIT3": "um", "CTYPE3": "WAVE", "CDELT3": 0.02,
                      "CRVAL3": 1.5, "CRPIX3": 50, "SPEC_REF": None,
                      "BUNIT": "ph s-1 m-2 um-1"}
@@ -177,8 +181,9 @@ def _unity_source(dx=0, dy=0, angle=0, weight=1, n=100):
     im_wcs.wcs.cunit = [u.arcsec, u.arcsec]
     im_wcs.wcs.cdelt = [1, 1]
     im_wcs.wcs.crval = [0, 0]
-    im_wcs.wcs.crpix = [n/2, n/2]
-    im_wcs.wcs.ctype = ["RA---TAN", "DEC--TAN"]
+    im_wcs.wcs.crpix = [(n + 1) / 2, (n + 1) / 2]
+    # im_wcs.wcs.ctype = ["RA---TAN", "DEC--TAN"]
+    im_wcs.wcs.ctype = ["LINEAR", "LINEAR"]
 
     im = np.ones((n, n))
 

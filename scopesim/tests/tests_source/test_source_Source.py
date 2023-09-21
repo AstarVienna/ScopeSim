@@ -116,8 +116,9 @@ def image_source():
     im_wcs.wcs.cunit = [u.arcsec, u.arcsec]
     im_wcs.wcs.cdelt = [0.2, 0.2]
     im_wcs.wcs.crval = [0, 0]
-    im_wcs.wcs.crpix = [n//2, n//2]
-    im_wcs.wcs.ctype = ["RA---TAN", "DEC--TAN"]
+    im_wcs.wcs.crpix = [(n + 1) / 2, (n + 1) / 2]
+    # im_wcs.wcs.ctype = ["RA---TAN", "DEC--TAN"]
+    im_wcs.wcs.ctype = ["LINEAR", "LINEAR"]
 
     im = np.ones((n+1, n+1)) * 1E-11
     im[0, n] += 5
@@ -483,10 +484,3 @@ class TestMakeImageFromTable:
 #
 #     def test_scaling_properly_for_photlam_and_bscale_bzero_in_header(self):
 #         pass
-
-
-
-
-
-
-
