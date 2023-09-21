@@ -78,3 +78,16 @@ addopts = "--strict-markers"
 markers = [
     "webtest: marks tests as requiring network (deselect with '-m \"not webtest\"')",
 ]
+filterwarnings = [
+    "error",
+    # Should probably be fixed:
+    "ignore::ResourceWarning",
+    "ignore:The fit may be poorly conditioned:astropy.utils.exceptions.AstropyUserWarning",
+    # Perhaps fix?
+    "ignore:divide by zero encountered in scalar divide:RuntimeWarning",
+    "ignore:divide by zero encountered in double_scalars:RuntimeWarning",
+    "ignore:invalid value encountered in multiply:RuntimeWarning",
+    "ignore:Cannot merge meta key.*:astropy.utils.metadata.MergeConflictWarning",
+    # Raised when saving fits files, not so important to fix:
+    "ignore:.*a HIERARCH card will be created.*:astropy.io.fits.verify.VerifyWarning",
+]
