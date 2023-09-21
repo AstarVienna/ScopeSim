@@ -181,8 +181,8 @@ class TestFunctionGetStrehlCutout:
         centre_fov.header["CRVAL2"] -= 15/3600.
 
         fvpsf = FieldVaryingPSF(filename="test_FVPSF.fits")
-        strehl_hdu = scopesim.effects.psf_utils.get_strehl_cutout(centre_fov.header,
-                                                                  fvpsf.strehl_imagehdu)
+        strehl_hdu = scopesim.effects.psf_utils.get_strehl_cutout(
+            centre_fov.header, fvpsf.strehl_imagehdu)
 
         if PLOTS:
             plt.imshow(strehl_hdu.data, origin="lower")
@@ -190,3 +190,8 @@ class TestFunctionGetStrehlCutout:
             plt.show()
 
         assert all(np.unique(strehl_hdu.data).astype(int) == [0, 1, 3, 4])
+        # These work for scale 0.5, 1, 2, but are off for 0.2, weird...
+        # assert (strehl_hdu.data == 0).sum() == 100
+        # assert (strehl_hdu.data == 1).sum() == 100
+        # assert (strehl_hdu.data == 3).sum() == 100
+        # assert (strehl_hdu.data == 4).sum() == 100
