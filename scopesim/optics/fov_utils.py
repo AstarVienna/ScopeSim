@@ -7,7 +7,7 @@ from astropy.table import Table, Column
 from synphot import SourceSpectrum, Empirical1D
 
 from .. import utils
-from ...optics import image_plane_utils as imp_utils
+from . import image_plane_utils as imp_utils
 
 
 def is_field_in_fov(fov_header, field, wcs_suffix=""):
