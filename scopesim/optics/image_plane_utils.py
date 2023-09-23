@@ -203,6 +203,15 @@ def header_from_list_of_xy(x, y, pixel_scale, wcs_suffix="", sky_offset=False,
     naxis1 = int(np.round(dx))
     naxis2 = int(np.round(dy))
 
+    if s == "D":
+        crpix1 = 1.
+        crpix2 = 1.
+    else:
+        crval1 = (min(x) + max(x)) / 2
+        crval2 = (min(y) + max(y)) / 2
+        crpix1 = (naxis1 + 1) / 2
+        crpix2 = (naxis2 + 1) / 2
+
     # To deal with half pixels:
     # offset1 = round((crval1 + 0.5 * pixel_scale) % pixel_scale, 12)
     # offset2 = round((crval2 + 0.5 * pixel_scale) % pixel_scale, 12)
@@ -210,7 +219,7 @@ def header_from_list_of_xy(x, y, pixel_scale, wcs_suffix="", sky_offset=False,
     # offset2 = round(crval2 % pixel_scale, 12)
     # print(f"{s=}")
     offset1 = 0.5 * pixel_scale if s == "D" or sky_offset else 0.0
-    offset2 = 0.5 * pixel_scale if s == "D" or sky_offset  else 0.0
+    offset2 = 0.5 * pixel_scale if s == "D" or sky_offset else 0.0
 
     ctype = "LINEAR" if s in "DX" else "RA---TAN"
     if s == "D":
@@ -231,8 +240,8 @@ def header_from_list_of_xy(x, y, pixel_scale, wcs_suffix="", sky_offset=False,
     hdr["CDELT2"+s] = pixel_scale
     hdr["CRVAL1"+s] = crval1 + offset1
     hdr["CRVAL2"+s] = crval2 + offset2
-    hdr["CRPIX1"+s] = 1.  # 0.
-    hdr["CRPIX2"+s] = 1.  # 0.
+    hdr["CRPIX1"+s] = crpix1
+    hdr["CRPIX2"+s] = crpix2
 
     # Set reference to center if not linear
     if ctype != "LINEAR" or force_center:
@@ -543,8 +552,8 @@ def rescale_imagehdu(imagehdu: fits.ImageHDU, pixel_scale: float,
         si = wcs_suffix[ii] if wcs_suffix else ""
         if imagehdu.header[f"CTYPE1{si}"] != "LINEAR":
             logging.warning("Non-linear WCS rescaled using linear procedure.")
-        imagehdu.header[f"CRPIX1{si}"] = (zoom[0] + 1) / 2 + (imagehdu.header[f"CRPIX1{si}"] - 1) * zoom[0]
-        imagehdu.header[f"CRPIX2{si}"] = (zoom[1] + 1) / 2 + (imagehdu.header[f"CRPIX2{si}"] - 1) * zoom[1]
+        imagehdu.header[f"CRPIX1{si}"] = np.ceil(((zoom[0] + 1) / 2 + (imagehdu.header[f"CRPIX1{si}"] - 1) * zoom[0]) * 2) / 2
+        imagehdu.header[f"CRPIX2{si}"] = np.ceil(((zoom[1] + 1) / 2 + (imagehdu.header[f"CRPIX2{si}"] - 1) * zoom[1]) * 2) / 2
         imagehdu.header[f"CDELT1{si}"] = pixel_scale
         imagehdu.header[f"CDELT2{si}"] = pixel_scale
         imagehdu.header[f"CUNIT1{si}"] = "mm" if si == "D" else "deg"

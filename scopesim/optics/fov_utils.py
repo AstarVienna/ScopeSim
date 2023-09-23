@@ -38,7 +38,8 @@ def is_field_in_fov(fov_header, field, wcs_suffix=""):
             y = list(utils.quantity_from_table("y", field,
                                                u.arcsec).to(u.deg).value)
             s = wcs_suffix
-            cdelt = utils.quantify(fov_header["CDELT1" + s], u.deg).value
+            # cdelt = utils.quantify(fov_header["CDELT1" + s], u.deg).value
+            cdelt = fov_header[f"CDELT1{s}"] * u.Unit(fov_header[f"CUNIT1{s}"]).to(u.deg)
             field_header = imp_utils.header_from_list_of_xy(x, y, cdelt, s)
         elif isinstance(field, (fits.ImageHDU, fits.PrimaryHDU)):
             field_header = field.header
@@ -254,10 +255,10 @@ def extract_area_from_table(table, fov_volume):
     fov_xs = (fov_volume["xs"] * fov_unit).to(table["x"].unit)
     fov_ys = (fov_volume["ys"] * fov_unit).to(table["y"].unit)
 
-    mask = ((table["x"].data >= fov_xs[0].value) *
-            (table["x"].data < fov_xs[1].value) *
-            (table["y"].data >= fov_ys[0].value) *
-            (table["y"].data < fov_ys[1].value))
+    mask = ((table["x"].data >= fov_xs[0].round(12).value) *
+            (table["x"].data <= fov_xs[1].round(12).value) *
+            (table["y"].data >= fov_ys[0].round(12).value) *
+            (table["y"].data <= fov_ys[1].round(12).value))
     table_new = table[mask]
 
     return table_new
