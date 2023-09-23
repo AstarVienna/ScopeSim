@@ -46,9 +46,9 @@ class TestInit:
 
 
 class TestExtractFrom:
-    @pytest.mark.xfail(reason=("is_field_in_fov drops table if anything is "
-                               "outside fov volume, therefore no point source "
-                               "is extracted..."))
+    # @pytest.mark.xfail(reason=("is_field_in_fov drops table if anything is "
+    #                            "outside fov volume, therefore no point source "
+    #                            "is extracted..."))
     def test_extract_point_sources_from_table(self):
         src = so._table_source()
         src.fields[0]["x"] = [-15,-5,0,0] * u.arcsec
@@ -87,9 +87,9 @@ class TestExtractFrom:
 
         assert fov.fields[0].shape == (3, 51, 25)
 
-    @pytest.mark.xfail(reason=("is_field_in_fov drops table if anything is "
-                               "outside fov volume, therefore no point source "
-                               "is extracted..."))
+    # @pytest.mark.xfail(reason=("is_field_in_fov drops table if anything is "
+    #                            "outside fov volume, therefore no point source "
+    #                            "is extracted..."))
     def test_extract_one_of_each_type_from_source_object(self):
         src_table = so._table_source()              # 4 sources, put two outside of FOV
         src_table.fields[0]["x"] = [-15,-5,0,0] * u.arcsec
@@ -170,7 +170,7 @@ class TestMakeCube:
             plt.imshow(cube.data[0, :, :], origin="lower")
             plt.show()
 
-    @pytest.mark.xfail(reason="apply make_cube's fov.waveset available to the outside ")
+    # @pytest.mark.xfail(reason="apply make_cube's fov.waveset available to the outside ")
     def test_makes_cube_from_imagehdu(self):
         src_image = so._image_source()            # 10x10" @ 0.2"/pix, [0.5, 2.5]m @ 0.02µm
         fov = _fov_190_210_um()
@@ -289,14 +289,14 @@ class TestMakeImage:
         fov = _fov_190_210_um()
         fov.extract_from(src_table)
 
-        img = fov.make_image_hdu()
-
         in_sum = 0
         waveset = fov.spectra[0].waveset
         for x, y, ref, weight in src_table.fields[0]:
             flux = src_table.spectra[ref](waveset).to(u.ph/u.s/u.m**2/u.um)
             flux *= 1 * u.m**2 * 0.02 * u.um * 0.9      # 0.9 is to catch the half bins at either end
             in_sum += np.sum(flux).value * weight
+
+        img = fov.make_image_hdu()
         out_sum = np.sum(img.data)
 
         if PLOTS:

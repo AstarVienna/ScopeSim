@@ -88,8 +88,8 @@ class TestExtractAreaFromImageHDU:
 
             plt.show()
 
-        assert new_field.header["NAXIS1"] == 26
-        assert new_field.header["NAXIS2"] == 26
+        assert new_field.header["NAXIS1"] == 25
+        assert new_field.header["NAXIS2"] == 25
         assert new_field.header["NAXIS3"] == 51
 
 
@@ -127,8 +127,6 @@ class TestExtractRangeFromSpectrum:
             new_spec = fov_utils.extract_range_from_spectrum(spec, waverange)
 
 
-@pytest.mark.xfail(reason=("How is -15 and 15 supposed to fit into a field "
-                           "with 20x20, aka -10 to 10?"))
 class TestMakeCubeFromTable():
     def test_returns_an_imagehdu(self):
         src_table = so._table_source()
