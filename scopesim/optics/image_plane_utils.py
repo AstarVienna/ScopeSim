@@ -11,10 +11,6 @@ from scipy import ndimage as ndi
 from .. import utils
 
 
-###############################################################################
-# Make Canvas
-
-
 def get_canvas_header(hdu_or_table_list, pixel_scale=1 * u.arcsec):
     """
     Generate a fits.Header with a WCS that covers everything in the FOV.
@@ -92,7 +88,6 @@ def _make_bounding_header_from_imagehdus(imagehdus, pixel_scale=1*u.arcsec):
         x += list(x_foot)
         y += list(y_foot)
 
-    # unit = u.mm if s == "D" else u.deg
     unit = headers[0][f"CUNIT1{s}"].lower()
     assert all(header[f"CUNIT{i}{s}"].lower() == unit
                for header, i in product(headers, range(1, 3))), \
@@ -186,17 +181,12 @@ def header_from_list_of_xy(x, y, pixel_scale, wcs_suffix="", sky_offset=False,
 
     hdr = fits.Header()
 
-    # .. todo: find out how this plays with chunks
-    # crval1 = divmod(min(x), pixel_scale)[0] * pixel_scale
-    # crval2 = divmod(min(y), pixel_scale)[0] * pixel_scale
-
-    # naxis1 = int((max(x) - crval1) // pixel_scale) # + 2
-    # naxis2 = int((max(y) - crval2) // pixel_scale) # + 2
+    # TODO: find out how this plays with chunks
 
     crval1 = min(x)
     crval2 = min(y)
 
-    # ..todo:: test whether abs(pixel_scale) breaks anything
+    # TODO: test whether abs(pixel_scale) breaks anything
     pixel_scale = abs(pixel_scale)
     dx = (max(x) - min(x)) / pixel_scale
     dy = (max(y) - min(y)) / pixel_scale
@@ -213,11 +203,6 @@ def header_from_list_of_xy(x, y, pixel_scale, wcs_suffix="", sky_offset=False,
         crpix2 = (naxis2 + 1) / 2
 
     # To deal with half pixels:
-    # offset1 = round((crval1 + 0.5 * pixel_scale) % pixel_scale, 12)
-    # offset2 = round((crval2 + 0.5 * pixel_scale) % pixel_scale, 12)
-    # offset1 = round(crval1 % pixel_scale, 12)
-    # offset2 = round(crval2 % pixel_scale, 12)
-    # print(f"{s=}")
     offset1 = 0.5 * pixel_scale if s == "D" or sky_offset else 0.0
     offset2 = 0.5 * pixel_scale if s == "D" or sky_offset else 0.0
 
@@ -253,10 +238,6 @@ def header_from_list_of_xy(x, y, pixel_scale, wcs_suffix="", sky_offset=False,
         hdr["CRPIX2"+s] = ypcen + 1
 
     return hdr
-
-
-###############################################################################
-# Table overlays
 
 
 def add_table_to_imagehdu(table: Table, canvas_hdu: fits.ImageHDU,
@@ -401,49 +382,6 @@ def sub_pixel_fractions(x, y):
 
     return x_pix, y_pix, fracs
 
-
-###############################################################################
-# Image overlays
-#
-#
-# def overlay_image_old(small_im, big_im, coords, mask=None, sub_pixel=False):
-#     """
-#     Overlay small_im on top of big_im at the position specified by coords
-#
-#     ``small_im`` will be centred at ``coords``
-#
-#     Adapted from:
-#     ``https://stackoverflow.com/questions/14063070/
-#         overlay-a-smaller-image-on-a-larger-image-python-opencv``
-#
-#     """
-#
-#     # TODO - Add in a catch for sub-pixel shifts
-#     if sub_pixel:
-#         raise NotImplementedError
-#
-#     x, y = np.array(coords, dtype=int) - np.array(small_im.shape) // 2
-#
-#     # Image ranges
-#     x1, x2 = max(0, x), min(big_im.shape[0], x + small_im.shape[0])
-#     y1, y2 = max(0, y), min(big_im.shape[1], y + small_im.shape[1])
-#
-#     # Overlay ranges
-#     x1o, x2o = max(0, -x), min(small_im.shape[0], big_im.shape[0] - x)
-#     y1o, y2o = max(0, -y), min(small_im.shape[1], big_im.shape[1] - y)
-#
-#     # Exit if nothing to do
-#     if y1 >= y2 or x1 >= x2 or y1o >= y2o or x1o >= x2o:
-#         return big_im
-#
-#     if mask is None:
-#         big_im[x1:x2, y1:y2] += small_im[x1o:x2o, y1o:y2o]
-#     else:
-#         mask = mask[x1o:x2o, y1o:y2o].astype(bool)
-#         big_im[x1:x2, y1:y2][mask] += small_im[x1o:x2o, y1o:y2o][mask]
-#
-#     return big_im
-#
 
 def overlay_image(small_im, big_im, coords, mask=None, sub_pixel=False):
     """
@@ -602,7 +540,6 @@ def reorient_imagehdu(imagehdu: fits.ImageHDU, wcs_suffix: str = "",
 
         new_im = affine_map(imagehdu.data, matrix=mat, reshape=True,
                             spline_order=spline_order)
-        # new_im = ndi.rotate(imagehdu.data, angle, reshape=True, order=spline_order)
 
         if conserve_flux:
             new_im = np.nan_to_num(new_im, copy=False)
@@ -770,10 +707,7 @@ def add_imagehdu_to_imagehdu(image_hdu: fits.ImageHDU,
             if c > 180:
                 sky_center[0][i] -= 360
     sky_center *= conv_fac
-    # xsky0, ysky0 = pix2val(new_hdu.header, xcen_im, ycen_im, wcs_suffix)
-    # sky_center = np.array([[xsky0, ysky0]])
     pix_center = canvas_wcs.wcs_world2pix(sky_center, 0)
-    # xpix0, ypix0 = val2pix(canvas_hdu.header, xsky0, ysky0, wcs_suffix)
 
     canvas_hdu.data = overlay_image(new_hdu.data, canvas_hdu.data,
                                     coords=pix_center.squeeze())
@@ -934,7 +868,7 @@ def split_header(hdr, chunk_size, wcs_suffix=""):
     -------
     hdr_list
     """
-    # ..todo:: test that this works
+    # TODO: test that this works
     s = wcs_suffix
     naxis1, naxis2 = hdr["NAXIS1"+s], hdr["NAXIS2"+s]
     x0_pix, y0_pix = hdr["CRPIX1"+s], hdr["CRPIX2"+s]       # pix
