@@ -111,7 +111,7 @@ def image_source():
     specs = [SourceSpectrum(Empirical1D, points=wave,
                             lookup_table=np.linspace(0, 4, n) * unit)]
 
-    n = 50
+    n = 51
     im_wcs = wcs.WCS(naxis=2)
     im_wcs.wcs.cunit = [u.arcsec, u.arcsec]
     im_wcs.wcs.cdelt = [0.2, 0.2]
@@ -120,9 +120,9 @@ def image_source():
     # im_wcs.wcs.ctype = ["RA---TAN", "DEC--TAN"]
     im_wcs.wcs.ctype = ["LINEAR", "LINEAR"]
 
-    im = np.ones((n+1, n+1)) * 1E-11
-    im[0, n] += 5
-    im[n, 0] += 5
+    im = np.ones((n, n)) * 1E-11
+    im[0, n-1] += 5
+    im[n-1, 0] += 5
     im[n//2, n//2] += 10
 
     im_hdu = fits.ImageHDU(data=im, header=im_wcs.to_header())
@@ -279,7 +279,7 @@ class TestSourceImageInRange:
         im = table_source.image_in_range(1*u.um, 2*u.um)
         assert np.sum(im.image) == approx(counts)
 
-    @pytest.mark.parametrize("pix_scl", [0.1, 0.2, 0.4])
+    @pytest.mark.parametrize("pix_scl", [0.1, 0.2, 0.4, 1.0])
     def test_flux_from_imagehdu_is_as_expected(self, image_source, pix_scl):
         ph = image_source.photons_in_range(1*u.um, 2*u.um)[0].value
         im_sum = ph * np.sum(image_source.fields[0].data)
