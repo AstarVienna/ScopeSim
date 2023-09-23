@@ -429,7 +429,7 @@ def make_cube_from_table(table, spectra, waveset, fov_header, sub_pixel=False):
     Returns
     -------
     cube: fits.ImageHDU
-        Units of ph/s/m2/bin --> should this be ph/s/m2/um?
+        Units of ph/s/m2/bin --> should this be ph / (s * m2 * um)?
 
     """
     cube = np.zeros((fov_header["NAXIS2"], fov_header["NAXIS1"], len(waveset)))
