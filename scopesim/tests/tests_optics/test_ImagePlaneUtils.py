@@ -157,7 +157,7 @@ class TestAddImageHDUtoImageHDU:
         # FITS uses bottom left as CRPIXn = [1, 1]
         # matplotlib just needs origin='lower' to display these correctly
 
-        from scipy.misc import face
+        from scipy.datasets import face
         im = face()[::-1, :, 1]
         print(np.shape(face()))
 
@@ -166,8 +166,8 @@ class TestAddImageHDUtoImageHDU:
         hdu.header["CDELT2"] = -1
         hdu.header["CRVAL1"] = 0
         hdu.header["CRVAL2"] = 0
-        hdu.header["CUNIT1"] = "DEG"
-        hdu.header["CUNIT2"] = "DEG"
+        hdu.header["CUNIT1"] = "deg"
+        hdu.header["CUNIT2"] = "deg"
         hdu.header["CTYPE1"] = "LINEAR"
         hdu.header["CTYPE2"] = "LINEAR"
         hdu.header["CRPIX1"] = im.shape[1]/2
