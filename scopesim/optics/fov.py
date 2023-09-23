@@ -71,6 +71,7 @@ class FieldOfView(FieldOfViewBase):
         self.header["NAXIS1"] = header["NAXIS1"]
         self.header["NAXIS2"] = header["NAXIS2"]
         self.header.update(header)
+        self._ensure_deg_header()
         self.detector_header = detector_header
         self.hdu = None
 
@@ -698,6 +699,17 @@ class FieldOfView(FieldOfViewBase):
         return [field for field in self.fields
                 if isinstance(field, fits.ImageHDU)
                 and field.header.get("BG_SRC", False)]
+
+    def _ensure_deg_header(self):
+        cunit = u.Unit(self.header["CUNIT1"].lower())
+        convf = cunit.to(u.deg)
+        self.header["CDELT1"] *= convf
+        self.header["CDELT2"] *= convf
+        self.header["CRVAL1"] *= convf
+        self.header["CRVAL2"] *= convf
+        self.header["CUNIT1"] = "deg"
+        self.header["CUNIT2"] = "deg"
+            
 
     def __repr__(self):
         waverange = [self.meta["wave_min"].value, self.meta["wave_max"].value]

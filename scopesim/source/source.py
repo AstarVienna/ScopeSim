@@ -260,7 +260,7 @@ class Source(SourceBase):
             # Do not test for CUNIT or CDELT so that it throws an exception
             unit = u.Unit(image_hdu.header["CUNIT"+str(i)].lower())
             val = float(image_hdu.header["CDELT"+str(i)])
-            image_hdu.header["CUNIT"+str(i)] = "DEG"
+            image_hdu.header["CUNIT"+str(i)] = "deg"
             image_hdu.header["CDELT"+str(i)] = val * unit.to(u.deg)
 
         self.fields.append(image_hdu)
