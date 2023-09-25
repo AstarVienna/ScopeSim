@@ -278,11 +278,9 @@ def add_table_to_imagehdu(table: Table, canvas_hdu: fits.ImageHDU,
 
 def _add_intpixel_sources_to_canvas(canvas_hdu, xpix, ypix, flux, mask):
     canvas_hdu.header["comment"] = f"Adding {len(flux)} int-pixel files"
-    xpix = xpix.astype(int)
-    ypix = ypix.astype(int)
-    for ii in range(len(xpix)):
-        if mask[ii]:
-            canvas_hdu.data[ypix[ii], xpix[ii]] += flux[ii].value
+    for xpx, ypx, flx, msk in zip(xpix.astype(int), ypix.astype(int),
+                                  flux, mask):
+        canvas_hdu.data[ypx, xpx] += flx.value * msk
 
     return canvas_hdu
 
@@ -290,12 +288,12 @@ def _add_intpixel_sources_to_canvas(canvas_hdu, xpix, ypix, flux, mask):
 def _add_subpixel_sources_to_canvas(canvas_hdu, xpix, ypix, flux, mask):
     canvas_hdu.header["comment"] = f"Adding {len(flux)} sub-pixel files"
     canvas_shape = canvas_hdu.data.shape
-    for ii in range(len(xpix)):
-        if mask[ii]:
-            xx, yy, fracs = sub_pixel_fractions(xpix[ii], ypix[ii])
+    for xpx, ypx, flx, msk in zip(xpix, ypix, flux, mask):
+        if msk:
+            xx, yy, fracs = sub_pixel_fractions(xpx, ypx)
             for x, y, frac in zip(xx, yy, fracs):
                 if y < canvas_shape[0] and x < canvas_shape[1]:
-                    canvas_hdu.data[y, x] += frac * flux[ii].value
+                    canvas_hdu.data[y, x] += frac * flx.value
 
     return canvas_hdu
 
