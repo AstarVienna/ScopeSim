@@ -128,35 +128,32 @@ def _make_bounding_header_for_tables(tables, pixel_scale=1*u.arcsec):
     hdr : fits.Header
 
     """
-    x = []
-    y = []
+    wcs_suffix = "D" if pixel_scale.unit.physical_type == "length" else ""
+    # FIXME: Convert to deg here? If yes, remove the arcsec=True below...
+    # Note: this could all be a lot simpler if we have consistent units, i.e.
+    #       don't need to convert mm -> mm and arcsec -> arcsec (or deg)
+    new_unit = u.mm if wcs_suffix == "D" else u.arcsec  # u.deg
+    tbl_unit = u.mm if wcs_suffix == "D" else u.arcsec
+    x_name = "x_mm" if wcs_suffix == "D" else "x"
+    y_name = "y_mm" if wcs_suffix == "D" else "y"
 
-    s = "D" if pixel_scale.unit.physical_type == "length" else ""
-    unit_new = u.mm if s == "D" else u.arcsec#u.deg
-    unit_orig = u.mm if s == "D" else u.arcsec
-    x_name = "x_mm" if s == "D" else "x"
-    y_name = "y_mm" if s == "D" else "y"
+    pixel_scale = pixel_scale.to(new_unit)
 
-    pixel_scale = pixel_scale.to(unit_new).value
+    extents = []
     for table in tables:
-        x_col = utils.quantity_from_table(x_name, table,
-                                          unit_orig).to(unit_new)
-        y_col = utils.quantity_from_table(y_name, table,
-                                          unit_orig).to(unit_new)
-        x_col = list(x_col.value)
-        y_col = list(y_col.value)
-        x += [np.min(x_col) - pixel_scale,
-              np.max(x_col) + pixel_scale]
-        y += [np.min(y_col) - pixel_scale,
-              np.max(y_col) + pixel_scale]
+        extent = calc_table_footprint(table, x_name, y_name,
+                                      tbl_unit, new_unit,
+                                      padding=pixel_scale)
+        extents.append(extent)
+    pnts = np.vstack(extents)
 
-    hdr = header_from_list_of_xy(x, y, pixel_scale, s, arcsec=True)
-
+    hdr = header_from_list_of_xy(pnts[:, 0], pnts[:, 1], pixel_scale.value,
+                                 wcs_suffix, arcsec=True)
     return hdr
 
 
 def header_from_list_of_xy(x, y, pixel_scale, wcs_suffix="", sky_offset=False,
-                           arcsec=False, force_center=False):
+                           arcsec=False):
     """
     Make a header large enough to contain all x,y on-sky coordinates.
 
@@ -703,9 +700,10 @@ def add_imagehdu_to_imagehdu(image_hdu: fits.ImageHDU,
     new_wcs = WCS(new_hdu.header, key=canvas_wcs.wcs.alt, naxis=2)
     sky_center = new_wcs.wcs_pix2world(img_center, 0)
     if new_wcs.wcs.cunit[0] == "deg":
-        for i, c in enumerate(sky_center[0]):
-            if c > 180:
-                sky_center[0][i] -= 360
+        sky_center = _fix_360(sky_center)
+        # for i, c in enumerate(sky_center[0]):
+        #     if c > 180:
+        #         sky_center[0][i] -= 360
     sky_center *= conv_fac
     pix_center = canvas_wcs.wcs_world2pix(sky_center, 0)
 
@@ -798,7 +796,7 @@ def val2pix(header, a, b, wcs_suffix=""):
     return x, y
 
 
-def calc_footprint(header, wcs_suffix=" "):
+def calc_footprint(header, wcs_suffix="", new_unit: str = None):
     """
     Return the sky/detector positions [deg/mm] of the corners of a header WCS.
 
@@ -829,29 +827,83 @@ def calc_footprint(header, wcs_suffix=" "):
     if isinstance(header, fits.ImageHDU):
         header = header.header
 
-    w, h = max(header["NAXIS1"] - 1, 0), max(header["NAXIS2"] - 1, 0)
-    x0 = np.array([0, w, w, 0])
-    y0 = np.array([0, 0, h, h])
-
     # TODO: maybe celestial instead??
     coords = WCS(header, key=wcs_suffix, naxis=2)
     if header["NAXIS"] == 3:
-        xy1 = coords.calc_footprint(center=False, axes=(header["NAXIS1"], header["NAXIS2"]))
+        xy1 = coords.calc_footprint(center=False, axes=(header["NAXIS1"],
+                                                        header["NAXIS2"]))
     else:
         xy1 = coords.calc_footprint(center=False)
+
     if xy1 is None:
-        xy1 = coords.wcs_pix2world(np.column_stack((x0, y0)), 0)
+        x_ext = max(header["NAXIS1"] - 1, 0)
+        y_ext = max(header["NAXIS2"] - 1, 0)
+        xy0 = np.array([[0, 0], [0, y_ext], [x_ext, y_ext], [x_ext, 0]])
+        xy1 = coords.wcs_pix2world(xy0, 0)
 
-    if header[f"CUNIT1{wcs_suffix}"] == "deg":
-        for i, corner in enumerate(xy1):
-            if corner[0] < -90:
-                xy1[i, 0] += 360
-            if corner[1] < -90:
-                xy1[i, 1] += 360
-    x1 = xy1[:, 0]
-    y1 = xy1[:, 1]
+    if (cunit := coords.wcs.cunit[0]) == "deg":
+        xy1 = _fix_360(xy1)
 
-    return x1, y1
+    if new_unit is not None:
+        convf = cunit.to(new_unit)
+        xy1 *= convf
+
+    return xy1
+
+
+def calc_table_footprint(table: Table, x_name: str, y_name: str,
+                         tbl_unit: str, new_unit: str,
+                         padding=None) -> np.ndarray:
+    """
+    Equivalent to ``calc_footprint()``, but for tables instead of images.
+
+    Parameters
+    ----------
+    table : astropy.table.Table
+        Table containing data.
+    x_name : str
+        Name of the column in `table` to use as x-coordinates.
+    y_name : str
+        Name of the column in `table` to use as y-coordinates.
+    tbl_unit : str
+        Default unit to use for x and y if no units are found in `table`.
+    new_unit : str
+        Unit to convert x and y to, can be identical to `tbl_unit`.
+    padding : astropy.units.Quantity, optional
+        Constant value to subtract from minima and add to maxima. If used, must
+        be Quantity with same physical type as x and y. If None (default), no
+        padding is added.
+
+    Returns
+    -------
+    extent : (4, 2) array
+        Array containing corner points (clockwise from bottom left). Format and
+        order are equivalent to the output of
+        ``astropy.wcs.WCS.calc_footprint()``.
+
+    """
+    if padding is not None:
+        padding = padding.to(new_unit).value
+    else:
+        padding = 0.
+
+    x_convf = utils.unit_from_table(x_name, table, tbl_unit).to(new_unit)
+    y_convf = utils.unit_from_table(y_name, table, tbl_unit).to(new_unit)
+
+    x_col = table[x_name] * x_convf
+    y_col = table[y_name] * y_convf
+
+    x_min = x_col.min() - padding
+    x_max = x_col.max() + padding
+    y_min = y_col.min() - padding
+    y_max = y_col.max() + padding
+
+    extent = np.array([[x_min, y_min],
+                       [x_min, y_max],
+                       [x_max, y_max],
+                       [x_max, y_min]])
+
+    return extent
 
 
 def split_header(hdr, chunk_size, wcs_suffix=""):
@@ -889,3 +941,20 @@ def split_header(hdr, chunk_size, wcs_suffix=""):
             hdr_list.append(hdr_sky)
 
     return hdr_list
+
+
+def _fix_360(arr):
+    """Fix the "full circle overflow" that occurs with deg."""
+    arr = np.asarray(arr)
+    arr[arr > 270] -= 360
+    arr[arr <= -90] += 360
+    return arr
+
+
+def _get_unit_from_headers(*headers, wcs_suffix: str = "") -> str:
+    unit = headers[0][f"CUNIT1{wcs_suffix}"].lower()
+    assert all(header[f"CUNIT{i}{wcs_suffix}"].lower() == unit
+               for header, i in product(headers, range(1, 3))), \
+        [header[f"CUNIT{i}{wcs_suffix}"]
+         for header, i in product(headers, range(1, 3))]
+    return unit
