@@ -6,6 +6,7 @@ from astropy import units as u
 from astropy.wcs import WCS
 from astropy.io import fits
 from astropy.table import Table
+from astropy.utils.exceptions import AstropyWarning
 from scipy import ndimage as ndi
 
 from .. import utils
@@ -818,7 +819,13 @@ def calc_footprint(header, wcs_suffix="", new_unit: str = None):
         xy1 = coords.calc_footprint(center=False, axes=(header["NAXIS1"],
                                                         header["NAXIS2"]))
     else:
-        xy1 = coords.calc_footprint(center=False)
+        try:
+            xy1 = coords.calc_footprint(center=False)
+        except AstropyWarning:
+            # This is only relevant if Warnings are treated as Errors,
+            # otherwise astropy will silently return None by itself.
+            # Yes this whole thing should be improved, but not now...
+            xy1 = None
 
     if xy1 is None:
         x_ext = max(header["NAXIS1"] - 1, 0)
