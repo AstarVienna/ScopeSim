@@ -72,7 +72,7 @@ class TestCombineTableBoundaries:
         tbl2["x"] -= 25
         tbl3["y"] -= 60
 
-        hdr = imp_utils._make_bounding_header_for_tables([tbl1, tbl2, tbl3])
+        hdr = imp_utils._make_bounding_header_for_tables(tbl1, tbl2, tbl3)
         as2deg = u.arcsec.to(u.deg)
         for tbl in [tbl1, tbl2, tbl3]:
             x, y = imp_utils.val2pix(hdr, tbl["x"]*as2deg, tbl["y"]*as2deg)
@@ -103,8 +103,8 @@ class TestCombineTableBoundaries:
         tbl2["x_mm"] += 50
         tbl3["y_mm"] += 25
 
-        hdr = imp_utils._make_bounding_header_for_tables([tbl1, tbl2, tbl3],
-                                                         100*u.um)
+        hdr = imp_utils._make_bounding_header_for_tables(tbl1, tbl2, tbl3,
+                                                         pixel_scale=100*u.um)
         for tbl in [tbl1, tbl2, tbl3]:
             x, y = imp_utils.val2pix(hdr, tbl["x_mm"], tbl["y_mm"], "D")
             for xi, yi in zip(x, y):
@@ -136,8 +136,8 @@ class TestCombineImageHDUBoundaries:
         image_hdu_rect.header["CRVAL1"] -= 70  # * u.arcsec.to(u.deg)
         image_hdu_square.header["CRVAL2"] += 70  # * u.arcsec.to(u.deg)
 
-        hdr = imp_utils._make_bounding_header_from_imagehdus([image_hdu_square,
-                                                              image_hdu_rect])
+        hdr = imp_utils._make_bounding_header_from_headers(
+            image_hdu_square.header, image_hdu_rect.header)
         for imhdr in [image_hdu_square.header, image_hdu_rect.header]:
             xy = imp_utils.calc_footprint(imhdr)
             x, y = xy[:, 0], xy[:, 1]
@@ -166,8 +166,9 @@ class TestCombineImageHDUBoundaries:
         image_hdu_rect_mm.header["CRVAL1D"] -= 40
         image_hdu_square_mm.header["CRVAL2D"] += 80
 
-        hdr = imp_utils._make_bounding_header_from_imagehdus(
-            [image_hdu_square_mm, image_hdu_rect_mm], pixel_scale=1*u.mm)
+        hdr = imp_utils._make_bounding_header_from_headers(
+            image_hdu_square_mm.header, image_hdu_rect_mm.header,
+            pixel_scale=1*u.mm)
         for imhdr in [image_hdu_square_mm.header, image_hdu_rect_mm.header]:
             xy = imp_utils.calc_footprint(imhdr, "D")
             x, y = xy[:, 0], xy[:, 1]
@@ -483,11 +484,11 @@ class TestAddImageHDUToImageHDU:
         im = np.zeros((hdr["NAXIS2"], hdr["NAXIS1"]))
         canvas_hdu = fits.ImageHDU(header=hdr, data=im)
 
-        canvas_hdu = imp_utils.add_table_to_imagehdu(tbl1, canvas_hdu)
-        canvas_hdu = imp_utils.add_table_to_imagehdu(tbl2, canvas_hdu)
         canvas_hdu = imp_utils.add_imagehdu_to_imagehdu(im_hdu, canvas_hdu)
         canvas_hdu = imp_utils.add_imagehdu_to_imagehdu(image_hdu_square,
                                                         canvas_hdu)
+        canvas_hdu = imp_utils.add_table_to_imagehdu(tbl1, canvas_hdu)
+        canvas_hdu = imp_utils.add_table_to_imagehdu(tbl2, canvas_hdu)
 
         assert np.sum(canvas_hdu.data) == approx(total_flux, rel=1e-2)
 

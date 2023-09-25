@@ -33,20 +33,30 @@ def get_canvas_header(hdu_or_table_list, pixel_scale=1 * u.arcsec):
                     "Any image made from this header will use more that "
                     ">{size} in memory")
 
-    headers = [ht.header for ht in hdu_or_table_list
-               if isinstance(ht, fits.ImageHDU)]
-    if any(isinstance(ht, Table) for ht in hdu_or_table_list):
-        tbls = [ht for ht in hdu_or_table_list if isinstance(ht, Table)]
-        tbl_hdr = _make_bounding_header_for_tables(tbls,
+    def _get_headers(hdus_or_tables):
+        tables = []
+        for hdu_or_table in hdus_or_tables:
+            if isinstance(hdu_or_table, fits.ImageHDU):
+                yield hdu_or_table.header
+            elif isinstance(hdu_or_table, fits.Header):
+                yield hdu_or_table
+            elif isinstance(hdu_or_table, Table):
+                tables.append(hdu_or_table)
+            else:
+                raise TypeError(
+                    "hdu_or_table_list may only contain fits.ImageHDU, Table "
+                    "or fits.Header, found {type(hdu_or_table)}.")
+        if tables:
+            yield _make_bounding_header_for_tables(*tables,
                                                    pixel_scale=pixel_scale)
-        headers.append(tbl_hdr)
+
+    headers = list(_get_headers(hdu_or_table_list))
 
     if not headers:
         logging.warning("No tables or ImageHDUs were passed")
         return None
 
-    hdr = _make_bounding_header_from_imagehdus(headers,
-                                               pixel_scale=pixel_scale)
+    hdr = _make_bounding_header_from_headers(*headers, pixel_scale=pixel_scale)
 
     num_pix = hdr["NAXIS1"] * hdr["NAXIS2"]
     if num_pix > 2 ** 28:
@@ -58,13 +68,13 @@ def get_canvas_header(hdu_or_table_list, pixel_scale=1 * u.arcsec):
     return hdr
 
 
-def _make_bounding_header_from_imagehdus(imagehdus, pixel_scale=1*u.arcsec):
+def _make_bounding_header_from_headers(*headers, pixel_scale=1*u.arcsec):
     """
     Return a Header with WCS and NAXISn keywords bounding all input ImageHDUs.
 
     Parameters
     ----------
-    imagehdus : list of fits.ImageHDU
+    headers : list of fits.ImageHDU
     pixel_scale : u.Quantity
         [arcsec]
 
@@ -73,45 +83,29 @@ def _make_bounding_header_from_imagehdus(imagehdus, pixel_scale=1*u.arcsec):
     hdr : fits.Header
 
     """
-    x = []
-    y = []
-    if pixel_scale.unit.physical_type == "angle":
-        s = ""
-    elif pixel_scale.unit.physical_type == "length":
-        s = "D"
+    wcs_suffix = "D" if pixel_scale.unit.physical_type == "length" else ""
+    unit = u.Unit(_get_unit_from_headers(*headers, wcs_suffix=wcs_suffix))
 
-    headers = [hdu.header if isinstance(hdu, fits.ImageHDU) else hdu
-               for hdu in imagehdus]
-
-    for header in headers:
-        x_foot, y_foot = calc_footprint(header, s)
-        x += list(x_foot)
-        y += list(y_foot)
-
-    unit = headers[0][f"CUNIT1{s}"].lower()
-    assert all(header[f"CUNIT{i}{s}"].lower() == unit
-               for header, i in product(headers, range(1, 3))), \
-        [header[f"CUNIT{i}{s}"] for header, i in product(headers, range(1, 3))]
-
-    unit = u.Unit(unit)
     if unit.physical_type == "angle":
-        factor = unit.to(u.deg)
-        x = [xx * factor for xx in x]
-        y = [yy * factor for yy in y]
+        unit = "deg"
         pixel_scale = pixel_scale.to(u.deg).value
     else:
         pixel_scale = pixel_scale.to(unit).value
 
-    hdr = header_from_list_of_xy(x, y, pixel_scale, s)
+    extents = [calc_footprint(header, wcs_suffix, unit) for header in headers]
+    pnts = np.vstack(extents)
+
+    hdr = header_from_list_of_xy(pnts[:, 0], pnts[:, 1],
+                                 pixel_scale, wcs_suffix)
     hdr["NAXIS1"] += 1
     hdr["NAXIS2"] += 1
-    hdr[f"CRVAL1{s}"] -= 0.5 * pixel_scale
-    hdr[f"CRVAL2{s}"] -= 0.5 * pixel_scale
+    hdr[f"CRVAL1{wcs_suffix}"] -= 0.5 * pixel_scale
+    hdr[f"CRVAL2{wcs_suffix}"] -= 0.5 * pixel_scale
 
     return hdr
 
 
-def _make_bounding_header_for_tables(tables, pixel_scale=1*u.arcsec):
+def _make_bounding_header_for_tables(*tables, pixel_scale=1*u.arcsec):
     """
     Return a Header with WCS and NAXISn keywords bounding all input Tables.
 
@@ -169,39 +163,27 @@ def header_from_list_of_xy(x, y, pixel_scale, wcs_suffix="", sky_offset=False,
     hdr : fits.Header
 
     """
+    # TODO: find out how this plays with chunks
     s = wcs_suffix
     if wcs_suffix != "D" and not arcsec:
-        x = np.array(x)
-        x[x > 270] -= 360
-        x[x <= -90] += 360
-        x = list(x)
-
-    hdr = fits.Header()
-
-    # TODO: find out how this plays with chunks
-
-    crval1 = min(x)
-    crval2 = min(y)
+        x = _fix_360(x)
+        y = _fix_360(y)
+    pnts = np.array([x, y])
 
     # TODO: test whether abs(pixel_scale) breaks anything
     pixel_scale = abs(pixel_scale)
-    dx = (max(x) - min(x)) / pixel_scale
-    dy = (max(y) - min(y)) / pixel_scale
-    naxis1 = int(np.round(dx))
-    naxis2 = int(np.round(dy))
+    extent = pnts.ptp(axis=1) / pixel_scale
+    naxis = extent.round().astype(int)
 
     if s == "D":
-        crpix1 = 1.
-        crpix2 = 1.
+        crpix = np.array([1., 1.])
+        crval = pnts.min(axis=1)
     else:
-        crval1 = (min(x) + max(x)) / 2
-        crval2 = (min(y) + max(y)) / 2
-        crpix1 = (naxis1 + 1) / 2
-        crpix2 = (naxis2 + 1) / 2
+        crpix = (naxis + 1) / 2
+        crval = (pnts.min(axis=1) + pnts.max(axis=1)) / 2
 
     # To deal with half pixels:
-    offset1 = 0.5 * pixel_scale if s == "D" or sky_offset else 0.0
-    offset2 = 0.5 * pixel_scale if s == "D" or sky_offset else 0.0
+    offset = 0.5 * pixel_scale if s == "D" or sky_offset else 0.0
 
     ctype = "LINEAR" if s in "DX" else "RA---TAN"
     if s == "D":
@@ -211,28 +193,18 @@ def header_from_list_of_xy(x, y, pixel_scale, wcs_suffix="", sky_offset=False,
     else:
         cunit = "deg"
 
-    hdr["NAXIS"] = 2
-    hdr["NAXIS1"] = naxis1
-    hdr["NAXIS2"] = naxis2
-    hdr["CTYPE1"+s] = ctype
-    hdr["CTYPE2"+s] = ctype
-    hdr["CUNIT1"+s] = cunit
-    hdr["CUNIT2"+s] = cunit
-    hdr["CDELT1"+s] = pixel_scale
-    hdr["CDELT2"+s] = pixel_scale
-    hdr["CRVAL1"+s] = crval1 + offset1
-    hdr["CRVAL2"+s] = crval2 + offset2
-    hdr["CRPIX1"+s] = crpix1
-    hdr["CRPIX2"+s] = crpix2
+    new_wcs = WCS(key=s)
+    new_wcs.wcs.ctype = 2 * [ctype]
+    new_wcs.wcs.cunit = 2 * [cunit]
+    new_wcs.wcs.cdelt = np.array(2 * [pixel_scale])
+    new_wcs.wcs.crval = crval + offset
+    new_wcs.wcs.crpix = crpix
 
-    # Set reference to center if not linear
-    if ctype != "LINEAR" or force_center:
-        xpcen, ypcen = (naxis1 - 1) / 2, (naxis2 - 1) / 2
-        xscen, yscen = pix2val(hdr, xpcen, ypcen, s)
-        hdr["CRVAL1"+s] = round(float(xscen), 12)
-        hdr["CRVAL2"+s] = round(float(yscen), 12)
-        hdr["CRPIX1"+s] = xpcen + 1
-        hdr["CRPIX2"+s] = ypcen + 1
+    hdr = fits.Header()
+    hdr["NAXIS"] = 2
+    hdr["NAXIS1"] = naxis[0]
+    hdr["NAXIS2"] = naxis[1]
+    hdr.update(new_wcs.to_header())
 
     return hdr
 
@@ -288,19 +260,18 @@ def add_table_to_imagehdu(table: Table, canvas_hdu: fits.ImageHDU,
 
     xpix, ypix = val2pix(canvas_hdu.header, x.value, y.value, s)
 
-    # Weird FITS / astropy behaviour. Axis1 == y, Axis2 == x.
     naxis1 = canvas_hdu.header["NAXIS1"]
     naxis2 = canvas_hdu.header["NAXIS2"]
-    # Also occasionally 0 is returned as ~ -1e-11
+    # Occasionally 0 is returned as ~ -1e-11
     eps = -1e-7
     mask = (xpix >= eps) * (xpix < naxis1) * (ypix >= eps) * (ypix < naxis2)
 
     if sub_pixel:
-        canvas_hdu = _add_subpixel_sources_to_canvas(canvas_hdu, xpix, ypix, f,
-                                                     mask)
+        canvas_hdu = _add_subpixel_sources_to_canvas(
+            canvas_hdu, xpix, ypix, f, mask)
     else:
-        canvas_hdu = _add_intpixel_sources_to_canvas(canvas_hdu, xpix, ypix, f,
-                                                     mask)
+        canvas_hdu = _add_intpixel_sources_to_canvas(
+            canvas_hdu, xpix, ypix, f, mask)
 
     return canvas_hdu
 
@@ -458,17 +429,19 @@ def rescale_imagehdu(imagehdu: fits.ImageHDU, pixel_scale: float,
     imagehdu : fits.ImageHDU
 
     """
-    s0 = wcs_suffix[0] if wcs_suffix else ""
-    cdelt = np.array([imagehdu.header[f"CDELT1{s0}"],
-                      imagehdu.header[f"CDELT2{s0}"]])
+    # WCS needs single space as key for default wcs
+    wcs_suffix = wcs_suffix or " "
+    primary_wcs = WCS(imagehdu.header, key=wcs_suffix[0])
 
     # making sure all are positive
-    zoom = np.abs(cdelt / pixel_scale)
+    zoom = np.abs(primary_wcs.wcs.cdelt / pixel_scale)
 
-    if imagehdu.data.ndim == 3:
-        zoom = np.append(zoom, [1])
+    if primary_wcs.naxis == 3:
+        # zoom = np.append(zoom, [1])
+        zoom[2] = 1.
 
-    if all(zoom == 1):
+    if all(zoom == 1.):
+        # Nothing to do
         return imagehdu
 
     sum_orig = np.sum(imagehdu.data)
@@ -483,16 +456,30 @@ def rescale_imagehdu(imagehdu: fits.ImageHDU, pixel_scale: float,
 
     imagehdu.data = new_im
 
-    for ii in range(max(1, len(wcs_suffix))):
-        si = wcs_suffix[ii] if wcs_suffix else ""
-        if imagehdu.header[f"CTYPE1{si}"] != "LINEAR":
+    for key in wcs_suffix:
+        # TODO: can this be done with astropy wcs sub-wcs? or wcs.find_all_wcs?
+        ww = WCS(imagehdu.header, key=key)
+        if any(ctype != "LINEAR" for ctype in ww.wcs.ctype):
             logging.warning("Non-linear WCS rescaled using linear procedure.")
-        imagehdu.header[f"CRPIX1{si}"] = np.ceil(((zoom[0] + 1) / 2 + (imagehdu.header[f"CRPIX1{si}"] - 1) * zoom[0]) * 2) / 2
-        imagehdu.header[f"CRPIX2{si}"] = np.ceil(((zoom[1] + 1) / 2 + (imagehdu.header[f"CRPIX2{si}"] - 1) * zoom[1]) * 2) / 2
-        imagehdu.header[f"CDELT1{si}"] = pixel_scale
-        imagehdu.header[f"CDELT2{si}"] = pixel_scale
-        imagehdu.header[f"CUNIT1{si}"] = "mm" if si == "D" else "deg"
-        imagehdu.header[f"CUNIT2{si}"] = "mm" if si == "D" else "deg"
+
+        new_crpix = (zoom + 1) / 2 + (ww.wcs.crpix - 1) * zoom
+        new_crpix = np.ceil(new_crpix * 2) / 2  # round to nearest half-pixel
+        ww.wcs.crpix = new_crpix
+
+        # Keep CDELT3 if cube...
+        new_cdelt = ww.wcs.cdelt[:]
+        new_cdelt[0] = pixel_scale
+        new_cdelt[1] = pixel_scale
+        ww.wcs.cdelt = new_cdelt
+
+        # TODO: is forcing deg here really the best way?
+        # FIXME: NO THIS WILL MESS UP IF new_cdelt IS IN ARCSEC!!!!!
+        # new_cunit = [str(cunit) for cunit in ww.wcs.cunit]
+        # new_cunit[0] = "mm" if key == "D" else "deg"
+        # new_cunit[1] = "mm" if key == "D" else "deg"
+        # ww.wcs.cunit = new_cunit
+
+        imagehdu.header.update(ww.to_header())
 
     return imagehdu
 

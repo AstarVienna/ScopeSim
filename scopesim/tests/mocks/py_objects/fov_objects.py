@@ -9,7 +9,7 @@ def _centre_fov(n=55, waverange=(1.0, 2.0)):
     xsky = np.array([-n, n]) * u.arcsec.to(u.deg)
     ysky = np.array([-n, n]) * u.arcsec.to(u.deg)
     sky_hdr = imp_utils.header_from_list_of_xy(xsky, ysky, 1/3600.,
-                                               sky_offset=True, force_center=True)
+                                               sky_offset=True)
     imp_hdr = imp_utils.header_from_list_of_xy([-n, n], [-n, n], 1, "D")
     imp_hdr.update(sky_hdr)
     fov = FieldOfView(imp_hdr, waverange=waverange*u.um, area=1*u.m**2)
@@ -23,7 +23,7 @@ def _centre_micado_fov(n=128, waverange=(1.9, 2.4)):
     ysky = np.array([-n, n]) * u.arcsec.to(u.deg)
     pixscale = 0.004/3600.
     sky_hdr = imp_utils.header_from_list_of_xy(xsky, ysky, pixscale,
-                                               sky_offset=True, force_center=True)
+                                               sky_offset=True)
     imp_hdr = imp_utils.header_from_list_of_xy([-n, n], [-n, n], pixscale, "D")
     imp_hdr.update(sky_hdr)
     fov = FieldOfView(imp_hdr, waverange=waverange*u.um, area=1*u.m**2)
