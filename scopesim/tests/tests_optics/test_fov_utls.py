@@ -36,11 +36,14 @@ class TestExtractAreaFromImageHDU:
         new_field = fov_utils.extract_area_from_imagehdu(field, fov.volume())
 
         if PLOTS:
-            x, y = imp_utils.calc_footprint(basic_fov_header)
+            xy = imp_utils.calc_footprint(basic_fov_header)
+            x, y = xy[:, 0], xy[:, 1]
             plt.fill(x, y, c="r")
-            x, y = imp_utils.calc_footprint(field.header)
+            xy = imp_utils.calc_footprint(field.header)
+            x, y = xy[:, 0], xy[:, 1]
             plt.fill(x, y, c="y")
-            x, y = imp_utils.calc_footprint(new_field.header)
+            xy = imp_utils.calc_footprint(new_field.header)
+            x, y = xy[:, 0], xy[:, 1]
             plt.fill(x, y, c="g")
 
             plt.show()
@@ -56,11 +59,14 @@ class TestExtractAreaFromImageHDU:
         new_field = fov_utils.extract_area_from_imagehdu(field, fov.volume())
 
         if PLOTS:
-            x, y = imp_utils.calc_footprint(basic_fov_header)
+            xy = imp_utils.calc_footprint(basic_fov_header)
+            x, y = xy[:, 0], xy[:, 1]
             plt.fill(x, y, c="r")
-            x, y = imp_utils.calc_footprint(field.header)
+            xy = imp_utils.calc_footprint(field.header)
+            x, y = xy[:, 0], xy[:, 1]
             plt.fill(x, y, c="y")
-            x, y = imp_utils.calc_footprint(new_field.header)
+            xy = imp_utils.calc_footprint(new_field.header)
+            x, y = xy[:, 0], xy[:, 1]
             plt.fill(x, y, c="g")
 
             plt.show()
@@ -79,11 +85,14 @@ class TestExtractAreaFromImageHDU:
         new_field = fov_utils.extract_area_from_imagehdu(field, fov.volume())
 
         if PLOTS:
-            x, y = imp_utils.calc_footprint(basic_fov_header)
+            xy = imp_utils.calc_footprint(basic_fov_header)
+            x, y = xy[:, 0], xy[:, 1]
             plt.fill(x, y, c="r")
-            x, y = imp_utils.calc_footprint(field.header)
+            xy = imp_utils.calc_footprint(field.header)
+            x, y = xy[:, 0], xy[:, 1]
             plt.fill(x, y, c="y")
-            x, y = imp_utils.calc_footprint(new_field.header)
+            xy = imp_utils.calc_footprint(new_field.header)
+            x, y = xy[:, 0], xy[:, 1]
             plt.fill(x, y, c="g")
 
             plt.show()

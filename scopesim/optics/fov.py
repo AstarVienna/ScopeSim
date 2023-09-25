@@ -600,7 +600,8 @@ class FieldOfView(FieldOfViewBase):
         return canvas_cube_hdu      # [ph s-1 AA-1 (arcsec-2)]
 
     def volume(self, wcs_prefix=""):
-        xs, ys = imp_utils.calc_footprint(self.header, wcs_suffix=wcs_prefix)
+        xy = imp_utils.calc_footprint(self.header, wcs_suffix=wcs_prefix)
+        xs, ys = xy[:, 0], xy[:, 1]
         unit = self.header[f"CUNIT1{wcs_prefix}"].lower()
         # FIXME: This is unused!!
         # wave_corners = self.waverange
@@ -627,6 +628,10 @@ class FieldOfView(FieldOfViewBase):
     @property
     def corners(self):
         """Return sky footprint, image plane footprint."""
+        # Couldn't find where this is ever used, put warning here just in case
+        logging.warning("calc_footprint has been updated, any code that "
+                        "relies on this .corners property must likely be "
+                        "adapted as well.")
         sky_corners = imp_utils.calc_footprint(self.header)
         imp_corners = imp_utils.calc_footprint(self.header, "D")
         return sky_corners, imp_corners

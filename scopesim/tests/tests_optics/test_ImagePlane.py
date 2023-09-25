@@ -81,7 +81,8 @@ class TestCombineTableBoundaries:
                 assert 0 <= yi < hdr["NAXIS2"]
 
         if PLOTS:
-            x, y = imp_utils.calc_footprint(hdr)
+            xy = imp_utils.calc_footprint(hdr)
+            x, y = xy[:, 0], xy[:, 1]
             x, y = imp_utils.val2pix(hdr, x, y)
             x0, y0 = imp_utils.val2pix(hdr, 0, 0)
 
@@ -111,7 +112,8 @@ class TestCombineTableBoundaries:
                 assert 0 <= yi < hdr["NAXIS2"]
 
         if PLOTS:
-            x, y = imp_utils.calc_footprint(hdr, "D")
+            xy = imp_utils.calc_footprint(hdr, "D")
+            x, y = xy[:, 0], xy[:, 1]
             x, y = imp_utils.val2pix(hdr, x, y, "D")
             x0, y0 = imp_utils.val2pix(hdr, 0, 0, "D")
 
@@ -137,7 +139,8 @@ class TestCombineImageHDUBoundaries:
         hdr = imp_utils._make_bounding_header_from_imagehdus([image_hdu_square,
                                                               image_hdu_rect])
         for imhdr in [image_hdu_square.header, image_hdu_rect.header]:
-            x, y = imp_utils.calc_footprint(imhdr)
+            xy = imp_utils.calc_footprint(imhdr)
+            x, y = xy[:, 0], xy[:, 1]
             x *= u.arcsec.to(u.deg)
             y *= u.arcsec.to(u.deg)
             x, y = imp_utils.val2pix(hdr, x, y)
@@ -147,7 +150,8 @@ class TestCombineImageHDUBoundaries:
 
         if PLOTS:
             for imhdr in [image_hdu_square.header, image_hdu_rect.header, hdr]:
-                x, y = imp_utils.calc_footprint(imhdr)
+                xy = imp_utils.calc_footprint(imhdr)
+                x, y = xy[:, 0], xy[:, 1]
                 xp, yp = imp_utils.val2pix(imhdr, x, y)
                 plt.plot(x, y, "r-")
 
@@ -165,7 +169,8 @@ class TestCombineImageHDUBoundaries:
         hdr = imp_utils._make_bounding_header_from_imagehdus(
             [image_hdu_square_mm, image_hdu_rect_mm], pixel_scale=1*u.mm)
         for imhdr in [image_hdu_square_mm.header, image_hdu_rect_mm.header]:
-            x, y = imp_utils.calc_footprint(imhdr, "D")
+            xy = imp_utils.calc_footprint(imhdr, "D")
+            x, y = xy[:, 0], xy[:, 1]
             x, y = imp_utils.val2pix(hdr, x, y, "D")
             for xi, yi in zip(x, y):
                 assert 0 <= xi < hdr["NAXIS1"]
@@ -174,7 +179,8 @@ class TestCombineImageHDUBoundaries:
         if PLOTS:
             for imhdr in [image_hdu_square_mm.header,
                           image_hdu_rect_mm.header, hdr]:
-                x, y = imp_utils.calc_footprint(imhdr, "D")
+                xy = imp_utils.calc_footprint(imhdr, "D")
+                x, y = xy[:, 0], xy[:, 1]
                 xp, yp = imp_utils.val2pix(imhdr, x, y, "D")
                 plt.plot(x, y, "r-")
 
@@ -207,7 +213,8 @@ class TestGetCanvasHeader:
         as2deg = u.arcsec.to(u.deg)
 
         for im in [image_hdu_square.header, image_hdu_rect.header]:
-            x, y = imp_utils.calc_footprint(im)
+            xy = imp_utils.calc_footprint(im)
+            x, y = xy[:, 0], xy[:, 1]
             x, y = imp_utils.val2pix(hdr, x*as2deg, y*as2deg)
             for xi, yi in zip(x, y):
                 assert 0 <= xi < hdr["NAXIS1"]
@@ -221,7 +228,8 @@ class TestGetCanvasHeader:
 
         if PLOTS:
 
-            x, y = imp_utils.calc_footprint(hdr)
+            xy = imp_utils.calc_footprint(hdr)
+            x, y = xy[:, 0], xy[:, 1]
             x, y = imp_utils.val2pix(hdr, x, y)
             plt.plot(x, y, "b")
             x0, y0 = imp_utils.val2pix(hdr, 0, 0)
@@ -232,7 +240,8 @@ class TestGetCanvasHeader:
                 plt.plot(x, y, "k.")
 
             for im in [image_hdu_square.header, image_hdu_rect.header]:
-                x, y = imp_utils.calc_footprint(im)
+                xy = imp_utils.calc_footprint(im)
+                x, y = xy[:, 0], xy[:, 1]
                 x, y = imp_utils.val2pix(hdr, x, y)
                 plt.plot(x, y, "r-")
 
@@ -259,7 +268,8 @@ class TestGetCanvasHeader:
                                           pixel_scale=1*u.mm)
 
         for im in [image_hdu_square_mm.header, image_hdu_rect_mm.header]:
-            x, y = imp_utils.calc_footprint(im, "D")
+            xy = imp_utils.calc_footprint(im, "D")
+            x, y = xy[:, 0], xy[:, 1]
             x, y = imp_utils.val2pix(hdr, x, y, "D")
             for xi, yi in zip(x, y):
                 assert 0 <= xi < hdr["NAXIS1"]
@@ -273,7 +283,8 @@ class TestGetCanvasHeader:
 
         if PLOTS:
 
-            x, y = imp_utils.calc_footprint(hdr, "D")
+            xy = imp_utils.calc_footprint(hdr, "D")
+            x, y = xy[:, 0], xy[:, 1]
             x, y = imp_utils.val2pix(hdr, x, y, "D")
             plt.plot(x, y, "b")
             x0, y0 = imp_utils.val2pix(hdr, 0, 0, "D")
@@ -284,7 +295,8 @@ class TestGetCanvasHeader:
                 plt.plot(x, y, "k.")
 
             for im in [image_hdu_square_mm.header, image_hdu_rect_mm.header]:
-                x, y = imp_utils.calc_footprint(im, "D")
+                xy = imp_utils.calc_footprint(im, "D")
+                x, y = xy[:, 0], xy[:, 1]
                 x, y = imp_utils.val2pix(hdr, x, y, "D")
                 plt.plot(x, y, "r-")
 
@@ -407,7 +419,8 @@ class TestAddImageHDUToImageHDU:
 
         if PLOTS:
             for im in [im_hdu, image_hdu_square]:
-                x, y = imp_utils.calc_footprint(im.header)
+                xy = imp_utils.calc_footprint(im.header)
+                x, y = xy[:, 0], xy[:, 1]
                 x, y = imp_utils.val2pix(canvas_hdu.header, x, y)
                 plt.plot(x, y, "r-")
 
@@ -436,7 +449,8 @@ class TestAddImageHDUToImageHDU:
 
         if PLOTS:
             for im in [im_hdu, image_hdu_square_mm]:
-                x, y = imp_utils.calc_footprint(im.header, "D")
+                xy = imp_utils.calc_footprint(im.header, "D")
+                x, y = xy[:, 0], xy[:, 1]
                 x, y = imp_utils.val2pix(canvas_hdu.header, x, y, "D")
                 plt.plot(x, y, "r-")
 
@@ -480,7 +494,8 @@ class TestAddImageHDUToImageHDU:
         if PLOTS:
 
             for im in [im_hdu, image_hdu_square]:
-                x, y = imp_utils.calc_footprint(im)
+                xy = imp_utils.calc_footprint(im)
+                x, y = xy[:, 0], xy[:, 1]
                 x, y = imp_utils.val2pix(canvas_hdu, x, y)
                 plt.plot(x, y, "r-")
 
@@ -530,7 +545,8 @@ class TestAddImageHDUToImageHDU:
         if PLOTS:
 
             for im in [im_hdu, image_hdu_square]:
-                x, y = imp_utils.calc_footprint(im, "D")
+                xy = imp_utils.calc_footprint(im, "D")
+                x, y = xy[:, 0], xy[:, 1]
                 x, y = imp_utils.val2pix(canvas_hdu, x, y, "D")
                 plt.plot(x, y, "r-")
 
@@ -572,13 +588,15 @@ class TestImagePlaneAdd:
 
         if PLOTS:
             for im in [im_hdu, image_hdu_square]:
-                x, y = imp_utils.calc_footprint(im.header)
+                xy = imp_utils.calc_footprint(im.header)
+                x, y = xy[:, 0], xy[:, 1]
                 x, y = imp_utils.val2pix(implane.header, x, y)
                 plt.plot(x, y, "r-")
 
             for tbl in [tbl1, tbl2]:
-                hdr = imp_utils._make_bounding_header_for_tables([tbl])
-                x, y = imp_utils.calc_footprint(hdr)
+                hdr = imp_utils._make_bounding_header_for_tables(tbl)
+                xy = imp_utils.calc_footprint(hdr)
+                x, y = xy[:, 0], xy[:, 1]
                 x, y = imp_utils.val2pix(implane.header, x, y)
                 plt.plot(x, y, "r-")
 
@@ -616,14 +634,16 @@ class TestImagePlaneAdd:
 
         if PLOTS:
             for im in [im_hdu, image_hdu_square]:
-                x, y = imp_utils.calc_footprint(im.header, "D")
+                xy = imp_utils.calc_footprint(im.header, "D")
+                x, y = xy[:, 0], xy[:, 1]
                 x, y = imp_utils.val2pix(implane.header, x, y, "D")
                 plt.plot(x, y, "r-")
 
             for tbl in [tbl1, tbl2]:
-                hdr = imp_utils._make_bounding_header_for_tables([tbl],
+                hdr = imp_utils._make_bounding_header_for_tables(tbl,
                                                                  pixel_scale=1*u.mm)
-                x, y = imp_utils.calc_footprint(hdr, "D")
+                xy = imp_utils.calc_footprint(hdr, "D")
+                x, y = xy[:, 0], xy[:, 1]
                 x, y = imp_utils.val2pix(implane.header, x, y, "D")
                 plt.plot(x, y, "r-")
 
@@ -679,7 +699,8 @@ class TestRescaleImageHDU:
 @pytest.mark.usefixtures("image_hdu_square")
 class TestGetSpatialExtentOfHeader:
     def test_returns_right_sky_coords_from_known_coords(self, image_hdu_square):
-        xsky, ysky = imp_utils.calc_footprint(image_hdu_square.header)
+        xy = imp_utils.calc_footprint(image_hdu_square.header)
+        xsky, ysky = xy[:, 0], xy[:, 1]
         xsky = np.array(xsky)
         xsky[xsky > 180 ] -= 360
         # xsky = np.array(xsky)*u.deg.to(u.arcsec)

@@ -47,8 +47,10 @@ def is_field_in_fov(fov_header, field, wcs_suffix=""):
             logging.warning("Input was neither Table nor ImageHDU: %s", field)
             return False
 
-        ext_xsky, ext_ysky = imp_utils.calc_footprint(field_header, wcs_suffix)
-        fov_xsky, fov_ysky = imp_utils.calc_footprint(fov_header, wcs_suffix)
+        xy = imp_utils.calc_footprint(field_header, wcs_suffix)
+        ext_xsky, ext_ysky = xy[:, 0], xy[:, 1]
+        xy = imp_utils.calc_footprint(fov_header, wcs_suffix)
+        fov_xsky, fov_ysky = xy[:, 0], xy[:, 1]
         fov_xsky *= u.Unit(fov_header["CUNIT1"].lower()).to(u.deg)
         fov_ysky *= u.Unit(fov_header["CUNIT2"].lower()).to(u.deg)
 
@@ -94,7 +96,8 @@ def combine_table_fields(fov_header, src, field_indexes):
     tbl : Table
 
     """
-    fov_xsky, fov_ysky = imp_utils.calc_footprint(fov_header)
+    xy = imp_utils.calc_footprint(fov_header)
+    fov_xsky, fov_ysky = xy[:, 0], xy[:, 1]
 
     x, y, ref, weight = [], [], [], []
 
@@ -285,7 +288,8 @@ def extract_area_from_imagehdu(imagehdu, fov_volume):
     hdr = imagehdu.header
     new_hdr = {}
     naxis1, naxis2 = hdr["NAXIS1"], hdr["NAXIS2"]
-    x_hdu, y_hdu = imp_utils.calc_footprint(imagehdu)  # field edges in "deg"
+    xy = imp_utils.calc_footprint(imagehdu)  # field edges in "deg"
+    x_hdu, y_hdu = xy[:, 0], xy[:, 1]
     x_fov, y_fov = np.array(fov_volume["xs"]), np.array(fov_volume["ys"])
 
     if hdr["CUNIT1"] == "arcsec":

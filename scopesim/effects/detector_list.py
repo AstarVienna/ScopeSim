@@ -138,7 +138,8 @@ class DetectorList(Effect):
         if isinstance(obj, FOVSetupBase):
 
             hdr = self.image_plane_header
-            x_mm, y_mm = calc_footprint(hdr, "D")
+            xy = calc_footprint(hdr, "D")
+            x_mm, y_mm = xy[:, 0], xy[:, 1]
             pixel_size = hdr["CDELT1D"]              # mm
             pixel_scale = kwargs.get("pixel_scale", self.meta["pixel_scale"])   # ["]
             pixel_scale = utils.from_currsys(pixel_scale)
@@ -163,7 +164,8 @@ class DetectorList(Effect):
             self.meta = utils.from_currsys(self.meta)
 
             hdr = self.image_plane_header
-            x_mm, y_mm = calc_footprint(hdr, "D")
+            xy = calc_footprint(hdr, "D")
+            x_mm, y_mm = xy[:, 0], xy[:, 1]
             pixel_size = hdr["CDELT1D"]              # mm
             pixel_scale = self.meta["pixel_scale"]   # ["]
             x_sky = x_mm * pixel_scale / pixel_size  # x["] = x[mm] * ["] / [mm]
@@ -265,7 +267,8 @@ class DetectorList(Effect):
             _, axes = figure_factory()
 
         for hdr in self.detector_headers():
-            x_mm, y_mm = calc_footprint(hdr, "D")
+            xy = calc_footprint(hdr, "D")
+            x_mm, y_mm = xy[:, 0], xy[:, 1]
             axes.plot(list(close_loop(x_mm)), list(close_loop(y_mm)))
             axes.text(*np.mean((x_mm, y_mm), axis=1), hdr["ID"],
                       ha="center", va="center")

@@ -149,7 +149,8 @@ class FOVManager:
                                                 [ys_min, ys_max],
                                                 pixel_scale=pixel_scale / 3600.)
 
-            x_sky, y_sky = ipu.calc_footprint(skyhdr)
+            xy = ipu.calc_footprint(skyhdr)
+            x_sky, y_sky = xy[:, 0], xy[:, 1]
             x_det = x_sky / plate_scale_deg
             y_det = y_sky / plate_scale_deg
             dethdr = ipu.header_from_list_of_xy(x_det, y_det, pixel_size, "D")

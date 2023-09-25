@@ -217,7 +217,8 @@ def get_imaging_headers(effects, **kwargs):
     pixel_size = pixel_scale / plate_scale
     plate_scale_deg = plate_scale / 3600.   # ["/mm] / 3600 = [deg/mm]
     for skyhdr in sky_hdrs:
-        x_sky, y_sky = imp_utils.calc_footprint(skyhdr)
+        xy = imp_utils.calc_footprint(skyhdr)
+        x_sky, y_sky = xy[:, 0], xy[:, 1]
         x_det = x_sky / plate_scale_deg
         y_det = y_sky / plate_scale_deg
 
