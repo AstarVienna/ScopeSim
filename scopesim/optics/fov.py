@@ -514,7 +514,7 @@ class FieldOfView(FieldOfViewBase):
         3. Find Image fields (see ``FieldOfView._make_cube_imagefields()``).
         4. Find Table fields (see ``FieldOfView._make_cube_tablefields()``).
 
-        ``PHOTLAM = ph/s/m2/um``.
+        ``PHOTLAM = ph / (s * m2 * um)``.
         Original source fields are in units of:
 
         - tables: (PHOTLAM in spectrum)
