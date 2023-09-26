@@ -28,7 +28,7 @@ def _table_source():
                             lookup_table=np.linspace(0, 4, n)[::-1] * unit)]
     tbl = Table(names=["x", "y", "ref", "weight"],
                 data=[[5,  0, -5,  0]*u.arcsec,
-                      [5, -10, 5,  0] * u.arcsec,
+                      [5, -9, 5,  0] * u.arcsec,
                       [2,  0,  1,  0],
                       [1,  1,  1,  2]])
     tbl_source = Source(table=tbl, spectra=specs)
