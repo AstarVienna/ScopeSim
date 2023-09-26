@@ -203,8 +203,8 @@ def header_from_list_of_xy(x, y, pixel_scale, wcs_suffix="", sky_offset=False,
 
     hdr = fits.Header()
     hdr["NAXIS"] = 2
-    hdr["NAXIS1"] = naxis[0]
-    hdr["NAXIS2"] = naxis[1]
+    hdr["NAXIS1"] = int(naxis[0])
+    hdr["NAXIS2"] = int(naxis[1])
     hdr.update(new_wcs.to_header())
 
     return hdr
