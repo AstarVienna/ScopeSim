@@ -155,11 +155,10 @@ class UserCommands:
 
     def update(self, **kwargs):
         """
-        Updates the current parameters with a yaml dictionary
+        Update the current parameters with a yaml dictionary.
 
         See the ``UserCommands`` main docstring for acceptable kwargs
         """
-
         if "use_instrument" in kwargs:
             self.package_name = kwargs["use_instrument"]
             self.update(packages=[kwargs["use_instrument"]],
@@ -279,10 +278,9 @@ class UserCommands:
         else:
             p.text(str(self))
 
+
 def check_for_updates(package_name):
-    """
-    Asks IRDB server if there are newer versions of the instrument package
-    """
+    """Ask IRDB server if there are newer versions of instrument package."""
     response = {}
 
     # tracking **exclusively** your IP address for our internal stats
@@ -298,7 +296,7 @@ def check_for_updates(package_name):
 
 
 def patch_fake_symlinks(path: Path):
-    """Fixes broken symlinks in path.
+    """Fix broken symlinks in path.
 
     The irdb has some symlinks in it, which work fine under linux, but not
     always under windows, see https://stackoverflow.com/a/11664406 .
@@ -345,7 +343,7 @@ def patch_fake_symlinks(path: Path):
 
 def add_packages_to_rc_search(local_path, package_list):
     """
-    Adds the paths of a list of locally saved packages to the search path list
+    Add the paths of a list of locally saved packages to the search path list.
 
     Parameters
     ----------
@@ -375,7 +373,7 @@ def add_packages_to_rc_search(local_path, package_list):
 
 def load_yaml_dicts(filename):
     """
-    Loads one or more dicts stored in a YAML file under ``filename``
+    Load one or more dicts stored in a YAML file under `filename`.
 
     Parameters
     ----------
@@ -388,7 +386,6 @@ def load_yaml_dicts(filename):
         A list of dicts
 
     """
-
     yaml_dicts = []
     with open(filename) as f:
         yaml_dicts += [dic for dic in yaml.full_load_all(f)]
@@ -398,7 +395,7 @@ def load_yaml_dicts(filename):
 
 def list_local_packages(action="display"):
     """
-    Lists the packages on the local disk that ScopeSim can find
+    List the packages on the local disk that ScopeSim can find.
 
     Packages can only be found in the directory listed under::
 
@@ -428,7 +425,6 @@ def list_local_packages(action="display"):
         If action="return": Lists containing the names of locally saved packages
 
     """
-
     local_path = Path(rc.__config__["!SIM.file.local_packages_path"]).absolute()
     pkgs = [d for d in local_path.iterdir() if d.is_dir()]
 

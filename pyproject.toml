@@ -1,6 +1,6 @@
 [project]
 name = "ScopeSim"
-version = "0.6.1-alpha"
+version = "0.6.3-alpha"
 description = "Generalised telescope observation simulator"
 readme = "README.md"
 requires-python = ">=3.8"
@@ -20,10 +20,11 @@ classifiers=[
     "Topic :: Scientific/Engineering :: Astronomy",
 ]
 dependencies = [
-    "numpy>=1.19",
-    "scipy>=1.4.0",
+    "numpy>=1.19.5",
+    "scipy>=1.10.0",
     "astropy>=5.0",
     "matplotlib>=3.2.0",
+    "pooch>=1.7.0",  # for scipy.datasets
 
     "docutils>=0.15",
     "requests>=2.28.2",
@@ -43,6 +44,7 @@ dependencies = [
 dev = [
     "jupyter",
     "jupytext",
+    "ipykernel",
 ]
 test = [
     "pytest>=5.0.0",
@@ -50,6 +52,7 @@ test = [
     "scopesim_templates>=0.4.4",
     # Just so that readthedocs doesn't include the tests module - yes it's hacky
     "skycalc_cli",
+    "ipykernel",
 ]
 docs = [
     "sphinx>=4.3.0",
@@ -59,6 +62,7 @@ docs = [
     "nbsphinx",
     "numpydoc",
     "scopesim_templates>=0.4.4",
+    "ipykernel"
 ]
 
 [project.urls]
@@ -73,4 +77,17 @@ find = {}
 addopts = "--strict-markers"
 markers = [
     "webtest: marks tests as requiring network (deselect with '-m \"not webtest\"')",
+]
+filterwarnings = [
+    "error",
+    # Should probably be fixed:
+    "ignore::ResourceWarning",
+    "ignore:The fit may be poorly conditioned:astropy.utils.exceptions.AstropyUserWarning",
+    # Perhaps fix?
+    "ignore:divide by zero encountered in scalar divide:RuntimeWarning",
+    "ignore:divide by zero encountered in double_scalars:RuntimeWarning",
+    "ignore:invalid value encountered in multiply:RuntimeWarning",
+    "ignore:Cannot merge meta key.*:astropy.utils.metadata.MergeConflictWarning",
+    # Raised when saving fits files, not so important to fix:
+    "ignore:.*a HIERARCH card will be created.*:astropy.io.fits.verify.VerifyWarning",
 ]

@@ -158,7 +158,7 @@ class TestSpanishVOFilterWheelInit:
                                              current_filter=default_filter,
                                              name="test_svo_wheel")
 
-        assert isinstance(filt_wheel, tc.FilterWheel)
+        assert isinstance(filt_wheel, tc.FilterWheelBase)
         assert default_filter in filt_wheel.filters
 
     def test_returns_filters_with_include_str(self):

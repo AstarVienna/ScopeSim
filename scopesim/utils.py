@@ -1,17 +1,17 @@
-"""
-Helper functions for ScopeSim
-"""
+"""Helper functions for ScopeSim."""
 import math
 from pathlib import Path
 import sys
 import logging
 from collections import OrderedDict
-from docutils.core import publish_string
+from collections.abc import Iterable, Generator
 from copy import deepcopy
 
+from docutils.core import publish_string
 import requests
 import yaml
 import numpy as np
+from matplotlib import pyplot as plt
 from astropy import units as u
 from astropy.io import fits
 from astropy.table import Column, Table
@@ -21,22 +21,21 @@ from . import rc
 
 def unify(x, unit, length=1):
     """
-    Convert all types of input to an astropy array/unit pair
+    Convert all types of input to an astropy array/unit pair.
 
     Parameters
     ----------
     x : int, float, np.ndarray, astropy.Quantity
-        The array to be turned into an astropy.Quantity
+        The array to be turned into an ``astropy.Quantity``
     unit : astropy.Quantity
         The units to attach to the array
     length : int, optional
-        If ``x`` is a scalar, and the desired output is an array with ``length``
+        If `x` is a scalar, and the desired output is an array with `length`.
 
     Returns
     -------
     y : astropy.Quantity
     """
-
     if isinstance(x, u.quantity.Quantity):
         if isinstance(x.value, np.ndarray):
             y = x.to(unit)
@@ -57,7 +56,7 @@ def unify(x, unit, length=1):
 
 def parallactic_angle(ha, de, lat=-24.589167):
     r"""
-    Compute the parallactic angle
+    Compute the parallactic angle.
 
     Parameters
     ----------
@@ -78,7 +77,7 @@ def parallactic_angle(ha, de, lat=-24.589167):
     The parallactic angle is defined as the angle PTZ, where P is the
     .. math::
     \tan\eta = \frac{\cos\phi\sin H}{\sin\phi \cos\delta - \cos\phi \sin\delta \cos H}
-    It is negative (positive) if the target point is east (west) of the meridian.
+    It is negative (positive) if target point is east (west) of the meridian.
 
     References
     ----------
@@ -98,7 +97,7 @@ def parallactic_angle(ha, de, lat=-24.589167):
 
 def moffat(r, alpha, beta):
     """
-    !!Unfinished!! Return a Moffat function
+    !!Unfinished!! Return a Moffat function.
 
     Parameters
     ----------
@@ -110,12 +109,13 @@ def moffat(r, alpha, beta):
     -------
     eta
     """
-    return (beta - 1) / (np.pi * alpha ** 2) * (1 + (r / alpha) ** 2) ** (-beta)
+    return ((beta - 1) / (np.pi * alpha ** 2) *
+            (1 + (r / alpha) ** 2) ** (-beta))
 
 
 def poissonify(arr):
     """
-    Add a realisation of the poisson process to the array 'arr'.
+    Add a realisation of the poisson process to the array `arr`.
 
     Parameters
     ----------
@@ -133,19 +133,19 @@ def poissonify(arr):
 
 def nearest(arr, val):
     """
-    Return the index of the value from 'arr' which is closest to 'val'
+    Return the index of the value from `arr` which is closest to `val`.
 
     Parameters
     ----------
     arr : np.ndarray, list, tuple
         Array to be searched
     val : float, int
-        Value to find in ``arr``
+        Value to find in `arr`
 
     Returns
     -------
     i : int
-        index of array where the nearest value to ``val`` is
+        index of array where the nearest value to `val` is
     """
     if isinstance(val, (list, tuple, np.ndarray)):
         arr = np.array(arr)
@@ -155,7 +155,7 @@ def nearest(arr, val):
 
 
 def power_vector(val, degree):
-    """Return the vector of powers of val up to a degree"""
+    """Return the vector of powers of val up to a degree."""
     if degree < 0 or not isinstance(degree, int):
         raise ValueError("degree must be a positive integer")
 
@@ -163,7 +163,7 @@ def power_vector(val, degree):
 
 
 def deriv_polynomial2d(poly):
-    """Derivatives (gradient) of a Polynomial2D model
+    """Derive (gradient) of a Polynomial2D model.
 
     Parameters
     ----------
@@ -178,7 +178,7 @@ def deriv_polynomial2d(poly):
     degree = poly.degree
     dpoly_dx = Polynomial2D(degree=degree - 1)
     dpoly_dy = Polynomial2D(degree=degree - 1)
-    regexp = re.compile(r'c(\d+)_(\d+)')
+    regexp = re.compile(r"c(\d+)_(\d+)")
     for pname in poly.param_names:
         # analyse the name
         match = regexp.match(pname)
@@ -195,7 +195,7 @@ def deriv_polynomial2d(poly):
 
 def add_keyword(filename, keyword, value, comment="", ext=0):
     """
-    Add a keyword, value pair to an extension header in a FITS file
+    Add a keyword, value pair to an extension header in a FITS file.
 
     Parameters
     ----------
@@ -216,7 +216,7 @@ def add_keyword(filename, keyword, value, comment="", ext=0):
 
 def airmass_to_zenith_dist(airmass):
     """
-    returns zenith distance in degrees
+    Return zenith distance in degrees.
 
     Z = arccos(1/X)
     """
@@ -225,7 +225,7 @@ def airmass_to_zenith_dist(airmass):
 
 def zenith_dist_to_airmass(zenith_dist):
     """
-    ``zenith_dist`` is in degrees
+    `zenith_dist` is in degrees.
 
     X = sec(Z)
     """
@@ -233,17 +233,17 @@ def zenith_dist_to_airmass(zenith_dist):
 
 
 def seq(start, stop, step=1):
-    """Replacement for numpy.arange modelled after R's seq function
+    """Replacement for numpy.arange modelled after R's seq function.
 
-    Returns an evenly spaced sequence from start to stop. stop is included if the difference
-    between start and stop is an integer multiple of step.
+    Returns an evenly spaced sequence from start to stop. stop is included if
+    the difference between start and stop is an integer multiple of step.
 
-    From the documentation of numpy.range: "When using a non-integer step, such as 0.1, the
-    results will often not be consistent." This replacement aims to avoid these inconsistencies.
+    From the documentation of numpy.range: "When using a non-integer step, such
+    as 0.1, the results will often not be consistent." This replacement aims to
+    avoid these inconsistencies.
 
     Parameters
     ----------
-
     start, stop: [int, float]
         the starting and (maximal) end values of the sequence.
 
@@ -261,8 +261,7 @@ def seq(start, stop, step=1):
     except ZeroDivisionError:
         if step == 0 and delta == 0:
             return start
-        else:
-            raise ValueError("invalid '(stop - start) / step'")
+        raise ValueError("invalid '(stop - start) / step'")
 
     if npts < 0:
         raise ValueError("wrong sign in 'step' argument")
@@ -289,33 +288,25 @@ def seq(start, stop, step=1):
 
 
 def add_mags(mags):
-    """
-    Returns a combined magnitude for a group of py_objects with ``mags``
-    """
+    """Return a combined magnitude for a group of py_objects with `mags`."""
     return -2.5 * np.log10((10 ** (-0.4 * np.array(mags))).sum())
 
 
 def dist_mod_from_distance(d):
-    """
-    mu = 5 * np.log10(d) - 5
-    """
-
+    """Use mu = 5 * np.log10(d) - 5 formula."""
     mu = 5 * np.log10(d) - 5
     return mu
 
 
 def distance_from_dist_mod(mu):
-    """
-    d = 10**(1 + mu / 5)
-    """
-
+    """Use d = 10**(1 + mu / 5) formula."""
     d = 10 ** (1 + mu / 5)
     return d
 
 
 def telescope_diffraction_limit(aperture_size, wavelength, distance=None):
     """
-    Returns the diffraction limit of a telescope
+    Return the diffraction limit of a telescope.
 
     Parameters
     ----------
@@ -337,8 +328,8 @@ def telescope_diffraction_limit(aperture_size, wavelength, distance=None):
         If distance is not None, diff_limit is in the same units as distance
 
     """
-
-    diff_limit = (((wavelength * u.um) / (aperture_size * u.m)) * u.rad).to(u.arcsec).value
+    diff_limit = (((wavelength * u.um) / (aperture_size * u.m)) *
+                  u.rad).to(u.arcsec).value
 
     if distance is not None:
         diff_limit *= distance / u.pc.to(u.AU)
@@ -348,7 +339,7 @@ def telescope_diffraction_limit(aperture_size, wavelength, distance=None):
 
 def transverse_distance(angle, distance):
     """
-    Turn an angular distance into a proper transverse distance
+    Turn an angular distance into a proper transverse distance.
 
     Parameters
     ----------
@@ -364,7 +355,6 @@ def transverse_distance(angle, distance):
         proper transverse distance. Has the same Units as ``distance``
 
     """
-
     trans_distance = angle * distance * u.AU.to(u.pc)
 
     return trans_distance
@@ -372,17 +362,16 @@ def transverse_distance(angle, distance):
 
 def angle_in_arcseconds(distance, width):
     """
-    Returns the angular distance of an object in arcseconds.
+    Return the angular distance of an object in arcseconds.
 
     Units must be consistent!
     """
-
     return np.arctan2(width, distance) * u.rad.to(u.arcsec)
 
 
 def setup_loggers(**kwargs):
     """
-    Sets up both console and file loggers.
+    Set up both console and file loggers.
 
     Acceptable parameters are the same as the ``!SIM.logging`` sub dictionary
 
@@ -409,17 +398,13 @@ def setup_loggers(**kwargs):
 
 def set_logger_level(which="console", level="ERROR"):
     """
-    Sets the level of logging for either the console or file logger
+    Set the level of logging for either the console or file logger.
 
     Parameters
     ----------
-    which : str
-        ["console", "file"]
-    level : str
-        ["ON", "OFF", "DEBUG", "INFO", "WARN", "ERROR", "CRITICAL"]
-
+    which : {"console", "file"}
+    level : {"ON", "OFF", "DEBUG", "INFO", "WARN", "ERROR", "CRITICAL"}
     """
-
     hdlr_name = f"scopesim_{which}_logger"
     level = {"ON": "INFO", "OFF": "CRITICAL"}.get(level.upper(), level)
     logger = logging.getLogger()
@@ -430,8 +415,7 @@ def set_logger_level(which="console", level="ERROR"):
 
 
 def bug_report():
-    """Get versions of dependencies for inclusion in bug report"""
-
+    """Get versions of dependencies for inclusion in bug report."""
     try:
         from importlib import import_module
     except ImportError:
@@ -465,7 +449,7 @@ def bug_report():
 
 
 def find_file(filename, path=None, silent=False):
-    """Find a file in search path
+    """Find a file in search path.
 
     Parameters
     ----------
@@ -480,7 +464,6 @@ def find_file(filename, path=None, silent=False):
     -------
     Absolute path of the file
     """
-
     if filename is None or filename.lower() == "none":
         return None
 
@@ -524,7 +507,7 @@ def find_file(filename, path=None, silent=False):
 
 
 def zendist2airmass(zendist):
-    """Convert zenith distance to airmass
+    """Convert zenith distance to airmass.
 
     Parameters
     ----------
@@ -535,12 +518,11 @@ def zendist2airmass(zendist):
     -------
     airmass in sec(z) approximation
     """
-
     return 1. / np.cos(np.deg2rad(zendist))
 
 
 def airmass2zendist(airmass):
-    """Convert airmass to zenith distance
+    """Convert airmass to zenith distance.
 
     Parameters
     ----------
@@ -550,7 +532,6 @@ def airmass2zendist(airmass):
     -------
     zenith distance in degrees
     """
-
     return np.rad2deg(np.arccos(1 / airmass))
 
 
@@ -598,9 +579,9 @@ def change_table_entry(tbl, col_name, new_val, old_val=None, position=None):
 
 
 def real_colname(name, colnames, silent=True):
-    names = [name.lower(), name.upper(), name[0].upper() + name[1:].lower()]
+    names = [name.lower(), name.upper(), name.capitalize()]
     real_name = [name for name in names if name in colnames]
-    if len(real_name) == 0:
+    if not real_name:
         real_name = None
         if not silent:
             logging.warning("None of %s were found in %s", names, colnames)
@@ -640,7 +621,7 @@ def empty_type(x):
 
 def get_meta_quantity(meta_dict, name, fallback_unit=""):
     """
-    Extract a Quantity from a dictionary
+    Extract a Quantity from a dictionary.
 
     Parameters
     ----------
@@ -653,14 +634,13 @@ def get_meta_quantity(meta_dict, name, fallback_unit=""):
     quant : Quantity
 
     """
-
-    if isinstance(meta_dict[name], str) and meta_dict[name][0] == "!":
+    if isinstance(meta_dict[name], str) and meta_dict[name].startswith("!"):
         meta_dict[name] = from_currsys(meta_dict[name])
 
     if isinstance(meta_dict[name], u.Quantity):
         unit = meta_dict[name].unit
-    elif name + "_unit" in meta_dict:
-        unit = meta_dict[name + "_unit"]
+    elif f"{name}_unit" in meta_dict:
+        unit = meta_dict[f"{name}_unit"]
     else:
         unit = u.Unit(fallback_unit)
 
@@ -671,7 +651,7 @@ def get_meta_quantity(meta_dict, name, fallback_unit=""):
 
 def quantify(item, unit):
     """
-    Ensure an item is a Quantity
+    Ensure an item is a Quantity.
 
     Parameters
     ----------
@@ -683,8 +663,7 @@ def quantify(item, unit):
     quant : Quantity
 
     """
-
-    if isinstance(item, str) and item[0] == "!":
+    if isinstance(item, str) and item.startswith("!"):
         item = from_currsys(item)
     if isinstance(item, u.Quantity):
         quant = item.to(u.Unit(unit))
@@ -698,7 +677,7 @@ def quantify(item, unit):
 
 def extract_type_from_unit(unit, unit_type):
     """
-    Extract ``astropy`` physical type from a compound unit
+    Extract ``astropy`` physical type from a compound unit.
 
     Parameters
     ----------
@@ -709,9 +688,9 @@ def extract_type_from_unit(unit, unit_type):
     Returns
     -------
     new_unit : Unit
-        The input unit minus any base units corresponding to ``unit_type``
+        The input unit minus any base units corresponding to `unit_type`.
     extracted_units : Unit
-        Any base units corresponding to ``unit_type``
+        Any base units corresponding to `unit_type`.
 
     """
     extracted_units = u.Unit("")
@@ -726,7 +705,7 @@ def extract_type_from_unit(unit, unit_type):
 
 def extract_base_from_unit(unit, base_unit):
     """
-    Extract ``astropy`` base unit from a compound unit
+    Extract ``astropy`` base unit from a compound unit.
 
     Parameters
     ----------
@@ -736,12 +715,11 @@ def extract_base_from_unit(unit, base_unit):
    Returns
     -------
     new_unit : Unit
-        The input unit minus any base units corresponding to ``base_unit``
+        The input unit minus any base units corresponding to `base_unit`.
     extracted_units : Unit
-        Any base units corresponding to ``base_unit``
+        Any base units corresponding to `base_unit`.
 
     """
-
     extracted_units = u.Unit("")
     for base, power in zip(unit.bases, unit.powers):
         if base == base_unit:
@@ -752,13 +730,9 @@ def extract_base_from_unit(unit, base_unit):
     return new_unit, extracted_units
 
 
-def is_fits(filename):
-    flag = False
-    if filename is not None:
-        if filename.split(".")[-1].lower() in "fits":
-            flag = True
-
-    return flag
+def is_fits(filename) -> bool:
+    # Using 'in ".fits"' to also catch ".fit", which exists sometimes...
+    return (filename is not None and Path(filename).suffix.lower() in ".fits")
 
 
 def get_fits_type(filename):
@@ -779,7 +753,7 @@ def quantity_from_table(colname, table, default_unit=""):
         else:
             col = col.data << col.unit
     else:
-        colname_u = colname + "_unit"
+        colname_u = f"{colname}_unit"
         if colname_u in table.meta:
             col = col * u.Unit(table.meta[colname_u])
         else:
@@ -800,9 +774,9 @@ def quantity_from_table(colname, table, default_unit=""):
 
 def unit_from_table(colname, table, default_unit=""):
     """
-    Looks for the unit for a column based on the meta dict keyword "<col>_unit"
+    Look for the unit for a column based on the meta dict keyword "<col>_unit".
     """
-    colname_u = colname + "_unit"
+    colname_u = f"{colname}_unit"
     col = table[colname]
     if col.unit is not None:
         unit = col.unit
@@ -830,19 +804,15 @@ def rad2deg(theta):
 
 
 def has_needed_keywords(header, suffix=""):
-    """
-    Check to see if the WCS keywords are in the header
-    """
-    keys = ["CDELT1", "CRVAL1", "CRPIX1"]
-    return (sum(key + suffix in header.keys() for key in keys) == 3 and
-            "NAXIS1" in header.keys())
+    """Check to see if the WCS keywords are in the header."""
+    keys = {"CDELT1", "CRVAL1", "CRPIX1"}
+    keys = {key + suffix for key in keys}
+    keys.add("NAXIS1")
+    return all(key in header.keys() for key in keys)
 
 
 def stringify_dict(dic, ignore_types=(str, int, float)):
-    """
-    Turns a dict entries into strings for addition to FITS headers
-    """
-    from copy import deepcopy
+    """Turn a dict entries into strings for addition to FITS headers."""
     dic_new = deepcopy(dic)
     for key in dic_new:
         if not isinstance(dic_new[key], ignore_types):
@@ -853,7 +823,7 @@ def stringify_dict(dic, ignore_types=(str, int, float)):
 
 def clean_dict(orig_dict, new_entries):
     """
-    Used for replacing OBS_DICT keywords with actual values
+    Replace OBS_DICT keywords with actual values.
 
     Parameters
     ----------
@@ -876,9 +846,7 @@ def clean_dict(orig_dict, new_entries):
 
 
 def from_currsys(item):
-    """
-    Returns the current value of a bang-string from rc.__currsys__
-    """
+    """Return the current value of a bang-string from ``rc.__currsys__``."""
     if isinstance(item, Table):
         tbl_dict = {col: item[col].data for col in item.colnames}
         tbl_dict = from_currsys(tbl_dict)
@@ -910,8 +878,7 @@ def from_currsys(item):
 
 
 def check_keys(input_dict, required_keys, action="error", all_any="all"):
-    """ Checks to see if all/any of the required keys are present in a dict """
-
+    """Check to see if all/any of the required keys are present in a dict."""
     if isinstance(input_dict, (list, tuple)):
         input_dict = {key: None for key in input_dict}
 
@@ -925,7 +892,8 @@ def check_keys(input_dict, required_keys, action="error", all_any="all"):
     if not keys_present:
         if "error" in action:
             raise ValueError("One or more of the following keys missing from "
-                             f"input_dict: \n{required_keys} \n{input_dict.keys()}")
+                             f"input_dict: \n{required_keys} "
+                             f"\n{input_dict.keys()}")
         if "warn" in action:
             logging.warning(("One or more of the following keys missing "
                              "from input_dict: \n%s \n%s"), required_keys,
@@ -935,8 +903,7 @@ def check_keys(input_dict, required_keys, action="error", all_any="all"):
 
 
 def interp2(x_new, x_orig, y_orig):
-    """Checks and corrects for decreasing x_orig values"""
-
+    """Check and correct for decreasing x_orig values."""
     if x_orig[0] < x_orig[-1]:
         y_new = np.interp(x_new, x_orig, y_orig)
     else:
@@ -946,7 +913,7 @@ def interp2(x_new, x_orig, y_orig):
 
 
 def write_report(text, filename=None, output=None):
-    """ Writes a report string to file in latex or rst format"""
+    """Write a report string to file in latex or rst format."""
     if output is None:
         output = ["rst"]
     elif isinstance(output, str):
@@ -976,35 +943,69 @@ def pretty_print_dict(dic, indent=0):
     return text
 
 
-def return_latest_github_actions_jobs_status(owner_name="AstarVienna", repo_name="ScopeSim",
-                                             branch="dev_master", actions_yaml_name="tests.yml"):
-    """
-    Gets the status of the latest test run
-    """
-    response = requests.get(f"https://api.github.com/repos/{owner_name}/{repo_name}/"
-                            f"actions/workflows/{actions_yaml_name}/runs?branch={branch}&per_page=1")
+def return_latest_github_actions_jobs_status(
+        owner_name="AstarVienna",
+        repo_name="ScopeSim",
+        branch="dev_master",
+        actions_yaml_name="tests.yml",
+    ):
+    """Get the status of the latest test run."""
+    response = requests.get(
+        f"https://api.github.com/repos/{owner_name}/{repo_name}/actions/"
+        f"workflows/{actions_yaml_name}/runs?branch={branch}&per_page=1"
+    )
     dic = response.json()
     run_id = dic["workflow_runs"][0]["id"]
 
-    response = requests.get(f"https://api.github.com/repos/{owner_name}/{repo_name}/actions/runs/{run_id}/jobs")
+    response = requests.get(
+        f"https://api.github.com/repos/{owner_name}/{repo_name}/actions/runs/"
+        f"{run_id}/jobs"
+    )
     dic = response.json()
     params_list = []
     for job in dic["jobs"]:
         params = {
-            "name": job['name'],
-            "status": job['status'],
-            "conclusion": job['conclusion'],
-            "started_at": job['started_at'],
-            "completed_at": job['completed_at'],
-            "url": job['html_url'],
+            "name": job["name"],
+            "status": job["status"],
+            "conclusion": job["conclusion"],
+            "started_at": job["started_at"],
+            "completed_at": job["completed_at"],
+            "url": job["html_url"],
             "badge_url": None
         }
 
-        key = "Python_" + job['name'].split()[-1][:-1]
-        value = "passing" if job['conclusion'] == "success" else "failing"
-        colour = "brightgreen" if job['conclusion'] == "success" else "red"
+        # TODO: this could use the new badges from IRDB, once that's in
+        #       scopesim_core...
+        key = "Python_" + job["name"].split()[-1][:-1]
+        value = "passing" if job["conclusion"] == "success" else "failing"
+        colour = "brightgreen" if job["conclusion"] == "success" else "red"
         badge_url = f"https://img.shields.io/badge/{key}-{value}-{colour}"
         params["badge_url"] = badge_url
         params_list.append(params)
 
     return params_list
+
+
+def close_loop(iterable: Iterable) -> Generator:
+    """x, y = zip(*close_loop(zip(x, y)))"""
+    iterator = iter(iterable)
+    first = next(iterator)
+    yield first
+    yield from iterator
+    yield first
+
+
+def figure_factory(nrows=1, ncols=1, **kwargs):
+    """Default way to init fig and ax, to easily modify later."""
+    iterable_axes = kwargs.pop("iterable_axes", False)
+    fig, ax = plt.subplots(nrows, ncols, **kwargs)
+    if iterable_axes and not isinstance(ax, Iterable):
+        ax = (ax,)
+    return fig, ax
+
+
+def figure_grid_factory(nrows=1, ncols=1, **kwargs):
+    """Gridspec variant."""
+    fig = plt.figure()
+    gs = fig.add_gridspec(nrows, ncols, **kwargs)
+    return fig, gs

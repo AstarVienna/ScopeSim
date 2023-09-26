@@ -1,7 +1,6 @@
 from collections import OrderedDict
 
 import numpy as np
-from astropy import units as u
 
 from ..utils import real_colname, quantify
 from .radiometry_utils import combine_emissions, combine_throughputs, \
