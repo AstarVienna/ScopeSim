@@ -258,10 +258,10 @@ def extract_area_from_table(table, fov_volume):
     fov_xs = (fov_volume["xs"] * fov_unit).to(table["x"].unit)
     fov_ys = (fov_volume["ys"] * fov_unit).to(table["y"].unit)
 
-    mask = ((table["x"].data >= fov_xs[0].round(12).value) *
-            (table["x"].data <= fov_xs[1].round(12).value) *
-            (table["y"].data >= fov_ys[0].round(12).value) *
-            (table["y"].data <= fov_ys[1].round(12).value))
+    mask = ((table["x"].data >= fov_xs[0].value) *
+            (table["x"].data < fov_xs[1].value) *
+            (table["y"].data >= fov_ys[0].value) *
+            (table["y"].data < fov_ys[1].value))
     table_new = table[mask]
 
     return table_new
