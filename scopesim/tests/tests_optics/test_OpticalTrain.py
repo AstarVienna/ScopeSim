@@ -1,4 +1,4 @@
-import os
+from pathlib import Path
 from copy import deepcopy
 import pytest
 from pytest import approx
@@ -15,7 +15,7 @@ from scopesim.optics.optical_train import OpticalTrain
 from scopesim.optics.optics_manager import OpticsManager
 from scopesim.optics.optical_element import OpticalElement
 from scopesim.commands.user_commands import UserCommands
-from scopesim.effects import Effect, DetectorList, DarkCurrent
+from scopesim.effects import Effect, DetectorList
 from scopesim.utils import find_file
 
 from scopesim.tests.mocks.py_objects import source_objects as src_objs
@@ -23,12 +23,11 @@ from scopesim.tests.mocks.py_objects import source_objects as src_objs
 import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm
 
+
 PLOTS = False
 
-FILES_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),
-                                          "../mocks/files/"))
-YAMLS_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),
-                                          "../mocks/yamls/"))
+FILES_PATH = Path(__file__).parent.parent / "mocks/files/"
+YAMLS_PATH = Path(__file__).parent.parent / "mocks/yamls/"
 
 for NEW_PATH in [YAMLS_PATH, FILES_PATH]:
     if NEW_PATH not in rc.__search_path__:
@@ -70,15 +69,10 @@ def unity_src():
 
 @pytest.fixture(scope="class")
 def simplecado_opt():
-    simplecado_yaml = os.path.join(YAMLS_PATH, "SimpleCADO.yaml")
+    simplecado_yaml = str(YAMLS_PATH / "SimpleCADO.yaml")
     cmd = sim.UserCommands(yamls=[simplecado_yaml])
     return sim.OpticalTrain(cmd)
 
-#@pytest.fixture(scope="class")
-#def micado_opt():
-#    micado_yaml = os.path.join(YAMLS_PATH, "test_scope.yaml")
-#    cmd = sim.UserCommands(yamls=[micado_yaml])
-#    return sim.OpticalTrain(cmd)
 
 @pytest.mark.usefixtures("cmds")
 class TestInit:
@@ -124,7 +118,8 @@ class TestObserve:
         opt.observe(tbl_src)
 
         if PLOTS:
-            plt.imshow(opt.image_planes[0].image.T, origin="lower", norm=LogNorm())
+            plt.imshow(opt.image_planes[0].image.T, origin="lower",
+                       norm=LogNorm())
             plt.show()
 
     def test_observe_works_for_image(self, cmds, im_src):
@@ -132,7 +127,8 @@ class TestObserve:
         opt.observe(im_src)
 
         if PLOTS:
-            plt.imshow(opt.image_planes[0].image.T, origin="lower", norm=LogNorm())
+            plt.imshow(opt.image_planes[0].image.T, origin="lower",
+                       norm=LogNorm())
             plt.show()
 
     def test_observe_works_for_source_distributed_over_several_fovs(self, cmds,
@@ -236,7 +232,7 @@ class TestReadout:
             plt.colorbar()
             plt.show()
 
-        src_average = np.average(unity_src.fields[0].data)
+        _ = np.average(unity_src.fields[0].data)
         assert np.median(hdu[1].data) == approx(np.pi / 4., rel=1e-2)
 
 
@@ -298,7 +294,7 @@ class TestShutdown:
                                            name="testpsf")
         simplecado_opt.optics_manager.add_effect(psf)
         # This is just to make sure that we have an open file
-        assert(simplecado_opt['testpsf']._file._file.closed is False)
+        assert not simplecado_opt['testpsf']._file._file.closed
 
         simplecado_opt.shutdown()
 

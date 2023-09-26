@@ -2,13 +2,8 @@
 Warning: To test the creation of plots, if PLOTS=False, all tests will pass regardless
 """
 
-import os
-import pytest
-from pytest import approx
-
+from pathlib import Path
 import numpy as np
-from astropy import units as u
-from astropy.io import fits
 
 from scopesim import rc
 from scopesim.effects import psfs, electronic, shifts
@@ -16,17 +11,15 @@ from scopesim.effects import psfs, electronic, shifts
 from scopesim.tests.mocks.py_objects import fov_objects as fovobj
 from scopesim.tests.mocks.py_objects.fov_objects import _centre_fov
 
-from scopesim.tests.mocks.py_objects import source_objects as srcobj
-
 import matplotlib.pyplot as plt
-from matplotlib.colors import LogNorm
+
 
 PLOTS = False  # if FALSE all tests will pass regardless
 
-FILES_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),
-                                          "../mocks/files/"))
-YAMLS_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),
-                                          "../mocks/yamls/"))
+FILES_PATH = Path(__file__).parent.parent / "mocks/files/"
+YAMLS_PATH = Path(__file__).parent.parent / "mocks/yamls/"
+
+
 for NEW_PATH in [YAMLS_PATH, FILES_PATH]:
     if NEW_PATH not in rc.__search_path__:
         rc.__search_path__.insert(0, NEW_PATH)

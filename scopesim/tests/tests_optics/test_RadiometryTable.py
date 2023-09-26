@@ -1,9 +1,11 @@
-# 1 read in the tables
-# 2 read in curves from the set of unique files
-# 3 create a dictionary of curves
-#
+"""
+1. read in the tables
+2. read in curves from the set of unique files
+3. create a dictionary of curves
+"""
+
 import pytest
-import os
+from pathlib import Path
 
 import numpy as np
 from astropy.table import Table
@@ -19,8 +21,7 @@ from scopesim.optics import surface as opt_surf
 import scopesim as sim
 
 
-MOCK_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__),
-                                          "../mocks/MICADO_SCAO_WIDE/"))
+MOCK_DIR = Path(__file__).parent.parent / "mocks/MICADO_SCAO_WIDE/"
 sim.rc.__search_path__.insert(0, MOCK_DIR)
 
 
@@ -36,7 +37,7 @@ def input_tables():
                  "LIST_mirrors_SCAO_relay.tbl",
                  "LIST_mirrors_MICADO_Wide.tbl"]
 
-    return [os.path.join(MOCK_DIR, fname) for fname in filenames]
+    return [str(MOCK_DIR / fname) for fname in filenames]
 
 
 @pytest.mark.usefixtures("input_tables")

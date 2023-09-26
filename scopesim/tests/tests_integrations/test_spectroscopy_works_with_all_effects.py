@@ -1,6 +1,5 @@
-import os
+from pathlib import Path
 import pytest
-import numpy as np
 from astropy.io import fits
 from matplotlib import pyplot as plt
 
@@ -10,16 +9,15 @@ import scopesim.effects as efs
 from scopesim.tests.mocks.py_objects import integr_spectroscopy_objects as iso
 
 from scopesim import rc
-MOCK_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__),
-                                        "../mocks/MICADO_SPEC/"))
+
+
+MOCK_DIR = Path(__file__).parent.parent / "mocks/MICADO_SPEC/"
 rc.__search_path__.insert(0, MOCK_DIR)
 
 PLOTS = False
 
 
-
-
-################################################################################
+##############################################################################
 # Everything needed to test the FOVManager in Spectroscopy mode
 
 
@@ -30,7 +28,7 @@ def ap_list():
 
 @pytest.fixture(scope="function")
 def ap_list_mixed():
-    return iso.mock_aperture_list_mixed()\
+    return iso.mock_aperture_list_mixed()
 
 
 @pytest.fixture(scope="function")
@@ -82,7 +80,8 @@ def gauss_psf():
 def shift_3d():
     return iso.mock_3d_shift()
 
-################################################################################
+##############################################################################
+
 
 @pytest.mark.skip(reason="Ignoring old Spectroscopy integration tests")
 class TestSpectroscopyFOVs:
@@ -104,7 +103,7 @@ class TestSpectroscopyFOVs:
         fov_mgr = FOVManager(effects=fov_setup_effects, **config_yaml)
         fovs = fov_mgr.fovs
 
-        assert all([isinstance(fov, FieldOfView) for fov in fovs])
+        assert all(isinstance(fov, FieldOfView) for fov in fovs)
 
         implane = ImagePlane(det_list.image_plane_header)
         for fov in fovs:
@@ -141,7 +140,7 @@ class TestSpectroscopyFOVs:
         fov_mgr = FOVManager(effects=fov_setup_effects, **config_yaml)
         fovs = fov_mgr.fovs
 
-        assert all([isinstance(fov, FieldOfView) for fov in fovs])
+        assert all(isinstance(fov, FieldOfView) for fov in fovs)
 
         implane = ImagePlane(det_list.image_plane_header)
         for fov in fovs:
@@ -176,7 +175,7 @@ class TestSpectroscopyFOVs:
         fov_mgr = FOVManager(effects=fov_setup_effects, **config_yaml)
         fovs = fov_mgr.fovs
 
-        assert all([isinstance(fov, FieldOfView) for fov in fovs])
+        assert all(isinstance(fov, FieldOfView) for fov in fovs)
 
         implane = ImagePlane(det_list.image_plane_header)
         for fov in fovs:
@@ -192,6 +191,7 @@ class TestSpectroscopyFOVs:
         if PLOTS:
             plt.imshow(implane.data, origin="lower")
             plt.show()
+
 
 @pytest.mark.skip(reason="Ignoring old Spectroscopy integration tests")
 class TestSpectroscopyMICADO:

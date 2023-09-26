@@ -1,4 +1,4 @@
-import os
+from pathlib import Path
 
 import numpy as np
 from astropy import units as u
@@ -9,10 +9,11 @@ from scopesim import rc
 from scopesim.effects import TERCurve
 from scopesim.optics.surface import SpectralSurface
 
+
 PLOTS = False
 
-MOCK_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),
-                                         "../mocks/MICADO_SCAO_WIDE/"))
+MOCK_PATH = Path(__file__) / "mocks/MICADO_SCAO_WIDE/"
+
 if MOCK_PATH not in rc.__search_path__:
     rc.__search_path__ += [MOCK_PATH]
 

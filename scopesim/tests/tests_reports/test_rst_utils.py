@@ -1,5 +1,5 @@
 import pytest
-import os
+from pathlib import Path
 import shutil
 from docutils.core import publish_doctree
 
@@ -13,18 +13,18 @@ rc.__config__["!SIM.reports.rst_path"] = "./rst_temp/"
 CLEAN_UP = True
 PLOTS = False
 
-IMG_PATH = rc.__config__["!SIM.reports.image_path"]
-LATEX_PATH = rc.__config__["!SIM.reports.latex_path"]
-RST_PATH = rc.__config__["!SIM.reports.rst_path"]
+IMG_PATH = Path(rc.__config__["!SIM.reports.image_path"])
+LATEX_PATH = Path(rc.__config__["!SIM.reports.latex_path"])
+RST_PATH = Path(rc.__config__["!SIM.reports.rst_path"])
 
 
 def setup_module():
     for path in [IMG_PATH, LATEX_PATH, RST_PATH]:
-        if not os.path.exists(path):
-            os.mkdir(path)
-    rc.__config__["!SIM.reports.image_path"] = IMG_PATH
-    rc.__config__["!SIM.reports.latex_path"] = LATEX_PATH
-    rc.__config__["!SIM.reports.rst_path"] = RST_PATH
+        if not path.exists():
+            path.mkdir()
+    rc.__config__["!SIM.reports.image_path"] = str(IMG_PATH)
+    rc.__config__["!SIM.reports.latex_path"] = str(LATEX_PATH)
+    rc.__config__["!SIM.reports.rst_path"] = str(RST_PATH)
 
 
 def teardown_module():
@@ -45,10 +45,10 @@ class TestPlotRstText:
                               "module called py23. Find out what that is and "
                               "remove/replace it."))
     def test_image_file_exists_for_comment_node(self):
-        assert os.path.exists(IMG_PATH)
+        assert IMG_PATH.exists()
         ru.plotify_rst_text(ro.comment_plot_snippet)
-        assert os.path.exists(os.path.join(IMG_PATH, "my_fug.png"))
-        assert os.path.exists(os.path.join(IMG_PATH, "my_fug.pdf"))
+        assert (IMG_PATH / "my_fug.png").exists()
+        assert (IMG_PATH / "my_fug.pdf").exists()
 
     @pytest.mark.skip(reason=("This produces a DeprecationWarning about a "
                               "module called py23. Find out what that is and "
@@ -59,30 +59,29 @@ class TestPlotRstText:
         That is, on windows, plotify_rst_text should not create
         images_temp\ty_fug.pdf, because that has a tab character in it.
         """
-        assert os.path.exists(IMG_PATH)
+        assert IMG_PATH.exists()
         ru.plotify_rst_text(ro.comment_plot_snippet_with_escapable_name)
-        assert os.path.exists(os.path.join(IMG_PATH, "ty_fug.png"))
-        assert os.path.exists(os.path.join(IMG_PATH, "ty_fug.pdf"))
+        assert (IMG_PATH / "ty_fug.png").exists()
+        assert (IMG_PATH / "ty_fug.pdf").exists()
 
     def test_image_file_exists_for_literal_node(self):
         print(IMG_PATH)
         ru.plotify_rst_text(ro.literal_plot_snippet)
-        assert os.path.exists(os.path.join(IMG_PATH, "my_fug3.svg"))
-        assert os.path.exists(os.path.join(IMG_PATH, "my_fug3.png"))
+        assert (IMG_PATH / "my_fug3.svg").exists()
+        assert (IMG_PATH / "my_fug3.png").exists()
 
 
 class TestLatexifyRstText:
     def test_stuff(self):
         ru.latexify_rst_text(ro.big_rst_text)
-        assert os.path.exists(os.path.join(LATEX_PATH,
-                                           "This_parrot_goes_vrooom.tex"))
+        assert (LATEX_PATH / "This_parrot_goes_vrooom.tex").exists()
 
 
 class TestRstifyRstText:
     def test_stuff(self):
         ru.rstify_rst_text(ro.big_rst_text)
-        assert os.path.exists(os.path.join(RST_PATH,
-                                           "This_parrot_goes_vrooom.rst"))
+        assert (RST_PATH / "This_parrot_goes_vrooom.rst").exists()
+
 
 @pytest.mark.skip(reason="Ignoring for Github Actions")
 class TestPlotifyRstText:
@@ -91,7 +90,7 @@ class TestPlotifyRstText:
         ru.plotify_rst_text(ro.big_rst_text)
         fnames = ["my_fug_A.pdf", "my_fug_B.svg", "my_fug_C.png"]
         for fname in fnames:
-            assert os.path.exists(os.path.join(IMG_PATH, fname))
+            assert (IMG_PATH / fname).exists()
 
 
 class TestEffectReport:

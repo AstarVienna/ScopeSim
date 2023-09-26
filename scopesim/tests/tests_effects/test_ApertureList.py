@@ -1,6 +1,4 @@
-import os
-import pytest
-from pytest import approx
+from pathlib import Path
 
 import numpy as np
 from astropy.io import fits
@@ -9,10 +7,13 @@ from scopesim import rc
 from scopesim.effects import ApertureList, ApertureMask
 
 import matplotlib.pyplot as plt
+
+
 PLOTS = False
 
-FILES_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),
-                                          "../mocks/files/"))
+FILES_PATH = Path(__file__).parent.parent / "mocks/files/"
+
+
 if FILES_PATH not in rc.__search_path__:
     rc.__search_path__ += [FILES_PATH]
 
@@ -75,5 +76,3 @@ class TestFovGrid:
 
             plt.imshow(implane.data, origin="lower")
             plt.show()
-
-

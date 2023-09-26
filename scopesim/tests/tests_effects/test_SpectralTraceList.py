@@ -1,5 +1,6 @@
 """Tests for module spectral_trace_list.py"""
-import os
+
+from pathlib import Path
 import pytest
 
 from astropy.io import fits
@@ -12,8 +13,9 @@ from scopesim.tests.mocks.py_objects import trace_list_objects as tlo
 from scopesim.tests.mocks.py_objects import header_objects as ho
 from scopesim import rc
 
-MOCK_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),
-                                         "../mocks/MICADO_SPEC/"))
+
+MOCK_PATH = Path(__file__).parent.parent / "mocks/MICADO_SPEC/"
+
 if MOCK_PATH not in rc.__search_path__:
     rc.__search_path__ += [MOCK_PATH]
 

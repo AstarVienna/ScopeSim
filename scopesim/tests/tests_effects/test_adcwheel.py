@@ -1,14 +1,17 @@
 """Tests for class ADCWheel"""
-import os
+
+from pathlib import Path
 import pytest
 
 from scopesim import rc
 from scopesim.effects import TERCurve, ADCWheel
 
-FILES_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),
-                                          "../mocks/files/"))
+
+FILES_PATH = Path(__file__).parent.parent / "mocks/files/"
+
 if FILES_PATH not in rc.__search_path__:
     rc.__search_path__ += [FILES_PATH]
+
 
 @pytest.fixture(name="adcwheel", scope="class")
 def fixture_adcwheel():
@@ -17,7 +20,8 @@ def fixture_adcwheel():
                     filename_format="TER_ADC_{}.dat",
                     current_adc="const_90")
 
-# pylint: disable=no-self-use, missing-class-docstring,
+
+# pylint: disable=missing-class-docstring,
 # pylint: disable=missing-function-docstring
 class TestADCWheel:
     def test_initialises_correctly(self, adcwheel):

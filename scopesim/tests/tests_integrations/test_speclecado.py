@@ -1,20 +1,20 @@
 import pytest
-import os
-from astropy import units as u
+from pathlib import Path
+
 import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm
 
 from scopesim import UserCommands, OpticalTrain
 from scopesim.tests.mocks.py_objects import source_objects as so
-from scopesim import effects as efs
 
 from scopesim import rc
-MOCK_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__),
-                                        "../mocks/MICADO_SPEC/"))
+
+
+MOCK_DIR = Path(__file__).parent.parent / "mocks/MICADO_SPEC/"
 rc.__search_path__.insert(0, MOCK_DIR)
 
-
 PLOTS = False
+
 
 @pytest.mark.skip(reason="Ignoring old Spectroscopy integration tests")
 class TestMicadoSpec:

@@ -1,7 +1,6 @@
 from pathlib import Path
 
 import pytest
-import os
 from synphot import SpectralElement, SourceSpectrum
 
 from scopesim.effects import SkycalcTERCurve
@@ -10,22 +9,23 @@ from scopesim import rc
 if rc.__config__["!SIM.tests.run_skycalc_ter_tests"] is False:
     pytestmark = pytest.mark.skip("Ignoring SkyCalc integration tests")
 
-FILES_PATH = str(Path(__file__).parent.parent / "mocks" / "files")
+FILES_PATH = Path(__file__).parent.parent / "mocks/files"
+
 if FILES_PATH not in rc.__search_path__:
     rc.__search_path__ += [FILES_PATH]
 
 
 def setup_module():
-    rc_local_path = rc.__config__["!SIM.file.local_packages_path"]
-    if not os.path.exists(rc_local_path):
-        os.mkdir(rc_local_path)
-        rc.__config__["!SIM.file.local_packages_path"] = os.path.abspath(
-            rc_local_path)
+    rc_local_path = Path(rc.__config__["!SIM.file.local_packages_path"])
+    if not rc_local_path.exists():
+        rc_local_path.mkdir()
+        rc.__config__["!SIM.file.local_packages_path"] = str(rc_local_path.absolute())
 
 
 def teardown_module():
-    if os.path.exists("skycalc_temp.fits"):
-        os.remove("skycalc_temp.fits")
+    file = Path("skycalc_temp.fits")
+    if file.exists():
+        file.unlink()
 
 
 class TestInit:

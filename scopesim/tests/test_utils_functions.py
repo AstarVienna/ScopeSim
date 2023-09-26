@@ -1,6 +1,6 @@
 """Unit tests for module scopesim.utils"""
 
-import os
+from pathlib import Path
 import logging
 import pytest
 import numpy as np
@@ -206,15 +206,15 @@ class TestSetupLoggers:
 
     def test_log_file_exist_when_file_logging_turned_on(self):
         utils.setup_loggers(log_to_file=True)
-        filepath = rc.__config__["!SIM.logging.file_path"]
+        filepath = Path(rc.__config__["!SIM.logging.file_path"])
         level = rc.__config__["!SIM.logging.file_level"]
         f_handler = logging.getLogger().handlers[-1]
 
-        assert os.path.exists(filepath)
+        assert filepath.exists()
         assert f_handler.level == logging._checkLevel(level)
 
         logging.shutdown()
-        os.remove(filepath)
+        filepath.unlink()
 
     def test_console_logger_has_output(self, capsys):
         utils.setup_loggers(log_to_console=True)

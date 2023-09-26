@@ -1,4 +1,4 @@
-import os
+from pathlib import Path
 import pytest
 from pytest import approx
 
@@ -10,10 +10,13 @@ from scopesim.effects import ApertureMask
 from scopesim.effects.apertures import points_on_a_circle, make_aperture_polygon
 
 import matplotlib.pyplot as plt
+
+
 PLOTS = False
 
-FILES_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),
-                                          "../mocks/files/"))
+FILES_PATH = Path(__file__).parent.parent / "mocks/files/"
+
+
 if FILES_PATH not in rc.__search_path__:
     rc.__search_path__ += [FILES_PATH]
 

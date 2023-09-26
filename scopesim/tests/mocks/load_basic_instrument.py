@@ -1,7 +1,5 @@
-import os
-from copy import deepcopy
-from ... import UserCommands, OpticalTrain
-from ... import rc
+from pathlib import Path
+from scopesim import rc, UserCommands, OpticalTrain
 
 
 def load_example_optical_train(**kwargs):
@@ -36,7 +34,7 @@ def load_example_optical_train(**kwargs):
     # old_local_path = deepcopy(rc.__config__["!SIM.file.local_packages_path"])
     # old_search_path = deepcopy(rc.__search_path__)
 
-    inst_pkgs = os.path.dirname(__file__)
+    inst_pkgs = Path(__file__).parent
     if inst_pkgs not in rc.__search_path__:
         rc.__search_path__ = rc.__search_path__ + [inst_pkgs]
         rc.__config__["!SIM.file.local_packages_path"] = inst_pkgs

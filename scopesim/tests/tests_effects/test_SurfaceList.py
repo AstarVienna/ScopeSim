@@ -1,6 +1,7 @@
 """ Tests for the the new SurfaceList object """
+
+from pathlib import Path
 from pytest import approx
-import os
 import numpy as np
 from astropy import units as u
 from astropy.table import Table
@@ -12,12 +13,12 @@ from scopesim.effects import surface_list as sl
 from scopesim.optics import SpectralSurface
 
 from scopesim.tests.mocks.py_objects import source_objects as so
-from scopesim.tests.mocks.py_objects import effects_objects as eo
 from scopesim import rc
 
 
-MOCK_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),
-                                         "../mocks/MICADO_SCAO_WIDE/"))
+MOCK_PATH = Path(__file__) / "mocks/MICADO_SCAO_WIDE/"
+
+
 if MOCK_PATH not in rc.__search_path__:
     rc.__search_path__ += [MOCK_PATH]
 

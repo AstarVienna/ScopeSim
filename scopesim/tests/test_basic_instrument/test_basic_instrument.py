@@ -1,7 +1,4 @@
-import pytest
-from pytest import raises
-import os
-from time import time
+from pathlib import Path
 import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib.colors import LogNorm
@@ -10,9 +7,11 @@ from astropy import units as u
 import scopesim as sim
 from scopesim.source import source_templates as st
 
+
 PLOTS = False
 
-inst_pkgs = os.path.join(os.path.dirname(__file__), "../mocks")
+inst_pkgs = Path(__file__).parent.parent / "mocks"
+
 sim.rc.__currsys__["!SIM.file.local_packages_path"] = inst_pkgs
 
 
@@ -65,6 +64,7 @@ class TestObserveSpectroscopyMode:
     - H: 1.3, 1.8      dwave = 0.5  --> R~2000      -> 10 spots
     - K: 1.75, 2.5     dwave = 0.75 --> R~1300      -> 15 spots
     """
+
     def test_runs(self):
         wave = np.arange(0.7, 2.5, 0.001)
         spec = np.zeros(len(wave))
@@ -141,7 +141,6 @@ class TestObserveIfuMode:
             x0, x1 = xs[i]
             trace_flux = det_im[:, x0:x1].sum()     # sum along a trace
             assert round(trace_flux / spot_flux) == 15 * 5
-
 
     def test_random_star_field(self):
         src = sim.source.source_templates.star_field(n=100, mmin=8, mmax=18, width=10)

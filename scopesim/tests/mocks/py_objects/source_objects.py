@@ -1,4 +1,4 @@
-import os
+from pathlib import Path
 
 import numpy as np
 from astropy import units as u, wcs
@@ -10,8 +10,10 @@ from scopesim.source.source import Source
 from scopesim.source.source_templates import vega_spectrum
 from scopesim import rc
 
-FILES_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),
-                                          "../files/"))
+
+FILES_PATH = Path(__file__).parent.parent / "files/"
+
+
 if FILES_PATH not in rc.__search_path__:
     rc.__search_path__ += [FILES_PATH]
 
@@ -38,7 +40,7 @@ def _table_source():
 
 def _image_source(dx=0, dy=0, angle=0, weight=1):
     """
-    An image with 3 point sources on a random BG
+    Produce a source with 3 point sources on a random BG.
 
     Parameters
     ----------
@@ -50,7 +52,7 @@ def _image_source(dx=0, dy=0, angle=0, weight=1):
 
     Returns
     -------
-
+    source
     """
     n = 101
     unit = u.Unit("ph s-1 m-2 um-1")
@@ -95,7 +97,7 @@ def _fits_image_source():
     specs = [SourceSpectrum(Empirical1D, points=wave,
                             lookup_table=np.linspace(0, 4, n) * unit)]
 
-    hdulist = fits.open(os.path.join(FILES_PATH, "test_image.fits"))
+    hdulist = fits.open(FILES_PATH / "test_image.fits")
     fits_src = Source(image_hdu=hdulist[0], spectra=specs)
 
     return fits_src
@@ -103,7 +105,7 @@ def _fits_image_source():
 
 def _cube_source(**kwargs):
     """
-    An image with 3 point sources on a random BG
+    Produce a source with 3 point sources on a random BG.
 
     Parameters
     ----------
@@ -115,14 +117,13 @@ def _cube_source(**kwargs):
 
     Returns
     -------
-
+    source
     """
-
     n = 101
     im_src = _image_source(**kwargs)
     data = im_src.fields[0].data
 
-        # Broadcast the array onto a 3rd dimension and scale along the new axis
+    # Broadcast the array onto a 3rd dimension and scale along the new axis
     im_src.fields[0].data = data[None, :, :] * np.linspace(0, 4, n)[:, None, None]
     im_src.spectra = []
 
@@ -138,8 +139,7 @@ def _cube_source(**kwargs):
     return im_src
 
 
-
-def _combined_source(im_angle=0, dx=[0, 0, 0], dy=[0, 0, 0], weight=[1, 1, 1]):
+def _combined_source(im_angle=0, dx=(0, 0, 0), dy=(0, 0, 0), weight=(1, 1, 1)):
     tblsrc1 = _table_source()
 
     tblsrc2 = _table_source()

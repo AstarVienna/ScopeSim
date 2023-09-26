@@ -1,14 +1,17 @@
 """Tests for class SlitWheel"""
-import os
+
+from pathlib import Path
 import pytest
 
 from scopesim import rc
 from scopesim.effects import ApertureMask, SlitWheel
 
-FILES_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),
-                                          "../mocks/files/"))
+
+FILES_PATH = Path(__file__).parent.parent / "mocks/files/"
+
 if FILES_PATH not in rc.__search_path__:
     rc.__search_path__ += [FILES_PATH]
+
 
 @pytest.fixture(name="swheel", scope="class")
 def fixture_swheel():
@@ -16,6 +19,7 @@ def fixture_swheel():
     return SlitWheel(slit_names=["A", "B"],
                      filename_format="MASK_slit_{}.dat",
                      current_slit="B")
+
 
 # pylint: disable=no-self-use, missing-class-docstring,
 # pylint: disable=missing-function-docstring

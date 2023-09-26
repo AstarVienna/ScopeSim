@@ -1,4 +1,4 @@
-import os
+from pathlib import Path
 import pytest
 
 from scopesim import rc
@@ -9,8 +9,9 @@ from scopesim.tests.mocks.py_objects.effects_objects import _surf_list, \
     _surf_list_empty, _filter_surface
 from scopesim.tests.mocks.py_objects.yaml_objects import _atmo_yaml_dict
 
-MOCK_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),
-                                         "../mocks/MICADO_SCAO_WIDE/"))
+
+MOCK_PATH = Path(__file__) / "mocks/MICADO_SCAO_WIDE/"
+
 if MOCK_PATH not in rc.__search_path__:
     rc.__search_path__ += [MOCK_PATH]
 

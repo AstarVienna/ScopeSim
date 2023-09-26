@@ -1,25 +1,24 @@
-import os
+from pathlib import Path
 import pytest
 from pytest import approx
 
 import numpy as np
-from astropy import units as u
 from astropy.io import fits
 
 from scopesim import rc
-from scopesim.effects import FieldConstantPSF, AnisocadoConstPSF
+from scopesim.effects import AnisocadoConstPSF
 from scopesim.tests.mocks.py_objects import fov_objects as fovobj
 from scopesim.tests.mocks.py_objects import source_objects as srcobj
 
 import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm
 
+
 PLOTS = False
 
-FILES_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),
-                                          "../mocks/files/"))
-YAMLS_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),
-                                          "../mocks/yamls/"))
+FILES_PATH = Path(__file__).parent.parent / "mocks/files/"
+YAMLS_PATH = Path(__file__).parent.parent / "mocks/yamls/"
+
 for NEW_PATH in [YAMLS_PATH, FILES_PATH]:
     if NEW_PATH not in rc.__search_path__:
         rc.__search_path__.insert(0, NEW_PATH)
@@ -102,4 +101,3 @@ class TestApplyTo:
             plt.show()
 
         assert 1e-99 < np.average(fov.data) < 1e99
-

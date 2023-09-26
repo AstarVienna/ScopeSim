@@ -6,8 +6,7 @@
 # 2 compliment the table based on columns in file
 # 3 have @property methods for: transmission, ermission, reflection
 
-import inspect
-import os
+from pathlib import Path
 import sys
 import logging
 
@@ -28,25 +27,18 @@ from scopesim.optics import surface_utils as surf_utils
 from scopesim import utils
 
 
-def mock_dir():
-    cur_dirname = os.path.dirname(inspect.getfile(inspect.currentframe()))
-    rel_dirname = "../mocks/MICADO_SCAO_WIDE/"
-
-    return os.path.abspath(os.path.join(cur_dirname, rel_dirname))
-
-
-MOCK_DIR = mock_dir()
+MOCK_DIR = Path(__file__).parent.parent / "mocks/files/"
 
 
 @pytest.fixture(name="ter_table", scope="class")
 def fixture_ter_table():
-    return ioascii.read(os.path.join(MOCK_DIR, "TER_dichroic.dat"))
+    return ioascii.read(MOCK_DIR / "TER_dichroic.dat")
 
 
 @pytest.fixture(name="input_tables", scope="module")
 def fixture_input_tables():
     filenames = ["TER_dichroic.dat", "TC_filter_Ks.dat"]
-    abs_paths = [os.path.join(MOCK_DIR, fname) for fname in filenames]
+    abs_paths = [str(MOCK_DIR / fname) for fname in filenames]
 
     return abs_paths
 
@@ -305,7 +297,7 @@ class TestIntegration:
     @pytest.mark.parametrize("col_name",
                              ["transmission", "emissivity", "reflection"])
     def test_ter_property_of_object_from_file(self, col_name, ter_table):
-        filename = os.path.join(MOCK_DIR, "TER_dichroic.dat")
+        filename = str(MOCK_DIR / "TER_dichroic.dat")
         surf = opt_surf.SpectralSurface(filename=filename)
 
         tbl_ter_prop = ter_table[col_name]
@@ -328,7 +320,7 @@ class TestIntegration:
         assert np.all(surf_ter_prop == tbl_ter_prop)
 
     def test_return_emission_curve_from_file(self):
-        filename = os.path.join(MOCK_DIR, "emission_file.dat")
+        filename = str(MOCK_DIR / "emission_file.dat")
         surf = opt_surf.SpectralSurface(filename=filename)
         integal = surf.emission.integrate().to(u.Unit("ph s-1 m-2"))
         assert np.isclose(integal.value, 2)   # ph s-1 m-2

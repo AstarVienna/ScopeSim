@@ -1,18 +1,20 @@
-import os
+from pathlib import Path
 
 from astropy import units as u
 from astropy.table import Table
 
 from scopesim import effects as efs
+from scopesim.effects import AtmosphericDispersion
 from scopesim.effects.effects_utils import make_effect
 from scopesim.tests.mocks.py_objects.yaml_objects import _yaml_min_viable_scope
 
 from scopesim import rc
 
-FILES_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),
-                                          "../files/"))
-MICADO_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),
-                                           "../MICADO_SCAO_WIDE/"))
+
+FILES_PATH = Path(__file__).parent.parent / "files/"
+MICADO_PATH = Path(__file__).parent.parent / "MICADO_SCAO_WIDE/"
+
+
 if FILES_PATH not in rc.__search_path__:
     rc.__search_path__ += [FILES_PATH, MICADO_PATH]
 
@@ -67,7 +69,6 @@ def _full_detector_list():
 
 
 def _atmospheric_dispersion(**kwargs):
-    from scopesim.effects import AtmosphericDispersion
     atmo_params = {"airmass": 1.14,     # in deg
                    "temperature": 7,    # in degC
                    "humidity": 1,       # in %
@@ -115,6 +116,3 @@ def _img_aperture_mask(**kwargs):
     base_kwargs.update(kwargs)
     apm = efs.ApertureMask(**base_kwargs)
     return apm
-
-
-

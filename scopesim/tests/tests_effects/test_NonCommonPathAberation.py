@@ -1,4 +1,4 @@
-import os
+from pathlib import Path
 
 import pytest
 from pytest import approx
@@ -18,8 +18,8 @@ from scopesim.tests.mocks.py_objects.header_objects import \
     _fov_header, _implane_header
 
 
-FILES_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__),
-                                                         "../mocks/files"))
+FILES_DIR = Path(__file__).parent.parent / "mocks/files"
+
 if rc.__search_path__[0] != FILES_DIR:
     rc.__search_path__.insert(0, FILES_DIR)
 

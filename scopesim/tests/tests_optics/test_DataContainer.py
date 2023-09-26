@@ -1,11 +1,12 @@
+"""
 # datacontainer must read in the data if it is an ASCII file, or open a file
 # handle to it if it is a FITS file
 # the header(s) must be accessible as dictionaries
 # if the data is in table format, the table command accesses this
 # if the data is in image format, the image command accesses this
+"""
 
-import os
-import inspect
+from pathlib import Path
 import pytest
 
 import numpy as np
@@ -15,20 +16,13 @@ from astropy import units as u
 from scopesim.effects.data_container import DataContainer
 
 
-def mock_dir():
-    cur_dirname = os.path.dirname(inspect.getfile(inspect.currentframe()))
-    rel_dirname = "../mocks/MICADO_SCAO_WIDE/"
-
-    return os.path.abspath(os.path.join(cur_dirname, rel_dirname))
-
-
-MOCK_DIR = mock_dir()
+MOCK_DIR = Path(__file__).parent.parent / "mocks/MICADO_SCAO_WIDE/"
 
 
 @pytest.fixture(scope="module")
 def data_files():
     filenames = ["PSF_basic.fits", "TC_filter_Ks.dat"]
-    abs_paths = [os.path.join(MOCK_DIR, fname) for fname in filenames]
+    abs_paths = [str(MOCK_DIR / fname) for fname in filenames]
 
     return abs_paths
 
@@ -50,8 +44,8 @@ class TestInit:
         assert dat.is_fits is False
 
     def test_initialised_with_arrays_dict_input(self):
-        array_dict = {"wavelength" : np.linspace(1, 2, 11)*u.um,
-                      "transmission" : np.ones(11)}
+        array_dict = {"wavelength": np.linspace(1, 2, 11)*u.um,
+                      "transmission": np.ones(11)}
         dat = DataContainer(array_dict=array_dict)
         assert isinstance(dat, DataContainer)
         assert dat.is_fits is False
@@ -82,9 +76,8 @@ class TestGetData:
         assert isinstance(data, Table)
 
     def test_array_input_returns_table(self):
-        array_dict = {"wavelength" : np.linspace(1, 2, 11)*u.um,
-                      "transmission" : np.ones(11)}
+        array_dict = {"wavelength": np.linspace(1, 2, 11)*u.um,
+                      "transmission": np.ones(11)}
         datc = DataContainer(array_dict=array_dict)
         data = datc.get_data()
         assert isinstance(data, Table)
-

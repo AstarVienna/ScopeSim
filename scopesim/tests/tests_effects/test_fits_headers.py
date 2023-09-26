@@ -1,8 +1,6 @@
-import os
+from pathlib import Path
 import pytest
 from tempfile import TemporaryDirectory
-from pytest import raises
-from copy import deepcopy
 from astropy.io import fits
 from astropy import units as u
 import numpy as np
@@ -11,12 +9,13 @@ from scopesim.effects import fits_headers as fh
 from scopesim.source.source_templates import star
 import scopesim as sim
 
-YAMLS_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),
-                                          "../mocks/yamls/"))
+
+YAMLS_PATH = Path(__file__).parent.parent / "mocks/yamls/"
+
 
 @pytest.fixture(scope="function")
 def simplecado_opt():
-    simplecado_yaml = os.path.join(YAMLS_PATH, "SimpleCADO.yaml")
+    simplecado_yaml = YAMLS_PATH / "SimpleCADO.yaml"
     cmd = sim.UserCommands(yamls=[simplecado_yaml])
     return sim.OpticalTrain(cmd)
 
@@ -268,7 +267,7 @@ class TestSourceDescriptionFitsKeywordsApplyTo:
 
         # save to disk, what happens to cards that are longer than 80 characters
         with TemporaryDirectory() as tmpdir:
-            fname = os.path.join(tmpdir, "test.fits")
+            fname = Path(tmpdir / "test.fits")
             hdul.writeto(fname)
             tmp_hdr = fits.getheader(fname)
 

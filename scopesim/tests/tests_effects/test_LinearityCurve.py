@@ -1,5 +1,5 @@
 import pytest
-import os
+from pathlib import Path
 import numpy as np
 
 from scopesim import rc
@@ -7,10 +7,10 @@ from scopesim.effects import LinearityCurve
 
 from scopesim.tests.mocks.py_objects.detector_objects import _basic_detector
 
-FILES_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),
-                                          "../mocks/files/"))
-YAMLS_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),
-                                          "../mocks/yamls/"))
+
+FILES_PATH = Path(__file__).parent.parent / "mocks/files/"
+YAMLS_PATH = Path(__file__).parent.parent / "mocks/yamls/"
+
 
 for NEW_PATH in [YAMLS_PATH, FILES_PATH]:
     if NEW_PATH not in rc.__search_path__:
@@ -49,6 +49,7 @@ class TestInit:
                                   ndit=2)
         assert "incident" in lincurve.meta
         assert "measured" in lincurve.meta
+
 
 class TestApplyTo:
     @pytest.mark.parametrize("in_flux, out_flux", [(20, 10), (45, 52.5),

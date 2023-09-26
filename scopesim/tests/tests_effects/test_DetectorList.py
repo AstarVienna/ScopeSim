@@ -1,12 +1,15 @@
-import os
+from pathlib import Path
+
 import pytest
 from astropy.table import Table
 
 from scopesim import rc
 from scopesim.effects import DetectorList, DetectorWindow, ApertureMask
 
-MOCK_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),
-                                         "../mocks/MICADO_SCAO_WIDE/"))
+
+MOCK_PATH = Path(__file__).parent.parent / "mocks/MICADO_SCAO_WIDE/"
+
+
 if MOCK_PATH not in rc.__search_path__:
     rc.__search_path__ += [MOCK_PATH]
 
@@ -18,7 +21,7 @@ class TestDetectorListInit:
     def test_initialises_with_filename(self):
         det_list = DetectorList(filename="FPA_array_layout.dat",
                                 image_plane_id=0)
-        hdr = det_list.detector_headers()[0]
+        _ = det_list.detector_headers()[0]
         assert isinstance(det_list, DetectorList)
         assert "x_size" in det_list.table.colnames
         assert det_list.table["x_size"][0] == 61.44

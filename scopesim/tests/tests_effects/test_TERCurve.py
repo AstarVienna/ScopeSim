@@ -1,5 +1,5 @@
 
-import os
+from pathlib import Path
 import pytest
 
 import numpy as np
@@ -11,8 +11,9 @@ from scopesim.tests.mocks.py_objects import source_objects as so
 from scopesim.tests.mocks.py_objects import effects_objects as eo
 from scopesim import rc
 
-MOCK_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),
-                                         "../mocks/MICADO_SCAO_WIDE/"))
+
+MOCK_PATH = Path(__file__) / "mocks/MICADO_SCAO_WIDE/"
+
 if MOCK_PATH not in rc.__search_path__:
     rc.__search_path__ += [MOCK_PATH]
 

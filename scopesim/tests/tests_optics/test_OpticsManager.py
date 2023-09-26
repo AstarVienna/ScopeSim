@@ -1,4 +1,4 @@
-import os
+from pathlib import Path
 from scopesim import rc
 
 import pytest
@@ -12,10 +12,9 @@ from scopesim.tests.mocks.py_objects.yaml_objects import\
     _inst_yaml_dict, _detector_yaml_dict
 
 
-FILES_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),
-                                          "../mocks/files/"))
-YAMLS_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),
-                                          "../mocks/MICADO_SCAO_WIDE/"))
+FILES_PATH = Path(__file__).parent.parent / "mocks/files/"
+YAMLS_PATH = Path(__file__).parent.parent / "mocks/MICADO_SCAO_WIDE/"
+
 for NEW_PATH in [YAMLS_PATH, FILES_PATH]:
     if NEW_PATH not in rc.__search_path__:
         rc.__search_path__.insert(0, NEW_PATH)
@@ -95,4 +94,3 @@ class TestGetItem:
         opt_man = opt_mgr.OpticsManager([detector_yaml_dict])
         with pytest.raises(ValueError):
             opt_man[key]
-

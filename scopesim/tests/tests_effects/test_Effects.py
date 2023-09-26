@@ -1,4 +1,4 @@
-import os
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -10,15 +10,16 @@ from scopesim.effects import Effect, SurfaceList
 from scopesim.tests.mocks.py_objects import effects_objects as eo
 
 
-MOCK_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),
-                                         "../mocks/MICADO_SCAO_WIDE/"))
+MOCK_PATH = Path(__file__).parent.parent / "mocks/MICADO_SCAO_WIDE/"
+
+
 if MOCK_PATH not in rc.__search_path__:
     rc.__search_path__ += [MOCK_PATH]
 
 
 @pytest.fixture()
 def surf_list_file():
-    fname = os.path.join(MOCK_PATH, "LIST_mirrors_MICADO_Wide.tbl")
+    fname = MOCK_PATH / "LIST_mirrors_MICADO_Wide.tbl"
     return fname
 
 
@@ -71,5 +72,3 @@ class TestSurfaceListInit:
         surf_list = SurfaceList(filename=surf_list_file)
         assert isinstance(surf_list, SurfaceList)
         assert isinstance(surf_list.data, Table)
-
-

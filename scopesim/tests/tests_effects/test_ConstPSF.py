@@ -1,3 +1,4 @@
+"""
 # 1. ConstPSF should return the PSF for a given lambda
 # 2. should throw errors when:
 #   - file doesn't exist
@@ -13,30 +14,28 @@
 #   - (?) apply_to(obj)
 #   - fov_grid(which="waveset")
 #   - get_kernel(obj)
+"""
 
-import os
+from pathlib import Path
 import pytest
 from pytest import approx
 
 import numpy as np
-from astropy import units as u
-from astropy.io import fits
 
 from scopesim import rc
-from scopesim.optics.fov import FieldOfView
-from scopesim.optics import image_plane_utils as imp_utils
-from scopesim.effects import FieldConstantPSF, psfs
+from scopesim.effects import FieldConstantPSF
 
 from scopesim.tests.mocks.py_objects.fov_objects import _centre_fov
 
 import matplotlib.pyplot as plt
 
+
 PLOTS = False
 
-FILES_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),
-                                          "../mocks/files/"))
-YAMLS_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),
-                                          "../mocks/yamls/"))
+FILES_PATH = Path(__file__).parent.parent / "mocks/files/"
+YAMLS_PATH = Path(__file__).parent.parent / "mocks/yamls/"
+
+
 for NEW_PATH in [YAMLS_PATH, FILES_PATH]:
     if NEW_PATH not in rc.__search_path__:
         rc.__search_path__.insert(0, NEW_PATH)

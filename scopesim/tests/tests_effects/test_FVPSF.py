@@ -1,3 +1,4 @@
+"""
 # 1. FVPSF should return the PSF for a position in the FOV and a given lambda
 # 2. should throw errors when:
 #   - file doesn't exist
@@ -17,8 +18,9 @@
 #   - set_defaults(wave, pos)
 #   - array : returns an array for the defaults values of wave and pos
 #   - psf : returns self, as array returns a layer based on defaults
+"""
 
-import os
+from pathlib import Path
 import pytest
 from pytest import approx
 
@@ -33,12 +35,13 @@ from scopesim.tests.mocks.py_objects.psf_objects import _basic_circular_fvpsf
 
 import matplotlib.pyplot as plt
 
+
 PLOTS = False
 
-FILES_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),
-                                          "../mocks/files/"))
-YAMLS_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),
-                                          "../mocks/yamls/"))
+FILES_PATH = Path(__file__).parent.parent / "mocks/files/"
+YAMLS_PATH = Path(__file__).parent.parent / "mocks/yamls/"
+
+
 for NEW_PATH in [YAMLS_PATH, FILES_PATH]:
     if NEW_PATH not in rc.__search_path__:
         rc.__search_path__.insert(0, NEW_PATH)
@@ -121,7 +124,6 @@ class TestApplyTo:
         centre_fov.hdu.data = np.zeros((nax2, nax1))
         centre_fov.hdu.data[::3, ::3] = 1
         sum_orig = np.sum(centre_fov.hdu.data)
-
 
         fvpsf = FieldVaryingPSF(filename="test_FVPSF.fits")
         fov_back = fvpsf.apply_to(centre_fov)

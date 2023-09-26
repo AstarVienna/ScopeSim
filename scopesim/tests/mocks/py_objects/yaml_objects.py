@@ -1,11 +1,11 @@
-import os
+from pathlib import Path
 import yaml
 from scopesim import rc
 
-YAMLS_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),
-                                          "../yamls/"))
-FILES_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),
-                                          "../files/"))
+YAMLS_PATH = Path(__file__).parent.parent / "yamls/"
+FILES_PATH = Path(__file__).parent.parent / "files/"
+
+
 for NEW_PATH in [YAMLS_PATH, FILES_PATH]:
     if NEW_PATH not in rc.__search_path__:
         rc.__search_path__.insert(0, NEW_PATH)
@@ -113,18 +113,18 @@ effects :
 
 
 def _yaml_min_viable_scope():
-    with open(os.path.join(YAMLS_PATH, "min_viable_sys.yaml")) as f:
-        dicts = [dic for dic in yaml.full_load_all(f)]
+    with (YAMLS_PATH / "min_viable_sys.yaml").open("r", encoding="utf-8") as f:
+        dicts = list(yaml.full_load_all(f))
     return dicts
 
 
 def _usr_cmds_min_viable_scope():
-    with open(os.path.join(FILES_PATH, "CMD_mvs_cmds.yaml")) as f:
-        yaml_dicts = [dic for dic in yaml.full_load_all(f)]
-    return yaml_dicts
+    with (YAMLS_PATH / "CMD_mvs_cmds.yaml").open("r", encoding="utf-8") as f:
+        dicts = list(yaml.full_load_all(f))
+    return dicts
 
 
 def _yaml_unity_system():
-    with open(os.path.join(YAMLS_PATH, "unity_sys.yaml")) as f:
-        dicts = [dic for dic in yaml.full_load_all(f)]
+    with (YAMLS_PATH / "unity_sys.yaml").open("r", encoding="utf-8") as f:
+        dicts = list(yaml.full_load_all(f))
     return dicts
