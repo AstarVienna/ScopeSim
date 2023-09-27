@@ -176,12 +176,12 @@ def header_from_list_of_xy(x, y, pixel_scale, wcs_suffix="", sky_offset=False,
     extent = pnts.ptp(axis=1) / pixel_scale
     naxis = extent.round().astype(int)
 
-    if s == "D":
-        crpix = np.array([1., 1.])
-        crval = pnts.min(axis=1)
-    else:
-        crpix = (naxis + 1) / 2
-        crval = (pnts.min(axis=1) + pnts.max(axis=1)) / 2
+    # if s == "D":
+    #     crpix = np.array([1., 1.])
+    #     crval = pnts.min(axis=1)
+    # else:
+    crpix = (naxis + 1) / 2
+    crval = (pnts.min(axis=1) + pnts.max(axis=1)) / 2
 
     # To deal with half pixels:
     offset = 0.5 * pixel_scale if s == "D" or sky_offset else 0.0
