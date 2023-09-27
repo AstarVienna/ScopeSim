@@ -184,7 +184,7 @@ def header_from_list_of_xy(x, y, pixel_scale, wcs_suffix="", sky_offset=False,
     crval = (pnts.min(axis=1) + pnts.max(axis=1)) / 2
 
     # To deal with half pixels:
-    offset = 0.5 * pixel_scale if s == "D" or sky_offset else 0.0
+    # offset = 0.5 * pixel_scale if s == "D" or sky_offset else 0.0
 
     ctype = "LINEAR" if s in "DX" else "RA---TAN"
     if s == "D":
@@ -198,7 +198,7 @@ def header_from_list_of_xy(x, y, pixel_scale, wcs_suffix="", sky_offset=False,
     new_wcs.wcs.ctype = 2 * [ctype]
     new_wcs.wcs.cunit = 2 * [cunit]
     new_wcs.wcs.cdelt = np.array(2 * [pixel_scale])
-    new_wcs.wcs.crval = crval + offset
+    new_wcs.wcs.crval = crval #+ offset
     new_wcs.wcs.crpix = crpix
 
     hdr = fits.Header()
