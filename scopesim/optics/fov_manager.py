@@ -149,11 +149,10 @@ class FOVManager:
                                                 [ys_min, ys_max],
                                                 pixel_scale=pixel_scale / 3600.)
 
-            xy = ipu.calc_footprint(skyhdr)
-            x_sky, y_sky = xy[:, 0], xy[:, 1]
-            x_det = x_sky / plate_scale_deg
-            y_det = y_sky / plate_scale_deg
-            dethdr = ipu.header_from_list_of_xy(x_det, y_det, pixel_size, "D")
+            xy_sky = ipu.calc_footprint(skyhdr)
+            xy_det = xy_sky / plate_scale_deg
+            dethdr = ipu.header_from_list_of_xy(xy_det[:, 0], xy_det[:, 1],
+                                                pixel_size, "D")
             skyhdr.update(dethdr)
 
             # useful for spectroscopy mode where slit dimensions is not the same

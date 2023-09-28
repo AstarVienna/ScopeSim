@@ -543,12 +543,10 @@ class Source(SourceBase):
             if isinstance(field, Table):
                 axes.plot(field["x"], field["y"], col+".")
             elif isinstance(field, (fits.ImageHDU, fits.PrimaryHDU)):
-                xy = imp_utils.calc_footprint(field.header)
-                xpts, ypts = xy[:, 0], xy[:, 1]
-                # * 3600, because ImageHDUs are always in CUNIT=DEG
-                xpts = list(close_loop(xpts * 3600))
-                ypts = list(close_loop(ypts * 3600))
-                axes.plot(xpts, ypts, col)
+                xypts = imp_utils.calc_footprint(field.header)
+                convf = u.Unit(field.header["CUNIT1"]).to(u.arcsec)
+                outline = np.array(list(close_loop(xypts))) * convf
+                axes.plot(outline[:, 0], outline[:, 1], col)
                 axes.set_xlabel("x [arcsec]")
                 axes.set_ylabel("y [arcsec]")
         axes.set_aspect("equal")

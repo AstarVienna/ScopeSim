@@ -601,12 +601,12 @@ class FieldOfView(FieldOfViewBase):
 
     def volume(self, wcs_prefix=""):
         xy = imp_utils.calc_footprint(self.header, wcs_suffix=wcs_prefix)
-        xs, ys = xy[:, 0], xy[:, 1]
         unit = self.header[f"CUNIT1{wcs_prefix}"].lower()
         # FIXME: This is unused!!
         # wave_corners = self.waverange
-        self._volume = {"xs": [min(xs), max(xs)],
-                        "ys": [min(ys), max(ys)],
+        minmax = np.array((xy.min(axis=0), xy.max(axis=0)))
+        self._volume = {"xs": minmax[:, 0],
+                        "ys": minmax[:, 1],
                         "waves": self.waverange,
                         "xy_unit": unit,
                         "wave_unit": "um"}
