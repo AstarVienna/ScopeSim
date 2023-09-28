@@ -1,4 +1,5 @@
 import logging
+from typing import Tuple
 from itertools import product
 
 import numpy as np
@@ -147,8 +148,70 @@ def _make_bounding_header_for_tables(*tables, pixel_scale=1*u.arcsec):
     return hdr
 
 
-def header_from_list_of_xy(x, y, pixel_scale, wcs_suffix="", sky_offset=False,
-                           arcsec=False):
+def create_wcs_from_points(points: np.ndarray,
+                           pixel_scale: float,
+                           wcs_suffix: str = "",
+                           arcsec: bool = False) -> Tuple[WCS, np.ndarray]:
+    """
+    Create `astropy.wcs.WCS` instance that fits all points inside.
+
+    Parameters
+    ----------
+    corners : (N, 2) array
+        2D array of N >= 2 points in the form of [x, y].
+    pixel_scale : float
+        DESCRIPTION.
+    wcs_suffix : str, optional
+        DESCRIPTION. The default is "".
+    arcsec : bool, optional
+        DESCRIPTION. The default is False.
+
+    Returns
+    -------
+    new_wcs : TYPE
+        Newly created WCS instance.
+    naxis : TYPE
+        Array of NAXIS needed to fit all points.
+
+    """
+    # TODO: either make pixel_scale a quantity or deal with arcsec flag...
+    # TODO: find out how this plays with chunks
+    if wcs_suffix != "D" and not arcsec:
+        points = _fix_360(points)
+
+    # TODO: test whether abs(pixel_scale) breaks anything
+    pixel_scale = abs(pixel_scale)
+    extent = points.ptp(axis=0) / pixel_scale
+    naxis = extent.round().astype(int)
+
+    # FIXME: Woule be nice to have D headers referenced at (1, 1), but that
+    #        breaks some things, likely down to rescaling...
+    # if wcs_suffix == "D":
+    #     crpix = np.array([1., 1.])
+    #     crval = points.min(axis=0)
+    # else:
+    crpix = (naxis + 1) / 2
+    crval = (points.min(axis=0) + points.max(axis=0)) / 2
+
+    ctype = "LINEAR" if wcs_suffix in "DX" else "RA---TAN"
+    if wcs_suffix == "D":
+        cunit = "mm"
+    elif arcsec:
+        cunit = "arcsec"
+    else:
+        cunit = "deg"
+
+    new_wcs = WCS(key=wcs_suffix)
+    new_wcs.wcs.ctype = 2 * [ctype]
+    new_wcs.wcs.cunit = 2 * [cunit]
+    new_wcs.wcs.cdelt = np.array(2 * [pixel_scale])
+    new_wcs.wcs.crval = crval
+    new_wcs.wcs.crpix = crpix
+
+    return new_wcs, naxis
+
+
+def header_from_list_of_xy(x, y, pixel_scale, wcs_suffix="", arcsec=False):
     """
     Make a header large enough to contain all x,y on-sky coordinates.
 
@@ -164,42 +227,9 @@ def header_from_list_of_xy(x, y, pixel_scale, wcs_suffix="", sky_offset=False,
     hdr : fits.Header
 
     """
-    # TODO: find out how this plays with chunks
-    s = wcs_suffix
-    if wcs_suffix != "D" and not arcsec:
-        x = _fix_360(x)
-        y = _fix_360(y)
-    pnts = np.array([x, y])
-
-    # TODO: test whether abs(pixel_scale) breaks anything
-    pixel_scale = abs(pixel_scale)
-    extent = pnts.ptp(axis=1) / pixel_scale
-    naxis = extent.round().astype(int)
-
-    # if s == "D":
-    #     crpix = np.array([1., 1.])
-    #     crval = pnts.min(axis=1)
-    # else:
-    crpix = (naxis + 1) / 2
-    crval = (pnts.min(axis=1) + pnts.max(axis=1)) / 2
-
-    # To deal with half pixels:
-    # offset = 0.5 * pixel_scale if s == "D" or sky_offset else 0.0
-
-    ctype = "LINEAR" if s in "DX" else "RA---TAN"
-    if s == "D":
-        cunit = "mm"
-    elif arcsec:
-        cunit = "arcsec"
-    else:
-        cunit = "deg"
-
-    new_wcs = WCS(key=s)
-    new_wcs.wcs.ctype = 2 * [ctype]
-    new_wcs.wcs.cunit = 2 * [cunit]
-    new_wcs.wcs.cdelt = np.array(2 * [pixel_scale])
-    new_wcs.wcs.crval = crval #+ offset
-    new_wcs.wcs.crpix = crpix
+    points = np.column_stack((x, y))
+    new_wcs, naxis = create_wcs_from_points(points, pixel_scale,
+                                            wcs_suffix, arcsec)
 
     hdr = fits.Header()
     hdr["NAXIS"] = 2
@@ -786,6 +816,8 @@ def calc_footprint(header, wcs_suffix="", new_unit: str = None):
     """
     Return the sky/detector positions [deg/mm] of the corners of a header WCS.
 
+    TODO: The rest of this docstring is outdated, please update!
+
     The positions returned correspond to the corners of the header's
     image array, in this order::
 
@@ -811,6 +843,8 @@ def calc_footprint(header, wcs_suffix="", new_unit: str = None):
     wcs_suffix = wcs_suffix or " "
 
     if isinstance(header, fits.ImageHDU):
+        logging.warning("Passing a HDU to calc_footprint will be deprecated "
+                        "in v1.0. Please pass the header only.")
         header = header.header
 
     # TODO: maybe celestial instead??
