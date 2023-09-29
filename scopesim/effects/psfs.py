@@ -23,6 +23,7 @@ class PoorMansFOV:
         pixel_scale = utils.from_currsys("!INST.pixel_scale")
         self.header = {"CDELT1": pixel_scale / 3600.,
                        "CDELT2": pixel_scale / 3600.,
+                       "NAXIS": 2,
                        "NAXIS1": 128,
                        "NAXIS2": 128,
                        }

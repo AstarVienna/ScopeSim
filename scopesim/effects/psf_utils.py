@@ -95,8 +95,9 @@ def make_strehl_map_from_table(tbl, pixel_scale=1*u.arcsec):
                                          np.arange(-25, 26))).T,
                     method="nearest")
 
-    new_wcs, _ = create_wcs_from_points(np.array([[-25, -25], [25, 25]]),
-                                        pixel_scale=1, arcsec=True)
+    new_wcs, _ = imp_utils.create_wcs_from_points(np.array([[-25, -25],
+                                                            [25, 25]]),
+                                                  pixel_scale=1, arcsec=True)
 
     map_hdu = fits.ImageHDU(header=new_wcs.to_header(), data=smap)
 
@@ -112,6 +113,7 @@ def rescale_kernel(image, scale_factor, spline_order=None):
 
     # Re-centre kernel
     im_shape = image.shape
+    # TODO: this might be another off-by-something
     dy, dx = np.divmod(np.argmax(image), im_shape[1]) - np.array(im_shape) // 2
     if dy > 0:
         image = image[2*dy:, :]
