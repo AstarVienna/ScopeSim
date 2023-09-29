@@ -1,5 +1,5 @@
 import numpy as np
-
+import logging
 
 from astropy.io import fits
 from astropy.table import Table
@@ -61,7 +61,9 @@ class ImagePlane(ImagePlaneBase):
         self.hdu = fits.ImageHDU(data=image, header=header)
 
         self._det_wcs = self._get_wcs(header, "D")
+        logging.debug("det %s", self._det_wcs)
         self._sky_wcs = self._get_wcs(header, " ")
+        logging.debug("sky %s", self._sky_wcs)
 
     def add(self, hdus_or_tables, sub_pixel=None, spline_order=None,
             wcs_suffix=""):

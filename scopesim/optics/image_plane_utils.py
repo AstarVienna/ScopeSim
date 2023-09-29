@@ -469,6 +469,8 @@ def rescale_imagehdu(imagehdu: fits.ImageHDU, pixel_scale: float,
         # zoom = np.append(zoom, [1])
         zoom[2] = 1.
 
+    logging.debug("zoom %s", zoom)
+
     if all(zoom == 1.):
         # Nothing to do
         return imagehdu
@@ -492,7 +494,10 @@ def rescale_imagehdu(imagehdu: fits.ImageHDU, pixel_scale: float,
             logging.warning("Non-linear WCS rescaled using linear procedure.")
 
         new_crpix = (zoom + 1) / 2 + (ww.wcs.crpix - 1) * zoom
+        logging.debug("newcr %s", new_crpix)
+        new_crpix = new_crpix.round(8)
         new_crpix = np.ceil(new_crpix * 2) / 2  # round to nearest half-pixel
+        logging.debug("newcr %s", new_crpix)
         ww.wcs.crpix = new_crpix
 
         # Keep CDELT3 if cube...
@@ -704,6 +709,7 @@ def add_imagehdu_to_imagehdu(image_hdu: fits.ImageHDU,
                                wcs_suffix=canvas_wcs.wcs.alt,
                                spline_order=spline_order,
                                conserve_flux=conserve_flux)
+    logging.debug("fromrescale %s", WCS(new_hdu.header, key=canvas_wcs.wcs.alt))
     new_hdu = reorient_imagehdu(new_hdu,
                                 wcs_suffix=canvas_wcs.wcs.alt,
                                 spline_order=spline_order,
@@ -717,11 +723,12 @@ def add_imagehdu_to_imagehdu(image_hdu: fits.ImageHDU,
     sky_center = new_wcs.wcs_pix2world(img_center, 0)
     if new_wcs.wcs.cunit[0] == "deg":
         sky_center = _fix_360(sky_center)
-        # for i, c in enumerate(sky_center[0]):
-        #     if c > 180:
-        #         sky_center[0][i] -= 360
+    logging.debug("canvas %s", canvas_wcs)
+    logging.debug("new %s", new_wcs)
+    logging.debug("sky %s", sky_center)
     sky_center *= conv_fac
     pix_center = canvas_wcs.wcs_world2pix(sky_center, 0)
+    logging.debug("pix %s", pix_center)
 
     canvas_hdu.data = overlay_image(new_hdu.data, canvas_hdu.data,
                                     coords=pix_center.squeeze())
