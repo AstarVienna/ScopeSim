@@ -674,6 +674,8 @@ class FieldConstantPSF(DiscretePSF):
 
         # We need linear interpolation to preserve positivity. Might think of
         # more elaborate positivity-preserving schemes.
+        # Note: According to some basic profiling, this line is one of the
+        #       single largest hits on performance.
         ipsf = RectBivariateSpline(np.arange(nyin), np.arange(nxin), psf,
                                    kx=1, ky=1)
 

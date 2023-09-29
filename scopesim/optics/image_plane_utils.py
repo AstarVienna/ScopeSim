@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import logging
 from typing import Tuple
 from itertools import product
@@ -494,10 +495,8 @@ def rescale_imagehdu(imagehdu: fits.ImageHDU, pixel_scale: float,
             logging.warning("Non-linear WCS rescaled using linear procedure.")
 
         new_crpix = (zoom + 1) / 2 + (ww.wcs.crpix - 1) * zoom
-        logging.debug("newcr %s", new_crpix)
-        new_crpix = new_crpix.round(8)
-        new_crpix = np.ceil(new_crpix * 2) / 2  # round to nearest half-pixel
-        logging.debug("newcr %s", new_crpix)
+        new_crpix = np.round(new_crpix * 2) / 2  # round to nearest half-pixel
+        logging.debug("new crpix %s", new_crpix)
         ww.wcs.crpix = new_crpix
 
         # Keep CDELT3 if cube...
@@ -709,7 +708,7 @@ def add_imagehdu_to_imagehdu(image_hdu: fits.ImageHDU,
                                wcs_suffix=canvas_wcs.wcs.alt,
                                spline_order=spline_order,
                                conserve_flux=conserve_flux)
-    logging.debug("fromrescale %s", WCS(new_hdu.header, key=canvas_wcs.wcs.alt))
+    # logging.debug("fromrescale %s", WCS(new_hdu.header, key=canvas_wcs.wcs.alt))
     new_hdu = reorient_imagehdu(new_hdu,
                                 wcs_suffix=canvas_wcs.wcs.alt,
                                 spline_order=spline_order,
@@ -723,8 +722,8 @@ def add_imagehdu_to_imagehdu(image_hdu: fits.ImageHDU,
     sky_center = new_wcs.wcs_pix2world(img_center, 0)
     if new_wcs.wcs.cunit[0] == "deg":
         sky_center = _fix_360(sky_center)
-    logging.debug("canvas %s", canvas_wcs)
-    logging.debug("new %s", new_wcs)
+    # logging.debug("canvas %s", canvas_wcs)
+    # logging.debug("new %s", new_wcs)
     logging.debug("sky %s", sky_center)
     sky_center *= conv_fac
     pix_center = canvas_wcs.wcs_world2pix(sky_center, 0)
