@@ -635,7 +635,8 @@ class FieldConstantPSF(DiscretePSF):
 
                 if ((fov.header["NAXIS1"] < hdr["NAXIS1"]) or
                     (fov.header["NAXIS2"] < hdr["NAXIS2"])):
-                    self.kernel = pu.cutout_kernel(self.kernel, fov.header)
+                    self.kernel = pu.cutout_kernel(self.kernel, fov.header,
+                                                   kernel_header=hdr)
 
         return self.kernel
 
@@ -680,7 +681,7 @@ class FieldConstantPSF(DiscretePSF):
         cubewcs = WCS(naxis=2)
         cubewcs.wcs.ctype = ["LINEAR", "LINEAR"]
         cubewcs.wcs.crval = [0., 0.]
-        cubewcs.wcs.crpix = [nxpsf // 2, nypsf // 2]
+        cubewcs.wcs.crpix = [(nxpsf + 1) / 2, (nypsf + 1) / 2]
         cubewcs.wcs.cdelt = [fov_pixel_scale, fov_pixel_scale]
         cubewcs.wcs.cunit = [fov_pixel_unit, fov_pixel_unit]
 

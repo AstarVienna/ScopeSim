@@ -130,14 +130,22 @@ def rescale_kernel(image, scale_factor, spline_order=None):
     return image
 
 
-def cutout_kernel(image, fov_header):
+def cutout_kernel(image, fov_header, kernel_header=None):
+    from astropy.wcs import WCS
+    wk = WCS(kernel_header)
     h, w = image.shape
     xcen, ycen = 0.5 * w, 0.5 * h
+    xcen_w, ycen_w = wk.wcs_world2pix(np.array([[0., 0.]]), 0).squeeze().round(7)
+    assert xcen == xcen_w, "PSF center off"
+    assert ycen == ycen_w, "PSF center off"
+
     dx = 0.5 * fov_header["NAXIS1"]
     dy = 0.5 * fov_header["NAXIS2"]
-    x0, x1 = max(0, int(xcen-dx)), min(w, int(xcen+dx))
-    y0, y1 = max(0, int(ycen-dy)), min(w, int(ycen+dy))
-    image_cutout = image[y0:y1, x0:x1]
+
+    # TODO: this is WET with imp_utils, somehow, I think
+    x0, x1 = max(0, np.floor(xcen-dx).astype(int)), min(w, np.ceil(xcen+dx).astype(int))
+    y0, y1 = max(0, np.floor(ycen-dy).astype(int)), min(w, np.ceil(ycen+dy).astype(int))
+    image_cutout = image[y0:y1+1, x0:x1+1]
 
     return image_cutout
 
