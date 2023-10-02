@@ -469,6 +469,11 @@ def rescale_imagehdu(imagehdu: fits.ImageHDU, pixel_scale: float,
     if primary_wcs.naxis == 3:
         # zoom = np.append(zoom, [1])
         zoom[2] = 1.
+    if primary_wcs.naxis != imagehdu.data.ndim:
+        logging.warning("imagehdu.data.ndim is %d, but primary_wcs.naxis with "
+                        "key %s is %d, both should be equal.",
+                        imagehdu.data.ndim, wcs_suffix, primary_wcs.naxis)
+        zoom = zoom[:2]
 
     logging.debug("zoom %s", zoom)
 
@@ -491,6 +496,14 @@ def rescale_imagehdu(imagehdu: fits.ImageHDU, pixel_scale: float,
     for key in wcs_suffix:
         # TODO: can this be done with astropy wcs sub-wcs? or wcs.find_all_wcs?
         ww = WCS(imagehdu.header, key=key)
+
+        if ww.naxis != imagehdu.data.ndim:
+            logging.warning("imagehdu.data.ndim is %d, but wcs.naxis with key "
+                            "%s is %d, both should be equal.",
+                            imagehdu.data.ndim, key, ww.naxis)
+            # TODO: could this be ww = ww.sub(2) instead? or .celestial?
+            ww = WCS(imagehdu.header, key=key, naxis=imagehdu.data.ndim)
+
         if any(ctype != "LINEAR" for ctype in ww.wcs.ctype):
             logging.warning("Non-linear WCS rescaled using linear procedure.")
 
