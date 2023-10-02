@@ -136,7 +136,7 @@ def moffat(r, alpha, beta):
     -------
     eta
     """
-    return (beta - 1)/(np.pi * alpha**2) * (1 + (r/alpha)**2)**(-beta)
+    return (beta - 1) / (np.pi * alpha ** 2) * (1 + (r / alpha) ** 2) ** (-beta)
 
 
 def poissonify(arr):
@@ -179,12 +179,14 @@ def nearest(arr, val):
 
     return np.argmin(abs(arr - val))
 
+
 def power_vector(val, degree):
     """Return the vector of powers of val up to a degree"""
     if degree < 0 or not isinstance(degree, int):
         raise ValueError("degree must be a positive integer")
 
-    return np.array([val**exp for exp in range(degree + 1)])
+    return np.array([val ** exp for exp in range(degree + 1)])
+
 
 def deriv_polynomial2d(poly):
     """Derivatives (gradient) of a Polynomial2D model
@@ -209,8 +211,8 @@ def deriv_polynomial2d(poly):
         i = int(match.group(1))
         j = int(match.group(2))
         cij = getattr(poly, pname)
-        pname_x = "c%d_%d" % (i-1, j)
-        pname_y = "c%d_%d" % (i, j-1)
+        pname_x = "c%d_%d" % (i - 1, j)
+        pname_y = "c%d_%d" % (i, j - 1)
         setattr(dpoly_dx, pname_x, i * cij)
         setattr(dpoly_dy, pname_y, j * cij)
 
@@ -261,7 +263,8 @@ def add_SED_to_scopesim(file_in, file_out=None, wave_units="um"):
     if file_out is None:
         if "SED_" not in file_name:
             file_out = rc.__data_dir__ + "SED_" + file_name + ".dat"
-        else: file_out = rc.__data_dir__ + file_name + ".dat"
+        else:
+            file_out = rc.__data_dir__ + file_name + ".dat"
 
     if file_ext.lower() in "fits":
         data = fits.getdata(file_in)
@@ -270,7 +273,7 @@ def add_SED_to_scopesim(file_in, file_out=None, wave_units="um"):
         lam, val = ioascii.read(file_in)[:2]
 
     lam = (lam * u.Unit(wave_units)).to(u.um)
-    mask = (lam > 0.3*u.um) * (lam < 5.0*u.um)
+    mask = (lam > 0.3 * u.um) * (lam < 5.0 * u.um)
 
     np.savetxt(file_out, np.array((lam[mask], val[mask]), dtype=np.float32).T,
                header="wavelength    value \n [um]         [flux]")
@@ -313,7 +316,7 @@ def seq(start, stop, step=1):
         increment of the sequence, defaults to 1
 
     """
-    feps = 1e-10     # value used in R seq.default
+    feps = 1e-10  # value used in R seq.default
 
     delta = stop - start
     if delta == 0 and stop == 0:
@@ -354,7 +357,7 @@ def add_mags(mags):
     """
     Returns a combined magnitude for a group of py_objects with ``mags``
     """
-    return -2.5*np.log10((10**(-0.4*np.array(mags))).sum())
+    return -2.5 * np.log10((10 ** (-0.4 * np.array(mags))).sum())
 
 
 def dist_mod_from_distance(d):
@@ -371,7 +374,7 @@ def distance_from_dist_mod(mu):
     d = 10**(1 + mu / 5)
     """
 
-    d = 10**(1 + mu / 5)
+    d = 10 ** (1 + mu / 5)
     return d
 
 
@@ -400,7 +403,7 @@ def telescope_diffraction_limit(aperture_size, wavelength, distance=None):
 
     """
 
-    diff_limit = (((wavelength*u.um)/(aperture_size*u.m))*u.rad).to(u.arcsec).value
+    diff_limit = (((wavelength * u.um) / (aperture_size * u.m)) * u.rad).to(u.arcsec).value
 
     if distance is not None:
         diff_limit *= distance / u.pc.to(u.AU)
@@ -482,7 +485,6 @@ def set_logger_level(which="console", level="ERROR"):
 
     """
 
-
     hdlr_name = f"scopesim_{which}_logger"
     level = {"ON": "INFO", "OFF": "CRITICAL"}.get(level.upper(), level)
     logger = logging.getLogger()
@@ -562,7 +564,7 @@ def find_file(filename, path=None, silent=False):
                     for trydir in path if trydir is not None]
 
     for fname in trynames:
-        if os.path.exists(fname):   # success
+        if os.path.exists(fname):  # success
             # strip leading ./
             while fname[:2] == './':
                 fname = fname[2:]
@@ -609,11 +611,10 @@ def airmass2zendist(airmass):
     zenith distance in degrees
     """
 
-    return np.rad2deg(np.arccos(1/airmass))
+    return np.rad2deg(np.arccos(1 / airmass))
 
 
 def convert_table_comments_to_dict(tbl):
-
     comments_dict = {}
     if "comments" in tbl.meta:
         try:
@@ -635,7 +636,6 @@ def convert_table_comments_to_dict(tbl):
 
 
 def change_table_entry(tbl, col_name, new_val, old_val=None, position=None):
-
     offending_col = list(tbl[col_name].data)
 
     if old_val is not None:
@@ -752,7 +752,6 @@ def quantify(item, unit):
     return quant
 
 
-
 def extract_type_from_unit(unit, unit_type):
     """
     Extract ``astropy`` physical type from a compound unit
@@ -772,11 +771,11 @@ def extract_type_from_unit(unit, unit_type):
 
     """
 
-    unit = unit**1
+    unit = unit ** 1
     extracted_units = u.Unit("")
     for base, power in zip(unit._bases, unit._powers):
-        if unit_type == (base**abs(power)).physical_type:
-            extracted_units *= base**power
+        if unit_type == (base ** abs(power)).physical_type:
+            extracted_units *= base ** power
 
     new_unit = unit / extracted_units
 
@@ -801,13 +800,13 @@ def extract_base_from_unit(unit, base_unit):
 
     """
 
-    unit = unit**1
+    unit = unit ** 1
     extracted_units = u.Unit("")
     for base, power in zip(unit._bases, unit._powers):
         if base == base_unit:
-            extracted_units *= base**power
+            extracted_units *= base ** power
 
-    new_unit = unit * extracted_units**-1
+    new_unit = unit * extracted_units ** -1
 
     return new_unit, extracted_units
 
@@ -897,7 +896,7 @@ def has_needed_keywords(header, suffix=""):
     """
     keys = ["CDELT1", "CRVAL1", "CRPIX1"]
     return sum([key + suffix in header.keys() for key in keys]) == 3 and \
-           "NAXIS1" in header.keys()
+        "NAXIS1" in header.keys()
 
 
 def stringify_dict(dic, ignore_types=(str, int, float)):
@@ -991,8 +990,8 @@ def check_keys(input_dict, required_keys, action="error", all_any="all"):
                              "".format(required_keys, input_dict.keys()))
         elif "warn" in action:
             logging.warning("One or more of the following keys missing "
-                          "from input_dict: \n{} \n{}"
-                          "".format(required_keys, input_dict.keys()))
+                            "from input_dict: \n{} \n{}"
+                            "".format(required_keys, input_dict.keys()))
 
     return keys_present
 
@@ -1106,7 +1105,7 @@ class GridAxis:
         Transforms pixel positions from one reference frame to another.
     """
 
-    def __init__(self, n: int, *, x0: float = 0,  i0: Optional[int] = None, dx: float = 1.0):
+    def __init__(self, n: int, *, x0: float = 0, i0: Optional[int] = None, dx: float = 1.0):
         """
         Parameters
         ----------
@@ -1124,7 +1123,7 @@ class GridAxis:
         self.i0 = i0 if i0 else n // 2
         self.dx = dx
 
-    def pos_to_pix(self, pos: Union[float,  npt.NDArray]) -> npt.NDArray:
+    def pos_to_pix(self, pos: Union[float, npt.NDArray]) -> npt.NDArray:
         """Transforms real reference frame position to pixel positions.
 
         Parameters
@@ -1158,7 +1157,7 @@ class GridAxis:
 
     def pix_in_reference_frame(self,
                                other: GridAxis,
-                               pix: Optional[Union[float,  npt.NDArray]] = None) -> npt.NDArray:
+                               pix: Optional[Union[float, npt.NDArray]] = None) -> npt.NDArray:
         """Transforms pixel positions from one reference frame to another.
 
         Parameters
@@ -1174,7 +1173,7 @@ class GridAxis:
             The pixel coordinates projected in the other reference frame.
         """
         pix = np.array(pix, ndmin=1) if pix else np.arange(self.n)
-        return (self.x0 + (pix - self.i0) * self.dx - other.x0)/other.dx + other.i0
+        return (self.x0 + (pix - self.i0) * self.dx - other.x0) / other.dx + other.i0
 
     @property
     def coors(self) -> npt.NDArray:
@@ -1284,7 +1283,7 @@ class GridCoordinates:
         """Y pixel coordinates"""
         return self.y.pix
 
-    def pos_to_pix(self, x:  Union[float,  npt.NDArray], y:  Union[float,  npt.NDArray]) -> npt.NDArray:
+    def pos_to_pix(self, x: Union[float, npt.NDArray], y: Union[float, npt.NDArray]) -> npt.NDArray:
         """Transforms real reference frame positions to pixel positions.
 
         Parameters
@@ -1382,9 +1381,6 @@ def rescale_array(array: npt.ArrayLike,
     npt.NDArray
         The rescaled array.
     """
-    # interpolator = sp.interpolate.RectBivariateSpline(x=array_x, y=array_y, z=array, kx=order, ky=order)
-    # rescaled_array = interpolator(x=target_x, y=target_y, grid=False)
-    print("new2")
     rescaled_array = sp.interpolate.interpn(points=(array_x, array_y),
                                             values=array,
                                             xi=(target_x, target_y),
@@ -1402,7 +1398,7 @@ def rescale_array_grid(grid: npt.NDArray,
                        origin_pixel_scale: float,
                        target_pixel_scale: float,
                        *,
-                       method: str = "linear") -> npt.NDArray:
+                       method: str = "cubic") -> npt.NDArray:
     """Rescales each array in a grid of arrays to the desired pixel scale.
 
     Parameters
@@ -1453,12 +1449,22 @@ def rescale_array_grid(grid: npt.NDArray,
     flat_input_grid = grid.reshape((-1, array_i, array_j))
 
     # Use joblib to rescale the arrays in parallel
-    rescaled_arrays = Parallel(n_jobs=-1)(delayed(rescale_array)(array=array,
-                                                                 array_x=array_x,
-                                                                 array_y=array_y,
-                                                                 target_x=target_x,
-                                                                 target_y=target_y,
-                                                                 method=method) for array in flat_input_grid)
+    parallel = False
+    if parallel:
+        rescaled_arrays = Parallel(n_jobs=-1)(delayed(rescale_array)(array=array,
+                                                                     array_x=array_x,
+                                                                     array_y=array_y,
+                                                                     target_x=target_x,
+                                                                     target_y=target_y,
+                                                                     method=method) for array in flat_input_grid)
+    else:
+        rescaled_arrays = [rescale_array(array=array,
+                                         array_x=array_x,
+                                         array_y=array_y,
+                                         target_x=target_x,
+                                         target_y=target_y,
+                                         method=method)
+                           for array in flat_input_grid]
 
     # Combine the zoomed arrays back into a single grid
     output_grid = np.array(rescaled_arrays).reshape((grid_i, grid_j, *target_shape))
