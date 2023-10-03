@@ -90,4 +90,9 @@ filterwarnings = [
     "ignore:Cannot merge meta key.*:astropy.utils.metadata.MergeConflictWarning",
     # Raised when saving fits files, not so important to fix:
     "ignore:.*a HIERARCH card will be created.*:astropy.io.fits.verify.VerifyWarning",
+    # Web-related issues, fix at some point
+    "ignore:'urllib3.contrib.pyopenssl'*:DeprecationWarning",
+    "ignore:Blowfish*:UserWarning",
+    # Not sure what that is but it's everywhere...
+    "ignore:'cgi'*:DeprecationWarning",
 ]

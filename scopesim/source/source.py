@@ -228,20 +228,25 @@ class Source(SourceBase):
 
     def _from_imagehdu_and_spectra(self, image_hdu, spectra):
         if not image_hdu.header.get("BG_SRC"):
-            image_hdu.header["CRVAL1"] = 0
-            image_hdu.header["CRVAL2"] = 0
-            image_hdu.header["CRPIX1"] = image_hdu.header["NAXIS1"] / 2
-            image_hdu.header["CRPIX2"] = image_hdu.header["NAXIS2"] / 2
-            #image_hdu.header["CRPIX1"] = (image_hdu.header["NAXIS1"] + 1) / 2
-            #image_hdu.header["CRPIX2"] = (image_hdu.header["NAXIS2"] + 1) / 2
-            # .. todo:: find where the actual problem is with negative CDELTs
-            # .. todo:: --> abs(pixel_scale) in header_from_list_of_xy
-            if image_hdu.header["CDELT1"] < 0:
-                image_hdu.header["CDELT1"] *= -1
-                image_hdu.data = image_hdu.data[:, ::-1]
-            if image_hdu.header["CDELT2"] < 0:
-                image_hdu.header["CDELT2"] *= -1
-                image_hdu.data = image_hdu.data[::-1, :]
+            pass
+            # FIXME: This caused more problems than it solved!
+            #        Find out if there's a good reason to mess with this,
+            #        otherwise just remove...
+
+            # image_hdu.header["CRVAL1"] = 0
+            # image_hdu.header["CRVAL2"] = 0
+            # image_hdu.header["CRPIX1"] = image_hdu.header["NAXIS1"] / 2
+            # image_hdu.header["CRPIX2"] = image_hdu.header["NAXIS2"] / 2
+            # #image_hdu.header["CRPIX1"] = (image_hdu.header["NAXIS1"] + 1) / 2
+            # #image_hdu.header["CRPIX2"] = (image_hdu.header["NAXIS2"] + 1) / 2
+            # # .. todo:: find where the actual problem is with negative CDELTs
+            # # .. todo:: --> abs(pixel_scale) in header_from_list_of_xy
+            # if image_hdu.header["CDELT1"] < 0:
+            #     image_hdu.header["CDELT1"] *= -1
+            #     image_hdu.data = image_hdu.data[:, ::-1]
+            # if image_hdu.header["CDELT2"] < 0:
+            #     image_hdu.header["CDELT2"] *= -1
+            #     image_hdu.data = image_hdu.data[::-1, :]
 
         if isinstance(image_hdu, fits.PrimaryHDU):
             image_hdu = fits.ImageHDU(data=image_hdu.data,
@@ -260,7 +265,7 @@ class Source(SourceBase):
             # Do not test for CUNIT or CDELT so that it throws an exception
             unit = u.Unit(image_hdu.header["CUNIT"+str(i)].lower())
             val = float(image_hdu.header["CDELT"+str(i)])
-            image_hdu.header["CUNIT"+str(i)] = "DEG"
+            image_hdu.header["CUNIT"+str(i)] = "deg"
             image_hdu.header["CDELT"+str(i)] = val * unit.to(u.deg)
 
         self.fields.append(image_hdu)
@@ -538,11 +543,10 @@ class Source(SourceBase):
             if isinstance(field, Table):
                 axes.plot(field["x"], field["y"], col+".")
             elif isinstance(field, (fits.ImageHDU, fits.PrimaryHDU)):
-                xpts, ypts = imp_utils.calc_footprint(field.header)
-                # * 3600, because ImageHDUs are always in CUNIT=DEG
-                xpts = list(close_loop(xpts * 3600))
-                ypts = list(close_loop(ypts * 3600))
-                axes.plot(xpts, ypts, col)
+                xypts = imp_utils.calc_footprint(field.header)
+                convf = u.Unit(field.header["CUNIT1"]).to(u.arcsec)
+                outline = np.array(list(close_loop(xypts))) * convf
+                axes.plot(outline[:, 0], outline[:, 1], col)
                 axes.set_xlabel("x [arcsec]")
                 axes.set_ylabel("y [arcsec]")
         axes.set_aspect("equal")
