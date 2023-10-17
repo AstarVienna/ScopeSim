@@ -52,3 +52,10 @@ dist
 *TEST.fits
 *temp*
 *speclecado*.fits
+
+# Spyder project settings
+.spyderproject
+.spyproject
+
+# Pylint
+.pylint.d/

@@ -1,0 +1,27 @@
+# Instrument
+object : observation
+alias : OBS
+name : test_instrument
+
+packages :
+- test_package
+
+yamls :
+- test_package.yaml
+- test_telescope.yaml
+- test_instrument.yaml
+- test_detector.yaml
+
+properties :
+  airmass : 1.
+  modes : ["mode_1", "mode_2"]
+
+mode_yamls :
+- name : mode_1
+  alias: OBS
+  properties :
+    airmass : 2.
+
+- name : mode_2
+  yamls :
+  - test_mode_2.yaml

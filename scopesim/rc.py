@@ -1,17 +1,17 @@
-import os
+from pathlib import Path
 import yaml
 
 from .system_dict import SystemDict
 
-__pkg_dir__ = os.path.dirname(__file__)
+__pkg_dir__ = Path(__file__).parent
 
-with open(os.path.join(__pkg_dir__, "defaults.yaml")) as f:
-    dicts = [dic for dic in yaml.full_load_all(f)]
+with open(__pkg_dir__/"defaults.yaml") as f:
+    dicts = list(yaml.full_load_all(f))
 
-user_rc_path = os.path.expanduser("~/.scopesim_rc.yaml")
-if os.path.exists(user_rc_path):
+user_rc_path = Path("~/.scopesim_rc.yaml").expanduser()
+if user_rc_path.exists():
     with open(user_rc_path) as f:
-        dicts += [dic for dic in yaml.full_load_all(f)]
+        dicts.extend(list(yaml.full_load_all(f)))
 
 __config__ = SystemDict(dicts)
 __currsys__ = __config__

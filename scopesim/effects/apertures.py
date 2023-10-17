@@ -1,11 +1,11 @@
-"""Effects related to field masks, including spectroscopic slits"""
-from os import path as pth
-from copy import deepcopy
+"""Effects related to field masks, including spectroscopic slits."""
+
+from pathlib import Path
 import logging
 import yaml
 
 import numpy as np
-from matplotlib.path import Path
+from matplotlib.path import Path as MPLPath  # rename to avoid conflict with pathlib
 from astropy.io import fits
 from astropy import units as u
 from astropy.table import Table, Column
@@ -14,12 +14,13 @@ from .effects import Effect
 from ..optics import image_plane_utils as imp_utils
 from ..base_classes import FOVSetupBase, FieldOfViewBase
 
-from ..utils import quantify, quantity_from_table, from_currsys, check_keys
+from ..utils import quantify, quantity_from_table, from_currsys, check_keys, \
+    figure_factory
 
 
 class ApertureMask(Effect):
     """
-    Only provides the on-sky window coords of the Aperture
+    Only provides the on-sky window coords of the Aperture.
 
     - Case: Imaging
         - Covers the whole FOV of the detector
@@ -78,6 +79,7 @@ class ApertureMask(Effect):
         An integer to identify the ``ApertureMask`` in a list of apertures
 
     """
+
     def __init__(self, **kwargs):
         if not np.any([key in kwargs for key in ["filename", "table",
                                                  "array_dict"]]):
@@ -87,7 +89,7 @@ class ApertureMask(Effect):
                 w, h = kwargs["width"], kwargs["height"]
                 kwargs["filename"] = kwargs["filename_format"].format(w, h)
 
-        super(ApertureMask, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         params = {"extend_fov_beyond_slit": 0,
                   "pixel_scale": "!INST.pixel_scale",
                   "no_mask": True,
@@ -111,9 +113,12 @@ class ApertureMask(Effect):
         check_keys(kwargs, self.required_keys, "warning", all_any="any")
 
     def apply_to(self, obj, **kwargs):
+        """See parent docstring."""
         if isinstance(obj, FOVSetupBase):
-            x = quantity_from_table("x", self.table, u.arcsec).to(u.arcsec).value
-            y = quantity_from_table("y", self.table, u.arcsec).to(u.arcsec).value
+            x = quantity_from_table("x", self.table,
+                                    u.arcsec).to(u.arcsec).value
+            y = quantity_from_table("y", self.table,
+                                    u.arcsec).to(u.arcsec).value
             dr = self.meta["extend_fov_beyond_slit"]
             x_min, x_max = min(x) - dr, max(x) + dr
             y_min, y_max = min(y) - dr, max(y) + dr
@@ -126,6 +131,17 @@ class ApertureMask(Effect):
                 vol["meta"]["xi_max"] = max(x) * u.arcsec
 
         return obj
+
+    # Outdated. Remove when removing all old FOVManager code from effects
+    def fov_grid(self, which="edges", **kwargs):
+        """Return a header with the sky coordinates."""
+        logging.warning("DetectorList.fov_grid will be depreciated in v1.0")
+        if which == "edges":
+            self.meta.update(kwargs)
+            return self.header
+        elif which == "masks":
+            self.meta.update(kwargs)
+            return self.mask
 
     @property
     def hdu(self):
@@ -159,7 +175,7 @@ class ApertureMask(Effect):
 
     def get_mask(self):
         """
-        For placing over FOVs if the Aperture is rotated w.r.t. the field
+        For placing over FOVs if the Aperture is rotated w.r.t. the field.
         """
         self.meta = from_currsys(self.meta)
 
@@ -173,24 +189,25 @@ class ApertureMask(Effect):
 
         return mask
 
-    def plot(self, new_figure=True):
-        import matplotlib.pyplot as plt
-        if new_figure:
-            plt.gcf().clf()
+    def plot(self, axes=None):
+        if axes is None:
+            fig, ax = figure_factory()
+        else:
+            fig = axes.figure
 
         x = list(self.table["x"].data)
         y = list(self.table["y"].data)
-        plt.plot(x + [x[0]], y + [y[0]])
-        plt.gca().set_aspect("equal")
+        ax.plot(x + [x[0]], y + [y[0]])
+        ax.set_aspect("equal")
 
-        return plt.gcf()
+        return fig
 
 
 class RectangularApertureMask(ApertureMask):
     def __init__(self, **kwargs):
-        super(RectangularApertureMask, self).__init__(**kwargs)
-        params = {"x_unit" : "arcsec",
-                  "y_unit" : "arcsec"}
+        super().__init__(**kwargs)
+        params = {"x_unit": "arcsec",
+                  "y_unit": "arcsec"}
         self.meta.update(params)
         self.meta.update(kwargs)
         check_keys(self.meta, ["x", "y", "width", "height"])
@@ -212,7 +229,7 @@ class RectangularApertureMask(ApertureMask):
 
 class ApertureList(Effect):
     """
-    A list of apertures, useful for IFU or MOS instruments
+    A list of apertures, useful for IFU or MOS instruments.
 
     Parameters
     ----------
@@ -243,6 +260,7 @@ class ApertureList(Effect):
 
     File format
     -----------
+
     Much like an ApertureMask, an ApertureList can be initialised by either
     of the three standard DataContainer methods. The easiest is however to
     make an ASCII file with the following columns::
@@ -261,9 +279,9 @@ class ApertureList(Effect):
     optional column ``offset`` may be added. This column describes the offset
     from 0 deg to the angle where the first corner is set.
 
-    Additionally, the filename of an ``ApertureMask`` polygon file can be given.
-    The geometry of the polygon defined in the file will be scaled to fit
-    inside the edges of the row.
+    Additionally, the filename of an ``ApertureMask`` polygon file can be
+    given. The geometry of the polygon defined in the file will be scaled to
+    fit inside the edges of the row.
 
     .. note:: ``shape`` values ``"rect"`` and ``4`` do not produce equal results
 
@@ -275,8 +293,9 @@ class ApertureList(Effect):
 
 
     """
+
     def __init__(self, **kwargs):
-        super(ApertureList, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         params = {"fov_for_each_aperture": True,
                   "extend_fov_beyond_slit": 0,
                   "pixel_scale": "!INST.pixel_scale",
@@ -295,6 +314,7 @@ class ApertureList(Effect):
             check_keys(self.table.colnames, required_keys)
 
     def apply_to(self, obj, **kwargs):
+        """See parent docstring."""
         if isinstance(obj, FOVSetupBase):
             dr = self.meta["extend_fov_beyond_slit"]
             if self.meta["fov_for_each_aperture"] is True:
@@ -365,31 +385,32 @@ class ApertureList(Effect):
                       "x_unit": "arcsec",
                       "y_unit": "arcsec",
                       "angle_unit": "arcsec"}
-            apertures_list += [ApertureMask(array_dict=array_dict, **params)]
+            apertures_list.append(ApertureMask(array_dict=array_dict, **params))
 
         return apertures_list
 
     def plot(self):
-        import matplotlib.pyplot as plt
-        plt.gcf().clf()
+        fig, ax = figure_factory()
 
         for ap in self.apertures:
-            ap.plot(new_figure=False)
+            ap.plot(ax)
 
-        return plt.gcf()
+        return fig
 
     def plot_masks(self):
-        import matplotlib.pyplot as plt
-
         aps = self.apertures
         n = len(aps)
         w = np.ceil(n ** 0.5).astype(int)
+        assert int(n ** 0.5) == w + 1
         h = np.ceil(n / w).astype(int)
+        assert int(n / w) == h + 1
+        # TODO: change these?
 
-        for ii, ap in enumerate(aps):
-            plt.subplot(w, h, ii + 1)
-            plt.imshow(ap.mask.T)
-        plt.show()
+        fig, axes = figure_factory(w, h)
+        for ap, ax in zip(aps, axes):
+            ax.imshow(ap.mask.T)
+        fig.show()
+        return fig
 
     def __add__(self, other):
         if isinstance(other, ApertureList):
@@ -398,8 +419,8 @@ class ApertureList(Effect):
 
             return self
         else:
-            raise ValueError("Secondary argument not of type ApertureList: {}"
-                             "".format(type(other)))
+            raise ValueError("Secondary argument not of type ApertureList: "
+                             f"{type(other) = }")
 
 
 class FibreApertureList(ApertureList):
@@ -460,10 +481,9 @@ class FibreApertureList(ApertureList):
 
 
 
-
 class SlitWheel(Effect):
     """
-    A selection of predefined spectroscopic slits and possibly other field masks
+    Selection of predefined spectroscopic slits and possibly other field masks.
 
     It should contain an open position.
     A user can define a non-standard slit by directly using the Aperture
@@ -502,11 +522,13 @@ class SlitWheel(Effect):
             current_slit: "C"
 
     """
-    def __init__(self, **kwargs):
-        required_keys = ["slit_names", "filename_format", "current_slit"]
-        check_keys(kwargs, required_keys, action="error")
 
-        super(SlitWheel, self).__init__(**kwargs)
+    required_keys = {"slit_names", "filename_format", "current_slit"}
+    _current_str = "current_slit"
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        check_keys(kwargs, self.required_keys, action="error")
 
         params = {"z_order": [80, 280, 580],
                   "path": "",
@@ -516,37 +538,40 @@ class SlitWheel(Effect):
         self.meta.update(params)
         self.meta.update(kwargs)
 
-        path = pth.join(self.meta["path"],
-                        from_currsys(self.meta["filename_format"]))
+        path = self._get_path()
         self.slits = {}
         for name in from_currsys(self.meta["slit_names"]):
             kwargs["name"] = name
-            self.slits[name] = ApertureMask(filename=path.format(name),
-                                            **kwargs)
+            fname = str(path).format(name)
+            self.slits[name] = ApertureMask(filename=fname, **kwargs)
 
         self.table = self.get_table()
 
     def apply_to(self, obj, **kwargs):
-        """Use apply_to of current_slit"""
+        """Use apply_to of current_slit."""
         return self.current_slit.apply_to(obj, **kwargs)
 
+    def fov_grid(self, which="edges", **kwargs):
+        """See parent docstring."""
+        return self.current_slit.fov_grid(which=which, **kwargs)
+
     def change_slit(self, slitname=None):
-        """Change the current slit"""
+        """Change the current slit."""
         if not slitname or slitname in self.slits.keys():
-            self.meta['current_slit'] = slitname
+            self.meta["current_slit"] = slitname
             self.include = slitname
         else:
             raise ValueError("Unknown slit requested: " + slitname)
 
     def add_slit(self, newslit, name=None):
         """
-        Add a slit to the SlitWheel
+        Add a slit to the SlitWheel.
 
         Parameters
-        ==========
+        ----------
         newslit : Slit
         name : string
-           Name to be used for the new slit. If `None`, a name from
+           Name to be used for the new slit. If ``None``, a name from
            the newslit object is used.
         """
         if name is None:
@@ -555,7 +580,7 @@ class SlitWheel(Effect):
 
     @property
     def current_slit(self):
-        """Return the currently used slit"""
+        """Return the currently used slit."""
         currslit = from_currsys(self.meta["current_slit"])
         if not currslit:
             return False
@@ -571,20 +596,20 @@ class SlitWheel(Effect):
 
     def get_table(self):
         """
-        Create a table of slits with centre position, width and length
+        Create a table of slits with centre position, width and length.
 
         Width is defined as the extension in the y-direction, length in the
         x-direction. All values are in milliarcsec.
         """
         names = list(self.slits.keys())
         slits = self.slits.values()
-        xmax = np.array([slit.data['x'].max() * u.Unit(slit.meta['x_unit'])
+        xmax = np.array([slit.data["x"].max() * u.Unit(slit.meta["x_unit"])
                          .to(u.mas) for slit in slits])
-        xmin = np.array([slit.data['x'].min() * u.Unit(slit.meta['x_unit'])
+        xmin = np.array([slit.data["x"].min() * u.Unit(slit.meta["x_unit"])
                          .to(u.mas) for slit in slits])
-        ymax = np.array([slit.data['y'].max() * u.Unit(slit.meta['y_unit'])
+        ymax = np.array([slit.data["y"].max() * u.Unit(slit.meta["y_unit"])
                          .to(u.mas) for slit in slits])
-        ymin = np.array([slit.data['y'].min() * u.Unit(slit.meta['y_unit'])
+        ymin = np.array([slit.data["y"].min() * u.Unit(slit.meta["y_unit"])
                          .to(u.mas) for slit in slits])
         xmax = quantify(xmax, u.mas)
         xmin = quantify(xmin, u.mas)
@@ -600,7 +625,7 @@ class SlitWheel(Effect):
         return tbl
 
 
-################################################################################
+###############################################################################
 
 
 def make_aperture_polygon(left, right, top, bottom, angle, shape, **kwargs):
@@ -648,7 +673,7 @@ def mask_from_coords(x, y, pixel_scale):
     coords = [(xi, yi) for xi in xrange for yi in yrange]
 
     corners = [(xi, yi) for xi, yi in zip(x, y)]
-    path = Path(corners)
+    path = MPLPath(corners)
     # ..todo: known issue - for super thin apertures, the first row is masked
     # rad = 0.005
     rad = 0  # increase this to include slightly more points within the polygon
@@ -658,7 +683,8 @@ def mask_from_coords(x, y, pixel_scale):
 
 
 def rotate(x, y, x0, y0, angle):
-    """ Rotate a line by ``angle`` [deg] around the point (x0, y0) """
+    """Rotate a line by `angle` [deg] around the point (`x0`, `y0`)."""
+    # TODO: isn't that just a rotation matrix?
     angle_rad = angle / 57.29578
     xnew = x0 + (x - x0) * np.cos(angle_rad) - (y - y0) * np.sin(angle_rad)
     ynew = y0 + (x - x0) * np.sin(angle_rad) + (y - y0) * np.cos(angle_rad)

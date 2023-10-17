@@ -20,8 +20,8 @@ class Detector(DetectorBase):
         if reset:
             self.reset()
         if not isinstance(image_plane, ImagePlaneBase):
-            raise ValueError("image_plane must be an ImagePlane object: {}"
-                             "".format(type(image_plane)))
+            raise ValueError("image_plane must be an ImagePlane object, but is: "
+                             f"{type(image_plane)}")
 
         self._hdu = imp_utils.add_imagehdu_to_imagehdu(image_plane.hdu,
                                                        self.hdu, spline_order,

@@ -13,6 +13,7 @@ from astropy.utils.data import download_file
 
 from scopesim import rc
 
+from warnings import warn
 
 def get_local_packages(path):
     """
@@ -29,6 +30,8 @@ def get_local_packages(path):
         Names of packages on the local disk
 
     """
+    warn("Function Depreciated --> please use scopesim.download_package-s-()",
+         DeprecationWarning, stacklevel=2)
     dirnames = os.listdir(path)
     pkgs = []
 
@@ -166,4 +169,3 @@ def download_package(pkg_path, save_dir=None, url=None, from_cache=None):
         save_path = os.path.abspath(save_path)
 
     return save_path
-

@@ -1,6 +1,36 @@
-version = '0.5.6'
-date    = '2023-03-13 16:00:00 GMT'
+from importlib import metadata
+version = metadata.version(__package__)
+date = '2023-09-14 14:00:00 GMT'
 yaml_descriptions = """
+- version : 0.6.2
+  date : 2023-09-14
+  comment : Patch with bugfixes and code improvements
+  changes :
+  - Fix documentation on readthedocs.io: #269
+  - Bug fixes related to plotting methods: #270
+  - Formatting of code and documentation to meet community standards: #271
+  - General refactoring, some in preparation of more substantial bug fixes: #272
+
+- version : 0.6.1
+  date : 2023-09-06
+  comment : Patch with visualisation improvements and general refactoring
+  changes :
+  - Improvements to console representation and plot methods of various classes: #252, #260, #263, #266
+  - Refactoring and changes to the inheritance of some classes: #261, #264, #265
+  - Changes to the CI configuration to reduce fails caused by web request timeouts #255, #262
+
+- version : 0.6.0
+  date : 2023-07-10
+  comment : Summer 2023
+  changes :
+  - Rename MAORY to MORFEO #195
+  - Fix NCPA and PSF affecting spectroscopy #238
+  - Fix line widths bug #213
+  - Add rectification utilities #237
+  - Include grating efficiencies #215
+  - Improve downloading of IRDB #234
+  - Improve Windows support
+
 - version : 0.5.6
   date : 2023-03-13
   comment : Hotfix to include minimal set of SVO data

@@ -1,3 +1,4 @@
+"""Tests for module spectral_trace_list.py"""
 import os
 import pytest
 
@@ -12,6 +13,9 @@ from synphot import Empirical1D, SourceSpectrum
 
 from scopesim.effects import spectral_trace_list as spt
 from scopesim.optics.fov_manager import FovVolumeList
+from scopesim.effects.spectral_trace_list import SpectralTraceList, \
+    SpectralTraceListWheel
+from scopesim.effects.spectral_trace_list_utils import SpectralTrace
 from scopesim.tests.mocks.py_objects import trace_list_objects as tlo
 from scopesim.tests.mocks.py_objects import header_objects as ho
 from scopesim.base_classes import PoorMansHeader
@@ -27,36 +31,55 @@ if rc.__basic_inst_path__ not in rc.__search_path__:
 
 PLOTS = False
 
+# pylint: disable=missing-class-docstring,
+# pylint: disable=missing-function-docstring
 
-@pytest.fixture(scope="function")
-def slit_header():
+
+@pytest.fixture(name="slit_header", scope="class")
+def fixture_slit_header():
     return ho._short_micado_slit_header()
 
 
-@pytest.fixture(scope="function")
-def long_slit_header():
+@pytest.fixture(name="long_slit_header", scope="class")
+def fixture_long_slit_header():
     return ho._long_micado_slit_header()
 
 
-@pytest.fixture(scope="function")
-def full_trace_list():
+@pytest.fixture(name="full_trace_list", scope="class")
+def fixture_full_trace_list():
+    """Instantiate a trace definition hdu list"""
     return tlo.make_trace_hdulist()
 
 
 class TestInit:
     def test_initialises_with_nothing(self):
-        assert isinstance(spt.SpectralTraceList(), spt.SpectralTraceList)
+        assert isinstance(SpectralTraceList(), SpectralTraceList)
 
     @pytest.mark.usefixtures("full_trace_list")
     def test_initialises_with_a_hdulist(self, full_trace_list):
-        sptl = spt.SpectralTraceList(hdulist=full_trace_list)
-        assert isinstance(sptl, spt.SpectralTraceList)
-        assert sptl.get_data(2, fits.BinTableHDU)
+        spt = SpectralTraceList(hdulist=full_trace_list)
+        assert isinstance(spt, SpectralTraceList)
+        assert spt.get_data(2, fits.BinTableHDU)
+        # next assert that dispersion axis determined correctly
+        assert list(spt.spectral_traces.values())[2].dispersion_axis == 'y'
 
     def test_initialises_with_filename(self):
-        sptl = spt.SpectralTraceList(filename="TRACE_MICADO.fits",
+        spt = SpectralTraceList(filename="TRACE_MICADO.fits",
                                 wave_colname="wavelength", s_colname="xi")
         assert isinstance(sptl, spt.SpectralTraceList)
+        # assert that dispersion axis taken correctly from header keyword
+        assert list(spt.spectral_traces.values())[2].dispersion_axis == 'y'
+
+    def test_getitem_returns_spectral_trace(self, full_trace_list):
+        slist = SpectralTraceList(hdulist=full_trace_list)
+        assert isinstance(slist['Sheared'], SpectralTrace)
+
+    def test_setitem_appends_correctly(self, full_trace_list):
+        slist = SpectralTraceList(hdulist=full_trace_list)
+        n_trace = len(slist.spectral_traces)
+        spt = tlo.trace_1()
+        slist["New trace"] = spt
+        assert len(slist.spectral_traces) == n_trace + 1
 
 
 @pytest.mark.skip(reason="Ignoring old Spectroscopy integration tests")
@@ -124,7 +147,10 @@ class TestGetFOVHeaders:
 #         assert len(fvl) == 17
 
 
-################################################################################
+@pytest.fixture(name="spectral_trace_list", scope="class")
+def fixture_spectral_trace_list():
+    """Instantiate a SpectralTraceList"""
+    return SpectralTraceList(hdulist=tlo.make_trace_hdulist())
 
 
 def test_set_pc_matrix(rotation_ang=0, shear_ang=10):
@@ -168,6 +194,36 @@ def test_set_pc_matrix(rotation_ang=0, shear_ang=10):
         plt.plot(xd, yd, "o-")
         plt.plot(xs, ys, "o-")
         plt.show()
+
+
+class TestRectification:
+    def test_rectify_cube_not_implemented(self, spectral_trace_list):
+        hdulist = fits.HDUList()
+        with pytest.raises(NotImplementedError):
+            spectral_trace_list.rectify_cube(hdulist)
+
+    # def test_rectify_traces_needs_ximin_and_ximax(self, spectral_trace_list):
+    #    hdulist = fits.HDUList([fits.PrimaryHDU()])
+    #    with pytest.raises(KeyError):
+    #        spectral_trace_list.rectify_traces(hdulist)
+
+
+class TestSpectralTraceListWheel:
+    def test_basic_init(self):
+        """
+        This is a super basic test just to see the thing basically works and
+        parameters are passed correctly. Please feel free to improve this!!
+        """
+        kwargs = {"current_trace_list": "bogus",
+                  "filename_format": "bogus_{}",
+                  "trace_list_names": ["foo"]}
+        stw = SpectralTraceListWheel(**kwargs)
+        assert isinstance(stw, SpectralTraceListWheel)
+        assert stw.meta["current_trace_list"] == "bogus"
+        assert stw.meta["filename_format"] == "bogus_{}"
+        assert stw.meta["trace_list_names"] == ["foo"]
+        assert isinstance(stw.trace_lists["foo"], SpectralTraceList)
+        assert stw.trace_lists["foo"].meta["filename"] == "bogus_foo"
 
 
 class TestUnresolvedSpectralTraceListInit:

@@ -42,7 +42,7 @@ effects :
 -   name : telescope_psf
     class : FieldVaryingPSF
     kwargs :
-        filename : MAORY_SCAO_FVPSF_4mas_20181203.fits
+        filename : MORFEO_SCAO_FVPSF_4mas_20181203.fits
 
 -   name : telescope_surface_list
     class : SurfaceList

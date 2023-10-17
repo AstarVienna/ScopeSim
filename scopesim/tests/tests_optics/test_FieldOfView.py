@@ -140,8 +140,9 @@ class TestExtractFrom:
             assert isinstance(the_fov.fields[2], Table)
 
 
-@pytest.mark.xfail(reason="apply make_cube's fov.waveset available to the outside ")
+# @pytest.mark.xfail(reason="apply make_cube's fov.waveset available to the outside ")
 class TestMakeCube:
+    @pytest.mark.xfail(reason="apply make_cube's fov.waveset available to the outside ")
     def test_makes_cube_from_table(self):
         src_table = so._table_source()            # 10x10" @ 0.2"/pix, [0.5, 2.5]m @ 0.02µm
         fov = _fov_190_210_um()
@@ -163,6 +164,7 @@ class TestMakeCube:
             plt.imshow(cube.data[0, :, :], origin="lower")
             plt.show()
 
+    @pytest.mark.xfail(reason="apply make_cube's fov.waveset available to the outside ")
     def test_makes_cube_from_imagehdu(self):
         src_image = so._image_source()            # 10x10" @ 0.2"/pix, [0.5, 2.5]m @ 0.02µm
         fov = _fov_190_210_um()
@@ -181,6 +183,7 @@ class TestMakeCube:
             plt.imshow(cube.data[0, :, :], origin="lower")
             plt.show()
 
+    @pytest.mark.xfail(reason="apply make_cube's fov.waveset available to the outside ")
     def test_makes_cube_from_other_cube_imagehdu(self):
         import scopesim as sim
         sim.rc.__currsys__["!SIM.spectral.spectral_bin_width"] = 0.01
@@ -201,6 +204,7 @@ class TestMakeCube:
             plt.imshow(cube.data[0, :, :], origin="lower")
             plt.show()
 
+    @pytest.mark.xfail(reason="apply make_cube's fov.waveset available to the outside ")
     def test_makes_cube_from_two_similar_cube_imagehdus(self):
         src_cube = so._cube_source() + so._cube_source(dx=1)            # 2 cubes 10x10" @ 0.2"/pix, [0.5, 2.5]m @ 0.02µm
         fov = _fov_197_202_um()
@@ -220,6 +224,7 @@ class TestMakeCube:
             plt.imshow(cube.data[0, :, :], origin="lower")
             plt.show()
 
+    @pytest.mark.xfail(reason="apply make_cube's fov.waveset available to the outside ")
     def test_makes_cube_from_all_types_of_source_object(self):
         src_all = so._table_source() + \
                   so._image_source(dx=-4, dy=-4) + \
@@ -271,7 +276,7 @@ class TestMakeCube:
         assert "CTYPE3" in cube.header
 
 
-@pytest.mark.xfail(reason="revisit fov.waveset e.g. use make_cube waveset")
+# @pytest.mark.xfail(reason="revisit fov.waveset e.g. use make_cube waveset")
 class TestMakeImage:
     def test_makes_image_from_table(self):
         src_table = so._table_source()            # 10x10" @ 0.2"/pix, [0.5, 2.5]m @ 0.02µm
@@ -317,6 +322,7 @@ class TestMakeImage:
             plt.imshow(img.data, origin="lower")
             plt.show()
 
+    @pytest.mark.xfail(reason="revisit fov.waveset e.g. use make_cube waveset")
     def test_makes_image_from_cube(self):
         src_cube = so._cube_source()  # 10x10" @ 0.2"/pix, [0.5, 2.5]m @ 0.02µm
         fov = _fov_197_202_um()
@@ -334,6 +340,7 @@ class TestMakeImage:
 
         assert out_sum == approx(in_sum)
 
+    @pytest.mark.xfail(reason="revisit fov.waveset e.g. use make_cube waveset")
     def test_makes_image_from_all_types_of_source_object(self):
         src_all = so._table_source() + \
                   so._image_source(dx=-4, dy=-4) + \

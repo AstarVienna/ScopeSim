@@ -1,5 +1,7 @@
 import logging
 from inspect import isclass
+from typing import TextIO
+from io import StringIO
 
 from astropy.table import Table
 
@@ -12,7 +14,7 @@ from .. import rc
 
 class OpticalElement:
     """
-    Contains all information to describe a section of an optical system
+    Contains all information to describe a section of an optical system.
 
     There are 5 major section: ``location``, ``telescope``, ``relay optics``
     ``instrument``, ``detector``.
@@ -47,15 +49,12 @@ class OpticalElement:
         cleaned with from the ``meta`` dict during initialisation
 
     effects : list of dicts
-        Contains the a list of dict descriptions of the effects that the optical
-        element generates. Any OBS_DICT keywords are cleaned with from the
-        ``meta`` dict during initialisation
-
-
-    Examples
-    --------
+        Contains the a list of dict descriptions of the effects that the
+        optical element generates. Any OBS_DICT keywords are cleaned with from
+        the ``meta`` dict during initialisation.
 
     """
+
     def __init__(self, yaml_dict=None, **kwargs):
         self.meta = {"name": "<empty>"}
         self.meta.update(kwargs)
@@ -64,7 +63,7 @@ class OpticalElement:
 
         if isinstance(yaml_dict, dict):
             self.meta.update({key: yaml_dict[key] for key in yaml_dict
-                              if key not in ["properties", "effects"]})
+                              if key not in {"properties", "effects"}})
             if "properties" in yaml_dict:
                 self.properties = yaml_dict["properties"]
             if "name" in yaml_dict:
@@ -76,14 +75,15 @@ class OpticalElement:
                         if eff_dic["name"] in rc.__currsys__.ignore_effects:
                             eff_dic["include"] = False
 
-                    self.effects += [make_effect(eff_dic, **self.properties)]
+                    self.effects.append(make_effect(eff_dic,
+                                                    **self.properties))
 
     def add_effect(self, effect):
         if isinstance(effect, efs.Effect):
-            self.effects += [effect]
+            self.effects.append(effect)
         else:
-            logging.warning("{} is not an Effect object and was not added"
-                          "".format(effect))
+            logging.warning("%s is not an Effect object and was not added",
+                            effect)
 
     def get_all(self, effect_class):
         return get_all_effects(self.effects, effect_class)
@@ -102,11 +102,11 @@ class OpticalElement:
             if eff.include and "z_order" in eff.meta:
                 z = eff.meta["z_order"]
                 if isinstance(z, (list, tuple)):
-                    if any([zmin <= zi <= zmax for zi in z]):
-                        effects += [eff]
+                    if any(zmin <= zi <= zmax for zi in z):
+                        effects.append(eff)
                 else:
                     if zmin <= z <= zmax:
-                        effects += [eff]
+                        effects.append(eff)
 
         return effects
 
@@ -141,7 +141,7 @@ class OpticalElement:
 
     def __getitem__(self, item):
         """
-        Returns Effects of Effect meta properties
+        Return Effects of Effect meta properties.
 
         Parameters
         ----------
@@ -175,7 +175,7 @@ class OpticalElement:
         elif isinstance(item, int):
             obj = self.effects[item]
         elif isinstance(item, str):
-            if item[0] == "#" and "." in item:
+            if item.startswith("#") and "." in item:
                 eff, meta = item.replace("#", "").split(".")
                 obj = self[eff][f"#{meta}"]
             else:
@@ -190,70 +190,82 @@ class OpticalElement:
 
         return obj
 
+    def write_string(self, stream: TextIO, list_effects: bool = True) -> None:
+        """Write formatted string representation to I/O stream."""
+        stream.write(f"{self!s} contains {len(self.effects)} Effects\n")
+        if list_effects:
+            for i_eff, eff in enumerate(self.effects):
+                stream.write(f"[{i_eff}] {eff!r}\n")
+
+    def pretty_str(self) -> str:
+        """Return formatted string representation as str."""
+        with StringIO() as str_stream:
+            self.write_string(str_stream)
+            output = str_stream.getvalue()
+        return output
+
+    @property
+    def display_name(self):
+        return self.meta.get("name", self.meta.get("filename", "<empty>"))
+
     def __repr__(self):
-        msg = '\nOpticalElement : "{}" contains {} Effects: \n' \
-              ''.format(self.meta["name"], len(self.effects))
-        eff_str = "\n".join(["[{}] {}".format(i, eff.__repr__())
-                             for i, eff in enumerate(self.effects)])
-        return msg + eff_str
+        return f"<{self.__class__.__name__}>"
 
     def __str__(self):
-        name = self.meta.get("name", self.meta.get("filename", "<empty>"))
-        return '{}: "{}"'.format(type(self).__name__, name)
+        return f"{self.__class__.__name__}: \"{self.display_name}\""
+
+    def _repr_pretty_(self, p, cycle):
+        """For ipython."""
+        if cycle:
+            p.text(f"{self.__class__.__name__}(...)")
+        else:
+            p.text(str(self))
 
     @property
     def properties_str(self):
         prop_str = ""
-        max_key_len = max([len(key) for key in self.properties.keys()])
+        max_key_len = max(len(key) for key in self.properties.keys())
+        padlen = max_key_len + 4
         for key in self.properties:
-            if key not in ["comments", "changes", "description", "history",
-                           "report"]:
-                prop_str += "    {} : {}\n".format(key.rjust(max_key_len),
-                                                   self.properties[key])
+            if key not in {"comments", "changes", "description", "history",
+                           "report"}:
+                prop_str += f"{key:>{padlen}} : {self.properties[key]}\n"
 
         return prop_str
 
     def report(self, filename=None, output="rst", rst_title_chars="^#*+",
                **kwargs):
 
-        rst_str = """
-{}
-{}
+        rst_str = f"""
+{str(self)}
+{rst_title_chars[0] * len(str(self))}
 
-**Element**: {}
+**Element**: {self.meta.get("object", "<unknown optical element>")}
 
-**Alias**: {}
-        
-**Description**: {}
+**Alias**: {self.meta.get("alias", "<unknown alias>")}
+
+**Description**: {self.meta.get("description", "<no description>")}
 
 Global properties
-{}
+{rst_title_chars[1] * 17}
 ::
 
-{}
-""".format(str(self),
-           rst_title_chars[0] * len(str(self)),
-           self.meta.get("object", "<unknown optical element>"),
-           self.meta.get("alias", "<unknown alias>"),
-           self.meta.get("description", "<no description>"),
-           rst_title_chars[1] * 17,
-           self.properties_str)
+{self.properties_str}
+"""
 
         if len(self.list_effects()) > 0:
-            rst_str += """        
+            rst_str += f"""
 Effects
-{}
+{rst_title_chars[1] * 7}
 
 Summary of Effects included in this optical element:
 
 .. table::
-    :name: {}
-   
-{}
- 
-""".format(rst_title_chars[1] * 7,
-           "tbl:" + self.meta.get("name", "<unknown OpticalElement>"),
-           table_to_rst(self.list_effects(), indent=4))
+    :name: {"tbl:" + self.meta.get("name", "<unknown OpticalElement>")}
+
+{table_to_rst(self.list_effects(), indent=4)}
+
+"""
 
         reports = [eff.report(rst_title_chars=rst_title_chars[-2:], **kwargs)
                    for eff in self.effects]

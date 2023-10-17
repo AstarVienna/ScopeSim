@@ -1,5 +1,4 @@
 import logging
-from copy import deepcopy
 
 import numpy as np
 from astropy import units as u
@@ -7,13 +6,13 @@ from astropy.io import fits
 from astropy.table import Table, Column
 from synphot import SourceSpectrum, Empirical1D
 
-from scopesim import utils, rc
+from scopesim import utils
 from scopesim.optics import image_plane_utils as imp_utils
 
 
 def is_field_in_fov(fov_header, field, wcs_suffix=""):
     """
-    Returns True if Source.field footprint is inside the FieldOfView footprint
+    Return True if Source.field footprint is inside the FieldOfView footprint.
 
     Parameters
     ----------
@@ -29,7 +28,6 @@ def is_field_in_fov(fov_header, field, wcs_suffix=""):
     is_inside_fov : bool
 
     """
-
     if isinstance(field, fits.ImageHDU) and \
             field.header.get("BG_SRC") is not None:
         is_inside_fov = True
@@ -45,17 +43,16 @@ def is_field_in_fov(fov_header, field, wcs_suffix=""):
         elif isinstance(field, (fits.ImageHDU, fits.PrimaryHDU)):
             field_header = field.header
         else:
-            logging.warning("Input was neither Table nor ImageHDU: {}"
-                          "".format(field))
+            logging.warning("Input was neither Table nor ImageHDU: %s", field)
             return False
 
         ext_xsky, ext_ysky = imp_utils.calc_footprint(field_header, wcs_suffix)
         fov_xsky, fov_ysky = imp_utils.calc_footprint(fov_header, wcs_suffix)
 
-        is_inside_fov = min(ext_xsky) < max(fov_xsky) and \
-                        max(ext_xsky) > min(fov_xsky) and \
-                        min(ext_ysky) < max(fov_ysky) and \
-                        max(ext_ysky) > min(fov_ysky)
+        is_inside_fov = (min(ext_xsky) < max(fov_xsky) and
+                         max(ext_xsky) > min(fov_xsky) and
+                         min(ext_ysky) < max(fov_ysky) and
+                         max(ext_ysky) > min(fov_ysky))
 
     return is_inside_fov
 
@@ -80,7 +77,7 @@ def make_flux_table(source_tbl, src, wave_min, wave_max, area):
 
 def combine_table_fields(fov_header, src, field_indexes):
     """
-    Combines a list of Table objects into a single one bounded by the Header WCS
+    Combine list of Table objects into a single one bounded by the Header WCS.
 
     Parameters
     ----------
@@ -94,7 +91,6 @@ def combine_table_fields(fov_header, src, field_indexes):
     tbl : Table
 
     """
-
     fov_xsky, fov_ysky = imp_utils.calc_footprint(fov_header)
 
     x, y, ref, weight = [], [], [], []
@@ -111,8 +107,8 @@ def combine_table_fields(fov_header, src, field_indexes):
 
     x = np.array(x)
     y = np.array(y)
-    mask = np.array(x < max(fov_xsky)) * np.array(x > min(fov_xsky)) * \
-           np.array(y < max(fov_ysky)) * np.array(y > min(fov_ysky))
+    mask = (np.array(x < max(fov_xsky)) * np.array(x > min(fov_xsky)) *
+            np.array(y < max(fov_ysky)) * np.array(y > min(fov_ysky)))
 
     x = x[mask]
     y = y[mask]
@@ -129,7 +125,7 @@ def combine_table_fields(fov_header, src, field_indexes):
 def combine_imagehdu_fields(fov_header, src, fields_indexes, wave_min, wave_max,
                             area, wcs_suffix=""):
     """
-    Combines a list of ImageHDUs into a single one bounded by the Header WCS
+    Combine list of ImageHDUs into a single one bounded by the Header WCS.
 
     Parameters
     ----------
@@ -154,18 +150,18 @@ def combine_imagehdu_fields(fov_header, src, fields_indexes, wave_min, wave_max,
     canvas_hdu : fits.ImageHDU
 
     """
-
     image = np.zeros((fov_header["NAXIS2"], fov_header["NAXIS1"]))
     canvas_hdu = fits.ImageHDU(header=fov_header, data=image)
     spline_order = utils.from_currsys("!SIM.computing.spline_order")
-    pixel_area = fov_header["CDELT1"] * fov_header["CDELT2"] * \
-                 u.Unit(fov_header["CUNIT1"].lower()).to(u.arcsec) ** 2
+    pixel_area = (fov_header["CDELT1"] * fov_header["CDELT2"] *
+                  u.Unit(fov_header["CUNIT1"].lower()).to(u.arcsec) ** 2)
 
     for ii in fields_indexes:
         field = src.fields[ii]
         if isinstance(field, fits.ImageHDU):
             ref = field.header["SPEC_REF"]
-            flux = src.photons_in_range(wave_min, wave_max, area, indexes=[ref])
+            flux = src.photons_in_range(wave_min, wave_max, area,
+                                        indexes=[ref])
             image = np.zeros((fov_header["NAXIS2"], fov_header["NAXIS1"]))
             temp_hdu = fits.ImageHDU(header=fov_header, data=image)
 
@@ -186,7 +182,7 @@ def combine_imagehdu_fields(fov_header, src, fields_indexes, wave_min, wave_max,
 
 def sky2fp(header, xsky, ysky):
     """
-    Convert sky coordinates to image plane coordinated
+    Convert sky coordinates to image plane coordinated.
 
     Parameters
     ----------
@@ -201,16 +197,14 @@ def sky2fp(header, xsky, ysky):
         [mm] The coordinated on the image plane
 
     """
-
     xpix, ypix = imp_utils.val2pix(header, xsky, ysky)
     xdet, ydet = imp_utils.pix2val(header, xpix, ypix, "D")
-
     return xdet, ydet
 
 
 def extract_common_field(field, fov_volume):
     """
-    Extracts the overlapping parts of a field within a FOV volume
+    Extract the overlapping parts of a field within a FOV volume.
 
     Parameters
     ----------
@@ -230,15 +224,15 @@ def extract_common_field(field, fov_volume):
     elif isinstance(field, fits.ImageHDU):
         field_new = extract_area_from_imagehdu(field, fov_volume)
     else:
-        raise ValueError("field must be either Table or ImageHDU: {}"
-                         "".format(type(field)))
+        raise ValueError("field must be either Table or ImageHDU, but is "
+                         f"{type(field)}")
 
     return field_new
 
 
 def extract_area_from_table(table, fov_volume):
     """
-    Extracts the entries of a Table that fits inside the fov_volume
+    Extract the entries of a ``Table`` that fits inside the `fov_volume`.
 
     Parameters
     ----------
@@ -258,10 +252,10 @@ def extract_area_from_table(table, fov_volume):
     fov_xs = (fov_volume["xs"] * fov_unit).to(table["x"].unit)
     fov_ys = (fov_volume["ys"] * fov_unit).to(table["y"].unit)
 
-    mask = (table["x"].data >= fov_xs[0].value) * \
-           (table["x"].data <  fov_xs[1].value) * \
-           (table["y"].data >= fov_ys[0].value) * \
-           (table["y"].data <  fov_ys[1].value)
+    mask = ((table["x"].data >= fov_xs[0].value) *
+            (table["x"].data < fov_xs[1].value) *
+            (table["y"].data >= fov_ys[0].value) *
+            (table["y"].data < fov_ys[1].value))
     table_new = table[mask]
 
     return table_new
@@ -269,12 +263,12 @@ def extract_area_from_table(table, fov_volume):
 
 def extract_area_from_imagehdu(imagehdu, fov_volume):
     """
-    Extracts the part of a ImageHDU that fits inside the fov_volume
+    Extract the part of a ``ImageHDU`` that fits inside the `fov_volume`.
 
     Parameters
     ----------
     imagehdu : fits.ImageHDU
-        The field ImageHDU, either an image of a wavelength [um] cube
+        The field ImageHDU, either an image or a cube with wavelength [um]
     fov_volume : dict
         Contains {"xs": [xmin, xmax], "ys": [ymin, ymax],
                   "waves": [wave_min, wave_max],
@@ -287,7 +281,7 @@ def extract_area_from_imagehdu(imagehdu, fov_volume):
     """
     hdr = imagehdu.header
     new_hdr = {}
-
+    naxis1, naxis2 = hdr["NAXIS1"], hdr["NAXIS2"]
     x_hdu, y_hdu = imp_utils.calc_footprint(imagehdu)  # field edges in "deg"
     x_fov, y_fov = fov_volume["xs"], fov_volume["ys"]
 
@@ -295,7 +289,11 @@ def extract_area_from_imagehdu(imagehdu, fov_volume):
     y0s, y1s = max(min(y_hdu), min(y_fov)), min(max(y_hdu), max(y_fov))
 
     xp, yp = imp_utils.val2pix(hdr, np.array([x0s, x1s]), np.array([y0s, y1s]))
-    (x0p, x1p), (y0p, y1p) = np.round(xp).astype(int), np.round(yp).astype(int)
+    x0p = max(0, np.floor(xp[0]).astype(int))
+    x1p = min(naxis1, np.ceil(xp[1]).astype(int))
+    y0p = max(0, np.floor(yp[0]).astype(int))
+    y1p = min(naxis2, np.ceil(yp[1]).astype(int))
+    # (x0p, x1p), (y0p, y1p) = np.round(xp).astype(int), np.round(yp).astype(int)
     if x0p == x1p:
         x1p += 1
     if y0p == y1p:
@@ -326,7 +324,11 @@ def extract_area_from_imagehdu(imagehdu, fov_volume):
 
         # OC [2021-12-14] if fov range is not covered by the source return nothing
         if not np.any(mask):
-            print("FOV {} um - {} um: not covered by Source".format(fov_waves[0], fov_waves[1]))
+            logging.warning("FOV %s um - %s um: not covered by Source",
+                            fov_waves[0], fov_waves[1])
+            # FIXME: returning None here breaks the principle that a function
+            #        should always return the same type. Maybe this should
+            #        instead raise an exception that's caught higher up...
             return None
 
         i0p, i1p = np.where(mask)[0][0], np.where(mask)[0][-1]
@@ -356,6 +358,9 @@ def extract_area_from_imagehdu(imagehdu, fov_volume):
     else:
         data = imagehdu.data[y0p:y1p, x0p:x1p]
         new_hdr["SPEC_REF"] = hdr.get("SPEC_REF")
+
+    if not data.size:
+        logging.warning("Empty image HDU.")
 
     new_imagehdu = fits.ImageHDU(data=data)
     new_imagehdu.header.update(new_hdr)
@@ -393,13 +398,13 @@ def extract_range_from_spectrum(spectrum, waverange):
     mask = (spec_waveset > wave_min) * (spec_waveset < wave_max)
 
     if sum(mask) == 0:
-        logging.info(f"Waverange does not overlap with Spectrum waveset: "
-                      f"{[wave_min, wave_max]} <> {spec_waveset} "
-                      f"for spectrum {spectrum}")
+        logging.info(("Waverange does not overlap with Spectrum waveset: "
+                      "%s <> %s for spectrum %s"),
+                     [wave_min, wave_max], spec_waveset, spectrum)
     if wave_min < min(spec_waveset) or wave_max > max(spec_waveset):
-        logging.info(f"Waverange only partially overlaps with Spectrum waveset: "
-                      f"{[wave_min, wave_max]} <> {spec_waveset} "
-                      f"for spectrum {spectrum}")
+        logging.info(("Waverange only partially overlaps with Spectrum waveset: "
+                      "%s <> %s for spectrum %s"),
+                     [wave_min, wave_max], spec_waveset, spectrum)
 
     wave = np.r_[wave_min, spec_waveset[mask], wave_max]
     flux = spectrum(wave)
@@ -424,7 +429,7 @@ def make_cube_from_table(table, spectra, waveset, fov_header, sub_pixel=False):
     Returns
     -------
     cube: fits.ImageHDU
-        Units of ph/s/m2/bin --> should this be ph/s/m2/um?
+        Units of ph/s/m2/bin --> should this be ph / (s * m2 * um)?
 
     """
     cube = np.zeros((fov_header["NAXIS2"], fov_header["NAXIS1"], len(waveset)))

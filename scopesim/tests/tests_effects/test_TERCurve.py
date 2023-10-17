@@ -21,6 +21,7 @@ PLOTS = False
 # pylint: disable=no-self-use, missing-class-docstring
 # pylint: disable=missing-function-docstring
 
+
 class TestTERCurveApplyTo:
     def test_adds_bg_to_source_if_source_has_no_bg(self):
 
@@ -96,14 +97,6 @@ class TestSpanishVOFilterCurveInit:
                                        filter_name=filt_name)
         assert isinstance(filt, tc.FilterCurve)
 
-    def test_returns_unity_transmission_for_wrong_name(self):
-        filt = tc.SpanishVOFilterCurve(observatory=None,
-                                       instrument=None,
-                                       filter_name=None,
-                                       error_on_wrong_name=False)
-        assert isinstance(filt, tc.FilterCurve)
-        assert np.all([t == 1 for t in filt.data["transmission"]])
-
 
 @pytest.fixture(name="fwheel", scope="class")
 def _filter_wheel():
@@ -111,6 +104,7 @@ def _filter_wheel():
     return tc.FilterWheel(**{"filter_names": ["Ks", "Br-gamma"],
                              "filename_format": "TC_filter_{}.dat",
                              "current_filter": "Br-gamma"})
+
 
 class TestFilterWheelInit:
     def test_initialises_correctly(self, fwheel):
@@ -164,7 +158,7 @@ class TestSpanishVOFilterWheelInit:
                                              current_filter=default_filter,
                                              name="test_svo_wheel")
 
-        assert isinstance(filt_wheel, tc.FilterWheel)
+        assert isinstance(filt_wheel, tc.FilterWheelBase)
         assert default_filter in filt_wheel.filters
 
     def test_returns_filters_with_include_str(self):
