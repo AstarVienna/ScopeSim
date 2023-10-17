@@ -32,9 +32,6 @@ class TestSplitHeader:
         area_sum = np.sum([hdr["NAXIS1"] * hdr["NAXIS2"] for hdr in hdrs])
         assert area_sum == hdr["NAXIS1"] * hdr["NAXIS2"]
 
-        # print([hdr["NAXIS1"] for hdr in hdrs], hdr["NAXIS1"])
-        # print([hdr["NAXIS2"] for hdr in hdrs], hdr["NAXIS2"])
-
 
 class TestAddImageHDUtoImageHDU:
     def big_small_hdus(self, big_wh=(20, 10), big_offsets=(0, 0),
@@ -42,14 +39,14 @@ class TestAddImageHDUtoImageHDU:
         w, h = np.array(big_wh) // 2
         x = np.array([-w, -w, w, w]) + big_offsets[0]
         y = np.array([h, -h, -h, h]) + big_offsets[1]
-        big = imp_utils.header_from_list_of_xy(x, y, pixel_scale)
+        big = imp_utils.header_from_list_of_xy(x, y, pixel_scale, "X")
         im = np.ones([big["NAXIS2"], big["NAXIS1"]])
         big = fits.ImageHDU(header=big, data=im)
 
         w, h = np.array(small_wh) // 2
         x = np.array([-w, -w, w, w]) + small_offsets[0]
         y = np.array([h, -h, -h, h]) + small_offsets[1]
-        small = imp_utils.header_from_list_of_xy(x, y, pixel_scale)
+        small = imp_utils.header_from_list_of_xy(x, y, pixel_scale, "X")
         im = np.ones([small["NAXIS2"], small["NAXIS1"]])
         small = fits.ImageHDU(header=small, data=im)
 
@@ -58,9 +55,9 @@ class TestAddImageHDUtoImageHDU:
     def test_smaller_hdu_is_fully_in_larger_hdu(self):
         """yellow box in box"""
         big, small = self.big_small_hdus()
-        big_sum, small_sum =  np.sum(big.data), np.sum(small.data)
+        big_sum, small_sum = np.sum(big.data), np.sum(small.data)
 
-        new = imp_utils.add_imagehdu_to_imagehdu(small, big)
+        new = imp_utils.add_imagehdu_to_imagehdu(small, big, wcs_suffix="X")
 
         if PLOTS:
             plt.imshow(new.data, origin="lower")
@@ -74,9 +71,9 @@ class TestAddImageHDUtoImageHDU:
         big.data = big.data[None, :, :] * np.ones(3)[:, None, None]
         small.data = small.data[None, :, :] * np.ones(3)[:, None, None]
 
-        big_sum, small_sum =  np.sum(big.data), np.sum(small.data)
+        big_sum, small_sum = np.sum(big.data), np.sum(small.data)
 
-        new = imp_utils.add_imagehdu_to_imagehdu(small, big)
+        new = imp_utils.add_imagehdu_to_imagehdu(small, big, wcs_suffix="X")
 
         if PLOTS:
             plt.imshow(new.data[1, :, :], origin="lower")
@@ -87,9 +84,9 @@ class TestAddImageHDUtoImageHDU:
     def test_larger_hdu_encompases_smaller_hdu(self):
         """monochrome box"""
         big, small = self.big_small_hdus()
-        big_sum, small_sum =  np.sum(big.data), np.sum(small.data)
+        big_sum, small_sum = np.sum(big.data), np.sum(small.data)
 
-        new = imp_utils.add_imagehdu_to_imagehdu(big, small)
+        new = imp_utils.add_imagehdu_to_imagehdu(big, small, wcs_suffix="X")
 
         if PLOTS:
             plt.imshow(new.data, origin="lower")
@@ -100,9 +97,9 @@ class TestAddImageHDUtoImageHDU:
     def test_smaller_hdu_is_partially_in_larger_hdu(self):
         """yellow quarter top-right"""
         big, small = self.big_small_hdus(small_wh=(20, 10), small_offsets=(10, 5))
-        big_sum, small_sum =  np.sum(big.data), np.sum(small.data)
+        big_sum, small_sum = np.sum(big.data), np.sum(small.data)
 
-        new = imp_utils.add_imagehdu_to_imagehdu(small, big)
+        new = imp_utils.add_imagehdu_to_imagehdu(small, big, wcs_suffix="X")
 
         if PLOTS:
             plt.imshow(new.data, origin="lower")
@@ -113,9 +110,9 @@ class TestAddImageHDUtoImageHDU:
     def test_larger_hdu_is_partially_in_smaller_hdu(self):
         """yellow quarter bottom-left"""
         big, small = self.big_small_hdus(small_wh=(20, 10), small_offsets=(10, 5))
-        big_sum, small_sum =  np.sum(big.data), np.sum(small.data)
+        big_sum, small_sum = np.sum(big.data), np.sum(small.data)
 
-        new = imp_utils.add_imagehdu_to_imagehdu(big, small)
+        new = imp_utils.add_imagehdu_to_imagehdu(big, small, wcs_suffix="X")
 
         if PLOTS:
 
@@ -130,8 +127,8 @@ class TestAddImageHDUtoImageHDU:
         big.data = big.data[None, :, :] * np.ones(3)[:, None, None]
         small.data = small.data[None, :, :] * np.ones(3)[:, None, None]
 
-        big_sum, small_sum =  np.sum(big.data), np.sum(small.data)
-        new = imp_utils.add_imagehdu_to_imagehdu(big, small)
+        big_sum, small_sum = np.sum(big.data), np.sum(small.data)
+        new = imp_utils.add_imagehdu_to_imagehdu(big, small, wcs_suffix="X")
 
         if PLOTS:
 
@@ -145,7 +142,7 @@ class TestAddImageHDUtoImageHDU:
         big, small = self.big_small_hdus(small_offsets=(15, 0))
         big_sum, small_sum = np.sum(big.data), np.sum(small.data)
 
-        new = imp_utils.add_imagehdu_to_imagehdu(big, small)
+        new = imp_utils.add_imagehdu_to_imagehdu(big, small, wcs_suffix="X")
 
         if PLOTS:
             plt.imshow(new.data, origin="lower")
@@ -169,8 +166,8 @@ class TestAddImageHDUtoImageHDU:
         hdu.header["CDELT2"] = -1
         hdu.header["CRVAL1"] = 0
         hdu.header["CRVAL2"] = 0
-        hdu.header["CUNIT1"] = "DEG"
-        hdu.header["CUNIT2"] = "DEG"
+        hdu.header["CUNIT1"] = "deg"
+        hdu.header["CUNIT2"] = "deg"
         hdu.header["CTYPE1"] = "LINEAR"
         hdu.header["CTYPE2"] = "LINEAR"
         hdu.header["CRPIX1"] = im.shape[1]/2
@@ -233,7 +230,7 @@ class TestRescaleImageHDU:
     @pytest.mark.parametrize("scale_factor", [0.3, 0.5, 1, 2, 3])
     def test_rescales_a_2D_imagehdu(self, scale_factor):
         hdu0 = imo._image_hdu_rect()
-        hdu1 = imp_utils.rescale_imagehdu(deepcopy(hdu0), scale_factor/3600)
+        hdu1 = imp_utils.rescale_imagehdu(deepcopy(hdu0), scale_factor)#/3600)
 
         hdr0 = hdu0.header
         hdr1 = hdu1.header
@@ -245,7 +242,7 @@ class TestRescaleImageHDU:
     def test_rescales_a_3D_imagehdu(self, scale_factor):
         hdu0 = imo._image_hdu_rect()
         hdu0.data = hdu0.data[None, :, :] * np.ones(5)[:, None, None]
-        hdu1 = imp_utils.rescale_imagehdu(deepcopy(hdu0), scale_factor/3600)
+        hdu1 = imp_utils.rescale_imagehdu(deepcopy(hdu0), scale_factor)#/3600)
 
         hdr0 = hdu0.header
         hdr1 = hdu1.header
@@ -333,5 +330,3 @@ class TestSubPixelFractions:
     #     x, y = np.array([1.1, 2.9]), np.array([0.0, 0.5])
     #     xs, ys, fracs = imp_utils.sub_pixel_fractions(x, y)
     #     print(xs)
-
-

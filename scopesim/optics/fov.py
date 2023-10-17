@@ -71,6 +71,7 @@ class FieldOfView(FieldOfViewBase):
         self.header["NAXIS1"] = header["NAXIS1"]
         self.header["NAXIS2"] = header["NAXIS2"]
         self.header.update(header)
+        self._ensure_deg_header()
         self.detector_header = detector_header
         self.hdu = None
 
@@ -599,13 +600,15 @@ class FieldOfView(FieldOfViewBase):
         return canvas_cube_hdu      # [ph s-1 AA-1 (arcsec-2)]
 
     def volume(self, wcs_prefix=""):
-        xs, ys = imp_utils.calc_footprint(self.header, wcs_suffix=wcs_prefix)
+        xy = imp_utils.calc_footprint(self.header, wcs_suffix=wcs_prefix)
+        unit = self.header[f"CUNIT1{wcs_prefix}"].lower()
         # FIXME: This is unused!!
         # wave_corners = self.waverange
-        self._volume = {"xs": [min(xs), max(xs)],
-                        "ys": [min(ys), max(ys)],
+        minmax = np.array((xy.min(axis=0), xy.max(axis=0)))
+        self._volume = {"xs": minmax[:, 0],
+                        "ys": minmax[:, 1],
                         "waves": self.waverange,
-                        "xy_unit": "mm" if wcs_prefix == "D" else "deg",
+                        "xy_unit": unit,
                         "wave_unit": "um"}
         return self._volume
 
@@ -625,6 +628,10 @@ class FieldOfView(FieldOfViewBase):
     @property
     def corners(self):
         """Return sky footprint, image plane footprint."""
+        # Couldn't find where this is ever used, put warning here just in case
+        logging.warning("calc_footprint has been updated, any code that "
+                        "relies on this .corners property must likely be "
+                        "adapted as well.")
         sky_corners = imp_utils.calc_footprint(self.header)
         imp_corners = imp_utils.calc_footprint(self.header, "D")
         return sky_corners, imp_corners
@@ -697,6 +704,17 @@ class FieldOfView(FieldOfViewBase):
         return [field for field in self.fields
                 if isinstance(field, fits.ImageHDU)
                 and field.header.get("BG_SRC", False)]
+
+    def _ensure_deg_header(self):
+        cunit = u.Unit(self.header["CUNIT1"].lower())
+        convf = cunit.to(u.deg)
+        self.header["CDELT1"] *= convf
+        self.header["CDELT2"] *= convf
+        self.header["CRVAL1"] *= convf
+        self.header["CRVAL2"] *= convf
+        self.header["CUNIT1"] = "deg"
+        self.header["CUNIT2"] = "deg"
+            
 
     def __repr__(self):
         waverange = [self.meta["wave_min"].value, self.meta["wave_max"].value]

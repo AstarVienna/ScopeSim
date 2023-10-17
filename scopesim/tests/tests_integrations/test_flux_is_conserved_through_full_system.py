@@ -87,5 +87,5 @@ class TestObserve:
 
         # given a 1 um bandpass
         assert src_flux == approx(1)          # u.Unit("ph s-1")
-        assert np.max(im) - np.median(im) == approx(0.45, rel=1e-2)
+        assert np.sum(im - np.median(im)) == approx(0.45, rel=1e-2)
         assert np.median(im) == approx(1.5, abs=1e-2)

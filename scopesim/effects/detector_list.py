@@ -138,19 +138,21 @@ class DetectorList(Effect):
         if isinstance(obj, FOVSetupBase):
 
             hdr = self.image_plane_header
-            x_mm, y_mm = calc_footprint(hdr, "D")
+            xy_mm = calc_footprint(hdr, "D")
             pixel_size = hdr["CDELT1D"]              # mm
             pixel_scale = kwargs.get("pixel_scale", self.meta["pixel_scale"])   # ["]
             pixel_scale = utils.from_currsys(pixel_scale)
-            x_sky = x_mm * pixel_scale / pixel_size  # x["] = x[mm] * ["] / [mm]
-            y_sky = y_mm * pixel_scale / pixel_size  # y["] = y[mm] * ["] / [mm]
 
-            obj.shrink(axis=["x", "y"], values=([min(x_sky), max(x_sky)],
-                                                [min(y_sky), max(y_sky)]))
-            obj.detector_limits = {"xd_min": min(x_mm),
-                                   "xd_max": max(x_mm),
-                                   "yd_min": min(y_mm),
-                                   "yd_max": max(y_mm)}
+            # x["] = x[mm] * ["] / [mm]
+            xy_sky = xy_mm * pixel_scale / pixel_size
+
+            obj.shrink(axis=["x", "y"],
+                       values=(tuple(zip(xy_sky.min(axis=0),
+                                         xy_sky.max(axis=0)))))
+
+            lims = np.array((xy_mm.min(axis=0), xy_mm.max(axis=0)))
+            keys = ["xd_min", "xd_max", "yd_min", "yd_max"]
+            obj.detector_limits = dict(zip(keys, lims.T.flatten()))
 
         return obj
 
@@ -163,13 +165,15 @@ class DetectorList(Effect):
             self.meta = utils.from_currsys(self.meta)
 
             hdr = self.image_plane_header
-            x_mm, y_mm = calc_footprint(hdr, "D")
+            xy_mm = calc_footprint(hdr, "D")
             pixel_size = hdr["CDELT1D"]              # mm
             pixel_scale = self.meta["pixel_scale"]   # ["]
-            x_sky = x_mm * pixel_scale / pixel_size  # x["] = x[mm] * ["] / [mm]
-            y_sky = y_mm * pixel_scale / pixel_size  # y["] = y[mm] * ["] / [mm]
 
-            aperture_mask = ApertureMask(array_dict={"x": x_sky, "y": y_sky},
+            # x["] = x[mm] * ["] / [mm]
+            xy_sky = xy_mm * pixel_scale / pixel_size
+
+            aperture_mask = ApertureMask(array_dict={"x": xy_sky[:, 0],
+                                                     "y": xy_sky[:, 1]},
                                          pixel_scale=pixel_scale)
 
         return aperture_mask
@@ -265,9 +269,10 @@ class DetectorList(Effect):
             _, axes = figure_factory()
 
         for hdr in self.detector_headers():
-            x_mm, y_mm = calc_footprint(hdr, "D")
-            axes.plot(list(close_loop(x_mm)), list(close_loop(y_mm)))
-            axes.text(*np.mean((x_mm, y_mm), axis=1), hdr["ID"],
+            xy_mm = calc_footprint(hdr, "D")
+            outline = np.array(list(close_loop(xy_mm)))
+            axes.plot(outline[:, 0], outline[:, 1])
+            axes.text(*xy_mm.mean(axis=0), hdr["ID"],
                       ha="center", va="center")
 
         axes.set_aspect("equal")

@@ -745,54 +745,39 @@ def get_fits_type(filename):
     return hdutype
 
 
-def quantity_from_table(colname, table, default_unit=""):
+def quantity_from_table(colname: str, table: Table,
+                        default_unit: str = "") -> u.Quantity:
     col = table[colname]
     if col.unit is not None:
-        if len(col) < 1000:
-            col = col.data * col.unit
-        else:
-            col = col.data << col.unit
-    else:
-        colname_u = f"{colname}_unit"
-        if colname_u in table.meta:
-            col = col * u.Unit(table.meta[colname_u])
-        else:
-            com_tbl = convert_table_comments_to_dict(table)
-            if colname_u in com_tbl:
-                if len(col) < 1000:
-                    col = col * u.Unit(com_tbl[colname_u])
-                else:
-                    col = col << u.Unit(com_tbl[colname_u])
-            else:
-                col = col * u.Unit(default_unit)
-                tbl_name = table.meta.get("name", table.meta.get("filename"))
-                logging.info(("%s_unit was not found in table.meta: %s. "
-                              "Default to: %s"), colname, tbl_name, default_unit)
+        return col.quantity
 
-    return col
+    unit = unit_from_table(colname, table, default_unit)
+    # TODO: or rather << ?
+    return col * unit
 
 
-def unit_from_table(colname, table, default_unit=""):
+def unit_from_table(colname: str, table: Table,
+                    default_unit: str = "") -> u.Unit:
     """
     Look for the unit for a column based on the meta dict keyword "<col>_unit".
     """
-    colname_u = f"{colname}_unit"
     col = table[colname]
     if col.unit is not None:
-        unit = col.unit
-    elif colname_u in table.meta:
-        unit = u.Unit(table.meta[colname_u])
-    else:
-        com_tbl = convert_table_comments_to_dict(table)
-        if colname_u in com_tbl:
-            unit = u.Unit(com_tbl[colname_u])
-        else:
-            tbl_name = table.meta.get("name", table.meta.get("filename"))
-            logging.info(("%s_unit was not found in table.meta: %s. "
-                          "Default to: %s"), colname, tbl_name, default_unit)
-            unit = u.Unit(default_unit)
+        return col.unit
 
-    return unit
+    colname_u = f"{colname}_unit"
+    if colname_u in table.meta:
+        return u.Unit(table.meta[colname_u])
+
+    com_tbl = convert_table_comments_to_dict(table)
+    if colname_u in com_tbl:
+        return u.Unit(com_tbl[colname_u])
+
+    tbl_name = table.meta.get("name", table.meta.get("filename"))
+    logging.info(("%s_unit was not found in table.meta: %s. Default to: %s"),
+                 colname, tbl_name, default_unit)
+
+    return u.Unit(default_unit)
 
 
 def deg2rad(theta):
