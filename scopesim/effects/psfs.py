@@ -23,6 +23,7 @@ class PoorMansFOV:
         pixel_scale = utils.from_currsys("!INST.pixel_scale")
         self.header = {"CDELT1": pixel_scale / 3600.,
                        "CDELT2": pixel_scale / 3600.,
+                       "NAXIS": 2,
                        "NAXIS1": 128,
                        "NAXIS2": 128,
                        }
@@ -664,7 +665,8 @@ class FieldConstantPSF(DiscretePSF):
 
                 if ((fov.header["NAXIS1"] < hdr["NAXIS1"]) or
                     (fov.header["NAXIS2"] < hdr["NAXIS2"])):
-                    self.kernel = pu.cutout_kernel(self.kernel, fov.header)
+                    self.kernel = pu.cutout_kernel(self.kernel, fov.header,
+                                                   kernel_header=hdr)
 
         return self.kernel
 
@@ -702,6 +704,8 @@ class FieldConstantPSF(DiscretePSF):
 
         # We need linear interpolation to preserve positivity. Might think of
         # more elaborate positivity-preserving schemes.
+        # Note: According to some basic profiling, this line is one of the
+        #       single largest hits on performance.
         ipsf = RectBivariateSpline(np.arange(nyin), np.arange(nxin), psf,
                                    kx=1, ky=1)
 
@@ -709,7 +713,7 @@ class FieldConstantPSF(DiscretePSF):
         cubewcs = WCS(naxis=2)
         cubewcs.wcs.ctype = ["LINEAR", "LINEAR"]
         cubewcs.wcs.crval = [0., 0.]
-        cubewcs.wcs.crpix = [nxpsf // 2, nypsf // 2]
+        cubewcs.wcs.crpix = [(nxpsf + 1) / 2, (nypsf + 1) / 2]
         cubewcs.wcs.cdelt = [fov_pixel_scale, fov_pixel_scale]
         cubewcs.wcs.cunit = [fov_pixel_unit, fov_pixel_unit]
 

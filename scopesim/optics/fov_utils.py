@@ -4,10 +4,11 @@ import numpy as np
 from astropy import units as u
 from astropy.io import fits
 from astropy.table import Table, Column
+from astropy.wcs import WCS
 from synphot import SourceSpectrum, Empirical1D
 
-from scopesim import utils
-from scopesim.optics import image_plane_utils as imp_utils
+from .. import utils
+from . import image_plane_utils as imp_utils
 
 
 def is_field_in_fov(fov_header, field, wcs_suffix=""):
@@ -38,7 +39,8 @@ def is_field_in_fov(fov_header, field, wcs_suffix=""):
             y = list(utils.quantity_from_table("y", field,
                                                u.arcsec).to(u.deg).value)
             s = wcs_suffix
-            cdelt = utils.quantify(fov_header["CDELT1" + s], u.deg).value
+            # cdelt = utils.quantify(fov_header["CDELT1" + s], u.deg).value
+            cdelt = fov_header[f"CDELT1{s}"] * u.Unit(fov_header[f"CUNIT1{s}"]).to(u.deg)
             field_header = imp_utils.header_from_list_of_xy(x, y, cdelt, s)
         elif isinstance(field, (fits.ImageHDU, fits.PrimaryHDU)):
             field_header = field.header
@@ -46,8 +48,12 @@ def is_field_in_fov(fov_header, field, wcs_suffix=""):
             logging.warning("Input was neither Table nor ImageHDU: %s", field)
             return False
 
-        ext_xsky, ext_ysky = imp_utils.calc_footprint(field_header, wcs_suffix)
-        fov_xsky, fov_ysky = imp_utils.calc_footprint(fov_header, wcs_suffix)
+        xy = imp_utils.calc_footprint(field_header, wcs_suffix)
+        ext_xsky, ext_ysky = xy[:, 0], xy[:, 1]
+        xy = imp_utils.calc_footprint(fov_header, wcs_suffix)
+        fov_xsky, fov_ysky = xy[:, 0], xy[:, 1]
+        fov_xsky *= u.Unit(fov_header["CUNIT1"].lower()).to(u.deg)
+        fov_ysky *= u.Unit(fov_header["CUNIT2"].lower()).to(u.deg)
 
         is_inside_fov = (min(ext_xsky) < max(fov_xsky) and
                          max(ext_xsky) > min(fov_xsky) and
@@ -91,7 +97,8 @@ def combine_table_fields(fov_header, src, field_indexes):
     tbl : Table
 
     """
-    fov_xsky, fov_ysky = imp_utils.calc_footprint(fov_header)
+    xy = imp_utils.calc_footprint(fov_header)
+    fov_xsky, fov_ysky = xy[:, 0], xy[:, 1]
 
     x, y, ref, weight = [], [], [], []
 
@@ -280,27 +287,36 @@ def extract_area_from_imagehdu(imagehdu, fov_volume):
 
     """
     hdr = imagehdu.header
-    new_hdr = {}
+    image_wcs = WCS(hdr, naxis=2)
     naxis1, naxis2 = hdr["NAXIS1"], hdr["NAXIS2"]
-    x_hdu, y_hdu = imp_utils.calc_footprint(imagehdu)  # field edges in "deg"
-    x_fov, y_fov = fov_volume["xs"], fov_volume["ys"]
+    xy_hdu = image_wcs.calc_footprint(center=False, axes=(naxis1, naxis2))
 
-    x0s, x1s = max(min(x_hdu), min(x_fov)), min(max(x_hdu), max(x_fov))
-    y0s, y1s = max(min(y_hdu), min(y_fov)), min(max(y_hdu), max(y_fov))
+    if image_wcs.wcs.cunit[0] == "deg":
+        imp_utils._fix_360(xy_hdu)
+    elif image_wcs.wcs.cunit[0] == "arcsec":
+        xy_hdu *= u.arcsec.to(u.deg)
 
-    xp, yp = imp_utils.val2pix(hdr, np.array([x0s, x1s]), np.array([y0s, y1s]))
-    x0p = max(0, np.floor(xp[0]).astype(int))
-    x1p = min(naxis1, np.ceil(xp[1]).astype(int))
-    y0p = max(0, np.floor(yp[0]).astype(int))
-    y1p = min(naxis2, np.ceil(yp[1]).astype(int))
-    # (x0p, x1p), (y0p, y1p) = np.round(xp).astype(int), np.round(yp).astype(int)
-    if x0p == x1p:
-        x1p += 1
-    if y0p == y1p:
-        y1p += 1
+    xy_fov = np.array([fov_volume["xs"], fov_volume["ys"]]).T
 
-    new_hdr = imp_utils.header_from_list_of_xy([x0s, x1s], [y0s, y1s],
-                                               pixel_scale=hdr["CDELT1"])
+    if fov_volume["xy_unit"] == "arcsec":
+        xy_fov *= u.arcsec.to(u.deg)
+
+    xy0s = np.array((xy_hdu.min(axis=0), xy_fov.min(axis=0))).max(axis=0)
+    xy1s = np.array((xy_hdu.max(axis=0), xy_fov.max(axis=0))).min(axis=0)
+
+    # Round to avoid floating point madness
+    xyp = image_wcs.wcs_world2pix(np.array([xy0s, xy1s]), 0).round(7)
+
+    xy0p = np.max(((0, 0), np.floor(xyp[0]).astype(int)), axis=0)
+    xy1p = np.min(((naxis1, naxis2), np.ceil(xyp[1]).astype(int)), axis=0)
+
+    # Add 1 if the same
+    xy1p += (xy0p == xy1p)
+
+    new_wcs, new_naxis = imp_utils.create_wcs_from_points(
+        np.array([xy0s, xy1s]), pixel_scale=hdr["CDELT1"])
+    new_hdr = new_wcs.to_header()
+    new_hdr.update({"NAXIS1": new_naxis[0], "NAXIS2": new_naxis[1]})
 
     if hdr["NAXIS"] == 3:
 
@@ -334,7 +350,9 @@ def extract_area_from_imagehdu(imagehdu, fov_volume):
         i0p, i1p = np.where(mask)[0][0], np.where(mask)[0][-1]
         f0 = (abs(hdu_waves[i0p] - fov_waves[0] + 0.5 * wdel) % wdel) / wdel    # blue edge
         f1 = (abs(hdu_waves[i1p] - fov_waves[1] - 0.5 * wdel) % wdel) / wdel    # red edge
-        data = imagehdu.data[i0p:i1p+1, y0p:y1p, x0p:x1p]
+        data = imagehdu.data[i0p:i1p+1,
+                             xy0p[1]:xy1p[1],
+                             xy0p[0]:xy1p[0]]
         data[0, :, :] *= f0
         if i1p > i0p:
             data[-1, :, :] *= f1
@@ -356,7 +374,8 @@ def extract_area_from_imagehdu(imagehdu, fov_volume):
                         "BUNIT":  hdr["BUNIT"]})
 
     else:
-        data = imagehdu.data[y0p:y1p, x0p:x1p]
+        data = imagehdu.data[xy0p[1]:xy1p[1],
+                             xy0p[0]:xy1p[0]]
         new_hdr["SPEC_REF"] = hdr.get("SPEC_REF")
 
     if not data.size:
@@ -397,10 +416,10 @@ def extract_range_from_spectrum(spectrum, waverange):
     spec_waveset = spectrum.waveset.to(u.AA).value
     mask = (spec_waveset > wave_min) * (spec_waveset < wave_max)
 
-    if sum(mask) == 0:
-        logging.info(("Waverange does not overlap with Spectrum waveset: "
-                      "%s <> %s for spectrum %s"),
-                     [wave_min, wave_max], spec_waveset, spectrum)
+    # if sum(mask) == 0:
+    #     logging.info(("Waverange does not overlap with Spectrum waveset: "
+    #                   "%s <> %s for spectrum %s"),
+    #                  [wave_min, wave_max], spec_waveset, spectrum)
     if wave_min < min(spec_waveset) or wave_max > max(spec_waveset):
         logging.info(("Waverange only partially overlaps with Spectrum waveset: "
                       "%s <> %s for spectrum %s"),

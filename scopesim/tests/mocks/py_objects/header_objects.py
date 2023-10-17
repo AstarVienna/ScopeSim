@@ -8,18 +8,19 @@ from scopesim.optics.image_plane_utils import header_from_list_of_xy
 def _basic_fov_header():
     w, h = 150, 150
     skywcs = wcs.WCS(naxis=2)
-    skywcs.wcs.ctype = ["RA---TAN", "DEC--TAN"]
+    # skywcs.wcs.ctype = ["RA---TAN", "DEC--TAN"]
+    skywcs.wcs.ctype = ["LINEAR", "LINEAR"]
     skywcs.wcs.cdelt = [0.1, 0.1]
     skywcs.wcs.cunit = ["arcsec", "arcsec"]
     skywcs.wcs.crval = [0, 0]
-    skywcs.wcs.crpix = [w / 2, h / 2]
+    skywcs.wcs.crpix = [(w + 1) / 2, (h + 1) / 2]
 
     detwcs = wcs.WCS(naxis=2, key="D")
     detwcs.wcs.ctype = ["LINEAR", "LINEAR"]
     detwcs.wcs.cdelt = [1, 1]
     detwcs.wcs.cunit = ["mm", "mm"]
     detwcs.wcs.crval = [0, 0]
-    detwcs.wcs.crpix = [w / 2, h / 2]
+    detwcs.wcs.crpix = [(w + 1) / 2, (h + 1) / 2]
 
     skyhdr = skywcs.to_header()
     dethdr = detwcs.to_header()
@@ -39,7 +40,7 @@ def _implane_header():
     detwcs.wcs.cdelt = [1, 1]
     detwcs.wcs.cunit = ["mm", "mm"]
     detwcs.wcs.crval = [0, 0]
-    detwcs.wcs.crpix = [w / 2, h / 2]
+    detwcs.wcs.crpix = [(w + 1) / 2, (h + 1) / 2]
 
     dethdr = detwcs.to_header()
     dethdr["NAXIS"] = 2
@@ -52,18 +53,19 @@ def _implane_header():
 def _fov_header():
     w, h = 100, 100
     skywcs = wcs.WCS(naxis=2)
-    skywcs.wcs.ctype = ["RA---TAN", "DEC--TAN"]
+    # skywcs.wcs.ctype = ["RA---TAN", "DEC--TAN"]
+    skywcs.wcs.ctype = ["LINEAR", "LINEAR"]
     skywcs.wcs.cdelt = [0.2, 0.2]
     skywcs.wcs.cunit = ["arcsec", "arcsec"]
     skywcs.wcs.crval = [0, 0]
-    skywcs.wcs.crpix = [w / 2, h / 2]
+    skywcs.wcs.crpix = [(w + 1) / 2, (h + 1) / 2]
 
     detwcs = wcs.WCS(naxis=2, key="D")
     detwcs.wcs.ctype = ["LINEAR", "LINEAR"]
     detwcs.wcs.cdelt = [1, 1]
     detwcs.wcs.cunit = ["mm", "mm"]
     detwcs.wcs.crval = [0, 0]
-    detwcs.wcs.crpix = [w / 2, h / 2]
+    detwcs.wcs.crpix = [(w + 1) / 2, (h + 1) / 2]
 
     skyhdr = skywcs.to_header()
     dethdr = detwcs.to_header()
@@ -99,11 +101,3 @@ def _long_micado_slit_header():
     header["APERTURE"] = 0
 
     return header
-
-
-
-
-
-
-
-

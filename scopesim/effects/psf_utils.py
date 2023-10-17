@@ -1,4 +1,6 @@
 import numpy as np
+import logging
+
 from scipy import ndimage as spi
 from scipy.interpolate import RectBivariateSpline, griddata
 from scipy.ndimage import zoom
@@ -95,11 +97,11 @@ def make_strehl_map_from_table(tbl, pixel_scale=1*u.arcsec):
                                          np.arange(-25, 26))).T,
                     method="nearest")
 
-    hdr = imp_utils.header_from_list_of_xy(np.array([-25, 25]) / 3600.,
-                                           np.array([-25, 25]) / 3600.,
-                                           pixel_scale=1/3600)
+    new_wcs, _ = imp_utils.create_wcs_from_points(np.array([[-25, -25],
+                                                            [25, 25]]),
+                                                  pixel_scale=1, arcsec=True)
 
-    map_hdu = fits.ImageHDU(header=hdr, data=smap)
+    map_hdu = fits.ImageHDU(header=new_wcs.to_header(), data=smap)
 
     return map_hdu
 
@@ -113,6 +115,7 @@ def rescale_kernel(image, scale_factor, spline_order=None):
 
     # Re-centre kernel
     im_shape = image.shape
+    # TODO: this might be another off-by-something
     dy, dx = np.divmod(np.argmax(image), im_shape[1]) - np.array(im_shape) // 2
     if dy > 0:
         image = image[2*dy:, :]
@@ -129,14 +132,23 @@ def rescale_kernel(image, scale_factor, spline_order=None):
     return image
 
 
-def cutout_kernel(image, fov_header):
+def cutout_kernel(image, fov_header, kernel_header=None):
+    from astropy.wcs import WCS
+
+    wk = WCS(kernel_header)
     h, w = image.shape
     xcen, ycen = 0.5 * w, 0.5 * h
+    xcen_w, ycen_w = wk.wcs_world2pix(np.array([[0., 0.]]), 0).squeeze().round(7)
+    if xcen != xcen_w or ycen != ycen_w:
+        logging.warning("PSF center off")
+
     dx = 0.5 * fov_header["NAXIS1"]
     dy = 0.5 * fov_header["NAXIS2"]
-    x0, x1 = max(0, int(xcen-dx)), min(w, int(xcen+dx))
-    y0, y1 = max(0, int(ycen-dy)), min(w, int(ycen+dy))
-    image_cutout = image[y0:y1, x0:x1]
+
+    # TODO: this is WET with imp_utils, somehow, I think
+    x0, x1 = max(0, np.floor(xcen-dx).astype(int)), min(w, np.ceil(xcen+dx).astype(int))
+    y0, y1 = max(0, np.floor(ycen-dy).astype(int)), min(w, np.ceil(ycen+dy).astype(int))
+    image_cutout = image[y0:y1+1, x0:x1+1]
 
     return image_cutout
 
@@ -145,9 +157,8 @@ def get_strehl_cutout(fov_header, strehl_imagehdu):
 
     image = np.zeros((fov_header["NAXIS2"], fov_header["NAXIS1"]))
     canvas_hdu = fits.ImageHDU(header=fov_header, data=image)
-    canvas_hdu = imp_utils.add_imagehdu_to_imagehdu(strehl_imagehdu,
-                                                    canvas_hdu, spline_order=0,
-                                                    conserve_flux=False)
+    canvas_hdu = imp_utils.add_imagehdu_to_imagehdu(
+        strehl_imagehdu, canvas_hdu, spline_order=0, conserve_flux=False)
     canvas_hdu.data = canvas_hdu.data.astype(int)
 
     return canvas_hdu
