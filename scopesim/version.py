@@ -1,7 +1,14 @@
 from importlib import metadata
 version = metadata.version(__package__)
-date = '2023-09-14 14:00:00 GMT'
+date = '2023-10-18 12:00:00 GMT'
 yaml_descriptions = """
+- version : 0.7.0
+  date : 2023-10-18
+  comment : Off-by-one fix.
+  changes :
+  - Fix a long-standing bug regarding the internal implementation of WCS coordinates, which had multiple consequences, see #276 for details.
+  - This fix might break some existing codes using work-arounds for the bug described above.
+
 - version : 0.6.2
   date : 2023-09-14
   comment : Patch with bugfixes and code improvements
