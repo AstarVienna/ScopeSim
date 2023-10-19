@@ -14,7 +14,8 @@ from scopesim import rc
 
 @pytest.mark.webtest
 def test_package_list_loads():
-    pkgs = db.get_server_package_list()
+    with pytest.warns(DeprecationWarning):
+        pkgs = db.get_server_package_list()
     assert isinstance(pkgs, dict)
     assert "test_package" in pkgs
     assert "latest" in pkgs["test_package"]
@@ -128,7 +129,8 @@ class TestDownloadPackage:
     def test_downloads_package_successfully(self):
         pkg_path = "instruments/test_package.zip"
 
-        save_paths = db.download_package(pkg_path)
+        with pytest.warns(DeprecationWarning):
+            save_paths = db.download_package(pkg_path)
         assert os.path.exists(save_paths[0])
 
     # This no longer raises, but logs an error. This is intended.
@@ -233,7 +235,8 @@ class TestDownloadGithubFolder:
 @pytest.mark.webtest
 def test_old_download_package_signature():
     with TemporaryDirectory() as tmpdir:
-        db.download_package(["instruments/test_package.zip"], save_dir=tmpdir)
+        with pytest.warns(DeprecationWarning):
+            db.download_package(["instruments/test_package.zip"], save_dir=tmpdir)
         version_path = os.path.join(tmpdir, "test_package", "version.yaml")
         with open(version_path) as f:
             version_dict = yaml.full_load(f)

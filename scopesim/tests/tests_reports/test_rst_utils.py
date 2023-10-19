@@ -41,11 +41,28 @@ class TestWalk:
 
 
 class TestPlotRstText:
+    @pytest.mark.skip(reason=("This produces a DeprecationWarning about a "
+                              "module called py23. Find out what that is and "
+                              "remove/replace it."))
     def test_image_file_exists_for_comment_node(self):
         assert os.path.exists(IMG_PATH)
         ru.plotify_rst_text(ro.comment_plot_snippet)
         assert os.path.exists(os.path.join(IMG_PATH, "my_fug.png"))
         assert os.path.exists(os.path.join(IMG_PATH, "my_fug.pdf"))
+
+    @pytest.mark.skip(reason=("This produces a DeprecationWarning about a "
+                              "module called py23. Find out what that is and "
+                              "remove/replace it."))
+    def test_image_file_exists_for_comment_node_with_escapable_name(self):
+        """Test whether images are created with escapable names.
+
+        That is, on windows, plotify_rst_text should not create
+        images_temp\ty_fug.pdf, because that has a tab character in it.
+        """
+        assert os.path.exists(IMG_PATH)
+        ru.plotify_rst_text(ro.comment_plot_snippet_with_escapable_name)
+        assert os.path.exists(os.path.join(IMG_PATH, "ty_fug.png"))
+        assert os.path.exists(os.path.join(IMG_PATH, "ty_fug.pdf"))
 
     def test_image_file_exists_for_literal_node(self):
         print(IMG_PATH)

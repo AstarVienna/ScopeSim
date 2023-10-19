@@ -6,6 +6,13 @@ comment_plot_snippet = """
     ---
     plt.plot([0,1], [0,1])"""
 
+comment_plot_snippet_with_escapable_name = """
+..
+    action: plot
+    format: [pdf, png]
+    name: ty_fug
+    ---
+    plt.plot([0,1], [0,1])"""
 
 literal_plot_snippet = """
 .. code::

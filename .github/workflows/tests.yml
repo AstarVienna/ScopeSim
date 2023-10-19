@@ -11,6 +11,9 @@ on:
       - master
       - dev_master
       - dev_spectroscopy
+  schedule:
+    - # Run every day at 5:00 UTC
+    - cron: "0 5 * * *"
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:

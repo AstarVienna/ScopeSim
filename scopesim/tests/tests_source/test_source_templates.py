@@ -54,7 +54,7 @@ class TestUniformIllumination:
     def test_makes_source_and_runs_through_basic_instrument(self):
         opt = load_example_optical_train()
 
-        src = src_ts.uniform_illumination(xs=[-50, 50], ys=[20, 30],
+        src = src_ts.uniform_illumination(xs=[-50, 50], ys=[-20, 30],
                                           pixel_scale=1, flux=1*u.mag)
         opt.observe(src)
         im = opt.image_planes[0].data
@@ -63,7 +63,7 @@ class TestUniformIllumination:
             plt.imshow(im)
             plt.show()
 
-        assert im[512, 512] > im[0, 0]
+        assert im[512, 512] > 10 * im[0, 0]
 
     def test_loads_for_micado_15arcsec_slit(self):
         illum = src_ts.uniform_illumination(xs=[-8, 8], ys=[-0.03, 0.03],

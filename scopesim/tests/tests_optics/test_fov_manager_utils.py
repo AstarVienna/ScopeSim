@@ -159,7 +159,8 @@ class TestGetImagingHeaders:
             plt.subplot(121)
             for hdr in hdrs:
                 from scopesim.optics.image_plane_utils import calc_footprint
-                x, y = calc_footprint(hdr)
+                xy = calc_footprint(hdr)
+                x, y = xy[:, 0], xy[:, 1]
                 plt.plot(x*3600, y*3600)
                 plt.title("Sky plane")
                 plt.xlabel("[arcsec]")
@@ -167,7 +168,8 @@ class TestGetImagingHeaders:
             plt.subplot(122)
             for hdr in hdrs:
                 from scopesim.optics.image_plane_utils import calc_footprint
-                x, y = calc_footprint(hdr, "D")
+                xy = calc_footprint(hdr, "D")
+                x, y = xy[:, 0], xy[:, 1]
                 plt.plot(x, y)
                 plt.title("Detector focal plane")
                 plt.xlabel("[mm]")
@@ -201,14 +203,16 @@ class TestGetImagingFOVs:
             from scopesim.optics.image_plane_utils import calc_footprint
             plt.subplot(121)
             for fov in fovs:
-                x, y = calc_footprint(fov.header)
+                xy = calc_footprint(fov.header)
+                x, y = xy[:, 0], xy[:, 1]
                 plt.fill(x*3600, y*3600, alpha=0.1, c="b")
                 plt.title("Sky plane")
                 plt.xlabel("[arcsec]")
 
             plt.subplot(122)
             for fov in fovs:
-                x, y = calc_footprint(fov.header, "D")
+                xy = calc_footprint(fov.header, "D")
+                x, y = xy[:, 0], xy[:, 1]
                 plt.fill(x, y)
                 plt.title("Detector focal plane")
                 plt.xlabel("[mm]")
