@@ -95,4 +95,5 @@ filterwarnings = [
     "ignore:Blowfish*:UserWarning",
     # Not sure what that is but it's everywhere...
     "ignore:'cgi'*:DeprecationWarning",
+    "ignore:The py23*:DeprecationWarning",
 ]
