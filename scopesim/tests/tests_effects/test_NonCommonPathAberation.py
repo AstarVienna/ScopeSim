@@ -104,7 +104,7 @@ class TestApplyTo:
         assert np.all(new_implane.data == implane.data)
 
         if PLOTS:
-            plt.imshow(new_implane.image[:5,:5])
+            plt.imshow(new_implane.image[:5, :5])
             plt.show()
 
 
@@ -112,8 +112,8 @@ class TestFovGrid:
     def test_returns_currsys_edge_waves_for_no_input(self, ncpa_kwargs, fov_Ks):
         ncpa = NonCommonPathAberration(**ncpa_kwargs)
         waves = ncpa.fov_grid()
-        wave_min = rc.__currsys__["!SIM.spectral.wave_min"]
-        wave_max = rc.__currsys__["!SIM.spectral.wave_max"]
+        wave_min = from_currsys("!SIM.spectral.wave_min")
+        wave_max = from_currsys("!SIM.spectral.wave_max")
         assert waves[0].to(u.um).value == approx(wave_min)
         assert waves[-1].to(u.um).value == approx(wave_max)
 

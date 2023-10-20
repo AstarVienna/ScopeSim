@@ -13,7 +13,8 @@ class TestEffectInit:
         assert isinstance(Effect(), Effect)
 
     def test_initalising_with_arrays_creates_table(self):
-        eff = Effect(array_dict={"x": [-1, 0, 1], "y": [1, 0, 1],
+        eff = Effect(array_dict={"x": [-1, 0, 1],
+                                 "y": [1, 0, 1],
                                  "flux": [1, 2, 3]})
         assert isinstance(eff, Effect)
         assert np.sum(eff.table["flux"]) == 6
@@ -30,7 +31,9 @@ class TestEffectReport:
         det_list = eo._detector_list()
         det_list.meta.update(
             {"report_plot_include": False,
-             "report_table_caption": "The dimensions of the MICADO central detector"})
+             "report_table_caption":
+                 "The dimensions of the MICADO central detector"}
+        )
         rst_str = det_list.report()
         assert "MICADO H4RG-15 FPA" in rst_str
         assert "E-MCD-FPA-572089EB.uda" in rst_str

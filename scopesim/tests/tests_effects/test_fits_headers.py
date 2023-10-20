@@ -94,20 +94,20 @@ class TestExtraFitsKeywordsApplyTo:
         header_dict = {"ext_type": "PrimaryHDU",
                        "keywords":
                            {"SIM":
-                                {"dark_current": "#dark_current.value"}
+                            {"dark_current": "#dark_current.value"}
                             }
                        }
         eff = fh.ExtraFitsKeywords(header_dict=header_dict)
         with pytest.raises(ValueError):
-            hdul = eff.apply_to(comb_hdul)
+            _ = eff.apply_to(comb_hdul)
 
     def test_resolves_hash_strings_with_opticaltrain(self, simplecado_opt,
-                                                      comb_hdul):
+                                                     comb_hdul):
         header_dict = {"ext_name": "PriHDU",
                        "keywords":
                            {"SIM":
-                                {"dark_current": "#dark_current.value",
-                                 "telescope_area": "!TEL.area"}
+                            {"dark_current": "#dark_current.value",
+                             "telescope_area": "!TEL.area"}
                             }
                        }
         eff = fh.ExtraFitsKeywords(header_dict=header_dict)
@@ -194,17 +194,18 @@ class TestFlattenDict:
     def test_resolves_bang_strings(self):
         dic = {"SIM": {"random_seed": "!SIM.random.seed"}}
         flat_dict = fh.flatten_dict(dic, resolve=True)
-        assert flat_dict["SIM random_seed"] == None
+        assert flat_dict["SIM random_seed"] is None
 
     def test_resolves_hash_strings(self, simplecado_opt):
         dic = {"SIM": {"dark_current": "#dark_current.value"}}
-        flat_dict = fh.flatten_dict(dic, resolve=True,
-                                    optics_manager=simplecado_opt.optics_manager)
+        flat_dict = fh.flatten_dict(
+            dic, resolve=True, optics_manager=simplecado_opt.optics_manager)
         assert flat_dict["SIM dark_current"] == 0.1
 
 
 class TestEffectsMetaKeywordsApplyTo:
-    def test_effect_meta_in_header(self, yaml_string, simplecado_opt, comb_hdul):
+    def test_effect_meta_in_header(self, yaml_string, simplecado_opt,
+                                   comb_hdul):
         eff = fh.EffectsMetaKeywords()
         hdul = eff.apply_to(comb_hdul, optical_train=simplecado_opt)
         pri_hdr = hdul[0].header
@@ -214,7 +215,8 @@ class TestEffectsMetaKeywordsApplyTo:
 
     def test_effect_meta_in_secondary_header(self, yaml_string, simplecado_opt,
                                              comb_hdul):
-        eff = fh.EffectsMetaKeywords(ext_number=1, keyword_prefix="HIERARCH GOKU")
+        eff = fh.EffectsMetaKeywords(ext_number=1,
+                                     keyword_prefix="HIERARCH GOKU")
         hdul = eff.apply_to(comb_hdul, optical_train=simplecado_opt)
         pri_hdr = hdul[0].header
         sec_hdr = hdul[1].header
@@ -238,7 +240,8 @@ class TestSourceDescriptionFitsKeywordsApplyTo:
         assert pri_hdr["SIM SRC0 hello"] == "world"
         assert pri_hdr["SIM SRC1 servus"] == "oida"
 
-    def test_value_is_longer_than_80_characters(self, simplecado_opt, comb_hdul):
+    def test_value_is_longer_than_80_characters(self, simplecado_opt,
+                                                comb_hdul):
         star1, star2 = star(flux=1*u.ABmag), star()
         star1.meta["function_call"] *= 5
 
@@ -289,8 +292,8 @@ class TestAllFitsKeywordEffects:
                                    "dark_current": "#dark_current.value"
                                }
                            },
-                            "SIM":
-                                {"hello": "world"}
+                           "SIM":
+                               {"hello": "world"}
                        }
                    }
                    }
@@ -306,13 +309,10 @@ class TestAllFitsKeywordEffects:
         simplecado_opt.observe(star1)
         hdul = simplecado_opt.readout()[0]
 
-        # for key in hdul[0].header:
-        #     print(key, ":", hdul[0].header[key])
-
         hdr = hdul[0].header
         assert hdr["ESO INS dark_current"] == 0.1
         assert hdr["ESO INS pixel_scale"] == 0.004
         assert hdr["SIM EFF0 class"] == "DetectorList"
         assert hdr["SIM SRC0 class"] == "Table"
         assert hdr["SIM SRC0 photometric_system"] == "ab"
-        assert hdr["SIM CONFIG SIM random seed"] == None
+        assert hdr["SIM CONFIG SIM random seed"] is None
