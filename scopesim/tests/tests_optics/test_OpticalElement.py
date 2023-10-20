@@ -20,7 +20,6 @@ def detector_yaml_dict():
     return _detector_yaml_dict()
 
 
-@pytest.mark.usefixtures("atmo_yaml_dict")
 class TestOpticalElementInit:
     def test_initialised_with_nothing(self):
         assert isinstance(opt_elem.OpticalElement(),
@@ -51,7 +50,6 @@ class TestOpticalElementInit:
             assert opt_el.effects[ii].include is False
 
 
-@pytest.mark.usefixtures("detector_yaml_dict")
 class TestOpticalElementGetZOrderEffects:
     @pytest.mark.parametrize("z_orders, n", [(0, 2), (100, 1), ([200, 299], 1)])
     def test_returns_the_effects_with_z_values(self, z_orders, n,
@@ -60,14 +58,13 @@ class TestOpticalElementGetZOrderEffects:
         assert len(opt_el.get_z_order_effects(z_orders)) == n
 
 
-@pytest.mark.usefixtures("detector_yaml_dict")
 class TestGetItem:
     def test_returns_effect_for_normal_string(self, detector_yaml_dict):
         opt_el = opt_elem.OpticalElement(detector_yaml_dict)
         eff = opt_el["detector_qe_curve"]
         assert isinstance(eff, Effect)
 
-    def test_returns_effect_for_normal_string(self, detector_yaml_dict):
+    def test_returns_effect_for_hash_string(self, detector_yaml_dict):
         opt_el = opt_elem.OpticalElement(detector_yaml_dict)
         value = opt_el["#detector_qe_curve.filename"]
         assert value == "TER_blank.dat"
@@ -80,8 +77,6 @@ class TestGetItem:
         assert len(opt_el[key]) == 0
 
 
-@pytest.mark.usefixtures("detector_yaml_dict")
 class TestOpticalElementSurfaceListProperty:
     def test_returns_empty_list_if_no_surface_list_given(self):
         pass
-

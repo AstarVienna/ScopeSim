@@ -45,7 +45,6 @@ class TestInit:
     def test_initialises_with_nothing(self):
         assert isinstance(SpectralTraceList(), SpectralTraceList)
 
-    @pytest.mark.usefixtures("full_trace_list")
     def test_initialises_with_a_hdulist(self, full_trace_list):
         spt = SpectralTraceList(hdulist=full_trace_list)
         assert isinstance(spt, SpectralTraceList)
@@ -91,6 +90,7 @@ class TestRectification:
 
 
 class TestSpectralTraceListWheel:
+    @pytest.mark.usefixtures("no_file_error")
     def test_basic_init(self):
         """
         This is a super basic test just to see the thing basically works and

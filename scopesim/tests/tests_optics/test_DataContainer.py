@@ -27,7 +27,6 @@ def data_files():
     return abs_paths
 
 
-@pytest.mark.usefixtures("data_files")
 class TestInit:
     def test_initialised_with_no_input(self):
         dat = DataContainer()
@@ -51,7 +50,6 @@ class TestInit:
         assert dat.is_fits is False
 
 
-@pytest.mark.usefixtures("data_files")
 class TestGetData:
     def test_no_file_returns_no_input(self):
         dat = DataContainer()

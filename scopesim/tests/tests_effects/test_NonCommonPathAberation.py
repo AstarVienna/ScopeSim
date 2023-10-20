@@ -46,7 +46,6 @@ def ncpa_kwargs():
     return kwargs
 
 
-@pytest.mark.usefixtures("ncpa_kwargs")
 class TestInit:
     def test_initialises_with_nothing_but_pixel_scale(self):
         ncpa = NonCommonPathAberration(pixel_scale=0.004)
@@ -62,7 +61,6 @@ class TestInit:
         assert ncpa.table["wfe_rms"][0] == 20
 
 
-@pytest.mark.usefixtures("ncpa_kwargs", "fov_Ks")
 class TestGetKernel:
     def test_returns_total_wfe_in_units_of_table(self, ncpa_kwargs, fov_Ks):
         ncpa = NonCommonPathAberration(**ncpa_kwargs)
@@ -89,7 +87,6 @@ class TestGetKernel:
             plt.show()
 
 
-@pytest.mark.usefixtures("ncpa_kwargs", "fov_Ks")
 class TestApplyTo:
     def test_convolves_kernel_with_fov_image(self, ncpa_kwargs, fov_Ks):
         ncpa = NonCommonPathAberration(**ncpa_kwargs)
@@ -116,7 +113,6 @@ class TestApplyTo:
             plt.show()
 
 
-@pytest.mark.usefixtures("ncpa_kwargs", "fov_Ks")
 class TestFovGrid:
     def test_returns_currsys_edge_waves_for_no_input(self, ncpa_kwargs, fov_Ks):
         ncpa = NonCommonPathAberration(**ncpa_kwargs)

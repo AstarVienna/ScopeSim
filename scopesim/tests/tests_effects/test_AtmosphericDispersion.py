@@ -3,7 +3,6 @@ from pytest import approx
 
 import numpy as np
 
-from scopesim import rc
 from scopesim.effects.shifts import AtmosphericDispersion, \
                                     get_pixel_border_waves_from_atmo_disp
 
@@ -27,7 +26,6 @@ def atmo_yaml_dict():
     return atmo_dict
 
 
-@pytest.mark.usefixtures("atmo_yaml_dict")
 class TestInit:
     def test_throws_error_when_initialised_with_nothing(self):
         with pytest.raises(ValueError):
@@ -46,7 +44,6 @@ class TestInit:
             isinstance(AtmosphericDispersion(), AtmosphericDispersion)
 
 
-@pytest.mark.usefixtures("atmo_yaml_dict")
 class TestFovGrid:
     def test_returns_list_of_3_arrays_with_correct_which(self, atmo_yaml_dict):
         atmo_disp = AtmosphericDispersion(**atmo_yaml_dict["properties"])

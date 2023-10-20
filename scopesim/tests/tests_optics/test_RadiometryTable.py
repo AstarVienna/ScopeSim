@@ -40,7 +40,7 @@ def input_tables():
     return [str(MOCK_DIR / fname) for fname in filenames]
 
 
-@pytest.mark.usefixtures("input_tables")
+@pytest.mark.usefixtures("patch_mock_path_micado")
 class TestRadiometryTableInit:
     def test_initialises_with_no_input(self):
         rt = opt_rad.RadiometryTable()
@@ -58,7 +58,7 @@ class TestRadiometryTableInit:
         assert len(rt.table) == 19
 
 
-@pytest.mark.usefixtures("input_tables")
+@pytest.mark.usefixtures("patch_mock_path_micado")
 class TestRadiometryTableAddSurfaceList:
     def test_append_single_table_from_filename(self, input_tables):
         rad_table = opt_rad.RadiometryTable()
@@ -82,7 +82,7 @@ class TestRadiometryTableAddSurfaceList:
         assert np.all(name in rad_table.surface for name in names)
 
 
-@pytest.mark.usefixtures("input_tables")
+@pytest.mark.usefixtures("patch_mock_path_micado")
 class TestRadiometryTableAddSurface:
     @pytest.mark.parametrize("position", (0, 2, 5))
     def test_add_empty_surface_to_full_table(self, input_tables, position):
@@ -101,7 +101,7 @@ class TestRadiometryTableAddSurface:
             rt.add_surface(surf, "new_surf", 0)
 
 
-@pytest.mark.usefixtures("input_tables")
+@pytest.mark.usefixtures("patch_mock_path_micado")
 class TestRadiometryTableGetThroughput:
     def test_return_spectral_element_from_get_throughput(self, input_tables):
         rt = opt_rad.RadiometryTable(input_tables)
@@ -112,11 +112,7 @@ class TestRadiometryTableGetThroughput:
         rt = opt_rad.RadiometryTable(input_tables)
         thru = rt.get_throughput(start=1, end=3)
         assert isinstance(thru, SpectralElement)
-
-        if float(synphot_version()) < 0.2:
-            assert thru.model.n_submodels() == 2
-        else:
-            assert thru.model.n_submodels == 2
+        assert thru.model.n_submodels == 2
 
     def test_return_none_for_empty_radiometry_table(self):
         rt = opt_rad.RadiometryTable()
@@ -124,7 +120,7 @@ class TestRadiometryTableGetThroughput:
         assert thru is None
 
 
-@pytest.mark.usefixtures("input_tables")
+@pytest.mark.usefixtures("patch_mock_path_micado")
 class TestRadiometryTableGetEmission:
     def test_return_spectral_element_from_get_throughput(self, input_tables):
         rt = opt_rad.RadiometryTable(input_tables)

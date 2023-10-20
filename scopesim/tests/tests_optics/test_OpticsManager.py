@@ -30,7 +30,6 @@ def detector_yaml_dict():
     return _detector_yaml_dict()
 
 
-@pytest.mark.usefixtures("detector_yaml_dict", "inst_yaml_dict")
 class TestOpticsManager:
     def test_initialises_with_nothing(self):
         assert isinstance(opt_mgr.OpticsManager(),
@@ -54,7 +53,7 @@ class TestOpticsManager:
         assert isinstance(opt_man.optical_elements[0].effects[0], Effect)
 
 
-@pytest.mark.usefixtures("detector_yaml_dict")
+@pytest.mark.usefixtures("patch_mock_path")
 class TestOpticsManagerImagePlaneHeader:
     def test_makes_image_plane_header_correctly(self, detector_yaml_dict):
         opt_man = opt_mgr.OpticsManager(detector_yaml_dict)
@@ -63,7 +62,6 @@ class TestOpticsManagerImagePlaneHeader:
         assert isinstance(opt_man.image_plane_headers[0], fits.Header)
 
 
-@pytest.mark.usefixtures("detector_yaml_dict", "inst_yaml_dict")
 class TestGetItem:
     def test_returns_optical_element(self, detector_yaml_dict):
         opt_man = opt_mgr.OpticsManager([detector_yaml_dict])

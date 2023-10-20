@@ -1,4 +1,7 @@
-from pathlib import Path
+
+import pytest
+from unittest.mock import patch
+
 import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib.colors import LogNorm
@@ -6,15 +9,20 @@ from astropy import units as u
 
 import scopesim as sim
 from scopesim.source import source_templates as st
+from scopesim.system_dict import UniqueList
 
 
 PLOTS = False
 
-inst_pkgs = Path(__file__).parent.parent / "mocks"
 
-sim.rc.__currsys__["!SIM.file.local_packages_path"] = inst_pkgs
+@pytest.fixture(scope="class")
+def patch_mock_path_basicinst(mock_dir):
+    with patch("scopesim.rc.__search_path__",
+               UniqueList([mock_dir / "basic_instrument"])):
+        yield
 
 
+@pytest.mark.usefixtures("patch_mock_path_basicinst")
 class TestLoadsUserCommands:
     def test_loads(self):
         cmd = sim.UserCommands(use_instrument="basic_instrument")
@@ -22,6 +30,7 @@ class TestLoadsUserCommands:
         assert cmd["!INST.pixel_scale"] == 0.2
 
 
+@pytest.mark.usefixtures("patch_mock_path_basicinst")
 class TestLoadsOpticalTrain:
     def test_loads(self):
         cmd = sim.UserCommands(use_instrument="basic_instrument")
@@ -31,6 +40,7 @@ class TestLoadsOpticalTrain:
         assert opt["#slit_wheel.current_slit!"] == "narrow"
 
 
+@pytest.mark.usefixtures("patch_mock_path_basicinst")
 class TestObserveImagingMode:
     def test_runs(self):
         src = st.star(flux=9)
@@ -53,6 +63,7 @@ class TestObserveImagingMode:
         assert det_im[505:520, 505:520].sum() > 3e6
 
 
+@pytest.mark.usefixtures("patch_mock_path_basicinst")
 class TestObserveSpectroscopyMode:
     """
     Test the number of spots along the three spectral traces.
@@ -104,6 +115,7 @@ class TestObserveSpectroscopyMode:
             assert round(trace_flux / spot_flux) == round(n_spots[i])
 
 
+@pytest.mark.usefixtures("patch_mock_path_basicinst")
 class TestObserveIfuMode:
     def test_runs(self):
         wave = np.arange(0.7, 2.5, 0.001)
@@ -166,6 +178,7 @@ class TestObserveIfuMode:
             plt.show()
 
 
+@pytest.mark.usefixtures("patch_mock_path_basicinst")
 class TestFitsHeader:
     def test_source_keywords_in_header(self):
         src = st.star()

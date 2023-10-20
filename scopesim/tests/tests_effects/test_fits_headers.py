@@ -66,7 +66,7 @@ def yaml_string():
         grias_di: woed
         zdrasviute: mir
         salud: el mundo
-    EXTNAME: "DET++.DATA"    
+    EXTNAME: "DET++.DATA"
 """
 
 
@@ -74,19 +74,17 @@ class TestExtraFitsKeywordsInit:
     def test_initialises_with_nothing(self):
         assert isinstance(fh.ExtraFitsKeywords(), fh.ExtraFitsKeywords)
 
-    @pytest.mark.usefixtures("yaml_string")
     def test_initialies_with_yaml_string(self, yaml_string):
         eff = fh.ExtraFitsKeywords(yaml_string=yaml_string)
         assert isinstance(eff, fh.ExtraFitsKeywords)
 
 
-@pytest.mark.usefixtures("comb_hdul")
 class TestExtraFitsKeywordsApplyTo:
     def test_works_if_no_resolve_or_opticaltrain(self, comb_hdul):
         header_dict = {"ext_type": "PrimaryHDU",
                        "unresolved_keywords":
                            {"SIM":
-                                {"dark_current": "#dark_current.value"}
+                            {"dark_current": "#dark_current.value"}
                             }
                        }
         eff = fh.ExtraFitsKeywords(header_dict=header_dict)
@@ -106,7 +104,6 @@ class TestExtraFitsKeywordsApplyTo:
         with pytest.raises(ValueError):
             hdul = eff.apply_to(comb_hdul)
 
-    @pytest.mark.usefixtures("simplecado_opt")
     def test_resolves_hash_strings_with_opticaltrain(self, simplecado_opt,
                                                       comb_hdul):
         header_dict = {"ext_name": "PriHDU",
@@ -123,8 +120,6 @@ class TestExtraFitsKeywordsApplyTo:
         assert hdul[0].header["HIERARCH SIM dark_current"] == 0.1
         assert hdul[0].header["HIERARCH SIM telescope_area"] == 0.
 
-    @pytest.mark.usefixtures("yaml_string")
-    @pytest.mark.usefixtures("simplecado_opt")
     def test_full_yaml_string(self, yaml_string, simplecado_opt, comb_hdul):
         eff = fh.ExtraFitsKeywords(yaml_string=yaml_string)
         hdul = eff.apply_to(comb_hdul, optical_train=simplecado_opt)
@@ -144,7 +139,6 @@ class TestExtraFitsKeywordsApplyTo:
         assert hdul[1].header["EXTNAME"] == "DET1.DATA"
 
 
-@pytest.mark.usefixtures("comb_hdul")
 class TestGetRelevantExtensions:
     def test_works_for_ext_name(self, comb_hdul):
         dic = {"ext_name": "PriHDU"}
@@ -190,7 +184,7 @@ class TestFlattenDict:
                     "area": ("!TEL.area", "area"),
                     "SRC0": {"scaling_unit": u.mag},
                 },
-           },
+            },
         }
         flat_dict = fh.flatten_dict(dic)
         assert flat_dict["HIERARCH ESO ATM PWV"] == 1.0
@@ -205,7 +199,6 @@ class TestFlattenDict:
         flat_dict = fh.flatten_dict(dic, resolve=True)
         assert flat_dict["SIM random_seed"] == None
 
-    @pytest.mark.usefixtures("simplecado_opt")
     def test_resolves_hash_strings(self, simplecado_opt):
         dic = {"SIM": {"dark_current": "#dark_current.value"}}
         flat_dict = fh.flatten_dict(dic, resolve=True,
@@ -213,9 +206,6 @@ class TestFlattenDict:
         assert flat_dict["SIM dark_current"] == 0.1
 
 
-@pytest.mark.usefixtures("comb_hdul")
-@pytest.mark.usefixtures("yaml_string")
-@pytest.mark.usefixtures("simplecado_opt")
 class TestEffectsMetaKeywordsApplyTo:
     def test_effect_meta_in_header(self, yaml_string, simplecado_opt, comb_hdul):
         eff = fh.EffectsMetaKeywords()
@@ -237,8 +227,6 @@ class TestEffectsMetaKeywordsApplyTo:
         assert sec_hdr["GOKU EFF0 array_dict pixsize"] == "list:[0.015]"
 
 
-@pytest.mark.usefixtures("simplecado_opt")
-@pytest.mark.usefixtures("comb_hdul")
 class TestSourceDescriptionFitsKeywordsApplyTo:
     def test_source_meta_keywords_in_header(self, simplecado_opt, comb_hdul):
         star1, star2 = star(flux=1*u.ABmag), star()
@@ -274,8 +262,6 @@ class TestSourceDescriptionFitsKeywordsApplyTo:
         assert len(tmp_hdr["FNSRC0"]) == 120
 
 
-@pytest.mark.usefixtures("simplecado_opt")
-@pytest.mark.usefixtures("comb_hdul")
 class TestSimulationConfigFitsKeywordsApplyTo:
     def test_sys_dict_dicts_are_added_to_header(self, simplecado_opt, comb_hdul):
         eff = fh.SimulationConfigFitsKeywords()
@@ -294,7 +280,6 @@ class TestSimulationConfigFitsKeywordsApplyTo:
         assert pri_hdr["SIM CONFIG DET ndit"] == "!OBS.ndit"
 
 
-@pytest.mark.usefixtures("simplecado_opt")
 class TestAllFitsKeywordEffects:
     def test_works(self, simplecado_opt):
         hdr_dic = {"ext_type": "PrimaryHDU",

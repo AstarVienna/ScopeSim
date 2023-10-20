@@ -1,18 +1,13 @@
-from pathlib import Path
 import pytest
 from astropy.io import fits
 from matplotlib import pyplot as plt
 
+from scopesim import rc
 from scopesim.optics import FOVManager, FieldOfView, ImagePlane
 from scopesim.base_classes import PoorMansHeader
 import scopesim.effects as efs
 from scopesim.tests.mocks.py_objects import integr_spectroscopy_objects as iso
 
-from scopesim import rc
-
-
-MOCK_DIR = Path(__file__).parent.parent / "mocks/MICADO_SPEC/"
-rc.__search_path__.insert(0, MOCK_DIR)
 
 PLOTS = False
 
@@ -85,8 +80,6 @@ def shift_3d():
 
 @pytest.mark.skip(reason="Ignoring old Spectroscopy integration tests")
 class TestSpectroscopyFOVs:
-    @pytest.mark.usefixtures("ap_list", "spt_list", "det_list", "config_yaml",
-                             "point_source", "ext_source", "gauss_psf")
     def test_basic_spectroscopy_mode(self, ap_list, spt_list, det_list,
                                      config_yaml, point_source, ext_source,
                                      gauss_psf):
@@ -120,9 +113,6 @@ class TestSpectroscopyFOVs:
             plt.imshow(implane.data, origin="lower")
             plt.show()
 
-    @pytest.mark.usefixtures("ap_list_mixed", "spt_list_shear", "det_list",
-                             "config_yaml", "point_source", "ext_source",
-                             "gauss_psf", "shift_3d")
     def test_spec_with_different_apertures(self, ap_list_mixed, spt_list_shear,
                                            det_list, config_yaml, point_source,
                                            ext_source, gauss_psf, shift_3d):
@@ -157,9 +147,6 @@ class TestSpectroscopyFOVs:
             plt.imshow(implane.data, origin="lower")
             plt.show()
 
-    @pytest.mark.usefixtures("ap_list_single", "spt_list_single", "det_list",
-                             "config_yaml", "point_source", "ext_source",
-                             "gauss_psf", "shift_3d")
     def test_single_non_straight_traces(self, ap_list_single, spt_list_single,
                                         det_list, config_yaml, point_source,
                                         ext_source, gauss_psf):

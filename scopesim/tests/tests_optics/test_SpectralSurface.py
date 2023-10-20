@@ -51,7 +51,6 @@ def fixture_unity_flux():
     return flux, wave
 
 
-@pytest.mark.usefixtures("input_tables")
 class TestSpectralSurfaceInit:
     def test_can_exist_with_no_input(self):
         srf = opt_surf.SpectralSurface()
@@ -67,7 +66,6 @@ class TestSpectralSurfaceInit:
         assert len(srf.table) == 0
 
 
-@pytest.mark.usefixtures("input_tables")
 class TestSpectralSurfaceWavelengthProperty:
     def test_returns_quantity_array_from_file(self, input_tables):
         srf = opt_surf.SpectralSurface(filename=input_tables[0])
@@ -96,7 +94,6 @@ class TestSpectralSurfaceWavelengthProperty:
         assert np.all(srf.wavelength == [0.3, 3.0]*u.Angstrom)
 
 
-@pytest.mark.usefixtures("input_tables")
 class TestSpectralSurfaceTransmissionProperty:
     def test_returns_synphot_object_array_from_file(self, input_tables):
         srf = opt_surf.SpectralSurface(filename=input_tables[0])
@@ -226,7 +223,6 @@ class TestQuantify:
         assert utils.quantify(item, unit) == expected
 
 
-@pytest.mark.usefixtures("unity_flux")
 class TestMakeEmissionFromArray:
     @pytest.mark.parametrize("emission_unit",
                              ["ph s-1 m-2 um-1",
@@ -260,7 +256,6 @@ class TestMakeEmissionFromArray:
         assert isinstance(out, SourceSpectrum)
 
 
-@pytest.mark.usefixtures("input_tables")
 class TestMakeEmissionFromEmissivity:
     # .. todo:: write this test class
     @pytest.mark.parametrize("temp", [273, 273*u.deg_C])
@@ -269,7 +264,6 @@ class TestMakeEmissionFromEmissivity:
         out = surf_utils.make_emission_from_emissivity(273, srf.emissivity)
         assert isinstance(out, SourceSpectrum)
         assert out.model.temperature_0 == 273
-
 
     @pytest.mark.parametrize("temp", [283, 283*u.deg_C, 283*u.Kelvin])
     def test_blackbody_maximum_agrees_with_wien(self, temp):
@@ -292,7 +286,6 @@ class TestNormaliseBinnedFlux:
         pass
 
 
-@pytest.mark.usefixtures("ter_table")
 class TestIntegration:
     @pytest.mark.parametrize("col_name",
                              ["transmission", "emissivity", "reflection"])

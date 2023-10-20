@@ -9,11 +9,13 @@ class TestInit:
     def test_initialises_with_nothing(self):
         assert isinstance(FOVManager(preload_fovs=False), FOVManager)
 
+    @pytest.mark.usefixtures("patch_mock_path")
     def test_initialises_with_list_of_effects(self):
         effects = eo._mvs_effects_list()
         assert isinstance(FOVManager(effects, preload_fovs=False), FOVManager)
 
 
+@pytest.mark.usefixtures("patch_mock_path")
 class TestGenerateFovList:
     def test_returns_default_single_entry_fov_list_for_no_effects(self):
         fov_man = FOVManager(pixel_scale=1, plate_scale=1)

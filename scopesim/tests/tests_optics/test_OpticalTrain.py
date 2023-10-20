@@ -74,7 +74,6 @@ def simplecado_opt():
     return sim.OpticalTrain(cmd)
 
 
-@pytest.mark.usefixtures("cmds")
 class TestInit:
     def test_initialises_with_nothing(self):
         assert isinstance(OpticalTrain(), OpticalTrain)
@@ -105,7 +104,7 @@ class TestInit:
         assert isinstance(opt.yaml_dicts, list) and len(opt.yaml_dicts) > 0
 
 
-@pytest.mark.usefixtures("cmds", "im_src", "tbl_src")
+@pytest.mark.usefixtures("patch_mock_path")
 class TestObserve:
     """
     All tests here are for visual inspection.
@@ -209,7 +208,7 @@ class TestObserve:
         assert np.sum(opt.image_planes[0].data) > 0
 
 
-@pytest.mark.usefixtures("unity_cmds", "unity_src")
+@pytest.mark.usefixtures("patch_mock_path")
 class TestReadout:
     def test_readout_works_when_source_observed(self, unity_cmds, unity_src):
 
@@ -236,7 +235,6 @@ class TestReadout:
         assert np.median(hdu[1].data) == approx(np.pi / 4., rel=1e-2)
 
 
-@pytest.mark.usefixtures("simplecado_opt")
 class TestGetItems:
     def test_optical_element_returned_for_unique_name(self, simplecado_opt):
         print(type(simplecado_opt["test_detector"]))
@@ -255,7 +253,6 @@ class TestGetItems:
         assert len(effects) == 1
 
 
-@pytest.mark.usefixtures("simplecado_opt")
 class TestSetItems:
     def test_effect_kwarg_can_be_changed_using(self, simplecado_opt):
         simplecado_opt["dark_current"] = {"value": 0.2}
@@ -268,7 +265,6 @@ class TestSetItems:
         assert simplecado_opt["dark_current"].meta["include"] is False
 
 
-@pytest.mark.usefixtures("simplecado_opt")
 class TestListEffects:
     def test_effects_listed_in_table(self, simplecado_opt):
         assert isinstance(simplecado_opt.effects, Table)
@@ -280,7 +276,6 @@ class TestListEffects:
         print("\n", simplecado_opt.effects)
 
 
-@pytest.mark.usefixtures("simplecado_opt")
 class TestShutdown:
     """Test that fits files are closed on shutdown of OpticalTrain"""
 

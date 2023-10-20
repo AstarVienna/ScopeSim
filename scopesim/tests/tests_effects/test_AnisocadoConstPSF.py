@@ -52,7 +52,6 @@ class TestInit:
                               strehl=0.99, wavelength=0.8)
 
 
-@pytest.mark.usefixtures("psf_object", "fov_object")
 class TestGetKernel:
     def test_strehl_map_is_in_data(self, psf_object):
         assert isinstance(psf_object._file[0], fits.PrimaryHDU)

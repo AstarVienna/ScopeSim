@@ -45,9 +45,9 @@ def im_src():
     return _image_source()
 
 
+@pytest.mark.usefixtures("patch_mock_path")
 class TestObserve:
     # The CMD_unity_cmds.yaml sets the background emission to 0
-    @pytest.mark.usefixtures("cmds", "im_src", "tbl_src")
     def test_flux_is_conserved_for_no_bg_emission(self, cmds, tbl_src):
         opt = OpticalTrain(cmds)
         opt.observe(tbl_src)
@@ -67,7 +67,6 @@ class TestObserve:
         assert src_flux == approx(1)          # u.Unit("ph s-1")
         assert np.sum(im) == approx(src_flux * area, rel=2e-3)
 
-    @pytest.mark.usefixtures("non_unity_cmds", "tbl_src")
     def test_flux_is_conserved_for_yes_bg_emission(self, non_unity_cmds, tbl_src):
         """
         # originally all has 1 count. atmo TC=0.9, mirror TC=0.5. Hence:

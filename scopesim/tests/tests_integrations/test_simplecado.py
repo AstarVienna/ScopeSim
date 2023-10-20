@@ -65,7 +65,6 @@ def obs_dict():
             }
 
 
-@pytest.mark.usefixtures("obs_dict", "det_yaml")
 def test_simplecado(obs_dict, det_yaml):
 
     src = scopesim.source.source_templates.empty_sky()
@@ -86,9 +85,7 @@ def test_simplecado(obs_dict, det_yaml):
     assert np.all(hdu[1].data == 2.0)
 
 
-@pytest.mark.usefixtures("obs_dict", "det_yaml")
 def test_setitem_in_optical_train(obs_dict, det_yaml):
-    currsys = rc.__currsys__
     cmd = sim.commands.UserCommands(yamls=[det_yaml], properties=obs_dict)
 
     opt = sim.OpticalTrain(cmd)
