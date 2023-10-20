@@ -1,23 +1,22 @@
-from pathlib import Path
-
 import pytest
+from unittest.mock import patch
+
 from astropy.table import Table
 
-from scopesim import rc
 from scopesim.effects import DetectorList, DetectorWindow, ApertureMask
 
 
-MOCK_PATH = Path(__file__).parent.parent / "mocks/MICADO_SCAO_WIDE/"
-
-
-if MOCK_PATH not in rc.__search_path__:
-    rc.__search_path__ += [MOCK_PATH]
+@pytest.fixture(scope="class")
+def patch_mock_path_micado(mock_path_micado):
+    with patch("scopesim.rc.__search_path__", [mock_path_micado]):
+        yield
 
 
 class TestDetectorListInit:
     def test_initialises_with_nothing(self):
         assert isinstance(DetectorList(), DetectorList)
 
+    @pytest.mark.usefixtures("patch_mock_path_micado")
     def test_initialises_with_filename(self):
         det_list = DetectorList(filename="FPA_array_layout.dat",
                                 image_plane_id=0)
@@ -51,6 +50,7 @@ class TestDetectorListInit:
         assert hdr["NAXIS1"] == 100
 
 
+@pytest.mark.usefixtures("patch_mock_path_micado")
 class TestImagePlaneHeader:
     def test_header_is_sensical(self):
         det_list = DetectorList(filename="FPA_array_layout.dat",
@@ -150,6 +150,7 @@ class TestDetecotrHeaders:
             assert hdr["NAXIS2"] == 32
 
 
+@pytest.mark.usefixtures("patch_mock_path_micado")
 class TestFovGrid:
     def test_returns_aperture_mask_object(self):
         det_list = DetectorList(filename="FPA_array_layout.dat",
@@ -190,16 +191,41 @@ class TestDetectorWindowInit:
         assert det_window.data["x_size"][0] == 10
 
     def test_can_use_bang_strings_to_define_size(self):
-        rc.__currsys__["!DET.width"] = 4.2
-        rc.__currsys__["!DET.pixel_size"] = 0.1
-        det = DetectorWindow(pixel_size="!DET.pixel_size", x=0, y=0, width="!DET.width")
-        assert det.detector_headers()[0]["NAXIS1"] == 42.
+        patched = {"!DET.width": 4.2,
+                   "!DET.pixel_size": 0.1}
+        # FIXME: remove the second part of this asap
+        try:
+            with patch.dict("scopesim.rc.__currsys__", patched):
+                det = DetectorWindow(pixel_size="!DET.pixel_size", x=0, y=0,
+                                     width="!DET.width")
+                assert det.detector_headers()[0]["NAXIS1"] == 42.
+        except KeyError:
+            with patch.dict("scopesim.rc.__currsys__.cmds", patched):
+                det = DetectorWindow(pixel_size="!DET.pixel_size", x=0, y=0,
+                                     width="!DET.width")
+                assert det.detector_headers()[0]["NAXIS1"] == 42.
 
-        rc.__currsys__["!DET.width"] = 900.1
-        assert det.image_plane_header["NAXIS1"] == 9001
+        patched["!DET.width"] = 900.1
+        # FIXME: remove the second part of this asap
+        try:
+            with patch.dict("scopesim.rc.__currsys__", patched):
+                assert det.image_plane_header["NAXIS1"] == 9001
+        except KeyError:
+            with patch.dict("scopesim.rc.__currsys__.cmds", patched):
+                assert det.image_plane_header["NAXIS1"] == 9001
 
     def test_can_define_everything_in_pixels(self):
-        rc.__currsys__["!DET.width"] = 42
-        det = DetectorWindow(pixel_size=0.1, x=0, y=0, width="!DET.width", units="pixel")
-        assert det.image_plane_header["NAXIS1"] == 42
-        assert det.detector_headers()[0]["NAXIS1"] == 42
+        patched = {"!DET.width": 42}
+        # FIXME: remove the second part of this asap
+        try:
+            with patch.dict("scopesim.rc.__currsys__", patched):
+                det = DetectorWindow(pixel_size=0.1, x=0, y=0,
+                                     width="!DET.width", units="pixel")
+                assert det.image_plane_header["NAXIS1"] == 42
+                assert det.detector_headers()[0]["NAXIS1"] == 42
+        except KeyError:
+            with patch.dict("scopesim.rc.__currsys__.cmds", patched):
+                det = DetectorWindow(pixel_size=0.1, x=0, y=0,
+                                     width="!DET.width", units="pixel")
+                assert det.image_plane_header["NAXIS1"] == 42
+                assert det.detector_headers()[0]["NAXIS1"] == 42

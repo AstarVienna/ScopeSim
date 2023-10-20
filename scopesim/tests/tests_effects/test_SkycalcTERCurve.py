@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import pytest
+from unittest.mock import patch
 from synphot import SpectralElement, SourceSpectrum
 
 from scopesim.effects import SkycalcTERCurve
@@ -10,19 +11,13 @@ if rc.__config__["!SIM.tests.run_skycalc_ter_tests"] is False:
     pytestmark = pytest.mark.skip("Ignoring SkyCalc integration tests")
 
 
-
-
-def setup_module():
-    rc_local_path = Path(rc.__config__["!SIM.file.local_packages_path"])
-    if not rc_local_path.exists():
-        rc_local_path.mkdir()
-        rc.__config__["!SIM.file.local_packages_path"] = str(rc_local_path.absolute())
-
-
-def teardown_module():
-    file = Path("skycalc_temp.fits")
-    if file.exists():
-        file.unlink()
+# TODO: is this at all needed?
+@pytest.fixture(scope="module", autouse=True)
+def setup_and_teardown():
+    Path(rc.__config__["!SIM.file.local_packages_path"]).mkdir(parents=True,
+                                                               exist_ok=True)
+    yield
+    Path("skycalc_temp.fits").unlink(missing_ok=True)
 
 
 class TestInit:
@@ -38,8 +33,15 @@ class TestInit:
         assert str(sky_ter.surface.meta["wavelength_unit"]) == "um"
 
     def test_initialises_with_bang_strings(self):
-        rc.__currsys__["!OBS.pwv"] = 20.0
-        sky_ter = SkycalcTERCurve(pwv="!OBS.pwv")
+        patched = {"!OBS.pwv": 20.0}
+        # FIXME: remove the second part of this asap
+        try:
+            with patch.dict("scopesim.rc.__currsys__", patched):
+                sky_ter = SkycalcTERCurve(pwv="!OBS.pwv")
+        except KeyError:
+            with patch.dict("scopesim.rc.__currsys__.cmds", patched):
+                sky_ter = SkycalcTERCurve(pwv="!OBS.pwv")
+
         assert sky_ter.skycalc_conn.values["pwv"] == 20.0
         assert isinstance(sky_ter.surface.transmission, SpectralElement)
         assert isinstance(sky_ter.surface.emission, SourceSpectrum)

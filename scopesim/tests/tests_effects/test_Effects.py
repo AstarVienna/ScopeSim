@@ -1,26 +1,11 @@
-from pathlib import Path
-
 import numpy as np
 import pytest
+from unittest.mock import patch
 from astropy.table import Table
 
-from scopesim import rc
 from scopesim.effects import Effect, SurfaceList
 
 from scopesim.tests.mocks.py_objects import effects_objects as eo
-
-
-MOCK_PATH = Path(__file__).parent.parent / "mocks/MICADO_SCAO_WIDE/"
-
-
-if MOCK_PATH not in rc.__search_path__:
-    rc.__search_path__ += [MOCK_PATH]
-
-
-@pytest.fixture()
-def surf_list_file():
-    fname = MOCK_PATH / "LIST_mirrors_MICADO_Wide.tbl"
-    return fname
 
 
 class TestEffectInit:
@@ -63,12 +48,13 @@ class TestGet:
             det_list["image_plane_id"] == 0
 
 
-@pytest.mark.usefixtures("surf_list_file")
 class TestSurfaceListInit:
     def test_initialises_with_nothing(self):
         assert isinstance(SurfaceList(), SurfaceList)
 
-    def test_initialises_with_valid_filename(self, surf_list_file):
-        surf_list = SurfaceList(filename=surf_list_file)
+    def test_initialises_with_valid_filename(self, mock_path_micado):
+        fname = str(mock_path_micado / "LIST_mirrors_MICADO_Wide.tbl")
+        with patch("scopesim.rc.__search_path__", [mock_path_micado]):
+            surf_list = SurfaceList(filename=fname)
         assert isinstance(surf_list, SurfaceList)
         assert isinstance(surf_list.data, Table)

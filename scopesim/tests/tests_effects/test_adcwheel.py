@@ -1,24 +1,18 @@
 """Tests for class ADCWheel"""
 
-from pathlib import Path
 import pytest
+from unittest.mock import patch
 
-from scopesim import rc
 from scopesim.effects import TERCurve, ADCWheel
 
 
-FILES_PATH = Path(__file__).parent.parent / "mocks/files/"
-
-if FILES_PATH not in rc.__search_path__:
-    rc.__search_path__ += [FILES_PATH]
-
-
 @pytest.fixture(name="adcwheel", scope="class")
-def fixture_adcwheel():
+def fixture_adcwheel(mock_path):
     """Instantiate an ADCWheel"""
-    return ADCWheel(adc_names=["const_90", "const_10"],
-                    filename_format="TER_ADC_{}.dat",
-                    current_adc="const_90")
+    with patch("scopesim.rc.__search_path__", [mock_path]):
+        return ADCWheel(adc_names=["const_90", "const_10"],
+                        filename_format="TER_ADC_{}.dat",
+                        current_adc="const_90")
 
 
 # pylint: disable=missing-class-docstring,
@@ -44,10 +38,11 @@ class TestADCWheel:
         with pytest.raises(ValueError):
             adcwheel.change_adc('X')
 
-    def test_reports_current_adc_false(self):
-        adcwheel = ADCWheel(adc_names=["const_90", "const_10"],
-                            filename_format="TER_ADC_{}.dat",
-                            current_adc=False)
+    def test_reports_current_adc_false(self, mock_path):
+        with patch("scopesim.rc.__search_path__", [mock_path]):
+            adcwheel = ADCWheel(adc_names=["const_90", "const_10"],
+                                filename_format="TER_ADC_{}.dat",
+                                current_adc=False)
         assert not adcwheel.current_adc
 
     def test_changes_to_false(self, adcwheel):

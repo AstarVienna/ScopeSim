@@ -1,5 +1,5 @@
-from pathlib import Path
 import pytest
+from pathlib import Path
 from tempfile import TemporaryDirectory
 from astropy.io import fits
 from astropy import units as u
@@ -10,12 +10,9 @@ from scopesim.source.source_templates import star
 import scopesim as sim
 
 
-YAMLS_PATH = Path(__file__).parent.parent / "mocks/yamls/"
-
-
 @pytest.fixture(scope="function")
-def simplecado_opt():
-    simplecado_yaml = YAMLS_PATH / "SimpleCADO.yaml"
+def simplecado_opt(mock_path_yamls):
+    simplecado_yaml = str(mock_path_yamls / "SimpleCADO.yaml")
     cmd = sim.UserCommands(yamls=[simplecado_yaml])
     return sim.OpticalTrain(cmd)
 
@@ -253,9 +250,9 @@ class TestSourceDescriptionFitsKeywordsApplyTo:
 
         assert len(pri_hdr["FNSRC0"]) == 120
 
-        # save to disk, what happens to cards that are longer than 80 characters
+        # save to disk, what happens to cards longer than 80 characters
         with TemporaryDirectory() as tmpdir:
-            fname = Path(tmpdir / "test.fits")
+            fname = Path(tmpdir, "test.fits")
             hdul.writeto(fname)
             tmp_hdr = fits.getheader(fname)
 
@@ -263,13 +260,14 @@ class TestSourceDescriptionFitsKeywordsApplyTo:
 
 
 class TestSimulationConfigFitsKeywordsApplyTo:
-    def test_sys_dict_dicts_are_added_to_header(self, simplecado_opt, comb_hdul):
+    def test_sys_dict_dicts_are_added_to_header(self, simplecado_opt,
+                                                comb_hdul):
         eff = fh.SimulationConfigFitsKeywords()
         hdul = eff.apply_to(comb_hdul, optical_train=simplecado_opt)
         pri_hdr = hdul[0].header
 
         assert pri_hdr["SIM CONFIG DET ndit"] == 1
-        assert pri_hdr["SIM CONFIG SIM random seed"] == None
+        assert pri_hdr["SIM CONFIG SIM random seed"] is None
 
     def test_bang_string_untouched_for_resolve_false(self, simplecado_opt,
                                                      comb_hdul):

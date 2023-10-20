@@ -1,29 +1,32 @@
 """Tests for MetisLMSEfficiency effect"""
 
-from pathlib import Path
 import pytest
 from pytest import approx
+from unittest.mock import patch
 
 from scopesim.effects.ter_curves import TERCurve
 from scopesim.effects.metis_lms_trace_list import MetisLMSEfficiency
-from scopesim import rc
-
-
-MOCK_PATH = Path(__file__).parent.parent / "mocks/METIS_LMS/"
-
-if MOCK_PATH not in rc.__search_path__:
-    rc.__search_path__ += [MOCK_PATH]
 
 
 # pylint: disable=no-self-use, missing-class-docstring
 # pylint: disable=missing-function-docstring
 
-@pytest.fixture(name="efficiency", scope="class")
-def fixture_efficiency():
-    """Instantiate a MetisLMSEfficiency object"""
-    return MetisLMSEfficiency(wavelen=4.2, filename="TRACE_LMS.fits")
+@pytest.fixture(scope="class")
+def patch_mock_path_metis(mock_dir):
+    metis_dir = mock_dir / "METIS_LMS"
+    with patch("scopesim.rc.__search_path__", [metis_dir]):
+        yield
 
 
+# @pytest.fixture(name="efficiency", scope="class")
+# def fixture_efficiency(mock_dir):
+#     """Instantiate a MetisLMSEfficiency object"""
+#     # metis_dir = mock_dir / "METIS_LMS"
+#     # with patch("scopesim.rc.__search_path__", [metis_dir]):
+#     return MetisLMSEfficiency(wavelen=4.2, filename="TRACE_LMS.fits")
+
+
+@pytest.mark.usefixtures("patch_mock_path_metis")
 class TestMetisLMSEfficiency:
     def test_initialises_correctly(self):
         eff = MetisLMSEfficiency(wavelen=4.2, filename="TRACE_LMS.fits")

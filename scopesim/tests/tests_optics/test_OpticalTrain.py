@@ -27,24 +27,18 @@ from matplotlib.colors import LogNorm
 PLOTS = False
 
 
+# TODO: check if class scope breaks anything (used to be function scope)
+@pytest.fixture(scope="class")
+def cmds(mock_path, mock_path_yamls):
+    with patch("scopesim.rc.__search_path__", [mock_path, mock_path_yamls]):
+        return UserCommands(yamls=[find_file("CMD_mvs_cmds.yaml")])
 
 
-def _basic_cmds():
-    return UserCommands(yamls=[find_file("CMD_mvs_cmds.yaml")])
-
-
-def _unity_cmds():
-    return UserCommands(yamls=[find_file("CMD_unity_cmds.yaml")])
-
-
-@pytest.fixture(scope="function")
-def cmds():
-    return _basic_cmds()
-
-
-@pytest.fixture(scope="function")
-def unity_cmds():
-    return _unity_cmds()
+# TODO: check if class scope breaks anything (used to be function scope)
+@pytest.fixture(scope="class")
+def unity_cmds(mock_path, mock_path_yamls):
+    with patch("scopesim.rc.__search_path__", [mock_path, mock_path_yamls]):
+        return UserCommands(yamls=[find_file("CMD_unity_cmds.yaml")])
 
 
 @pytest.fixture(scope="function")
@@ -274,14 +268,15 @@ class TestListEffects:
 class TestShutdown:
     """Test that fits files are closed on shutdown of OpticalTrain"""
 
-    def test_files_closed_on_shutdown(self, simplecado_opt):
+    def test_files_closed_on_shutdown(self, simplecado_opt, mock_path):
         """Test for closed files in two ways:
         - `closed` flag is set to True
         - data access fails
         """
         # Add an effect with a psf
-        psf = sim.effects.FieldConstantPSF(filename="test_ConstPSF.fits",
-                                           name="testpsf")
+        with patch("scopesim.rc.__search_path__", [mock_path]):
+            psf = sim.effects.FieldConstantPSF(filename="test_ConstPSF.fits",
+                                               name="testpsf")
         simplecado_opt.optics_manager.add_effect(psf)
         # This is just to make sure that we have an open file
         assert not simplecado_opt['testpsf']._file._file.closed

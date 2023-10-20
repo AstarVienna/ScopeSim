@@ -5,7 +5,7 @@
 """
 
 import pytest
-from pathlib import Path
+from unittest.mock import patch
 
 import numpy as np
 from astropy.table import Table
@@ -18,26 +18,13 @@ import scopesim.optics.radiometry_utils as rad_utils
 from scopesim import utils
 from scopesim.optics import radiometry as opt_rad
 from scopesim.optics import surface as opt_surf
-import scopesim as sim
-
-
-MOCK_DIR = Path(__file__).parent.parent / "mocks/MICADO_SCAO_WIDE/"
-sim.rc.__search_path__.insert(0, MOCK_DIR)
-
-
-def synphot_version():
-    from synphot.version import version
-    nums = version.split(".")
-    return float(nums[0]) + float(nums[1]) * 0.1
 
 
 @pytest.fixture(scope="module")
-def input_tables():
-    filenames = ["LIST_mirrors_ELT.tbl",
-                 "LIST_mirrors_SCAO_relay.tbl",
-                 "LIST_mirrors_MICADO_Wide.tbl"]
-
-    return [str(MOCK_DIR / fname) for fname in filenames]
+def input_tables(mock_path_micado):
+    filenames = ["ELT", "SCAO_relay", "MICADO_Wide"]
+    return [str(mock_path_micado / f"LIST_mirrors_{fname}.tbl")
+            for fname in filenames]
 
 
 @pytest.mark.usefixtures("patch_mock_path_micado")
@@ -133,11 +120,7 @@ class TestRadiometryTableGetEmission:
         etendue = (996*u.m ** 2) * (0.004 * u.arcsec) ** 2
         emiss = rt.get_emission(etendue=etendue, start=1, end=3)
         assert isinstance(emiss, SourceSpectrum)
-
-        if float(synphot_version()) < 0.2:
-            assert emiss.model.n_submodels() == 9
-        else:
-            assert emiss.model.n_submodels == 7
+        assert emiss.model.n_submodels == 7
 
     def test_return_none_for_empty_radiometry_table(self):
         rt = opt_rad.RadiometryTable()
@@ -145,7 +128,7 @@ class TestRadiometryTableGetEmission:
         assert emiss is None
 
 
-@pytest.mark.usefixtures("input_tables")
+@pytest.mark.usefixtures("patch_mock_path_micado")
 class TestCombineEmissions:
     def test_super_simple_case(self):
         n = 11
@@ -172,7 +155,7 @@ class TestCombineEmissions:
         assert isinstance(comb_emission, SourceSpectrum)
 
 
-@pytest.mark.usefixtures("input_tables")
+@pytest.mark.usefixtures("patch_mock_path_micado")
 class TestCombineThroughputs:
     def test_returns_spectral_element_containing_everything(self, input_tables):
         rt = opt_rad.RadiometryTable(tables=(input_tables))
@@ -203,7 +186,6 @@ class TestCombineThroughputs:
         assert combi is None
 
 
-@pytest.mark.usefixtures("input_tables")
 class TestCombineTables:
     def test_adds_two_tables(self):
         tblA = Table(names=["colA", "colB"], data=[[0, 1], [0, 1]])
@@ -252,7 +234,7 @@ class TestCombineTables:
         assert np.all(tblC["colB"] == np.array([2, 3, 0, 1]))
 
 
-@pytest.mark.usefixtures("input_tables")
+@pytest.mark.usefixtures("patch_mock_path_micado")
 class TestMakeSurfaceFromRow:
     def test_return_none_from_empty_row(self, input_tables):
         tblA = ioascii.read(input_tables[0])
@@ -280,7 +262,7 @@ class TestRealColname:
         assert utils.real_colname("yahoo", ["Bogus"]) is None
 
 
-@pytest.mark.usefixtures("input_tables")
+@pytest.mark.usefixtures("patch_mock_path_micado")
 class TestMakeSurfaceDictFromTable:
     def test_return_dict_from_table(self, input_tables):
         tbl = ioascii.read(input_tables[0])
@@ -314,7 +296,7 @@ class TestEmptyType:
         assert utils.empty_type(x) == expected
 
 
-@pytest.mark.usefixtures("input_tables")
+@pytest.mark.usefixtures("patch_mock_path_micado")
 class TestAddSurfaceToTable:
     @pytest.mark.parametrize("position", [0, 2, 5])
     def test_(self, input_tables, position):

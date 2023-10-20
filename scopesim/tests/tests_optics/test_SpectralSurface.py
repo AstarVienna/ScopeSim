@@ -113,8 +113,9 @@ class TestSpectralSurfaceTransmissionProperty:
 
 class TestSpectralSurfaceEmissionProperty:
     def test_returns_synphot_object_per_arcsec2_scaled_to_per_arcsec2(self):
-        srf = opt_surf.SpectralSurface(wavelength=[0.3, 3.0] * u.um,
-                                       emission=[1, 1] * PHOTLAM * u.arcsec**-2)
+        srf = opt_surf.SpectralSurface(
+            wavelength=[0.3, 3.0] * u.um,
+            emission=[1, 1] * PHOTLAM * u.arcsec**-2)
         assert isinstance(srf.emission, SourceSpectrum)
         assert np.all(srf.emission([0.3, 3.0] * u.um) == [1, 1] * PHOTLAM)
 
@@ -151,12 +152,8 @@ class TestSpectralSurfaceComplimentArray:
         srf.meta[colname1] = col1
         srf.meta[colname2] = col2
         col3 = srf._compliment_array(colname1, colname2)
-        if sys.version_info.major >= 3:
-            assert np.all(np.isclose(col3.data, expected.data))
-            assert col3.unit == expected.unit
-        else:
-            logging.warning("Data equality isn't tested for 2.7")
-            assert col3.unit == expected.unit
+        assert np.all(np.isclose(col3.data, expected.data))
+        assert col3.unit == expected.unit
 
     @pytest.mark.parametrize("colname1, colname2, col1, col2, expected",
                              [("A",     "B",      None, None, None)])
@@ -180,11 +177,8 @@ class TestSpectralSurfaceComplimentArray:
             srf.table.add_column(Column(name="col2", data=col2_arr))
 
         col3 = srf._compliment_array("col1", "col2")
-        if sys.version_info.major >= 3:
-            assert col3.data == pytest.approx(expected)
-            assert len(col3.data) == len(expected)
-        else:
-            logging.warning("Data equality isn't tested for 2.7")
+        assert col3.data == pytest.approx(expected)
+        assert len(col3.data) == len(expected)
 
 
 class TestSpectralSurfaceAreaProperty:

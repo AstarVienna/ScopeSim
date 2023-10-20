@@ -1,10 +1,10 @@
-from pathlib import Path
+
 import pytest
 from pytest import approx
+from unittest.mock import patch
 
 import numpy as np
 
-from scopesim import rc
 from scopesim.optics.optical_train import OpticalTrain
 from scopesim.commands import UserCommands
 
@@ -17,22 +17,17 @@ from matplotlib.colors import LogNorm
 
 PLOTS = False
 
-FILES_PATH = Path(__file__).parent.parent / "mocks/files/"
-YAMLS_PATH = Path(__file__).parent.parent / "mocks/yamls/"
 
-for NEW_PATH in [YAMLS_PATH, FILES_PATH]:
-    if NEW_PATH not in rc.__search_path__:
-        rc.__search_path__.insert(0, NEW_PATH)
+@pytest.fixture(scope="function")
+def cmds(mock_path, mock_path_yamls):
+    with patch("scopesim.rc.__search_path__", [mock_path, mock_path_yamls]):
+        return UserCommands(yamls=["CMD_unity_cmds.yaml"])
 
 
 @pytest.fixture(scope="function")
-def cmds():
-    return UserCommands(yamls=["CMD_unity_cmds.yaml"])
-
-
-@pytest.fixture(scope="function")
-def non_unity_cmds():
-    return UserCommands(yamls=["CMD_non_unity_cmds.yaml"])
+def non_unity_cmds(mock_path, mock_path_yamls):
+    with patch("scopesim.rc.__search_path__", [mock_path, mock_path_yamls]):
+        return UserCommands(yamls=["CMD_non_unity_cmds.yaml"])
 
 
 @pytest.fixture(scope="function")

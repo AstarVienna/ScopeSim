@@ -1,7 +1,7 @@
 """Tests for module spectral_trace_list.py"""
 
-from pathlib import Path
 import pytest
+from unittest.mock import patch
 
 from astropy.io import fits
 
@@ -11,13 +11,7 @@ from scopesim.effects.spectral_trace_list import SpectralTraceList, \
 from scopesim.effects.spectral_trace_list_utils import SpectralTrace
 from scopesim.tests.mocks.py_objects import trace_list_objects as tlo
 from scopesim.tests.mocks.py_objects import header_objects as ho
-from scopesim import rc
 
-
-MOCK_PATH = Path(__file__).parent.parent / "mocks/MICADO_SPEC/"
-
-if MOCK_PATH not in rc.__search_path__:
-    rc.__search_path__ += [MOCK_PATH]
 
 PLOTS = False
 
@@ -52,9 +46,11 @@ class TestInit:
         # next assert that dispersion axis determined correctly
         assert list(spt.spectral_traces.values())[2].dispersion_axis == 'y'
 
-    def test_initialises_with_filename(self):
-        spt = SpectralTraceList(filename="TRACE_MICADO.fits",
-                                wave_colname="wavelength", s_colname="xi")
+    def test_initialises_with_filename(self, mock_dir):
+        micado_spec_dir = mock_dir / "MICADO_SPEC"
+        with patch("scopesim.rc.__search_path__", [micado_spec_dir]):
+            spt = SpectralTraceList(filename="TRACE_MICADO.fits",
+                                    wave_colname="wavelength", s_colname="xi")
         assert isinstance(spt, SpectralTraceList)
         # assert that dispersion axis taken correctly from header keyword
         assert list(spt.spectral_traces.values())[2].dispersion_axis == 'y'
