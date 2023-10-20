@@ -1,5 +1,3 @@
-
-from pathlib import Path
 import pytest
 
 import numpy as np
@@ -9,18 +7,18 @@ from astropy import units as u
 from scopesim.effects import ter_curves as tc
 from scopesim.tests.mocks.py_objects import source_objects as so
 from scopesim.tests.mocks.py_objects import effects_objects as eo
-from scopesim import rc
 
-
-MOCK_PATH = Path(__file__) / "mocks/MICADO_SCAO_WIDE/"
-
-if MOCK_PATH not in rc.__search_path__:
-    rc.__search_path__ += [MOCK_PATH]
 
 PLOTS = False
 
-# pylint: disable=no-self-use, missing-class-docstring
-# pylint: disable=missing-function-docstring
+
+@pytest.fixture(name="fwheel", scope="class")
+def _filter_wheel(mock_path_micado):
+    """Instantiate a FilterWheel"""
+    fname = str(mock_path_micado / "TC_filter_{}.dat")
+    return tc.FilterWheel(**{"filter_names": ["Ks", "Br-gamma"],
+                             "filename_format": fname,
+                             "current_filter": "Br-gamma"})
 
 
 class TestTERCurveApplyTo:
@@ -92,19 +90,12 @@ class TestSpanishVOFilterCurveInit:
                              [("Paranal", "HAWKI", "Ks"),
                               ("HST", "WFC3_IR", "F160W"),
                               ("JWST", "NIRCam", "F164N")])
-    def test_returns_filter_as_wanted(self, observatory, instrument, filt_name):
+    def test_returns_filter_as_wanted(self, observatory, instrument,
+                                      filt_name):
         filt = tc.SpanishVOFilterCurve(observatory=observatory,
                                        instrument=instrument,
                                        filter_name=filt_name)
         assert isinstance(filt, tc.FilterCurve)
-
-
-@pytest.fixture(name="fwheel", scope="class")
-def _filter_wheel():
-    """Instantiate a FilterWheel"""
-    return tc.FilterWheel(**{"filter_names": ["Ks", "Br-gamma"],
-                             "filename_format": "TC_filter_{}.dat",
-                             "current_filter": "Br-gamma"})
 
 
 class TestFilterWheelInit:

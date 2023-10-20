@@ -2,7 +2,6 @@
 import pytest
 from pytest import approx
 
-from pathlib import Path
 import numpy as np
 
 from astropy.io import fits
@@ -15,7 +14,6 @@ from synphot import SourceSpectrum, SpectralElement
 from synphot.models import Empirical1D
 from synphot.units import PHOTLAM
 
-import scopesim as sim
 from scopesim.source import source_utils
 from scopesim.source.source import Source
 
@@ -28,33 +26,30 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm
 
 
-MOCK_DIR = Path(__file__).parent.parent / "../mocks/files/"
-sim.rc.__search_path__.insert(0, MOCK_DIR)
-
 PLOTS = False
 
 
 @pytest.fixture(scope="module")
-def input_files():
+def input_files(mock_path):
     filenames = ["test_image.fits", "test_table.fits", "test_table.tbl",
                  "test_spectrum_Flam.dat", "test_spectrum_photlam.dat"]
-    filenames = [str(MOCK_DIR / fname) for fname in filenames]
+    filenames = [str(mock_path / fname) for fname in filenames]
     return filenames
 
 
 @pytest.fixture(scope="module")
-def input_hdulist():
+def input_hdulist(mock_path):
     filenames = ["test_image.fits"]
-    filenames = [str(MOCK_DIR / fname) for fname in filenames]
+    filenames = [str(mock_path / fname) for fname in filenames]
     hdu_handle = fits.open(filenames[0])
 
     return hdu_handle
 
 
 @pytest.fixture(scope="module")
-def input_tables():
+def input_tables(mock_path):
     filenames = ["test_table.fits", "test_table.tbl"]
-    filenames = [str(MOCK_DIR / fname) for fname in filenames]
+    filenames = [str(mock_path / fname) for fname in filenames]
     tbls = []
     tbls += [Table.read(filenames[0])]
     tbls += [Table.read(filenames[1], format="ascii.basic")]
@@ -64,9 +59,9 @@ def input_tables():
 
 
 @pytest.fixture(scope="module")
-def input_spectra():
+def input_spectra(mock_path):
     filenames = ["test_spectrum_photlam.dat", "test_spectrum_Flam.dat"]
-    filenames = [str(MOCK_DIR / fname) for fname in filenames]
+    filenames = [str(mock_path / fname) for fname in filenames]
     tbls = [ioascii.read(fname) for fname in filenames]
     specs = []
     for tbl in tbls:

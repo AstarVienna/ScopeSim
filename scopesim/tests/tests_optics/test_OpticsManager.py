@@ -1,6 +1,3 @@
-from pathlib import Path
-from scopesim import rc
-
 import pytest
 from astropy.io import fits
 
@@ -10,14 +7,6 @@ from scopesim.effects import Effect
 
 from scopesim.tests.mocks.py_objects.yaml_objects import\
     _inst_yaml_dict, _detector_yaml_dict
-
-
-FILES_PATH = Path(__file__).parent.parent / "mocks/files/"
-YAMLS_PATH = Path(__file__).parent.parent / "mocks/MICADO_SCAO_WIDE/"
-
-for NEW_PATH in [YAMLS_PATH, FILES_PATH]:
-    if NEW_PATH not in rc.__search_path__:
-        rc.__search_path__.insert(0, NEW_PATH)
 
 
 @pytest.fixture(scope="function")

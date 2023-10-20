@@ -6,10 +6,6 @@
 # 2 compliment the table based on columns in file
 # 3 have @property methods for: transmission, ermission, reflection
 
-from pathlib import Path
-import sys
-import logging
-
 import pytest
 
 import numpy as np
@@ -27,18 +23,15 @@ from scopesim.optics import surface_utils as surf_utils
 from scopesim import utils
 
 
-MOCK_DIR = Path(__file__).parent.parent / "mocks/files/"
-
-
 @pytest.fixture(name="ter_table", scope="class")
-def fixture_ter_table():
-    return ioascii.read(MOCK_DIR / "TER_dichroic.dat")
+def fixture_ter_table(mock_path_micado):
+    return ioascii.read(mock_path_micado / "TER_dichroic.dat")
 
 
 @pytest.fixture(name="input_tables", scope="module")
-def fixture_input_tables():
+def fixture_input_tables(mock_path_micado):
     filenames = ["TER_dichroic.dat", "TC_filter_Ks.dat"]
-    abs_paths = [str(MOCK_DIR / fname) for fname in filenames]
+    abs_paths = [str(mock_path_micado / fname) for fname in filenames]
 
     return abs_paths
 
@@ -289,8 +282,9 @@ class TestNormaliseBinnedFlux:
 class TestIntegration:
     @pytest.mark.parametrize("col_name",
                              ["transmission", "emissivity", "reflection"])
-    def test_ter_property_of_object_from_file(self, col_name, ter_table):
-        filename = str(MOCK_DIR / "TER_dichroic.dat")
+    def test_ter_property_of_object_from_file(self, col_name, ter_table,
+                                              mock_path_micado):
+        filename = str(mock_path_micado / "TER_dichroic.dat")
         surf = opt_surf.SpectralSurface(filename=filename)
 
         tbl_ter_prop = ter_table[col_name]
@@ -312,8 +306,8 @@ class TestIntegration:
         assert isinstance(surf, opt_surf.SpectralSurface)
         assert np.all(surf_ter_prop == tbl_ter_prop)
 
-    def test_return_emission_curve_from_file(self):
-        filename = str(MOCK_DIR / "emission_file.dat")
+    def test_return_emission_curve_from_file(self, mock_path_micado):
+        filename = str(mock_path_micado / "emission_file.dat")
         surf = opt_surf.SpectralSurface(filename=filename)
         integal = surf.emission.integrate().to(u.Unit("ph s-1 m-2"))
         assert np.isclose(integal.value, 2)   # ph s-1 m-2

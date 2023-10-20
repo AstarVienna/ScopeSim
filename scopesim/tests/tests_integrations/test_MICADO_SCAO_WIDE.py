@@ -19,7 +19,6 @@ The data that we need for this are
 """
 
 import pytest
-from pathlib import Path
 
 import numpy as np
 from matplotlib import pyplot as plt
@@ -28,7 +27,6 @@ from matplotlib.colors import LogNorm
 import synphot as sp
 from astropy import units as u
 
-from scopesim import rc
 from scopesim.commands.user_commands import UserCommands
 from scopesim.optics.optical_train import OpticalTrain
 from scopesim.optics.optics_manager import OpticsManager
@@ -39,18 +37,13 @@ from scopesim.source.source import Source
 from scopesim.utils import find_file
 
 
-TEST_PATH = Path(__file__).parent.parent / "mocks/MICADO_SCAO_WIDE/"
-if TEST_PATH not in rc.__search_path__:
-    rc.__search_path__ += [TEST_PATH]
-
 PLOTS = False
 
 
 @pytest.mark.skip("Calls a 256MB PSF file. Not including that on Git.")
 class Test_MICADO_MVP_YAML:
-    def test_yaml_file_can_be_loaded_into_optical_train(self):
-        # .. todo: get this working on Travis      why?
-        filename = str(TEST_PATH / "MICADO_SCAO_WIDE_2.yaml")
+    def test_yaml_file_can_be_loaded_into_optical_train(self, mock_path_micado):
+        filename = str(mock_path_micado / "MICADO_SCAO_WIDE_2.yaml")
 
         cmds = UserCommands(yamls=[filename])
         assert isinstance(cmds, UserCommands)

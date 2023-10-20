@@ -1,11 +1,10 @@
-from pathlib import Path
+
 import pytest
 from pytest import approx
 
 import numpy as np
 from astropy.io import fits
 
-from scopesim import rc
 from scopesim.effects import ApertureMask
 from scopesim.effects.apertures import points_on_a_circle, make_aperture_polygon
 
@@ -13,12 +12,6 @@ import matplotlib.pyplot as plt
 
 
 PLOTS = False
-
-FILES_PATH = Path(__file__).parent.parent / "mocks/files/"
-
-
-if FILES_PATH not in rc.__search_path__:
-    rc.__search_path__ += [FILES_PATH]
 
 
 class TestInit:
@@ -34,8 +27,8 @@ class TestInit:
         assert isinstance(apm, ApertureMask)
         assert "x" in apm.table.colnames
 
-    def test_initialises_from_file(self):
-        apm = ApertureMask(filename="test_aperture.dat")
+    def test_initialises_from_file(self, mock_path):
+        apm = ApertureMask(filename=str(mock_path / "test_aperture.dat"))
         assert isinstance(apm, ApertureMask)
         assert "y" in apm.table.colnames
 

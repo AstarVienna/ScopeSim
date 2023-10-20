@@ -9,10 +9,7 @@ from scopesim import rc
 if rc.__config__["!SIM.tests.run_skycalc_ter_tests"] is False:
     pytestmark = pytest.mark.skip("Ignoring SkyCalc integration tests")
 
-FILES_PATH = Path(__file__).parent.parent / "mocks/files"
 
-if FILES_PATH not in rc.__search_path__:
-    rc.__search_path__ += [FILES_PATH]
 
 
 def setup_module():
@@ -51,6 +48,7 @@ class TestInit:
         sky_ter = SkycalcTERCurve(name="bogus")
         assert "name" not in sky_ter.skycalc_conn.values
 
-    def test_initialise_with_local_skycalc_file(self):
-        sky_ter = SkycalcTERCurve(use_local_skycalc_file="skycalc_override.fits")
+    def test_initialise_with_local_skycalc_file(self, mock_path):
+        sky_ter = SkycalcTERCurve(
+            use_local_skycalc_file=str(mock_path / "skycalc_override.fits"))
         assert sky_ter.skycalc_table is not None

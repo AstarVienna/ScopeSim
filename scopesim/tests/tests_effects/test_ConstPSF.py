@@ -16,13 +16,11 @@
 #   - get_kernel(obj)
 """
 
-from pathlib import Path
 import pytest
 from pytest import approx
 
 import numpy as np
 
-from scopesim import rc
 from scopesim.effects import FieldConstantPSF
 
 from scopesim.tests.mocks.py_objects.fov_objects import _centre_fov
@@ -31,14 +29,6 @@ import matplotlib.pyplot as plt
 
 
 PLOTS = False
-
-FILES_PATH = Path(__file__).parent.parent / "mocks/files/"
-YAMLS_PATH = Path(__file__).parent.parent / "mocks/yamls/"
-
-
-for NEW_PATH in [YAMLS_PATH, FILES_PATH]:
-    if NEW_PATH not in rc.__search_path__:
-        rc.__search_path__.insert(0, NEW_PATH)
 
 
 @pytest.fixture(scope="function")
@@ -51,13 +41,16 @@ class TestInit:
         with pytest.raises(ValueError):
             isinstance(FieldConstantPSF(), FieldConstantPSF)
 
-    def test_initialised_when_passed_fits_filename(self):
-        constpsf = FieldConstantPSF(filename="test_ConstPSF.fits")
+    def test_initialised_when_passed_fits_filename(self, mock_path):
+        constpsf = FieldConstantPSF(
+            filename=str(mock_path / "test_ConstPSF.fits"))
         assert isinstance(constpsf, FieldConstantPSF)
 
-    def test_initialised_when_passed_fits_filename_with_waveleng(self):
-        constpsf = FieldConstantPSF(filename="test_ConstPSF_WAVELENG.fits",
-                                    wave_key="WAVELENG")
+    def test_initialised_when_passed_fits_filename_with_waveleng(self,
+                                                                 mock_path):
+        constpsf = FieldConstantPSF(
+            filename=str(mock_path / "test_ConstPSF_WAVELENG.fits"),
+            wave_key="WAVELENG")
         assert isinstance(constpsf, FieldConstantPSF)
         assert len(constpsf._waveset) == 2
 
@@ -69,8 +62,10 @@ class TestGetKernel:
                               ([1.9, 2.5], 1.),
                               ([0.9, 1.1], 1 / 3.),
                               ([1.875, 1.876], 1.)])
-    def test_returns_array_with_single_kernel_from_fov(self, waves, max_pixel):
-        constpsf = FieldConstantPSF(filename="test_ConstPSF.fits")
+    def test_returns_array_with_single_kernel_from_fov(self, waves, max_pixel,
+                                                       mock_path):
+        constpsf = FieldConstantPSF(
+            filename=str(mock_path / "test_ConstPSF.fits"))
         fov = _centre_fov(n=10, waverange=waves)
         fov.view()
         kernel = constpsf.get_kernel(fov)
@@ -79,13 +74,15 @@ class TestGetKernel:
         assert np.max(kernel) == approx(max_pixel)
 
     @pytest.mark.parametrize("factor", [1/3., 1, 5])
-    def test_kernel_is_scale_properly_if_cdelts_differ(self, factor):
+    def test_kernel_is_scale_properly_if_cdelts_differ(self, factor,
+                                                       mock_path):
         fov = _centre_fov(n=10, waverange=[1.5, 1.7])
         fov.header["CDELT1"] *= factor
         fov.header["CDELT2"] *= factor
         fov.view()
 
-        constpsf = FieldConstantPSF(filename="test_ConstPSF.fits")
+        constpsf = FieldConstantPSF(
+            filename=str(mock_path / "test_ConstPSF.fits"))
         kernel = constpsf.get_kernel(fov)
 
         psf_shape = np.array(constpsf._file[2].data.shape)
@@ -99,14 +96,16 @@ class TestApplyTo:
                              [([1.1, 1.3], 1 / 3.),
                               ([1.5, 1.7], 1 / 3.),
                               ([1.9, 2.5], 1.)])
-    def test_convolves_with_basic_fov_for_each_waveleng(self, waves, max_pixel):
+    def test_convolves_with_basic_fov_for_each_waveleng(self, waves, max_pixel,
+                                                        mock_path):
         centre_fov = _centre_fov(n=10, waverange=waves)
         nax1, nax2 = centre_fov.header["NAXIS1"], centre_fov.header["NAXIS2"]
         centre_fov.view("image")
         centre_fov.hdu.data = np.zeros((nax2, nax1))
         centre_fov.hdu.data[1::4, 1::4] = 1
 
-        constpsf = FieldConstantPSF(filename="test_ConstPSF.fits")
+        constpsf = FieldConstantPSF(
+            filename=str(mock_path / "test_ConstPSF.fits"))
         fov_returned = constpsf.apply_to(centre_fov)
 
         if PLOTS:
@@ -115,7 +114,7 @@ class TestApplyTo:
 
         assert np.max(fov_returned.hdu.data) == approx(max_pixel)
 
-    def test_convolution_leaves_constant_background_intact(self):
+    def test_convolution_leaves_constant_background_intact(self, mock_path):
         """FOV object with constant data must be unchanged by PSF convolution
 
         1. Set up initial FOV object with constant data array
@@ -128,7 +127,8 @@ class TestApplyTo:
         centre_fov.view()
         centre_fov.hdu.data = np.ones((nax2, nax1), dtype=np.float32)
 
-        constpsf = FieldConstantPSF(filename="test_ConstPSF.fits")
+        constpsf = FieldConstantPSF(
+            filename=str(mock_path / "test_ConstPSF.fits"))
         fov_returned = constpsf.apply_to(centre_fov)
 
         if PLOTS:

@@ -1,29 +1,23 @@
-from pathlib import Path
+import pytest
 
 import numpy as np
 from astropy import units as u
 from matplotlib import pyplot as plt
 from synphot import SpectralElement, SourceSpectrum
 
-from scopesim import rc
 from scopesim.effects import TERCurve
 from scopesim.optics.surface import SpectralSurface
 
 
 PLOTS = False
 
-MOCK_PATH = Path(__file__) / "mocks/MICADO_SCAO_WIDE/"
-
-if MOCK_PATH not in rc.__search_path__:
-    rc.__search_path__ += [MOCK_PATH]
-
 
 class TestTERCurveInit:
     def test_initialise_with_nothing(self):
         assert isinstance(TERCurve(), TERCurve)
 
-    def test_initalises_with_list_of_surfaces(self):
-        filename = os.path.join(MOCK_PATH, "TC_filter_Ks.dat")
+    def test_initalises_with_list_of_surfaces(self, mock_path_micado):
+        filename = str(mock_path_micado / "TC_filter_Ks.dat")
         surf = TERCurve(filename=filename)
         assert isinstance(surf, TERCurve)
 
@@ -35,8 +29,8 @@ class TestTERCurveInit:
 
 
 class TestSurfaceAttribute:
-    def test_returns_surface_object(self):
-        filename = os.path.join(MOCK_PATH, "TC_filter_Ks.dat")
+    def test_returns_surface_object(self, mock_path_micado):
+        filename = str(mock_path_micado / "TC_filter_Ks.dat")
         surf = TERCurve(filename=filename)
 
         assert isinstance(surf.surface, SpectralSurface)

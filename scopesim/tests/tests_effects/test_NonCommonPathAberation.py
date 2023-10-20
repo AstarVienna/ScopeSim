@@ -1,4 +1,3 @@
-from pathlib import Path
 
 import pytest
 from pytest import approx
@@ -11,17 +10,12 @@ from astropy import units as u
 from scopesim.effects.psfs import NonCommonPathAberration
 from scopesim.effects.psf_utils import strehl2sigma, sigma2gauss, wfe2gauss, wfe2strehl
 from scopesim.optics import FieldOfView, ImagePlane
-from scopesim import rc
+from scopesim.utils import from_currsys
 
 from scopesim.tests.mocks.py_objects.source_objects import _single_table_source
 from scopesim.tests.mocks.py_objects.header_objects import \
     _fov_header, _implane_header
 
-
-FILES_DIR = Path(__file__).parent.parent / "mocks/files"
-
-if rc.__search_path__[0] != FILES_DIR:
-    rc.__search_path__.insert(0, FILES_DIR)
 
 PLOTS = False
 
@@ -55,8 +49,9 @@ class TestInit:
         ncpa = NonCommonPathAberration(**ncpa_kwargs)
         assert ncpa.table["wfe_rms"][0] == 20
 
-    def test_initialises_with_file(self):
-        kwargs = {"filename": "test_NCPAs_table.dat", "pixel_scale": 0.004}
+    def test_initialises_with_file(self, mock_path):
+        kwargs = {"filename": str(mock_path / "test_NCPAs_table.dat"),
+                  "pixel_scale": 0.004}
         ncpa = NonCommonPathAberration(**kwargs)
         assert ncpa.table["wfe_rms"][0] == 20
 

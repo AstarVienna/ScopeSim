@@ -1,14 +1,14 @@
-from pathlib import Path
+
 from copy import deepcopy
 import pytest
 from pytest import approx
+from unittest.mock import patch
 
 import numpy as np
 from astropy import units as u
 from astropy.table import Table
 
 import scopesim as sim
-from scopesim import rc
 from scopesim.optics.fov_manager import FOVManager
 from scopesim.optics.image_plane import ImagePlane
 from scopesim.optics.optical_train import OpticalTrain
@@ -26,12 +26,7 @@ from matplotlib.colors import LogNorm
 
 PLOTS = False
 
-FILES_PATH = Path(__file__).parent.parent / "mocks/files/"
-YAMLS_PATH = Path(__file__).parent.parent / "mocks/yamls/"
 
-for NEW_PATH in [YAMLS_PATH, FILES_PATH]:
-    if NEW_PATH not in rc.__search_path__:
-        rc.__search_path__.insert(0, NEW_PATH)
 
 
 def _basic_cmds():
@@ -68,8 +63,8 @@ def unity_src():
 
 
 @pytest.fixture(scope="class")
-def simplecado_opt():
-    simplecado_yaml = str(YAMLS_PATH / "SimpleCADO.yaml")
+def simplecado_opt(mock_path_yamls):
+    simplecado_yaml = str(mock_path_yamls / "SimpleCADO.yaml")
     cmd = sim.UserCommands(yamls=[simplecado_yaml])
     return sim.OpticalTrain(cmd)
 

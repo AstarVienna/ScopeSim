@@ -1,12 +1,11 @@
 """
-# datacontainer must read in the data if it is an ASCII file, or open a file
-# handle to it if it is a FITS file
-# the header(s) must be accessible as dictionaries
-# if the data is in table format, the table command accesses this
-# if the data is in image format, the image command accesses this
+datacontainer must read in the data if it is an ASCII file, or open a file
+handle to it if it is a FITS file
+the header(s) must be accessible as dictionaries
+if the data is in table format, the table command accesses this
+if the data is in image format, the image command accesses this
 """
 
-from pathlib import Path
 import pytest
 
 import numpy as np
@@ -16,13 +15,10 @@ from astropy import units as u
 from scopesim.effects.data_container import DataContainer
 
 
-MOCK_DIR = Path(__file__).parent.parent / "mocks/MICADO_SCAO_WIDE/"
-
-
 @pytest.fixture(scope="module")
-def data_files():
+def data_files(mock_path_micado):
     filenames = ["PSF_basic.fits", "TC_filter_Ks.dat"]
-    abs_paths = [str(MOCK_DIR / fname) for fname in filenames]
+    abs_paths = [str(mock_path_micado / fname) for fname in filenames]
 
     return abs_paths
 
