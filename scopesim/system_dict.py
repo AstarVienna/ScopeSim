@@ -69,8 +69,19 @@ class SystemDict(MutableMapping):
             self.dic[key] = value
 
     def __delitem__(self, key):
-        raise NotImplementedError("item deletion is not yet implemented for "
-                                  f"{self.__class__.__name__}")
+        # TODO: check this implementation with unit tests
+        if isinstance(key, str) and key.startswith("!"):
+            # TODO: these should be replaced with item.removeprefix("!")
+            #       once we can finally drop support for Python 3.8 UwU
+            *key_chunks, final_key = key[1:].split(".")
+            entry = self.dic
+            for key in key_chunks:
+                if not isinstance(entry, Mapping):
+                    raise KeyError(key)
+                entry = entry[key]
+            del entry[final_key]
+        else:
+            del self.dic[key]
 
     def _yield_subkeys(self, key, value):
         for subkey, subvalue in value.items():
