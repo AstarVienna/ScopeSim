@@ -1,4 +1,4 @@
-from pathlib import Path
+from unittest.mock import patch
 
 from astropy import units as u
 from astropy.table import Table
@@ -8,22 +8,15 @@ from scopesim.effects import AtmosphericDispersion
 from scopesim.effects.effects_utils import make_effect
 from scopesim.tests.mocks.py_objects.yaml_objects import _yaml_min_viable_scope
 
-from scopesim import rc
-
-
-FILES_PATH = Path(__file__).parent.parent / "files/"
-MICADO_PATH = Path(__file__).parent.parent / "MICADO_SCAO_WIDE/"
-
-
-if FILES_PATH not in rc.__search_path__:
-    rc.__search_path__ += [FILES_PATH, MICADO_PATH]
+from . import FILES_PATH, MICADO_PATH
 
 
 def _surf_list():
     kwargs = {"etendue": 5776 * u.m ** 2 * u.mas ** 2,
-              "filename": "LIST_mirrors_MICADO_Wide.tbl",
+              "filename": str(MICADO_PATH / "LIST_mirrors_MICADO_Wide.tbl"),
               "name": "MICADO Mirror List"}
-    return efs.SurfaceList(**kwargs)
+    with patch("scopesim.rc.__search_path__", [MICADO_PATH]):
+        return efs.SurfaceList(**kwargs)
 
 
 def _surf_list_empty():
@@ -38,7 +31,7 @@ def _surf_list_empty():
 
 
 def _filter_surface(**kwargs):
-    params = {"filename": "TC_filter_Ks.dat",
+    params = {"filename": str(MICADO_PATH / "TC_filter_Ks.dat"),
               "name": "filter",
               "action": "transmission",
               "outer": 0.1,
@@ -58,13 +51,14 @@ def _mvs_effects_list():
 
 
 def _detector_list():
-    kwargs = {"filename": "LIST_detector_layout.dat", "image_plane_id": 0,
-              "report": {}}
+    kwargs = {"filename": str(FILES_PATH / "LIST_detector_layout.dat"),
+              "image_plane_id": 0, "report": {}}
     return efs.DetectorList(**kwargs)
 
 
 def _full_detector_list():
-    kwargs = {"filename": "LIST_full_detector_layout.dat", "image_plane_id": 0}
+    kwargs = {"filename": str(FILES_PATH / "LIST_full_detector_layout.dat"),
+              "image_plane_id": 0}
     return efs.DetectorList(**kwargs)
 
 
@@ -99,7 +93,7 @@ def _filter_tophat_curve():
 
 
 def _const_psf():
-    return efs.FieldConstantPSF(filename="test_ConstPSF.fits")
+    return efs.FieldConstantPSF(filename=str(FILES_PATH / "test_ConstPSF.fits"))
 
 
 def _ncpa_psf():

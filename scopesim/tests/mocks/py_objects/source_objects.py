@@ -1,5 +1,3 @@
-from pathlib import Path
-
 import numpy as np
 from astropy import units as u, wcs
 from astropy.io import fits
@@ -8,14 +6,8 @@ from synphot import SourceSpectrum, Empirical1D
 
 from scopesim.source.source import Source
 from scopesim.source.source_templates import vega_spectrum
-from scopesim import rc
 
-
-FILES_PATH = Path(__file__).parent.parent / "files/"
-
-
-if FILES_PATH not in rc.__search_path__:
-    rc.__search_path__ += [FILES_PATH]
+from . import FILES_PATH
 
 
 def _table_source():

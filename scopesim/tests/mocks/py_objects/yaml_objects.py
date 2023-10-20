@@ -1,14 +1,6 @@
-from pathlib import Path
 import yaml
-from scopesim import rc
 
-YAMLS_PATH = Path(__file__).parent.parent / "yamls/"
-FILES_PATH = Path(__file__).parent.parent / "files/"
-
-
-for NEW_PATH in [YAMLS_PATH, FILES_PATH]:
-    if NEW_PATH not in rc.__search_path__:
-        rc.__search_path__.insert(0, NEW_PATH)
+from . import YAMLS_PATH
 
 
 def _atmo_yaml_dict():
@@ -27,7 +19,7 @@ properties :
     humidity : 0.6
     pwv : 2.5
     pupil_angle : 30
-    
+
 effects :
 -   name : super_psf
     class : GaussianDiffractionPSF
@@ -42,7 +34,7 @@ effects :
         wave_min : 2.16
         wave_min : 2.4
         pixel_scale: 0.004
-        
+
 -   name : ignorable_effect
     class : Effect
     include : False
@@ -80,7 +72,7 @@ effects :
         latitude : 0
         altitude : 0
         pupil_angle : 0
-        
+
     """
     return yaml.full_load(text)
 
