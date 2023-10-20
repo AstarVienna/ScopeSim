@@ -1,6 +1,7 @@
 """TBA."""
 
 from pathlib import Path
+import logging
 
 import numpy as np
 from astropy import units as u
@@ -94,9 +95,15 @@ def download_svo_filter(filter_name, return_style="synphot"):
         silent=True,
     )
     if not path:
+        logging.debug("File not found in %s, downloading...", PATH_SVO_DATA)
         path = download_file(url, cache=True)
 
-    tbl = Table.read(path, format='votable')
+    try:
+        tbl = Table.read(path, format='votable')
+    except ValueError as err:
+        logging.error("Unable to load %s from %s.", filter_name, path)
+        raise err
+
     wave = u.Quantity(tbl['Wavelength'].data.data, u.Angstrom, copy=False)
     trans = tbl['Transmission'].data.data
 
