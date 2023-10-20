@@ -1,26 +1,21 @@
 import os
 from pathlib import Path
 import pytest
-from tempfile import TemporaryDirectory
+from unittest.mock import patch
 
-from scopesim import rc
 from scopesim.commands.user_commands import UserCommands, patch_fake_symlinks
-
-tmpdir = TemporaryDirectory()
-
-FILES_PATH = str(Path(__file__).parent.parent / "mocks")
+from scopesim.system_dict import UniqueList
 
 
-def setup_module():
-    rc.__config__["local_packages_path_OLD"] = rc.__config__["!SIM.file.local_packages_path"]
-    rc.__config__["!SIM.file.local_packages_path"] = FILES_PATH
+@pytest.fixture(scope="function")
+def patch_mock_paths(mock_dir):
+    with patch("scopesim.rc.__search_path__", UniqueList([mock_dir])):
+        patched = {"!SIM.file.local_packages_path": mock_dir}
+        with patch.dict("scopesim.rc.__config__", patched):
+            yield
 
 
-def teardown_module():
-    rc.__config__["!SIM.file.local_packages_path"] = rc.__config__["local_packages_path_OLD"]
-    # TODO: something like rc.__config__.pop("local_packages_path_OLD")
-
-
+@pytest.mark.usefixtures("patch_mock_paths")
 class TestInit:
     def test_initialise_with_nothing(self):
         assert isinstance(UserCommands(), UserCommands)
@@ -124,7 +119,7 @@ class TestListLocalPackages:
 
 class TestTrackIpAddress:
     def test_see_if_theres_an_entry_on_the_server_log_file(self):
-        cmds = UserCommands(use_instrument="test_package")
+        _ = UserCommands(use_instrument="test_package")
 
 
 def test_patch_fake_symlinks(tmp_path):
