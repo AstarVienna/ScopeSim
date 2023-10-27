@@ -173,6 +173,7 @@ The following global `yield`-fixtures are available for patching, to be used via
 
 - `patch_mock_path` and `patch_mock_path_micado`: patches `rc.__search_path__` to `mock_path` and `mock_path_micado`, respectively (see above).
 Note that in these cases, _only_ that path is present in the patched `rc.__search_path__`.
+- `patch_all_mock_paths`: like `patch_mock_path`, but also patches `"!SIM.file.local_packages_path"` with `mock_dir`, which is needed by some tests.
 - `no_file_error`: sets `rc.__currsys__["!SIM.file.error_on_missing_file"] = False`.
 Allowing files to not be present in a specific location is a feature of ScopeSim, used e.g. to determine if something needs to be downloaded or looked for at another location.
 However, the tests are generally run with this set to `True`, to spot any cases of files missing unintentionally.

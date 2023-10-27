@@ -7,6 +7,8 @@ import pytest
 from unittest.mock import patch
 
 import scopesim as sim
+from scopesim.system_dict import UniqueList
+
 
 MOCK_DIR = Path(__file__).parent / "mocks"
 
@@ -34,6 +36,20 @@ def patch_mock_path(mock_path):
     """
     with patch("scopesim.rc.__search_path__", [mock_path]):
         yield
+
+
+@pytest.fixture(scope="class")
+def patch_all_mock_paths(mock_dir):
+    with patch("scopesim.rc.__search_path__", UniqueList([mock_dir])):
+        patched = {"!SIM.file.local_packages_path": str(mock_dir)}
+        with patch.dict("scopesim.rc.__config__", patched):
+            # FIXME: remove the second part of this asap
+            try:
+                with patch.dict("scopesim.rc.__currsys__", patched):
+                    yield
+            except KeyError:
+                with patch.dict("scopesim.rc.__currsys__.cmds", patched):
+                    yield
 
 
 @pytest.fixture(scope="package")

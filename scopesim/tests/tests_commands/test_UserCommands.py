@@ -1,21 +1,11 @@
 import os
 from pathlib import Path
 import pytest
-from unittest.mock import patch
 
 from scopesim.commands.user_commands import UserCommands, patch_fake_symlinks
-from scopesim.system_dict import UniqueList
 
 
-@pytest.fixture(scope="function")
-def patch_mock_paths(mock_dir):
-    with patch("scopesim.rc.__search_path__", UniqueList([mock_dir])):
-        patched = {"!SIM.file.local_packages_path": mock_dir}
-        with patch.dict("scopesim.rc.__config__", patched):
-            yield
-
-
-@pytest.mark.usefixtures("patch_mock_paths")
+@pytest.mark.usefixtures("patch_all_mock_paths")
 class TestInit:
     def test_initialise_with_nothing(self):
         assert isinstance(UserCommands(), UserCommands)
@@ -91,6 +81,7 @@ class TestInit:
         assert cmd1.cmds == cmd2.cmds
 
 
+@pytest.mark.usefixtures("patch_all_mock_paths")
 class TestMiscFeatures:
     def test_updates_with_yaml_dict(self):
         yaml_input = {"alias": "TEL",
@@ -110,6 +101,7 @@ class TestMiscFeatures:
         assert "├─" in str(cmd)
 
 
+@pytest.mark.usefixtures("patch_all_mock_paths")
 class TestListLocalPackages:
     def test_all_packages_listed(self):
         from scopesim.commands import user_commands as uc2
@@ -117,6 +109,7 @@ class TestListLocalPackages:
         assert len(real_pkgs) > 0
 
 
+@pytest.mark.usefixtures("patch_all_mock_paths")
 class TestTrackIpAddress:
     def test_see_if_theres_an_entry_on_the_server_log_file(self):
         _ = UserCommands(use_instrument="test_package")

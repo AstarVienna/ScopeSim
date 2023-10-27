@@ -21,6 +21,7 @@ def setup_and_teardown():
 
 
 class TestInit:
+    @pytest.mark.webtest
     def test_initialises_with_nothing(self):
         assert isinstance(SkycalcTERCurve(), SkycalcTERCurve)
 
@@ -28,10 +29,12 @@ class TestInit:
         sky_ter = SkycalcTERCurve(include=False)
         assert sky_ter.skycalc_table is None
 
+    @pytest.mark.webtest
     def test_initialises_with_some_kwargs(self):
         sky_ter = SkycalcTERCurve(pwv=1.0, observatory="paranal")
         assert str(sky_ter.surface.meta["wavelength_unit"]) == "um"
 
+    @pytest.mark.webtest
     def test_initialises_with_bang_strings(self):
         patched = {"!OBS.pwv": 20.0}
         # FIXME: remove the second part of this asap
@@ -46,6 +49,7 @@ class TestInit:
         assert isinstance(sky_ter.surface.transmission, SpectralElement)
         assert isinstance(sky_ter.surface.emission, SourceSpectrum)
 
+    @pytest.mark.webtest
     def test_initialises_with_non_skycalc_keys(self):
         sky_ter = SkycalcTERCurve(name="bogus")
         assert "name" not in sky_ter.skycalc_conn.values
