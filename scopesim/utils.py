@@ -6,6 +6,9 @@ import logging
 from collections import OrderedDict
 from collections.abc import Iterable, Generator
 from copy import deepcopy
+from typing import TextIO
+from io import StringIO
+from importlib import metadata
 
 from docutils.core import publish_string
 import requests
@@ -414,38 +417,82 @@ def set_logger_level(which="console", level="ERROR"):
             hdlr.setLevel(level)
 
 
-def bug_report():
-    """Get versions of dependencies for inclusion in bug report."""
-    try:
-        from importlib import import_module
-    except ImportError:
-        import_module = __import__
+def _get_required_packages():
+    reqs = metadata.requires(__package__)
+    for req in reqs:
+        # Only include non-extra packages
+        if "extra" in req:
+            continue
 
-    packages = ["scopesim", "numpy", "scipy", "astropy", "matplotlib",
-                "synphot", "skycalc_ipy", "requests", "bs4", "yaml"]
+        name = req.split(">", maxsplit=1)[0]#.replace("-", "_")
+        yield name
 
+
+def _get_all_irdb_pkgs(root: Path):
+    return [pkg_path for pkg_path in root.iterdir() if pkg_path.is_dir()]
+
+
+def _get_irdb_pkg_version(pkg_path: Path) -> str:
+    versionfile = pkg_path / "version.yaml"
+    if not versionfile.exists():
+        return "version number not available."
+    with versionfile.open(encoding="utf-8") as file:
+        return yaml.load(file, yaml.SafeLoader)["version"]
+
+
+def _write_bug_report(stream: TextIO) -> None:
     # Check Python version
-    print("Python:\n", sys.version)
-    print("")
+    stream.write(f"Python:\n{sys.version}\n")
 
     # Check package dependencies
-    for package_name in packages:
+    stream.write("\nInstalled Python packages:\n")
+    packages = set(_get_required_packages())
+    packages.update({"scopesim_templates", "scopesim_data", "anisocado"})
+    maxkeylen = max(len(pkg) for pkg in packages)
+    for package_name in sorted(packages):
+        stream.write(f"{package_name:>{maxkeylen+2}}: ")
         try:
-            pkg = import_module(package_name)
-            print(package_name, ": ", pkg.__version__)
+            ver = metadata.version(package_name)
+            stream.write(f"{ver}\n")
         except ImportError:
-            print(package_name, "could not be loaded.")
-        except AttributeError:
-            print(package_name, ": version number not available")
+            stream.write(f"could not be loaded.\n")
+        # except AttributeError:
+        #     stream.write(f"version number not available.\n")
+
+    # Check IRDB packages
+    stream.write("\nInstalled IRDB packages:\n")
+    pkgs_path = Path(rc.__config__["!SIM.file.local_packages_path"])
+    installed_pkgs = _get_all_irdb_pkgs(pkgs_path)
+    maxkeylen = max(len(pkg.stem) for pkg in installed_pkgs)
+    for pkg_path in installed_pkgs:
+        pkg_ver = _get_irdb_pkg_version(pkg_path)
+        stream.write(f"{pkg_path.stem:>{maxkeylen+2}}: {pkg_ver}\n")
 
     # Check operating system
     import platform
     osinfo = platform.uname()
-    print("")
-    print("Operating system: ", osinfo.system)
-    print("         Release: ", osinfo.release)
-    print("         Version: ", osinfo.version)
-    print("         Machine: ", osinfo.machine)
+    stream.write("\nOperating System info:\n")
+    for field in ["system", "release", "version", "machine"]:
+        stream.write(f"{field.title():>9}: {getattr(osinfo, field)}\n")
+
+
+def bug_report() -> None:
+    """Print versions of dependencies for inclusion in bug report."""
+    _write_bug_report(sys.stdout)
+
+
+def bug_report_to_file(filename) -> None:
+    """Like bug_report, but writes to file instead of printing."""
+    filename = Path(filename)
+    with filename.open("w", encoding="utf-8") as file:
+        _write_bug_report(file)
+
+
+def log_bug_report(level=logging.DEBUG) -> None:
+    """Emit bug report as logging message."""
+    with StringIO() as str_stream:
+        _write_bug_report(str_stream)
+        logging.log(level, str_stream.getvalue())
 
 
 def find_file(filename, path=None, silent=False):
