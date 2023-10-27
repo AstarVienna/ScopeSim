@@ -33,7 +33,7 @@ def load_example_optical_train(**kwargs):
     opt: OpticalTrain
 
     """
-    patched = {"!SIM.file.local_packages_path": Path(__file__).parent}
+    patched = {"!SIM.file.local_packages_path": str(Path(__file__).parent)}
     with patch.dict("scopesim.rc.__config__", patched):
         cmd = UserCommands(use_instrument="basic_instrument", **kwargs)
         opt = OpticalTrain(cmd)
