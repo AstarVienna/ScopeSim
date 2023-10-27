@@ -9,6 +9,7 @@ from copy import deepcopy
 from typing import TextIO
 from io import StringIO
 from importlib import metadata
+import functools
 
 from docutils.core import publish_string
 import requests
@@ -1041,3 +1042,26 @@ def figure_grid_factory(nrows=1, ncols=1, **kwargs):
     fig = plt.figure()
     gs = fig.add_gridspec(nrows, ncols, **kwargs)
     return fig, gs
+
+
+def top_level_catch(func):
+    """Catch any unhandled exceptions, log it including bug report."""
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        try:
+            output = func(*args, **kwargs)
+        except Exception as err:
+            # FIXME: This try-except should not be necessary, but
+            # logging.exception has an issue in some versions.
+            try:
+                logging.exception(
+                    "Unhandled exception occured, see log file for details.")
+            except TypeError:
+                logging.error(
+                    "Unhandled exception occured, see log file for details.")
+                logging.error("Couldn't log full exception stack.")
+                logging.error("Error message was: '%s'", err)
+            log_bug_report(logging.ERROR)
+            raise err
+        return output
+    return wrapper
