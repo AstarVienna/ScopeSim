@@ -20,10 +20,10 @@ classifiers=[
     "Topic :: Scientific/Engineering :: Astronomy",
 ]
 dependencies = [
-    "numpy>=1.19.5",
+    "numpy>=1.20.0",
     "scipy>=1.10.0",
     "astropy>=5.0",
-    "matplotlib>=3.2.0",
+    "matplotlib>=3.7.2",
     "pooch>=1.7.0",  # for scipy.datasets
 
     "docutils>=0.15",
@@ -95,4 +95,6 @@ filterwarnings = [
     "ignore:Blowfish*:UserWarning",
     # Not sure what that is but it's everywhere...
     "ignore:'cgi'*:DeprecationWarning",
+    "ignore:The py23*:DeprecationWarning",
+    "ignore:datetime.datetime.utcfromtimestamp()*:DeprecationWarning",
 ]
