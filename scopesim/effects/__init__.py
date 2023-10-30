@@ -18,5 +18,8 @@ from .obs_strategies import *
 from .fits_headers import *
 
 from .rotation import *
+from .mosaic_atmo_disp_fibre_coupling import MosaicAtmosDispFibreCoupling
+from . import mosaic_atmo_disp_fibre_coupling_utils
+
 
 # from . import effects_utils
