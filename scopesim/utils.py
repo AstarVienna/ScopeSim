@@ -457,7 +457,7 @@ def _write_bug_report(stream: TextIO) -> None:
             ver = metadata.version(package_name)
             stream.write(f"{ver}\n")
         except ImportError:
-            stream.write(f"could not be loaded.\n")
+            stream.write("could not be loaded.\n")
         # except AttributeError:
         #     stream.write(f"version number not available.\n")
 
@@ -1063,6 +1063,6 @@ def top_level_catch(func):
                 logging.error("Couldn't log full exception stack.")
                 logging.error("Error message was: '%s'", err)
             log_bug_report(logging.ERROR)
-            raise err
+            raise
         return output
     return wrapper
