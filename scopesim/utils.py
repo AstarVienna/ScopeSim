@@ -430,7 +430,8 @@ def _get_required_packages():
 
 
 def _get_all_irdb_pkgs(root: Path):
-    return [pkg_path for pkg_path in root.iterdir() if pkg_path.is_dir()]
+    return [pkg_path for pkg_path in root.iterdir() if pkg_path.is_dir()
+            and not pkg_path.name.startswith("__")]
 
 
 def _get_irdb_pkg_version(pkg_path: Path) -> str:
