@@ -425,7 +425,7 @@ def _get_required_packages():
         if "extra" in req:
             continue
 
-        name = req.split(">", maxsplit=1)[0]#.replace("-", "_")
+        name = req.split(">", maxsplit=1)[0].strip()
         yield name
 
 
