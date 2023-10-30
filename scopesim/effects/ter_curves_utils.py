@@ -100,9 +100,9 @@ def download_svo_filter(filter_name, return_style="synphot"):
 
     try:
         tbl = Table.read(path, format='votable')
-    except ValueError as err:
+    except ValueError:
         logging.error("Unable to load %s from %s.", filter_name, path)
-        raise err
+        raise
 
     wave = u.Quantity(tbl['Wavelength'].data.data, u.Angstrom, copy=False)
     trans = tbl['Transmission'].data.data
