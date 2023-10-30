@@ -8,7 +8,7 @@ import yaml
 import requests
 
 from .. import rc
-from ..utils import find_file
+from ..utils import find_file, top_level_catch
 
 __all__ = ["UserCommands"]
 
@@ -141,6 +141,7 @@ class UserCommands:
 
     """
 
+    @top_level_catch
     def __init__(self, **kwargs):
 
         self.cmds = copy.deepcopy(rc.__config__)

@@ -16,7 +16,7 @@ from .image_plane import ImagePlane
 from ..commands.user_commands import UserCommands
 from ..detector import DetectorArray
 from ..effects import ExtraFitsKeywords
-from ..utils import from_currsys
+from ..utils import from_currsys, top_level_catch
 from ..version import version
 from .. import rc
 
@@ -76,6 +76,7 @@ class OpticalTrain:
 
     """
 
+    @top_level_catch
     def __init__(self, cmds=None):
         self.cmds = cmds
         self._description = self.__repr__()
@@ -131,6 +132,7 @@ class OpticalTrain:
         self.detector_arrays = [DetectorArray(det_list, **kwargs)
                                 for det_list in opt_man.detector_setup_effects]
 
+    @top_level_catch
     def observe(self, orig_source, update=True, **kwargs):
         """
         Main controlling method for observing ``Source`` objects.
@@ -273,6 +275,7 @@ class OpticalTrain:
 
         return source
 
+    @top_level_catch
     def readout(self, filename=None, **kwargs):
         """
         Produce detector readouts for the observed image.
