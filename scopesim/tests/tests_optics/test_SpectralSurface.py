@@ -53,6 +53,7 @@ class TestSpectralSurfaceInit:
         srf = opt_surf.SpectralSurface(filename=input_tables[0])
         assert isinstance(srf.table, Table)
 
+    @pytest.mark.usefixtures("no_file_error")
     def test_returns_empty_table_if_path_is_bogus(self):
         srf = opt_surf.SpectralSurface(filename="bogus.txt")
         assert isinstance(srf, opt_surf.SpectralSurface)
