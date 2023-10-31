@@ -26,7 +26,7 @@ __currsys__ = deepcopy(__config__)
 
 # Order matters!
 __search_path__ = UniqueList([
-    __config__["!SIM.file.local_packages_path"],
-    __pkg_dir__,
-    *list(__config__["!SIM.file.search_path"]),
+    Path(__config__["!SIM.file.local_packages_path"]).absolute(),
+    Path(__pkg_dir__).absolute(),
+    *[Path(pth).absolute() for pth in __config__["!SIM.file.search_path"]],
 ])
