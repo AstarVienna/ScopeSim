@@ -30,13 +30,8 @@ def setup_and_teardown():
                "!SIM.reports.rst_path": str(RST_PATH.absolute()),
                }
     with patch.dict("scopesim.rc.__config__", patched):
-        # FIXME: remove the second part of this asap
-        try:
-            with patch.dict("scopesim.rc.__currsys__", patched):
-                yield
-        except KeyError:
-            with patch.dict("scopesim.rc.__currsys__.cmds", patched):
-                yield
+        with patch.dict("scopesim.rc.__currsys__", patched):
+            yield
 
     if CLEAN_UP:
         for path in paths:

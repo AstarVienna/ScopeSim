@@ -43,13 +43,8 @@ def patch_all_mock_paths(mock_dir):
     with patch("scopesim.rc.__search_path__", UniqueList([mock_dir])):
         patched = {"!SIM.file.local_packages_path": str(mock_dir)}
         with patch.dict("scopesim.rc.__config__", patched):
-            # FIXME: remove the second part of this asap
-            try:
-                with patch.dict("scopesim.rc.__currsys__", patched):
-                    yield
-            except KeyError:
-                with patch.dict("scopesim.rc.__currsys__.cmds", patched):
-                    yield
+            with patch.dict("scopesim.rc.__currsys__", patched):
+                yield
 
 
 @pytest.fixture(scope="package")
@@ -79,13 +74,8 @@ def patch_mock_path_micado(mock_path_micado):
 def no_file_error():
     """Patch currsys to avoid missing file error."""
     patched = {"!SIM.file.error_on_missing_file": False}
-    # FIXME: remove the second part of this asap
-    try:
-        with patch.dict("scopesim.rc.__currsys__", patched):
-            yield
-    except KeyError:
-        with patch.dict("scopesim.rc.__currsys__.cmds", patched):
-            yield
+    with patch.dict("scopesim.rc.__currsys__", patched):
+        yield
 
 
 @pytest.fixture(scope="function")

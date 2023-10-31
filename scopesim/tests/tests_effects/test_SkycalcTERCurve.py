@@ -37,13 +37,8 @@ class TestInit:
     @pytest.mark.webtest
     def test_initialises_with_bang_strings(self):
         patched = {"!OBS.pwv": 20.0}
-        # FIXME: remove the second part of this asap
-        try:
-            with patch.dict("scopesim.rc.__currsys__", patched):
-                sky_ter = SkycalcTERCurve(pwv="!OBS.pwv")
-        except KeyError:
-            with patch.dict("scopesim.rc.__currsys__.cmds", patched):
-                sky_ter = SkycalcTERCurve(pwv="!OBS.pwv")
+        with patch.dict("scopesim.rc.__currsys__", patched):
+            sky_ter = SkycalcTERCurve(pwv="!OBS.pwv")
 
         assert sky_ter.skycalc_conn.values["pwv"] == 20.0
         assert isinstance(sky_ter.surface.transmission, SpectralElement)

@@ -101,13 +101,7 @@ class TestSelectModes:
                               (1e6, "fast"),
                               (5e6, "fast")])
     def test_selects_correct_mode(self, imageplane, value, mode, basic_dmps):
-        # FIXME: remove the second part of this asap
         patched = {"!OBS.auto_exposure.fill_frac": 0.5}
-        try:
-            with patch.dict("scopesim.rc.__currsys__", patched):
-                imageplane.hdu.data += value
-                assert basic_dmps.select_mode(imageplane) == mode
-        except KeyError:
-            with patch.dict("scopesim.rc.__currsys__.cmds", patched):
-                imageplane.hdu.data += value
-                assert basic_dmps.select_mode(imageplane) == mode
+        with patch.dict("scopesim.rc.__currsys__", patched):
+            imageplane.hdu.data += value
+            assert basic_dmps.select_mode(imageplane) == mode

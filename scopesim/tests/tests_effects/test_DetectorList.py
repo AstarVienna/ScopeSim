@@ -198,39 +198,19 @@ class TestDetectorWindowInit:
     def test_can_use_bang_strings_to_define_size(self):
         patched = {"!DET.width": 4.2,
                    "!DET.pixel_size": 0.1}
-        # FIXME: remove the second part of this asap
-        try:
-            with patch.dict("scopesim.rc.__currsys__", patched):
-                det = DetectorWindow(pixel_size="!DET.pixel_size", x=0, y=0,
-                                     width="!DET.width")
-                assert det.detector_headers()[0]["NAXIS1"] == 42.
-        except KeyError:
-            with patch.dict("scopesim.rc.__currsys__.cmds", patched):
-                det = DetectorWindow(pixel_size="!DET.pixel_size", x=0, y=0,
-                                     width="!DET.width")
-                assert det.detector_headers()[0]["NAXIS1"] == 42.
+        with patch.dict("scopesim.rc.__currsys__", patched):
+            det = DetectorWindow(pixel_size="!DET.pixel_size", x=0, y=0,
+                                 width="!DET.width")
+            assert det.detector_headers()[0]["NAXIS1"] == 42.
 
         patched["!DET.width"] = 900.1
-        # FIXME: remove the second part of this asap
-        try:
-            with patch.dict("scopesim.rc.__currsys__", patched):
-                assert det.image_plane_header["NAXIS1"] == 9001
-        except KeyError:
-            with patch.dict("scopesim.rc.__currsys__.cmds", patched):
-                assert det.image_plane_header["NAXIS1"] == 9001
+        with patch.dict("scopesim.rc.__currsys__", patched):
+            assert det.image_plane_header["NAXIS1"] == 9001
 
     def test_can_define_everything_in_pixels(self):
         patched = {"!DET.width": 42}
-        # FIXME: remove the second part of this asap
-        try:
-            with patch.dict("scopesim.rc.__currsys__", patched):
-                det = DetectorWindow(pixel_size=0.1, x=0, y=0,
-                                     width="!DET.width", units="pixel")
-                assert det.image_plane_header["NAXIS1"] == 42
-                assert det.detector_headers()[0]["NAXIS1"] == 42
-        except KeyError:
-            with patch.dict("scopesim.rc.__currsys__.cmds", patched):
-                det = DetectorWindow(pixel_size=0.1, x=0, y=0,
-                                     width="!DET.width", units="pixel")
-                assert det.image_plane_header["NAXIS1"] == 42
-                assert det.detector_headers()[0]["NAXIS1"] == 42
+        with patch.dict("scopesim.rc.__currsys__", patched):
+            det = DetectorWindow(pixel_size=0.1, x=0, y=0,
+                                 width="!DET.width", units="pixel")
+            assert det.image_plane_header["NAXIS1"] == 42
+            assert det.detector_headers()[0]["NAXIS1"] == 42
