@@ -97,5 +97,4 @@ filterwarnings = [
     "ignore:'cgi'*:DeprecationWarning",
     "ignore:The py23*:DeprecationWarning",
     "ignore:datetime.datetime.utcfromtimestamp()*:DeprecationWarning",
-    "ignore::astropy.units.core.UnitsWarning"
 ]

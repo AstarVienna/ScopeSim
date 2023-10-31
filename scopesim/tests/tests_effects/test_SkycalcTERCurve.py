@@ -20,6 +20,7 @@ def setup_and_teardown():
     Path("skycalc_temp.fits").unlink(missing_ok=True)
 
 
+@pytest.mark.filterwarnings("ignore::astropy.units.core.UnitsWarning")
 class TestInit:
     @pytest.mark.webtest
     def test_initialises_with_nothing(self):
