@@ -32,13 +32,24 @@ class TestFindFile:
     @pytest.mark.parametrize("throw_error", [True, False])
     def test_throws_error_if_file_doesnt_exist(self, throw_error):
         patched = {"!SIM.file.error_on_missing_file": throw_error}
-        with patch.dict("scopesim.rc.__currsys__", patched):
-            filename = "utils987654.pz"
-            if throw_error:
-                with pytest.raises(ValueError):
-                    utils.find_file(filename, rc.__search_path__)
-            else:
-                assert utils.find_file(filename, rc.__search_path__) is None
+        # FIXME: remove the second part of this asap
+        try:
+            with patch.dict("scopesim.rc.__currsys__", patched):
+                filename = "utils987654.pz"
+                if throw_error:
+                    with pytest.raises(ValueError):
+                        utils.find_file(filename, rc.__search_path__)
+                else:
+                    assert utils.find_file(filename, rc.__search_path__) is None
+
+        except KeyError:
+            with patch.dict("scopesim.rc.__currsys__.cmds", patched):
+                filename = "utils987654.pz"
+                if throw_error:
+                    with pytest.raises(ValueError):
+                        utils.find_file(filename, rc.__search_path__)
+                else:
+                    assert utils.find_file(filename, rc.__search_path__) is None
 
     def test_ignores_none_objects_in_search_path_list(self):
         filename = "utils.py"
