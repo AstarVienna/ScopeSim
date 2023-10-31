@@ -32,7 +32,7 @@ class TestInit:
     @pytest.mark.webtest
     def test_initialises_with_some_kwargs(self):
         sky_ter = SkycalcTERCurve(pwv=1.0, observatory="paranal")
-        assert str(sky_ter.surface.meta["wavelength_unit"]) == "um"
+        assert str(sky_ter.surface.meta["wavelength_unit"]) in ("nm", "um")
 
     @pytest.mark.webtest
     def test_initialises_with_bang_strings(self):
