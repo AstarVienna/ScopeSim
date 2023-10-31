@@ -1,6 +1,6 @@
 import pytest
+from unittest.mock import patch
 
-from scopesim import rc
 from scopesim.optics import optical_element as opt_elem
 from scopesim.effects import GaussianDiffractionPSF
 from scopesim.commands import UserCommands
@@ -43,13 +43,14 @@ class TestOpticalElementInit:
         assert opt_el.effects[2].include is False
 
     def test_currsys_ignore_effects_have_false_include_flag(self, atmo_yaml_dict):
-        rc.__currsys__ = UserCommands()
-        rc.__currsys__.ignore_effects = ["super_psf", "atmo_dispersion"]
-        opt_el = opt_elem.OpticalElement(atmo_yaml_dict)
-        for ii in range(2):
-            assert opt_el.effects[ii].include is False
+        with patch("scopesim.rc.__currsys__", UserCommands()) as patched:
+            patched.ignore_effects = ["super_psf", "atmo_dispersion"]
+            opt_el = opt_elem.OpticalElement(atmo_yaml_dict)
+            for ii in range(2):
+                assert opt_el.effects[ii].include is False
 
 
+@pytest.mark.usefixtures("patch_mock_path")
 class TestOpticalElementGetZOrderEffects:
     @pytest.mark.parametrize("z_orders, n", [(0, 2), (100, 1), ([200, 299], 1)])
     def test_returns_the_effects_with_z_values(self, z_orders, n,
@@ -58,6 +59,7 @@ class TestOpticalElementGetZOrderEffects:
         assert len(opt_el.get_z_order_effects(z_orders)) == n
 
 
+@pytest.mark.usefixtures("patch_mock_path")
 class TestGetItem:
     def test_returns_effect_for_normal_string(self, detector_yaml_dict):
         opt_el = opt_elem.OpticalElement(detector_yaml_dict)

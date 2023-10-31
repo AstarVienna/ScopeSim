@@ -41,6 +41,7 @@ PLOTS = False
 
 
 @pytest.mark.skip("Calls a 256MB PSF file. Not including that on Git.")
+@pytest.mark.usefixtures("protect_currsys")
 class Test_MICADO_MVP_YAML:
     def test_yaml_file_can_be_loaded_into_optical_train(self, mock_path_micado):
         filename = str(mock_path_micado / "MICADO_SCAO_WIDE_2.yaml")

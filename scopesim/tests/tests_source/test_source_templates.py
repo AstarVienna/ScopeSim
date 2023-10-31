@@ -54,8 +54,8 @@ def test_all_zero_spectra_line_up():
 
 
 class TestUniformIllumination:
-    # @pytest.mark.usefixtures("patch_mock_path")
-    def test_makes_source_and_runs_through_basic_instrument(self, mock_dir):
+    @pytest.mark.usefixtures("protect_currsys")
+    def test_makes_source_and_runs_through_basic_instrument(self):
         opt = load_example_optical_train()
 
         src = src_ts.uniform_illumination(xs=[-50, 50], ys=[-20, 30],

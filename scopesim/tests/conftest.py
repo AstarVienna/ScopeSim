@@ -86,3 +86,10 @@ def no_file_error():
     except KeyError:
         with patch.dict("scopesim.rc.__currsys__.cmds", patched):
             yield
+
+
+@pytest.fixture(scope="function")
+def protect_currsys():
+    """Prevent modification of global currsys."""
+    with patch("scopesim.rc.__currsys__"):
+        yield

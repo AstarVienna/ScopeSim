@@ -238,15 +238,17 @@ class TestSetupLoggers:
         logging.shutdown()
 
 
+# load_example_optical_train modifies __currsys__!
+@pytest.mark.usefixtures("protect_currsys")
 class TestLoadExampleOptTrain:
     def test_loads_imager_optical_train_object(self):
         opt = load_example_optical_train()
 
         assert isinstance(opt, OpticalTrain)
-        assert from_currsys(opt["slit_wheel"].include) == False
+        assert not from_currsys(opt["slit_wheel"].include)
 
     def test_loads_spectroscopy_optical_train_object(self):
         opt = load_example_optical_train(set_modes=["spectroscopy"])
 
         assert isinstance(opt, OpticalTrain)
-        assert from_currsys(opt["slit_wheel"].include) == True
+        assert from_currsys(opt["slit_wheel"].include)

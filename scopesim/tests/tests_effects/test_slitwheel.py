@@ -6,7 +6,7 @@ from unittest.mock import patch
 from scopesim.effects import ApertureMask, SlitWheel
 
 
-@pytest.fixture(name="swheel", scope="class")
+@pytest.fixture(name="swheel", scope="function")
 def fixture_swheel(mock_path):
     """Instantiate a SlitWheel"""
     with patch("scopesim.rc.__search_path__", [mock_path]):

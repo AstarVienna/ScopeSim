@@ -27,6 +27,13 @@ from matplotlib.colors import LogNorm
 PLOTS = False
 
 
+@pytest.fixture(scope="module", autouse=True)
+def patch_globals():
+    """Prevent modification of globals from within this module."""
+    with patch("scopesim.rc.__currsys__"):
+        yield
+
+
 # TODO: check if class scope breaks anything (used to be function scope)
 @pytest.fixture(scope="class")
 def cmds(mock_path, mock_path_yamls):

@@ -12,7 +12,7 @@ from scopesim.tests.mocks.py_objects import effects_objects as eo
 PLOTS = False
 
 
-@pytest.fixture(name="fwheel", scope="class")
+@pytest.fixture(name="fwheel", scope="function")
 def _filter_wheel(mock_path_micado):
     """Instantiate a FilterWheel"""
     fname = str(mock_path_micado / "TC_filter_{}.dat")

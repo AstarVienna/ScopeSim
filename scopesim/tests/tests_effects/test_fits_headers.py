@@ -1,4 +1,6 @@
 import pytest
+from unittest.mock import patch
+
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from astropy.io import fits
@@ -12,9 +14,10 @@ import scopesim as sim
 
 @pytest.fixture(scope="function")
 def simplecado_opt(mock_path_yamls):
-    simplecado_yaml = str(mock_path_yamls / "SimpleCADO.yaml")
-    cmd = sim.UserCommands(yamls=[simplecado_yaml])
-    return sim.OpticalTrain(cmd)
+    with patch("scopesim.rc.__currsys__"):
+        simplecado_yaml = str(mock_path_yamls / "SimpleCADO.yaml")
+        cmd = sim.UserCommands(yamls=[simplecado_yaml])
+        yield sim.OpticalTrain(cmd)
 
 
 @pytest.fixture(scope="function")

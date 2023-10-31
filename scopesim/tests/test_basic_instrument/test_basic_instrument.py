@@ -13,7 +13,7 @@ from scopesim.source import source_templates as st
 PLOTS = False
 
 
-@pytest.mark.usefixtures("patch_all_mock_paths")
+@pytest.mark.usefixtures("protect_currsys", "patch_all_mock_paths")
 class TestLoadsUserCommands:
     def test_loads(self):
         cmd = sim.UserCommands(use_instrument="basic_instrument")
@@ -21,7 +21,7 @@ class TestLoadsUserCommands:
         assert cmd["!INST.pixel_scale"] == 0.2
 
 
-@pytest.mark.usefixtures("patch_all_mock_paths")
+@pytest.mark.usefixtures("protect_currsys", "patch_all_mock_paths")
 class TestLoadsOpticalTrain:
     def test_loads(self):
         cmd = sim.UserCommands(use_instrument="basic_instrument")
@@ -31,7 +31,7 @@ class TestLoadsOpticalTrain:
         assert opt["#slit_wheel.current_slit!"] == "narrow"
 
 
-@pytest.mark.usefixtures("patch_all_mock_paths")
+@pytest.mark.usefixtures("protect_currsys", "patch_all_mock_paths")
 class TestObserveImagingMode:
     def test_runs(self):
         src = st.star(flux=9)
@@ -54,7 +54,7 @@ class TestObserveImagingMode:
         assert det_im[505:520, 505:520].sum() > 3e6
 
 
-@pytest.mark.usefixtures("patch_all_mock_paths")
+@pytest.mark.usefixtures("protect_currsys", "patch_all_mock_paths")
 class TestObserveSpectroscopyMode:
     """
     Test the number of spots along the three spectral traces.
@@ -106,7 +106,7 @@ class TestObserveSpectroscopyMode:
             assert round(trace_flux / spot_flux) == round(n_spots[i])
 
 
-@pytest.mark.usefixtures("patch_all_mock_paths")
+@pytest.mark.usefixtures("protect_currsys", "patch_all_mock_paths")
 class TestObserveIfuMode:
     def test_runs(self):
         wave = np.arange(0.7, 2.5, 0.001)
@@ -169,7 +169,7 @@ class TestObserveIfuMode:
             plt.show()
 
 
-@pytest.mark.usefixtures("patch_all_mock_paths")
+@pytest.mark.usefixtures("protect_currsys", "patch_all_mock_paths")
 class TestFitsHeader:
     def test_source_keywords_in_header(self):
         src = st.star()

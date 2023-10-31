@@ -1,4 +1,5 @@
 import pytest
+from unittest.mock import patch
 from astropy.io import fits
 
 from scopesim.optics import optics_manager as opt_mgr
@@ -7,6 +8,12 @@ from scopesim.effects import Effect
 
 from scopesim.tests.mocks.py_objects.yaml_objects import\
     _inst_yaml_dict, _detector_yaml_dict
+
+
+@pytest.fixture(scope="class")
+def paths_patch(mock_path, mock_path_micado):
+    with patch("scopesim.rc.__search_path__", [mock_path, mock_path_micado]):
+        yield
 
 
 @pytest.fixture(scope="function")
@@ -19,6 +26,7 @@ def detector_yaml_dict():
     return _detector_yaml_dict()
 
 
+@pytest.mark.usefixtures("paths_patch")
 class TestOpticsManager:
     def test_initialises_with_nothing(self):
         assert isinstance(opt_mgr.OpticsManager(),
@@ -51,6 +59,7 @@ class TestOpticsManagerImagePlaneHeader:
         assert isinstance(opt_man.image_plane_headers[0], fits.Header)
 
 
+@pytest.mark.usefixtures("patch_mock_path")
 class TestGetItem:
     def test_returns_optical_element(self, detector_yaml_dict):
         opt_man = opt_mgr.OpticsManager([detector_yaml_dict])

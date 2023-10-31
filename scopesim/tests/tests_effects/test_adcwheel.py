@@ -6,7 +6,7 @@ from unittest.mock import patch
 from scopesim.effects import TERCurve, ADCWheel
 
 
-@pytest.fixture(name="adcwheel", scope="class")
+@pytest.fixture(name="adcwheel", scope="function")
 def fixture_adcwheel(mock_path):
     """Instantiate an ADCWheel"""
     with patch("scopesim.rc.__search_path__", [mock_path]):
