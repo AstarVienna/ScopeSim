@@ -155,18 +155,6 @@ def no_file_error():
         yield
 ```
 
-_Note: A current limitation for patching specifically `rc.__currsys__` is that the type of it is changed by `OpticalTrain`, to a type that does not implement `MutableMapping`, but has an attribute `.cmds` which does.
-This will be fixed in a future version of ScopeSim, but for now, the following workaround is needed to ensure tests can run per-module as well as in the whole test suite:_
-```python
-patched = {"!SIM.file.error_on_missing_file": False}
-try:
-    with patch.dict("scopesim.rc.__currsys__", patched):
-        yield
-except KeyError:
-    with patch.dict("scopesim.rc.__currsys__.cmds", patched):
-        yield
-```
-
 ### Predefined global patches
 
 The following global `yield`-fixtures are available for patching, to be used via `@pytest.mark.usefixtures()`
@@ -178,6 +166,8 @@ Note that in these cases, _only_ that path is present in the patched `rc.__searc
 Allowing files to not be present in a specific location is a feature of ScopeSim, used e.g. to determine if something needs to be downloaded or looked for at another location.
 However, the tests are generally run with this set to `True`, to spot any cases of files missing unintentionally.
 If a test needs the "silent missing" functionality, this patch needs to be applied.
+- `protect_currsys`: creates a copy of `rc.__currsys__` for the scope of the test, to avoid polluting the global one.
+Should be used around everything the uses `OpticalTrain`.
 
 ## Misc
 
