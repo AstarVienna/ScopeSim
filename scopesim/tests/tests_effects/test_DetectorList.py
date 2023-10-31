@@ -1,24 +1,26 @@
-import os
 import pytest
+from unittest.mock import patch
+
 from astropy.table import Table
 
-from scopesim import rc
 from scopesim.effects import DetectorList, DetectorWindow, ApertureMask
 
-MOCK_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),
-                                         "../mocks/MICADO_SCAO_WIDE/"))
-if MOCK_PATH not in rc.__search_path__:
-    rc.__search_path__ += [MOCK_PATH]
+
+@pytest.fixture(scope="class")
+def patch_mock_path_micado(mock_path_micado):
+    with patch("scopesim.rc.__search_path__", [mock_path_micado]):
+        yield
 
 
 class TestDetectorListInit:
     def test_initialises_with_nothing(self):
         assert isinstance(DetectorList(), DetectorList)
 
+    @pytest.mark.usefixtures("patch_mock_path_micado")
     def test_initialises_with_filename(self):
         det_list = DetectorList(filename="FPA_array_layout.dat",
                                 image_plane_id=0)
-        hdr = det_list.detector_headers()[0]
+        _ = det_list.detector_headers()[0]
         assert isinstance(det_list, DetectorList)
         assert "x_size" in det_list.table.colnames
         assert det_list.table["x_size"][0] == 61.44
@@ -48,6 +50,7 @@ class TestDetectorListInit:
         assert hdr["NAXIS1"] == 100
 
 
+@pytest.mark.usefixtures("patch_mock_path_micado")
 class TestImagePlaneHeader:
     def test_header_is_sensical(self):
         det_list = DetectorList(filename="FPA_array_layout.dat",
@@ -71,34 +74,36 @@ class TestImagePlaneHeader:
         assert 4096 * 2 < hdr_big["NAXIS2"] < 4096 * 2 + 200
 
     def test_happy_using_x_size_unit_in_pixels(self):
-        det_list = DetectorList(array_dict={"id":[0, 1],
-                                            "x_cen":[-0.2, 0.2],      # mm
-                                            "y_cen":[0, 0],
-                                            "x_size":[32, 32],        # pixel
-                                            "y_size":[32, 32],
-                                            "pixsize":[0.01, 0.01],   # mm/pixel
-                                            "angle":[0, 0],
-                                            "gain":[1, 1]},
-                                x_size_unit="pixel",
-                                y_size_unit="pixel",
-                                image_plane_id=0)
+        det_list = DetectorList(array_dict={
+            "id": [0, 1],
+            "x_cen": [-0.2, 0.2],     # mm
+            "y_cen": [0, 0],
+            "x_size": [32, 32],       # pixel
+            "y_size": [32, 32],
+            "pixsize": [0.01, 0.01],  # mm/pixel
+            "angle": [0, 0],
+            "gain": [1, 1]},
+            x_size_unit="pixel",
+            y_size_unit="pixel",
+            image_plane_id=0)
 
         hdr_big = det_list.image_plane_header
         assert hdr_big["NAXIS1"] == (16 + 20) * 2
         assert hdr_big["NAXIS2"] == 32
 
     def test_happy_using_x_size_unit_in_mm(self):
-        det_list = DetectorList(array_dict={"id":[0, 1],
-                                            "x_cen":[-0.2, 0.2],      # mm
-                                            "y_cen":[0, 0],
-                                            "x_size":[0.32, 0.32],        # pixel
-                                            "y_size":[0.32, 0.32],
-                                            "pixsize":[0.01, 0.01],   # mm/pixel
-                                            "angle":[0, 0],
-                                            "gain":[1, 1]},
-                                x_size_unit="mm",
-                                y_size_unit="mm",
-                                image_plane_id=0)
+        det_list = DetectorList(array_dict={
+            "id": [0, 1],
+            "x_cen": [-0.2, 0.2],     # mm
+            "y_cen": [0, 0],
+            "x_size": [0.32, 0.32],   # pixel
+            "y_size": [0.32, 0.32],
+            "pixsize": [0.01, 0.01],  # mm/pixel
+            "angle": [0, 0],
+            "gain": [1, 1]},
+            x_size_unit="mm",
+            y_size_unit="mm",
+            image_plane_id=0)
 
         hdr_big = det_list.image_plane_header
         assert hdr_big["NAXIS1"] == (16 + 20) * 2
@@ -107,39 +112,42 @@ class TestImagePlaneHeader:
 
 class TestDetecotrHeaders:
     def test_happy_using_x_size_unit_in_pixels(self):
-        det_list = DetectorList(array_dict={"id":[0, 1],
-                                            "x_cen":[-0.2, 0.2],      # mm
-                                            "y_cen":[0, 0],
-                                            "x_size":[32, 32],        # pixel
-                                            "y_size":[32, 32],
-                                            "pixsize":[0.01, 0.01],   # mm/pixel
-                                            "angle":[0, 0],
-                                            "gain":[1, 1]},
-                                x_size_unit="pixel",
-                                y_size_unit="pixel",
-                                x_cen_unit="mm",
-                                y_cen_unit="mm",
-                                image_plane_id=0)
+        det_list = DetectorList(array_dict={
+            "id": [0, 1],
+            "x_cen": [-0.2, 0.2],     # mm
+            "y_cen": [0, 0],
+            "x_size": [32, 32],       # pixel
+            "y_size": [32, 32],
+            "pixsize": [0.01, 0.01],  # mm/pixel
+            "angle": [0, 0],
+            "gain": [1, 1]},
+            x_size_unit="pixel",
+            y_size_unit="pixel",
+            x_cen_unit="mm",
+            y_cen_unit="mm",
+            image_plane_id=0)
 
         det_hdrs = det_list.detector_headers()
         for hdr in det_hdrs:
             assert hdr["NAXIS1"] == 32
             assert hdr["NAXIS2"] == 32
 
+    # FIXME: why is this defined twice???
     def test_happy_using_x_size_unit_in_pixels(self):
-        det_list = DetectorList(array_dict={"id":[0, 1],
-                                            "x_cen":[-0.2, 0.2],      # mm
-                                            "y_cen":[0, 0],
-                                            "x_size":[0.32, 0.32],        # pixel
-                                            "y_size":[0.32, 0.32],
-                                            "pixsize":[0.01, 0.01],   # mm/pixel
-                                            "angle":[0, 0],
-                                            "gain":[1, 1]},
-                                x_size_unit="mm",
-                                y_size_unit="mm",
-                                x_cen_unit="mm",
-                                y_cen_unit="mm",
-                                image_plane_id=0)
+        det_list = DetectorList(array_dict={
+            "id": [0, 1],
+            "x_cen": [-0.2, 0.2],     # mm
+            "y_cen": [0, 0],
+            "x_size": [0.32, 0.32],   # pixel
+            "y_size": [0.32, 0.32],
+            "pixsize": [0.01, 0.01],  # mm/pixel
+            "angle": [0, 0],
+            "gain": [1, 1]},
+            x_size_unit="mm",
+            y_size_unit="mm",
+            x_cen_unit="mm",
+            y_cen_unit="mm",
+            image_plane_id=0)
 
         det_hdrs = det_list.detector_headers()
         for hdr in det_hdrs:
@@ -147,6 +155,7 @@ class TestDetecotrHeaders:
             assert hdr["NAXIS2"] == 32
 
 
+@pytest.mark.usefixtures("patch_mock_path_micado")
 class TestFovGrid:
     def test_returns_aperture_mask_object(self):
         det_list = DetectorList(filename="FPA_array_layout.dat",
@@ -187,16 +196,21 @@ class TestDetectorWindowInit:
         assert det_window.data["x_size"][0] == 10
 
     def test_can_use_bang_strings_to_define_size(self):
-        rc.__currsys__["!DET.width"] = 4.2
-        rc.__currsys__["!DET.pixel_size"] = 0.1
-        det = DetectorWindow(pixel_size="!DET.pixel_size", x=0, y=0, width="!DET.width")
-        assert det.detector_headers()[0]["NAXIS1"] == 42.
+        patched = {"!DET.width": 4.2,
+                   "!DET.pixel_size": 0.1}
+        with patch.dict("scopesim.rc.__currsys__", patched):
+            det = DetectorWindow(pixel_size="!DET.pixel_size", x=0, y=0,
+                                 width="!DET.width")
+            assert det.detector_headers()[0]["NAXIS1"] == 42.
 
-        rc.__currsys__["!DET.width"] = 900.1
-        assert det.image_plane_header["NAXIS1"] == 9001
+        patched["!DET.width"] = 900.1
+        with patch.dict("scopesim.rc.__currsys__", patched):
+            assert det.image_plane_header["NAXIS1"] == 9001
 
     def test_can_define_everything_in_pixels(self):
-        rc.__currsys__["!DET.width"] = 42
-        det = DetectorWindow(pixel_size=0.1, x=0, y=0, width="!DET.width", units="pixel")
-        assert det.image_plane_header["NAXIS1"] == 42
-        assert det.detector_headers()[0]["NAXIS1"] == 42
+        patched = {"!DET.width": 42}
+        with patch.dict("scopesim.rc.__currsys__", patched):
+            det = DetectorWindow(pixel_size=0.1, x=0, y=0,
+                                 width="!DET.width", units="pixel")
+            assert det.image_plane_header["NAXIS1"] == 42
+            assert det.detector_headers()[0]["NAXIS1"] == 42

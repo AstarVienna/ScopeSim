@@ -108,6 +108,14 @@ class OpticalTrain:
                              f"but is {type(user_commands)}")
 
         self.cmds = user_commands
+        # FIXME: Setting rc.__currsys__ to user_commands causes many problems:
+        #        UserCommands used SystemDict internally, but is itself not an
+        #        instance or subclas thereof. So rc.__currsys__ actually
+        #        changes type as a result of this line. On one hand, some other
+        #        code relies on this change, i.e. uses attributes from
+        #        UserCommands via rc.__currsys__, but on the other hand some
+        #        tests (now with proper patching) fail because of this type
+        #        change. THIS IS A PROBLEM!
         rc.__currsys__ = user_commands
         self.yaml_dicts = rc.__currsys__.yaml_dicts
         self.optics_manager = OpticsManager(self.yaml_dicts)

@@ -2,34 +2,17 @@
 Warning: To test the creation of plots, if PLOTS=False, all tests will pass regardless
 """
 
-import os
-import pytest
-from pytest import approx
-
 import numpy as np
-from astropy import units as u
-from astropy.io import fits
 
-from scopesim import rc
 from scopesim.effects import psfs, electronic, shifts
 
 from scopesim.tests.mocks.py_objects import fov_objects as fovobj
 from scopesim.tests.mocks.py_objects.fov_objects import _centre_fov
 
-from scopesim.tests.mocks.py_objects import source_objects as srcobj
-
 import matplotlib.pyplot as plt
-from matplotlib.colors import LogNorm
+
 
 PLOTS = False  # if FALSE all tests will pass regardless
-
-FILES_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),
-                                          "../mocks/files/"))
-YAMLS_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),
-                                          "../mocks/yamls/"))
-for NEW_PATH in [YAMLS_PATH, FILES_PATH]:
-    if NEW_PATH not in rc.__search_path__:
-        rc.__search_path__.insert(0, NEW_PATH)
 
 
 class TestPsfEffects:
@@ -68,9 +51,10 @@ class TestPsfEffects:
             psf.plot(fov)
             plt.show()
 
-    def test_AnisocadoPsf_plot(self):
-        psf = psfs.AnisocadoConstPSF(filename="test_AnisoCADO_rms_map.fits",
-                                     strehl=0.5, wavelength=2.15)
+    def test_AnisocadoPsf_plot(self, mock_path):
+        psf = psfs.AnisocadoConstPSF(
+            filename=str(mock_path / "test_AnisoCADO_rms_map.fits"),
+            strehl=0.5, wavelength=2.15)
         fov = fovobj._centre_micado_fov()
 
         if PLOTS:
@@ -79,8 +63,9 @@ class TestPsfEffects:
 
         assert True
 
-    def test_FieldConstantPSF_plot(self):
-        psf = psfs.FieldConstantPSF(filename="test_ConstPSF.fits")
+    def test_FieldConstantPSF_plot(self, mock_path):
+        psf = psfs.FieldConstantPSF(
+            filename=str(mock_path / "test_ConstPSF.fits"))
         fov = fovobj._centre_micado_fov()
 
         if PLOTS:
@@ -173,8 +158,9 @@ class TestDetectorEffectsPlots:
             eff.plot(dtcr)
             plt.show()
 
-    def test_LinearityCurve_plot(self):
-        eff = electronic.LinearityCurve(ndit=1, filename="test_linearity.dat")  # raise error for ints!
+    def test_LinearityCurve_plot(self, mock_path):
+        eff = electronic.LinearityCurve(
+            ndit=1, filename=str(mock_path / "test_linearity.dat"))  # raise error for ints!
 
         if PLOTS:
             eff.plot()

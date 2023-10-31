@@ -27,7 +27,6 @@ def basic_fov_header():
     return ho._basic_fov_header()
 
 
-@pytest.mark.usefixtures("cube_source", "basic_fov_header")
 class TestExtractAreaFromImageHDU:
     def test_returns_full_cube_for_thick_fov(self, cube_source,
                                              basic_fov_header):

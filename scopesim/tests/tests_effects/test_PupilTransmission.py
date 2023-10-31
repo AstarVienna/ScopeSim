@@ -1,4 +1,5 @@
 import pytest
+from unittest.mock import patch
 
 from astropy import units as u
 
@@ -12,10 +13,16 @@ from scopesim.effects.ter_curves import PupilTransmission
 
 THROUGHPUT = 0.764      # random value
 
-@pytest.fixture(name="pupilmask", scope="class")
+
+@pytest.fixture(name="pupilmask", scope="function")
 def fixture_pupilmask():
     """Instantiate a PupilTransmission object"""
-    return PupilTransmission(transmission=THROUGHPUT)
+    # Ensure same values no matter the currsysS
+    patched = {"!SIM.spectral.wave_min": 0.3,
+               "!SIM.spectral.wave_max": 20}
+    with patch.dict("scopesim.rc.__currsys__", patched):
+        yield PupilTransmission(transmission=THROUGHPUT)
+
 
 class TestPupilTransmission:
     def test_initialises_correctly(self, pupilmask):

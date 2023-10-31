@@ -31,7 +31,6 @@ class TestInit:
         assert dtcr_arr.meta["random_parameter"] == 42
 
 
-@pytest.mark.usefixtures("image_plane", "detector_list_effect")
 class TestReadout:
     def test_returns_hdu_for_empty_effects_list(self, image_plane,
                                                 detector_list_effect):

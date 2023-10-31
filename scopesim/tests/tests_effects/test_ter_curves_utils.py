@@ -7,12 +7,13 @@ from matplotlib import pyplot as plt
 
 from astropy import units as u
 
-import scopesim.source.source_templates as src_ts
 from scopesim.effects import ter_curves_utils as ter_utils
 
 PLOTS = False
 
 
+# get_filter relies on None from find_file
+@pytest.mark.usefixtures("no_file_error")
 class TestFunctionGetFilter:
     @pytest.mark.parametrize("filt_name", ["V", "Ks", "L", "z'"])
     def test_returns_generic_filter_from_svo(self, filt_name):
@@ -26,6 +27,7 @@ class TestFunctionGetFilter:
         assert np.max(ks(wave)) > 0.75
 
 
+@pytest.mark.usefixtures("no_file_error")
 @pytest.mark.parametrize("filter_name, phot_system, flux",
                          [("V", "vega", 995),
                           ("z", "AB", 602),
@@ -39,6 +41,7 @@ def test_zero_mag_flux(filter_name, phot_system, flux):
     assert flux == approx(new_flux.value, rel=0.08)
 
 
+@pytest.mark.usefixtures("no_file_error")
 def test_compare_br_gamma():
     filt = "Ks"
     flux_vega = ter_utils.zero_mag_flux(filt, "vega").value
@@ -47,6 +50,7 @@ def test_compare_br_gamma():
     assert delta_mag == approx(1.85, rel=0.01)
 
 
+@pytest.mark.usefixtures("no_file_error")
 class TestScaleSpectrum:
     def test_scales_vega_spectrum_to_vega_ab_or_jansky(self):
         spec = scopesim.source.source_templates.vega_spectrum()

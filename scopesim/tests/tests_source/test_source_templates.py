@@ -1,10 +1,13 @@
 import pytest
+from pytest import approx
+from unittest.mock import patch
+
 from matplotlib import pyplot as plt
 
-from _pytest.python_api import approx
 from astropy import units as u
 from astropy.table import Table
 
+from scopesim import rc
 from scopesim import load_example_optical_train
 from scopesim.source import source_templates as src_ts
 from scopesim.source.source import Source
@@ -51,6 +54,7 @@ def test_all_zero_spectra_line_up():
 
 
 class TestUniformIllumination:
+    @pytest.mark.usefixtures("protect_currsys")
     def test_makes_source_and_runs_through_basic_instrument(self):
         opt = load_example_optical_train()
 

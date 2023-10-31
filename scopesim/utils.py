@@ -549,7 +549,7 @@ def find_file(filename, path=None, silent=False):
     if not silent:
         logging.error(msg)
 
-    if from_currsys("!SIM.file.error_on_missing_file") is True:
+    if from_currsys("!SIM.file.error_on_missing_file"):
         raise ValueError(msg)
 
     return None
