@@ -38,7 +38,7 @@ def fixture_detmodepropset(kwargs_dict):
     return DetectorModePropertiesSetter(**kwargs_dict)
 
 
-@pytest.fixture(name="imageplane", scope="class")
+@pytest.fixture(name="imageplane", scope="function")
 def fixture_imageplane():
     """Instantiate an ImagePlane object"""
     implane = ImagePlane(_image_hdu_square().header)
