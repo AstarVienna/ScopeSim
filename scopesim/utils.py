@@ -465,7 +465,7 @@ def _write_bug_report(stream: TextIO) -> None:
     stream.write("\nInstalled IRDB packages:\n")
     pkgs_path = Path(rc.__config__["!SIM.file.local_packages_path"])
     installed_pkgs = _get_all_irdb_pkgs(pkgs_path)
-    maxkeylen = max(len(pkg.stem) for pkg in installed_pkgs)
+    maxkeylen = max((len(pkg.stem) for pkg in installed_pkgs), default=0)
     for pkg_path in installed_pkgs:
         pkg_ver = _get_irdb_pkg_version(pkg_path)
         stream.write(f"{pkg_path.stem:>{maxkeylen+2}}: {pkg_ver}\n")
