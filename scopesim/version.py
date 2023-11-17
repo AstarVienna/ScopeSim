@@ -1,12 +1,16 @@
 from importlib import metadata
 version = metadata.version(__package__)
-date = '2023-10-18 12:00:00 GMT'
+date = '2023-11-07 12:00:00 GMT'
 yaml_descriptions = """
-- version : 0.7.1-alpha
-  date : 202x-xx-xx
-  comment : None
+- version : 0.7.1
+  date : 2023-11-07
+  comment : Bug fixes and better error report
   changes :
-  - None
+  - Improve the output of `scopsim.bug_report()` and automatically log that report when an unhandled error occurs: #287
+  - Some bug fixes related to that same bug_report: #290, #291
+  - Improve ScopeSim's README file: #294
+  - Deal with warnings from the latest Python version 3.12: #289
+  - Internally restructure and clean the test suite, make sure individual tests are not influencing each other: #285
 
 - version : 0.7.0
   date : 2023-10-18
