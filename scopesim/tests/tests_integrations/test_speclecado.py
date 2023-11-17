@@ -1,22 +1,17 @@
 import pytest
-import os
-from astropy import units as u
+
 import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm
 
 from scopesim import UserCommands, OpticalTrain
 from scopesim.tests.mocks.py_objects import source_objects as so
-from scopesim import effects as efs
-
-from scopesim import rc
-MOCK_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__),
-                                        "../mocks/MICADO_SPEC/"))
-rc.__search_path__.insert(0, MOCK_DIR)
 
 
 PLOTS = False
 
+
 @pytest.mark.skip(reason="Ignoring old Spectroscopy integration tests")
+@pytest.mark.usefixtures("protect_currsys")
 class TestMicadoSpec:
     def test_full_run_through(self):
         src1 = so._vega_source(mag=20)

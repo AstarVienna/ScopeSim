@@ -93,30 +93,25 @@ class TestGet3DShifts:
 
 
 class TestGetImagingWaveset:
-    @pytest.mark.usefixtures("wave_kwargs")
     def test_returns_default_wave_range_when_passed_no_effects(self, wave_kwargs):
         wave_bin_edges = fm_utils.get_imaging_waveset([], **wave_kwargs)
         assert len(wave_bin_edges) == 2
 
-    @pytest.mark.usefixtures("wave_kwargs", "th_filt")
     def test_returns_waveset_of_filter(self, wave_kwargs, th_filt):
         wave_bin_edges = fm_utils.get_imaging_waveset([th_filt], **wave_kwargs)
         assert len(wave_bin_edges) == 2
 
-    @pytest.mark.usefixtures("wave_kwargs")
     def test_returns_waveset_of_psf(self, wave_kwargs):
         psf = eo._const_psf()
         wave_bin_edges = fm_utils.get_imaging_waveset([psf], **wave_kwargs)
         assert len(wave_bin_edges) == 4
 
-    @pytest.mark.usefixtures("wave_kwargs", "th_filt")
     def test_returns_waveset_of_psf_and_filter(self, wave_kwargs, th_filt):
         psf = eo._const_psf()
         wave_bin_edges = fm_utils.get_imaging_waveset([th_filt, psf],
                                                       **wave_kwargs)
         assert len(wave_bin_edges) == 4
 
-    @pytest.mark.usefixtures("wave_kwargs", "th_filt")
     def test_returns_waveset_of_ncpa_psf_inside_filter_edges(self, wave_kwargs,
                                                              th_filt):
         psf = eo._ncpa_psf()
@@ -220,7 +215,6 @@ class TestGetImagingFOVs:
             plt.show()
 
 
-@pytest.mark.usefixtures("spec_hdrs")
 class TestGetSpectroscopyHeaders:
     def test_returns_headers(self, spec_hdrs):
         assert all([isinstance(hdr, PoorMansHeader) for hdr in spec_hdrs])
@@ -235,7 +229,6 @@ class TestGetSpectroscopyHeaders:
             plt.show()
 
 
-@pytest.mark.usefixtures("spec_hdrs")
 class TestGetSpectroscopyFOVs:
     def test_returns_fovs(self, spec_hdrs):
         shifts = {"wavelengths": np.array([0.7, 2.5]),

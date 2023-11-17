@@ -41,7 +41,6 @@ class TestInit:
         assert np.sum(vibration.kernel) == approx(1, rel=1e-3)
 
 
-@pytest.mark.usefixtures("fov_hdr", "implane_hdr")
 class TestApplyTo:
     def test_nothing_happens_if_apply_to_fov(self, fov_hdr):
         fov = FieldOfView(header=fov_hdr, waverange=[0.5, 2.5], area=1*u.m**2)
@@ -66,5 +65,3 @@ class TestApplyTo:
             plt.imshow(vibration.kernel, norm=LogNorm())
             plt.colorbar()
             plt.show()
-
-

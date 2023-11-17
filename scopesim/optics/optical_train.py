@@ -16,7 +16,7 @@ from .image_plane import ImagePlane
 from ..commands.user_commands import UserCommands
 from ..detector import DetectorArray
 from ..effects import ExtraFitsKeywords
-from ..utils import from_currsys
+from ..utils import from_currsys, top_level_catch
 from ..version import version
 from .. import rc
 
@@ -76,6 +76,7 @@ class OpticalTrain:
 
     """
 
+    @top_level_catch
     def __init__(self, cmds=None):
         self.cmds = cmds
         self._description = self.__repr__()
@@ -107,6 +108,14 @@ class OpticalTrain:
                              f"but is {type(user_commands)}")
 
         self.cmds = user_commands
+        # FIXME: Setting rc.__currsys__ to user_commands causes many problems:
+        #        UserCommands used SystemDict internally, but is itself not an
+        #        instance or subclas thereof. So rc.__currsys__ actually
+        #        changes type as a result of this line. On one hand, some other
+        #        code relies on this change, i.e. uses attributes from
+        #        UserCommands via rc.__currsys__, but on the other hand some
+        #        tests (now with proper patching) fail because of this type
+        #        change. THIS IS A PROBLEM!
         rc.__currsys__ = user_commands
         self.yaml_dicts = rc.__currsys__.yaml_dicts
         self.optics_manager = OpticsManager(self.yaml_dicts)
@@ -131,6 +140,7 @@ class OpticalTrain:
         self.detector_arrays = [DetectorArray(det_list, **kwargs)
                                 for det_list in opt_man.detector_setup_effects]
 
+    @top_level_catch
     def observe(self, orig_source, update=True, **kwargs):
         """
         Main controlling method for observing ``Source`` objects.
@@ -273,6 +283,7 @@ class OpticalTrain:
 
         return source
 
+    @top_level_catch
     def readout(self, filename=None, **kwargs):
         """
         Produce detector readouts for the observed image.

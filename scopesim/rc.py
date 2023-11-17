@@ -1,24 +1,32 @@
+# -*- coding: utf-8 -*-
+"""Global configurations for ScopeSim."""
+
 from pathlib import Path
 import yaml
 
-from .system_dict import SystemDict
+from copy import deepcopy
+
+from .system_dict import SystemDict, UniqueList
 
 __pkg_dir__ = Path(__file__).parent
 
-with open(__pkg_dir__/"defaults.yaml") as f:
-    dicts = list(yaml.full_load_all(f))
+with (__pkg_dir__ / "defaults.yaml").open(encoding="utf-8") as file:
+    dicts = list(yaml.full_load_all(file))
 
-user_rc_path = Path("~/.scopesim_rc.yaml").expanduser()
-if user_rc_path.exists():
-    with open(user_rc_path) as f:
-        dicts.extend(list(yaml.full_load_all(f)))
+
+try:
+    with (Path.home() / ".scopesim_rc.yaml").open(encoding="utf-8") as file:
+        dicts.extend(list(yaml.full_load_all(file)))
+except FileNotFoundError:
+    pass
+
 
 __config__ = SystemDict(dicts)
-__currsys__ = __config__
+__currsys__ = deepcopy(__config__)
 
-__search_path__ = [__config__["!SIM.file.local_packages_path"],
-                   __pkg_dir__] + __config__["!SIM.file.search_path"]
-
-# if os.environ.get("READTHEDOCS") == "True" or "F:" in os.getcwd():
-#     extra_paths = ["../", "../../", "../../../", "../../../../"]
-#     __search_path__ = extra_paths + __search_path__
+# Order matters!
+__search_path__ = UniqueList([
+    Path(__config__["!SIM.file.local_packages_path"]).absolute(),
+    Path(__pkg_dir__).absolute(),
+    *[Path(pth).absolute() for pth in __config__["!SIM.file.search_path"]],
+])

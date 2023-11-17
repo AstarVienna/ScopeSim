@@ -3,7 +3,6 @@ from pytest import approx
 
 import numpy as np
 
-from scopesim import rc
 from scopesim.effects.shifts import AtmosphericDispersion, \
                                     get_pixel_border_waves_from_atmo_disp
 
@@ -27,7 +26,6 @@ def atmo_yaml_dict():
     return atmo_dict
 
 
-@pytest.mark.usefixtures("atmo_yaml_dict")
 class TestInit:
     def test_throws_error_when_initialised_with_nothing(self):
         with pytest.raises(ValueError):
@@ -46,7 +44,6 @@ class TestInit:
             isinstance(AtmosphericDispersion(), AtmosphericDispersion)
 
 
-@pytest.mark.usefixtures("atmo_yaml_dict")
 class TestFovGrid:
     def test_returns_list_of_3_arrays_with_correct_which(self, atmo_yaml_dict):
         atmo_disp = AtmosphericDispersion(**atmo_yaml_dict["properties"])
@@ -70,7 +67,7 @@ class TestFovGrid:
         atmo_yaml_dict["properties"]["pupil_angle"] = 90
         atmo_disp = AtmosphericDispersion(**atmo_yaml_dict["properties"])
         waves, dx, dy = atmo_disp.fov_grid()
-        assert dx[0] - dx[-1]== approx(0.53, rel=1e-2)
+        assert dx[0] - dx[-1] == approx(0.53, rel=1e-2)
         assert all([y == approx(0) for y in dy])
 
     def test_returns_same_results_when_turned_30_degrees(self, atmo_yaml_dict):
@@ -97,13 +94,14 @@ class TestGetPixelBorderWavesFromAtmoDisp:
     - 2.5 : -0.53 arcsec
 
     """
+
     def test_returns_sensible_data(self):
-        atmo_params = {"z0"     : 28.7,               # in deg
-                       "temp"   : 7,                # in degC
+        atmo_params = {"z0": 28.7,               # in deg
+                       "temp": 7,                # in degC
                        "rel_hum": 100,              # in %
-                       "pres"   : 755,              # in mbar
-                       "lat"    : -26,              # in deg
-                       "h"      : 2400,             # in m
+                       "pres": 755,              # in mbar
+                       "lat": -26,              # in deg
+                       "h": 2400,             # in m
                        "wave_min": 0.5,             # in um
                        "wave_mid": 1.5,
                        "wave_max": 2.5,

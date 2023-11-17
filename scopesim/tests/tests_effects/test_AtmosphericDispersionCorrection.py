@@ -36,7 +36,6 @@ def atmo_params():
     return _atmo_params
 
 
-@pytest.mark.usefixtures("atmo_params")
 class TestInit:
     def test_initialises_when_all_needed_keywords_given(self, atmo_params):
         assert isinstance(ADC(**atmo_params), ADC)
@@ -46,7 +45,6 @@ class TestInit:
             ADC(**{"its_over": 9000})
 
 
-@pytest.mark.usefixtures("atmo_params")
 class TestApplyTo:
     def test_does_nothing_when_passed_wrong_type(self, atmo_params):
         adc = ADC(**atmo_params)
@@ -85,7 +83,6 @@ class TestApplyTo:
         assert new_crpix_d[1] == approx(old_crpix_d[1] - offset, rel=1e-3)
 
 
-@pytest.mark.usefixtures("atmo_params")
 class TestCombinedWithAtmoDisp:
     @pytest.mark.parametrize("waves", [(0.7, 0.8), (1.4, 1.6), (2.4, 2.6)])
     @pytest.mark.parametrize("angle", [0, 15, 45, 85, 90])
@@ -116,5 +113,3 @@ class TestCombinedWithAtmoDisp:
 
         assert adc_x_shift == approx(ad_x_shift, rel=1e-3)
         assert adc_y_shift == approx(ad_y_shift, rel=1e-3)
-
-

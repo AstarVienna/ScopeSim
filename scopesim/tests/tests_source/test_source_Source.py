@@ -2,9 +2,6 @@
 import pytest
 from pytest import approx
 
-import os
-from copy import deepcopy
-
 import numpy as np
 
 from astropy.io import fits
@@ -17,7 +14,6 @@ from synphot import SourceSpectrum, SpectralElement
 from synphot.models import Empirical1D
 from synphot.units import PHOTLAM
 
-import scopesim as sim
 from scopesim.source import source_utils
 from scopesim.source.source import Source
 
@@ -30,35 +26,30 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm
 
 
-MOCK_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__),
-                                        "../mocks/files/"))
-sim.rc.__search_path__.insert(0, MOCK_DIR)
-
 PLOTS = False
 
 
 @pytest.fixture(scope="module")
-def input_files():
+def input_files(mock_path):
     filenames = ["test_image.fits", "test_table.fits", "test_table.tbl",
                  "test_spectrum_Flam.dat", "test_spectrum_photlam.dat"]
-    filenames = [os.path.join(MOCK_DIR, fname) for fname in filenames]
+    filenames = [str(mock_path / fname) for fname in filenames]
     return filenames
 
 
 @pytest.fixture(scope="module")
-def input_hdulist():
+def input_hdulist(mock_path):
     filenames = ["test_image.fits"]
-    filenames = [os.path.join(MOCK_DIR, fname) for fname in filenames]
-    print(filenames)
+    filenames = [str(mock_path / fname) for fname in filenames]
     hdu_handle = fits.open(filenames[0])
 
     return hdu_handle
 
 
 @pytest.fixture(scope="module")
-def input_tables():
+def input_tables(mock_path):
     filenames = ["test_table.fits", "test_table.tbl"]
-    filenames = [os.path.join(MOCK_DIR, fname) for fname in filenames]
+    filenames = [str(mock_path / fname) for fname in filenames]
     tbls = []
     tbls += [Table.read(filenames[0])]
     tbls += [Table.read(filenames[1], format="ascii.basic")]
@@ -68,9 +59,9 @@ def input_tables():
 
 
 @pytest.fixture(scope="module")
-def input_spectra():
+def input_spectra(mock_path):
     filenames = ["test_spectrum_photlam.dat", "test_spectrum_Flam.dat"]
-    filenames = [os.path.join(MOCK_DIR, fname) for fname in filenames]
+    filenames = [str(mock_path / fname) for fname in filenames]
     tbls = [ioascii.read(fname) for fname in filenames]
     specs = []
     for tbl in tbls:
@@ -132,8 +123,6 @@ def image_source():
     return im_source
 
 
-@pytest.mark.usefixtures("input_files", "input_hdulist", "input_tables",
-                         "input_spectra")
 class TestSourceInit:
     def test_initialises_with_nothing(self):
         src = Source()
@@ -204,7 +193,6 @@ class TestSourceInit:
         assert isinstance(src.fields[0], Table)
 
 
-@pytest.mark.usefixtures("table_source", "image_source")
 class TestSourceAddition:
     def test_ref_column_always_references_correct_spectrum(self, table_source,
                                                            image_source):
@@ -264,7 +252,6 @@ class TestSourceAddition:
         assert len(new_source_2.fields) == len(new_source_2._meta_dicts)
 
 
-@pytest.mark.usefixtures("table_source", "image_source")
 class TestSourceImageInRange:
     def test_returns_an_image_plane_object(self, table_source):
         im = table_source.image_in_range(1*u.um, 2*u.um)
@@ -307,7 +294,6 @@ class TestSourceImageInRange:
             plt.show()
 
 
-@pytest.mark.usefixtures("table_source", "image_source")
 class TestSourcePhotonsInRange:
     def test_correct_photons_are_returned_for_table_source(self, table_source):
         ph = table_source.photons_in_range(1, 2)
@@ -343,7 +329,6 @@ class TestSourceRotate:
         pass
 
 
-@pytest.mark.usefixtures("input_spectra")
 class TestPhotonsInRange:
     @pytest.mark.parametrize("ii, n_ph",
                              [(0, 50),

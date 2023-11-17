@@ -1,6 +1,6 @@
 [project]
 name = "ScopeSim"
-version = "0.7.0"
+version = "0.7.1"
 description = "Generalised telescope observation simulator"
 readme = "README.md"
 requires-python = ">=3.8"
@@ -20,10 +20,10 @@ classifiers=[
     "Topic :: Scientific/Engineering :: Astronomy",
 ]
 dependencies = [
-    "numpy>=1.19.5",
+    "numpy>=1.20.0",
     "scipy>=1.10.0",
     "astropy>=5.0",
-    "matplotlib>=3.2.0",
+    "matplotlib>=3.7.2",
     "pooch>=1.7.0",  # for scipy.datasets
 
     "docutils>=0.15",
@@ -36,7 +36,7 @@ dependencies = [
     "requests-cache>1.0",
 
     "synphot>=1.1.0",
-    "skycalc_ipy>=0.1.5",
+    "skycalc_ipy>=0.2.0",
     "anisocado>=0.3.0",
 ]
 
@@ -95,4 +95,6 @@ filterwarnings = [
     "ignore:Blowfish*:UserWarning",
     # Not sure what that is but it's everywhere...
     "ignore:'cgi'*:DeprecationWarning",
+    "ignore:The py23*:DeprecationWarning",
+    "ignore:datetime.datetime.utcfromtimestamp()*:DeprecationWarning",
 ]

@@ -1,7 +1,6 @@
+
 import pytest
-from pytest import raises
-import os
-from time import time
+
 import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib.colors import LogNorm
@@ -10,12 +9,11 @@ from astropy import units as u
 import scopesim as sim
 from scopesim.source import source_templates as st
 
+
 PLOTS = False
 
-inst_pkgs = os.path.join(os.path.dirname(__file__), "../mocks")
-sim.rc.__currsys__["!SIM.file.local_packages_path"] = inst_pkgs
 
-
+@pytest.mark.usefixtures("protect_currsys", "patch_all_mock_paths")
 class TestLoadsUserCommands:
     def test_loads(self):
         cmd = sim.UserCommands(use_instrument="basic_instrument")
@@ -23,6 +21,7 @@ class TestLoadsUserCommands:
         assert cmd["!INST.pixel_scale"] == 0.2
 
 
+@pytest.mark.usefixtures("protect_currsys", "patch_all_mock_paths")
 class TestLoadsOpticalTrain:
     def test_loads(self):
         cmd = sim.UserCommands(use_instrument="basic_instrument")
@@ -32,6 +31,7 @@ class TestLoadsOpticalTrain:
         assert opt["#slit_wheel.current_slit!"] == "narrow"
 
 
+@pytest.mark.usefixtures("protect_currsys", "patch_all_mock_paths")
 class TestObserveImagingMode:
     def test_runs(self):
         src = st.star(flux=9)
@@ -54,6 +54,7 @@ class TestObserveImagingMode:
         assert det_im[505:520, 505:520].sum() > 3e6
 
 
+@pytest.mark.usefixtures("protect_currsys", "patch_all_mock_paths")
 class TestObserveSpectroscopyMode:
     """
     Test the number of spots along the three spectral traces.
@@ -65,6 +66,7 @@ class TestObserveSpectroscopyMode:
     - H: 1.3, 1.8      dwave = 0.5  --> R~2000      -> 10 spots
     - K: 1.75, 2.5     dwave = 0.75 --> R~1300      -> 15 spots
     """
+
     def test_runs(self):
         wave = np.arange(0.7, 2.5, 0.001)
         spec = np.zeros(len(wave))
@@ -104,6 +106,7 @@ class TestObserveSpectroscopyMode:
             assert round(trace_flux / spot_flux) == round(n_spots[i])
 
 
+@pytest.mark.usefixtures("protect_currsys", "patch_all_mock_paths")
 class TestObserveIfuMode:
     def test_runs(self):
         wave = np.arange(0.7, 2.5, 0.001)
@@ -142,7 +145,6 @@ class TestObserveIfuMode:
             trace_flux = det_im[:, x0:x1].sum()     # sum along a trace
             assert round(trace_flux / spot_flux) == 15 * 5
 
-
     def test_random_star_field(self):
         src = sim.source.source_templates.star_field(n=100, mmin=8, mmax=18, width=10)
 
@@ -167,6 +169,7 @@ class TestObserveIfuMode:
             plt.show()
 
 
+@pytest.mark.usefixtures("protect_currsys", "patch_all_mock_paths")
 class TestFitsHeader:
     def test_source_keywords_in_header(self):
         src = st.star()
