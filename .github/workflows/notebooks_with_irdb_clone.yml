@@ -48,5 +48,5 @@ jobs:
       - name: Run notebooks
         env:
           TQDM_MININTERVAL: 10
-          # TQDM_POSITION: -1
+        shell: bash
         run: ./runnotebooks.sh --checkout-irdb --delete
