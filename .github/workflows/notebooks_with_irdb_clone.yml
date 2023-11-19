@@ -49,4 +49,6 @@ jobs:
         env:
           TQDM_MININTERVAL: 10
         shell: bash
-        run: ./runnotebooks.sh --checkout-irdb --delete
+        run: |
+          echo "# Notebook Tests" >> $GITHUB_STEP_SUMMARY
+          ./runnotebooks.sh --checkout-irdb --delete

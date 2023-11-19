@@ -25,7 +25,7 @@ if [[ "x${1}" == "x--clone-irdb" ]] ; then
 fi
 
 
-echo "## Notebooks tested" >> $GITHUB_STEP_SUMMARY
+echo "## Notebooks tested" >> "$GITHUB_STEP_SUMMARY"
 # https://github.com/koalaman/shellcheck/wiki/SC2044
 find . -iname "*.ipynb" -print0 | while IFS= read -r -d '' fnnotebook
 do
