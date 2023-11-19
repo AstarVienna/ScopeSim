@@ -23,7 +23,7 @@ if [[ "x${1}" == "x--clone-irdb" ]] ; then
     fi
 
     # Comment out any download_package[s] in the notebooks.
-    pusd "${dirnotebooks}" || exit 1
+    pushd "${dirnotebooks}" || exit 1
       sed -i -E 's|"(.*\.download_package)|"#\1|g' -- *.ipynb
     popd || exit 1
   done
