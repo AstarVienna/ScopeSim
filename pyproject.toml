@@ -32,7 +32,7 @@ dependencies = [
     "lxml>=4.5.0",
     "pyyaml>5.1",
     "more-itertools>=9.0",
-    "tqdm>=4.64",
+    "tqdm>=4.66.1",
     "requests-cache>1.0",
 
     "synphot>=1.1.0",
