@@ -46,4 +46,6 @@ jobs:
           pip install .
           pip install .[dev,test]
       - name: Run notebooks
+        env:
+          TQDM_MININTERVAL: 10
         run: ./runnotebooks.sh --checkout-irdb --delete
