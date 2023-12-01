@@ -4,14 +4,16 @@
 [![Build Status](https://github.com/AstarVienna/ScopeSim/actions/workflows/tests.yml/badge.svg)](https://github.com/AstarVienna/ScopeSim/actions/workflows/tests.yml/badge.svg)
 [![Build Status](https://github.com/AstarVienna/ScopeSim/actions/workflows/minimumdependencies.yml/badge.svg)](https://github.com/AstarVienna/ScopeSim/actions/workflows/minimumdependencies.yml/badge.svg)
 [![Build Status](https://github.com/AstarVienna/ScopeSim/actions/workflows/notebooks_with_irdb_download.yml/badge.svg)](https://github.com/AstarVienna/ScopeSim/actions/workflows/notebooks_with_irdb_download.yml/badge.svg)
+[![Poetry](https://img.shields.io/endpoint?url=https://python-poetry.org/badge/v0.json)](https://python-poetry.org/)
+![dev version](https://img.shields.io/badge/dynamic/toml?url=https%3A%2F%2Fraw.githubusercontent.com%2FAstarVienna%2FScopeSim%2Fdev_master%2Fpyproject.toml&query=%24.tool.poetry.version&label=dev%20version&color=teal)
 
 [![Documentation Status](https://readthedocs.org/projects/scopesim/badge/?version=latest)](https://scopesim.readthedocs.io/en/latest)
 [![codecov](https://codecov.io/gh/AstarVienna/ScopeSim/graph/badge.svg)](https://codecov.io/gh/AstarVienna/ScopeSim)
 [![PyPI - Version](https://img.shields.io/pypi/v/ScopeSim)](https://pypi.org/project/ScopeSim/)
-[![Python Version Support](https://github-actions.40ants.com/AstarVienna/DevOps/matrix.svg?only=Tests.build.ubuntu-latest)](https://github.com/AstarVienna/ScopeSim)
+![Python Version Support](https://github-actions.40ants.com/AstarVienna/DevOps/matrix.svg?only=Tests.build.ubuntu-latest)
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
-
+[![Citation](https://img.shields.io/badge/DOI-10.1117%2F12.2559784-blue)](https://doi.org/10.1117/12.2559784)
 
 ## Summary
 
