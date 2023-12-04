@@ -10,6 +10,8 @@ Bug fixes and better error report
 - Deal with warnings from the latest Python version 3.12: https://github.com/AstarVienna/ScopeSim/pull/289
 - Internally restructure and clean the test suite, make sure individual tests are not influencing each other: https://github.com/AstarVienna/ScopeSim/pull/285
 
+**Full Changelog**: https://github.com/AstarVienna/ScopeSim/compare/v0.7.0...v0.7.1
+
 # Version 0.7.0
 **2023-10-18**
 
@@ -18,6 +20,8 @@ Off-by-one fix.
 ## What's Changed
 - Fix a long-standing bug regarding the internal implementation of WCS coordinates, which had multiple consequences, see https://github.com/AstarVienna/ScopeSim/pull/276 for details.
 - This fix might break some existing codes using work-arounds for the bug described above.
+
+**Full Changelog**: https://github.com/AstarVienna/ScopeSim/compare/v0.6.2...v0.7.0
 
 # Version 0.6.2
 **2023-09-14**
@@ -30,6 +34,8 @@ Patch with bugfixes and code improvements
 - Formatting of code and documentation to meet community standards: https://github.com/AstarVienna/ScopeSim/pull/271
 - General refactoring, some in preparation of more substantial bug fixes: https://github.com/AstarVienna/ScopeSim/pull/272
 
+**Full Changelog**: https://github.com/AstarVienna/ScopeSim/compare/v0.6.1...v0.6.2
+
 # Version 0.6.1
 **2023-09-06**
 
@@ -39,6 +45,8 @@ Patch with visualisation improvements and general refactoring
 - Improvements to console representation and plot methods of various classes: https://github.com/AstarVienna/ScopeSim/pull/252 , https://github.com/AstarVienna/ScopeSim/pull/260 , https://github.com/AstarVienna/ScopeSim/pull/263 , https://github.com/AstarVienna/ScopeSim/pull/266
 - Refactoring and changes to the inheritance of some classes: https://github.com/AstarVienna/ScopeSim/pull/261 , https://github.com/AstarVienna/ScopeSim/pull/264 , https://github.com/AstarVienna/ScopeSim/pull/265
 - Changes to the CI configuration to reduce fails caused by web request timeouts https://github.com/AstarVienna/ScopeSim/pull/255 , https://github.com/AstarVienna/ScopeSim/pull/262
+
+**Full Changelog**: https://github.com/AstarVienna/ScopeSim/compare/v0.6.0...v0.6.1
 
 # Version 0.6.0
 **2023-07-10**
@@ -54,6 +62,11 @@ Summer 2023
 - Improve downloading of IRDB https://github.com/AstarVienna/ScopeSim/pull/234
 - Improve Windows support
 
+## New Contributors
+* @teutoburg made their first contribution in https://github.com/AstarVienna/ScopeSim/pull/216
+
+**Full Changelog**: https://github.com/AstarVienna/ScopeSim/compare/v0.5.6...v0.6.0
+
 # Version 0.5.6
 **2023-03-13**
 
@@ -67,7 +80,7 @@ Hotfix to include minimal set of SVO data
 # Version 0.5.5
 **2023-03-08**
 
-Hotfix for header keyword generators
+v0.5.5 is the first release by the 2023 A*Vienna team
 
 ## What's Changed
 - Return to § for incremental extension keywords https://github.com/AstarVienna/ScopeSim/pull/168
