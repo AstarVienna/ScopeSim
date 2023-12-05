@@ -166,15 +166,14 @@ class OpticsManager:
         effects : list of Effect objects
 
         """
-        effects = []
-        for opt_el in self.optical_elements:
-            # Extend evaluates generator
-            effects.extend(opt_el.get_z_order_effects(z_level))
+        def _gather_effects():
+            for opt_el in self.optical_elements:
+                yield from opt_el.get_z_order_effects(z_level)
 
-        def sortkey(eff):
+        def _sortkey(eff):
             return next(z % 100 for z in eff.meta["z_order"] if z >= z_level)
 
-        return sorted(effects, key=sortkey)
+        return sorted(_gather_effects(), key=_sortkey)
 
     @property
     def is_spectroscope(self):
