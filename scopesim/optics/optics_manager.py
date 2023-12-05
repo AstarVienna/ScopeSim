@@ -171,7 +171,10 @@ class OpticsManager:
             # Extend evaluates generator
             effects.extend(opt_el.get_z_order_effects(z_level))
 
-        return effects
+        def sortkey(eff):
+            return next(z % 100 for z in eff.meta["z_order"])
+
+        return effects.sort(key=sortkey)
 
     @property
     def is_spectroscope(self):
