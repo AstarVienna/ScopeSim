@@ -153,7 +153,7 @@ class OpticsManager:
 
         Parameters
         ----------
-        z_level : int, tuple
+        z_level : int
             [0, 100, 200, 300, 400, 500]
 
         Returns
@@ -163,7 +163,8 @@ class OpticsManager:
         """
         effects = []
         for opt_el in self.optical_elements:
-            effects += opt_el.get_z_order_effects(z_level)
+            # Extend evaluates generator
+            effects.extend(opt_el.get_z_order_effects(z_level))
 
         return effects
 

@@ -52,11 +52,13 @@ class TestOpticalElementInit:
 
 @pytest.mark.usefixtures("patch_mock_path")
 class TestOpticalElementGetZOrderEffects:
-    @pytest.mark.parametrize("z_orders, n", [(0, 2), (100, 1), ([200, 299], 1)])
-    def test_returns_the_effects_with_z_values(self, z_orders, n,
+    @pytest.mark.parametrize("z_lvl, zmax, n", [(0, None, 2),
+                                                (100, None, 1),
+                                                (200, 299, 1)])
+    def test_returns_the_effects_with_z_values(self, z_lvl, zmax, n,
                                                detector_yaml_dict):
         opt_el = opt_elem.OpticalElement(detector_yaml_dict)
-        assert len(opt_el.get_z_order_effects(z_orders)) == n
+        assert len(list(opt_el.get_z_order_effects(z_lvl, zmax))) == n
 
 
 @pytest.mark.usefixtures("patch_mock_path")
