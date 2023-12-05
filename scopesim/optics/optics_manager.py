@@ -183,11 +183,10 @@ class OpticsManager:
     @property
     def image_plane_headers(self):
         detector_lists = self.detector_setup_effects
-        headers = [det_list.image_plane_header for det_list in detector_lists]
-
         if not detector_lists:
             raise ValueError(f"No DetectorList objects found. {detector_lists}")
 
+        headers = [det_list.image_plane_header for det_list in detector_lists]
         return headers
 
     @property
