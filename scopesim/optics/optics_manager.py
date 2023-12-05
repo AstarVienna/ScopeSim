@@ -139,7 +139,7 @@ class OpticsManager:
 
         return effects
 
-    def get_z_order_effects(self, z_level):
+    def get_z_order_effects(self, z_level: int):
         """
         Return a list of all effects with a z_order keywords within `z_level`.
 
@@ -150,11 +150,16 @@ class OpticsManager:
         - Apply Source altering effects - z_order = 200..299
         - Apply FOV specific (3D) effects - z_order = 300..399
         - Apply FOV-independent (2D) effects - z_order = 400..499
+        - Apply XXX effects - z_order = 500..599
+        - Apply XXX effects - z_order = 600..699
+        - Apply lambda-independent 2D image plane effects - z_order = 700..799
+        - Apply detector effects - z_order = 800..899
+        - Apply detector array effects - z_order = 900..999
 
         Parameters
         ----------
-        z_level : int
-            [0, 100, 200, 300, 400, 500]
+        z_level : {0, 100, 200, 300, 400, 500, 600, 700, 800, 900}
+            100-range of z_orders.
 
         Returns
         -------
