@@ -6,7 +6,8 @@ from io import StringIO
 from astropy.table import Table
 
 from .. import effects as efs
-from ..effects.effects_utils import make_effect, get_all_effects
+from ..effects.effects_utils import (make_effect, get_all_effects,
+                                     z_order_in_range)
 from ..utils import write_report
 from ..reports.rst_utils import table_to_rst
 from .. import rc
@@ -88,27 +89,56 @@ class OpticalElement:
     def get_all(self, effect_class):
         return get_all_effects(self.effects, effect_class)
 
-    def get_z_order_effects(self, z_level):
-        if isinstance(z_level, int):
-            zmin = z_level
-            zmax = zmin + 99
-        elif isinstance(z_level, (tuple, list)):
-            zmin, zmax = z_level[:2]
+    def get_z_order_effects(self, z_level: int, z_max: int = None):
+        """
+        Yield all effects in the given 100-range of `z_level`.
+
+        E.g., ``z_level=200`` will yield all effect with a z_order between
+        200 and 299. Optionally, the upper limit can be set manually with the
+        optional argument `z_max`.
+
+        Parameters
+        ----------
+        z_level : int
+            100-range of z_orders.
+        z_max : int, optional
+            Optional upper bound. This is currently not used anywhere in
+            ScopeSim, but the functionality is tested. If None (default), this
+            will be set to ``z_level + 99``.
+
+        Raises
+        ------
+        TypeError
+            Raised if either `z_level` or `z_max` is not of int type.
+        ValueError
+            Raised if `z_max` (if given) is less than `z_level`.
+
+        Yields
+        ------
+        eff : Iterator of effects
+            Iterator containing all effect objects in the given z_order range.
+
+        """
+        if not isinstance(z_level, int):
+            raise TypeError(f"z_level must be int, got {type(z_level)=}")
+        if z_max is not None and not isinstance(z_max, int):
+            raise TypeError(f"If given, z_max must be int, got {type(z_max)=}")
+
+        z_min = z_level
+        if z_max is not None:
+            if z_max < z_min:
+                raise ValueError(
+                    "z_max must be greater (or equal to) z_level, but "
+                    f"{z_max=} < {z_level=}.")
         else:
-            zmin, zmax = 0, 999
+            z_max = z_min + 99
 
-        effects = []
         for eff in self.effects:
-            if eff.include and "z_order" in eff.meta:
-                z = eff.meta["z_order"]
-                if isinstance(z, (list, tuple)):
-                    if any(zmin <= zi <= zmax for zi in z):
-                        effects.append(eff)
-                else:
-                    if zmin <= z <= zmax:
-                        effects.append(eff)
+            if not eff.include or "z_order" not in eff.meta:
+                continue
 
-        return effects
+            if z_order_in_range(eff.meta["z_order"], range(z_min, z_max)):
+                yield eff
 
     @property
     def surfaces_list(self):
