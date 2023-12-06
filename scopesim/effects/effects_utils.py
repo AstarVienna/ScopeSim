@@ -132,7 +132,7 @@ def z_order_in_range(z_eff, z_range: range) -> bool:
 
     """
     if not isinstance(z_eff, Iterable):
-        logging.warning("z_order %d should be a single-item list", z_eff)
+        logging.warning("z_order %d should be a single-item iterable", z_eff)
         z_eff = [z_eff]
 
     return any(zi in z_range for zi in z_eff)
