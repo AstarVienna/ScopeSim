@@ -132,12 +132,13 @@ class OpticalElement:
                     f"{z_max=} < {z_level=}.")
         else:
             z_max = z_min + 100  # range doesn't include final element -> 100
+        z_range = range(z_min, z_max)
 
         for eff in self.effects:
             if not eff.include or "z_order" not in eff.meta:
                 continue
 
-            if z_order_in_range(eff.meta["z_order"], range(z_min, z_max)):
+            if z_order_in_range(eff.meta["z_order"], z_range):
                 yield eff
 
     @property
