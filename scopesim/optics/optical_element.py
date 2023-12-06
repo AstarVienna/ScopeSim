@@ -131,7 +131,7 @@ class OpticalElement:
                     "z_max must be greater (or equal to) z_level, but "
                     f"{z_max=} < {z_level=}.")
         else:
-            z_max = z_min + 99
+            z_max = z_min + 100  # range doesn't include final element -> 100
 
         for eff in self.effects:
             if not eff.include or "z_order" not in eff.meta:
