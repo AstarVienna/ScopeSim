@@ -141,18 +141,18 @@ class OpticalElement:
             if z_order_in_range(eff.meta["z_order"], z_range):
                 yield eff
 
+    def _get_matching_effects(self, effect_classes):
+        return (eff for eff in self.effects if isinstance(eff, effect_classes))
+
     @property
     def surfaces_list(self):
-        _ter_list = [effect for effect in self.effects
-                     if isinstance(effect, (efs.SurfaceList, efs.FilterWheel,
-                                            efs.TERCurve))]
-        return _ter_list
+        effect_classes = (efs.SurfaceList, efs.FilterWheel, efs.TERCurve)
+        return list(self._get_matching_effects(effect_classes))
 
     @property
     def masks_list(self):
-        _mask_list = [effect for effect in self.effects if
-                      isinstance(effect, (efs.ApertureList, efs.ApertureMask))]
-        return _mask_list
+        effect_classes = (efs.ApertureList, efs.ApertureMask)
+        return list(self._get_matching_effects(effect_classes))
 
     def list_effects(self):
         elements = [self.meta["name"]] * len(self.effects)
@@ -254,15 +254,18 @@ class OpticalElement:
 
     @property
     def properties_str(self):
-        prop_str = ""
-        max_key_len = max(len(key) for key in self.properties.keys())
-        padlen = max_key_len + 4
-        for key in self.properties:
-            if key not in {"comments", "changes", "description", "history",
-                           "report"}:
-                prop_str += f"{key:>{padlen}} : {self.properties[key]}\n"
+        # TODO: This seems to be used only in the report below.
+        #       Once the report uses stream writing, change this to a function
+        #       that simply write to that same stream...
+        padlen = max(len(key) for key in self.properties) + 4
+        exclude = {"comments", "changes", "description", "history", "report"}
 
-        return prop_str
+        with StringIO() as str_stream:
+            for key in self.properties.keys() - exclude:
+                str_stream.write(f"{key:>{padlen}} : {self.properties[key]}\n")
+            output = str_stream.getvalue()
+
+        return output
 
     def report(self, filename=None, output="rst", rst_title_chars="^#*+",
                **kwargs):
