@@ -173,7 +173,8 @@ class OpticsManager:
         def _sortkey(eff):
             return next(z % 100 for z in eff.meta["z_order"] if z >= z_level)
 
-        return sorted(_gather_effects(), key=_sortkey)
+        # return sorted(_gather_effects(), key=_sortkey)
+        return list(_gather_effects())
 
     @property
     def is_spectroscope(self):
