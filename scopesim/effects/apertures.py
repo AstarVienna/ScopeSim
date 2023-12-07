@@ -206,16 +206,6 @@ class RectangularApertureMask(ApertureMask):
 
         self.table = self.get_table(**kwargs)
 
-    # def fov_grid(self, which="edges", **kwargs):
-    #     """ Returns a header with the sky coordinates """
-    #     if which == "edges":
-    #         self.table = self.get_table(**kwargs)
-    #         return self.header      # from base class ApertureMask
-    #
-    #     elif which == "masks":
-    #         self.meta.update(kwargs)
-    #         return self.mask
-
     def get_table(self, **kwargs):
         self.meta.update(kwargs)
         x = from_currsys(self.meta["x"])
@@ -314,14 +304,6 @@ class ApertureList(Effect):
             obj.volumes = new_vols
 
         return obj
-
-    # def fov_grid(self, which="edges", **kwargs):
-    #     params = deepcopy(self.meta)
-    #     params.update(kwargs)
-    #     if which == "edges":
-    #         return [ap.fov_grid(which=which, **params) for ap in self.apertures]
-    #     if which == "masks":
-    #         return {ap.meta["id"]: ap.mask for ap in self.apertures}
 
     @property
     def apertures(self):
