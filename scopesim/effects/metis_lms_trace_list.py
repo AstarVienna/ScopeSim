@@ -1,6 +1,7 @@
 """SpectralTraceList and SpectralTrace for the METIS LM spectrograph."""
 
 from copy import deepcopy
+import warnings
 import numpy as np
 from scipy.interpolate import RectBivariateSpline
 
@@ -205,6 +206,11 @@ class MetisLMSSpectralTrace(SpectralTrace):
         `x_max`, `y_max`. Spatial limits refer to the sky and are given in
         arcsec.
         """
+        # TODO: Specify in the warning where the functionality should go!
+        warnings.warn("The fov_grid method is deprecated and will be removed "
+                      "in a future release. The functionality should be moved"
+                      " somewhere else.", DeprecationWarning, stacklevel=2)
+
         aperture = self._file["Aperture list"].data[self.meta["slice"]]
         x_min = aperture["left"]
         x_max = aperture["right"]

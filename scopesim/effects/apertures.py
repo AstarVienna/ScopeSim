@@ -1,5 +1,6 @@
 """Effects related to field masks, including spectroscopic slits."""
 
+import warnings
 import yaml
 
 import numpy as np
@@ -127,7 +128,8 @@ class ApertureMask(Effect):
     # Outdated. Remove when removing all old FOVManager code from effects
     def fov_grid(self, which="edges", **kwargs):
         """Return a header with the sky coordinates."""
-        logger.warning("DetectorList.fov_grid will be depreciated in v1.0")
+        warnings.warn("The fov_grid method is deprecated and will be removed "
+                      "in a future release.", DeprecationWarning, stacklevel=2)
         if which == "edges":
             self.meta.update(kwargs)
             return self.header
@@ -441,6 +443,8 @@ class SlitWheel(Effect):
 
     def fov_grid(self, which="edges", **kwargs):
         """See parent docstring."""
+        warnings.warn("The fov_grid method is deprecated and will be removed "
+                      "in a future release.", DeprecationWarning, stacklevel=2)
         return self.current_slit.fov_grid(which=which, **kwargs)
 
     def change_slit(self, slitname=None):

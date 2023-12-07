@@ -9,6 +9,8 @@ This module contains
    - utility functions for use with spectral traces
 """
 
+import warnings
+
 import numpy as np
 
 from scipy.interpolate import RectBivariateSpline
@@ -95,6 +97,8 @@ class SpectralTrace:
         Spatial limits are determined by the `ApertureMask` effect
         and are not returned here.
         """
+        warnings.warn("The fov_grid method is deprecated and will be removed "
+                      "in a future release.", DeprecationWarning, stacklevel=2)
         aperture_id = self.meta["aperture_id"]
         lam_arr = self.table[self.meta["wave_colname"]]
 

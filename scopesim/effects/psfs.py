@@ -1,3 +1,4 @@
+import warnings
 import numpy as np
 from scipy.signal import convolve
 from scipy.interpolate import RectBivariateSpline
@@ -118,6 +119,8 @@ class PSF(Effect):
 
     def fov_grid(self, which="waveset", **kwargs):
         """See parent docstring."""
+        warnings.warn("The fov_grid method is deprecated and will be removed "
+                      "in a future release.", DeprecationWarning, stacklevel=2)
         waveset = []
         if which == "waveset":
             if self._waveset is not None:
@@ -210,6 +213,8 @@ class NonCommonPathAberration(AnalyticalPSF):
 
     def fov_grid(self, which="waveset", **kwargs):
         """See parent docstring."""
+        warnings.warn("The fov_grid method is deprecated and will be removed "
+                      "in a future release.", DeprecationWarning, stacklevel=2)
         if which == "waveset":
             self.meta.update(kwargs)
             self.meta = utils.from_currsys(self.meta)
@@ -312,6 +317,8 @@ class GaussianDiffractionPSF(AnalyticalPSF):
 
     def fov_grid(self, which="waveset", **kwargs):
         """See parent docstring."""
+        warnings.warn("The fov_grid method is deprecated and will be removed "
+                      "in a future release.", DeprecationWarning, stacklevel=2)
         wavelengths = []
         if which == "waveset" and \
                 "waverange" in kwargs and \
