@@ -49,6 +49,7 @@ from collections.abc import Iterable, MutableSequence
 
 import numpy as np
 from astropy import units as u
+from astropy.wcs import WCS
 
 from . import image_plane_utils as ipu
 from ..effects import DetectorList
@@ -121,8 +122,6 @@ class FOVManager:
         # ..todo: add catch to split volumes larger than chunk_size
         pixel_scale = from_currsys(self.meta["pixel_scale"])
         plate_scale = from_currsys(self.meta["plate_scale"])
-        pixel_size = pixel_scale / plate_scale
-        plate_scale_deg = plate_scale / 3600.  # ["/mm] / 3600 = [deg/mm]
 
         chunk_size = from_currsys(self.meta["chunk_size"])
         max_seg_size = from_currsys(self.meta["max_segment_size"])
@@ -149,11 +148,9 @@ class FOVManager:
                                                 [ys_min, ys_max],
                                                 pixel_scale=pixel_scale / 3600.)
 
-            xy_sky = ipu.calc_footprint(skyhdr)
-            xy_det = xy_sky / plate_scale_deg
-            dethdr = ipu.header_from_list_of_xy(xy_det[:, 0], xy_det[:, 1],
-                                                pixel_size, "D")
-            skyhdr.update(dethdr)
+            dethdr, _ = ipu.det_wcs_from_sky_wcs(
+                WCS(skyhdr), pixel_scale, plate_scale)
+            skyhdr.update(dethdr.to_header())
 
             # useful for spectroscopy mode where slit dimensions is not the same
             # as detector dimensions

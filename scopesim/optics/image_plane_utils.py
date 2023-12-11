@@ -1023,3 +1023,96 @@ def _get_unit_from_headers(*headers, wcs_suffix: str = "") -> str:
         [(i, header[f"CUNIT{i}{wcs_suffix}"])
          for header, i in product(headers, range(1, 3))]
     return unit
+
+
+def det_wcs_from_sky_wcs(sky_wcs: WCS,
+                         pixel_scale: float,
+                         plate_scale: float,
+                         naxis=None) -> Tuple[WCS, np.ndarray]:
+    """
+    Create detector WCS from celestial WCS using pixel and plate scales.
+
+    Parameters
+    ----------
+    sky_wcs : astropy.wcs.WCS
+        Celestial WCS.
+    pixel_scale : float
+        Quantity or float (assumed to be arcsec / pixel).
+    plate_scale : float
+        Quantity or float (assumed to be arcsec / mm).
+    naxis : (int, int), optional
+        Shape of the image, usually ``NAXIS1`` and ``NAXIS2``. If the input WCS
+        holds this information, the default None will use that. Otherwise not
+        providing `naxis` will raise and error.
+
+    Returns
+    -------
+    det_wcs : astropy.wcs.WCS
+        Detector WCS.
+    det_naxis : (int, int)
+        Shape of the image (``NAXIS1``, ``NAXIS2``).
+
+    """
+    # TODO: Using astropy units for now to avoid deg vs. arcsec confusion.
+    #       Once Scopesim is consistent there, remove astropy units.
+    pixel_scale <<= u.arcsec / u.pixel
+    plate_scale <<= u.arcsec / u.mm
+    logging.debug("Pixel scale: %s", pixel_scale)
+    logging.debug("Plate scale: %s", plate_scale)
+
+    pixel_size = pixel_scale / plate_scale
+    # TODO: add check if cunit is consistent along all axes
+    cunit = sky_wcs.wcs.cunit[0]
+    corners = sky_wcs.calc_footprint(center=False, axes=naxis) * cunit
+    logging.debug("WCS sky corners: %s", corners)
+    corners /= plate_scale
+    corners = corners.to(u.mm)
+    logging.debug("WCS det corners: %s", corners)
+
+    return create_wcs_from_points(corners, pixel_size, "D")
+
+
+def sky_wcs_from_det_wcs(det_wcs: WCS,
+                         pixel_scale: float,
+                         plate_scale: float,
+                         naxis=None) -> Tuple[WCS, np.ndarray]:
+    """
+    Create celestial WCS from detector WCS using pixel and plate scales.
+
+    Parameters
+    ----------
+    det_wcs : astropy.wcs.WCS
+        Detector WCS.
+    pixel_scale : float
+        Quantity or float (assumed to be arcsec / pixel).
+    plate_scale : float
+        Quantity or float (assumed to be arcsec / mm).
+    naxis : (int, int), optional
+        Shape of the image, usually ``NAXIS1`` and ``NAXIS2``. If the input WCS
+        holds this information, the default None will use that. Otherwise not
+        providing `naxis` will raise and error.
+
+    Returns
+    -------
+    sky_wcs : astropy.wcs.WCS
+        Celestial WCS.
+    sky_naxis : (int, int)
+        Shape of the image (``NAXIS1``, ``NAXIS2``).
+
+    """
+    # TODO: Using astropy units for now to avoid deg vs. arcsec confusion.
+    #       Once Scopesim is consistent there, remove astropy units.
+    pixel_scale <<= u.arcsec / u.pixel
+    plate_scale <<= u.arcsec / u.mm
+    logging.debug("Pixel scale: %s", pixel_scale)
+    logging.debug("Plate scale: %s", plate_scale)
+
+    # TODO: add check if cunit is consistent along all axes
+    cunit = det_wcs.wcs.cunit[0]
+    corners = det_wcs.calc_footprint(center=False, axes=naxis) * cunit
+    logging.debug("WCS det corners: %s", corners)
+    corners *= plate_scale
+    corners = corners.to(u.arcsec)
+    logging.debug("WCS sky corners: %s", corners)
+
+    return create_wcs_from_points(corners, pixel_scale)
