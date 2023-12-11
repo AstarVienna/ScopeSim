@@ -28,7 +28,7 @@ class Detector(DetectorBase):
                                                        wcs_suffix="D")
 
     def reset(self):
-        self._hdu.data = np.zeros(self._hdu.data.shape)
+        self._hdu.data = np.zeros_like(self._hdu.data)
 
     @property
     def hdu(self):
