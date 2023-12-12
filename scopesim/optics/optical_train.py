@@ -420,16 +420,6 @@ class OpticalTrain:
                 iheader[f"SURFACE{isurface}"] = eff.meta["name"]
                 isurface += 1
 
-
-        for eff in self.optics_manager.fov_effects:
-            efftype = type(eff).__name__
-
-            if efftype == "SpectralTraceList" and eff.include:
-                if "CTYPE1" in eff.meta:
-                    for key in {"WCSAXES", "CTYPE1", "CTYPE2", "CRPIX1", "CRPIX2", "CRVAL1",
-                                "CRVAL2", "CDELT1", "CDELT2", "CUNIT1", "CUNIT2"}:
-                        iheader[key] = eff.meta[key]
-
         return hdulist
 
     def set_focus(self, **kwargs):
