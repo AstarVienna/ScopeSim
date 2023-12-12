@@ -73,9 +73,9 @@ class DetectorArray:
         self.meta.update(kwargs)
 
         # 1. Get the image plane that corresponds to this detector array
-        image_plane_id = self._detector_list.meta["image_plane_id"]
-        image_plane = [implane for implane in image_planes if
-                       implane.id == image_plane_id][0]
+        # TODO: This silently only returns the first match, is that intended??
+        image_plane = next(implane for implane in image_planes if
+                           implane.id == self._detector_list.image_plane_id)
 
         # 2. Apply detector array effects (apply to the entire image plane)
         for effect in self.array_effects:
