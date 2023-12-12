@@ -20,10 +20,15 @@ class DetectorArray:
     def __init__(self, detector_list=None, **kwargs):
         self.meta = {}
         self.meta.update(kwargs)
-        self.detector_list = detector_list
+
+        # The effect from which the instance is constructed
+        self._detector_list = detector_list
+
         self.array_effects = []
         self.dtcr_effects = []
         self.detectors = []
+
+        # The (initially empty) HDUList produced by the readout
         self.latest_exposure = None
 
     def readout(self, image_planes, array_effects=None, dtcr_effects=None,
@@ -68,7 +73,7 @@ class DetectorArray:
         self.meta.update(kwargs)
 
         # 1. Get the image plane that corresponds to this detector array
-        image_plane_id = self.detector_list.meta["image_plane_id"]
+        image_plane_id = self._detector_list.meta["image_plane_id"]
         image_plane = [implane for implane in image_planes if
                        implane.id == image_plane_id][0]
 
@@ -78,7 +83,7 @@ class DetectorArray:
 
         # 3. make a series of Detectors for each row in a DetectorList object
         self.detectors = [Detector(hdr, **self.meta)
-                          for hdr in self.detector_list.detector_headers()]
+                          for hdr in self._detector_list.detector_headers()]
 
         # 4. iterate through all Detectors, extract image from image_plane
         logging.info("Extracting from %d detectors...", len(self.detectors))
@@ -111,11 +116,11 @@ class DetectorArray:
 
     def __repr__(self):
         msg = (f"{self.__class__.__name__}"
-               f"({self.detector_list!r}, **{self.meta!r})")
+               f"({self._detector_list!r}, **{self.meta!r})")
         return msg
 
     def __str__(self):
-        return f"{self.__class__.__name__} with {self.detector_list!s}"
+        return f"{self.__class__.__name__} with {self._detector_list!s}"
 
     def _repr_pretty_(self, p, cycle):
         """For ipython."""
