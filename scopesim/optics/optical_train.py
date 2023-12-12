@@ -367,18 +367,6 @@ class OpticalTrain:
         iheader["BUNIT"] = "e", "per EXPTIME"
         iheader["PIXSCALE"] = from_currsys("!INST.pixel_scale"), "[arcsec]"
 
-        # A simple WCS
-        iheader["CTYPE1"] = "LINEAR"
-        iheader["CTYPE2"] = "LINEAR"
-        iheader["CRPIX1"] = (iheader["NAXIS1"] + 1) / 2
-        iheader["CRPIX2"] = (iheader["NAXIS2"] + 1) / 2
-        iheader["CRVAL1"] = 0.
-        iheader["CRVAL2"] = 0.
-        iheader["CDELT1"] = iheader["PIXSCALE"]
-        iheader["CDELT2"] = iheader["PIXSCALE"]
-        iheader["CUNIT1"] = "arcsec"
-        iheader["CUNIT2"] = "arcsec"
-
         for eff in self.optics_manager.detector_setup_effects:
             efftype = type(eff).__name__
 
