@@ -605,9 +605,10 @@ class Quantization(Effect):
             logging.warning("Setting quantized data to dtype %s, which is not "
                             "an integer subtype.", new_dtype)
 
-        data = np.floor(obj._hdu.data).astype(new_dtype)
-        new_imagehdu = fits.ImageHDU(data=data, header=obj._hdu.header)
-        obj._hdu = new_imagehdu
+        # This used to create a new ImageHDU with the same header but the data
+        # set to the modified data. It should be fine to simply re-assign the
+        # data attribute, but just in case it's not...
+        obj._hdu.data = np.floor(obj._hdu.data).astype(new_dtype)
 
         return obj
 
