@@ -331,8 +331,14 @@ def _download_single_package(pkg_name: str, release: str, all_versions,
                              folder_dict: Path, base_url: str, save_dir: Path,
                              padlen: int, from_cache: bool) -> Path:
     if pkg_name not in all_versions:
+        maybe = ""
+        for key in folder_dict:
+            if pkg_name in key or key in pkg_name:
+                maybe = f"\nDid you mean '{key}' instead of '{pkg_name}'?"
+
         raise PkgNotFoundError(f"Unable to find {release} release for "
-                               f"package '{pkg_name}' on server {base_url}.")
+                               f"package '{pkg_name}' on server {base_url}."
+                               + maybe)
 
     if save_dir is None:
         save_dir = rc.__config__["!SIM.file.local_packages_path"]
