@@ -367,18 +367,6 @@ class OpticalTrain:
         iheader["BUNIT"] = "e", "per EXPTIME"
         iheader["PIXSCALE"] = from_currsys("!INST.pixel_scale"), "[arcsec]"
 
-        # A simple WCS
-        iheader["CTYPE1"] = "LINEAR"
-        iheader["CTYPE2"] = "LINEAR"
-        iheader["CRPIX1"] = (iheader["NAXIS1"] + 1) / 2
-        iheader["CRPIX2"] = (iheader["NAXIS2"] + 1) / 2
-        iheader["CRVAL1"] = 0.
-        iheader["CRVAL2"] = 0.
-        iheader["CDELT1"] = iheader["PIXSCALE"]
-        iheader["CDELT2"] = iheader["PIXSCALE"]
-        iheader["CUNIT1"] = "arcsec"
-        iheader["CUNIT2"] = "arcsec"
-
         for eff in self.optics_manager.detector_setup_effects:
             efftype = type(eff).__name__
 
@@ -428,38 +416,9 @@ class OpticalTrain:
                 iheader["PRESSURE"] = eff.meta["pressure"], "[hPa]"
                 iheader["PWV"] = eff.meta["pwv"], "precipitable water vapour"
 
-            if efftype == "AtmosphericTERCurve" and eff.include:
-                iheader["ATMOSPHE"] = eff.meta["filename"], "atmosphere model"
-                # ..todo: expand if necessary
-
             if efftype == "SurfaceList" and eff.include:
-                iheader[f"SURFACE{isurface}"] = (eff.meta["filename"],
-                                                 eff.meta["name"])
+                iheader[f"SURFACE{isurface}"] = eff.meta["name"]
                 isurface += 1
-
-            if efftype == "QuantumEfficiencyCurve" and eff.include:
-                iheader["QE"] = Path(eff.meta["filename"]).name, eff.meta["name"]
-
-        for eff in self.optics_manager.fov_effects:
-            efftype = type(eff).__name__
-
-            # ..todo: needs to be handled with isinstance(eff, PSF)
-            if efftype == "FieldConstantPSF" and eff.include:
-                iheader["PSF"] = eff.meta["filename"], "point spread function"
-
-            if efftype == "SpectralTraceList" and eff.include:
-                iheader["SPECTRAC"] = (from_currsys(eff.meta["filename"]),
-                                       "spectral trace definition")
-                if "CTYPE1" in eff.meta:
-                    for key in {"WCSAXES", "CTYPE1", "CTYPE2", "CRPIX1", "CRPIX2", "CRVAL1",
-                                "CRVAL2", "CDELT1", "CDELT2", "CUNIT1", "CUNIT2"}:
-                        iheader[key] = eff.meta[key]
-
-        for eff in self.optics_manager.detector_effects:
-            efftype = type(eff).__name__
-
-            if efftype == "LinearityCurve" and eff.include:
-                iheader["DETLIN"] = from_currsys(eff.meta["filename"])
 
         return hdulist
 
