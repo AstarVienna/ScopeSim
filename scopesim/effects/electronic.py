@@ -386,7 +386,6 @@ class ShotNoise(Effect):
             above = np.invert(below)
             data[below] = np.random.poisson(data[below]).astype(float)
             data[above] = np.random.normal(data[above], np.sqrt(data[above]))
-            data = np.floor(data)
             new_imagehdu = fits.ImageHDU(data=data, header=det._hdu.header)
             det._hdu = new_imagehdu
 
@@ -583,6 +582,34 @@ class UnequalBinnedImage(Effect):
             det._hdu.data = new_image.sum(axis=3).sum(axis=1)
 
         return det
+
+
+class Quantization(Effect):
+    """Converts raw data to whole photons."""
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        params = {
+            "z_order": [825],
+            "dtype": "uint32",
+        }
+        self.meta.update(params)
+        self.meta.update(kwargs)
+
+    def apply_to(self, obj, **kwargs):
+        if not isinstance(obj, DetectorBase):
+            return obj
+
+        new_dtype = self.meta["dtype"]
+        if not np.issubdtype(new_dtype, np.integer):
+            logging.warning("Setting quantized data to dtype %s, which is not "
+                            "an integer subtype.", new_dtype)
+
+        data = np.floor(obj._hdu.data).astype(new_dtype)
+        new_imagehdu = fits.ImageHDU(data=data, header=obj._hdu.header)
+        obj._hdu = new_imagehdu
+
+        return obj
 
 
 def make_ron_frame(image_shape, noise_std, n_channels, channel_fraction,
