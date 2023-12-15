@@ -1,4 +1,4 @@
-from copy import deepcopy
+import logging
 import numpy as np
 
 from ..base_classes import ImagePlaneBase, DetectorBase
@@ -6,6 +6,7 @@ from ..optics import image_plane_utils as imp_utils
 from .. import utils
 
 from astropy.io import fits
+from astropy.wcs import WCS
 
 
 class Detector(DetectorBase):
@@ -28,12 +29,22 @@ class Detector(DetectorBase):
                                                        wcs_suffix="D")
 
     def reset(self):
-        self._hdu.data = np.zeros(self._hdu.data.shape)
+        self._hdu.data = np.zeros_like(self._hdu.data)
 
     @property
     def hdu(self):
         new_meta = utils.stringify_dict(self.meta)
         self._hdu.header.update(new_meta)
+
+        pixel_scale = utils.from_currsys("!INST.pixel_scale")
+        plate_scale = utils.from_currsys("!INST.plate_scale")
+        if pixel_scale == 0 or plate_scale == 0:
+            logging.warning("Could not create sky WCS.")
+        else:
+            sky_wcs, _ = imp_utils.sky_wcs_from_det_wcs(
+                WCS(self._hdu.header, key="D"), pixel_scale, plate_scale)
+            self._hdu.header.update(sky_wcs.to_header())
+
         return self._hdu
 
     @property

@@ -97,9 +97,10 @@ def make_strehl_map_from_table(tbl, pixel_scale=1*u.arcsec):
                                          np.arange(-25, 26))).T,
                     method="nearest")
 
-    new_wcs, _ = imp_utils.create_wcs_from_points(np.array([[-25, -25],
-                                                            [25, 25]]),
-                                                  pixel_scale=1, arcsec=True)
+    new_wcs, _ = imp_utils.create_wcs_from_points(
+        np.array([[-25, -25],
+                  [25, 25]]) * u.arcsec,
+        pixel_scale=1*u.arcsec/u.pixel)
 
     map_hdu = fits.ImageHDU(header=new_wcs.to_header(), data=smap)
 

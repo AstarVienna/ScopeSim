@@ -144,15 +144,15 @@ def _make_bounding_header_for_tables(*tables, pixel_scale=1*u.arcsec):
         extents.append(extent)
     pnts = np.vstack(extents)
 
+    # TODO: check if this could just use create_wcs_from_points
     hdr = header_from_list_of_xy(pnts[:, 0], pnts[:, 1], pixel_scale.value,
-                                 wcs_suffix, arcsec=True)
+                                 wcs_suffix, arcsec=wcs_suffix != "D")
     return hdr
 
 
 def create_wcs_from_points(points: np.ndarray,
                            pixel_scale: float,
-                           wcs_suffix: str = "",
-                           arcsec: bool = False) -> Tuple[WCS, np.ndarray]:
+                           wcs_suffix: str = "") -> Tuple[WCS, np.ndarray]:
     """
     Create `astropy.wcs.WCS` instance that fits all points inside.
 
@@ -164,8 +164,6 @@ def create_wcs_from_points(points: np.ndarray,
         DESCRIPTION.
     wcs_suffix : str, optional
         DESCRIPTION. The default is "".
-    arcsec : bool, optional
-        DESCRIPTION. The default is False.
 
     Returns
     -------
@@ -175,9 +173,10 @@ def create_wcs_from_points(points: np.ndarray,
         Array of NAXIS needed to fit all points.
 
     """
-    # TODO: either make pixel_scale a quantity or deal with arcsec flag...
+    # TODO: should pixel_scale be called pixel_size by conventions elsewhere?
+    # TODO: add quantity stuff to docstring
     # TODO: find out how this plays with chunks
-    if wcs_suffix != "D" and not arcsec:
+    if wcs_suffix != "D":
         points = _fix_360(points)
 
     # TODO: test whether abs(pixel_scale) breaks anything
@@ -191,16 +190,29 @@ def create_wcs_from_points(points: np.ndarray,
     #     crpix = np.array([1., 1.])
     #     crval = points.min(axis=0)
     # else:
+
+    if isinstance(naxis, u.Quantity):
+        naxis = naxis.decompose()
+        if naxis.unit != "pixel":
+            raise u.UnitConversionError("If given quantities, must resolve to "
+                                        f"pix, got '{naxis.unit}' instead.")
+        naxis = naxis.value
+
     crpix = (naxis + 1) / 2
     crval = (points.min(axis=0) + points.max(axis=0)) / 2
 
     ctype = "LINEAR" if wcs_suffix in "DX" else "RA---TAN"
-    if wcs_suffix == "D":
-        cunit = "mm"
-    elif arcsec:
-        cunit = "arcsec"
+
+    if isinstance(points, u.Quantity):
+        cunit = points.unit
     else:
-        cunit = "deg"
+        if wcs_suffix == "D":
+            cunit = "mm"
+        else:
+            cunit = "deg"
+
+    if isinstance(pixel_scale, u.Quantity):
+        pixel_scale = pixel_scale.value
 
     new_wcs = WCS(key=wcs_suffix)
     new_wcs.wcs.ctype = 2 * [ctype]
@@ -229,8 +241,12 @@ def header_from_list_of_xy(x, y, pixel_scale, wcs_suffix="", arcsec=False):
 
     """
     points = np.column_stack((x, y))
-    new_wcs, naxis = create_wcs_from_points(points, pixel_scale,
-                                            wcs_suffix, arcsec)
+
+    if arcsec:
+        points <<= u.arcsec
+        pixel_scale <<= u.arcsec / u.pixel
+
+    new_wcs, naxis = create_wcs_from_points(points, pixel_scale, wcs_suffix)
 
     hdr = fits.Header()
     hdr["NAXIS"] = 2
@@ -990,9 +1006,13 @@ def split_header(hdr, chunk_size, wcs_suffix=""):
 
 def _fix_360(arr):
     """Fix the "full circle overflow" that occurs with deg."""
-    arr = np.asarray(arr)
-    arr[arr > 270] -= 360
-    arr[arr <= -90] += 360
+    if isinstance(arr, u.Quantity):
+        arr[arr > 270*u.deg] -= 360*u.deg
+        arr[arr <= -90*u.deg] += 360*u.deg
+    else:
+        arr = np.asarray(arr)
+        arr[arr > 270] -= 360
+        arr[arr <= -90] += 360
     return arr
 
 
@@ -1000,6 +1020,99 @@ def _get_unit_from_headers(*headers, wcs_suffix: str = "") -> str:
     unit = headers[0][f"CUNIT1{wcs_suffix}"].lower()
     assert all(header[f"CUNIT{i}{wcs_suffix}"].lower() == unit
                for header, i in product(headers, range(1, 3))), \
-        [header[f"CUNIT{i}{wcs_suffix}"]
+        [(i, header[f"CUNIT{i}{wcs_suffix}"])
          for header, i in product(headers, range(1, 3))]
     return unit
+
+
+def det_wcs_from_sky_wcs(sky_wcs: WCS,
+                         pixel_scale: float,
+                         plate_scale: float,
+                         naxis=None) -> Tuple[WCS, np.ndarray]:
+    """
+    Create detector WCS from celestial WCS using pixel and plate scales.
+
+    Parameters
+    ----------
+    sky_wcs : astropy.wcs.WCS
+        Celestial WCS.
+    pixel_scale : float
+        Quantity or float (assumed to be arcsec / pixel).
+    plate_scale : float
+        Quantity or float (assumed to be arcsec / mm).
+    naxis : (int, int), optional
+        Shape of the image, usually ``NAXIS1`` and ``NAXIS2``. If the input WCS
+        holds this information, the default None will use that. Otherwise not
+        providing `naxis` will raise and error.
+
+    Returns
+    -------
+    det_wcs : astropy.wcs.WCS
+        Detector WCS.
+    det_naxis : (int, int)
+        Shape of the image (``NAXIS1``, ``NAXIS2``).
+
+    """
+    # TODO: Using astropy units for now to avoid deg vs. arcsec confusion.
+    #       Once Scopesim is consistent there, remove astropy units.
+    pixel_scale <<= u.arcsec / u.pixel
+    plate_scale <<= u.arcsec / u.mm
+    logging.debug("Pixel scale: %s", pixel_scale)
+    logging.debug("Plate scale: %s", plate_scale)
+
+    pixel_size = pixel_scale / plate_scale
+    # TODO: add check if cunit is consistent along all axes
+    cunit = sky_wcs.wcs.cunit[0]
+    corners = sky_wcs.calc_footprint(center=False, axes=naxis) * cunit
+    logging.debug("WCS sky corners: %s", corners)
+    corners /= plate_scale
+    corners = corners.to(u.mm)
+    logging.debug("WCS det corners: %s", corners)
+
+    return create_wcs_from_points(corners, pixel_size, "D")
+
+
+def sky_wcs_from_det_wcs(det_wcs: WCS,
+                         pixel_scale: float,
+                         plate_scale: float,
+                         naxis=None) -> Tuple[WCS, np.ndarray]:
+    """
+    Create celestial WCS from detector WCS using pixel and plate scales.
+
+    Parameters
+    ----------
+    det_wcs : astropy.wcs.WCS
+        Detector WCS.
+    pixel_scale : float
+        Quantity or float (assumed to be arcsec / pixel).
+    plate_scale : float
+        Quantity or float (assumed to be arcsec / mm).
+    naxis : (int, int), optional
+        Shape of the image, usually ``NAXIS1`` and ``NAXIS2``. If the input WCS
+        holds this information, the default None will use that. Otherwise not
+        providing `naxis` will raise and error.
+
+    Returns
+    -------
+    sky_wcs : astropy.wcs.WCS
+        Celestial WCS.
+    sky_naxis : (int, int)
+        Shape of the image (``NAXIS1``, ``NAXIS2``).
+
+    """
+    # TODO: Using astropy units for now to avoid deg vs. arcsec confusion.
+    #       Once Scopesim is consistent there, remove astropy units.
+    pixel_scale <<= u.arcsec / u.pixel
+    plate_scale <<= u.arcsec / u.mm
+    logging.debug("Pixel scale: %s", pixel_scale)
+    logging.debug("Plate scale: %s", plate_scale)
+
+    # TODO: add check if cunit is consistent along all axes
+    cunit = det_wcs.wcs.cunit[0]
+    corners = det_wcs.calc_footprint(center=False, axes=naxis) * cunit
+    logging.debug("WCS det corners: %s", corners)
+    corners *= plate_scale
+    corners = corners.to(u.arcsec)
+    logging.debug("WCS sky corners: %s", corners)
+
+    return create_wcs_from_points(corners, pixel_scale)

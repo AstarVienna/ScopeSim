@@ -7,7 +7,7 @@ from scopesim.system_dict import SystemDict, recursive_update
 _basic_yaml = """
 alias : OBS
 properties :
-    temperature : 100    
+    temperature : 100
 """
 
 
@@ -19,10 +19,11 @@ def basic_yaml():
 @pytest.fixture(scope="class")
 def nested_dict():
     return {"foo": 5, "bar": {"bogus": {"a": 42, "b": 69},
-        "baz": "meh"}, "moo": "yolo", "yeet": {"x": 0, "y": 420}}
+                              "baz": "meh"},
+            "moo": "yolo",
+            "yeet": {"x": 0, "y": 420}}
 
 
-@pytest.mark.usefixtures("basic_yaml")
 class TestInit:
     def test_initialises_with_nothing(self):
         assert isinstance(SystemDict(), SystemDict)
@@ -37,7 +38,6 @@ class TestInit:
         assert "OBS" in sys_dict.dic
 
 
-@pytest.mark.usefixtures("basic_yaml")
 class TestActsLikeDict:
     def test_can_add_and_retrieve_normal_dict_entries(self):
         sys_dict = SystemDict()
@@ -62,7 +62,6 @@ class TestActsLikeDict:
         assert "!OBS.humidity" not in sys_dict
 
 
-@pytest.mark.usefixtures("basic_yaml")
 class TestRecursiveUpdate:
     def test_updates_normal_recursive_dicts(self):
         sys_dict = SystemDict()
@@ -112,7 +111,6 @@ class TestFunctionRecursiveUpdate:
         assert e["a"]["b"]["c"] == "world"
 
 
-@pytest.mark.usefixtures("nested_dict")
 class TestRepresentation:
     def test_str_conversion(self, nested_dict):
         desired = ("SystemDict contents:\n├─foo: 5\n├─bar: \n│ ├─bogus: "

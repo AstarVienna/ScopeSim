@@ -1,7 +1,5 @@
-import os
-from scopesim import rc
-
 import pytest
+from unittest.mock import patch
 from astropy.io import fits
 
 from scopesim.optics import optics_manager as opt_mgr
@@ -12,13 +10,10 @@ from scopesim.tests.mocks.py_objects.yaml_objects import\
     _inst_yaml_dict, _detector_yaml_dict
 
 
-FILES_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),
-                                          "../mocks/files/"))
-YAMLS_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),
-                                          "../mocks/MICADO_SCAO_WIDE/"))
-for NEW_PATH in [YAMLS_PATH, FILES_PATH]:
-    if NEW_PATH not in rc.__search_path__:
-        rc.__search_path__.insert(0, NEW_PATH)
+@pytest.fixture(scope="class")
+def paths_patch(mock_path, mock_path_micado):
+    with patch("scopesim.rc.__search_path__", [mock_path, mock_path_micado]):
+        yield
 
 
 @pytest.fixture(scope="function")
@@ -31,7 +26,7 @@ def detector_yaml_dict():
     return _detector_yaml_dict()
 
 
-@pytest.mark.usefixtures("detector_yaml_dict", "inst_yaml_dict")
+@pytest.mark.usefixtures("paths_patch")
 class TestOpticsManager:
     def test_initialises_with_nothing(self):
         assert isinstance(opt_mgr.OpticsManager(),
@@ -55,7 +50,7 @@ class TestOpticsManager:
         assert isinstance(opt_man.optical_elements[0].effects[0], Effect)
 
 
-@pytest.mark.usefixtures("detector_yaml_dict")
+@pytest.mark.usefixtures("patch_mock_path")
 class TestOpticsManagerImagePlaneHeader:
     def test_makes_image_plane_header_correctly(self, detector_yaml_dict):
         opt_man = opt_mgr.OpticsManager(detector_yaml_dict)
@@ -64,7 +59,7 @@ class TestOpticsManagerImagePlaneHeader:
         assert isinstance(opt_man.image_plane_headers[0], fits.Header)
 
 
-@pytest.mark.usefixtures("detector_yaml_dict", "inst_yaml_dict")
+@pytest.mark.usefixtures("patch_mock_path")
 class TestGetItem:
     def test_returns_optical_element(self, detector_yaml_dict):
         opt_man = opt_mgr.OpticsManager([detector_yaml_dict])
@@ -95,4 +90,3 @@ class TestGetItem:
         opt_man = opt_mgr.OpticsManager([detector_yaml_dict])
         with pytest.raises(ValueError):
             opt_man[key]
-

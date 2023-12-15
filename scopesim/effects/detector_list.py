@@ -206,7 +206,7 @@ class DetectorList(Effect):
 
         pixel_size = pixel_size.to(u.mm).value
         hdr = header_from_list_of_xy(x_det, y_det, pixel_size, "D")
-        hdr["IMGPLANE"] = self.meta["image_plane_id"]
+        hdr["IMGPLANE"] = self.image_plane_id
 
         return hdr
 
@@ -280,6 +280,11 @@ class DetectorList(Effect):
         axes.set_ylabel("Size [mm]")
 
         return axes
+
+    @property
+    def image_plane_id(self) -> int:
+        """Get ID of the corresponding image plane."""
+        return self.meta["image_plane_id"]
 
 
 class DetectorWindow(DetectorList):

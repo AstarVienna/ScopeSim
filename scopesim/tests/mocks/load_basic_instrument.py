@@ -1,12 +1,12 @@
-import os
-from copy import deepcopy
-from ... import UserCommands, OpticalTrain
-from ... import rc
+from unittest.mock import patch
+
+from pathlib import Path
+from scopesim import UserCommands, OpticalTrain
 
 
 def load_example_optical_train(**kwargs):
     """
-    Returns an basic example ``OpticalTrain`` object with IMG and SPEC modes
+    Return an basic example ``OpticalTrain`` object with IMG and SPEC modes.
 
     Parameters
     ----------
@@ -33,18 +33,9 @@ def load_example_optical_train(**kwargs):
     opt: OpticalTrain
 
     """
-    # old_local_path = deepcopy(rc.__config__["!SIM.file.local_packages_path"])
-    # old_search_path = deepcopy(rc.__search_path__)
-
-    inst_pkgs = os.path.dirname(__file__)
-    if inst_pkgs not in rc.__search_path__:
-        rc.__search_path__ = rc.__search_path__ + [inst_pkgs]
-        rc.__config__["!SIM.file.local_packages_path"] = inst_pkgs
-
-    cmd = UserCommands(use_instrument="basic_instrument", **kwargs)
-    opt = OpticalTrain(cmd)
-
-    # rc.__config__["!SIM.file.local_packages_path"] = old_local_path
-    # rc.__search_path__ = old_search_path
+    patched = {"!SIM.file.local_packages_path": str(Path(__file__).parent)}
+    with patch.dict("scopesim.rc.__config__", patched):
+        cmd = UserCommands(use_instrument="basic_instrument", **kwargs)
+        opt = OpticalTrain(cmd)
 
     return opt

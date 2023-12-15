@@ -2,9 +2,13 @@
 ## A telescope observation simulator for Python
 
 [![Build Status](https://github.com/AstarVienna/ScopeSim/actions/workflows/tests.yml/badge.svg)](https://github.com/AstarVienna/ScopeSim/actions/workflows/tests.yml/badge.svg)
-[![Documentation Status](https://readthedocs.org/projects/scopesim/badge/?version=latest)](https://scopesim.readthedocs.io/en/latest/?badge=latest)
+[![Build Status](https://github.com/AstarVienna/ScopeSim/actions/workflows/minimumdependencies.yml/badge.svg)](https://github.com/AstarVienna/ScopeSim/actions/workflows/minimumdependencies.yml/badge.svg)
+[![Build Status](https://github.com/AstarVienna/ScopeSim/actions/workflows/notebooks_with_irdb_download.yml/badge.svg)](https://github.com/AstarVienna/ScopeSim/actions/workflows/notebooks_with_irdb_download.yml/badge.svg)
 
-[![Build Status](http://github-actions.40ants.com/AstarVienna/ScopeSim/matrix.svg)](https://github.com/AstarVienna/ScopeSim)
+[![Documentation Status](https://readthedocs.org/projects/scopesim/badge/?version=latest)](https://scopesim.readthedocs.io/en/latest)
+[![codecov](https://codecov.io/gh/AstarVienna/ScopeSim/graph/badge.svg)](https://codecov.io/gh/AstarVienna/ScopeSim)
+[![PyPI - Version](https://img.shields.io/pypi/v/ScopeSim)](https://pypi.org/project/ScopeSim/)
+[![Python Version Support](https://github-actions.40ants.com/AstarVienna/DevOps/matrix.svg?only=Tests.build.ubuntu-latest)](https://github.com/AstarVienna/ScopeSim)
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
