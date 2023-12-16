@@ -3,6 +3,7 @@ from pytest import approx
 from copy import deepcopy
 import numpy as np
 from astropy.io import fits
+from astropy.wcs import WCS
 import matplotlib.pyplot as plt
 
 from scopesim.optics import image_plane_utils as imp_utils
@@ -332,6 +333,23 @@ class TestSubPixelFractions:
     #     print(xs)
 
 
+class TestSkyDetWCS:
+    def test_wcs_roundtrip(self):
+        # FIXME: This should be a fixture, but everywhere in this module...
+        hdu = imo._image_hdu_rect()
+        sky_wcs = WCS(hdu.header)
+
+        # Scale 1.0 from _image_hdu_rect cdelt, 20 arbitrary plate scale
+        det_wcs, nax = imp_utils.det_wcs_from_sky_wcs(sky_wcs, 1.0, 20)
+        new_wcs, nax = imp_utils.sky_wcs_from_det_wcs(det_wcs, 1.0, 20,
+                                                      naxis=nax)
+
+        # Compare header representations because of missing NAXIS info in new
+        assert new_wcs.to_header() == sky_wcs.to_header()
+        assert all(nax == (hdu.header["NAXIS1"], hdu.header["NAXIS2"]))
+
+
+# These come from from kl/mos_branch. Are these tests useful?
 class TestExtractRegionFromHdu:
     @pytest.mark.parametrize("x_cen, y_cen", [(0, 0), (-15, 0), (-15, 96)])
     def test_returns_sub_section_inside_2d_imagehdu(self, x_cen, y_cen):

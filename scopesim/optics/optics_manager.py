@@ -139,7 +139,7 @@ class OpticsManager:
 
         return effects
 
-    def get_z_order_effects(self, z_level):
+    def get_z_order_effects(self, z_level: int):
         """
         Return a list of all effects with a z_order keywords within `z_level`.
 
@@ -150,75 +150,90 @@ class OpticsManager:
         - Apply Source altering effects - z_order = 200..299
         - Apply FOV specific (3D) effects - z_order = 300..399
         - Apply FOV-independent (2D) effects - z_order = 400..499
+        - Apply XXX effects - z_order = 500..599
+        - Apply XXX effects - z_order = 600..699
+        - Apply lambda-independent 2D image plane effects - z_order = 700..799
+        - Apply detector effects - z_order = 800..899
+        - Apply detector array effects - z_order = 900..999
 
         Parameters
         ----------
-        z_level : int, tuple
-            [0, 100, 200, 300, 400, 500]
+        z_level : {0, 100, 200, 300, 400, 500, 600, 700, 800, 900}
+            100-range of z_orders.
 
         Returns
         -------
         effects : list of Effect objects
 
         """
-        effects = []
-        for opt_el in self.optical_elements:
-            effects += opt_el.get_z_order_effects(z_level)
+        def _gather_effects():
+            for opt_el in self.optical_elements:
+                yield from opt_el.get_z_order_effects(z_level)
 
-        return effects
+        def _sortkey(eff):
+            return next(z % 100 for z in eff.meta["z_order"] if z >= z_level)
+
+        # return sorted(_gather_effects(), key=_sortkey)
+        return list(_gather_effects())
 
     @property
     def is_spectroscope(self):
+        """Return True if any of the effects is a spectroscope."""
         return is_spectroscope(self.all_effects)
 
     @property
     def image_plane_headers(self):
+        """Get headers from detector setup effects."""
         detector_lists = self.detector_setup_effects
-        headers = [det_list.image_plane_header for det_list in detector_lists]
-
         if not detector_lists:
-            raise ValueError(f"No DetectorList objects found. {detector_lists}")
+            raise ValueError("No DetectorList objects found.")
 
-        return headers
+        return [det_list.image_plane_header for det_list in detector_lists]
 
     @property
     def detector_array_effects(self):
+        """Get effects with z_order = 900...999."""
         return self.get_z_order_effects(900)
 
     @property
     def detector_effects(self):
+        """Get effects with z_order = 800...899."""
         return self.get_z_order_effects(800)
 
     @property
     def image_plane_effects(self):
-        effects = self.get_z_order_effects(700)
-        return effects
+        """Get effects with z_order = 700...799."""
+        return self.get_z_order_effects(700)
 
     @property
     def fov_effects(self):
-        effects = self.get_z_order_effects(600)
-        return effects
+        """Get effects with z_order = 600...699."""
+        return self.get_z_order_effects(600)
 
     @property
     def source_effects(self):
+        """Get effects with z_order = 500...599."""
         return self.get_z_order_effects(500)   # Transmission
 
     @property
     def detector_setup_effects(self):
-        # !!! Only DetectorLists go in here !!!
+        """Get effects with z_order = 400...499 (DetectorLists only!)."""
         return self.get_z_order_effects(400)
 
     @property
     def image_plane_setup_effects(self):
+        """Get effects with z_order = 300...399."""
         return self.get_z_order_effects(300)
 
     @property
     def fov_setup_effects(self):
+        """Get effects with z_order = 200...299."""
         # Working out where to set wave_min, wave_max
         return self.get_z_order_effects(200)
 
     @property
     def surfaces_table(self):
+        """Get combined surface table from effects with z_order = 100...199."""
         if self._surfaces_table is None:
             surface_like_effects = self.get_z_order_effects(100)
             self._surfaces_table = combine_surface_effects(surface_like_effects)
@@ -226,6 +241,7 @@ class OpticsManager:
 
     @property
     def all_effects(self):
+        """Get all effects in all optical elements."""
         return [eff for opt_eff in self.optical_elements for eff in opt_eff]
 
     @property

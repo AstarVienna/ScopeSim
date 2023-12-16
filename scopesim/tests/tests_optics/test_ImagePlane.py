@@ -61,8 +61,6 @@ def input_table_mm():
     return tbl
 
 
-@pytest.mark.usefixtures("image_hdu_square", "image_hdu_rect",
-                         "input_table", "input_table_mm")
 class TestCombineTableBoundaries:
     def test_all_three_tables_are_inside_header_wcs(self, input_table):
         tbl1 = deepcopy(input_table)
@@ -126,9 +124,6 @@ class TestCombineTableBoundaries:
             plt.show()
 
 
-@pytest.mark.usefixtures("image_hdu_square", "image_hdu_rect",
-                         "image_hdu_square_mm", "image_hdu_rect_mm",
-                         "input_table", "input_table")
 class TestCombineImageHDUBoundaries:
     def test_all_two_imagehdus_are_inside_header_wcs(self, image_hdu_square,
                                                      image_hdu_rect):
@@ -190,9 +185,6 @@ class TestCombineImageHDUBoundaries:
             plt.show()
 
 
-@pytest.mark.usefixtures("image_hdu_square", "image_hdu_rect",
-                         "image_hdu_square_mm", "image_hdu_rect_mm",
-                         "input_table", "input_table_mm")
 class TestGetCanvasHeader:
     def test_all_5_objects_are_inside_header_wcs(self, image_hdu_square,
                                                  image_hdu_rect, input_table):
@@ -305,8 +297,6 @@ class TestGetCanvasHeader:
             plt.show()
 
 
-@pytest.mark.usefixtures("image_hdu_square", "image_hdu_rect",
-                         "input_table", "input_table_mm")
 class TestAddTableToImageHDU:
     def test_points_are_added_to_small_canvas(self, input_table):
         tbl1 = deepcopy(input_table)
@@ -399,9 +389,6 @@ class TestAddTableToImageHDU:
             plt.show()
 
 
-@pytest.mark.usefixtures("image_hdu_square", "image_hdu_rect",
-                         "image_hdu_square_mm", "image_hdu_rect_mm",
-                         "input_table", "input_table_mm")
 class TestAddImageHDUToImageHDU:
     def test_image_is_added_to_small_canvas(self, image_hdu_rect,
                                             image_hdu_square):
@@ -560,9 +547,6 @@ class TestAddImageHDUToImageHDU:
             plt.show()
 
 
-@pytest.mark.usefixtures("image_hdu_square", "image_hdu_rect",
-                         "image_hdu_square_mm", "image_hdu_rect_mm",
-                         "input_table", "input_table_mm")
 class TestImagePlaneAdd:
     def test_add_many_tables_and_imagehdus(self, input_table, image_hdu_rect,
                                            image_hdu_square):
@@ -656,7 +640,6 @@ class TestImagePlaneAdd:
             plt.show()
 
 
-@pytest.mark.usefixtures("image_hdu_rect", "image_hdu_rect_mm")
 class TestReorientImageHDU:
     def test_flux_remains_constant(self, image_hdu_rect):
         orig_sum = np.sum(image_hdu_rect.data)
@@ -673,7 +656,6 @@ class TestReorientImageHDU:
         assert new_sum == approx(orig_sum)
 
 
-@pytest.mark.usefixtures("image_hdu_rect")
 class TestRescaleImageHDU:
     @pytest.mark.parametrize("pixel_scale", [0.1, 0.2, 1, 2])
     def test_flux_remains_constant(self, image_hdu_rect, pixel_scale):
@@ -697,7 +679,6 @@ class TestRescaleImageHDU:
 ###############################################################################
 # ..todo: When you have time, reintegrate these tests, There are some good ones
 
-@pytest.mark.usefixtures("image_hdu_square")
 class TestGetSpatialExtentOfHeader:
     def test_returns_right_sky_coords_from_known_coords(self, image_hdu_square):
         xy = imp_utils.calc_footprint(image_hdu_square.header)
@@ -712,7 +693,6 @@ class TestGetSpatialExtentOfHeader:
         assert dy == approx(image_hdu_square.header["NAXIS2"])
 
 
-@pytest.mark.usefixtures("image_hdu_square", "image_hdu_rect", "input_table")
 class TestMakeImagePlaneHeader:
     def test_header_contains_future_naxis_pixel_sizes(self, image_hdu_square,
                                                       image_hdu_rect):
@@ -786,7 +766,6 @@ class TestMakeImagePlaneHeader:
 #         assert pytest.approx(ysky[0] == y[0] * u.arcmin.to(u.deg))
 #
 #
-# @pytest.mark.usefixtures("image_hdu_square")
 # class TestGetCornerSkyCoords:
 #     def test_returns_coords_for_combination_of_table_and_header(self,
 #                                                             image_hdu_square):
@@ -796,8 +775,8 @@ class TestMakeImagePlaneHeader:
 #
 #         assert np.all((xsky == x.to(u.deg).value))
 #
-#
-@pytest.mark.usefixtures("image_hdu_square")
+
+
 class TestAddTableToImageHDU:
     @pytest.mark.parametrize("xpix, ypix, value",
                              [(51, 51, 2),
@@ -851,7 +830,6 @@ class TestAddTableToImageHDU:
             assert np.sum(hdu.data) == np.prod(hdu.data.shape)
 
 
-@pytest.mark.usefixtures("image_hdu_square", "image_hdu_rect")
 class TestAddImagehduToImageHDU:
     @pytest.mark.parametrize("angle", [0, 30, 45, 89])
     def test_image_added_conserves_flux(self, angle, image_hdu_square):
@@ -884,7 +862,6 @@ class TestSubPixelFractions:
             assert all([a == approx(b) for a, b in zip(aa, bb)])
 
 
-@pytest.mark.usefixtures("image_hdu_square", "image_hdu_rect")
 class TestImagePlaneInit:
     def test_throws_error_when_initialised_with_nothing(self):
         with pytest.raises(TypeError):
@@ -904,7 +881,6 @@ class TestImagePlaneInit:
             opt_imp.ImagePlane(fits.Header())
 
 
-@pytest.mark.usefixtures("image_hdu_square", "image_hdu_rect")
 class TestImagePlaneAdd:
     def test_simple_add_imagehdu_conserves_flux(self, image_hdu_square,
                                                 image_hdu_rect):

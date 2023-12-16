@@ -1,5 +1,3 @@
-import os
-from os import path as p
 import pytest
 from pytest import approx
 
@@ -12,11 +10,9 @@ from scopesim.effects.apertures import points_on_a_circle, make_aperture_polygon
 from scopesim.optics.fov_manager import FovVolumeList
 
 import matplotlib.pyplot as plt
-PLOTS = False
 
-FILES_PATH = p.abspath(p.join(p.dirname(__file__), "../mocks/files/"))
-if FILES_PATH not in rc.__search_path__:
-    rc.__search_path__ += [FILES_PATH]
+
+PLOTS = False
 
 
 def basic_aperture_mask(x=(-2, -1, 1, 2), y=(-1, -2, 2, 1), **kwargs):
@@ -36,8 +32,8 @@ class TestInit:
         assert isinstance(apm, ApertureMask)
         assert "x" in apm.table.colnames
 
-    def test_initialises_from_file(self):
-        apm = ApertureMask(filename="test_aperture.dat")
+    def test_initialises_from_file(self, mock_path):
+        apm = ApertureMask(filename=str(mock_path / "test_aperture.dat"))
         assert isinstance(apm, ApertureMask)
         assert "y" in apm.table.colnames
 

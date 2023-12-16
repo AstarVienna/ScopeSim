@@ -6,11 +6,6 @@
 # 2 compliment the table based on columns in file
 # 3 have @property methods for: transmission, ermission, reflection
 
-import inspect
-import os
-import sys
-import logging
-
 import pytest
 
 import numpy as np
@@ -28,25 +23,15 @@ from scopesim.optics import surface_utils as surf_utils
 from scopesim import utils
 
 
-def mock_dir():
-    cur_dirname = os.path.dirname(inspect.getfile(inspect.currentframe()))
-    rel_dirname = "../mocks/MICADO_SCAO_WIDE/"
-
-    return os.path.abspath(os.path.join(cur_dirname, rel_dirname))
-
-
-MOCK_DIR = mock_dir()
-
-
 @pytest.fixture(name="ter_table", scope="class")
-def fixture_ter_table():
-    return ioascii.read(os.path.join(MOCK_DIR, "TER_dichroic.dat"))
+def fixture_ter_table(mock_path_micado):
+    return ioascii.read(mock_path_micado / "TER_dichroic.dat")
 
 
 @pytest.fixture(name="input_tables", scope="module")
-def fixture_input_tables():
+def fixture_input_tables(mock_path_micado):
     filenames = ["TER_dichroic.dat", "TC_filter_Ks.dat"]
-    abs_paths = [os.path.join(MOCK_DIR, fname) for fname in filenames]
+    abs_paths = [str(mock_path_micado / fname) for fname in filenames]
 
     return abs_paths
 
@@ -59,7 +44,6 @@ def fixture_unity_flux():
     return flux, wave
 
 
-@pytest.mark.usefixtures("input_tables")
 class TestSpectralSurfaceInit:
     def test_can_exist_with_no_input(self):
         srf = opt_surf.SpectralSurface()
@@ -69,13 +53,13 @@ class TestSpectralSurfaceInit:
         srf = opt_surf.SpectralSurface(filename=input_tables[0])
         assert isinstance(srf.table, Table)
 
+    @pytest.mark.usefixtures("no_file_error")
     def test_returns_empty_table_if_path_is_bogus(self):
         srf = opt_surf.SpectralSurface(filename="bogus.txt")
         assert isinstance(srf, opt_surf.SpectralSurface)
         assert len(srf.table) == 0
 
 
-@pytest.mark.usefixtures("input_tables")
 class TestSpectralSurfaceWavelengthProperty:
     def test_returns_quantity_array_from_file(self, input_tables):
         srf = opt_surf.SpectralSurface(filename=input_tables[0])
@@ -104,7 +88,6 @@ class TestSpectralSurfaceWavelengthProperty:
         assert np.all(srf.wavelength == [0.3, 3.0]*u.Angstrom)
 
 
-@pytest.mark.usefixtures("input_tables")
 class TestSpectralSurfaceTransmissionProperty:
     def test_returns_synphot_object_array_from_file(self, input_tables):
         srf = opt_surf.SpectralSurface(filename=input_tables[0])
@@ -131,8 +114,9 @@ class TestSpectralSurfaceTransmissionProperty:
 
 class TestSpectralSurfaceEmissionProperty:
     def test_returns_synphot_object_per_arcsec2_scaled_to_per_arcsec2(self):
-        srf = opt_surf.SpectralSurface(wavelength=[0.3, 3.0] * u.um,
-                                       emission=[1, 1] * PHOTLAM * u.arcsec**-2)
+        srf = opt_surf.SpectralSurface(
+            wavelength=[0.3, 3.0] * u.um,
+            emission=[1, 1] * PHOTLAM * u.arcsec**-2)
         assert isinstance(srf.emission, SourceSpectrum)
         assert np.all(srf.emission([0.3, 3.0] * u.um) == [1, 1] * PHOTLAM)
 
@@ -169,12 +153,8 @@ class TestSpectralSurfaceComplimentArray:
         srf.meta[colname1] = col1
         srf.meta[colname2] = col2
         col3 = srf._compliment_array(colname1, colname2)
-        if sys.version_info.major >= 3:
-            assert np.all(np.isclose(col3.data, expected.data))
-            assert col3.unit == expected.unit
-        else:
-            logging.warning("Data equality isn't tested for 2.7")
-            assert col3.unit == expected.unit
+        assert np.all(np.isclose(col3.data, expected.data))
+        assert col3.unit == expected.unit
 
     @pytest.mark.parametrize("colname1, colname2, col1, col2, expected",
                              [("A",     "B",      None, None, None)])
@@ -198,11 +178,8 @@ class TestSpectralSurfaceComplimentArray:
             srf.table.add_column(Column(name="col2", data=col2_arr))
 
         col3 = srf._compliment_array("col1", "col2")
-        if sys.version_info.major >= 3:
-            assert col3.data == pytest.approx(expected)
-            assert len(col3.data) == len(expected)
-        else:
-            logging.warning("Data equality isn't tested for 2.7")
+        assert col3.data == pytest.approx(expected)
+        assert len(col3.data) == len(expected)
 
 
 class TestSpectralSurfaceAreaProperty:
@@ -234,7 +211,6 @@ class TestQuantify:
         assert utils.quantify(item, unit) == expected
 
 
-@pytest.mark.usefixtures("unity_flux")
 class TestMakeEmissionFromArray:
     @pytest.mark.parametrize("emission_unit",
                              ["ph s-1 m-2 um-1",
@@ -268,7 +244,6 @@ class TestMakeEmissionFromArray:
         assert isinstance(out, SourceSpectrum)
 
 
-@pytest.mark.usefixtures("input_tables")
 class TestMakeEmissionFromEmissivity:
     # .. todo:: write this test class
     @pytest.mark.parametrize("temp", [273, 273*u.deg_C])
@@ -277,7 +252,6 @@ class TestMakeEmissionFromEmissivity:
         out = surf_utils.make_emission_from_emissivity(273, srf.emissivity)
         assert isinstance(out, SourceSpectrum)
         assert out.model.temperature_0 == 273
-
 
     @pytest.mark.parametrize("temp", [283, 283*u.deg_C, 283*u.Kelvin])
     def test_blackbody_maximum_agrees_with_wien(self, temp):
@@ -300,12 +274,12 @@ class TestNormaliseBinnedFlux:
         pass
 
 
-@pytest.mark.usefixtures("ter_table")
 class TestIntegration:
     @pytest.mark.parametrize("col_name",
                              ["transmission", "emissivity", "reflection"])
-    def test_ter_property_of_object_from_file(self, col_name, ter_table):
-        filename = os.path.join(MOCK_DIR, "TER_dichroic.dat")
+    def test_ter_property_of_object_from_file(self, col_name, ter_table,
+                                              mock_path_micado):
+        filename = str(mock_path_micado / "TER_dichroic.dat")
         surf = opt_surf.SpectralSurface(filename=filename)
 
         tbl_ter_prop = ter_table[col_name]
@@ -327,8 +301,8 @@ class TestIntegration:
         assert isinstance(surf, opt_surf.SpectralSurface)
         assert np.all(surf_ter_prop == tbl_ter_prop)
 
-    def test_return_emission_curve_from_file(self):
-        filename = os.path.join(MOCK_DIR, "emission_file.dat")
+    def test_return_emission_curve_from_file(self, mock_path_micado):
+        filename = str(mock_path_micado / "emission_file.dat")
         surf = opt_surf.SpectralSurface(filename=filename)
         integal = surf.emission.integrate().to(u.Unit("ph s-1 m-2"))
         assert np.isclose(integal.value, 2)   # ph s-1 m-2

@@ -1,7 +1,6 @@
 import pytest
-import os
+from pathlib import Path
 from tempfile import TemporaryDirectory
-from urllib3.exceptions import HTTPError
 
 import yaml
 import numpy as np
@@ -131,7 +130,7 @@ class TestDownloadPackage:
 
         with pytest.warns(DeprecationWarning):
             save_paths = db.download_package(pkg_path)
-        assert os.path.exists(save_paths[0])
+        assert save_paths[0].exists()
 
     # This no longer raises, but logs an error. This is intended.
     # TODO: Change test to capture log and assert if error log is present.
@@ -148,10 +147,10 @@ class TestDownloadPackages:
         with TemporaryDirectory() as tmpdir:
             db.download_packages(["test_package"], release="stable",
                                  save_dir=tmpdir, from_cache=False)
-            assert os.path.exists(os.path.join(tmpdir, "test_package.zip"))
+            assert Path(tmpdir, "test_package.zip").exists()
 
-            version_path = os.path.join(tmpdir, "test_package", "version.yaml")
-            assert os.path.exists(version_path)
+            version_path = Path(tmpdir, "test_package", "version.yaml")
+            assert version_path.exists()
 
             with open(version_path) as f:
                 version_dict = yaml.full_load(f)
@@ -162,9 +161,9 @@ class TestDownloadPackages:
         with TemporaryDirectory() as tmpdir:
             db.download_packages("test_package", release="latest",
                                  save_dir=tmpdir, from_cache=False)
-            version_path = os.path.join(tmpdir, "test_package", "version.yaml")
-            with open(version_path) as f:
-                version_dict = yaml.full_load(f)
+            version_path = Path(tmpdir, "test_package", "version.yaml")
+            with version_path.open("r", encoding="utf-8") as file:
+                version_dict = yaml.full_load(file)
 
             assert version_dict["release"] == "dev"
 
@@ -174,9 +173,9 @@ class TestDownloadPackages:
         with TemporaryDirectory() as tmpdir:
             db.download_packages(["test_package"], release=release,
                                  save_dir=tmpdir, from_cache=False)
-            version_path = os.path.join(tmpdir, "test_package", "version.yaml")
-            with open(version_path) as f:
-                version_dict = yaml.full_load(f)
+            version_path = Path(tmpdir, "test_package", "version.yaml")
+            with version_path.open("r", encoding="utf-8") as file:
+                version_dict = yaml.full_load(file)
 
             assert version_dict["version"] == release
 
@@ -187,9 +186,9 @@ class TestDownloadPackages:
         with TemporaryDirectory() as tmpdir:
             db.download_packages("ELT", release=release,
                                  save_dir=tmpdir, from_cache=False)
-            filename = os.path.join(tmpdir, "ELT", "EC_sky_25.tbl")
+            filename = Path(tmpdir, "ELT", "EC_sky_25.tbl")
 
-            assert os.path.exists(filename)
+            assert filename.exists()
 
     @pytest.mark.skip(reason="fails too often with timeout")
     @pytest.mark.webtest
@@ -198,9 +197,9 @@ class TestDownloadPackages:
         with TemporaryDirectory() as tmpdir:
             db.download_packages("ELT", release=release,
                                  save_dir=tmpdir, from_cache=False)
-            filename = os.path.join(tmpdir, "ELT", "EC_sky_25.tbl")
+            filename = Path(tmpdir, "ELT", "EC_sky_25.tbl")
 
-            assert os.path.exists(filename)
+            assert filename.exists()
 
 
 @pytest.mark.skip(reason="fails too often with timeout")
@@ -211,18 +210,18 @@ class TestDownloadGithubFolder:
             # tmpdir = "."
             url = "https://github.com/AstarVienna/irdb/tree/dev_master/MICADO"
             dbgh.download_github_folder(url, output_dir=tmpdir)
-            filename = os.path.join(tmpdir, "MICADO", "default.yaml")
+            filename = Path(tmpdir, "MICADO", "default.yaml")
 
-            assert os.path.exists(filename)
+            assert filename.exists()
 
     @pytest.mark.webtest
     def test_downloads_with_old_commit_hash(self):
         with TemporaryDirectory() as tmpdir:
             url = "https://github.com/AstarVienna/irdb/tree/728761fc76adb548696205139e4e9a4260401dfc/ELT"
             dbgh.download_github_folder(url, output_dir=tmpdir)
-            filename = os.path.join(tmpdir, "ELT", "EC_sky_25.tbl")
+            filename = Path(tmpdir, "ELT", "EC_sky_25.tbl")
 
-            assert os.path.exists(filename)
+            assert filename.exists()
 
     @pytest.mark.webtest
     def test_throws_for_bad_url(self):
@@ -237,8 +236,8 @@ def test_old_download_package_signature():
     with TemporaryDirectory() as tmpdir:
         with pytest.warns(DeprecationWarning):
             db.download_package(["instruments/test_package.zip"], save_dir=tmpdir)
-        version_path = os.path.join(tmpdir, "test_package", "version.yaml")
-        with open(version_path) as f:
-            version_dict = yaml.full_load(f)
+        version_path = Path(tmpdir, "test_package", "version.yaml")
+        with version_path.open("r", encoding="utf-8") as file:
+            version_dict = yaml.full_load(file)
 
         assert version_dict["release"] == "stable"

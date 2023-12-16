@@ -1,7 +1,10 @@
 """TBA."""
 
+import logging
 import inspect
 from copy import deepcopy, copy
+from collections.abc import Iterable
+
 from astropy.table import Table
 
 from .. import effects as efs
@@ -107,3 +110,29 @@ def scopesim_effect_classes(base_effect=efs.Effect):
     sorted_effects = {key: efs_dict[key] for key in sorted(efs_dict)}
 
     return sorted_effects
+
+
+def z_order_in_range(z_eff, z_range: range) -> bool:
+    """
+    Return True if any of the z_orders in `z_eff` is in the given range.
+
+    The `z_range` parameter can be constructed as ``range(z_min, z_max)``.
+
+    Parameters
+    ----------
+    z_eff : int or list of ints
+        z_order(s) of the effect.
+    z_range : range
+        range object of allowed z_order values.
+
+    Returns
+    -------
+    bool
+        True if at least one z_order is in range, False otherwise.
+
+    """
+    if not isinstance(z_eff, Iterable):
+        logging.warning("z_order %d should be a single-item iterable", z_eff)
+        z_eff = [z_eff]
+
+    return any(zi in z_range for zi in z_eff)
