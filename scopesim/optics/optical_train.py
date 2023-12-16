@@ -8,6 +8,8 @@ import numpy as np
 from scipy.interpolate import interp1d
 from astropy import units as u
 
+from tqdm import tqdm
+
 from synphot.units import PHOTLAM
 
 from .optics_manager import OpticsManager
@@ -183,7 +185,7 @@ class OpticalTrain:
 
         # [3D - Atmospheric shifts, PSF, NCPAs, Grating shift/distortion]
         fovs = self.fov_manager.fovs
-        for fov in fovs:
+        for fov in tqdm(fovs, desc=" FOVs", position=0):
             # print("FOV", fov_i+1, "of", n_fovs, flush=True)
             # .. todo: possible bug with bg flux not using plate_scale
             #          see fov_utils.combine_imagehdu_fields
@@ -191,7 +193,8 @@ class OpticalTrain:
 
             hdu_type = "cube" if self.fov_manager.is_spectroscope else "image"
             fov.view(hdu_type)
-            for effect in self.optics_manager.fov_effects:
+            for effect in tqdm(self.optics_manager.fov_effects,
+                               desc=" FOV effects", position=1, leave=False):
                 fov = effect.apply_to(fov)
 
             fov.flatten()
@@ -199,7 +202,8 @@ class OpticalTrain:
             # ..todo: finish off the multiple image plane stuff
 
         # [2D - Vibration, flat fielding, chopping+nodding]
-        for effect in self.optics_manager.image_plane_effects:
+        for effect in tqdm(self.optics_manager.image_plane_effects,
+                           desc=" Image Plane effects"):
             for ii, image_plane in enumerate(self.image_planes):
                 self.image_planes[ii] = effect.apply_to(image_plane)
 
