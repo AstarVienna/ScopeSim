@@ -15,13 +15,7 @@ import re
 from pathlib import Path
 from typing import Union
 
-import httpx
-
-from .download_utils import handle_download
-
-
-class ServerError(Exception):
-    """Some error with the server or connection to the server."""
+from .download_utils import handle_download, send_get, create_client
 
 
 def create_github_url(url: str) -> None:
@@ -35,7 +29,7 @@ def create_github_url(url: str) -> None:
 
     # Check if the given url is a url to a GitHub repo. If it is, tell the
     # user to use 'git clone' to download it
-    if re.match(repo_only_url,url):
+    if re.match(repo_only_url, url):
         message = ("✘ The given url is a complete repository. Use 'git clone'"
                    " to download the repository")
         logging.error(message)
@@ -63,53 +57,22 @@ def download_github_folder(repo_url: str,
     api_url, download_dirs = create_github_url(repo_url)
 
     # get the contents of the github folder
-    try:
-        transport = httpx.HTTPTransport(retries=5)
-        with httpx.Client(timeout=2, transport=transport) as client:
-            data = client.get(api_url).json()
-    except httpx.RequestError as err:
-        logging.exception("An error occurred while requesting %s.",
-                          err.request.url)
-        raise ServerError("Cannot connect to server.") from err
-    except httpx.HTTPStatusError as err:
-        logging.error("Error response %s while requesting %s.",
-                      err.response.status_code, err.request.url)
-        raise ServerError("Cannot connect to server.") from err
-    except Exception as error:
-        logging.error(("Unhandled exception occured while accessing server."
-                      "Attempted URL was: %s."), api_url)
-        logging.error(error)
-        raise error
+    with create_client("", cached=False) as client:
+        data = send_get(client, api_url).json()
 
-    # Make the base directories for this GitHub folder
-    (output_dir / download_dirs).mkdir(parents=True, exist_ok=True)
+        # Make the base directories for this GitHub folder
+        (output_dir / download_dirs).mkdir(parents=True, exist_ok=True)
 
-    for entry in data:
-        # if the entry is a further folder, walk through it
-        if entry["type"] == "dir":
-            download_github_folder(repo_url=entry["html_url"],
-                                   output_dir=output_dir)
+        for entry in data:
+            # if the entry is a further folder, walk through it
+            if entry["type"] == "dir":
+                download_github_folder(repo_url=entry["html_url"],
+                                       output_dir=output_dir)
 
-        # if the entry is a file, download it
-        elif entry["type"] == "file":
-            try:
+            # if the entry is a file, download it
+            elif entry["type"] == "file":
                 # download the file
                 save_path = output_dir / entry["path"]
-                handle_download(entry["download_url"],
-                                save_path, entry["path"],
-                                padlen=0, disable_bar=True)
+                handle_download(client, entry["download_url"], save_path,
+                                entry["path"], padlen=0, disable_bar=True)
                 logging.info("Downloaded: %s", entry["path"])
-
-            except httpx.RequestError as err:
-                logging.exception("An error occurred while requesting %s.",
-                                  err.request.url)
-                raise ServerError("Cannot connect to server.") from err
-            except httpx.HTTPStatusError as err:
-                logging.error("Error response %s while requesting %s.",
-                              err.response.status_code, err.request.url)
-                raise ServerError("Cannot connect to server.") from err
-            except Exception as error:
-                logging.error(("Unhandled exception occured while accessing "
-                              "server. Attempted URL was: %s."), api_url)
-                logging.error(error)
-                raise error

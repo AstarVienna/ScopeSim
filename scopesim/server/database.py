@@ -150,6 +150,7 @@ def crawl_server_dirs(client=None) -> Iterator[Tuple[str, Set[str]]]:
     if client is None:
         with create_client(get_base_url()) as client:
             yield from crawl_server_dirs(client)
+        return
 
     for dir_name in get_server_folder_contents(client, "", "/"):
         logging.info("Searching folder '%s'", dir_name)
@@ -236,11 +237,7 @@ def get_all_packages_on_server() -> Iterator[Tuple[str, set]]:
         Key-value pairs of folder and corresponding package names.
 
     """
-    # TODO: this basically does the same as the crawl function...
-    with create_client(get_base_url()) as client:
-        for dir_name in ("locations", "telescopes", "instruments"):
-            package_names = get_server_folder_package_names(client, dir_name)
-            yield dir_name, package_names
+    yield from crawl_server_dirs()
 
 
 def list_packages(pkg_name: Optional[str] = None) -> List[str]:

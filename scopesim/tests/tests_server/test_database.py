@@ -232,7 +232,7 @@ class TestDownloadGithubFolder:
     def test_throws_for_bad_url(self):
         with TemporaryDirectory() as tmpdir:
             url = "https://github.com/AstarVienna/irdb/tree/bogus/MICADO"
-            with pytest.raises(dbgh.ServerError):
+            with pytest.raises(db.ServerError):
                 dbgh.download_github_folder(url, output_dir=tmpdir)
 
 
