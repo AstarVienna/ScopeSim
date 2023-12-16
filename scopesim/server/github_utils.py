@@ -20,7 +20,7 @@ from .download_utils import handle_download, send_get, create_client
 
 def create_github_url(url: str) -> None:
     """
-    From the given url, produce a URL that is compatible with Github's REST API.
+    From the given url, produce a URL compatible with Github's REST API.
 
     Can handle blob or tree paths.
     """
@@ -46,7 +46,7 @@ def create_github_url(url: str) -> None:
 def download_github_folder(repo_url: str,
                            output_dir: Union[Path, str] = "./") -> None:
     """
-    Downloads the files and directories in repo_url.
+    Download the files and directories in repo_url.
 
     Re-written based on the on the download function
     `here <https://github.com/sdushantha/gitdir/blob/f47ce9d85ee29f8612ce5ae804560a12b803ddf3/gitdir/gitdir.py#L55>`_

@@ -28,6 +28,7 @@ class PkgNotFoundError(Exception):
 
 
 def get_base_url():
+    """Get instrument package server URL from rc.__config__."""
     return rc.__config__["!SIM.file.server_base_url"]
 
 
@@ -179,6 +180,7 @@ def get_all_package_versions(client=None) -> Dict[str, List[str]]:
 
 
 def get_package_folders(client) -> Dict[str, str]:
+    """Map package names to server locations."""
     folders_dict = {pkg: path.strip("/")
                     for path, pkgs in dict(crawl_server_dirs(client)).items()
                     for pkg in pkgs}

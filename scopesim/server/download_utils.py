@@ -36,6 +36,7 @@ def _make_tqdm_kwargs(desc: str = ""):
 
 
 def create_client(base_url, cached: bool = False, cache_name: str = ""):
+    """Create httpx Client instance, should support cache at some point."""
     if cached:
         raise NotImplementedError("Caching not yet implemented with httpx.")
     transport = httpx.HTTPTransport(retries=5)
@@ -47,6 +48,7 @@ def handle_download(client, pkg_url: str,
                     save_path: Path, pkg_name: str,
                     padlen: int, chunk_size: int = 128,
                     disable_bar=False) -> None:
+    """Perform a streamed download and write the content to disk."""
     tqdm_kwargs = _make_tqdm_kwargs(f"Downloading {pkg_name:<{padlen}}")
 
     stream = send_get(client, pkg_url, stream=True)
@@ -75,6 +77,7 @@ def handle_download(client, pkg_url: str,
 
 def handle_unzipping(save_path: Path, save_dir: Path,
                      pkg_name: str, padlen: int) -> None:
+    """Unpack a zipped folder, usually called right after downloading."""
     with ZipFile(save_path, "r") as zip_ref:
         namelist = zip_ref.namelist()
         tqdm_kwargs = _make_tqdm_kwargs(f"Extracting  {pkg_name:<{padlen}}")
@@ -83,6 +86,10 @@ def handle_unzipping(save_path: Path, save_dir: Path,
 
 
 def send_get(client, sub_url, stream: bool = False):
+    """Send a GET request (streamed or not) using an existing client.
+
+    The point of this function is mostly elaborate exception handling.
+    """
     try:
         if stream:
             response = client.stream("GET", sub_url)
@@ -106,6 +113,7 @@ def send_get(client, sub_url, stream: bool = False):
 
 def get_server_folder_contents(client, dir_name: str,
                                unique_str: str = ".zip$") -> Iterator[str]:
+    """Find all zip files in a given server folder."""
     dir_name = dir_name + "/" if not dir_name.endswith("/") else dir_name
     response = send_get(client, dir_name)
 
