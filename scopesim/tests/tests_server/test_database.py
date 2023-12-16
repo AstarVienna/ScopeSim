@@ -11,6 +11,13 @@ from scopesim.server import github_utils as dbgh
 from scopesim import rc
 
 
+@pytest.fixture(scope="class")
+def mock_client():
+    # TODO: investigate proper mocking via httpx
+    with db.create_client(db.get_base_url()) as client:
+        yield client
+
+
 @pytest.mark.webtest
 def test_package_list_loads():
     with pytest.warns(DeprecationWarning):
@@ -53,32 +60,30 @@ class TestGetZipname:
 
 class TestGetServerFolderContents:
     @pytest.mark.webtest
-    def test_downloads_locations(self):
-        pkgs = list(db.get_server_folder_contents("locations"))
+    def test_downloads_locations(self, mock_client):
+        pkgs = list(db.get_server_folder_contents(mock_client, "locations"))
         assert len(pkgs) > 0
 
     @pytest.mark.webtest
-    def test_downloads_telescopes(self):
-        pkgs = list(db.get_server_folder_contents("telescopes"))
+    def test_downloads_telescopes(self, mock_client):
+        pkgs = list(db.get_server_folder_contents(mock_client, "telescopes"))
         assert len(pkgs) > 0
 
     @pytest.mark.webtest
-    def test_downloads_instruments(self):
-        pkgs = list(db.get_server_folder_contents("instruments"))
+    def test_downloads_instruments(self, mock_client):
+        pkgs = list(db.get_server_folder_contents(mock_client, "instruments"))
         assert len(pkgs) > 0
 
     @pytest.mark.webtest
-    def test_finds_armazones(self):
-        pkgs = list(db.get_server_folder_contents("locations"))
+    def test_finds_armazones(self, mock_client):
+        pkgs = list(db.get_server_folder_contents(mock_client, "locations"))
         assert "Armazones" in pkgs[0]
 
     @pytest.mark.webtest
     def test_throws_for_wrong_url_server(self):
-        original_url = rc.__config__["!SIM.file.server_base_url"]
-        rc.__config__["!SIM.file.server_base_url"] = "https://scopesim.univie.ac.at/bogus/"
-        with pytest.raises(db.ServerError):
-            list(db.get_server_folder_contents("locations"))
-        rc.__config__["!SIM.file.server_base_url"] = original_url
+        with db.create_client("https://scopesim.univie.ac.at/bogus/") as client:
+            with pytest.raises(db.ServerError):
+                list(db.get_server_folder_contents(client, "locations"))
 
 
 class TestGetServerElements:
@@ -146,7 +151,7 @@ class TestDownloadPackages:
     def test_downloads_stable_package(self):
         with TemporaryDirectory() as tmpdir:
             db.download_packages(["test_package"], release="stable",
-                                 save_dir=tmpdir, from_cache=False)
+                                 save_dir=tmpdir)
             assert Path(tmpdir, "test_package.zip").exists()
 
             version_path = Path(tmpdir, "test_package", "version.yaml")
@@ -160,7 +165,7 @@ class TestDownloadPackages:
     def test_downloads_latest_package(self):
         with TemporaryDirectory() as tmpdir:
             db.download_packages("test_package", release="latest",
-                                 save_dir=tmpdir, from_cache=False)
+                                 save_dir=tmpdir)
             version_path = Path(tmpdir, "test_package", "version.yaml")
             with version_path.open("r", encoding="utf-8") as file:
                 version_dict = yaml.full_load(file)
@@ -172,7 +177,7 @@ class TestDownloadPackages:
         release = "2022-04-09.dev"
         with TemporaryDirectory() as tmpdir:
             db.download_packages(["test_package"], release=release,
-                                 save_dir=tmpdir, from_cache=False)
+                                 save_dir=tmpdir)
             version_path = Path(tmpdir, "test_package", "version.yaml")
             with version_path.open("r", encoding="utf-8") as file:
                 version_dict = yaml.full_load(file)
@@ -185,7 +190,7 @@ class TestDownloadPackages:
         release = "github:728761fc76adb548696205139e4e9a4260401dfc"
         with TemporaryDirectory() as tmpdir:
             db.download_packages("ELT", release=release,
-                                 save_dir=tmpdir, from_cache=False)
+                                 save_dir=tmpdir)
             filename = Path(tmpdir, "ELT", "EC_sky_25.tbl")
 
             assert filename.exists()
@@ -196,7 +201,7 @@ class TestDownloadPackages:
         release = "github@728761fc76adb548696205139e4e9a4260401dfc"
         with TemporaryDirectory() as tmpdir:
             db.download_packages("ELT", release=release,
-                                 save_dir=tmpdir, from_cache=False)
+                                 save_dir=tmpdir)
             filename = Path(tmpdir, "ELT", "EC_sky_25.tbl")
 
             assert filename.exists()

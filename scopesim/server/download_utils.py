@@ -1,14 +1,27 @@
 # -*- coding: utf-8 -*-
 """Used only by the `database` and `github_utils` submodules."""
 
+import re
+import logging
+
+# Python 3.8 doesn't yet know these things.......
+# from collections.abc import Iterator, Iterable, Mapping
+from typing import Iterator
+
 from zipfile import ZipFile
 from pathlib import Path
 from shutil import get_terminal_size
 
 import httpx
+import bs4
+
 from tqdm import tqdm
 # from tqdm.contrib.logging import logging_redirect_tqdm
 # put with logging_redirect_tqdm(loggers=all_loggers): around tqdm
+
+
+class ServerError(Exception):
+    """Some error with the server or connection to the server."""
 
 
 def _make_tqdm_kwargs(desc: str = ""):
@@ -22,24 +35,25 @@ def _make_tqdm_kwargs(desc: str = ""):
     return tqdm_kwargs
 
 
-def _create_client(cached: bool = False, cache_name: str = ""):
+def create_client(base_url, cached: bool = False, cache_name: str = ""):
     if cached:
         raise NotImplementedError("Caching not yet implemented with httpx.")
     transport = httpx.HTTPTransport(retries=5)
-    client = httpx.Client(base_url="https://scopesim.univie.ac.at/InstPkgSvr/",
-                          timeout=2, transport=transport)
+    client = httpx.Client(base_url=base_url, timeout=2, transport=transport)
     return client
 
 
-def handle_download(pkg_url: str,
+def handle_download(client, pkg_url: str,
                     save_path: Path, pkg_name: str,
                     padlen: int, chunk_size: int = 128,
-                    cached: bool = False, cache_name: str = "",
                     disable_bar=False) -> None:
     tqdm_kwargs = _make_tqdm_kwargs(f"Downloading {pkg_name:<{padlen}}")
 
-    with _create_client(cached, cache_name) as client:
-        with client.stream("GET", pkg_url) as response:
+    stream = send_get(client, pkg_url, stream=True)
+
+    try:
+        with stream as response:
+            response.raise_for_status()
             total = int(response.headers.get("Content-Length", 0))
 
             # Turn this into non-nested double with block in Python 3.9 or 10
@@ -50,6 +64,14 @@ def handle_download(pkg_url: str,
                     for chunk in response.iter_bytes(chunk_size=chunk_size):
                         file_inner.write(chunk)
 
+    except httpx.HTTPStatusError as err:
+        logging.error("Error response %s while requesting %s.",
+                      err.response.status_code, err.request.url)
+        raise ServerError("Cannot connect to server.") from err
+    except Exception as err:
+        logging.exception("Unhandled exception while accessing server.")
+        raise ServerError("Cannot connect to server.") from err
+
 
 def handle_unzipping(save_path: Path, save_dir: Path,
                      pkg_name: str, padlen: int) -> None:
@@ -58,3 +80,37 @@ def handle_unzipping(save_path: Path, save_dir: Path,
         tqdm_kwargs = _make_tqdm_kwargs(f"Extracting  {pkg_name:<{padlen}}")
         for file in tqdm(iterable=namelist, total=len(namelist), **tqdm_kwargs):
             zip_ref.extract(file, save_dir)
+
+
+def send_get(client, sub_url, stream: bool = False):
+    try:
+        if stream:
+            response = client.stream("GET", sub_url)
+        else:
+            response = client.get(sub_url)
+            response.raise_for_status()
+    except httpx.RequestError as err:
+        logging.exception("An error occurred while requesting %s.",
+                          err.request.url)
+        raise ServerError("Cannot connect to server.") from err
+    except httpx.HTTPStatusError as err:
+        logging.error("Error response %s while requesting %s.",
+                      err.response.status_code, err.request.url)
+        raise ServerError("Cannot connect to server.") from err
+    except Exception as err:
+        logging.exception("Unhandled exception while accessing server.")
+        raise ServerError("Cannot connect to server.") from err
+
+    return response
+
+
+def get_server_folder_contents(client, dir_name: str,
+                               unique_str: str = ".zip$") -> Iterator[str]:
+    dir_name = dir_name + "/" if not dir_name.endswith("/") else dir_name
+    response = send_get(client, dir_name)
+
+    soup = bs4.BeautifulSoup(response.content, features="lxml")
+    hrefs = soup.find_all("a", href=True, string=re.compile(unique_str))
+    pkgs = (href.string for href in hrefs)
+
+    return pkgs
