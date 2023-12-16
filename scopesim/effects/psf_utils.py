@@ -307,8 +307,13 @@ def get_bkg_level(obj, bg_w):
             mask = np.zeros_like(obj, dtype=bool)
             if bg_w > 0:
                 mask[:, bg_w:-bg_w, bg_w:-bg_w] = True
-            bkg_level = np.ma.median(np.ma.masked_array(obj, mask=mask),
-                                     axis=(2, 1)).data
+
+            # Using overwrite_input=True reduces memory consumption.
+            # Nevertheless, the computation of the median here can be
+            # responsible for more than 40% of the memory consumption.
+            bkg_masked_array = np.ma.masked_array(obj, mask=mask)
+            bkg_level_temp = np.ma.median(bkg_masked_array, axis=(2, 1), overwrite_input=True)
+            bkg_level = bkg_level_temp.data
 
     else:
         raise ValueError("Unsupported dimension:", obj.ndim)
