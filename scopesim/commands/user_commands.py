@@ -5,7 +5,7 @@ from pathlib import Path
 
 import numpy as np
 import yaml
-import requests
+import httpx
 
 from .. import rc
 from ..utils import find_file, top_level_catch
@@ -290,7 +290,7 @@ def check_for_updates(package_name):
         front_matter = rc.__currsys__["!SIM.file.server_base_url"]
         back_matter = f"api.php?package_name={package_name}"
         try:
-            response = requests.get(url=front_matter+back_matter).json()
+            response = httpx.get(url=front_matter+back_matter).json()
         except:
             print(f"Offline. Cannot check for updates for {package_name}")
     return response

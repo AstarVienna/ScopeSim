@@ -15,14 +15,9 @@ import re
 from pathlib import Path
 from typing import Union
 
-import requests
-from requests.packages.urllib3.util.retry import Retry
-from requests.adapters import HTTPAdapter
+import httpx
 
-from .download_utils import initiate_download, handle_download
-
-
-HTTP_RETRY_CODES = [403, 404, 429, 500, 501, 502, 503]
+from .download_utils import handle_download
 
 
 class ServerError(Exception):
@@ -69,18 +64,17 @@ def download_github_folder(repo_url: str,
 
     # get the contents of the github folder
     try:
-        retry_strategy = Retry(total=3, backoff_factor=2,
-                               status_forcelist=HTTP_RETRY_CODES,
-                               allowed_methods=["GET"])
-        adapter = HTTPAdapter(max_retries=retry_strategy)
-        with requests.Session() as session:
-            session.mount("https://", adapter)
-            data = session.get(api_url).json()
-    except (requests.exceptions.ConnectionError,
-            requests.exceptions.RetryError) as error:
-        logging.error(error)
-        raise ServerError("Cannot connect to server. "
-                          f"Attempted URL was: {api_url}.") from error
+        transport = httpx.HTTPTransport(retries=5)
+        with httpx.Client(timeout=2, transport=transport) as client:
+            data = client.get(api_url).json()
+    except httpx.RequestError as err:
+        logging.exception("An error occurred while requesting %s.",
+                          err.request.url)
+        raise ServerError("Cannot connect to server.") from err
+    except httpx.HTTPStatusError as err:
+        logging.error("Error response %s while requesting %s.",
+                      err.response.status_code, err.request.url)
+        raise ServerError("Cannot connect to server.") from err
     except Exception as error:
         logging.error(("Unhandled exception occured while accessing server."
                       "Attempted URL was: %s."), api_url)
@@ -101,16 +95,19 @@ def download_github_folder(repo_url: str,
             try:
                 # download the file
                 save_path = output_dir / entry["path"]
-                response = initiate_download(entry["download_url"])
-                handle_download(response, save_path, entry["path"],
+                handle_download(entry["download_url"],
+                                save_path, entry["path"],
                                 padlen=0, disable_bar=True)
                 logging.info("Downloaded: %s", entry["path"])
 
-            except (requests.exceptions.ConnectionError,
-                    requests.exceptions.RetryError) as error:
-                logging.error(error)
-                raise ServerError("Cannot connect to server. "
-                                  f"Attempted URL was: {api_url}.") from error
+            except httpx.RequestError as err:
+                logging.exception("An error occurred while requesting %s.",
+                                  err.request.url)
+                raise ServerError("Cannot connect to server.") from err
+            except httpx.HTTPStatusError as err:
+                logging.error("Error response %s while requesting %s.",
+                              err.response.status_code, err.request.url)
+                raise ServerError("Cannot connect to server.") from err
             except Exception as error:
                 logging.error(("Unhandled exception occured while accessing "
                               "server. Attempted URL was: %s."), api_url)

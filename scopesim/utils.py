@@ -12,7 +12,7 @@ from importlib import metadata
 import functools
 
 from docutils.core import publish_string
-import requests
+import httpx
 import yaml
 import numpy as np
 from matplotlib import pyplot as plt
@@ -984,14 +984,14 @@ def return_latest_github_actions_jobs_status(
         actions_yaml_name="tests.yml",
     ):
     """Get the status of the latest test run."""
-    response = requests.get(
+    response = httpx.get(
         f"https://api.github.com/repos/{owner_name}/{repo_name}/actions/"
         f"workflows/{actions_yaml_name}/runs?branch={branch}&per_page=1"
     )
     dic = response.json()
     run_id = dic["workflow_runs"][0]["id"]
 
-    response = requests.get(
+    response = httpx.get(
         f"https://api.github.com/repos/{owner_name}/{repo_name}/actions/runs/"
         f"{run_id}/jobs"
     )

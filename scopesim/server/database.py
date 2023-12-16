@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
-"""
-Functions to download instrument packages and example data
-"""
+"""Functions to download instrument packages and example data."""
+
 import re
 import logging
 from datetime import date
@@ -12,20 +11,16 @@ from typing import Optional, Union, List, Tuple, Set, Dict
 # from collections.abc import Iterator, Iterable, Mapping
 from typing import Iterator, Iterable, Mapping
 
-from urllib.error import HTTPError
-from urllib3.exceptions import HTTPError as HTTPError3
 from more_itertools import first, last, groupby_transform
 
-import requests
-from requests.packages.urllib3.util.retry import Retry
-from requests.adapters import HTTPAdapter
+import httpx
 import bs4
 
 from scopesim import rc
 from .github_utils import download_github_folder
 from .example_data_utils import (download_example_data, list_example_data,
                                  get_server_elements)
-from .download_utils import initiate_download, handle_download, handle_unzipping
+from .download_utils import handle_download, handle_unzipping
 
 _GrpVerType = Mapping[str, Iterable[str]]
 _GrpItrType = Iterator[Tuple[str, List[str]]]
@@ -65,29 +60,29 @@ def get_server_package_list():
 
 def get_server_folder_contents(dir_name: str,
                                unique_str: str = ".zip$") -> Iterator[str]:
-    url = rc.__config__["!SIM.file.server_base_url"] + dir_name
+    base_url = rc.__config__["!SIM.file.server_base_url"]
 
-    retry_strategy = Retry(total=2,
-                           status_forcelist=HTTP_RETRY_CODES,
-                           allowed_methods=["GET"])
-    adapter = HTTPAdapter(max_retries=retry_strategy)
+    transport = httpx.HTTPTransport(retries=3)
 
     try:
-        with requests.Session() as session:
-            session.mount("https://", adapter)
-            result = session.get(url).content
-    except (requests.exceptions.ConnectionError,
-            requests.exceptions.RetryError) as error:
-        logging.error(error)
-        raise ServerError("Cannot connect to server. "
-                          f"Attempted URL was: {url}.") from error
+        with httpx.Client(base_url=base_url, timeout=2,
+                          transport=transport) as client:
+            response = client.get(dir_name)
+    except httpx.RequestError as err:
+        logging.exception("An error occurred while requesting %s.",
+                          err.request.url)
+        raise ServerError("Cannot connect to server.") from err
+    except httpx.HTTPStatusError as err:
+        logging.error("Error response %s while requesting %s.",
+                      err.response.status_code, err.request.url)
+        raise ServerError("Cannot connect to server.") from err
     except Exception as error:
         logging.error(("Unhandled exception occured while accessing server."
-                      "Attempted URL was: %s."), url)
+                      "Attempted URL was: %s."), base_url + dir_name)
         logging.error(error)
         raise error
 
-    soup = bs4.BeautifulSoup(result, features="lxml")
+    soup = bs4.BeautifulSoup(response.content, features="lxml")
     hrefs = soup.find_all("a", href=True, string=re.compile(unique_str))
     pkgs = (href.string for href in hrefs)
 
@@ -359,22 +354,18 @@ def _download_single_package(pkg_name: str, release: str, all_versions,
         if from_cache is None:
             from_cache = rc.__config__["!SIM.file.use_cached_downloads"]
 
-        response = initiate_download(pkg_url, from_cache, "test_cache")
         save_path = save_dir / f"{pkg_name}.zip"
-        handle_download(response, save_path, pkg_name, padlen)
+        handle_download(pkg_url, save_path, pkg_name, padlen)
         handle_unzipping(save_path, save_dir, pkg_name, padlen)
 
-    except HTTPError3 as error:
-        logging.error(error)
-        msg = f"Unable to find file: {pkg_url + pkg_name}"
-        raise ValueError(msg) from error
-    except HTTPError as error:
-        logging.error("urllib (not urllib3) error was raised, this should "
-                      "not happen anymore!")
-        logging.error(error)
-    except requests.exceptions.ConnectionError as error:
-        logging.error(error)
-        raise ServerError("Cannot connect to server.") from error
+    except httpx.RequestError as err:
+        logging.exception("An error occurred while requesting %s.",
+                          err.request.url)
+        raise ServerError("Cannot connect to server.") from err
+    except httpx.HTTPStatusError as err:
+        logging.error("Error response %s while requesting %s.",
+                      err.response.status_code, err.request.url)
+        raise ServerError("Cannot connect to server.") from err
     except Exception as error:
         logging.error(("Unhandled exception occured while accessing server."
                       "Attempted URL was: %s."), base_url)
