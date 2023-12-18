@@ -8,6 +8,8 @@ The Effect is called `SpectralTraceList`, it applies a list of
 import logging
 from itertools import cycle
 
+from tqdm import tqdm
+
 from astropy.io import fits
 from astropy.table import Table
 
@@ -295,7 +297,8 @@ class SpectralTraceList(Effect):
         # pdu.header["FILTER"] = from_currsys("!OBS.filter_name_fw1")
         outhdul = fits.HDUList([pdu])
 
-        for i, trace_id in enumerate(self.spectral_traces, start=1):
+        for i, trace_id in tqdm(enumerate(self.spectral_traces, start=1),
+                                desc=" Traces"):
             hdu = self[trace_id].rectify(hdulist,
                                          interps=interps,
                                          bin_width=bin_width,
