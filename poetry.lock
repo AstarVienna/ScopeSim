@@ -679,14 +679,13 @@ files = [
 
 [[package]]
 name = "docutils"
-version = "0.15"
+version = "0.18"
 description = "Docutils -- Python Documentation Utilities"
 optional = false
-python-versions = ">=2.6,<3.0 || >=3.3.dev0"
+python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*"
 files = [
-    {file = "docutils-0.15-py3-none-any.whl", hash = "sha256:d2ddba74835cb090a1b627d3de4e7835c628d07ee461f7b4480f51af2fe4d448"},
-    {file = "docutils-0.15.post1-py2-none-any.whl", hash = "sha256:ba4584f9107571ced0d2c7f56a5499c696215ba90797849c92d395979da68521"},
-    {file = "docutils-0.15.tar.gz", hash = "sha256:54a349c622ff31c91cbec43b0b512f113b5b24daf00e2ea530bb1bd9aac14849"},
+    {file = "docutils-0.18-py2.py3-none-any.whl", hash = "sha256:a31688b2ea858517fa54293e5d5df06fbb875fb1f7e4c64529271b77781ca8fc"},
+    {file = "docutils-0.18.tar.gz", hash = "sha256:c1d5dab2b11d16397406a282e53953fe495a46d69ae329f55aa98a5c4e3c5fbb"},
 ]
 
 [[package]]
@@ -3347,4 +3346,4 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "p
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.8,<3.12"
-content-hash = "555503abb21449a629a319ea3f8eb84622baec2ae549c692d56c501b6c4ada5c"
+content-hash = "3ab0ec509f4c8c120775ca502ce187e3e9c288bff31304c0fee8e7f139e2d325"
