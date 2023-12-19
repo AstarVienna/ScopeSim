@@ -2,7 +2,6 @@
 ## A telescope observation simulator for Python
 
 [![Build Status](https://github.com/AstarVienna/ScopeSim/actions/workflows/tests.yml/badge.svg)](https://github.com/AstarVienna/ScopeSim/actions/workflows/tests.yml/badge.svg)
-[![Build Status](https://github.com/AstarVienna/ScopeSim/actions/workflows/minimumdependencies.yml/badge.svg)](https://github.com/AstarVienna/ScopeSim/actions/workflows/minimumdependencies.yml/badge.svg)
 [![Build Status](https://github.com/AstarVienna/ScopeSim/actions/workflows/notebooks_with_irdb_download.yml/badge.svg)](https://github.com/AstarVienna/ScopeSim/actions/workflows/notebooks_with_irdb_download.yml/badge.svg)
 [![Poetry](https://img.shields.io/endpoint?url=https://python-poetry.org/badge/v0.json)](https://python-poetry.org/)
 ![dev version](https://img.shields.io/badge/dynamic/toml?url=https%3A%2F%2Fraw.githubusercontent.com%2FAstarVienna%2FScopeSim%2Fdev_master%2Fpyproject.toml&query=%24.tool.poetry.version&label=dev%20version&color=teal)
