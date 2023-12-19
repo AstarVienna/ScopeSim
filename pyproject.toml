@@ -101,4 +101,4 @@ filterwarnings = [
 ]
 
 [tool.coverage.report]
-omit = ["scopesim/tests/*"]
+omit = ["scopesim/tests/*", "docs/*"]
