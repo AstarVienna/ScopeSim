@@ -7,10 +7,7 @@ import shutil
 from pathlib import Path
 from typing import List, Optional, Union, Iterable
 
-from urllib.error import HTTPError
-from urllib3.exceptions import HTTPError as HTTPError3
-
-import requests
+import httpx
 import bs4
 
 from astropy.utils.data import download_file
@@ -40,7 +37,7 @@ def get_server_elements(url: str, unique_str: str = "/") -> List[str]:
         unique_str = [unique_str]
 
     try:
-        result = requests.get(url).content
+        result = httpx.get(url).content
     except Exception as error:
         raise ValueError(f"URL returned error: {url}") from error
 
@@ -156,7 +153,7 @@ def download_example_data(file_path: Union[Iterable[str], str],
                                    cache=from_cache)
         save_path = save_dir / file_path.name
         file_path = shutil.copy2(cache_path, str(save_path))
-    except (HTTPError, HTTPError3) as error:
+    except httpx.HTTPError as error:
         msg = f"Unable to find file: {url + 'example_data/' + file_path}"
         raise ValueError(msg) from error
 

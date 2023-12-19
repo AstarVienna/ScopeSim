@@ -27,13 +27,12 @@ dependencies = [
     "pooch>=1.7.0",  # for scipy.datasets
 
     "docutils>=0.15",
-    "requests>=2.28.2",
+    "httpx>=0.23.0",
     "beautifulsoup4>=4.4",
     "lxml>=4.5.0",
     "pyyaml>5.1",
     "more-itertools>=9.0",
     "tqdm>=4.66.1",
-    "requests-cache>1.0",
 
     "synphot>=1.1.0",
     "skycalc_ipy>=0.2.0",
