@@ -2747,26 +2747,33 @@ test = ["asv", "gmpy2", "mpmath", "pooch", "pytest", "pytest-cov", "pytest-timeo
 
 [[package]]
 name = "scopesim-templates"
-version = "0.4.4"
+version = "0.5.0"
 description = "On-sky source templates for ScopeSim"
 optional = false
-python-versions = "*"
+python-versions = ">=3.8"
 files = [
-    {file = "ScopeSim_Templates-0.4.4-py3-none-any.whl", hash = "sha256:0b94a915c81757ec99ef468ee67e2801b94aac0a083a47fb765c12bdde5a2cdb"},
-    {file = "ScopeSim_Templates-0.4.4.tar.gz", hash = "sha256:f5caa3f42e72d3e7bb48dc1bbdeab67c7a3047d678940d4d9101bb26ad913c78"},
+    {file = "ScopeSim_Templates-0.5.0-py3-none-any.whl", hash = "sha256:5b7f7e882e2ed60fe7b636ecb4b4201aaa5c115bf01561880bd502adf376ce62"},
+    {file = "ScopeSim_Templates-0.5.0.tar.gz", hash = "sha256:ccef56687b510f139eaa5d352661594b6c0cd774024cc4e338450d2577c45b41"},
 ]
 
 [package.dependencies]
-astropy = ">1.1.2"
-matplotlib = ">1.5.0"
-numpy = ">=1.16"
-pyckles = "*"
-pyyaml = ">5"
-requests = ">2.0"
-scipy = ">0.17"
-scopesim = "*"
-spextra = "*"
-synphot = ">0.1"
+astropy = ">=5.0"
+beautifulsoup4 = ">=4.4"
+docutils = ">=0.15"
+lxml = ">=4.5.0"
+matplotlib = ">=3.2.0"
+numpy = ">=1.19.5"
+pyckles = ">=0.2"
+pyyaml = ">=5.3"
+scipy = ">=1.10.0"
+scopesim = ">=0.7.0"
+spextra = ">=0.33"
+synphot = ">=1.1.0"
+
+[package.extras]
+dev = ["jupyter", "jupytext"]
+docs = ["jupyter-sphinx (==0.2.3)", "nbsphinx", "numpydoc", "sphinx (>=4.3.0)", "sphinx-rtd-theme (>=0.5.1)", "sphinxcontrib-apidoc"]
+test = ["pytest", "pytest-cov", "skycalc-cli"]
 
 [[package]]
 name = "send2trash"
@@ -3340,4 +3347,4 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "p
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.8,<3.12"
-content-hash = "27d4cc8d04ad783114de1c9a2e3b0d0b3ccfb5828fcf8c6b8e3715e98d4878cd"
+content-hash = "555503abb21449a629a319ea3f8eb84622baec2ae549c692d56c501b6c4ada5c"

@@ -49,7 +49,7 @@ ipykernel = "^6.24.0"
 [tool.poetry.group.test.dependencies]
 pytest = "^7.4.3"
 pytest-cov = "^4.1.0"
-scopesim_templates = "^0.4.4"
+scopesim_templates = "^0.5.0"
 # Just so that readthedocs doesn't include the tests module - yes it's hacky
 skycalc_cli = "*"
 ipykernel = "^6.24.0"
@@ -64,7 +64,7 @@ jupyter-sphinx = "^0.2.3"
 sphinxcontrib-apidoc = "^0.4.0"
 nbsphinx = "^0.9.3"
 numpydoc = "^1.6.0"
-scopesim_templates = "^0.4.4"
+scopesim_templates = "^0.5.0"
 ipykernel = "^6.24.0"
 
 [tool.poetry.urls]
