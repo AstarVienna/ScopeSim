@@ -27,7 +27,7 @@ matplotlib = "^3.7.2"
 pooch = "^1.7.0"
 
 docutils = "^0.15"
-httpx = "0.23.0"
+httpx = "^0.23.0"
 beautifulsoup4 = "^4.12.1"
 lxml = "^4.9.3"
 pyyaml = "^6.0.0"
