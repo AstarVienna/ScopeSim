@@ -38,10 +38,10 @@ do
   fnpy="${fnnotebook%.ipynb}.py"
 
   # Convert .ipynb file to .py.
-  jupytext --to py "${fnnotebook}"
+  poetry run jupytext --to py "${fnnotebook}"
 
   # Run the python script and quit on first error.
-  python "${fnpy}" || exit 1
+  poetry run python "${fnpy}" || exit 1
   echo "- ${fnnotebook}" >> $GITHUB_STEP_SUMMARY
 
   # Delete generated files if --delete is specified.
