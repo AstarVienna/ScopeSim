@@ -5,12 +5,10 @@ on:
     branches:
       - master
       - dev_master
-      - dev_spectroscopy
   pull_request:
     branches:
       - master
       - dev_master
-      - dev_spectroscopy
   schedule:
     - # Run every day at 5:00 UTC
     - cron: "0 5 * * *"
@@ -20,4 +18,6 @@ on:
 
 jobs:
   call-tests:
-    uses: AstarVienna/DevOps/.github/workflows/tests.yml@master
+    name: Call tests
+    uses: AstarVienna/DevOps/.github/workflows/tests.yml@poetry
+    secrets: inherit
