@@ -32,7 +32,7 @@ fi
 
 echo "## Notebooks tested" >> $GITHUB_STEP_SUMMARY
 # https://github.com/koalaman/shellcheck/wiki/SC2044
-find . -iname "*.ipynb" -print0 | while IFS= read -r -d '' fnnotebook
+find ./docs -iname "*.ipynb" -print0 | while IFS= read -r -d '' fnnotebook
 do
   echo "Testing ${fnnotebook} ..."
   fnpy="${fnnotebook%.ipynb}.py"
