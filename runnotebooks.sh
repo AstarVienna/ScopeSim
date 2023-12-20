@@ -11,7 +11,7 @@ if [[ "x${1}" == "x--clone-irdb" ]] ; then
 
   echo "## Symlinks" >> $GITHUB_STEP_SUMMARY
   # https://github.com/koalaman/shellcheck/wiki/SC2044
-  find . -iname "*.ipynb" -printf '%h\0' | sort -z | uniq -z | while IFS= read -r -d '' dirnotebooks; do
+  find ./docs -iname "*.ipynb" -printf '%h\0' | sort -z | uniq -z | while IFS= read -r -d '' dirnotebooks; do
     echo "${dirnotebooks}"
     echo "- ${dirnotebooks}" >> $GITHUB_STEP_SUMMARY
     dirinstpkgs="${dirnotebooks}/inst_pkgs"
