@@ -1,14 +1,15 @@
 import os
-import logging
 import copy
 from pathlib import Path
 
-import numpy as np
 import yaml
 import httpx
 
 from .. import rc
-from ..utils import find_file, top_level_catch
+from ..utils import find_file, top_level_catch, get_logger
+
+
+logger = get_logger(__name__)
 
 __all__ = ["UserCommands"]
 
@@ -181,7 +182,7 @@ class UserCommands:
                         if yaml_input == "default.yaml":
                             self.default_yamls = yaml_dict
                     else:
-                        logging.warning("%s could not be found", yaml_input)
+                        logger.warning("%s could not be found", yaml_input)
 
                 elif isinstance(yaml_input, dict):
                     self.cmds.update(yaml_input)
@@ -232,7 +233,7 @@ class UserCommands:
                     if mode in self.modes_dict:
                         defyam["properties"]["modes"].append(mode)
                         if "deprecate" in self.modes_dict[mode]:
-                            logging.warning(self.modes_dict[mode]["deprecate"])
+                            logger.warning(self.modes_dict[mode]["deprecate"])
                     else:
                         raise ValueError(f"mode '{mode}' was not recognised")
 
@@ -362,7 +363,7 @@ def add_packages_to_rc_search(local_path, package_list):
         if not pkg_dir.exists():
             # todo: keep here, but add test for this by downloading test_package
             # raise ValueError("Package could not be found: {}".format(pkg_dir))
-            logging.warning("Package could not be found: %s", pkg_dir)
+            logger.warning("Package could not be found: %s", pkg_dir)
 
         rc.__search_path__.append_first(pkg_dir)
 

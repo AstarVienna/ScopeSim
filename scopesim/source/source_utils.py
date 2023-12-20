@@ -1,4 +1,3 @@
-import logging
 from collections.abc import Iterable
 
 import numpy as np
@@ -7,14 +6,17 @@ from astropy.io import fits
 from astropy.table import Table
 from synphot import SourceSpectrum, Empirical1D, SpectralElement
 
-from .. import utils
+from ..utils import find_file, quantify, get_logger
+
+
+logger = get_logger(__name__)
 
 
 def validate_source_input(**kwargs):
     if "filename" in kwargs and kwargs["filename"] is not None:
         filename = kwargs["filename"]
-        if utils.find_file(filename) is None:
-            logging.warning("filename was not found: %s", filename)
+        if find_file(filename) is None:
+            logger.warning("filename was not found: %s", filename)
 
     if "image" in kwargs and kwargs["image"] is not None:
         image_hdu = kwargs["image"]
@@ -23,7 +25,7 @@ def validate_source_input(**kwargs):
                              f"{type(image_hdu) = }")
 
         if len(wcs.find_all_wcs(image_hdu.header)) == 0:
-            logging.warning("image does not contain valid WCS. %s",
+            logger.warning("image does not contain valid WCS. %s",
                             wcs.WCS(image_hdu))
 
     if "table" in kwargs and kwargs["table"] is not None:
@@ -119,7 +121,7 @@ def photons_in_range(spectra, wave_min, wave_max, area=None, bandpass=None):
     counts = 1E4 * np.array(counts)    # to get from cm-2 to m-2
     counts *= u.ph * u.s**-1 * u.m**-2
     if area is not None:
-        counts *= utils.quantify(area, u.m ** 2)
+        counts *= quantify(area, u.m ** 2)
 
     return counts
 
@@ -128,8 +130,8 @@ def make_imagehdu_from_table(x, y, flux, pix_scale=1*u.arcsec):
 
     pix_scale = pix_scale.to(u.deg)
     unit = pix_scale.unit
-    x = utils.quantify(x, unit)
-    y = utils.quantify(y, unit)
+    x = quantify(x, unit)
+    y = quantify(y, unit)
 
     xpixmin = int(np.floor(np.min(x) / pix_scale))
     ypixmin = int(np.floor(np.min(y) / pix_scale))

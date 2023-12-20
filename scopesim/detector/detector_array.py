@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
 """Contains DetectorArray and aux functions."""
 
-import logging
-
 from astropy.io import fits
 
 from .detector import Detector
+from ..utils import stringify_dict, get_logger
 
-from .. import utils
+
+logger = get_logger(__name__)
 
 
 class DetectorArray:
@@ -86,7 +86,7 @@ class DetectorArray:
                           for hdr in self._detector_list.detector_headers()]
 
         # 4. iterate through all Detectors, extract image from image_plane
-        logging.info("Extracting from %d detectors...", len(self.detectors))
+        logger.info("Extracting from %d detectors...", len(self.detectors))
         for detector in self.detectors:
             detector.extract_from(image_plane)
 
@@ -133,7 +133,7 @@ class DetectorArray:
 def make_primary_hdu(meta):
     """Create the primary header from meta data."""
     prihdu = fits.PrimaryHDU()
-    prihdu.header.update(utils.stringify_dict(meta))
+    prihdu.header.update(stringify_dict(meta))
     return prihdu
 
 

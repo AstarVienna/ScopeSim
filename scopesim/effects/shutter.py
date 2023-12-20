@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*-
 """Contains the Shutter effect."""
 
-import logging
-
 from . import Effect
 from ..base_classes import ImagePlaneBase
+from ..utils import get_logger
+
+
+logger = get_logger(__name__)
 
 
 class Shutter(Effect):
@@ -19,6 +21,6 @@ class Shutter(Effect):
         if not isinstance(obj, ImagePlaneBase):
             return obj
 
-        logging.warning("Shutter is closed, setting all pixels to zero.")
+        logger.warning("Shutter is closed, setting all pixels to zero.")
         obj.data[:] = 0.0
         return obj

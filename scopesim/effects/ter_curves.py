@@ -1,6 +1,5 @@
 """Transmission, emissivity, reflection curves."""
 
-import logging
 from collections.abc import Collection
 
 import numpy as np
@@ -16,8 +15,11 @@ from .ter_curves_utils import download_svo_filter, download_svo_filter_list
 from ..base_classes import SourceBase, FOVSetupBase
 from ..optics.surface import SpectralSurface
 from ..source.source import Source
-from ..utils import from_currsys, quantify, check_keys, find_file, \
-    figure_factory
+from ..utils import (from_currsys, quantify, check_keys, find_file,
+                     figure_factory, get_logger)
+
+
+logger = get_logger(__name__)
 
 
 class TERCurve(Effect):
@@ -338,7 +340,7 @@ class SkycalcTERCurve(AtmosphericTERCurve):
             tbl = self.skycalc_conn.get_sky_spectrum(return_type="table")
         except ConnectionError:
             msg = "Could not connect to skycalc server"
-            logging.exception(msg)
+            logger.exception(msg)
             raise ValueError(msg)
 
         return tbl

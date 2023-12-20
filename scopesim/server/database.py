@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 """Functions to download instrument packages and example data."""
 
-import logging
 from datetime import date
 from warnings import warn
 from pathlib import Path
@@ -18,6 +17,10 @@ from .example_data_utils import (download_example_data, list_example_data,
                                  get_server_elements)
 from .download_utils import (get_server_folder_contents, handle_download,
                              handle_unzipping, create_client, ServerError)
+from ..utils import get_logger
+
+
+logger = get_logger(__name__)
 
 _GrpVerType = Mapping[str, Iterable[str]]
 _GrpItrType = Iterator[Tuple[str, List[str]]]
@@ -154,13 +157,13 @@ def crawl_server_dirs(client=None) -> Iterator[Tuple[str, Set[str]]]:
         return
 
     for dir_name in get_server_folder_contents(client, "", "/"):
-        logging.info("Searching folder '%s'", dir_name)
+        logger.info("Searching folder '%s'", dir_name)
         try:
             p_dir = get_server_folder_package_names(client, dir_name)
         except ValueError as err:
-            logging.info(err)
+            logger.info(err)
             continue
-        logging.info("Found packages %s.", p_dir)
+        logger.info("Found packages %s.", p_dir)
         yield dir_name, p_dir
 
 
@@ -394,7 +397,7 @@ def download_packages(pkg_names: Union[Iterable[str], str],
     """
     base_url = get_base_url()
     print("Gathering information from server ...")
-    logging.info("Accessing %s", base_url)
+    logger.info("Accessing %s", base_url)
 
     with create_client(base_url) as client:
         all_versions = get_all_package_versions(client)
@@ -413,9 +416,9 @@ def download_packages(pkg_names: Union[Iterable[str], str],
                     client, pkg_name, release, all_versions, folders_dict,
                     save_dir, padlen)
             except PkgNotFoundError as error:
-                logging.error("\n")  # needed until tqdm redirect implemented
-                logging.error(error)
-                logging.error("Skipping download of package '%s'", pkg_name)
+                logger.error("\n")  # needed until tqdm redirect implemented
+                logger.error(error)
+                logger.error("Skipping download of package '%s'", pkg_name)
                 continue
             save_paths.append(pkg_path)
 

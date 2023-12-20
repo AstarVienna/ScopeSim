@@ -5,7 +5,6 @@ The Effect is called `SpectralTraceList`, it applies a list of
 `spectral_trace_list_utils.SpectralTrace` objects to a `FieldOfView`.
 """
 
-import logging
 from itertools import cycle
 
 from tqdm import tqdm
@@ -16,9 +15,12 @@ from astropy.table import Table
 from .effects import Effect
 from .ter_curves import FilterCurve
 from .spectral_trace_list_utils import SpectralTrace, make_image_interpolations
-from ..utils import from_currsys, check_keys, figure_factory
 from ..optics.image_plane_utils import header_from_list_of_xy
 from ..base_classes import FieldOfViewBase, FOVSetupBase
+from ..utils import from_currsys, check_keys, figure_factory, get_logger
+
+
+logger = get_logger(__name__)
 
 
 class SpectralTraceList(Effect):
@@ -193,7 +195,7 @@ class SpectralTraceList(Effect):
                 # for MAAT
                 pass
             elif obj.hdu is None and obj.cube is None:
-                logging.info("Making cube")
+                logger.info("Making cube")
                 obj.cube = obj.make_cube_hdu()
 
             spt = self.spectral_traces[obj.trace_id]
@@ -267,18 +269,18 @@ class SpectralTraceList(Effect):
         filtwaves = filtcurve.table["wavelength"]
         filtwave = filtwaves[filtcurve.table["transmission"] > 0.01]
         wave_min, wave_max = min(filtwave), max(filtwave)
-        logging.info("Full wavelength range: %.02f .. %.02f um",
-                     wave_min, wave_max)
+        logger.info("Full wavelength range: %.02f .. %.02f um",
+                    wave_min, wave_max)
 
         if xi_min is None or xi_max is None:
             try:
                 xi_min = inhdul[0].header["HIERARCH INS SLIT XIMIN"]
                 xi_max = inhdul[0].header["HIERARCH INS SLIT XIMAX"]
-                logging.info(
+                logger.info(
                     "Slit limits taken from header: %.02f .. %.02f arcsec",
                     xi_min, xi_max)
             except KeyError:
-                logging.error("""
+                logger.error("""
                 Spatial slit limits (in arcsec) must be provided:
                 - either as method parameters xi_min and xi_max
                 - or as header keywords HIERARCH INS SLIT XIMIN/XIMAX
@@ -288,7 +290,7 @@ class SpectralTraceList(Effect):
         bin_width = kwargs.get("bin_width", None)
 
         if interps is None:
-            logging.info("Computing interpolation functions")
+            logger.info("Computing interpolation functions")
             interps = make_image_interpolations(hdulist)
 
         pdu = fits.PrimaryHDU()

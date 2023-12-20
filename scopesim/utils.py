@@ -400,6 +400,10 @@ def setup_loggers(**kwargs):
         logger.addHandler(s_handler)
 
 
+def get_logger(name: str):
+    return logging.getLogger("astar." + name)
+
+
 def set_logger_level(which="console", level="ERROR"):
     """
     Set the level of logging for either the console or file logger.

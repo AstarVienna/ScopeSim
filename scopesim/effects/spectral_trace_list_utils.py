@@ -9,8 +9,6 @@ This module contains
    - utility functions for use with spectral traces
 """
 
-import logging
-
 import numpy as np
 
 from scipy.interpolate import RectBivariateSpline
@@ -23,8 +21,11 @@ from astropy import units as u
 from astropy.wcs import WCS
 from astropy.modeling.models import Polynomial2D
 
-from ..utils import power_vector, quantify, from_currsys, close_loop, \
-    figure_factory
+from ..utils import (power_vector, quantify, from_currsys, close_loop,
+                     figure_factory, get_logger)
+
+
+logger = get_logger(__name__)
 
 
 class SpectralTrace:
@@ -136,7 +137,7 @@ class SpectralTrace:
                 self.dispersion_axis = "x"
             else:
                 self.dispersion_axis = "y"
-            logging.warning("Dispersion axis determined to be %s",
+            logger.warning("Dispersion axis determined to be %s",
                             self.dispersion_axis)
 
     def map_spectra_to_focal_plane(self, fov):
@@ -149,7 +150,7 @@ class SpectralTrace:
         The method returns a section of the fov image along with info on
         where this image lies in the focal plane.
         """
-        logging.info("Mapping %s", fov.trace_id)
+        logger.info("Mapping %s", fov.trace_id)
         # Initialise the image based on the footprint of the spectral
         # trace and the focal plane WCS
         wave_min = fov.meta["wave_min"].value       # [um]
@@ -160,7 +161,7 @@ class SpectralTrace:
                                           xi_min=xi_min, xi_max=xi_max)
 
         if xlim_mm is None:
-            logging.warning("xlim_mm is None")
+            logger.warning("xlim_mm is None")
             return None
 
         fov_header = fov.header
@@ -182,7 +183,7 @@ class SpectralTrace:
 
         # Check if spectral trace footprint is outside FoV
         if xmax < 0 or xmin > naxis1d or ymax < 0 or ymin > naxis2d:
-            logging.info("Spectral trace %s: footprint is outside FoV",
+            logger.info("Spectral trace %s: footprint is outside FoV",
                          fov.trace_id)
             return None
 
@@ -274,7 +275,7 @@ class SpectralTrace:
         img_header["YMAX"] = ymax
 
         if np.any(image < 0):
-            logging.warning("map_spectra_to_focal_plane: %d negative pixels",
+            logger.warning("map_spectra_to_focal_plane: %d negative pixels",
                             np.sum(image < 0))
 
         image_hdu = fits.ImageHDU(header=img_header, data=image)
@@ -308,25 +309,25 @@ class SpectralTrace:
            Spatial limits of the slit on the sky. This should be taken from
            the header of the hdulist, but this is not yet provided by scopesim
         """
-        logging.info("Rectifying %s", self.trace_id)
+        logger.info("Rectifying %s", self.trace_id)
 
         wave_min = kwargs.get("wave_min",
                               self.wave_min)
         wave_max = kwargs.get("wave_max",
                               self.wave_max)
         if wave_max < self.wave_min or wave_min > self.wave_max:
-            logging.info("   Outside filter range")
+            logger.info("   Outside filter range")
             return None
         wave_min = max(wave_min, self.wave_min)
         wave_max = min(wave_max, self.wave_max)
-        logging.info("   %.02f .. %.02f um", wave_min, wave_max)
+        logger.info("   %.02f .. %.02f um", wave_min, wave_max)
 
         # bin_width is taken as the minimum dispersion of the trace
         bin_width = kwargs.get("bin_width", None)
         if bin_width is None:
             self._set_dispersion(wave_min, wave_max)
             bin_width = np.abs(self.dlam_per_pix.y).min()
-        logging.info("   Bin width %.02g um", bin_width)
+        logger.info("   Bin width %.02g um", bin_width)
 
         pixscale = from_currsys(self.meta["pixel_scale"])
 
@@ -336,14 +337,14 @@ class SpectralTrace:
             try:
                 xi_min = hdulist[0].header["HIERARCH INS SLIT XIMIN"]
             except KeyError:
-                logging.error("xi_min not found")
+                logger.error("xi_min not found")
                 return None
         xi_max = kwargs.get("xi_max", None)
         if xi_max is None:
             try:
                 xi_max = hdulist[0].header["HIERARCH INS SLIT XIMAX"]
             except KeyError:
-                logging.error("xi_max not found")
+                logger.error("xi_max not found")
                 return None
 
         if wcs is None:
@@ -361,7 +362,7 @@ class SpectralTrace:
 
         # Create interpolation functions if not provided
         if interps is None:
-            logging.info("Computing image interpolations")
+            logger.info("Computing image interpolations")
             interps = make_image_interpolations(hdulist, kx=1, ky=1)
 
         # Create Xi, Lam images (do I need Iarr and Jarr or can I build Xi, Lam directly?)
@@ -676,8 +677,8 @@ class XiLamImage():
             dlam_per_pix_val = dlam_per_pix(np.asarray(self.lam))
         except TypeError:
             dlam_per_pix_val = dlam_per_pix
-            logging.warning("Using scalar dlam_per_pix = %.2g",
-                            dlam_per_pix_val)
+            logger.warning("Using scalar dlam_per_pix = %.2g",
+                           dlam_per_pix_val)
 
         for i, eta in enumerate(cube_eta):
             lam0 = self.lam + dlam_per_pix_val * eta / d_eta

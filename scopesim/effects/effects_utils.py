@@ -1,6 +1,5 @@
 """TBA."""
 
-import logging
 import inspect
 from copy import deepcopy, copy
 from collections.abc import Iterable
@@ -8,6 +7,10 @@ from collections.abc import Iterable
 from astropy.table import Table
 
 from .. import effects as efs
+from ..utils import get_logger
+
+
+logger = get_logger(__name__)
 
 
 def combine_surface_effects_OLD(surface_effects):
@@ -132,7 +135,7 @@ def z_order_in_range(z_eff, z_range: range) -> bool:
 
     """
     if not isinstance(z_eff, Iterable):
-        logging.warning("z_order %d should be a single-item iterable", z_eff)
+        logger.warning("z_order %d should be a single-item iterable", z_eff)
         z_eff = [z_eff]
 
     return any(zi in z_range for zi in z_eff)

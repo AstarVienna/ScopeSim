@@ -1,5 +1,4 @@
 import numpy as np
-import logging
 
 from scipy import ndimage as spi
 from scipy.interpolate import RectBivariateSpline, griddata
@@ -10,7 +9,10 @@ from astropy.io import fits
 
 from .. import utils
 from ..optics import image_plane_utils as imp_utils
-from ..utils import figure_factory
+from ..utils import figure_factory, get_logger
+
+
+logger = get_logger(__name__)
 
 
 def round_kernel_edges(kernel):
@@ -141,7 +143,7 @@ def cutout_kernel(image, fov_header, kernel_header=None):
     xcen, ycen = 0.5 * w, 0.5 * h
     xcen_w, ycen_w = wk.wcs_world2pix(np.array([[0., 0.]]), 0).squeeze().round(7)
     if xcen != xcen_w or ycen != ycen_w:
-        logging.warning("PSF center off")
+        logger.warning("PSF center off")
 
     dx = 0.5 * fov_header["NAXIS1"]
     dy = 0.5 * fov_header["NAXIS2"]

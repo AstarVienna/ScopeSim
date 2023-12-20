@@ -33,7 +33,6 @@
 """
 
 import pickle
-import logging
 from copy import deepcopy
 from pathlib import Path
 import numpy as np
@@ -44,8 +43,7 @@ from astropy.io import fits
 from astropy import units as u
 from astropy.wcs import WCS
 
-from synphot import SpectralElement, SourceSpectrum, Empirical1D
-from synphot.units import PHOTLAM
+from synphot import SpectralElement
 
 from ..optics.image_plane import ImagePlane
 from ..optics import image_plane_utils as imp_utils
@@ -54,9 +52,12 @@ from .source_utils import validate_source_input, convert_to_list_of_spectra, \
 from . import source_templates as src_tmp
 
 from ..base_classes import SourceBase
-from .. import utils
-from ..utils import close_loop, figure_factory
-# TODO: explicit util imports above...
+from ..utils import (find_file, is_fits, get_fits_type, quantify,
+                     quantity_from_table, convert_table_comments_to_dict,
+                     close_loop, figure_factory, get_logger)
+
+
+logger = get_logger(__name__)
 
 
 class Source(SourceBase):
@@ -185,7 +186,7 @@ class Source(SourceBase):
             else:
                 msg = ("image_hdu must be accompanied by either spectra or flux:\n"
                        f"spectra: {spectra}, flux: {flux}")
-                logging.exception(msg)
+                logger.exception(msg)
                 raise ValueError(msg)
 
         elif x is not None and y is not None and \
@@ -193,10 +194,10 @@ class Source(SourceBase):
             self._from_arrays(x, y, ref, weight, spectra)
 
     def _from_file(self, filename, spectra, flux):
-        filename = utils.find_file(filename)
+        filename = find_file(filename)
 
-        if utils.is_fits(filename):
-            fits_type = utils.get_fits_type(filename)
+        if is_fits(filename):
+            fits_type = get_fits_type(filename)
             data = fits.getdata(filename)
             hdr = fits.getheader(filename)
             hdr["FILENAME"] = Path(filename).name
@@ -212,11 +213,11 @@ class Source(SourceBase):
                 hdr1 = fits.getheader(filename, 1)
                 hdr.update(hdr1)
                 tbl = Table(data, meta=dict(hdr))
-                tbl.meta.update(utils.convert_table_comments_to_dict(tbl))
+                tbl.meta.update(convert_table_comments_to_dict(tbl))
                 self._from_table(tbl, spectra)
         else:
             tbl = ioascii.read(filename)
-            tbl.meta.update(utils.convert_table_comments_to_dict(tbl))
+            tbl.meta.update(convert_table_comments_to_dict(tbl))
             self._from_table(tbl, spectra)
 
     def _from_table(self, tbl, spectra):
@@ -257,8 +258,8 @@ class Source(SourceBase):
             self.spectra += spectra
         else:
             image_hdu.header["SPEC_REF"] = ""
-            logging.warning("No spectrum was provided. SPEC_REF set to ''. "
-                            "This could cause problems later")
+            logger.warning("No spectrum was provided. SPEC_REF set to ''. "
+                           "This could cause problems later")
             raise NotImplementedError
 
         for i in [1, 2]:
@@ -300,8 +301,8 @@ class Source(SourceBase):
         if weight is None:
             weight = np.ones(len(x))
 
-        x = utils.quantify(x, u.arcsec)
-        y = utils.quantify(y, u.arcsec)
+        x = quantify(x, u.arcsec)
+        y = quantify(y, u.arcsec)
         tbl = Table(names=["x", "y", "ref", "weight"],
                     data=[x, y, np.array(ref) + len(self.spectra), weight])
         tbl.meta["x_unit"] = "arcsec"
@@ -340,8 +341,8 @@ class Source(SourceBase):
             u.Unit(bunit)
         except KeyError:
             bunit = "erg / (s cm2 arcsec2)"
-            logging.warning("Keyword \"BUNIT\" not found, setting to %s by default",
-                            bunit)
+            logger.warning("Keyword \"BUNIT\" not found, setting to %s by default",
+                           bunit)
         except ValueError as errcode:
             print("\"BUNIT\" keyword is malformed:", errcode)
             raise
@@ -400,8 +401,8 @@ class Source(SourceBase):
             if isinstance(field, Table):
                 fluxes = self.photons_in_range(wave_min, wave_max, area,
                                                field["ref"]) * field["weight"]
-                x = utils.quantity_from_table("x", field, u.arcsec)
-                y = utils.quantity_from_table("y", field, u.arcsec)
+                x = quantity_from_table("x", field, u.arcsec)
+                y = quantity_from_table("y", field, u.arcsec)
                 tbl = Table(names=["x", "y", "flux"], data=[x, y, fluxes])
                 tbl.meta.update(field.meta)
                 hdu_or_table = tbl
@@ -507,16 +508,16 @@ class Source(SourceBase):
 
         for ii in layers:
             if isinstance(self.fields[ii], Table):
-                x = utils.quantity_from_table("x", self.fields[ii], u.arcsec)
-                x += utils.quantify(dx, u.arcsec)
+                x = quantity_from_table("x", self.fields[ii], u.arcsec)
+                x += quantify(dx, u.arcsec)
                 self.fields[ii]["x"] = x
 
-                y = utils.quantity_from_table("y", self.fields[ii], u.arcsec)
-                y += utils.quantify(dy, u.arcsec)
+                y = quantity_from_table("y", self.fields[ii], u.arcsec)
+                y += quantify(dy, u.arcsec)
                 self.fields[ii]["y"] = y
             elif isinstance(self.fields[ii], (fits.ImageHDU, fits.PrimaryHDU)):
-                dx = utils.quantify(dx, u.arcsec).to(u.deg)
-                dy = utils.quantify(dy, u.arcsec).to(u.deg)
+                dx = quantify(dx, u.arcsec).to(u.deg)
+                dy = quantify(dy, u.arcsec).to(u.deg)
                 self.fields[ii].header["CRVAL1"] += dx.value
                 self.fields[ii].header["CRVAL2"] += dy.value
 

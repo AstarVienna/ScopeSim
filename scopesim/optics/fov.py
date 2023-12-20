@@ -1,6 +1,5 @@
 """Defines FieldOfView class."""
 
-import logging
 from copy import deepcopy
 from itertools import chain
 from collections.abc import Iterable
@@ -18,7 +17,10 @@ from . import fov_utils as fu
 from . import image_plane_utils as imp_utils
 
 from ..base_classes import SourceBase, FieldOfViewBase
-from .. import utils
+from ..utils import from_currsys, quantify, has_needed_keywords, get_logger
+
+
+logger = get_logger(__name__)
 
 
 class FieldOfView(FieldOfViewBase):
@@ -44,8 +46,8 @@ class FieldOfView(FieldOfViewBase):
     def __init__(self, header, waverange, detector_header=None, **kwargs):
         self.meta = {
             "id": None,
-            "wave_min": utils.quantify(waverange[0], u.um),
-            "wave_max": utils.quantify(waverange[1], u.um),
+            "wave_min": quantify(waverange[0], u.um),
+            "wave_max": quantify(waverange[1], u.um),
             "wave_bin_n": 1,
             "wave_bin_type": "linear",
 
@@ -63,10 +65,10 @@ class FieldOfView(FieldOfViewBase):
         }
         self.meta.update(kwargs)
 
-        if not any((utils.has_needed_keywords(header, s) for s in ["", "S"])):
+        if not any((has_needed_keywords(header, s) for s in ["", "S"])):
             raise ValueError(
                 f"Header must contain a valid sky-plane WCS: {dict(header)}")
-        if not utils.has_needed_keywords(header, "D"):
+        if not has_needed_keywords(header, "D"):
             raise ValueError(
                 f"Header must contain a valid image-plane WCS: {dict(header)}")
 
@@ -120,7 +122,7 @@ class FieldOfView(FieldOfViewBase):
         fields_in_fov = [field for field in src.fields
                          if fu.is_field_in_fov(self.header, field)]
         if not fields_in_fov:
-            logging.warning("No fields in FOV.")
+            logger.warning("No fields in FOV.")
 
         spec_refs = set()
         volume = self.volume()
@@ -319,7 +321,7 @@ class FieldOfView(FieldOfViewBase):
             xpix, ypix = imp_utils.val2pix(self.header,
                                            field["x"] / 3600,
                                            field["y"] / 3600)
-            if utils.from_currsys(self.meta["sub_pixel"]):
+            if from_currsys(self.meta["sub_pixel"]):
                 for idx, row in enumerate(field):
                     xs, ys, fracs = imp_utils.sub_pixel_fractions(xpix[idx],
                                                                   ypix[idx])
@@ -363,13 +365,13 @@ class FieldOfView(FieldOfViewBase):
             [ph s-1 pixel-1] or PHOTLAM (if use_photlam=True)
 
         """
-        spline_order = utils.from_currsys("!SIM.computing.spline_order")
+        spline_order = from_currsys("!SIM.computing.spline_order")
 
         # Make waveset and canvas image
         fov_waveset = self.waveset
         bin_widths = np.diff(fov_waveset)       # u.um
         bin_widths = 0.5 * (np.r_[0, bin_widths] + np.r_[bin_widths, 0])
-        area = utils.from_currsys(self.meta["area"])    # u.m2
+        area = from_currsys(self.meta["area"])    # u.m2
 
         # PHOTLAM * u.um * u.m2 --> ph / s
         specs = {ref: spec(fov_waveset) if use_photlam
@@ -389,7 +391,7 @@ class FieldOfView(FieldOfViewBase):
                 spline_order=spline_order)
 
         for flux, weight, x, y in self._make_image_tablefields(fluxes):
-            if utils.from_currsys(self.meta["sub_pixel"]):
+            if from_currsys(self.meta["sub_pixel"]):
                 # These x and y should not be arrays when sub_pixel is
                 # enabled, it is therefore not necessary to deploy the fix
                 # below in the else-branch.
@@ -489,7 +491,7 @@ class FieldOfView(FieldOfViewBase):
                 xpix, ypix = imp_utils.val2pix(self.header, xsky, ysky)
                 flux_vector = specs[row["ref"]].value * row["weight"] / self.pixel_area
 
-                if utils.from_currsys(self.meta["sub_pixel"]):
+                if from_currsys(self.meta["sub_pixel"]):
                     xs, ys, fracs = imp_utils.sub_pixel_fractions(xpix, ypix)
                     for i, j, k in zip(xs, ys, fracs):
                         yield flux_vector * k, i, j
@@ -501,7 +503,7 @@ class FieldOfView(FieldOfViewBase):
             # TODO: The following would have been identical to the other two
             #       make methods, but was commented out. Why?
             # bg_solid_angle = u.Unit(field.header["SOLIDANG"]).to(u.arcsec**-2)  # float [arcsec-2]
-            # pixel_area = utils.from_currsys(self.meta["pixel_scale"]) ** 2      # float [arcsec2]
+            # pixel_area = from_currsys(self.meta["pixel_scale"]) ** 2      # float [arcsec2]
             # area_factor = pixel_area * bg_solid_angle                           # float [arcsec2 * arcsec-2]
 
             # Cube should be in PHOTLAM arcsec-2 for SpectralTrace mapping
@@ -555,14 +557,14 @@ class FieldOfView(FieldOfViewBase):
             [ph s-1 AA-1 arcsec-2]      # as needed by SpectralTrace
 
         """
-        spline_order = utils.from_currsys("!SIM.computing.spline_order")
+        spline_order = from_currsys("!SIM.computing.spline_order")
 
         # 1. Make waveset and canvas cube (area, bin_width are applied at end)
         # TODO: Why is this not self.waveset? What's different?
-        wave_unit = u.Unit(utils.from_currsys("!SIM.spectral.wave_unit"))
+        wave_unit = u.Unit(from_currsys("!SIM.spectral.wave_unit"))
         fov_waveset = np.arange(
             self.meta["wave_min"].value, self.meta["wave_max"].value,
-            utils.from_currsys("!SIM.spectral.spectral_bin_width")) * wave_unit
+            from_currsys("!SIM.spectral.spectral_bin_width")) * wave_unit
         fov_waveset = fov_waveset.to(u.um)
 
         # TODO: what's with this code??
@@ -609,7 +611,7 @@ class FieldOfView(FieldOfViewBase):
         #    PHOTLAM = ph/s/cm-2/AA
         #    area = m2, fov_waveset = um
         # SpectralTrace wants ph/s/um/arcsec2 --> get rid of m2, leave um
-        area = utils.from_currsys(self.meta["area"])  # u.m2
+        area = from_currsys(self.meta["area"])  # u.m2
         canvas_cube_hdu.data *= area.to(u.cm ** 2).value
         canvas_cube_hdu.data *= 1e4       # ph/s/AA/arcsec2 --> ph/s/um/arcsec2
 
@@ -657,9 +659,9 @@ class FieldOfView(FieldOfViewBase):
     def corners(self):
         """Return sky footprint, image plane footprint."""
         # Couldn't find where this is ever used, put warning here just in case
-        logging.warning("calc_footprint has been updated, any code that "
-                        "relies on this .corners property must likely be "
-                        "adapted as well.")
+        logger.warning("calc_footprint has been updated, any code that "
+                       "relies on this .corners property must likely be "
+                       "adapted as well.")
         sky_corners = imp_utils.calc_footprint(self.header)
         imp_corners = imp_utils.calc_footprint(self.header, "D")
         return sky_corners, imp_corners
@@ -668,8 +670,8 @@ class FieldOfView(FieldOfViewBase):
     def waverange(self):
         """Return wavelength range in um [wave_min, wave_max]."""
         if self._waverange is None:
-            wave_min = utils.quantify(self.meta["wave_min"], u.um).value
-            wave_max = utils.quantify(self.meta["wave_max"], u.um).value
+            wave_min = quantify(self.meta["wave_min"], u.um).value
+            wave_max = quantify(self.meta["wave_max"], u.um).value
             self._waverange = [wave_min, wave_max]
         return self._waverange
 
@@ -678,7 +680,7 @@ class FieldOfView(FieldOfViewBase):
         """Return central wavelength in um."""
         if self._wavelength is None:
             self._wavelength = np.average(self.waverange)
-        return utils.quantify(self._wavelength, u.um)
+        return quantify(self._wavelength, u.um)
 
     @property
     def waveset(self):

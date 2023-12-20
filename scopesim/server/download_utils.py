@@ -2,7 +2,6 @@
 """Used only by the `database` and `github_utils` submodules."""
 
 import re
-import logging
 
 # Python 3.8 doesn't yet know these things.......
 # from collections.abc import Iterator, Iterable, Mapping
@@ -18,6 +17,11 @@ import bs4
 from tqdm import tqdm
 # from tqdm.contrib.logging import logging_redirect_tqdm
 # put with logging_redirect_tqdm(loggers=all_loggers): around tqdm
+
+from ..utils import get_logger
+
+
+logger = get_logger(__name__)
 
 
 class ServerError(Exception):
@@ -67,11 +71,11 @@ def handle_download(client, pkg_url: str,
                         file_inner.write(chunk)
 
     except httpx.HTTPStatusError as err:
-        logging.error("Error response %s while requesting %s.",
-                      err.response.status_code, err.request.url)
+        logger.error("Error response %s while requesting %s.",
+                     err.response.status_code, err.request.url)
         raise ServerError("Cannot connect to server.") from err
     except Exception as err:
-        logging.exception("Unhandled exception while accessing server.")
+        logger.exception("Unhandled exception while accessing server.")
         raise ServerError("Cannot connect to server.") from err
 
 
@@ -97,15 +101,15 @@ def send_get(client, sub_url, stream: bool = False):
             response = client.get(sub_url)
             response.raise_for_status()
     except httpx.RequestError as err:
-        logging.exception("An error occurred while requesting %s.",
-                          err.request.url)
+        logger.exception("An error occurred while requesting %s.",
+                         err.request.url)
         raise ServerError("Cannot connect to server.") from err
     except httpx.HTTPStatusError as err:
-        logging.error("Error response %s while requesting %s.",
-                      err.response.status_code, err.request.url)
+        logger.error("Error response %s while requesting %s.",
+                     err.response.status_code, err.request.url)
         raise ServerError("Cannot connect to server.") from err
     except Exception as err:
-        logging.exception("Unhandled exception while accessing server.")
+        logger.exception("Unhandled exception while accessing server.")
         raise ServerError("Cannot connect to server.") from err
 
     return response
