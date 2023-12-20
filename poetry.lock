@@ -728,6 +728,20 @@ files = [
 tests = ["asttokens (>=2.1.0)", "coverage", "coverage-enable-subprocess", "ipython", "littleutils", "pytest", "rich"]
 
 [[package]]
+name = "fastjsonschema"
+version = "2.19.0"
+description = "Fastest Python implementation of JSON schema"
+optional = false
+python-versions = "*"
+files = [
+    {file = "fastjsonschema-2.19.0-py3-none-any.whl", hash = "sha256:b9fd1a2dd6971dbc7fee280a95bd199ae0dd9ce22beb91cc75e9c1c528a5170e"},
+    {file = "fastjsonschema-2.19.0.tar.gz", hash = "sha256:e25df6647e1bc4a26070b700897b07b542ec898dd4f1f6ea013e7f6a88417225"},
+]
+
+[package.extras]
+devel = ["colorama", "json-spec", "jsonschema", "pylint", "pytest", "pytest-benchmark", "pytest-cache", "validictory"]
+
+[[package]]
 name = "fonttools"
 version = "4.47.0"
 description = "Tools to manipulate font files"
@@ -1241,24 +1255,32 @@ files = [
 
 [[package]]
 name = "jupytext"
-version = "1.10.0"
+version = "1.16.0"
 description = "Jupyter notebooks as Markdown documents, Julia, Python or R scripts"
 optional = false
-python-versions = "~=3.6"
+python-versions = ">=3.8"
 files = [
-    {file = "jupytext-1.10.0-py3-none-any.whl", hash = "sha256:e820cadd0b2396a4e5af5d44067167072b4ed7e7249d58ab3cfa2489066c5902"},
-    {file = "jupytext-1.10.0.tar.gz", hash = "sha256:26922b3de89445af2ccb70fce7bb0d57f97799c1d4912dd97f7fa42fbbc0436d"},
+    {file = "jupytext-1.16.0-py3-none-any.whl", hash = "sha256:c2b951ac72871f39cd6cd242b56bc43219b7ed8169598bae5359811fb1f54d28"},
+    {file = "jupytext-1.16.0.tar.gz", hash = "sha256:94c7e67775e90e1792c39ab7fca4e0459bf7c35656123e8dc2e9e1b3e953baf8"},
 ]
 
 [package.dependencies]
-markdown-it-py = ">=0.6.0,<0.7.0"
-nbformat = "<=5.0.8"
+markdown-it-py = ">=1.0.0"
+mdit-py-plugins = "*"
+nbformat = "*"
+packaging = "*"
 pyyaml = "*"
 toml = "*"
 
 [package.extras]
-rst2md = ["sphinx-gallery (>=0.7.0,<0.8.0)"]
-toml = ["toml"]
+dev = ["jupytext[test-cov,test-external]"]
+docs = ["myst-parser", "sphinx", "sphinx-copybutton", "sphinx-rtd-theme"]
+test = ["pytest", "pytest-randomly", "pytest-xdist"]
+test-cov = ["jupytext[test-integration]", "pytest-cov (>=2.6.1)"]
+test-external = ["autopep8", "black", "flake8", "gitpython", "isort", "jupyter-fs (<0.4.0)", "jupytext[test-integration]", "pre-commit", "sphinx-gallery (<0.8)"]
+test-functional = ["jupytext[test]"]
+test-integration = ["ipykernel", "jupyter-server (!=2.11)", "jupytext[test-functional]", "nbconvert"]
+test-ui = ["calysto-bash"]
 
 [[package]]
 name = "kiwisolver"
@@ -1482,24 +1504,24 @@ source = ["Cython (>=0.29.35)"]
 
 [[package]]
 name = "markdown-it-py"
-version = "0.6.2"
+version = "1.1.0"
 description = "Python port of markdown-it. Markdown parsing, done right!"
 optional = false
 python-versions = "~=3.6"
 files = [
-    {file = "markdown-it-py-0.6.2.tar.gz", hash = "sha256:c3b9f995be0792cbbc8ab2f53d74072eb7ff8a8b622be8d61d38ab879709eca3"},
-    {file = "markdown_it_py-0.6.2-py3-none-any.whl", hash = "sha256:30b3e9f8198dc82a5df0dcb73fd31d56cd9a43bf8a747feb10b2ba74f962bcb1"},
+    {file = "markdown-it-py-1.1.0.tar.gz", hash = "sha256:36be6bb3ad987bfdb839f5ba78ddf094552ca38ccbd784ae4f74a4e1419fc6e3"},
+    {file = "markdown_it_py-1.1.0-py3-none-any.whl", hash = "sha256:98080fc0bc34c4f2bcf0846a096a9429acbd9d5d8e67ed34026c03c61c464389"},
 ]
 
 [package.dependencies]
-attrs = ">=19,<21"
-mdit-py-plugins = ">=0.2.1,<0.3.0"
+attrs = ">=19,<22"
 
 [package.extras]
 code-style = ["pre-commit (==2.6)"]
 compare = ["commonmark (>=0.9.1,<0.10.0)", "markdown (>=3.2.2,<3.3.0)", "mistletoe-ebp (>=0.10.0,<0.11.0)", "mistune (>=0.8.4,<0.9.0)", "panflute (>=1.12,<2.0)"]
 linkify = ["linkify-it-py (>=1.0,<2.0)"]
-rtd = ["myst-nb (>=0.11.1,<0.12.0)", "pyyaml", "sphinx (>=2,<4)", "sphinx-book-theme", "sphinx-copybutton", "sphinx-panels (>=0.4.0,<0.5.0)"]
+plugins = ["mdit-py-plugins"]
+rtd = ["myst-nb (==0.13.0a1)", "pyyaml", "sphinx (>=2,<4)", "sphinx-book-theme", "sphinx-copybutton", "sphinx-panels (>=0.4.0,<0.5.0)"]
 testing = ["coverage", "psutil", "pytest (>=3.6,<4)", "pytest-benchmark (>=3.2,<4.0)", "pytest-cov", "pytest-regressions"]
 
 [[package]]
@@ -1745,13 +1767,13 @@ test = ["black", "check-manifest", "flake8", "ipykernel", "ipython (<8.0.0)", "i
 
 [[package]]
 name = "nbconvert"
-version = "6.4.5"
+version = "6.5.1"
 description = "Converting Jupyter Notebooks"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "nbconvert-6.4.5-py3-none-any.whl", hash = "sha256:e01d219f55cc79f9701c834d605e8aa3acf35725345d3942e3983937f368ce14"},
-    {file = "nbconvert-6.4.5.tar.gz", hash = "sha256:21163a8e2073c07109ca8f398836e45efdba2aacea68d6f75a8a545fef070d4e"},
+    {file = "nbconvert-6.5.1-py3-none-any.whl", hash = "sha256:0a3e224ee753ac4dceeb0257c4a315c069dcc6f9f4ae0ad15c5ea84713d15e28"},
+    {file = "nbconvert-6.5.1.tar.gz", hash = "sha256:2c01f3f518fee736c3d3f999dd20e0a16febba17a0d60a3b0fd28fbdec14115d"},
 ]
 
 [package.dependencies]
@@ -1759,45 +1781,47 @@ beautifulsoup4 = "*"
 bleach = "*"
 defusedxml = "*"
 entrypoints = ">=0.2.2"
-jinja2 = ">=2.4"
-jupyter-core = "*"
+jinja2 = ">=3.0"
+jupyter-core = ">=4.7"
 jupyterlab-pygments = "*"
+lxml = "*"
 MarkupSafe = ">=2.0"
 mistune = ">=0.8.1,<2"
-nbclient = ">=0.5.0,<0.6.0"
-nbformat = ">=4.4"
+nbclient = ">=0.5.0"
+nbformat = ">=5.1"
+packaging = "*"
 pandocfilters = ">=1.4.1"
 pygments = ">=2.4.1"
-testpath = "*"
+tinycss2 = "*"
 traitlets = ">=5.0"
 
 [package.extras]
-all = ["ipykernel", "ipython", "ipywidgets (>=7)", "nbsphinx (>=0.2.12)", "pyppeteer (>=1,<1.1)", "pytest", "pytest-cov", "pytest-dependency", "sphinx (>=1.5.1)", "sphinx-rtd-theme", "tornado (>=4.0)"]
+all = ["ipykernel", "ipython", "ipywidgets (>=7)", "nbsphinx (>=0.2.12)", "pre-commit", "pyppeteer (>=1,<1.1)", "pytest", "pytest-cov", "pytest-dependency", "sphinx (>=1.5.1)", "sphinx-rtd-theme", "tornado (>=6.1)"]
 docs = ["ipython", "nbsphinx (>=0.2.12)", "sphinx (>=1.5.1)", "sphinx-rtd-theme"]
-serve = ["tornado (>=4.0)"]
-test = ["ipykernel", "ipywidgets (>=7)", "pyppeteer (>=1,<1.1)", "pytest", "pytest-cov", "pytest-dependency"]
+serve = ["tornado (>=6.1)"]
+test = ["ipykernel", "ipywidgets (>=7)", "pre-commit", "pyppeteer (>=1,<1.1)", "pytest", "pytest-cov", "pytest-dependency"]
 webpdf = ["pyppeteer (>=1,<1.1)"]
 
 [[package]]
 name = "nbformat"
-version = "5.0.8"
+version = "5.9.2"
 description = "The Jupyter Notebook format"
 optional = false
-python-versions = ">=3.5"
+python-versions = ">=3.8"
 files = [
-    {file = "nbformat-5.0.8-py3-none-any.whl", hash = "sha256:aa9450c16d29286dc69b92ea4913c1bffe86488f90184445996ccc03a2f60382"},
-    {file = "nbformat-5.0.8.tar.gz", hash = "sha256:f545b22138865bfbcc6b1ffe89ed5a2b8e2dc5d4fe876f2ca60d8e6f702a30f8"},
+    {file = "nbformat-5.9.2-py3-none-any.whl", hash = "sha256:1c5172d786a41b82bcfd0c23f9e6b6f072e8fb49c39250219e4acfff1efe89e9"},
+    {file = "nbformat-5.9.2.tar.gz", hash = "sha256:5f98b5ba1997dff175e77e0c17d5c10a96eaed2cbd1de3533d1fc35d5e111192"},
 ]
 
 [package.dependencies]
-ipython-genutils = "*"
-jsonschema = ">=2.4,<2.5.0 || >2.5.0"
+fastjsonschema = "*"
+jsonschema = ">=2.6"
 jupyter-core = "*"
-traitlets = ">=4.1"
+traitlets = ">=5.1"
 
 [package.extras]
-fast = ["fastjsonschema"]
-test = ["fastjsonschema", "pytest", "pytest-cov", "testpath"]
+docs = ["myst-parser", "pydata-sphinx-theme", "sphinx", "sphinxcontrib-github-alt", "sphinxcontrib-spelling"]
+test = ["pep440", "pre-commit", "pytest", "testpath"]
 
 [[package]]
 name = "nbsphinx"
@@ -3162,18 +3186,22 @@ test = ["pre-commit", "pytest (>=7.0)", "pytest-timeout"]
 typing = ["mypy (>=1.6,<2.0)", "traitlets (>=5.11.1)"]
 
 [[package]]
-name = "testpath"
-version = "0.6.0"
-description = "Test utilities for code working with files and commands"
+name = "tinycss2"
+version = "1.2.1"
+description = "A tiny CSS parser"
 optional = false
-python-versions = ">= 3.5"
+python-versions = ">=3.7"
 files = [
-    {file = "testpath-0.6.0-py3-none-any.whl", hash = "sha256:8ada9f80a2ac6fb0391aa7cdb1a7d11cfa8429f693eda83f74dde570fe6fa639"},
-    {file = "testpath-0.6.0.tar.gz", hash = "sha256:2f1b97e6442c02681ebe01bd84f531028a7caea1af3825000f52345c30285e0f"},
+    {file = "tinycss2-1.2.1-py3-none-any.whl", hash = "sha256:2b80a96d41e7c3914b8cda8bc7f705a4d9c49275616e886103dd839dfc847847"},
+    {file = "tinycss2-1.2.1.tar.gz", hash = "sha256:8cff3a8f066c2ec677c06dbc7b45619804a6938478d9d73c284b29d14ecb0627"},
 ]
 
+[package.dependencies]
+webencodings = ">=0.4"
+
 [package.extras]
-test = ["pytest"]
+doc = ["sphinx", "sphinx_rtd_theme"]
+test = ["flake8", "isort", "pytest"]
 
 [[package]]
 name = "toml"
