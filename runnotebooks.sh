@@ -1,53 +1,56 @@
 #!/usr/bin/env bash
 
-echo "# Running Notebooks Tests" >> $GITHUB_STEP_SUMMARY
+# https://betterdev.blog/minimal-safe-bash-script-template/
+set -Eeuo pipefail
+
+# Set stdout as default so the script can be ran on the commandline.
+STEP_SUMMARY="${GITHUB_STEP_SUMMARY:-/dev/stdout}"
+
+echo "# Running Notebooks Tests" >> $STEP_SUMMARY
 
 if [[ "x${1}" == "x--clone-irdb" ]] ; then
   # Cloning IRDB
-  if [[ ! -e irdb ]] ; then
-    echo "_Cloning IRDB_" >> $GITHUB_STEP_SUMMARY
-    git clone https://github.com/AstarVienna/irdb.git
+  if [[ ! -e inst_pkgs ]] ; then
+    echo "_Cloning IRDB_" >> $STEP_SUMMARY
+    git clone https://github.com/AstarVienna/irdb.git inst_pkgs
   fi
 
-  echo "## Symlinks" >> $GITHUB_STEP_SUMMARY
+  echo "## Patch notebooks" >> $STEP_SUMMARY
   # https://github.com/koalaman/shellcheck/wiki/SC2044
-  find . -iname "*.ipynb" -printf '%h\0' | sort -z | uniq -z | while IFS= read -r -d '' dirnotebooks; do
+  find ./docs -iname "*.ipynb" -printf '%h\0' | sort -z | uniq -z | while IFS= read -r -d '' dirnotebooks; do
     echo "${dirnotebooks}"
-    echo "- ${dirnotebooks}" >> $GITHUB_STEP_SUMMARY
-    dirinstpkgs="${dirnotebooks}/inst_pkgs"
-    if [[ (! -e ./docs/source/examples/inst_pkgs) && (! -L ./docs/source/examples/inst_pkgs) ]] ; then
-      echo "Creating symlink to irdb: ${dirinstpkgs}" >> $GITHUB_STEP_SUMMARY
-      ln -s irdb "${dirinstpkgs}"
-    else
-      echo "Directory exists, not creating symlink: ${dirinstpkgs}" >> $GITHUB_STEP_SUMMARY
-    fi
-
-    # Comment out any download_package[s] in the notebooks.
-    pushd "${dirnotebooks}" || exit 1
+    echo "- ${dirnotebooks}" >> $STEP_SUMMARY
+    pushd "${dirnotebooks}"
+      # Comment out any download_package[s] in the notebooks.
       sed -i -E 's|"(.*\.download_package)|"#\1|g' -- *.ipynb
-    popd || exit 1
+      # Comment out explicitly setting the local_packages_path to somewhere.
+      sed -i -E 's|"(.*__config__\[\\"!SIM.file.local_packages_path)|"#\1|g' -- *.ipynb
+    popd
   done
 fi
 
 
-echo "## Notebooks tested" >> $GITHUB_STEP_SUMMARY
+echo "## Notebooks tested" >> $STEP_SUMMARY
 # https://github.com/koalaman/shellcheck/wiki/SC2044
-find . -iname "*.ipynb" -print0 | while IFS= read -r -d '' fnnotebook
+find ./docs -iname "*.ipynb" -print0 | while IFS= read -r -d '' fnnotebook
 do
   echo "Testing ${fnnotebook} ..."
   fnpy="${fnnotebook%.ipynb}.py"
 
   # Convert .ipynb file to .py.
-  jupytext --to py "${fnnotebook}"
+  poetry run jupytext --to py "${fnnotebook}"
 
   # Run the python script and quit on first error.
-  python "${fnpy}" || exit 1
-  echo "- ${fnnotebook}" >> $GITHUB_STEP_SUMMARY
+  poetry run python "${fnpy}"
+  echo "- ${fnnotebook}" >> $STEP_SUMMARY
 
   # Delete generated files if --delete is specified.
   # By default do not delete any files.
+  # The delete functionality is intended to make it easy for developers to test
+  # all the notebooks on their own machine.
   if [ "x$1" = "x--delete" ]
   then
+    echo "Removing ${fnpy}"
     rm "${fnpy}"
   fi
 
