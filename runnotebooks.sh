@@ -20,12 +20,12 @@ if [[ "x${1}" == "x--clone-irdb" ]] ; then
   find ./docs -iname "*.ipynb" -printf '%h\0' | sort -z | uniq -z | while IFS= read -r -d '' dirnotebooks; do
     echo "${dirnotebooks}"
     echo "- ${dirnotebooks}" >> $STEP_SUMMARY
-    pushd "${dirnotebooks}" || exit 1
+    pushd "${dirnotebooks}"
       # Comment out any download_package[s] in the notebooks.
       sed -i -E 's|"(.*\.download_package)|"#\1|g' -- *.ipynb
       # Comment out explicitly setting the local_packages_path to somewhere.
       sed -i -E 's|"(.*__config__\[\\"!SIM.file.local_packages_path)|"#\1|g' -- *.ipynb
-    popd || exit 1
+    popd
   done
 fi
 
@@ -41,7 +41,7 @@ do
   poetry run jupytext --to py "${fnnotebook}"
 
   # Run the python script and quit on first error.
-  poetry run python "${fnpy}" || exit 1
+  poetry run python "${fnpy}"
   echo "- ${fnnotebook}" >> $STEP_SUMMARY
 
   # Delete generated files if --delete is specified.
