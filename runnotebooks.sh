@@ -4,14 +4,14 @@ echo "# Running Notebooks Tests" >> $GITHUB_STEP_SUMMARY
 
 if [[ "x${1}" == "x--clone-irdb" ]] ; then
   # Cloning IRDB
-  if [[ ! -e irdb ]] ; then
+  if [[ ! -e inst_pkgs ]] ; then
     echo "_Cloning IRDB_" >> $GITHUB_STEP_SUMMARY
-    git clone https://github.com/AstarVienna/irdb.git
+    git clone https://github.com/AstarVienna/irdb.git inst_pkgs
   fi
 
   echo "## Symlinks" >> $GITHUB_STEP_SUMMARY
   # https://github.com/koalaman/shellcheck/wiki/SC2044
-  find ./docs -iname "*.ipynb" -printf '%h\0' | sort -z | uniq -z | while IFS= read -r -d '' dirnotebooks; do
+  find . -iname "*.ipynb" -printf '%h\0' | sort -z | uniq -z | while IFS= read -r -d '' dirnotebooks; do
     echo "${dirnotebooks}"
     echo "- ${dirnotebooks}" >> $GITHUB_STEP_SUMMARY
     dirinstpkgs="${dirnotebooks}/inst_pkgs"
@@ -23,7 +23,7 @@ if [[ "x${1}" == "x--clone-irdb" ]] ; then
     fi
 
     # Comment out any download_package[s] in the notebooks.
-    pushd "${dirnotebooks}" || exit 1
+    pushd "${dirnotebooks}"
       sed -i -E 's|"(.*\.download_package)|"#\1|g' -- *.ipynb
     popd || exit 1
   done
