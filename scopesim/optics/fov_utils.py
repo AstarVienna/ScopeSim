@@ -308,6 +308,8 @@ def extract_area_from_imagehdu(imagehdu, fov_volume):
 
     # Round to avoid floating point madness
     xyp = image_wcs.wcs_world2pix(np.array([xy0s, xy1s]), 0).round(7)
+    # To deal with negative CDELTs
+    xyp.sort(axis=0)
 
     xy0p = np.max(((0, 0), np.floor(xyp[0]).astype(int)), axis=0)
     xy1p = np.min(((naxis1, naxis2), np.ceil(xyp[1]).astype(int)), axis=0)
