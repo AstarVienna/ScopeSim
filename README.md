@@ -18,6 +18,8 @@ https://doi.org/10.1117/12.2559784
 
 https://www.spiedigitallibrary.org/conference-proceedings-of-spie/11452/2559784/ScopeSim--a-flexible-general-purpose-astronomical-instrument-data-simulation/10.1117/12.2559784.short
 
+https://www.spiedigitallibrary.org/conference-proceedings-of-spie/11452/2559784/ScopeSim--a-flexible-general-purpose-astronomical-instrument-data-simulation/10.1117/12.2559784.short#_=_
+
 ## Summary
 
 Telescopy aims to simulate images of astronomical objects observed with visual 
