@@ -1,10 +1,15 @@
 name: Check Markdown links
 
 on:
-  push:
-  schedule:
-    - # Run every day at 5:00 UTC
-    - cron: "0 5 * * *"
+# 2023/12/25 HB: Disabled automatic running of markdown link checker, because
+# since December 2023 this fails on SPIE articles. Can be reenabled later, see
+# https://github.com/AstarVienna/ScopeSim/issues/322
+#  push:
+#  schedule:
+#    - # Run every day at 5:00 UTC
+#    - cron: "0 5 * * *"
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
 
 jobs:
   markdown-link-check:
