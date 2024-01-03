@@ -43,6 +43,7 @@ jobs:
       - name: Install dependencies
         run: |
           poetry install --with test --with dev --all-extras
+          pip install git+https://github.com/AstarVienna/ScopeSim_Data.git
 
       - name: Run notebooks
         env:
