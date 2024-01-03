@@ -9,7 +9,7 @@
 [![Documentation Status](https://readthedocs.org/projects/scopesim/badge/?version=latest)](https://scopesim.readthedocs.io/en/latest)
 [![codecov](https://codecov.io/gh/AstarVienna/ScopeSim/graph/badge.svg)](https://codecov.io/gh/AstarVienna/ScopeSim)
 [![PyPI - Version](https://img.shields.io/pypi/v/ScopeSim)](https://pypi.org/project/ScopeSim/)
-![Python Version Support](https://github-actions.40ants.com/AstarVienna/DevOps/matrix.svg?only=Tests.build.ubuntu-latest)
+![PyPI - Python Version](https://img.shields.io/pypi/pyversions/ScopeSim)
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![Citation](https://img.shields.io/badge/DOI-10.1117%2F12.2559784-blue)](https://doi.org/10.1117/12.2559784)
