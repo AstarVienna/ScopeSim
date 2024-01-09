@@ -49,4 +49,4 @@ jobs:
         env:
           TQDM_MININTERVAL: 10
           CLONE:  ${{ inputs.clone-irdb && '--clone-irdb' || '' }}
-        run: ./runnotebooks.sh $CLONE --delete
+        run: poetry run ./runnotebooks.sh $CLONE --delete

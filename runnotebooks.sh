@@ -90,10 +90,10 @@ do
   fnpy="${fnnotebook%.ipynb}.py"
 
   # Convert .ipynb file to .py.
-  poetry run jupytext --to py "${fnnotebook}"
+  jupytext --to py "${fnnotebook}"
 
-  # Run the python script and quit on first error.
-  poetry run python "${fnpy}"
+  # Run the python script.
+  python "${fnpy}"
   echo "- ${fnnotebook}" >> $STEP_SUMMARY
 
   # Delete generated files if --delete is specified.
