@@ -19,9 +19,9 @@ classifiers = [
 ]
 
 [tool.poetry.dependencies]
-python = ">=3.9,<3.13"
+python = "^3.9"
 numpy = "^1.24.4"
-scipy = "^1.11.1"
+scipy = "^1.11.4"
 astropy = "^5.2.2"
 matplotlib = "^3.7.2"
 pooch = "^1.7.0"
@@ -35,7 +35,7 @@ more-itertools = "^9.0"
 tqdm = "^4.66.1"
 
 synphot = "^1.1.0"
-skycalc_ipy = "^0.2.0"
+skycalc_ipy = "^0.3.0"
 anisocado = "^0.3.0"
 
 [tool.poetry.group.dev]
