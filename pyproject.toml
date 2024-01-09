@@ -53,6 +53,8 @@ scopesim_templates = "^0.5.0"
 # Just so that readthedocs doesn't include the tests module - yes it's hacky
 skycalc_cli = "*"
 ipykernel = "^6.24.0"
+# Poetry itself is needed for runnotebooks.sh.
+poetry = "*"
 
 [tool.poetry.group.docs]
 optional = true
