@@ -102,7 +102,9 @@ filterwarnings = [
     "ignore:datetime.datetime.utcfromtimestamp()*:DeprecationWarning",
     # Pytest Notebook stuff
     "ignore:The*:pytest.PytestRemovedIn8Warning",
-    "ignore:Proactor*:RuntimeWarning"
+    "ignore:Proactor*:RuntimeWarning",
+    # Deprecation warnings due to the low levels in our poetry.lock file:
+    "ignore:*'sre_constants'*:DeprecationWarning",
 ]
 
 [tool.coverage.report]
