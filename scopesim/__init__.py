@@ -1,8 +1,8 @@
 "Generalised telescope observation simulator."
 
-################################################################################
-#                            TURN OFF WARNINGS                                 #
-################################################################################
+###############################################################################
+#                            TURN OFF WARNINGS                                #
+###############################################################################
 import sys
 import logging
 import warnings
@@ -12,19 +12,19 @@ from astropy.utils.exceptions import AstropyWarning
 
 warnings.simplefilter('ignore', UserWarning)
 warnings.simplefilter('ignore', FutureWarning)
-warnings.simplefilter('ignore', RuntimeWarning)     # warnings for the developer
+warnings.simplefilter('ignore', RuntimeWarning)    # warnings for the developer
 warnings.simplefilter('ignore', category=AstropyWarning)
 yaml.warnings({'YAMLLoadWarning': False})
 
-################################################################################
-#                         PACKAGE GLOBAL VARIABLES                             #
-################################################################################
+###############################################################################
+#                         PACKAGE GLOBAL VARIABLES                            #
+###############################################################################
 
 from . import rc
 
-################################################################################
-#                         SET BASIC LOGGING LEVEL                              #
-################################################################################
+###############################################################################
+#                         SET BASIC LOGGING LEVEL                             #
+###############################################################################
 
 root = logging.getLogger()
 root.setLevel("DEBUG")            # DEBUG
@@ -46,9 +46,9 @@ if rc.__config__["!SIM.logging.log_to_console"] is True:
     root.addHandler(stdout_handler)
 
 
-################################################################################
-#                         IMPORT PACKAGE MODULES                               #
-################################################################################
+###############################################################################
+#                         IMPORT PACKAGE MODULES                              #
+###############################################################################
 
 # Import all the modules to go under ScopeSim
 
@@ -72,8 +72,8 @@ from .server.database import (list_packages, download_packages, download_package
 
 from .tests.mocks.load_basic_instrument import load_example_optical_train
 
-################################################################################
-#                          VERSION INFORMATION                                 #
-################################################################################
+###############################################################################
+#                          VERSION INFORMATION                                #
+###############################################################################
 
 __version__ = metadata.version(__package__)
