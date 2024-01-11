@@ -141,6 +141,11 @@ class TestStackedStars:
         the_sums = [q.sum() for q in quadrants]
         flux_one_star, empty1, empty2, flux_four_stacked_stars = the_sums
 
+        # Check whether the stars are equal.
         assert flux_one_star == pytest.approx(flux_four_stacked_stars, rel=0.05)
-        assert empty1 == pytest.approx(empty1, rel=0.05)
+
+        # Check whether the empty skies are equal.
+        assert empty1 == pytest.approx(empty2, rel=0.05)
+
+        # Check whether the star is brighter than the sky.
         assert flux_one_star > empty1 * 2
