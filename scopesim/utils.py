@@ -25,6 +25,9 @@ from astar_utils import get_logger
 from . import rc
 
 
+logger = get_logger(__name__)
+
+
 def unify(x, unit, length=1):
     """
     Convert all types of input to an astropy array/unit pair.
@@ -504,7 +507,7 @@ def find_file(filename, path=None, silent=False):
     # no file found
     msg = f"File cannot be found: {filename}"
     if not silent:
-        logging.error(msg)
+        logger.error(msg)
 
     if from_currsys("!SIM.file.error_on_missing_file"):
         raise ValueError(msg)
@@ -549,16 +552,16 @@ def convert_table_comments_to_dict(tbl):
             comments_str = "\n".join(tbl.meta["comments"])
             comments_dict = yaml.full_load(comments_str)
         except yaml.error.YAMLError:
-            logging.warning("Couldn't convert <table>.meta['comments'] to dict")
+            logger.warning("Couldn't convert <table>.meta['comments'] to dict")
             comments_dict = tbl.meta["comments"]
     elif "COMMENT" in tbl.meta:
         try:
             comments_dict = yaml.full_load("\n".join(tbl.meta["COMMENT"]))
         except yaml.error.YAMLError:
-            logging.warning("Couldn't convert <table>.meta['COMMENT'] to dict")
+            logger.warning("Couldn't convert <table>.meta['COMMENT'] to dict")
             comments_dict = tbl.meta["COMMENT"]
     else:
-        logging.debug("No comments in table")
+        logger.debug("No comments in table")
 
     return comments_dict
 
@@ -590,7 +593,7 @@ def real_colname(name, colnames, silent=True):
     if not real_name:
         real_name = None
         if not silent:
-            logging.warning("None of %s were found in %s", names, colnames)
+            logger.warning("None of %s were found in %s", names, colnames)
     else:
         real_name = real_name[0]
 
@@ -780,8 +783,8 @@ def unit_from_table(colname: str, table: Table,
         return u.Unit(com_tbl[colname_u])
 
     tbl_name = table.meta.get("name", table.meta.get("filename"))
-    logging.info(("%s_unit was not found in table.meta: %s. Default to: %s"),
-                 colname, tbl_name, default_unit)
+    logger.info("%s_unit was not found in table.meta: %s. Default to: %s",
+                colname, tbl_name, default_unit)
 
     return u.Unit(default_unit)
 
@@ -886,9 +889,9 @@ def check_keys(input_dict, required_keys, action="error", all_any="all"):
                              f"input_dict: \n{required_keys} "
                              f"\n{input_dict.keys()}")
         if "warn" in action:
-            logging.warning(("One or more of the following keys missing "
-                             "from input_dict: \n%s \n%s"), required_keys,
-                            input_dict.keys())
+            logger.warning(
+                "One or more of the following keys missing from input_dict: "
+                "\n%s \n%s", required_keys, input_dict.keys())
 
     return keys_present
 
