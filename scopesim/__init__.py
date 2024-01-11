@@ -1,4 +1,4 @@
-"""The Instrument data simulator for MICADO on the E-ELT"""
+"Generalised telescope observation simulator."
 
 ################################################################################
 #                            TURN OFF WARNINGS                                 #
