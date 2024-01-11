@@ -26,6 +26,7 @@ from . import rc
 
 
 logger = get_logger(__name__)
+bug_logger = get_logger("bug_report")
 
 
 def unify(x, unit, length=1):
@@ -454,7 +455,7 @@ def log_bug_report(level=logging.DEBUG) -> None:
     """Emit bug report as logging message."""
     with StringIO() as str_stream:
         _write_bug_report(str_stream)
-        logging.log(level, str_stream.getvalue())
+        bug_logger.log(level, str_stream.getvalue())
 
 
 def find_file(filename, path=None, silent=False):
@@ -1013,15 +1014,15 @@ def top_level_catch(func):
             output = func(*args, **kwargs)
         except Exception as err:
             # FIXME: This try-except should not be necessary, but
-            # logging.exception has an issue in some versions.
+            # logger.exception has an issue in some versions.
             try:
-                logging.exception(
+                bug_logger.exception(
                     "Unhandled exception occured, see log file for details.")
             except TypeError:
-                logging.error(
+                bug_logger.error(
                     "Unhandled exception occured, see log file for details.")
-                logging.error("Couldn't log full exception stack.")
-                logging.error("Error message was: '%s'", err)
+                bug_logger.error("Couldn't log full exception stack.")
+                bug_logger.error("Error message was: '%s'", err)
             log_bug_report(logging.ERROR)
             raise
         return output
