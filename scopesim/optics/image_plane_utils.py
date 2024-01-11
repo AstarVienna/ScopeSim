@@ -742,7 +742,8 @@ def add_imagehdu_to_imagehdu(image_hdu: fits.ImageHDU,
                                wcs_suffix=canvas_wcs.wcs.alt,
                                spline_order=spline_order,
                                conserve_flux=conserve_flux)
-    # logging.debug("fromrescale %s", WCS(new_hdu.header, key=canvas_wcs.wcs.alt))
+    # TODO: Perhaps add separately formatted WCS logger?
+    # logger.debug("fromrescale %s", WCS(new_hdu.header, key=canvas_wcs.wcs.alt))
     new_hdu = reorient_imagehdu(new_hdu,
                                 wcs_suffix=canvas_wcs.wcs.alt,
                                 spline_order=spline_order,
@@ -756,8 +757,8 @@ def add_imagehdu_to_imagehdu(image_hdu: fits.ImageHDU,
     sky_center = new_wcs.wcs_pix2world(img_center, 0)
     if new_wcs.wcs.cunit[0] == "deg":
         sky_center = _fix_360(sky_center)
-    # logging.debug("canvas %s", canvas_wcs)
-    # logging.debug("new %s", new_wcs)
+    # logger.debug("canvas %s", canvas_wcs)
+    # logger.debug("new %s", new_wcs)
     logger.debug("sky %s", sky_center)
     sky_center *= conv_fac
     pix_center = canvas_wcs.wcs_world2pix(sky_center, 0)

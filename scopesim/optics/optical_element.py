@@ -218,8 +218,8 @@ class OpticalElement:
         if isinstance(obj, list) and len(obj) == 1:
             obj = obj[0]
         # if obj is None or len(obj) == 0:
-        #     logging.warning(f'No result for key: "{item}". '
-        #                     f'Did you mean "#{item}"?')
+        #     logger.warning(
+        #         "No result for key: '%s'. Did you mean '#%s'?", item, item)
 
         return obj
 

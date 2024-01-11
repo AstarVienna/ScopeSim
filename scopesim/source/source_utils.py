@@ -260,7 +260,7 @@ def make_img_wcs_header(pixel_scale, image_size):
 #         imagehdu.data = imagehdu.data.value
 #     else:
 #         unit = ""
-#         logging.warning("No flux unit found on ImageHDU. Please add BUNIT or "
-#                       "FLUXUNIT to the header.")
+#         logger.warning("No flux unit found on ImageHDU. Please add BUNIT or "
+#                        "FLUXUNIT to the header.")
 #
 #     return unit
