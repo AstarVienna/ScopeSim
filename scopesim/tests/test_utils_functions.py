@@ -1,7 +1,5 @@
 """Unit tests for module scopesim.utils"""
 
-from pathlib import Path
-import logging
 import pytest
 from unittest.mock import patch
 
