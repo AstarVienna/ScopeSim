@@ -20,6 +20,8 @@ from astropy import units as u
 from astropy.io import fits
 from astropy.table import Column, Table
 
+from astar_utils import get_logger
+
 from . import rc
 
 
@@ -371,10 +373,6 @@ def angle_in_arcseconds(distance, width):
     Units must be consistent!
     """
     return np.arctan2(width, distance) * u.rad.to(u.arcsec)
-
-
-def get_logger(name: str):
-    return logging.getLogger("astar." + name)
 
 
 def _get_required_packages():
