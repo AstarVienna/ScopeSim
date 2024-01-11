@@ -1,4 +1,5 @@
 import logging
+from collections.abc import Iterable
 
 import numpy as np
 from astropy import wcs, units as u
@@ -146,8 +147,10 @@ def make_imagehdu_from_table(x, y, flux, pix_scale=1*u.arcsec):
     yint, xint  = ypix.astype(int), xpix.astype(int)
 
     image = np.zeros((np.max(xint) + 1, np.max(yint) + 1))
-    for ii in range(len(xint)):
-        image[xint[ii], yint[ii]] += flux[ii]
+    for xi, yi, fluxi in zip(xint, yint, flux):
+        # To prevent adding array values in this manner.
+        assert not isinstance(xi, Iterable), "xi should be integer"
+        image[xi, yi] += fluxi
 
     hdu = fits.ImageHDU(data=image)
     hdu.header.extend(the_wcs.to_header())

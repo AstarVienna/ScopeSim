@@ -2,6 +2,7 @@
 import logging
 from typing import Tuple
 from itertools import product
+from collections.abc import Iterable
 
 import numpy as np
 from astropy import units as u
@@ -328,6 +329,8 @@ def _add_intpixel_sources_to_canvas(canvas_hdu, xpix, ypix, flux, mask):
     canvas_hdu.header["comment"] = f"Adding {len(flux)} int-pixel files"
     for xpx, ypx, flx, msk in zip(xpix.astype(int), ypix.astype(int),
                                   flux, mask):
+        # To prevent adding array values in this manner.
+        assert not isinstance(xpx, Iterable), "xpx should be integer"
         canvas_hdu.data[ypx, xpx] += flx.value * msk
 
     return canvas_hdu
@@ -341,6 +344,8 @@ def _add_subpixel_sources_to_canvas(canvas_hdu, xpix, ypix, flux, mask):
             xx, yy, fracs = sub_pixel_fractions(xpx, ypx)
             for x, y, frac in zip(xx, yy, fracs):
                 if y < canvas_shape[0] and x < canvas_shape[1]:
+                    # To prevent adding array values in this manner.
+                    assert not isinstance(x, Iterable), "x should be integer"
                     canvas_hdu.data[y, x] += frac * flx.value
 
     return canvas_hdu
