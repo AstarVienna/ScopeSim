@@ -784,8 +784,8 @@ def unit_from_table(colname: str, table: Table,
         return u.Unit(com_tbl[colname_u])
 
     tbl_name = table.meta.get("name", table.meta.get("filename"))
-    logger.info("%s_unit was not found in table.meta: %s. Default to: %s",
-                colname, tbl_name, default_unit)
+    logger.debug("%s_unit was not found in table.meta: %s. Default to: %s",
+                 colname, tbl_name, default_unit)
 
     return u.Unit(default_unit)
 
