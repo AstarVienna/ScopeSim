@@ -141,6 +141,21 @@ doc = ["doc8", "sphinx (>=7.0.0)", "sphinx-autobuild", "sphinx-autodoc-typehints
 test = ["dateparser (==1.*)", "pre-commit", "pytest", "pytest-cov", "pytest-mock", "pytz (==2021.1)", "simplejson (==3.*)"]
 
 [[package]]
+name = "astar-utils"
+version = "0.2.0b0"
+description = "Contains commonly-used utilities for AstarVienna's projects."
+optional = false
+python-versions = ">=3.9,<4.0"
+files = [
+    {file = "astar_utils-0.2.0b0-py3-none-any.whl", hash = "sha256:4a47a188edb3156ee45e0bfdc211350c9553c3c69aad1ce9872bb0b2c9ec7044"},
+    {file = "astar_utils-0.2.0b0.tar.gz", hash = "sha256:b45322ca89dff98e89828bfe0f1cd6a04fe3fafb5f49dc5a42ce1431328a8e5e"},
+]
+
+[package.dependencies]
+more-itertools = ">=10.1.0,<11.0.0"
+pyyaml = ">=6.0.1,<7.0.0"
+
+[[package]]
 name = "astropy"
 version = "5.3.3"
 description = "Astronomy and astrophysics core library"
@@ -3696,4 +3711,4 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "p
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.9"
-content-hash = "6fabbcb30c56e58c4c643e2478ed9cc38bd2b815d3f318452b070e39c2fc493d"
+content-hash = "db0d8ac00666a493c6c939f6b621d50c7a8b7c44cecd257adbc2671163b95f21"

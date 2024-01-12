@@ -37,6 +37,7 @@ tqdm = "^4.66.1"
 synphot = "^1.2.1"
 skycalc_ipy = "^0.3.0"
 anisocado = "^0.3.0"
+astar-utils = {version = "^0.2.0b0", allow-prereleases = true}
 
 [tool.poetry.group.dev]
 optional = true
