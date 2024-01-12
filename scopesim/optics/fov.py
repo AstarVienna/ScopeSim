@@ -3,6 +3,7 @@
 import logging
 from copy import deepcopy
 from itertools import chain
+from collections.abc import Iterable
 
 import numpy as np
 from scipy.interpolate import interp1d
@@ -389,13 +390,28 @@ class FieldOfView(FieldOfViewBase):
 
         for flux, weight, x, y in self._make_image_tablefields(fluxes):
             if utils.from_currsys(self.meta["sub_pixel"]):
+                # These x and y should not be arrays when sub_pixel is
+                # enabled, it is therefore not necessary to deploy the fix
+                # below in the else-branch.
+                assert not isinstance(x, Iterable), "x must be an integer"
                 canvas_image_hdu.data[y, x] += flux * weight
             else:
                 # Mask out any stars that were pushed out of the fov by rounding
                 mask = ((x < canvas_image_hdu.data.shape[1]) *
                         (y < canvas_image_hdu.data.shape[0]))
-                canvas_image_hdu.data[y[mask], x[mask]
-                                      ] += flux[mask] * weight[mask]
+
+                # This used to contain this line:
+                #   canvas_image_hdu.data[y[mask], x[mask]] += flux[mask] * weight[mask]
+                # However, that is wrong when there are duplicate (x, y) pairs.
+                # In those cases, only the last source flux is added to the
+                # pixel. Therefor it is necessary to iterate over the sources.
+                # The stacking of stars is tested by TestStackedStars in
+                # test_flux_is_conserved_through_full_system.py
+
+                for yi, xi, fluxi, weighti in zip(
+                        y[mask], x[mask], flux[mask], weight[mask]):
+                    canvas_image_hdu.data[yi, xi] += fluxi * weighti
+
 
         canvas_image_hdu.data = sum(self._make_image_backfields(fluxes),
                                     start=canvas_image_hdu.data)
@@ -581,6 +597,8 @@ class FieldOfView(FieldOfViewBase):
                                    start=canvas_cube_hdu.data)
 
         for flux, x, y in self._make_cube_tablefields(specs):
+            # To prevent adding array values in this manner.
+            assert not isinstance(x, Iterable), "x should be integer"
             canvas_cube_hdu.data[:, y, x] += flux
 
         canvas_cube_hdu.data = sum(self._make_cube_backfields(specs),
