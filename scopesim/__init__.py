@@ -1,10 +1,10 @@
-"Generalised telescope observation simulator."
+"""Generalised telescope observation simulator."""
 
 ###############################################################################
 #                            TURN OFF WARNINGS                                #
 ###############################################################################
-import sys
 import logging
+import logging.config
 import warnings
 import yaml
 from importlib import metadata
@@ -26,31 +26,11 @@ from . import rc
 #                         SET BASIC LOGGING LEVEL                             #
 ###############################################################################
 
-# TODO: this should be replaced with YAML-based config!! see prepipy
-
 # This should be part of ScopeSim (the app) and not scopesim_core eventually
+# TODO: need to add a function to reload the config!
 
-top_logger = logging.getLogger("astar")
-top_logger.setLevel(logging.WARNING)
-sim_logger = top_logger.getChild(__package__)
-sim_logger.setLevel(logging.DEBUG)
-top_logger.propagate = False
-formatter = logging.Formatter("%(name)s - %(levelname)s: %(message)s")
-
-log_dict = rc.__config__["!SIM.logging"]
-if log_dict["log_to_file"]:
-    file_handler = logging.FileHandler(log_dict["file_path"],
-                                       log_dict["file_open_mode"])
-    file_handler.setLevel(log_dict["file_level"])  # DEBUG
-    file_handler.setFormatter(formatter)
-    top_logger.addHandler(file_handler)
-
-if log_dict["log_to_console"]:
-    stdout_handler = logging.StreamHandler(sys.stdout)
-    stdout_handler.setLevel(log_dict["console_level"])  # INFO
-    stdout_handler.setFormatter(formatter)
-    top_logger.addHandler(stdout_handler)
-
+logging.config.dictConfig(rc.__config__["!SIM.logging"])
+logging.captureWarnings(True)
 
 ###############################################################################
 #                         IMPORT PACKAGE MODULES                              #
