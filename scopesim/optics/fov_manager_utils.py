@@ -1,4 +1,3 @@
-import logging
 from copy import deepcopy
 from itertools import product
 from more_itertools import pairwise
@@ -10,9 +9,12 @@ from . import image_plane_utils as imp_utils
 from .fov import FieldOfView
 from .. import effects as efs
 from ..effects.effects_utils import get_all_effects
-from ..utils import check_keys
+from ..utils import check_keys, get_logger
 
 # TODO: Where are all these functions used??
+
+
+logger = get_logger(__name__)
 
 
 def get_3d_shifts(effects, **kwargs):
@@ -260,7 +262,7 @@ def get_imaging_fovs(headers, waveset, shifts, **kwargs):
     # Actually evaluating the generators here is only necessary for the log msg
     waveset = list(waveset)
     headers = list(headers)
-    logging.info("Preparing %d FieldOfViews", (len(waveset) - 1) * len(headers))
+    logger.info("Preparing %d FieldOfViews", (len(waveset) - 1) * len(headers))
 
     combos = product(pairwise(waveset), headers)
     for fov_id, ((wave_min, wave_max), hdr) in enumerate(combos):
@@ -347,7 +349,7 @@ def get_spectroscopy_fovs(headers, shifts, effects=None, **kwargs):
     shift_dx = shifts["x_shifts"]           # in [deg]
     shift_dy = shifts["y_shifts"]
 
-    logging.info("Preparing %d FieldOfViews", len(headers))
+    logger.info("Preparing %d FieldOfViews", len(headers))
 
     apertures = get_all_effects(effects, (efs.ApertureList, efs.ApertureMask))
     masks = [ap.fov_grid(which="masks") for ap in apertures]

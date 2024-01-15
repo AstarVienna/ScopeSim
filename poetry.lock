@@ -141,6 +141,21 @@ doc = ["doc8", "sphinx (>=7.0.0)", "sphinx-autobuild", "sphinx-autodoc-typehints
 test = ["dateparser (==1.*)", "pre-commit", "pytest", "pytest-cov", "pytest-mock", "pytz (==2021.1)", "simplejson (==3.*)"]
 
 [[package]]
+name = "astar-utils"
+version = "0.2.0b0"
+description = "Contains commonly-used utilities for AstarVienna's projects."
+optional = false
+python-versions = ">=3.9,<4.0"
+files = [
+    {file = "astar_utils-0.2.0b0-py3-none-any.whl", hash = "sha256:4a47a188edb3156ee45e0bfdc211350c9553c3c69aad1ce9872bb0b2c9ec7044"},
+    {file = "astar_utils-0.2.0b0.tar.gz", hash = "sha256:b45322ca89dff98e89828bfe0f1cd6a04fe3fafb5f49dc5a42ce1431328a8e5e"},
+]
+
+[package.dependencies]
+more-itertools = ">=10.1.0,<11.0.0"
+pyyaml = ">=6.0.1,<7.0.0"
+
+[[package]]
 name = "astropy"
 version = "5.3.3"
 description = "Astronomy and astrophysics core library"
@@ -1909,13 +1924,13 @@ files = [
 
 [[package]]
 name = "more-itertools"
-version = "9.0.0"
+version = "10.1.0"
 description = "More routines for operating on iterables, beyond itertools"
 optional = false
-python-versions = ">=3.7"
+python-versions = ">=3.8"
 files = [
-    {file = "more-itertools-9.0.0.tar.gz", hash = "sha256:5a6257e40878ef0520b1803990e3e22303a41b5714006c32a3fd8304b26ea1ab"},
-    {file = "more_itertools-9.0.0-py3-none-any.whl", hash = "sha256:250e83d7e81d0c87ca6bd942e6aeab8cc9daa6096d12c5308f3f92fa5e5c1f41"},
+    {file = "more-itertools-10.1.0.tar.gz", hash = "sha256:626c369fa0eb37bac0291bce8259b332fd59ac792fa5497b59837309cd5b114a"},
+    {file = "more_itertools-10.1.0-py3-none-any.whl", hash = "sha256:64e0735fcfdc6f3464ea133afe8ea4483b1c5fe3a3d69852e6503b43a0b222e6"},
 ]
 
 [[package]]
@@ -3696,4 +3711,4 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "p
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.9"
-content-hash = "8ca449a3d76211029c22ccda783abae5d17c4acc30e87b8aa7ad3a8010a96ca8"
+content-hash = "db0d8ac00666a493c6c939f6b621d50c7a8b7c44cecd257adbc2671163b95f21"

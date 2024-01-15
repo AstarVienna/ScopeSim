@@ -1,8 +1,8 @@
-"""The Instrument data simulator for MICADO on the E-ELT"""
+"Generalised telescope observation simulator."
 
-################################################################################
-#                            TURN OFF WARNINGS                                 #
-################################################################################
+###############################################################################
+#                            TURN OFF WARNINGS                                #
+###############################################################################
 import sys
 import logging
 import warnings
@@ -12,43 +12,48 @@ from astropy.utils.exceptions import AstropyWarning
 
 warnings.simplefilter('ignore', UserWarning)
 warnings.simplefilter('ignore', FutureWarning)
-warnings.simplefilter('ignore', RuntimeWarning)     # warnings for the developer
+warnings.simplefilter('ignore', RuntimeWarning)    # warnings for the developer
 warnings.simplefilter('ignore', category=AstropyWarning)
 yaml.warnings({'YAMLLoadWarning': False})
 
-################################################################################
-#                         PACKAGE GLOBAL VARIABLES                             #
-################################################################################
+###############################################################################
+#                         PACKAGE GLOBAL VARIABLES                            #
+###############################################################################
 
 from . import rc
 
-################################################################################
-#                         SET BASIC LOGGING LEVEL                              #
-################################################################################
+###############################################################################
+#                         SET BASIC LOGGING LEVEL                             #
+###############################################################################
 
-root = logging.getLogger()
-root.setLevel("DEBUG")            # DEBUG
+# TODO: this should be replaced with YAML-based config!! see prepipy
 
-if rc.__config__["!SIM.logging.log_to_file"] is True:
-    file_path = rc.__config__["!SIM.logging.file_path"]
-    write_mode = rc.__config__["!SIM.logging.file_open_mode"]
-    file_handler = logging.FileHandler(file_path, write_mode)
-    file_handler.setLevel(rc.__config__["!SIM.logging.file_level"])  # DEBUG
-    formatter = logging.Formatter('%(levelname)s - %(message)s')
+# This should be part of ScopeSim (the app) and not scopesim_core eventually
+
+top_logger = logging.getLogger("astar")
+top_logger.setLevel(logging.WARNING)
+sim_logger = top_logger.getChild(__package__)
+sim_logger.setLevel(logging.DEBUG)
+formatter = logging.Formatter("%(name)s - %(levelname)s: %(message)s")
+
+log_dict = rc.__config__["!SIM.logging"]
+if log_dict["log_to_file"]:
+    file_handler = logging.FileHandler(log_dict["file_path"],
+                                       log_dict["file_open_mode"])
+    file_handler.setLevel(log_dict["file_level"])  # DEBUG
     file_handler.setFormatter(formatter)
-    root.addHandler(file_handler)
+    top_logger.addHandler(file_handler)
 
-if rc.__config__["!SIM.logging.log_to_console"] is True:
+if log_dict["log_to_console"]:
     stdout_handler = logging.StreamHandler(sys.stdout)
-    stdout_handler.setLevel(rc.__config__["!SIM.logging.console_level"])  # WARNING
-    formatter = logging.Formatter('%(levelname)s - %(message)s')
+    stdout_handler.setLevel(log_dict["console_level"])  # INFO
     stdout_handler.setFormatter(formatter)
-    root.addHandler(stdout_handler)
+    top_logger.addHandler(stdout_handler)
 
 
-################################################################################
-#                         IMPORT PACKAGE MODULES                               #
-################################################################################
+###############################################################################
+#                         IMPORT PACKAGE MODULES                              #
+###############################################################################
 
 # Import all the modules to go under ScopeSim
 
@@ -72,8 +77,8 @@ from .server.database import (list_packages, download_packages, download_package
 
 from .tests.mocks.load_basic_instrument import load_example_optical_train
 
-################################################################################
-#                          VERSION INFORMATION                                 #
-################################################################################
+###############################################################################
+#                          VERSION INFORMATION                                #
+###############################################################################
 
 __version__ = metadata.version(__package__)

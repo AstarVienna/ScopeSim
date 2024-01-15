@@ -20,7 +20,13 @@ from astropy import units as u
 from astropy.io import fits
 from astropy.table import Column, Table
 
+from astar_utils import get_logger
+
 from . import rc
+
+
+logger = get_logger(__name__)
+bug_logger = get_logger("bug_report")
 
 
 def unify(x, unit, length=1):
@@ -373,51 +379,6 @@ def angle_in_arcseconds(distance, width):
     return np.arctan2(width, distance) * u.rad.to(u.arcsec)
 
 
-def setup_loggers(**kwargs):
-    """
-    Set up both console and file loggers.
-
-    Acceptable parameters are the same as the ``!SIM.logging`` sub dictionary
-
-    """
-    logd = rc.__currsys__["!SIM.logging"]
-    logd.update(kwargs)
-
-    logger = logging.getLogger()
-    hdlr_names = [hdlr.name for hdlr in logger.handlers]
-
-    if logd["log_to_file"] and "scopesim_file_logger" not in hdlr_names:
-        f_handler = logging.FileHandler(logd["file_path"],
-                                        logd["file_open_mode"])
-        f_handler.name = "scopesim_file_logger"
-        f_handler.setLevel(logd["file_level"])
-        logger.addHandler(f_handler)
-
-    if logd["log_to_console"] and "scopesim_console_logger" not in hdlr_names:
-        s_handler = logging.StreamHandler(sys.stdout)
-        s_handler.name = "scopesim_console_logger"
-        s_handler.setLevel(logd["console_level"])
-        logger.addHandler(s_handler)
-
-
-def set_logger_level(which="console", level="ERROR"):
-    """
-    Set the level of logging for either the console or file logger.
-
-    Parameters
-    ----------
-    which : {"console", "file"}
-    level : {"ON", "OFF", "DEBUG", "INFO", "WARN", "ERROR", "CRITICAL"}
-    """
-    hdlr_name = f"scopesim_{which}_logger"
-    level = {"ON": "INFO", "OFF": "CRITICAL"}.get(level.upper(), level)
-    logger = logging.getLogger()
-    logger.setLevel(level)
-    for hdlr in logger.handlers:
-        if hdlr.name == hdlr_name:
-            hdlr.setLevel(level)
-
-
 def _get_required_packages():
     reqs = metadata.requires(__package__)
     for req in reqs:
@@ -494,7 +455,7 @@ def log_bug_report(level=logging.DEBUG) -> None:
     """Emit bug report as logging message."""
     with StringIO() as str_stream:
         _write_bug_report(str_stream)
-        logging.log(level, str_stream.getvalue())
+        bug_logger.log(level, str_stream.getvalue())
 
 
 def find_file(filename, path=None, silent=False):
@@ -547,7 +508,7 @@ def find_file(filename, path=None, silent=False):
     # no file found
     msg = f"File cannot be found: {filename}"
     if not silent:
-        logging.error(msg)
+        logger.error(msg)
 
     if from_currsys("!SIM.file.error_on_missing_file"):
         raise ValueError(msg)
@@ -592,16 +553,16 @@ def convert_table_comments_to_dict(tbl):
             comments_str = "\n".join(tbl.meta["comments"])
             comments_dict = yaml.full_load(comments_str)
         except yaml.error.YAMLError:
-            logging.warning("Couldn't convert <table>.meta['comments'] to dict")
+            logger.warning("Couldn't convert <table>.meta['comments'] to dict")
             comments_dict = tbl.meta["comments"]
     elif "COMMENT" in tbl.meta:
         try:
             comments_dict = yaml.full_load("\n".join(tbl.meta["COMMENT"]))
         except yaml.error.YAMLError:
-            logging.warning("Couldn't convert <table>.meta['COMMENT'] to dict")
+            logger.warning("Couldn't convert <table>.meta['COMMENT'] to dict")
             comments_dict = tbl.meta["COMMENT"]
     else:
-        logging.debug("No comments in table")
+        logger.debug("No comments in table")
 
     return comments_dict
 
@@ -633,7 +594,7 @@ def real_colname(name, colnames, silent=True):
     if not real_name:
         real_name = None
         if not silent:
-            logging.warning("None of %s were found in %s", names, colnames)
+            logger.warning("None of %s were found in %s", names, colnames)
     else:
         real_name = real_name[0]
 
@@ -823,7 +784,7 @@ def unit_from_table(colname: str, table: Table,
         return u.Unit(com_tbl[colname_u])
 
     tbl_name = table.meta.get("name", table.meta.get("filename"))
-    logging.info(("%s_unit was not found in table.meta: %s. Default to: %s"),
+    logger.debug("%s_unit was not found in table.meta: %s. Default to: %s",
                  colname, tbl_name, default_unit)
 
     return u.Unit(default_unit)
@@ -929,9 +890,9 @@ def check_keys(input_dict, required_keys, action="error", all_any="all"):
                              f"input_dict: \n{required_keys} "
                              f"\n{input_dict.keys()}")
         if "warn" in action:
-            logging.warning(("One or more of the following keys missing "
-                             "from input_dict: \n%s \n%s"), required_keys,
-                            input_dict.keys())
+            logger.warning(
+                "One or more of the following keys missing from input_dict: "
+                "\n%s \n%s", required_keys, input_dict.keys())
 
     return keys_present
 
@@ -1053,15 +1014,15 @@ def top_level_catch(func):
             output = func(*args, **kwargs)
         except Exception as err:
             # FIXME: This try-except should not be necessary, but
-            # logging.exception has an issue in some versions.
+            # logger.exception has an issue in some versions.
             try:
-                logging.exception(
+                bug_logger.exception(
                     "Unhandled exception occured, see log file for details.")
             except TypeError:
-                logging.error(
+                bug_logger.error(
                     "Unhandled exception occured, see log file for details.")
-                logging.error("Couldn't log full exception stack.")
-                logging.error("Error message was: '%s'", err)
+                bug_logger.error("Couldn't log full exception stack.")
+                bug_logger.error("Error message was: '%s'", err)
             log_bug_report(logging.ERROR)
             raise
         return output

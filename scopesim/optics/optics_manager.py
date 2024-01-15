@@ -1,4 +1,4 @@
-import logging
+
 from inspect import isclass
 from typing import TextIO
 from io import StringIO
@@ -13,9 +13,12 @@ from .optical_element import OpticalElement
 from .. import effects as efs
 from ..effects.effects_utils import is_spectroscope
 from ..effects.effects_utils import combine_surface_effects
-from ..utils import write_report, from_currsys
+from ..utils import write_report, from_currsys, get_logger
 from ..reports.rst_utils import table_to_rst
 from .. import rc
+
+
+logger = get_logger(__name__)
 
 
 class OpticsManager:
@@ -356,7 +359,7 @@ Summary of Effects in Optical Elements:
     def __setitem__(self, key, value):
         obj = self.__getitem__(key)
         if isinstance(obj, list) and len(obj) > 1:
-            logging.warning("%s does not return a singular object:\n %s", key, obj)
+            logger.warning("%s does not return a singular object:\n %s", key, obj)
         elif isinstance(obj, efs.Effect) and isinstance(value, dict):
             obj.meta.update(value)
 

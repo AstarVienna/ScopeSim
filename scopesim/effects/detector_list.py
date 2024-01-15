@@ -1,7 +1,5 @@
 """TBA."""
 
-import logging
-
 import numpy as np
 from astropy import units as u
 from astropy.table import Table
@@ -9,9 +7,11 @@ from astropy.table import Table
 from ..base_classes import FOVSetupBase
 from .effects import Effect
 from .apertures import ApertureMask
-from .. import utils
-from ..utils import close_loop, figure_factory
 from ..optics.image_plane_utils import header_from_list_of_xy, calc_footprint
+from ..utils import (from_currsys, close_loop, figure_factory,
+                     quantity_from_table, unit_from_table, get_logger)
+
+logger = get_logger(__name__)
 
 __all__ = ["DetectorList", "DetectorWindow"]
 
@@ -141,7 +141,7 @@ class DetectorList(Effect):
             xy_mm = calc_footprint(hdr, "D")
             pixel_size = hdr["CDELT1D"]              # mm
             pixel_scale = kwargs.get("pixel_scale", self.meta["pixel_scale"])   # ["]
-            pixel_scale = utils.from_currsys(pixel_scale)
+            pixel_scale = from_currsys(pixel_scale)
 
             # x["] = x[mm] * ["] / [mm]
             xy_sky = xy_mm * pixel_scale / pixel_size
@@ -158,11 +158,11 @@ class DetectorList(Effect):
 
     def fov_grid(self, which="edges", **kwargs):
         """Return an ApertureMask object. kwargs are "pixel_scale" [arcsec]."""
-        logging.warning("DetectorList.fov_grid will be depreciated in v1.0")
+        logger.warning("DetectorList.fov_grid will be depreciated in v1.0")
         aperture_mask = None
         if which == "edges":
             self.meta.update(kwargs)
-            self.meta = utils.from_currsys(self.meta)
+            self.meta = from_currsys(self.meta)
 
             hdr = self.image_plane_header
             xy_mm = calc_footprint(hdr, "D")
@@ -181,9 +181,9 @@ class DetectorList(Effect):
     @property
     def image_plane_header(self):
         tbl = self.active_table
-        pixel_size = np.min(utils.quantity_from_table("pixel_size", tbl, u.mm))
-        x_unit = utils.unit_from_table("x_size", tbl, u.mm)
-        y_unit = utils.unit_from_table("y_size", tbl, u.mm)
+        pixel_size = np.min(quantity_from_table("pixel_size", tbl, u.mm))
+        x_unit = unit_from_table("x_size", tbl, u.mm)
+        y_unit = unit_from_table("y_size", tbl, u.mm)
 
         xcen = tbl["x_cen"].data.astype(float)
         ycen = tbl["y_cen"].data.astype(float)
@@ -221,7 +221,7 @@ class DetectorList(Effect):
         else:
             raise ValueError("Could not determine which detectors are active: "
                              f"{self.meta['active_detectors']}, {self.table},")
-        tbl = utils.from_currsys(tbl)
+        tbl = from_currsys(tbl)
 
         return tbl
 
@@ -229,7 +229,7 @@ class DetectorList(Effect):
         if ids is not None and all(isinstance(ii, int) for ii in ids):
             self.meta["active_detectors"] = list(ids)
 
-        tbl = utils.from_currsys(self.active_table)
+        tbl = from_currsys(self.active_table)
         hdrs = []
         for row in tbl:
             pixel_size = row["pixel_size"]

@@ -1,7 +1,5 @@
 """Unit tests for module scopesim.utils"""
 
-from pathlib import Path
-import logging
 import pytest
 from unittest.mock import patch
 
@@ -192,39 +190,6 @@ class TestFromCurrSys:
                     names=["seeds", "seeds2"])
         assert utils.from_currsys(tbl["seeds2"][1]) is None
 
-
-class TestSetupLoggers:
-    def test_no_loggers_present_in_initial_scopesim_load(self):
-        hdlrs = logging.getLogger().handlers
-
-        assert not any([hdlr.name == "scopesim_file_logger" for hdlr in hdlrs])
-
-    def test_setup_loggers_has_no_loggers(self):
-        utils.setup_loggers(log_to_file=False, log_to_console=False)
-        hdlrs = logging.getLogger().handlers
-
-        assert not any([hdlr.name == "scopesim_file_logger" for hdlr in hdlrs])
-
-    def test_log_file_exist_when_file_logging_turned_on(self):
-        utils.setup_loggers(log_to_file=True)
-        filepath = Path(rc.__config__["!SIM.logging.file_path"])
-        level = rc.__config__["!SIM.logging.file_level"]
-        f_handler = logging.getLogger().handlers[-1]
-
-        assert filepath.exists()
-        assert f_handler.level == logging._checkLevel(level)
-
-        logging.shutdown()
-        filepath.unlink()
-
-    def test_console_logger_has_output(self, capsys):
-        utils.setup_loggers(log_to_console=True)
-        utils.set_logger_level("console", "INFO")
-        logging.info("Hello World!")
-        captured = capsys.readouterr()
-        assert "Hello World!" in captured.out
-
-        logging.shutdown()
 
 
 # load_example_optical_train modifies __currsys__!

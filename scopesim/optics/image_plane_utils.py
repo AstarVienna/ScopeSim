@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-import logging
+
 from typing import Tuple
 from itertools import product
 from collections.abc import Iterable
@@ -12,7 +12,11 @@ from astropy.table import Table
 from astropy.utils.exceptions import AstropyWarning
 from scipy import ndimage as ndi
 
-from .. import utils
+from ..utils import (unit_from_table, quantity_from_table, has_needed_keywords,
+                     get_logger)
+
+
+logger = get_logger(__name__)
 
 
 def get_canvas_header(hdu_or_table_list, pixel_scale=1 * u.arcsec):
@@ -57,7 +61,7 @@ def get_canvas_header(hdu_or_table_list, pixel_scale=1 * u.arcsec):
     headers = list(_get_headers(hdu_or_table_list))
 
     if not headers:
-        logging.warning("No tables or ImageHDUs were passed")
+        logger.warning("No tables or ImageHDUs were passed")
         return None
 
     hdr = _make_bounding_header_from_headers(*headers, pixel_scale=pixel_scale)
@@ -67,8 +71,8 @@ def get_canvas_header(hdu_or_table_list, pixel_scale=1 * u.arcsec):
         raise MemoryError(size_warning.format(adverb="too", num_pix=num_pix,
                                               size="8 GB"))
     if num_pix > 2 ** 25:  # 2 * 4096**2
-        logging.warning(size_warning.format(adverb="", num_pix=num_pix,
-                                            size="256 MB"))
+        logger.warning(size_warning.format(adverb="", num_pix=num_pix,
+                                           size="256 MB"))
     return hdr
 
 
@@ -288,22 +292,18 @@ def add_table_to_imagehdu(table: Table, canvas_hdu: fits.ImageHDU,
 
     """
     s = wcs_suffix
-    if not utils.has_needed_keywords(canvas_hdu.header, s):
+    if not has_needed_keywords(canvas_hdu.header, s):
         raise ValueError(f"canvas_hdu must include an appropriate WCS: {s}")
 
-    f = utils.quantity_from_table("flux", table, default_unit=u.Unit("ph s-1"))
+    f = quantity_from_table("flux", table, default_unit=u.Unit("ph s-1"))
     if s == "D":
-        x = utils.quantity_from_table("x_mm", table,
-                                      default_unit=u.mm).to(u.mm)
-        y = utils.quantity_from_table("y_mm", table,
-                                      default_unit=u.mm).to(u.mm)
+        x = quantity_from_table("x_mm", table, default_unit=u.mm).to(u.mm)
+        y = quantity_from_table("y_mm", table, default_unit=u.mm).to(u.mm)
     else:
         arcsec = u.arcsec
         canvas_unit = u.Unit(canvas_hdu.header[f"CUNIT1{s}"])
-        x = utils.quantity_from_table("x", table,
-                                      default_unit=arcsec.to(canvas_unit))
-        y = utils.quantity_from_table("y", table,
-                                      default_unit=arcsec.to(canvas_unit))
+        x = quantity_from_table("x", table, default_unit=arcsec.to(canvas_unit))
+        y = quantity_from_table("y", table, default_unit=arcsec.to(canvas_unit))
         x *= arcsec.to(canvas_unit)
         y *= arcsec.to(canvas_unit)
 
@@ -491,12 +491,12 @@ def rescale_imagehdu(imagehdu: fits.ImageHDU, pixel_scale: float,
         # zoom = np.append(zoom, [1])
         zoom[2] = 1.
     if primary_wcs.naxis != imagehdu.data.ndim:
-        logging.warning("imagehdu.data.ndim is %d, but primary_wcs.naxis with "
+        logger.warning("imagehdu.data.ndim is %d, but primary_wcs.naxis with "
                         "key %s is %d, both should be equal.",
                         imagehdu.data.ndim, wcs_suffix, primary_wcs.naxis)
         zoom = zoom[:2]
 
-    logging.debug("zoom %s", zoom)
+    logger.debug("zoom %s", zoom)
 
     if all(zoom == 1.):
         # Nothing to do
@@ -519,18 +519,18 @@ def rescale_imagehdu(imagehdu: fits.ImageHDU, pixel_scale: float,
         ww = WCS(imagehdu.header, key=key)
 
         if ww.naxis != imagehdu.data.ndim:
-            logging.warning("imagehdu.data.ndim is %d, but wcs.naxis with key "
-                            "%s is %d, both should be equal.",
-                            imagehdu.data.ndim, key, ww.naxis)
+            logger.warning("imagehdu.data.ndim is %d, but wcs.naxis with key "
+                           "%s is %d, both should be equal.",
+                           imagehdu.data.ndim, key, ww.naxis)
             # TODO: could this be ww = ww.sub(2) instead? or .celestial?
             ww = WCS(imagehdu.header, key=key, naxis=imagehdu.data.ndim)
 
         if any(ctype != "LINEAR" for ctype in ww.wcs.ctype):
-            logging.warning("Non-linear WCS rescaled using linear procedure.")
+            logger.warning("Non-linear WCS rescaled using linear procedure.")
 
         new_crpix = (zoom + 1) / 2 + (ww.wcs.crpix - 1) * zoom
         new_crpix = np.round(new_crpix * 2) / 2  # round to nearest half-pixel
-        logging.debug("new crpix %s", new_crpix)
+        logger.debug("new crpix %s", new_crpix)
         ww.wcs.crpix = new_crpix
 
         # Keep CDELT3 if cube...
@@ -604,9 +604,9 @@ def reorient_imagehdu(imagehdu: fits.ImageHDU, wcs_suffix: str = "",
         imagehdu.header = hdr
 
     elif any("PC1_1" in key for key in imagehdu.header):
-        logging.warning(("PC Keywords were found, but not used due to "
-                         "different wcs_suffix given: %s \n %s"),
-                        wcs_suffix, dict(imagehdu.header))
+        logger.warning(("PC Keywords were found, but not used due to "
+                        "different wcs_suffix given: %s \n %s"),
+                       wcs_suffix, dict(imagehdu.header))
 
     return imagehdu
 
@@ -742,7 +742,8 @@ def add_imagehdu_to_imagehdu(image_hdu: fits.ImageHDU,
                                wcs_suffix=canvas_wcs.wcs.alt,
                                spline_order=spline_order,
                                conserve_flux=conserve_flux)
-    # logging.debug("fromrescale %s", WCS(new_hdu.header, key=canvas_wcs.wcs.alt))
+    # TODO: Perhaps add separately formatted WCS logger?
+    # logger.debug("fromrescale %s", WCS(new_hdu.header, key=canvas_wcs.wcs.alt))
     new_hdu = reorient_imagehdu(new_hdu,
                                 wcs_suffix=canvas_wcs.wcs.alt,
                                 spline_order=spline_order,
@@ -756,12 +757,12 @@ def add_imagehdu_to_imagehdu(image_hdu: fits.ImageHDU,
     sky_center = new_wcs.wcs_pix2world(img_center, 0)
     if new_wcs.wcs.cunit[0] == "deg":
         sky_center = _fix_360(sky_center)
-    # logging.debug("canvas %s", canvas_wcs)
-    # logging.debug("new %s", new_wcs)
-    logging.debug("sky %s", sky_center)
+    # logger.debug("canvas %s", canvas_wcs)
+    # logger.debug("new %s", new_wcs)
+    logger.debug("sky %s", sky_center)
     sky_center *= conv_fac
     pix_center = canvas_wcs.wcs_world2pix(sky_center, 0)
-    logging.debug("pix %s", pix_center)
+    logger.debug("pix %s", pix_center)
 
     canvas_hdu.data = overlay_image(new_hdu.data, canvas_hdu.data,
                                     coords=pix_center.squeeze())
@@ -794,7 +795,7 @@ def pix2val(header, x, y, wcs_suffix=""):
         pc11, pc12, pc21, pc22 = 1, 0, 0, 1
 
     if (pc11 * pc22 - pc12 * pc21) != 1.0:
-        logging.error("PC matrix det != 1.0")
+        logger.error("PC matrix det != 1.0")
 
     da = header["CDELT1"+s]
     db = header["CDELT2"+s]
@@ -837,7 +838,7 @@ def val2pix(header, a, b, wcs_suffix=""):
         pc11, pc12, pc21, pc22 = 1, 0, 0, 1
 
     if (pc11 * pc22 - pc12 * pc21) != 1.0:
-        logging.error("PC matrix det != 1.0")
+        logger.error("PC matrix det != 1.0")
 
     da = float(header["CDELT1"+s])
     db = float(header["CDELT2"+s])
@@ -883,8 +884,8 @@ def calc_footprint(header, wcs_suffix="", new_unit: str = None):
     wcs_suffix = wcs_suffix or " "
 
     if isinstance(header, fits.ImageHDU):
-        logging.warning("Passing a HDU to calc_footprint will be deprecated "
-                        "in v1.0. Please pass the header only.")
+        logger.warning("Passing a HDU to calc_footprint will be deprecated "
+                       "in v1.0. Please pass the header only.")
         header = header.header
 
     # TODO: maybe celestial instead??
@@ -953,8 +954,8 @@ def calc_table_footprint(table: Table, x_name: str, y_name: str,
     else:
         padding = 0.
 
-    x_convf = utils.unit_from_table(x_name, table, tbl_unit).to(new_unit)
-    y_convf = utils.unit_from_table(y_name, table, tbl_unit).to(new_unit)
+    x_convf = unit_from_table(x_name, table, tbl_unit).to(new_unit)
+    y_convf = unit_from_table(y_name, table, tbl_unit).to(new_unit)
 
     x_col = table[x_name] * x_convf
     y_col = table[y_name] * y_convf
@@ -1062,17 +1063,17 @@ def det_wcs_from_sky_wcs(sky_wcs: WCS,
     #       Once Scopesim is consistent there, remove astropy units.
     pixel_scale <<= u.arcsec / u.pixel
     plate_scale <<= u.arcsec / u.mm
-    logging.debug("Pixel scale: %s", pixel_scale)
-    logging.debug("Plate scale: %s", plate_scale)
+    logger.debug("Pixel scale: %s", pixel_scale)
+    logger.debug("Plate scale: %s", plate_scale)
 
     pixel_size = pixel_scale / plate_scale
     # TODO: add check if cunit is consistent along all axes
     cunit = sky_wcs.wcs.cunit[0]
     corners = sky_wcs.calc_footprint(center=False, axes=naxis) * cunit
-    logging.debug("WCS sky corners: %s", corners)
+    logger.debug("WCS sky corners: %s", corners)
     corners /= plate_scale
     corners = corners.to(u.mm)
-    logging.debug("WCS det corners: %s", corners)
+    logger.debug("WCS det corners: %s", corners)
 
     return create_wcs_from_points(corners, pixel_size, "D")
 
@@ -1109,15 +1110,15 @@ def sky_wcs_from_det_wcs(det_wcs: WCS,
     #       Once Scopesim is consistent there, remove astropy units.
     pixel_scale <<= u.arcsec / u.pixel
     plate_scale <<= u.arcsec / u.mm
-    logging.debug("Pixel scale: %s", pixel_scale)
-    logging.debug("Plate scale: %s", plate_scale)
+    logger.debug("Pixel scale: %s", pixel_scale)
+    logger.debug("Plate scale: %s", plate_scale)
 
     # TODO: add check if cunit is consistent along all axes
     cunit = det_wcs.wcs.cunit[0]
     corners = det_wcs.calc_footprint(center=False, axes=naxis) * cunit
-    logging.debug("WCS det corners: %s", corners)
+    logger.debug("WCS det corners: %s", corners)
     corners *= plate_scale
     corners = corners.to(u.arcsec)
-    logging.debug("WCS sky corners: %s", corners)
+    logger.debug("WCS sky corners: %s", corners)
 
     return create_wcs_from_points(corners, pixel_scale)

@@ -10,12 +10,15 @@ Original comment for these functions:
 
 """
 
-import logging
 import re
 from pathlib import Path
 from typing import Union
 
 from .download_utils import handle_download, send_get, create_client
+from ..utils import get_logger
+
+
+logger = get_logger(__name__)
 
 
 def create_github_url(url: str) -> None:
@@ -32,7 +35,7 @@ def create_github_url(url: str) -> None:
     if re.match(repo_only_url, url):
         message = ("✘ The given url is a complete repository. Use 'git clone'"
                    " to download the repository")
-        logging.error(message)
+        logger.error(message)
         raise ValueError(message)
 
     # extract the branch name from the given url (e.g master)
@@ -75,4 +78,4 @@ def download_github_folder(repo_url: str,
                 save_path = output_dir / entry["path"]
                 handle_download(client, entry["download_url"], save_path,
                                 entry["path"], padlen=0, disable_bar=True)
-                logging.info("Downloaded: %s", entry["path"])
+                logger.info("Downloaded: %s", entry["path"])

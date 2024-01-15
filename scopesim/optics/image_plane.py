@@ -1,5 +1,4 @@
 import numpy as np
-import logging
 
 from astropy.io import fits
 from astropy.table import Table
@@ -8,8 +7,10 @@ from astropy.wcs import WCS
 from .image_plane_utils import add_table_to_imagehdu, add_imagehdu_to_imagehdu
 
 from ..base_classes import ImagePlaneBase
+from ..utils import from_currsys, has_needed_keywords, get_logger
 from .. import rc
-from .. import utils
+
+logger = get_logger(__name__)
 
 
 class ImagePlane(ImagePlaneBase):
@@ -51,7 +52,7 @@ class ImagePlane(ImagePlaneBase):
         self.meta.update(kwargs)
         self.id = header["IMGPLANE"] if "IMGPLANE" in header else 0
 
-        if not any(utils.has_needed_keywords(header, s)
+        if not any(has_needed_keywords(header, s)
                    for s in ["", "D", "S"]):
             raise ValueError(f"header must have a valid image-plane WCS: "
                              f"{dict(header)}")
@@ -61,9 +62,9 @@ class ImagePlane(ImagePlaneBase):
         self.hdu = fits.ImageHDU(data=image, header=header)
 
         self._det_wcs = self._get_wcs(header, "D")
-        logging.debug("det %s", self._det_wcs)
+        logger.debug("det %s", self._det_wcs)
         self._sky_wcs = self._get_wcs(header, " ")
-        logging.debug("sky %s", self._sky_wcs)
+        logger.debug("sky %s", self._sky_wcs)
 
     def add(self, hdus_or_tables, sub_pixel=None, spline_order=None,
             wcs_suffix=""):
@@ -108,9 +109,9 @@ class ImagePlane(ImagePlaneBase):
 
         """
         if sub_pixel is None:
-            sub_pixel = utils.from_currsys("!SIM.sub_pixel.flag")
+            sub_pixel = from_currsys("!SIM.sub_pixel.flag")
         if spline_order is None:
-            spline_order = utils.from_currsys("!SIM.computing.spline_order")
+            spline_order = from_currsys("!SIM.computing.spline_order")
 
         if isinstance(hdus_or_tables, (list, tuple)):
             for hdu_or_table in hdus_or_tables:
