@@ -26,3 +26,9 @@ jobs:
     name: Network tests
     uses: AstarVienna/DevOps/.github/workflows/webtests.yml@poetry
     secrets: inherit
+
+  call-notebooks-with-clone:
+    name: Notebook tests
+    uses: ./.github/workflows/notebooks_dispatch.yml
+    with:
+      clone-irdb: true
