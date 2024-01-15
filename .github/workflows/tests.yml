@@ -27,6 +27,11 @@ jobs:
     uses: AstarVienna/DevOps/.github/workflows/webtests.yml@poetry
     secrets: inherit
 
+  call-updated-tests:
+    name: Tests with updated dependencies
+    uses: AstarVienna/DevOps/.github/workflows/updated_tests.yml@poetry
+    secrets: inherit
+
   call-notebooks-with-clone:
     name: Notebook tests
     uses: ./.github/workflows/notebooks_dispatch.yml
