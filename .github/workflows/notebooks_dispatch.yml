@@ -10,6 +10,7 @@ on:
 
 jobs:
   run_notebooks:
+    name: ${{ matrix.os }}, ${{ matrix.python-version }}
     strategy:
       matrix:
         # Run all operating systems, because this is the first interaction
