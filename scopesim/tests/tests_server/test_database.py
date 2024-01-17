@@ -18,6 +18,12 @@ def mock_client():
         yield client
 
 
+@pytest.fixture(scope="class")
+def all_pkg():
+    # TODO: This could use some kind of mock to avoid server access
+    yield db.get_all_package_versions()
+
+
 @pytest.mark.webtest
 def test_package_list_loads():
     with pytest.warns(DeprecationWarning):
@@ -40,22 +46,20 @@ def test_get_all_latest():
 
 @pytest.mark.webtest
 class TestGetZipname:
-    # TODO: This could use some kind of mock to avoid server access
-    all_pkg = db.get_all_package_versions()
 
-    def test_gets_stable(self):
-        zipname = db._get_zipname("test_package", "stable", self.all_pkg)
+    def test_gets_stable(self, all_pkg):
+        zipname = db._get_zipname("test_package", "stable", all_pkg)
         assert zipname.startswith("test_package.")
         assert zipname.endswith(".zip")
 
-    def test_gets_latest(self):
-        zipname = db._get_zipname("test_package", "latest", self.all_pkg)
+    def test_gets_latest(self, all_pkg):
+        zipname = db._get_zipname("test_package", "latest", all_pkg)
         assert zipname.startswith("test_package.")
         assert zipname.endswith(".dev.zip")
 
-    def test_throws_for_nonexisting_release(self):
+    def test_throws_for_nonexisting_release(self, all_pkg):
         with pytest.raises(ValueError):
-            db._get_zipname("test_package", "bogus", self.all_pkg)
+            db._get_zipname("test_package", "bogus", all_pkg)
 
 
 @pytest.mark.webtest
