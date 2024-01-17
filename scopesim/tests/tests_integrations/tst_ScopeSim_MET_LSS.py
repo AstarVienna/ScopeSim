@@ -40,7 +40,8 @@ def run_metis_lss():
     plt.show()
 
 
-run_metis_lss()
+if __name__ == "__main__":
+    run_metis_lss()
 
 
 # class TestMetisLss:
