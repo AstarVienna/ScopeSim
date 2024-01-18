@@ -22,6 +22,24 @@ from ..utils import from_currsys, top_level_catch
 from ..version import version
 from .. import rc
 
+import multiprocessing as mp
+
+N_PROCESSES = mp.cpu_count() - 1
+USE_MULTIPROCESSING = True
+
+def extract_source(fov, source):
+    fov.extract_from(source)
+    return fov
+
+def view_fov(fov, hdu_type):
+    fov.view(hdu_type)
+    return fov
+
+def apply_fov_effects(fov, fov_effects):
+    for effect in fov_effects:
+        fov = effect.apply_to(fov)
+    return fov
+
 
 class OpticalTrain:
     """
@@ -184,22 +202,47 @@ class OpticalTrain:
             source = effect.apply_to(source)
 
         # [3D - Atmospheric shifts, PSF, NCPAs, Grating shift/distortion]
-        fovs = self.fov_manager.fovs
-        for fov in tqdm(fovs, desc=" FOVs", position=0):
-            # print("FOV", fov_i+1, "of", n_fovs, flush=True)
-            # .. todo: possible bug with bg flux not using plate_scale
-            #          see fov_utils.combine_imagehdu_fields
-            fov.extract_from(source)
 
+        # START OF MULTIPROCESSING
+        if USE_MULTIPROCESSING:
+
+            fovs = self.fov_manager.fovs
+            fov_effects = self.optics_manager.fov_effects
             hdu_type = "cube" if self.fov_manager.is_spectroscope else "image"
-            fov.view(hdu_type)
-            for effect in tqdm(self.optics_manager.fov_effects,
-                               desc=" FOV effects", position=1, leave=False):
-                fov = effect.apply_to(fov)
 
-            fov.flatten()
-            self.image_planes[fov.image_plane_id].add(fov.hdu, wcs_suffix="D")
-            # ..todo: finish off the multiple image plane stuff
+            with mp.Pool(processes=N_PROCESSES) as pool:
+                fovs = pool.starmap(extract_source,
+                                    zip(fovs, [source] * len(fovs)))
+
+            with mp.Pool(processes=N_PROCESSES) as pool:
+                fovs = pool.starmap(view_fov,
+                                    zip(fovs, [hdu_type] * len(fovs)))
+
+            with mp.Pool(processes=N_PROCESSES) as pool:
+                fovs = pool.starmap(apply_fov_effects,
+                                    zip(fovs, [fov_effects] * len(fovs)))
+
+        # OLD SINGLE CORE CODE
+        else:
+
+            fovs = self.fov_manager.fovs
+            for fov in tqdm(fovs, desc=" FOVs", position=0):
+                # print("FOV", fov_i+1, "of", n_fovs, flush=True)
+                # .. todo: possible bug with bg flux not using plate_scale
+                #          see fov_utils.combine_imagehdu_fields
+                fov.extract_from(source)
+
+                hdu_type = "cube" if self.fov_manager.is_spectroscope else "image"
+                fov.view(hdu_type)
+                for effect in tqdm(self.optics_manager.fov_effects,
+                                   desc=" FOV effects", position=1, leave=False):
+                    fov = effect.apply_to(fov)
+
+                fov.flatten()
+                self.image_planes[fov.image_plane_id].add(fov.hdu, wcs_suffix="D")
+                # ..todo: finish off the multiple image plane stuff
+
+        # END OF MULTIPROCESSING
 
         # [2D - Vibration, flat fielding, chopping+nodding]
         for effect in tqdm(self.optics_manager.image_plane_effects,
