@@ -34,11 +34,12 @@ class Effect(DataContainer):
 
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self, cmds=None, **kwargs):
         super().__init__(**kwargs)
         self.meta["z_order"] = []
         self.meta["include"] = True
         self.meta.update(kwargs)
+        self.cmds = cmds
 
     def apply_to(self, obj, **kwargs):
         """TBA."""
@@ -101,7 +102,7 @@ class Effect(DataContainer):
 
     @property
     def include(self):
-        return from_currsys(self.meta["include"])
+        return from_currsys(self.meta["include"], self.cmds)
 
     @include.setter
     def include(self, item):
@@ -112,7 +113,7 @@ class Effect(DataContainer):
         name = self.meta.get("name", self.meta.get("filename", "<untitled>"))
         if not hasattr(self, "_current_str"):
             return name
-        return f"{name} : [{from_currsys(self.meta[self._current_str])}]"
+        return f"{name} : [{from_currsys(self.meta[self._current_str], self.cmds)}]"
 
     @property
     def meta_string(self):
@@ -218,7 +219,7 @@ class Effect(DataContainer):
                   "changes_str": changes_str}
         params.update(self.meta)
         params.update(kwargs)
-        params = from_currsys(params)
+        params = from_currsys(params, self.cmds)
 
         rst_str = f"""
 {str(self)}
@@ -312,9 +313,9 @@ Meta-data
                 if item.endswith("!"):
                     key = item[1:-1]
                     if len(key) > 0:
-                        value = from_currsys(self.meta[key])
+                        value = from_currsys(self.meta[key], self.cmds)
                     else:
-                        value = from_currsys(self.meta)
+                        value = from_currsys(self.meta, self.cmds)
                 else:
                     value = self.meta[item[1:]]
             else:
@@ -328,4 +329,4 @@ Meta-data
         if any(key not in self.meta for key in ("path", "filename_format")):
             return None
         return Path(self.meta["path"],
-                    from_currsys(self.meta["filename_format"]))
+                    from_currsys(self.meta["filename_format"], self.cmds))

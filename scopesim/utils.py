@@ -840,29 +840,34 @@ def clean_dict(orig_dict, new_entries):
     return orig_dict
 
 
-def from_currsys(item):
+def from_currsys(item, cmds=None):
     """Return the current value of a bang-string from ``rc.__currsys__``."""
     if isinstance(item, Table):
         tbl_dict = {col: item[col].data for col in item.colnames}
-        tbl_dict = from_currsys(tbl_dict)
+        tbl_dict = from_currsys(tbl_dict, cmds)
         item_meta = item.meta
         item = Table(data=list(tbl_dict.values()),
                      names=list(tbl_dict.keys()))
         item.meta = item_meta
 
     if isinstance(item, np.ndarray) and not isinstance(item, u.Quantity):
-        item = np.array([from_currsys(x) for x in item])
+        item = np.array([from_currsys(x, cmds) for x in item])
 
     if isinstance(item, list):
-        item = [from_currsys(x) for x in item]
+        item = [from_currsys(x, cmds) for x in item]
 
     if isinstance(item, dict):
         for key in item:
-            item[key] = from_currsys(item[key])
+            item[key] = from_currsys(item[key], cmds)
 
     if isinstance(item, str) and len(item) and item.startswith("!"):
-        if item in rc.__currsys__:
-            item = rc.__currsys__[item]
+        # if not isinstance(cmds, UserCommands)
+        #     raise TypeError
+        if not cmds:
+            cmds = rc.__currsys__
+
+        if item in cmds:
+            item = cmds[item]
             if isinstance(item, str) and item.startswith("!"):
                 item = from_currsys(item)
         else:

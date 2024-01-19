@@ -35,7 +35,8 @@ class Shift3D(Effect):
         if self.table is None:
             names = ["wavelength", "dx", "dy"]
             waves = from_currsys(["!SIM.spectral.wave_" + key
-                                  for key in ("min", "mid", "max")])
+                                  for key in ("min", "mid", "max")],
+                                 self.cmds)
             tbl = Table(names=names, data=[waves, [0] * 3, [0] * 3])
         else:
             tbl = self.table

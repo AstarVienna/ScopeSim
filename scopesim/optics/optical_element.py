@@ -27,7 +27,6 @@ class OpticalElement:
     ``Effects`` along with a set of local properties e.g. temperature, etc
     which are common to more than one Effect
 
-
     Parameters
     ----------
     yaml_dict : dict
@@ -36,9 +35,9 @@ class OpticalElement:
     kwargs : dict
         Optical Element specific information which has no connection to the
         effects that are passed. Any global values, e.g. airmass
-        (i.e. bang strings) are passed on to the individual effect, where the
-        relevant values are then pulled from rc.__currsys__
-
+        (i.e. bang strings) are passed on to the individual effect which can
+        extract the relevant bang_string from the UserCommands object held in
+        self.cmds
 
     Attributes
     ----------
@@ -58,11 +57,12 @@ class OpticalElement:
 
     """
 
-    def __init__(self, yaml_dict=None, **kwargs):
+    def __init__(self, yaml_dict=None, cmds=None, **kwargs):
         self.meta = {"name": "<empty>"}
         self.meta.update(kwargs)
         self.properties = {}
         self.effects = []
+        self.cmds = cmds
 
         if isinstance(yaml_dict, dict):
             self.meta.update({key: yaml_dict[key] for key in yaml_dict
@@ -73,12 +73,13 @@ class OpticalElement:
                 self.properties["element_name"] = yaml_dict["name"]
             if "effects" in yaml_dict and len(yaml_dict["effects"]) > 0:
                 for eff_dic in yaml_dict["effects"]:
-                    if "name" in eff_dic and hasattr(rc.__currsys__,
+                    if "name" in eff_dic and hasattr(self.cmds,
                                                      "ignore_effects"):
-                        if eff_dic["name"] in rc.__currsys__.ignore_effects:
+                        if eff_dic["name"] in self.cmds.ignore_effects:
                             eff_dic["include"] = False
 
                     self.effects.append(make_effect(eff_dic,
+                                                    self.cmds,
                                                     **self.properties))
 
     def add_effect(self, effect):

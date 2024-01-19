@@ -29,7 +29,7 @@ class SurfaceList(TERCurve):
         wave_edges = []
         if which == "waveset":
             self.meta.update(kwargs)
-            self.meta = from_currsys(self.meta)
+            self.meta = from_currsys(self.meta, self.cmds)
             wave_min = quantify(self.meta["wave_min"], u.um)
             wave_max = quantify(self.meta["wave_max"], u.um)
             # ..todo:: add 1001 to default.yaml somewhere
@@ -58,7 +58,8 @@ class SurfaceList(TERCurve):
     def emission(self):
         if "etendue" not in self.meta:
             raise ValueError("self.meta['etendue'] must be set")
-        etendue = quantify(from_currsys(self.meta["etendue"]), "m2 arcsec2")
+        etendue = quantify(from_currsys(self.meta["etendue"], self.cmds),
+                           "m2 arcsec2")
         if self._emission is None:
             self._emission = self.get_emission(etendue)
 

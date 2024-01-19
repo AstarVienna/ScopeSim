@@ -137,8 +137,8 @@ class OpticalTrain:
         #        tests (now with proper patching) fail because of this type
         #        change. THIS IS A PROBLEM!
         rc.__currsys__ = user_commands
-        self.yaml_dicts = rc.__currsys__.yaml_dicts
-        self.optics_manager = OpticsManager(self.yaml_dicts)
+        self.yaml_dicts = self.cmds.yaml_dicts
+        self.optics_manager = OpticsManager(self.yaml_dicts, self.cmds)
         self.update()
 
     def update(self, **kwargs):
@@ -154,10 +154,11 @@ class OpticalTrain:
         self.optics_manager.update(**kwargs)
         opt_man = self.optics_manager
 
-        self.fov_manager = FOVManager(opt_man.fov_setup_effects, **kwargs)
+        self.fov_manager = FOVManager(opt_man.fov_setup_effects, cmds=self.cmds,
+                                      **kwargs)
         self.image_planes = [ImagePlane(hdr, **kwargs)
                              for hdr in opt_man.image_plane_headers]
-        self.detector_arrays = [DetectorArray(det_list, **kwargs)
+        self.detector_arrays = [DetectorArray(det_list, cmds=self.cmds, **kwargs)
                                 for det_list in opt_man.detector_setup_effects]
 
     @top_level_catch
@@ -306,8 +307,8 @@ class OpticalTrain:
             # Put on fov wavegrid
             wave_min = min(fov.meta["wave_min"] for fov in self.fov_manager.fovs)
             wave_max = max(fov.meta["wave_max"] for fov in self.fov_manager.fovs)
-            wave_unit = u.Unit(from_currsys("!SIM.spectral.wave_unit"))
-            dwave = from_currsys("!SIM.spectral.spectral_bin_width")  # Not a quantity
+            wave_unit = u.Unit(from_currsys("!SIM.spectral.wave_unit"), self.cmds)
+            dwave = from_currsys("!SIM.spectral.spectral_bin_width", self.cmds)  # Not a quantity
             fov_waveset = np.arange(wave_min.value, wave_max.value, dwave) * wave_unit
             fov_waveset = fov_waveset.to(u.um)
 
@@ -384,10 +385,10 @@ class OpticalTrain:
         pheader = hdulist[0].header
         pheader["DATE"] = datetime.now().isoformat(timespec="seconds")
         pheader["ORIGIN"] = "Scopesim " + version
-        pheader["INSTRUME"] = from_currsys("!OBS.instrument")
-        pheader["INSTMODE"] = ", ".join(from_currsys("!OBS.modes"))
-        pheader["TELESCOP"] = from_currsys("!TEL.telescope")
-        pheader["LOCATION"] = from_currsys("!ATMO.location")
+        pheader["INSTRUME"] = from_currsys("!OBS.instrument", self.cmds)
+        pheader["INSTMODE"] = ", ".join(from_currsys("!OBS.modes", self.cmds))
+        pheader["TELESCOP"] = from_currsys("!TEL.telescope", self.cmds)
+        pheader["LOCATION"] = from_currsys("!ATMO.location", self.cmds)
 
         # Source information taken from first only.
         # ..todo: What if source is a composite?
@@ -408,11 +409,11 @@ class OpticalTrain:
         # ..todo: normalise filenames - some need from_currsys, some need Path(...).name
         #         this should go into a function so as to reduce clutter here.
         iheader = hdulist[1].header
-        iheader["EXPTIME"] = from_currsys("!OBS.exptime"), "[s]"
-        iheader["DIT"] = from_currsys("!OBS.dit"), "[s]"
-        iheader["NDIT"] = from_currsys("!OBS.ndit")
+        iheader["EXPTIME"] = from_currsys("!OBS.exptime", self.cmds), "[s]"
+        iheader["DIT"] = from_currsys("!OBS.dit", self.cmds), "[s]"
+        iheader["NDIT"] = from_currsys("!OBS.ndit", self.cmds)
         iheader["BUNIT"] = "e", "per EXPTIME"
-        iheader["PIXSCALE"] = from_currsys("!INST.pixel_scale"), "[arcsec]"
+        iheader["PIXSCALE"] = from_currsys("!INST.pixel_scale", self.cmds), "[arcsec]"
 
         for eff in self.optics_manager.detector_setup_effects:
             efftype = type(eff).__name__
@@ -428,10 +429,10 @@ class OpticalTrain:
                 # ..todo: can we write this into currsys?
                 iheader["DET_MODE"] = (eff.meta["detector_readout_mode"],
                                        "detector readout mode")
-                iheader["MINDIT"] = from_currsys("!DET.mindit"), "[s]"
-                iheader["FULLWELL"] = from_currsys("!DET.full_well"), "[s]"
-                iheader["RON"] = from_currsys("!DET.readout_noise"), "[e]"
-                iheader["DARK"] = from_currsys("!DET.dark_current"), "[e/s]"
+                iheader["MINDIT"] = from_currsys("!DET.mindit", self.cmds), "[s]"
+                iheader["FULLWELL"] = from_currsys("!DET.full_well", self.cmds), "[s]"
+                iheader["RON"] = from_currsys("!DET.readout_noise", self.cmds), "[e]"
+                iheader["DARK"] = from_currsys("!DET.dark_current", self.cmds), "[e/s]"
 
         ifilter = 1   # Counts filter wheels
         isurface = 1  # Counts surface lists
@@ -451,7 +452,7 @@ class OpticalTrain:
                                    eff.meta["name"])
 
             if efftype == "PupilTransmission" and eff.include:
-                iheader["PUPTRANS"] = (from_currsys("!OBS.pupil_transmission"),
+                iheader["PUPTRANS"] = (from_currsys("!OBS.pupil_transmission", self.cmds),
                                        "cold stop, pupil transmission")
 
             if efftype == "SkycalcTERCurve" and eff.include:

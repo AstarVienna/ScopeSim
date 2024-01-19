@@ -220,7 +220,7 @@ class SpectralTraceList(Effect):
     @property
     def image_plane_header(self):
         x, y = self.footprint
-        pixel_scale = from_currsys(self.meta["pixel_scale"])
+        pixel_scale = from_currsys(self.meta["pixel_scale"], self.cmds)
         hdr = header_from_list_of_xy(x, y, pixel_scale, "D")
 
         return hdr
@@ -259,13 +259,13 @@ class SpectralTraceList(Effect):
         # keywords for the filter... We try to make it work for METIS
         # and MICADO for the time being.
         try:
-            filter_name = from_currsys("!OBS.filter_name")
+            filter_name = from_currsys("!OBS.filter_name", self.cmds)
         except ValueError:
-            filter_name = from_currsys("!OBS.filter_name_fw1")
+            filter_name = from_currsys("!OBS.filter_name_fw1", self.cmds)
 
         filtcurve = FilterCurve(
             filter_name=filter_name,
-            filename_format=from_currsys("!INST.filter_file_format"))
+            filename_format=from_currsys("!INST.filter_file_format", self.cmds))
         filtwaves = filtcurve.table["wavelength"]
         filtwave = filtwaves[filtcurve.table["transmission"] > 0.01]
         wave_min, wave_max = min(filtwave), max(filtwave)
@@ -296,7 +296,7 @@ class SpectralTraceList(Effect):
         pdu = fits.PrimaryHDU()
         pdu.header["FILETYPE"] = "Rectified spectra"
         # pdu.header["INSTRUME"] = inhdul[0].header["HIERARCH ESO OBS INSTRUME"]
-        # pdu.header["FILTER"] = from_currsys("!OBS.filter_name_fw1")
+        # pdu.header["FILTER"] = from_currsys("!OBS.filter_name_fw1", self.cmds)
         outhdul = fits.HDUList([pdu])
 
         for i, trace_id in tqdm(enumerate(self.spectral_traces, start=1),
@@ -341,9 +341,9 @@ class SpectralTraceList(Effect):
 
         """
         if wave_min is None:
-            wave_min = from_currsys("!SIM.spectral.wave_min")
+            wave_min = from_currsys("!SIM.spectral.wave_min", self.cmds)
         if wave_max is None:
-            wave_max = from_currsys("!SIM.spectral.wave_max")
+            wave_max = from_currsys("!SIM.spectral.wave_max", self.cmds)
 
         if axes is None:
             fig, axes = figure_factory()
@@ -447,7 +447,7 @@ class SpectralTraceListWheel(Effect):
 
         path = self._get_path()
         self.trace_lists = {}
-        for name in from_currsys(self.meta["trace_list_names"]):
+        for name in from_currsys(self.meta["trace_list_names"], self.cmds):
             kwargs["name"] = name
             fname = str(path).format(name)
             self.trace_lists[name] = SpectralTraceList(filename=fname,
@@ -460,7 +460,8 @@ class SpectralTraceListWheel(Effect):
     @property
     def current_trace_list(self):
         trace_list_eff = None
-        trace_list_name = from_currsys(self.meta["current_trace_list"])
+        trace_list_name = from_currsys(self.meta["current_trace_list"],
+                                       self.cmds)
         if trace_list_name is not None:
             trace_list_eff = self.trace_lists[trace_list_name]
         return trace_list_eff

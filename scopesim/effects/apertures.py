@@ -82,7 +82,7 @@ class ApertureMask(Effect):
                                                  "array_dict"]]):
             if "width" in kwargs and "height" in kwargs and \
                     "filename_format" in kwargs:
-                kwargs = from_currsys(kwargs)
+                kwargs = from_currsys(kwargs, self.cmds)
                 w, h = kwargs["width"], kwargs["height"]
                 kwargs["filename"] = kwargs["filename_format"].format(w, h)
 
@@ -147,7 +147,7 @@ class ApertureMask(Effect):
         return self._header
 
     def get_header(self):
-        self.meta = from_currsys(self.meta)
+        self.meta = from_currsys(self.meta, self.cmds)
         x = quantity_from_table("x", self.table, u.arcsec).to(u.deg).value
         y = quantity_from_table("y", self.table, u.arcsec).to(u.deg).value
         pix_scale_deg = self.meta["pixel_scale"] / 3600.
@@ -169,7 +169,7 @@ class ApertureMask(Effect):
         """
         For placing over FOVs if the Aperture is rotated w.r.t. the field.
         """
-        self.meta = from_currsys(self.meta)
+        self.meta = from_currsys(self.meta, self.cmds)
 
         if self.meta["no_mask"] is False:
             x = quantity_from_table("x", self.table, u.arcsec).to(u.deg).value
@@ -218,10 +218,10 @@ class RectangularApertureMask(ApertureMask):
 
     def get_table(self, **kwargs):
         self.meta.update(kwargs)
-        x = from_currsys(self.meta["x"])
-        y = from_currsys(self.meta["y"])
-        dx = 0.5 * from_currsys(self.meta["width"])
-        dy = 0.5 * from_currsys(self.meta["height"])
+        x = from_currsys(self.meta["x"], self.cmds)
+        y = from_currsys(self.meta["y"], self.cmds)
+        dx = 0.5 * from_currsys(self.meta["width"], self.cmds)
+        dy = 0.5 * from_currsys(self.meta["height"], self.cmds)
         xs = [x - dx, x + dx, x + dx, x - dx]
         ys = [y - dy, y - dy, y + dy, y + dy]
         tbl = Table(names=["x", "y"], data=[xs, ys], meta=self.meta)
@@ -446,7 +446,7 @@ class SlitWheel(Effect):
 
         path = self._get_path()
         self.slits = {}
-        for name in from_currsys(self.meta["slit_names"]):
+        for name in from_currsys(self.meta["slit_names"], self.cmds):
             kwargs["name"] = name
             fname = str(path).format(name)
             self.slits[name] = ApertureMask(filename=fname, **kwargs)
@@ -487,7 +487,7 @@ class SlitWheel(Effect):
     @property
     def current_slit(self):
         """Return the currently used slit."""
-        currslit = from_currsys(self.meta["current_slit"])
+        currslit = from_currsys(self.meta["current_slit"], self.cmds)
         if not currslit:
             return False
         return self.slits[currslit]

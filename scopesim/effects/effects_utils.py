@@ -71,7 +71,7 @@ def get_all_effects(effects, effect_class):
     return my_effects
 
 
-def make_effect(effect_dict, **properties):
+def make_effect(effect_dict, cmds=None, **properties):
     effect_meta_dict = {key: effect_dict[key] for key in effect_dict
                         if key not in ["class", "kwargs"]}
     effect_class_name = effect_dict["class"]
@@ -84,8 +84,7 @@ def make_effect(effect_dict, **properties):
     if "kwargs" in effect_dict:
         effect_kwargs.update(effect_dict["kwargs"])  # individual effect kwargs
 
-    effect = effect_cls(**effect_kwargs)
-    # effect.meta.update(effect_meta_dict)  # is this needed? Seems redundant
+    effect = effect_cls(cmds=cmds, **effect_kwargs)
 
     return effect
 
