@@ -33,7 +33,7 @@ from . import rc
 top_logger = logging.getLogger("astar")
 top_logger.setLevel(logging.WARNING)
 sim_logger = top_logger.getChild(__package__)
-sim_logger.setLevel(logging.DEBUG)
+sim_logger.setLevel(logging.INFO)
 formatter = logging.Formatter("%(name)s - %(levelname)s: %(message)s")
 
 log_dict = rc.__config__["!SIM.logging"]
