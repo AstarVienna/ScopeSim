@@ -478,7 +478,9 @@ def find_file(filename, path=None, silent=False):
         return None
 
     if filename.startswith("!"):
-        filename = from_currsys(filename)
+        raise ValueError(f"!-string filename should be resolved upstream: "
+                         f"{filename}")
+        # filename = from_currsys(filename)
     # Turn into pathlib.Path object for better manipulation afterwards
     filename = Path(filename)
 
@@ -510,6 +512,7 @@ def find_file(filename, path=None, silent=False):
     if not silent:
         logger.error(msg)
 
+    # TODO: Not sure what to do here
     if from_currsys("!SIM.file.error_on_missing_file"):
         raise ValueError(msg)
 
@@ -645,7 +648,8 @@ def get_meta_quantity(meta_dict, name, fallback_unit=""):
 
     """
     if isinstance(meta_dict[name], str) and meta_dict[name].startswith("!"):
-        meta_dict[name] = from_currsys(meta_dict[name])
+        raise ValueError(f"!-strings should be resolved upstream: "
+                         f"{meta_dict[name]}")
 
     if isinstance(meta_dict[name], u.Quantity):
         unit = meta_dict[name].unit
