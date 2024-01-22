@@ -69,9 +69,10 @@ properties :
         handlers: [console]  # [console, file] or just [console]
         propagate: False  # Any logging from astar stops here.
         # Or don't add handlers here, but let it propagate to root?
-      astar.scopesim:
-        level: DEBUG
-        propagate: True  # Goes through to astar logger.
+      # This doesn't work because NestedMapping doesn't like "." in keys...
+      # astar.scopesim:
+      #   level: DEBUG
+      #   propagate: True  # Goes through to astar logger.
 
     handlers:
       console:

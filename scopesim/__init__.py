@@ -32,6 +32,12 @@ from . import rc
 logging.config.dictConfig(rc.__config__["!SIM.logging"])
 logging.captureWarnings(True)
 
+# This cannot be in the dict config (yet) because NestedMapping doesn't like
+#   "." in keys (yet) ...
+from astar_utils import get_logger
+# Set the "astar.scopesim" logger
+get_logger(__package__).setLevel(logging.DEBUG)
+
 ###############################################################################
 #                         IMPORT PACKAGE MODULES                              #
 ###############################################################################

@@ -1,46 +1,45 @@
 # -*- coding: utf-8 -*-
 """Test to make sure the logging configuration is applied."""
 
-# import logging
-# from importlib import reload
+import logging
+from importlib import reload
 
-# import pytest
+import pytest
 
-# import scopesim as sim
-
-
-# @pytest.fixture(scope="function")
-# def reload_scopesim():
-#     """Temprarily disable the global configure_logging fixture."""
-#     base_logger = logging.getLogger("astar")
-#     handlers = base_logger.handlers
-#     prop = base_logger.propagate
-#     # Reload scopesim to apply logging configuration again
-#     reload(sim)
-#     yield
-#     # Restore
-#     base_logger.handlers = handlers
-#     base_logger.propagate = prop
+import scopesim as sim
 
 
-# @pytest.mark.usefixtures("reload_scopesim")
-# def test_loggers_are_configured():
-#     log_dict = sim.rc.__config__["!SIM.logging"]
-#     base_logger_dict = log_dict["loggers"]["astar"]
-#     sim_logger_dict = log_dict["loggers"]["astar.scopesim"]
+@pytest.fixture(scope="function")
+def reload_scopesim():
+    """Temprarily disable the global configure_logging fixture."""
+    base_logger = logging.getLogger("astar")
+    handlers = base_logger.handlers
+    prop = base_logger.propagate
+    # Reload scopesim to apply logging configuration again
+    reload(sim)
+    yield
+    # Restore
+    base_logger.handlers = handlers
+    base_logger.propagate = prop
 
-#     base_logger = logging.getLogger("astar")
-#     sim_logger = base_logger.getChild("scopesim")
 
-#     base_logger_level = logging.getLevelName(base_logger.getEffectiveLevel())
-#     assert base_logger_level == base_logger_dict["level"]
+@pytest.mark.usefixtures("reload_scopesim")
+def test_loggers_are_configured():
+    log_dict = sim.rc.__config__["!SIM.logging"]
+    base_logger_dict = log_dict["loggers"]["astar"]
 
-#     sim_logger_level = logging.getLevelName(sim_logger.getEffectiveLevel())
-#     assert sim_logger_level == sim_logger_dict["level"]
+    base_logger = logging.getLogger("astar")
+    sim_logger = base_logger.getChild("scopesim")
 
-#     assert base_logger.propagate == base_logger_dict["propagate"]
-#     assert sim_logger.propagate == sim_logger_dict["propagate"]
+    base_logger_level = logging.getLevelName(base_logger.getEffectiveLevel())
+    assert base_logger_level == base_logger_dict["level"]
 
-#     for handler, name in zip(base_logger.handlers,
-#                              base_logger_dict["handlers"]):
-#         handler.name == name
+    sim_logger_level = logging.getLevelName(sim_logger.getEffectiveLevel())
+    assert sim_logger_level == "DEBUG"
+
+    assert base_logger.propagate == base_logger_dict["propagate"]
+    assert sim_logger.propagate
+
+    for handler, name in zip(base_logger.handlers,
+                             base_logger_dict["handlers"]):
+        handler.name == name
