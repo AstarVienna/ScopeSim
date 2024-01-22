@@ -43,3 +43,19 @@ def test_loggers_are_configured():
     for handler, name in zip(base_logger.handlers,
                              base_logger_dict["handlers"]):
         handler.name == name
+
+
+def test_log_to_file():
+    base_logger = logging.getLogger("astar")
+    sim.log_to_file(enable=True)
+    assert any(handler.name == "file" for handler in base_logger.handlers)
+    sim.log_to_file(enable=False)
+    assert not any(handler.name == "file" for handler in base_logger.handlers)
+
+
+def test_set_console_log_level():
+    base_logger = logging.getLogger("astar")
+    sim.set_console_log_level("ERROR")
+    assert base_logger.handlers[0].level == logging.ERROR
+    sim.set_console_log_level()
+    assert base_logger.handlers[0].level == logging.INFO
