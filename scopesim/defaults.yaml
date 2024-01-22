@@ -66,7 +66,7 @@ properties :
     loggers:
       astar:
         level: WARNING
-        handlers: [console, file]  # [console, file] or just [console]
+        handlers: [console]  # [console, file] or just [console]
         propagate: False  # Any logging from astar stops here.
         # Or don't add handlers here, but let it propagate to root?
       astar.scopesim:
