@@ -29,14 +29,10 @@ from . import rc
 # This should be part of ScopeSim (the app) and not scopesim_core eventually
 # TODO: need to add a function to reload the config!
 
-logging.config.dictConfig(rc.__config__["!SIM.logging"])
-logging.captureWarnings(True)
+# Import convenience functions
+from .utils import update_logging, log_to_file, set_console_log_level
+update_logging()
 
-# This cannot be in the dict config (yet) because NestedMapping doesn't like
-#   "." in keys (yet) ...
-from astar_utils import get_logger
-# Set the "astar.scopesim" logger
-get_logger(__package__).setLevel(logging.DEBUG)
 
 ###############################################################################
 #                         IMPORT PACKAGE MODULES                              #
