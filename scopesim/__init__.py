@@ -3,8 +3,7 @@
 ###############################################################################
 #                            TURN OFF WARNINGS                                #
 ###############################################################################
-import logging
-import logging.config
+
 import warnings
 import yaml
 from importlib import metadata
