@@ -3,6 +3,7 @@ import math
 from pathlib import Path
 import sys
 import logging
+from logging.config import dictConfig
 from collections import OrderedDict
 from collections.abc import Iterable, Generator
 from copy import deepcopy
@@ -1031,7 +1032,7 @@ def top_level_catch(func):
 
 def update_logging(capture_warnings=True):
     """Reload logging configuration from ``rc.__config__``."""
-    logging.config.dictConfig(rc.__config__["!SIM.logging"])
+    dictConfig(rc.__config__["!SIM.logging"])
     logging.captureWarnings(capture_warnings)
 
     # This cannot be in the dict config (yet) because NestedMapping doesn't like
