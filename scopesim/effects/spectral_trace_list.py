@@ -141,7 +141,8 @@ class SpectralTraceList(Effect):
             params = {col: row[col] for col in row.colnames}
             params.update(self.meta)
             hdu = self._file[row["extension_id"]]
-            spec_traces[row["description"]] = SpectralTrace(hdu, **params)
+            spec_traces[row["description"]] = SpectralTrace(hdu, cmds=self.cmds,
+                                                            **params)
 
         self.spectral_traces = spec_traces
 
@@ -451,6 +452,7 @@ class SpectralTraceListWheel(Effect):
             kwargs["name"] = name
             fname = str(path).format(name)
             self.trace_lists[name] = SpectralTraceList(filename=fname,
+                                                       cmds=self.cmds,
                                                        **kwargs)
 
     def apply_to(self, obj, **kwargs):

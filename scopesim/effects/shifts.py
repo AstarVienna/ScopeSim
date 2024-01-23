@@ -132,7 +132,7 @@ class AtmosphericDispersion(Shift3D):
         if len(kwargs) > 0:
             self.meta.update(kwargs)
 
-        airmass = from_currsys(self.meta["airmass"])
+        airmass = from_currsys(self.meta["airmass"], self.cmds)
         atmo_params = {"z0": airmass2zendist(airmass),
                        "temp": self.meta["temperature"],  # in degC
                        "rel_hum": self.meta["humidity"] * 100,  # in %
@@ -140,7 +140,7 @@ class AtmosphericDispersion(Shift3D):
                        "lat": self.meta["latitude"],  # in deg
                        "h": self.meta["altitude"]}  # in m
         self.meta.update(atmo_params)
-        params = from_currsys(self.meta)
+        params = from_currsys(self.meta, self.cmds)
 
         waves, shifts = get_pixel_border_waves_from_atmo_disp(**params)
         dx = shifts * np.sin(np.deg2rad(params["pupil_angle"]))
@@ -194,7 +194,7 @@ class AtmosphericDispersionCorrection(Shift3D):
         # correct fovs CRPIXnD keys
 
         if isinstance(fov, self.apply_to_classes):
-            self.meta = from_currsys(self.meta)
+            self.meta = from_currsys(self.meta, self.cmds)
             atmo_params = {"z0": airmass2zendist(self.meta["airmass"]),
                            "temp": self.meta["temperature"],  # in degC
                            "rel_hum": self.meta["humidity"] * 100,  # in %

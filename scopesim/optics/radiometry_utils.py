@@ -103,7 +103,6 @@ def combine_tables(new_tables, old_table=None, prepend=False):
         if old_table is None:
             old_table = new_table
         else:
-            new_table = from_currsys(new_table)
             if prepend:
                 old_table = vstack([new_table, old_table])
             else:

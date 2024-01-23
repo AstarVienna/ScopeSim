@@ -183,4 +183,4 @@ class TestFitsHeader:
         assert hdr["SIM SRC0 object"] == 'star'
         assert hdr["SIM EFF14 class"] == 'SourceDescriptionFitsKeywords'
         assert hdr["SIM CONFIG OBS filter_name"] == 'J'
-        assert hdr["ESO ATM SEEING"] == sim.utils.from_currsys("!OBS.psf_fwhm")
+        assert hdr["ESO ATM SEEING"] == opt.cmds["!OBS.psf_fwhm"]

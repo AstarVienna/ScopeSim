@@ -663,7 +663,7 @@ def get_meta_quantity(meta_dict, name, fallback_unit=""):
     return quant
 
 
-def quantify(item, unit):
+def quantify(item, unit, cmds=None):
     """
     Ensure an item is a Quantity.
 
@@ -678,7 +678,8 @@ def quantify(item, unit):
 
     """
     if isinstance(item, str) and item.startswith("!"):
-        item = from_currsys(item)
+        raise ValueError(f"Quantify cannot resolve {item}")
+        # item = from_currsys(item, cmds)
     if isinstance(item, u.Quantity):
         quant = item.to(u.Unit(unit))
     else:

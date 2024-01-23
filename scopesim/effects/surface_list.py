@@ -133,8 +133,8 @@ class SurfaceList(TERCurve):
     def add_surface_list(self, surface_list, prepend=False):
         if isinstance(surface_list, SurfaceList):
             self.surfaces.update(surface_list.surfaces)
-            self.table = rad_utils.combine_tables(surface_list.table,
-                                                  self.table, prepend)
+            new_tbl = from_currsys(surface_list.table, self.cmds),
+            self.table = rad_utils.combine_tables(new_tbl, self.table, prepend)
 
     def plot(self, which="x", wavelength=None, *, axes=None, **kwargs):
         """Plot TER curves.

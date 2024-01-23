@@ -244,7 +244,7 @@ class OpticsManager:
         for eff in sle_list:
             if isinstance(eff, efs.SurfaceList):
                 eff_copy = deepcopy(eff)
-                eff_copy.table = from_currsys(eff.table)
+                eff_copy.table = from_currsys(eff.table, self.cmds)
             else:
                 # Avoid infinite recursion in Wheel effects (filter, adc)
                 eff_copy = eff
