@@ -294,28 +294,38 @@ def extract_area_from_imagehdu(imagehdu, fov_volume):
     xy_hdu = image_wcs.calc_footprint(center=False, axes=(naxis1, naxis2))
 
     if image_wcs.wcs.cunit[0] == "deg":
+        logger.debug("Found 'deg' in image WCS, applying 360 fix.")
         imp_utils._fix_360(xy_hdu)
     elif image_wcs.wcs.cunit[0] == "arcsec":
+        logger.debug("Found 'arcsec' in image WCS, converting to deg.")
         xy_hdu *= u.arcsec.to(u.deg)
+    logger.debug("XY HDU:\n%s", xy_hdu)
 
     xy_fov = np.array([fov_volume["xs"], fov_volume["ys"]]).T
 
     if fov_volume["xy_unit"] == "arcsec":
         xy_fov *= u.arcsec.to(u.deg)
 
+    logger.debug("XY FOV:\n%s", xy_fov)
+
     xy0s = np.array((xy_hdu.min(axis=0), xy_fov.min(axis=0))).max(axis=0)
     xy1s = np.array((xy_hdu.max(axis=0), xy_fov.max(axis=0))).min(axis=0)
 
     # Round to avoid floating point madness
     xyp = image_wcs.wcs_world2pix(np.array([xy0s, xy1s]), 0).round(7)
+
     # To deal with negative CDELTs
+    logger.debug("xyp:\n%s", xyp)
     xyp.sort(axis=0)
+    logger.debug("xyp:\n%s", xyp)
 
     xy0p = np.max(((0, 0), np.floor(xyp[0]).astype(int)), axis=0)
     xy1p = np.min(((naxis1, naxis2), np.ceil(xyp[1]).astype(int)), axis=0)
 
     # Add 1 if the same
     xy1p += (xy0p == xy1p)
+
+    logger.debug("xy0p: %s; xy1p: %s", xy0p, xy1p)
 
     new_wcs, new_naxis = imp_utils.create_wcs_from_points(
         np.array([xy0s, xy1s]), pixel_scale=hdr["CDELT1"])
