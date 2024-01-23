@@ -863,11 +863,18 @@ def from_currsys(item):
     if isinstance(item, str) and len(item) and item.startswith("!"):
         if item in rc.__currsys__:
             item = rc.__currsys__[item]
+            if isinstance(item, str) and item.startswith("!"):
+                item = from_currsys(item)
         else:
             raise ValueError(f"{item} was not found in rc.__currsys__")
 
-    if isinstance(item, str) and item.lower() == "none":
-        item = None
+    if isinstance(item, str):
+        if item.lower() == "none":
+            item = None
+        try:
+            item = float(item)
+        except:
+            pass
 
     return item
 
