@@ -18,16 +18,16 @@ sim.rc.__currsys__["!SIM.file.error_on_missing_file"] = True
 
 @pytest.fixture(scope="package", autouse=True)
 def configure_logging():
-    top_logger = logging.getLogger("astar")
-    handlers = top_logger.handlers
+    base_logger = logging.getLogger("astar")
+    handlers = base_logger.handlers
     # Disable handlers
-    top_logger.handlers = []
+    base_logger.handlers = []
     # Make sure logging can reach pytest's caplog
-    top_logger.propagate = True
+    base_logger.propagate = True
     yield
     # Restore
-    top_logger.handlers = handlers
-    top_logger.propagate = False
+    base_logger.handlers = handlers
+    base_logger.propagate = False
 
 
 @pytest.fixture(scope="package")
