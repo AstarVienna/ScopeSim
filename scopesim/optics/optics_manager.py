@@ -237,10 +237,20 @@ class OpticsManager:
     @property
     def surfaces_table(self):
         """Get combined surface table from effects with z_order = 100...199."""
-        if self._surfaces_table is None:
-            surface_like_effects = self.get_z_order_effects(100)
-            self._surfaces_table = combine_surface_effects(surface_like_effects)
-        return self._surfaces_table
+        from copy import deepcopy
+        sle_list = self.get_z_order_effects(100)
+        sle_list_copy = []
+        for eff in sle_list:
+            if isinstance(eff, efs.SurfaceList):
+                eff_copy = deepcopy(eff)
+                eff_copy.table = from_currsys(eff.table)
+            else:
+                # Avoid infinite recursion in Wheel effects (filter, adc)
+                eff_copy = eff
+            sle_list_copy += [eff_copy]
+
+        comb_table = combine_surface_effects(sle_list_copy)
+        return comb_table
 
     @property
     def all_effects(self):

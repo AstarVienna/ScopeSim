@@ -1,5 +1,5 @@
 """Transmission, emissivity, reflection curves."""
-
+import logging
 from collections.abc import Collection
 
 import numpy as np
@@ -25,6 +25,9 @@ logger = get_logger(__name__)
 class TERCurve(Effect):
     """
     Transmission, Emissivity, Reflection Curve.
+
+    note:: This is basically an ``Effect`` wrapper for the
+           ``SpectralSurface`` object
 
     Must contain a wavelength column, and one or more of the following:
     ``transmission``, ``emissivity``, ``reflection``.
@@ -201,7 +204,12 @@ class TERCurve(Effect):
         if wavelength is None:
             wunit = params["wave_unit"]
             # TODO: shouldn't need both, make sure they're equal
-            assert wunit == wave_unit
+            if wunit != wave_unit:
+                logger.warning(f"wavelength units in the meta dict of "
+                             f"{self.meta.get('name')} are inconsistent: \n"
+                             f"- wavelength_unit : {wave_unit} \n"
+                             f"- wave_unit : {wunit}")
+
             wave = np.arange(quantify(params["wave_min"], wunit).value,
                              quantify(params["wave_max"], wunit).value,
                              quantify(params["wave_bin"], wunit).value)
@@ -213,6 +221,8 @@ class TERCurve(Effect):
         abbrs = {"t": "transmission", "e": "emission",
                  "r": "reflection", "x": "throughput"}
 
+        if not isinstance(axes, list):
+            axes = [axes]
         for ter, ax in zip(which, axes):
             y_name = abbrs.get(ter, "throughput")
             y = getattr(self.surface, y_name)
@@ -580,6 +590,14 @@ class FilterWheelBase(Effect):
     def apply_to(self, obj, **kwargs):
         """Use apply_to of current filter."""
         return self.current_filter.apply_to(obj, **kwargs)
+
+    @property
+    def surface(self):
+        return self.current_filter.surface
+
+    @property
+    def throughput(self):
+        return self.current_filter.throughput
 
     def fov_grid(self, which="waveset", **kwargs):
         return self.current_filter.fov_grid(which=which, **kwargs)
