@@ -218,8 +218,8 @@ class AutoExposure(Effect):
                 logger.warning("The detector will be saturated!")
                 # ..todo: turn into proper warning
 
-            logger.info(f"Exposure parameters: DIT={dit:.3f}s  NDIT={ndit}")
-            logger.info(f"Total exposure time: {dit * ndit:.3f} s")
+            logger.info("Exposure parameters: DIT=%.3f s  NDIT=%d", dit, ndit)
+            logger.info("Total exposure time: %.3f s", dit * ndit)
 
             rc.__currsys__["!OBS.dit"] = dit
             rc.__currsys__["!OBS.ndit"] = ndit
