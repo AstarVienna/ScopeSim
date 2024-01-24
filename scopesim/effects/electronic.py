@@ -215,7 +215,7 @@ class AutoExposure(Effect):
             if dit < from_currsys(self.meta["mindit"]):
                 dit = from_currsys(self.meta["mindit"])
                 ndit = int(np.floor(exptime / dit))
-                logger.warning("Warning: The detector will be saturated!")
+                logger.warning("The detector will be saturated!")
                 # ..todo: turn into proper warning
 
             logger.info(f"Exposure parameters: DIT={dit:.3f}s  NDIT={ndit}")
