@@ -100,7 +100,7 @@ class DetectorModePropertiesSetter(Effect):
                                from_currsys("!OBS.detector_readout_mode"))
         if isinstance(obj, ImagePlaneBase) and mode_name == "auto":
             mode_name = self.select_mode(obj, **kwargs)
-            print("Detector mode set to", mode_name)
+            logger.info("Detector mode set to %s", mode_name)
 
         self.meta["detector_readout_mode"] = mode_name
         props_dict = self.mode_properties[mode_name]
@@ -195,10 +195,10 @@ class AutoExposure(Effect):
 
             if exptime is None:
                 exptime = from_currsys("!OBS.dit") * from_currsys("!OBS.ndit")
-            print(f"Requested exposure time: {exptime:.3f} s")
+            logger.info(f"Requested exposure time: {exptime:.3f} s")
 
             if exptime < mindit:
-                print(f"    increased to MINDIT: {mindit:.3f} s")
+                logger.info(f"    increased to MINDIT: {mindit:.3f} s")
                 exptime = mindit
 
             full_well = from_currsys(self.meta["full_well"])
@@ -215,12 +215,11 @@ class AutoExposure(Effect):
             if dit < from_currsys(self.meta["mindit"]):
                 dit = from_currsys(self.meta["mindit"])
                 ndit = int(np.floor(exptime / dit))
-                print("Warning: The detector will be saturated!")
+                logger.warn("Warning: The detector will be saturated!")
                 # ..todo: turn into proper warning
 
-            print("Exposure parameters:")
-            print(f"                DIT: {dit:.3f} s  NDIT: {ndit}")
-            print(f"Total exposure time: {dit * ndit:.3f} s")
+            logger.info(f"Exposure parameters: DIT={dit:.3f}s  NDIT={ndit}")
+            logger.info(f"Total exposure time: {dit * ndit:.3f} s")
 
             rc.__currsys__["!OBS.dit"] = dit
             rc.__currsys__["!OBS.ndit"] = ndit
