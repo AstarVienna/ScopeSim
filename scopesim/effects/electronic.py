@@ -198,7 +198,7 @@ class AutoExposure(Effect):
             logger.info("Requested exposure time: %.3f s", exptime)
 
             if exptime < mindit:
-                logger.info(f"    increased to MINDIT: {mindit:.3f} s")
+                logger.info("    increased to MINDIT: %.3f s", mindit)
                 exptime = mindit
 
             full_well = from_currsys(self.meta["full_well"])
