@@ -8,7 +8,7 @@ import numpy as np
 from scipy.interpolate import interp1d
 from astropy import units as u
 
-from tqdm import tqdm
+from tqdm.autonotebook import tqdm
 
 from synphot.units import PHOTLAM
 
@@ -185,7 +185,7 @@ class OpticalTrain:
 
         # [3D - Atmospheric shifts, PSF, NCPAs, Grating shift/distortion]
         fovs = self.fov_manager.fovs
-        for fov in tqdm(fovs, desc=" FOVs", position=0):
+        for fov in tqdm(fovs, desc=" FOVs"):
             # print("FOV", fov_i+1, "of", n_fovs, flush=True)
             # .. todo: possible bug with bg flux not using plate_scale
             #          see fov_utils.combine_imagehdu_fields
@@ -194,7 +194,7 @@ class OpticalTrain:
             hdu_type = "cube" if self.fov_manager.is_spectroscope else "image"
             fov.view(hdu_type)
             for effect in tqdm(self.optics_manager.fov_effects,
-                               desc=" FOV effects", position=1, leave=False):
+                               desc=" FOV effects"):
                 fov = effect.apply_to(fov)
 
             fov.flatten()
