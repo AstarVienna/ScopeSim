@@ -195,7 +195,7 @@ class AutoExposure(Effect):
 
             if exptime is None:
                 exptime = from_currsys("!OBS.dit") * from_currsys("!OBS.ndit")
-            logger.info(f"Requested exposure time: {exptime:.3f} s")
+            logger.info("Requested exposure time: %.3f s", exptime)
 
             if exptime < mindit:
                 logger.info(f"    increased to MINDIT: {mindit:.3f} s")
