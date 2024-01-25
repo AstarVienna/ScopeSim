@@ -3,9 +3,7 @@
 
 import re
 
-# Python 3.8 doesn't yet know these things.......
-# from collections.abc import Iterator, Iterable, Mapping
-from typing import Iterator
+from collections.abc import Iterator
 
 from zipfile import ZipFile
 from pathlib import Path
