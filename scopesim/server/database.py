@@ -157,13 +157,13 @@ def crawl_server_dirs(client=None) -> Iterator[Tuple[str, Set[str]]]:
         return
 
     for dir_name in get_server_folder_contents(client, "", "/"):
-        logger.info("Searching folder '%s'", dir_name)
+        logger.debug("Searching folder '%s'", dir_name)
         try:
             p_dir = get_server_folder_package_names(client, dir_name)
         except ValueError as err:
-            logger.info(err)
+            logger.debug(err)
             continue
-        logger.info("Found packages %s.", p_dir)
+        logger.debug("Found packages %s.", p_dir)
         yield dir_name, p_dir
 
 
@@ -396,14 +396,14 @@ def download_packages(pkg_names: Union[Iterable[str], str],
 
     """
     base_url = get_base_url()
-    print("Gathering information from server ...")
-    logger.info("Accessing %s", base_url)
+    logger.info("Gathering information from server ...")
+    logger.debug("Accessing %s", base_url)
 
     with create_client(base_url) as client:
         all_versions = get_all_package_versions(client)
         folders_dict = get_package_folders(client)
 
-        print("Connection successful, starting download ...")
+        logger.info("Connection successful, starting download ...")
 
         if isinstance(pkg_names, str):
             pkg_names = [pkg_names]
@@ -416,9 +416,11 @@ def download_packages(pkg_names: Union[Iterable[str], str],
                     client, pkg_name, release, all_versions, folders_dict,
                     save_dir, padlen)
             except PkgNotFoundError as error:
-                logger.error("\n")  # needed until tqdm redirect implemented
+                # Whole stack trace not useful for enduser.
+                # Could log it to file though...
+                # logger.exception(error)
                 logger.error(error)
-                logger.error("Skipping download of package '%s'", pkg_name)
+                logger.warning("Skipping download of package '%s'", pkg_name)
                 continue
             save_paths.append(pkg_path)
 
