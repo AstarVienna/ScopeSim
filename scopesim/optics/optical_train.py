@@ -1,6 +1,5 @@
 import copy
 import sys
-from pathlib import Path
 
 from datetime import datetime
 
@@ -250,7 +249,7 @@ class OpticalTrain:
             factor = 1
             for base, power in zip(inunit.bases, inunit.powers):
                 if (base**power).is_equivalent(u.arcsec**(-2)):
-                    conversion =(base**power).to(u.arcsec**(-2)) / base**power
+                    conversion = (base**power).to(u.arcsec**(-2)) / base**power
                     data *= conversion
                     factor = u.arcsec**(-2)
 

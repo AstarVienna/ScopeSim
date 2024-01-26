@@ -9,9 +9,6 @@ from itertools import cycle
 
 from tqdm import tqdm
 
-from matplotlib import pyplot as plt
-from matplotlib._pylab_helpers import Gcf
-
 from astropy.io import fits
 from astropy.table import Table
 
@@ -91,15 +88,16 @@ class SpectralTraceList(Effect):
 
     """
 
-    _class_params = {"x_colname": "x",
-                     "y_colname": "y",
-                     "s_colname": "s",
-                     "wave_colname": "wavelength",
-                     "col_number_start": 0,
-                     "center_on_wave_mid": False,
-                     "dwave": 0.002,  # [um] for finding best fit dispersion
-                     "invalid_value": None,  # for dodgy trace file values
-                     }
+    _class_params = {
+        "x_colname": "x",
+        "y_colname": "y",
+        "s_colname": "s",
+        "wave_colname": "wavelength",
+        "col_number_start": 0,
+        "center_on_wave_mid": False,
+        "dwave": 0.002,  # [um] for finding best fit dispersion
+        "invalid_value": None,  # for dodgy trace file values
+    }
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -107,23 +105,24 @@ class SpectralTraceList(Effect):
         if "hdulist" in kwargs and isinstance(kwargs["hdulist"], fits.HDUList):
             self._file = kwargs["hdulist"]
 
-        params = {"z_order": [70, 270, 670],
-                  "pixel_scale": "!INST.pixel_scale",  # [arcsec / pix]}
-                  "plate_scale": "!INST.plate_scale",  # [arcsec / mm]
-                  "spectral_bin_width": "!SIM.spectral.spectral_bin_width", # [um]
-                  "wave_min": "!SIM.spectral.wave_min",  # [um]
-                  "wave_mid": "!SIM.spectral.wave_mid",  # [um]
-                  "wave_max": "!SIM.spectral.wave_max",  # [um]
-                  "x_colname": "x",
-                  "y_colname": "y",
-                  "s_colname": "s",
-                  "wave_colname": "wavelength",
-                  "center_on_wave_mid": False,
-                  "dwave": 0.002,  # [um] for finding the best fit dispersion
-                  "invalid_value": None,  # for dodgy trace file values
-                  "report_plot_include": True,
-                  "report_table_include": False,
-                  }
+        params = {
+            "z_order": [70, 270, 670],
+            "pixel_scale": "!INST.pixel_scale",  # [arcsec / pix]}
+            "plate_scale": "!INST.plate_scale",  # [arcsec / mm]
+            "spectral_bin_width": "!SIM.spectral.spectral_bin_width", # [um]
+            "wave_min": "!SIM.spectral.wave_min",  # [um]
+            "wave_mid": "!SIM.spectral.wave_mid",  # [um]
+            "wave_max": "!SIM.spectral.wave_max",  # [um]
+            "x_colname": "x",
+            "y_colname": "y",
+            "s_colname": "s",
+            "wave_colname": "wavelength",
+            "center_on_wave_mid": False,
+            "dwave": 0.002,  # [um] for finding the best fit dispersion
+            "invalid_value": None,  # for dodgy trace file values
+            "report_plot_include": True,
+            "report_table_include": False,
+        }
         self.meta.update(params)
 
         # Parameters that are specific to the subclass
@@ -151,7 +150,7 @@ class SpectralTraceList(Effect):
 
     def update_meta(self):
         """
-        Update fov related meta values
+        Update fov related meta values.
 
         The values describe the full extent of the spectral trace
         volume in wavelength and space
@@ -159,23 +158,22 @@ class SpectralTraceList(Effect):
         wlim, xlim, ylim = [], [], []
         for thetrace in self.spectral_traces.values():
             fov = thetrace.fov_grid()
-            if 'wave_min' in fov:
-                wlim.extend([fov['wave_min'], fov['wave_max']])
-            if 'x_min' in fov:
-                xlim.extend([fov['x_min'], fov['x_max']])
-            if 'y_min' in fov:
-                ylim.extend([fov['y_min'], fov['y_max']])
+            if "wave_min" in fov:
+                wlim.extend([fov["wave_min"], fov["wave_max"]])
+            if "x_min" in fov:
+                xlim.extend([fov["x_min"], fov["x_max"]])
+            if "y_min" in fov:
+                ylim.extend([fov["y_min"], fov["y_max"]])
 
         if wlim:
-            self.meta['wave_min'] = np.min(wlim)
-            self.meta['wave_max'] = np.max(wlim)
+            self.meta["wave_min"] = min(wlim)
+            self.meta["wave_max"] = max(wlim)
         if xlim:
-            self.meta['x_min'] = np.min(xlim)
-            self.meta['x_max'] = np.max(xlim)
+            self.meta["x_min"] = min(xlim)
+            self.meta["x_max"] = max(xlim)
         if ylim:
-            self.meta['y_min'] = np.min(ylim)
-            self.meta['y_max'] = np.max(ylim)
-
+            self.meta["y_min"] = min(ylim)
+            self.meta["y_max"] = max(ylim)
 
     def apply_to(self, obj, **kwargs):
         """
@@ -196,7 +194,8 @@ class SpectralTraceList(Effect):
             #            for spectral_trace in self.spectral_traces.values()]
 
             new_vols_list = []
-            #for vol in volumes:
+
+            # for vol in volumes:
             for spt in self.spectral_traces.values():
                 vol = spt.fov_grid()
                 wave_edges = [vol["wave_min"], vol["wave_max"]]
@@ -254,7 +253,7 @@ class SpectralTraceList(Effect):
 
     @property
     def image_plane_header(self):
-        """Create and return header for the ImagePlane"""
+        """Create and return header for the ImagePlane."""
         x, y = self.footprint
         pixel_scale = from_currsys(self.meta["pixel_scale"])
         hdr = header_from_list_of_xy(x, y, pixel_scale, "D")
@@ -305,8 +304,8 @@ class SpectralTraceList(Effect):
         filtwaves = filtcurve.table["wavelength"]
         filtwave = filtwaves[filtcurve.table["transmission"] > 0.01]
         wave_min, wave_max = min(filtwave), max(filtwave)
-        logger.info("Full wavelength range: %.02f .. %.02f um",
-                    wave_min, wave_max)
+        logger.info(
+            "Full wavelength range: %.02f .. %.02f um", wave_min, wave_max)
 
         if xi_min is None or xi_max is None:
             try:
@@ -316,11 +315,11 @@ class SpectralTraceList(Effect):
                     "Slit limits taken from header: %.02f .. %.02f arcsec",
                     xi_min, xi_max)
             except KeyError:
-                logger.error("""
-                Spatial slit limits (in arcsec) must be provided:
-                - either as method parameters xi_min and xi_max
-                - or as header keywords HIERARCH INS SLIT XIMIN/XIMAX
-                """)
+                logger.error(
+                    "Spatial slit limits (in arcsec) must be provided:\n"
+                    "- either as method parameters xi_min and xi_max\n"
+                    "- or as header keywords HIERARCH INS SLIT XIMIN/XIMAX"
+                )
                 return None
 
         bin_width = kwargs.get("bin_width", None)
@@ -465,19 +464,24 @@ class SpectralTraceListWheel(Effect):
 
     """
 
-    required_keys = {"trace_list_names", "filename_format",
-                     "current_trace_list"}
+    required_keys = {
+        "trace_list_names",
+        "filename_format",
+        "current_trace_list",
+    }
     _current_str = "current_trace_list"
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         check_keys(kwargs, self.required_keys, action="error")
 
-        params = {"z_order": [70, 270, 670],
-                  "path": "",
-                  "report_plot_include": True,
-                  "report_table_include": True,
-                  "report_table_rounding": 4}
+        params = {
+            "z_order": [70, 270, 670],
+            "path": "",
+            "report_plot_include": True,
+            "report_table_include": True,
+            "report_table_rounding": 4,
+        }
         self.meta.update(params)
         self.meta.update(kwargs)
 
