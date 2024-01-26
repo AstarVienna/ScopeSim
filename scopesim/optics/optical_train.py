@@ -1,16 +1,14 @@
 import copy
 import sys
-from copy import deepcopy
-from shutil import copyfileobj
 from pathlib import Path
 
 from datetime import datetime
 
 import numpy as np
 from scipy.interpolate import interp1d
-from astropy.io import fits
-from astropy.wcs import WCS
 from astropy import units as u
+
+from tqdm import tqdm
 
 from synphot import SourceSpectrum, Empirical1D
 from synphot.units import PHOTLAM
@@ -21,17 +19,14 @@ from .image_plane import ImagePlane
 from ..commands.user_commands import UserCommands
 from ..detector import DetectorArray
 from ..effects import ExtraFitsKeywords
-from ..source.source import Source
-from ..utils import from_currsys
+from ..utils import from_currsys, top_level_catch
 from ..version import version
-from .. import effects
 from .. import rc
-from . import fov_utils as fu
 
 
 class OpticalTrain:
     """
-    The main class for controlling a simulation
+    The main class for controlling a simulation.
 
     Parameters
     ----------
@@ -66,8 +61,8 @@ class OpticalTrain:
 
          >>> opt["dark_current"].include = False
 
-    Data used by an Effect object is contained in the ``.data`` attribute, while
-    other information is contained in the ``.meta`` attribute::
+    Data used by an Effect object is contained in the ``.data`` attribute,
+    while other information is contained in the ``.meta`` attribute::
 
         >>> opt["dark_current"].data
         >>> opt["dark_current"].meta
@@ -83,6 +78,8 @@ class OpticalTrain:
         >>> opt["dark_current"] = {"value": 0.75, "dit": 30}
 
     """
+
+    @top_level_catch
     def __init__(self, cmds=None):
         self.cmds = cmds
         self._description = self.__repr__()
@@ -98,14 +95,13 @@ class OpticalTrain:
 
     def load(self, user_commands):
         """
-        (Re)Loads an OpticalTrain with a new set of UserCommands
+        (Re)Load an OpticalTrain with a new set of UserCommands.
 
         Parameters
         ----------
         user_commands : UserCommands or str
 
         """
-
         if isinstance(user_commands, str):
             user_commands = UserCommands(use_instrument=user_commands)
         elif isinstance(user_commands, UserCommands):
@@ -115,6 +111,14 @@ class OpticalTrain:
                              f"but is {type(user_commands)}")
 
         self.cmds = user_commands
+        # FIXME: Setting rc.__currsys__ to user_commands causes many problems:
+        #        UserCommands used SystemDict internally, but is itself not an
+        #        instance or subclas thereof. So rc.__currsys__ actually
+        #        changes type as a result of this line. On one hand, some other
+        #        code relies on this change, i.e. uses attributes from
+        #        UserCommands via rc.__currsys__, but on the other hand some
+        #        tests (now with proper patching) fail because of this type
+        #        change. THIS IS A PROBLEM!
         rc.__currsys__ = user_commands
         self.yaml_dicts = rc.__currsys__.yaml_dicts
         self.optics_manager = OpticsManager(self.yaml_dicts)
@@ -122,7 +126,7 @@ class OpticalTrain:
 
     def update(self, **kwargs):
         """
-        Update the user-defined parameters and remake the main internal classes
+        Update the user-defined parameters and remake main internal classes.
 
         Parameters
         ----------
@@ -139,10 +143,10 @@ class OpticalTrain:
         self.detector_arrays = [DetectorArray(det_list, **kwargs)
                                 for det_list in opt_man.detector_setup_effects]
 
-
+    @top_level_catch
     def observe(self, orig_source, update=True, **kwargs):
         """
-        Main controlling method for observing ``Source`` objects
+        Main controlling method for observing ``Source`` objects.
 
         Parameters
         ----------
@@ -182,7 +186,7 @@ class OpticalTrain:
 
         # [3D - Atmospheric shifts, PSF, NCPAs, Grating shift/distortion]
         fovs = self.fov_manager.fovs
-        for fov in fovs:
+        for fov in tqdm(fovs, desc=" FOVs", position=0):
             # print("FOV", fov_i+1, "of", n_fovs, flush=True)
             # .. todo: possible bug with bg flux not using plate_scale
             #          see fov_utils.combine_imagehdu_fields
@@ -190,7 +194,8 @@ class OpticalTrain:
 
             hdu_type = "cube" if self.fov_manager.is_spectroscope else "image"
             fov.view(hdu_type)
-            for effect in self.optics_manager.fov_effects:
+            for effect in tqdm(self.optics_manager.fov_effects,
+                               desc=" FOV effects", position=1, leave=False):
                 fov = effect.apply_to(fov)
 
             fov.flatten()
@@ -198,17 +203,17 @@ class OpticalTrain:
             # ..todo: finish off the multiple image plane stuff
 
         # [2D - Vibration, flat fielding, chopping+nodding]
-        for effect in self.optics_manager.image_plane_effects:
+        for effect in tqdm(self.optics_manager.image_plane_effects,
+                           desc=" Image Plane effects"):
             for ii, image_plane in enumerate(self.image_planes):
                 self.image_planes[ii] = effect.apply_to(image_plane)
 
         self._last_fovs = fovs
         self._last_source = source
 
-
     def prepare_source(self, source):
         """
-        Prepare source for observation
+        Prepare source for observation.
 
         The method is currently applied to cube fields only.
         The source data are converted to internally used units (PHOTLAM).
@@ -296,9 +301,10 @@ class OpticalTrain:
 
         return source
 
+    @top_level_catch
     def readout(self, filename=None, **kwargs):
         """
-        Produces detector readouts for the observed image
+        Produce detector readouts for the observed image.
 
         Parameters
         ----------
@@ -315,7 +321,6 @@ class OpticalTrain:
         - Apply detector plane (0D, 2D) effects - z_order = 500..599
 
         """
-
         hduls = []
         for i, detector_array in enumerate(self.detector_arrays):
             array_effects = self.optics_manager.detector_array_effects
@@ -345,8 +350,7 @@ class OpticalTrain:
         return hduls
 
     def write_header(self, hdulist):
-        """Writes meaningful header to simulation product"""
-
+        """Write meaningful header to simulation product."""
         # Primary hdu
         pheader = hdulist[0].header
         pheader["DATE"] = datetime.now().isoformat(timespec="seconds")
@@ -380,18 +384,6 @@ class OpticalTrain:
         iheader["NDIT"] = from_currsys("!OBS.ndit")
         iheader["BUNIT"] = "e", "per EXPTIME"
         iheader["PIXSCALE"] = from_currsys("!INST.pixel_scale"), "[arcsec]"
-
-        # A simple WCS
-        iheader["CTYPE1"] = "LINEAR"
-        iheader["CTYPE2"] = "LINEAR"
-        iheader["CRPIX1"] = (iheader["NAXIS1"] + 1) / 2
-        iheader["CRPIX2"] = (iheader["NAXIS2"] + 1) / 2
-        iheader["CRVAL1"] = 0.
-        iheader["CRVAL2"] = 0.
-        iheader["CDELT1"] = iheader["PIXSCALE"]
-        iheader["CDELT2"] = iheader["PIXSCALE"]
-        iheader["CUNIT1"] = "arcsec"
-        iheader["CUNIT2"] = "arcsec"
 
         for eff in self.optics_manager.detector_setup_effects:
             efftype = type(eff).__name__
@@ -442,38 +434,9 @@ class OpticalTrain:
                 iheader["PRESSURE"] = eff.meta["pressure"], "[hPa]"
                 iheader["PWV"] = eff.meta["pwv"], "precipitable water vapour"
 
-            if efftype == "AtmosphericTERCurve" and eff.include:
-                iheader["ATMOSPHE"] = eff.meta["filename"], "atmosphere model"
-                # ..todo: expand if necessary
-
             if efftype == "SurfaceList" and eff.include:
-                iheader[f"SURFACE{isurface}"] = (eff.meta["filename"],
-                                                 eff.meta["name"])
+                iheader[f"SURFACE{isurface}"] = eff.meta["name"]
                 isurface += 1
-
-            if efftype == "QuantumEfficiencyCurve" and eff.include:
-                iheader["QE"] = Path(eff.meta["filename"]).name, eff.meta["name"]
-
-        for eff in self.optics_manager.fov_effects:
-            efftype = type(eff).__name__
-
-            # ..todo: needs to be handled with isinstance(eff, PSF)
-            if efftype == "FieldConstantPSF" and eff.include:
-                iheader["PSF"] = eff.meta["filename"], "point spread function"
-
-            if efftype == "SpectralTraceList" and eff.include:
-                iheader["SPECTRAC"] = (from_currsys(eff.meta["filename"]),
-                                       "spectral trace definition")
-                if "CTYPE1" in eff.meta:
-                    for key in {"WCSAXES", "CTYPE1", "CTYPE2", "CRPIX1", "CRPIX2", "CRVAL1",
-                                "CRVAL2", "CDELT1", "CDELT2", "CUNIT1", "CUNIT2"}:
-                        iheader[key] = eff.meta[key]
-
-        for eff in self.optics_manager.detector_effects:
-            efftype = type(eff).__name__
-
-            if efftype == "LinearityCurve" and eff.include:
-                iheader["DETLIN"] = from_currsys(eff.meta["filename"])
 
         return hdulist
 
@@ -484,13 +447,12 @@ class OpticalTrain:
             self.cmds.update(packages=self.default_yamls[0]["packages"])
         rc.__currsys__ = self.cmds
 
-
     def shutdown(self):
         """
         Shut down the instrument.
 
-        This method closes all open file handles and should be called when the optical train
-        is no longer needed.
+        This method closes all open file handles and should be called when the
+        optical train is no longer needed.
         """
         for effect_name in self.effects["name"]:
             try:
@@ -510,6 +472,36 @@ class OpticalTrain:
 
     def __str__(self):
         return self._description
+
+    def _repr_pretty_(self, p, cycle):
+        """For ipython."""
+        if cycle:
+            p.text(f"{self.__class__.__name__}(...)")
+        else:
+            p.text(f"{self.__class__.__name__} ")
+            p.text(f"for {self.cmds['!OBS.instrument']} ")
+            p.text(f"@ {self.cmds['!TEL.telescope']}:")
+            p.breakable()
+            p.text("UserCommands:")
+            p.breakable()
+            p.pretty(self.cmds)
+            p.breakable()
+            p.text("OpticalElements:")
+            with p.indent(2):
+                for item in self:
+                    p.breakable()
+                    p.pretty(item)
+            p.breakable()
+            p.text("DetectorArrays:")
+            with p.indent(2):
+                for item in self.detector_arrays:
+                    p.breakable()
+                    p.pretty(item)
+            p.breakable()
+            p.text("Effects:")
+            p.breakable()
+            with p.indent(2):
+                p.pretty(self.effects)
 
     def __getitem__(self, item):
         return self.optics_manager[item]

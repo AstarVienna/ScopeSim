@@ -1,5 +1,6 @@
+# -*- coding: utf-8 -*-
 """
-Electronic detector effects - related to detector readout
+Electronic detector effects - related to detector readout.
 
 Classes:
 - DetectorModePropertiesSetter - set parameters for readout mode
@@ -19,23 +20,24 @@ Functions:
 - make_ron_frame
 - pseudo_random_field
 """
-import logging
 
 import numpy as np
-import matplotlib.pyplot as plt
 
 from astropy.io import fits
 
 from .. import rc
 from . import Effect
 from ..base_classes import DetectorBase, ImagePlaneBase
-from ..utils import from_currsys
-from .. import utils
+from ..utils import (from_currsys, figure_factory, check_keys, real_colname,
+                     pretty_print_dict, get_logger)
+
+
+logger = get_logger(__name__)
 
 
 class DetectorModePropertiesSetter(Effect):
     """
-    Sets mode specific curr_sys properties for different detector readout modes
+    Set mode specific curr_sys properties for different detector readout modes.
 
     A little class (``DetectorModePropertiesSetter``) that allows different
     ``"!DET"`` properties to be set on the fly.
@@ -89,7 +91,7 @@ class DetectorModePropertiesSetter(Effect):
         self.meta.update(kwargs)
 
         required_keys = ["mode_properties"]
-        utils.check_keys(self.meta, required_keys, action="error")
+        check_keys(self.meta, required_keys, action="error")
 
         self.mode_properties = kwargs["mode_properties"]
 
@@ -98,7 +100,7 @@ class DetectorModePropertiesSetter(Effect):
                                from_currsys("!OBS.detector_readout_mode"))
         if isinstance(obj, ImagePlaneBase) and mode_name == "auto":
             mode_name = self.select_mode(obj, **kwargs)
-            print("Detector mode set to", mode_name)
+            logger.info("Detector mode set to %s", mode_name)
 
         self.meta["detector_readout_mode"] = mode_name
         props_dict = self.mode_properties[mode_name]
@@ -109,15 +111,15 @@ class DetectorModePropertiesSetter(Effect):
         return obj
 
     def list_modes(self):
-        """Return list of available detector modes"""
-        return utils.pretty_print_dict(self.mode_properties)
+        """Return list of available detector modes."""
+        return pretty_print_dict(self.mode_properties)
 
     def select_mode(self, obj, **kwargs):
-        """Automatically select detector mode based on image plane peak value
+        """Automatically select detector mode based on image plane peak value.
 
-        Select the mode with lowest readnoise that does not saturate the detector.
-        When all modes saturate, select the mode with the lowest saturation level
-        (peak to full_well).
+        Select the mode with lowest readnoise that does not saturate the
+        detector. When all modes saturate, select the mode with the lowest
+        saturation level (peak to full_well).
         """
         immax = np.max(obj.data)
         fillfrac = kwargs.get("fill_frac",
@@ -145,7 +147,7 @@ class DetectorModePropertiesSetter(Effect):
 
 class AutoExposure(Effect):
     """
-    Determine DIT and NDIT automatically from ImagePlane
+    Determine DIT and NDIT automatically from ImagePlane.
 
     DIT is determined such that the maximum value in the incident photon flux
     (including astronomical source, sky and thermal backgrounds) fills
@@ -171,6 +173,7 @@ class AutoExposure(Effect):
            fill_frac: "!OBS.auto_exposure.fill_frac"
 
     """
+
     def __init__(self, **kwargs):
         """
         The effect is the first detector effect, hence essentially operates
@@ -182,7 +185,7 @@ class AutoExposure(Effect):
         self.meta.update(kwargs)
 
         required_keys = ["fill_frac", "full_well", "mindit"]
-        utils.check_keys(self.meta, required_keys, action="error")
+        check_keys(self.meta, required_keys, action="error")
 
     def apply_to(self, obj, **kwargs):
         if isinstance(obj, (ImagePlaneBase, DetectorBase)):
@@ -192,10 +195,10 @@ class AutoExposure(Effect):
 
             if exptime is None:
                 exptime = from_currsys("!OBS.dit") * from_currsys("!OBS.ndit")
-            print(f"Requested exposure time: {exptime:.3f} s")
+            logger.info("Requested exposure time: %.3f s", exptime)
 
             if exptime < mindit:
-                print(f"    increased to MINDIT: {mindit:.3f} s")
+                logger.info("    increased to MINDIT: %.3f s", mindit)
                 exptime = mindit
 
             full_well = from_currsys(self.meta["full_well"])
@@ -212,12 +215,11 @@ class AutoExposure(Effect):
             if dit < from_currsys(self.meta["mindit"]):
                 dit = from_currsys(self.meta["mindit"])
                 ndit = int(np.floor(exptime / dit))
-                print("Warning: The detector will be saturated!")
+                logger.warning("The detector will be saturated!")
                 # ..todo: turn into proper warning
 
-            print("Exposure parameters:")
-            print(f"                DIT: {dit:.3f} s  NDIT: {ndit}")
-            print(f"Total exposure time: {dit * ndit:.3f} s")
+            logger.info("Exposure parameters: DIT=%.3f s  NDIT=%d", dit, ndit)
+            logger.info("Total exposure time: %.3f s", dit * ndit)
 
             rc.__currsys__["!OBS.dit"] = dit
             rc.__currsys__["!OBS.ndit"] = ndit
@@ -226,18 +228,16 @@ class AutoExposure(Effect):
 
 
 class SummedExposure(Effect):
-    """
-    Simulates a summed stack of ``ndit`` exposures
+    """Simulates a summed stack of ``ndit`` exposures."""
 
-    """
     def __init__(self, **kwargs):
-        super(SummedExposure, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         params = {"z_order": [860]}
         self.meta.update(params)
         self.meta.update(kwargs)
 
         required_keys = ["dit", "ndit"]
-        utils.check_keys(self.meta, required_keys, action="error")
+        check_keys(self.meta, required_keys, action="error")
 
     def apply_to(self, obj, **kwargs):
         if isinstance(obj, DetectorBase):
@@ -250,18 +250,16 @@ class SummedExposure(Effect):
 
 
 class Bias(Effect):
-    """
-    Adds a constant bias level to readout
+    """Adds a constant bias level to readout."""
 
-    """
     def __init__(self, **kwargs):
-        super(Bias, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         params = {"z_order": [855]}
         self.meta.update(params)
         self.meta.update(kwargs)
 
         required_keys = ["bias"]
-        utils.check_keys(self.meta, required_keys, action="error")
+        check_keys(self.meta, required_keys, action="error")
 
     def apply_to(self, obj, **kwargs):
         if isinstance(obj, DetectorBase):
@@ -272,7 +270,7 @@ class Bias(Effect):
 
 class PoorMansHxRGReadoutNoise(Effect):
     def __init__(self, **kwargs):
-        super(PoorMansHxRGReadoutNoise, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         params = {"z_order": [811],
                   "pedestal_fraction": 0.3,
                   "read_fraction": 0.4,
@@ -285,7 +283,7 @@ class PoorMansHxRGReadoutNoise(Effect):
         self.meta.update(kwargs)
 
         self.required_keys = ["noise_std", "n_channels", "ndit"]
-        utils.check_keys(self.meta, self.required_keys, action="error")
+        check_keys(self.meta, self.required_keys, action="error")
 
     def apply_to(self, det, **kwargs):
         if isinstance(det, DetectorBase):
@@ -311,25 +309,28 @@ class PoorMansHxRGReadoutNoise(Effect):
 
         return det
 
-    def plot(self, det, new_figure=False, **kwargs):
+    def plot(self, det, **kwargs):
         dtcr = self.apply_to(det)
-        plt.imshow(dtcr.data, origin="lower")
+        fig, ax = figure_factory()
+        ax.imshow(dtcr.data, origin="lower")
 
     def plot_hist(self, det, **kwargs):
         dtcr = self.apply_to(det)
-        plt.hist(dtcr.data.flatten())
+        fig, ax = figure_factory()
+        ax.hist(dtcr.data.flatten())
 
 
 class BasicReadoutNoise(Effect):
-    """Readout noise computed as: ron * sqrt(NDIT)"""
+    """Readout noise computed as: ron * sqrt(NDIT)."""
+
     def __init__(self, **kwargs):
-        super(BasicReadoutNoise, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         self.meta["z_order"] = [811]
         self.meta["random_seed"] = "!SIM.random.seed"
         self.meta.update(kwargs)
 
         self.required_keys = ["noise_std", "ndit"]
-        utils.check_keys(self.meta, self.required_keys, action="error")
+        check_keys(self.meta, self.required_keys, action="error")
 
     def apply_to(self, det, **kwargs):
         if isinstance(det, DetectorBase):
@@ -347,16 +348,18 @@ class BasicReadoutNoise(Effect):
 
     def plot(self, det):
         dtcr = self.apply_to(det)
-        plt.imshow(dtcr.data)
+        fig, ax = figure_factory()
+        ax.imshow(dtcr.data)
 
     def plot_hist(self, det, **kwargs):
         dtcr = self.apply_to(det)
-        plt.hist(dtcr.data.flatten())
+        fig, ax = figure_factory()
+        ax.hist(dtcr.data.flatten())
 
 
 class ShotNoise(Effect):
     def __init__(self, **kwargs):
-        super(ShotNoise, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         self.meta["z_order"] = [820]
         self.meta["random_seed"] = "!SIM.random.seed"
         self.meta.update(kwargs)
@@ -377,14 +380,13 @@ class ShotNoise(Effect):
             # Check if there are negative values in the data
             negvals = np.sum(data < 0)
             if negvals:
-                logging.warning(f"Effect ShotNoise: {negvals} negative pixels")
+                logger.warning(f"Effect ShotNoise: {negvals} negative pixels")
                 data[data < 0] = 0
 
             below = data < 2**20
             above = np.invert(below)
             data[below] = np.random.poisson(data[below]).astype(float)
             data[above] = np.random.normal(data[above], np.sqrt(data[above]))
-            data = np.floor(data)
             new_imagehdu = fits.ImageHDU(data=data, header=det._hdu.header)
             det._hdu = new_imagehdu
 
@@ -392,11 +394,13 @@ class ShotNoise(Effect):
 
     def plot(self, det):
         dtcr = self.apply_to(det)
-        plt.imshow(dtcr.data)
+        fig, ax = figure_factory()
+        ax.imshow(dtcr.data)
 
     def plot_hist(self, det, **kwargs):
         dtcr = self.apply_to(det)
-        plt.hist(dtcr.data.flatten())
+        fig, ax = figure_factory()
+        ax.hist(dtcr.data.flatten())
 
 
 class DarkCurrent(Effect):
@@ -404,16 +408,16 @@ class DarkCurrent(Effect):
     required: dit, ndit, value
     """
     def __init__(self, **kwargs):
-        super(DarkCurrent, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         self.meta["z_order"] = [830]
 
         required_keys = ["value", "dit", "ndit"]
-        utils.check_keys(self.meta, required_keys, action="error")
+        check_keys(self.meta, required_keys, action="error")
 
     def apply_to(self, obj, **kwargs):
         if isinstance(obj, DetectorBase):
             if isinstance(from_currsys(self.meta["value"]), dict):
-                dtcr_id = obj.meta[utils.real_colname("id", obj.meta)]
+                dtcr_id = obj.meta[real_colname("id", obj.meta)]
                 dark = from_currsys(self.meta["value"][dtcr_id])
             elif isinstance(from_currsys(self.meta["value"]), float):
                 dark = from_currsys(self.meta["value"])
@@ -436,17 +440,18 @@ class DarkCurrent(Effect):
         dtcr = self.apply_to(det)
         dark_level = dtcr.data[0, 0] / total_time  # just read one pixel
         levels = dark_level * times
-        plt.plot(times, levels, **kwargs)
-        plt.xlabel("time")
-        plt.ylabel("dark level")
+        fig, ax = figure_factory()
+        ax.plot(times, levels, **kwargs)
+        ax.set_xlabel("time")
+        ax.set_ylabel("dark level")
 
 
 class LinearityCurve(Effect):
     """
-    Detector linearity effect
+    Detector linearity effect.
 
-    The detector linearity curve is set in terms of `incident` flux (e/s) and `measured`
-    detector values (ADU).
+    The detector linearity curve is set in terms of `incident` flux (e/s) and
+    `measured` detector values (ADU).
 
     Examples
     --------
@@ -471,6 +476,7 @@ class LinearityCurve(Effect):
             measured: [0, 77000, 77000]
 
     """
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         params = {"z_order": [840],
@@ -480,7 +486,7 @@ class LinearityCurve(Effect):
         self.meta.update(kwargs)
 
         self.required_keys = ["ndit"]
-        utils.check_keys(self.meta, self.required_keys, action="error")
+        check_keys(self.meta, self.required_keys, action="error")
 
     def apply_to(self, obj, **kwargs):
         if isinstance(obj, DetectorBase):
@@ -496,22 +502,22 @@ class LinearityCurve(Effect):
         return obj
 
     def plot(self, **kwargs):
-        plt.gcf().clf()
+        fig, ax = figure_factory()
 
         ndit = from_currsys(self.meta["ndit"])
         incident = self.table["incident"] * ndit
         measured = self.table["measured"] * ndit
 
-        plt.loglog(incident, measured, **kwargs)
-        plt.xlabel("Incident [ph s$^-1$]")
-        plt.ylabel("Measured [e- s$^-1$]")
+        ax.loglog(incident, measured, **kwargs)
+        ax.set_xlabel("Incident [ph s$^-1$]")
+        ax.set_ylabel("Measured [e- s$^-1$]")
 
-        return plt.gcf()
+        return fig
 
 
 class ReferencePixelBorder(Effect):
     def __init__(self, **kwargs):
-        super(ReferencePixelBorder, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         self.meta["z_order"] = [780]
         val = 0
         if "all" in kwargs:
@@ -536,17 +542,18 @@ class ReferencePixelBorder(Effect):
 
     def plot(self, implane, **kwargs):
         implane = self.apply_to(implane)
-        plt.imshow(implane.data, origin="bottom", **kwargs)
-        plt.show()
+        fig, ax = figure_factory()
+        ax.imshow(implane.data, origin="bottom", **kwargs)
+        # fig.show()
 
 
 class BinnedImage(Effect):
     def __init__(self, **kwargs):
-        super(BinnedImage, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         self.meta["z_order"] = [870]
 
         self.required_keys = ["bin_size"]
-        utils.check_keys(self.meta, self.required_keys, action="error")
+        check_keys(self.meta, self.required_keys, action="error")
 
     def apply_to(self, det, **kwargs):
         if isinstance(det, DetectorBase):
@@ -560,11 +567,11 @@ class BinnedImage(Effect):
 
 class UnequalBinnedImage(Effect):
     def __init__(self, **kwargs):
-        super(UnequalBinnedImage, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         self.meta["z_order"] = [870]
 
         self.required_keys = ["binx","biny"]
-        utils.check_keys(self.meta, self.required_keys, action="error")
+        check_keys(self.meta, self.required_keys, action="error")
 
     def apply_to(self, det, **kwargs):
         if isinstance(det, DetectorBase):
@@ -577,7 +584,34 @@ class UnequalBinnedImage(Effect):
 
         return det
 
-################################################################################
+
+class Quantization(Effect):
+    """Converts raw data to whole photons."""
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        params = {
+            "z_order": [825],
+            "dtype": "uint32",
+        }
+        self.meta.update(params)
+        self.meta.update(kwargs)
+
+    def apply_to(self, obj, **kwargs):
+        if not isinstance(obj, DetectorBase):
+            return obj
+
+        new_dtype = self.meta["dtype"]
+        if not np.issubdtype(new_dtype, np.integer):
+            logger.warning("Setting quantized data to dtype %s, which is not "
+                            "an integer subtype.", new_dtype)
+
+        # This used to create a new ImageHDU with the same header but the data
+        # set to the modified data. It should be fine to simply re-assign the
+        # data attribute, but just in case it's not...
+        obj._hdu.data = np.floor(obj._hdu.data).astype(new_dtype)
+
+        return obj
 
 
 def make_ron_frame(image_shape, noise_std, n_channels, channel_fraction,

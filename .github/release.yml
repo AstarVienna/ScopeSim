@@ -1,0 +1,23 @@
+changelog:
+  exclude:
+    labels:
+      - "no release notes"
+  categories:
+    - title: API Changes
+      labels:
+        - API
+    - title: Changes to or addition of Effects
+      labels:
+        - effects
+    - title: New Features or Improvements
+      labels:
+        - enhancement
+    - title: Dependency Changes
+      labels:
+        - dependencies
+    - title: Documentation Improvements
+      labels:
+        - documentation
+    - title: Other Changes
+      labels:
+        - "*"

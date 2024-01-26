@@ -1,4 +1,4 @@
-import logging
+"""TBA."""
 
 import numpy as np
 from astropy import units as u
@@ -7,15 +7,18 @@ from astropy.table import Table
 from ..base_classes import FOVSetupBase
 from .effects import Effect
 from .apertures import ApertureMask
-from .. import utils
 from ..optics.image_plane_utils import header_from_list_of_xy, calc_footprint
+from ..utils import (from_currsys, close_loop, figure_factory,
+                     quantity_from_table, unit_from_table, get_logger)
+
+logger = get_logger(__name__)
 
 __all__ = ["DetectorList", "DetectorWindow"]
 
 
 class DetectorList(Effect):
     """
-    A description of detector positions and properties
+    A description of detector positions and properties.
 
     The list of detectors must have the following table columns
     ::
@@ -23,6 +26,7 @@ class DetectorList(Effect):
         id   x_cen   y_cen  x_size  y_size  pixel_size  angle    gain
 
     where:
+
     * "id" is a reference id for the chip (fits header EXTNAME)
     * "x_cen" and "y_cen" [mm] are the physical coordinates of centre of the chip on the detector plane
     * "x_size", "y_size" [mm, pixel] are the width/height of the chip
@@ -104,8 +108,9 @@ class DetectorList(Effect):
         3    63.94    0.00    4096    4096       0.015  180.0     1.0
 
     """
+
     def __init__(self, **kwargs):
-        super(DetectorList, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         params = {"z_order": [90, 290, 390, 490],
                   "pixel_scale": "!INST.pixel_scale",      # arcsec
                   "active_detectors": "all",
@@ -115,54 +120,60 @@ class DetectorList(Effect):
         self.meta.update(kwargs)
 
         # for backwards compatibility
-        new_colnames = {"xhw": "x_size", "yhw": "y_size", "pixsize": "pixel_size"}
+        new_colnames = {"xhw": "x_size",
+                        "yhw": "y_size",
+                        "pixsize": "pixel_size"}
         mult_cols = {"xhw": 2., "yhw": 2., "pixsize": 1.}
         if isinstance(self.table, Table):
             for col, new_name in new_colnames.items():
                 if col in self.table.colnames:
                     self.table[col] = self.table[col] * mult_cols[col]
                     self.table.rename_column(col, new_name)
-        if not "x_size_unit" in self.meta and "xhw_unit" in self.meta:
+        if "x_size_unit" not in self.meta and "xhw_unit" in self.meta:
             self.meta["x_size_unit"] = self.meta["xhw_unit"]
-        if not "y_size_unit" in self.meta and "yhw_unit" in self.meta:
+        if "y_size_unit" not in self.meta and "yhw_unit" in self.meta:
             self.meta["y_size_unit"] = self.meta["yhw_unit"]
 
     def apply_to(self, obj, **kwargs):
         if isinstance(obj, FOVSetupBase):
 
             hdr = self.image_plane_header
-            x_mm, y_mm = calc_footprint(hdr, "D")
+            xy_mm = calc_footprint(hdr, "D")
             pixel_size = hdr["CDELT1D"]              # mm
             pixel_scale = kwargs.get("pixel_scale", self.meta["pixel_scale"])   # ["]
-            pixel_scale = utils.from_currsys(pixel_scale)
-            x_sky = x_mm * pixel_scale / pixel_size  # x["] = x[mm] * ["] / [mm]
-            y_sky = y_mm * pixel_scale / pixel_size  # y["] = y[mm] * ["] / [mm]
+            pixel_scale = from_currsys(pixel_scale)
 
-            obj.shrink(axis=["x", "y"], values=([min(x_sky), max(x_sky)],
-                                                [min(y_sky), max(y_sky)]))
-            obj.detector_limits = {"xd_min": min(x_mm),
-                                   "xd_max": max(x_mm),
-                                   "yd_min": min(y_mm),
-                                   "yd_max": max(y_mm)}
+            # x["] = x[mm] * ["] / [mm]
+            xy_sky = xy_mm * pixel_scale / pixel_size
+
+            obj.shrink(axis=["x", "y"],
+                       values=(tuple(zip(xy_sky.min(axis=0),
+                                         xy_sky.max(axis=0)))))
+
+            lims = np.array((xy_mm.min(axis=0), xy_mm.max(axis=0)))
+            keys = ["xd_min", "xd_max", "yd_min", "yd_max"]
+            obj.detector_limits = dict(zip(keys, lims.T.flatten()))
 
         return obj
 
     def fov_grid(self, which="edges", **kwargs):
-        """Returns an ApertureMask object. kwargs are "pixel_scale" [arcsec]"""
-        logging.warning("DetectorList.fov_grid will be depreciated in v1.0")
+        """Return an ApertureMask object. kwargs are "pixel_scale" [arcsec]."""
+        logger.warning("DetectorList.fov_grid will be depreciated in v1.0")
         aperture_mask = None
         if which == "edges":
             self.meta.update(kwargs)
-            self.meta = utils.from_currsys(self.meta)
+            self.meta = from_currsys(self.meta)
 
             hdr = self.image_plane_header
-            x_mm, y_mm = calc_footprint(hdr, "D")
+            xy_mm = calc_footprint(hdr, "D")
             pixel_size = hdr["CDELT1D"]              # mm
             pixel_scale = self.meta["pixel_scale"]   # ["]
-            x_sky = x_mm * pixel_scale / pixel_size  # x["] = x[mm] * ["] / [mm]
-            y_sky = y_mm * pixel_scale / pixel_size  # y["] = y[mm] * ["] / [mm]
 
-            aperture_mask = ApertureMask(array_dict={"x": x_sky, "y": y_sky},
+            # x["] = x[mm] * ["] / [mm]
+            xy_sky = xy_mm * pixel_scale / pixel_size
+
+            aperture_mask = ApertureMask(array_dict={"x": xy_sky[:, 0],
+                                                     "y": xy_sky[:, 1]},
                                          pixel_scale=pixel_scale)
 
         return aperture_mask
@@ -170,9 +181,9 @@ class DetectorList(Effect):
     @property
     def image_plane_header(self):
         tbl = self.active_table
-        pixel_size = np.min(utils.quantity_from_table("pixel_size", tbl, u.mm))
-        x_unit = utils.unit_from_table("x_size", tbl, u.mm)
-        y_unit = utils.unit_from_table("y_size", tbl, u.mm)
+        pixel_size = np.min(quantity_from_table("pixel_size", tbl, u.mm))
+        x_unit = unit_from_table("x_size", tbl, u.mm)
+        y_unit = unit_from_table("y_size", tbl, u.mm)
 
         xcen = tbl["x_cen"].data.astype(float)
         ycen = tbl["y_cen"].data.astype(float)
@@ -195,7 +206,7 @@ class DetectorList(Effect):
 
         pixel_size = pixel_size.to(u.mm).value
         hdr = header_from_list_of_xy(x_det, y_det, pixel_size, "D")
-        hdr["IMGPLANE"] = self.meta["image_plane_id"]
+        hdr["IMGPLANE"] = self.image_plane_id
 
         return hdr
 
@@ -209,8 +220,8 @@ class DetectorList(Effect):
             tbl = self.table[mask]
         else:
             raise ValueError("Could not determine which detectors are active: "
-                             f"{self.meta['active_detectors']}, {self.table}, ")
-        tbl = utils.from_currsys(tbl)
+                             f"{self.meta['active_detectors']}, {self.table},")
+        tbl = from_currsys(tbl)
 
         return tbl
 
@@ -218,7 +229,7 @@ class DetectorList(Effect):
         if ids is not None and all(isinstance(ii, int) for ii in ids):
             self.meta["active_detectors"] = list(ids)
 
-        tbl = utils.from_currsys(self.active_table)
+        tbl = from_currsys(self.active_table)
         hdrs = []
         for row in tbl:
             pixel_size = row["pixel_size"]
@@ -230,8 +241,10 @@ class DetectorList(Effect):
             if "pix" in self.meta["x_size_unit"]:
                 dx, dy = dx * pixel_size, dy * pixel_size
 
-            hdr = header_from_list_of_xy([xcen-dx, xcen+dx], [ycen-dy, ycen+dy],
-                                         pixel_scale=pixel_size, wcs_suffix="D")
+            hdr = header_from_list_of_xy([xcen-dx, xcen+dx],
+                                         [ycen-dy, ycen+dy],
+                                         pixel_scale=pixel_size,
+                                         wcs_suffix="D")
             if abs(row["angle"]) > 1E-4:
                 sang = np.sin(row["angle"] / 57.29578)
                 cang = np.cos(row["angle"] / 57.29578)
@@ -251,27 +264,32 @@ class DetectorList(Effect):
 
         return hdrs
 
-    def plot(self):
-        import matplotlib.pyplot as plt
-        plt.gcf().clf()
+    def plot(self, axes=None):
+        if axes is None:
+            _, axes = figure_factory()
 
         for hdr in self.detector_headers():
-            x_mm, y_mm = calc_footprint(hdr, "D")
-            x_cen, y_cen = np.average(x_mm), np.average(y_mm)
-            x_mm = list(x_mm) + [x_mm[0]]
-            y_mm = list(y_mm) + [y_mm[0]]
-            plt.gca().plot(x_mm, y_mm)
-            plt.gca().text(x_cen, y_cen, hdr["ID"])
+            xy_mm = calc_footprint(hdr, "D")
+            outline = np.array(list(close_loop(xy_mm)))
+            axes.plot(outline[:, 0], outline[:, 1])
+            axes.text(*xy_mm.mean(axis=0), hdr["ID"],
+                      ha="center", va="center")
 
-        plt.gca().set_aspect("equal")
-        plt.ylabel("Size [mm]")
+        axes.set_aspect("equal")
+        axes.set_xlabel("Size [mm]")
+        axes.set_ylabel("Size [mm]")
 
-        return plt.gcf()
+        return axes
+
+    @property
+    def image_plane_id(self) -> int:
+        """Get ID of the corresponding image plane."""
+        return self.meta["image_plane_id"]
 
 
 class DetectorWindow(DetectorList):
     """
-    For when a full DetectorList if too cumbersome
+    For when a full DetectorList if too cumbersome.
 
     Parameters
     ----------
@@ -291,6 +309,7 @@ class DetectorWindow(DetectorList):
         by ``pixel_size``
 
     """
+
     def __init__(self, pixel_size, x, y, width, height=None, angle=0, gain=1,
                  units="mm", **kwargs):
 
@@ -314,4 +333,4 @@ class DetectorWindow(DetectorList):
                            "angle", "gain", "pixel_size"])
         tbl.meta.update(params)
 
-        super(DetectorWindow, self).__init__(table=tbl, **params)
+        super().__init__(table=tbl, **params)

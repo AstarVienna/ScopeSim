@@ -1,19 +1,21 @@
 import numpy as np
 
-
 from astropy.io import fits
 from astropy.table import Table
+from astropy.wcs import WCS
 
 from .image_plane_utils import add_table_to_imagehdu, add_imagehdu_to_imagehdu
 
 from ..base_classes import ImagePlaneBase
+from ..utils import from_currsys, has_needed_keywords, get_logger
 from .. import rc
-from .. import utils
+
+logger = get_logger(__name__)
 
 
 class ImagePlane(ImagePlaneBase):
     """
-    A class to act as a canvas onto which to project `Source` images or tables
+    A class to act as a canvas onto which to project `Source` images or tables.
 
     Parameters
     ----------
@@ -46,29 +48,37 @@ class ImagePlane(ImagePlaneBase):
     def __init__(self, header, **kwargs):
 
         max_seg_size = rc.__config__["!SIM.computing.max_segment_size"]
-        self.meta = {"SIM_MAX_SEGMENT_SIZE" : max_seg_size}
+        self.meta = {"SIM_MAX_SEGMENT_SIZE": max_seg_size}
         self.meta.update(kwargs)
         self.id = header["IMGPLANE"] if "IMGPLANE" in header else 0
 
-        if not any(utils.has_needed_keywords(header, s)
+        if not any(has_needed_keywords(header, s)
                    for s in ["", "D", "S"]):
             raise ValueError(f"header must have a valid image-plane WCS: "
                              f"{dict(header)}")
 
-        image = np.zeros((header["NAXIS2"]+1, header["NAXIS1"]+1))
+        # image = np.zeros((header["NAXIS2"]+1, header["NAXIS1"]+1))
+        image = np.zeros((header["NAXIS2"], header["NAXIS1"]))
         self.hdu = fits.ImageHDU(data=image, header=header)
 
-    def add(self, hdus_or_tables, sub_pixel=None, spline_order=None, wcs_suffix=""):
+        self._det_wcs = self._get_wcs(header, "D")
+        logger.debug("det %s", self._det_wcs)
+        self._sky_wcs = self._get_wcs(header, " ")
+        logger.debug("sky %s", self._sky_wcs)
+
+    def add(self, hdus_or_tables, sub_pixel=None, spline_order=None,
+            wcs_suffix=""):
         """
-        Add a projection of an image or table files to the canvas
+        Add a projection of an image or table files to the canvas.
 
         .. note::
             If a Table is provided, it must include the following columns:
             `x_mm`, `y_mm`, and `flux`.
 
             Units for the columns should be provided in the
-            <Table>.unit attribute or as an entry in the table's meta dictionary
-            using this syntax: <Table>.meta["<colname>_unit"] = <unit>.
+            <Table>.unit attribute or as an entry in the table's meta
+            dictionary using this syntax:
+            <Table>.meta["<colname>_unit"] = <unit>.
 
             For example::
 
@@ -99,9 +109,9 @@ class ImagePlane(ImagePlaneBase):
 
         """
         if sub_pixel is None:
-            sub_pixel = utils.from_currsys("!SIM.sub_pixel.flag")
+            sub_pixel = from_currsys("!SIM.sub_pixel.flag")
         if spline_order is None:
-            spline_order = utils.from_currsys("!SIM.computing.spline_order")
+            spline_order = from_currsys("!SIM.computing.spline_order")
 
         if isinstance(hdus_or_tables, (list, tuple)):
             for hdu_or_table in hdus_or_tables:
@@ -135,3 +145,17 @@ class ImagePlane(ImagePlaneBase):
     def view(self, sub_pixel):
         # for consistency with FieldOfView
         return self.data
+
+    @staticmethod
+    def _get_wcs(header: fits.Header, key: str) -> WCS:
+        sky_alias = {" ", "S"}
+        try:
+            wcs = WCS(header, key=key)
+        except KeyError:
+            # retry with alias
+            sky_alias.discard(key)
+            try:
+                wcs = WCS(header, key=sky_alias.pop())
+            except KeyError:
+                wcs = None
+        return wcs

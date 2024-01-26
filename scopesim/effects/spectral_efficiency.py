@@ -1,9 +1,6 @@
-"""
-Spectral grating efficiencies
-"""
-import logging
+"""Spectral grating efficiencies."""
+
 import numpy as np
-from matplotlib import pyplot as plt
 
 from astropy.io import fits
 from astropy import units as u
@@ -13,12 +10,15 @@ from astropy.table import Table
 from .effects import Effect
 from .ter_curves import TERCurve
 from .ter_curves_utils import apply_throughput_to_cube
-from ..utils import find_file
-from ..base_classes import FieldOfViewBase, FOVSetupBase
+from ..utils import figure_factory, get_logger
+
+
+logger = get_logger(__name__)
+
 
 class SpectralEfficiency(Effect):
     """
-    Applies the grating efficiency (blaze function) for a SpectralTraceList
+    Applies the grating efficiency (blaze function) for a SpectralTraceList.
 
     Input Data Format
     -----------------
@@ -73,7 +73,7 @@ class SpectralEfficiency(Effect):
         self.efficiencies = self.get_efficiencies()
 
     def get_efficiencies(self):
-        """Reads effciencies from file, returns a dictionary"""
+        """Read effciencies from file, returns a dictionary."""
         hdul = self._file
         self.ext_data = hdul[0].header["EDATA"]
         self.ext_cat = hdul[0].header["ECAT"]
@@ -98,14 +98,12 @@ class SpectralEfficiency(Effect):
         return efficiencies
 
     def apply_to(self, obj, **kwargs):
-        """
-        Interface between FieldOfView and SpectralEfficiency
-        """
-        trace_id = obj.meta['trace_id']
+        """Interface between FieldOfView and SpectralEfficiency."""
+        trace_id = obj.trace_id
         try:
             effic = self.efficiencies[trace_id]
         except KeyError:
-            logging.warning("No grating efficiency for trace %s" % trace_id)
+            logger.warning("No grating efficiency for trace %s", trace_id)
             return obj
 
         wcs = WCS(obj.hdu.header).spectral
@@ -115,13 +113,15 @@ class SpectralEfficiency(Effect):
         return obj
 
     def plot(self):
-        """Plot the grating efficiencies"""
+        """Plot the grating efficiencies."""
+        fig, axes = figure_factory()
         for name, effic in self.efficiencies.items():
             wave = effic.throughput.waveset
-            plt.plot(wave.to(u.um), effic.throughput(wave), label=name)
+            axes.plot(wave.to(u.um), effic.throughput(wave), label=name)
 
-        plt.xlabel("Wavelength [um]")
-        plt.ylabel("Grating efficiency")
-        plt.title(f"Grating efficiencies from {self.filename}")
-        plt.legend()
-        plt.show()
+        axes.set_xlabel("Wavelength [um]")
+        axes.set_ylabel("Grating efficiency")
+        axes.set_title(f"Grating efficiencies {self.display_name}")
+        axes.legend()
+
+        return fig

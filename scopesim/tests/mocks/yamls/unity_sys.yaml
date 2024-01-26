@@ -15,7 +15,7 @@ effects :
                  emission: [0, 0]}
     action: transmission
     wavelength_unit: um
-    emission_unit: ph/s/m2/um
+    emission_unit: ph / (s * m2 * um)
     outer: 1
     outer_unit: m
 

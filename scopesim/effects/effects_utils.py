@@ -1,8 +1,16 @@
+"""TBA."""
+
 import inspect
 from copy import deepcopy, copy
+from collections.abc import Iterable
+
 from astropy.table import Table
 
 from .. import effects as efs
+from ..utils import get_logger
+
+
+logger = get_logger(__name__)
 
 
 def combine_surface_effects_OLD(surface_effects):
@@ -64,14 +72,14 @@ def get_all_effects(effects, effect_class):
 
 
 def make_effect(effect_dict, **properties):
-    effect_meta_dict = {key : effect_dict[key] for key in effect_dict
+    effect_meta_dict = {key: effect_dict[key] for key in effect_dict
                         if key not in ["class", "kwargs"]}
     effect_class_name = effect_dict["class"]
     effect_cls = getattr(efs, effect_class_name)
     # ..todo: add looking for custom effect class names from 3rd party packages
 
     effect_kwargs = {}
-    effect_kwargs.update(effect_meta_dict)         # effect name and description
+    effect_kwargs.update(effect_meta_dict)        # effect name and description
     effect_kwargs.update(properties)              # optical_element properties
     if "kwargs" in effect_dict:
         effect_kwargs.update(effect_dict["kwargs"])  # individual effect kwargs
@@ -105,3 +113,29 @@ def scopesim_effect_classes(base_effect=efs.Effect):
     sorted_effects = {key: efs_dict[key] for key in sorted(efs_dict)}
 
     return sorted_effects
+
+
+def z_order_in_range(z_eff, z_range: range) -> bool:
+    """
+    Return True if any of the z_orders in `z_eff` is in the given range.
+
+    The `z_range` parameter can be constructed as ``range(z_min, z_max)``.
+
+    Parameters
+    ----------
+    z_eff : int or list of ints
+        z_order(s) of the effect.
+    z_range : range
+        range object of allowed z_order values.
+
+    Returns
+    -------
+    bool
+        True if at least one z_order is in range, False otherwise.
+
+    """
+    if not isinstance(z_eff, Iterable):
+        logger.warning("z_order %d should be a single-item iterable", z_eff)
+        z_eff = [z_eff]
+
+    return any(zi in z_range for zi in z_eff)

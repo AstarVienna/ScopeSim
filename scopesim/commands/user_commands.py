@@ -1,14 +1,15 @@
 import os
-import logging
 import copy
 from pathlib import Path
 
-import numpy as np
 import yaml
-import requests
+import httpx
 
 from .. import rc
-from ..utils import find_file
+from ..utils import find_file, top_level_catch, get_logger
+
+
+logger = get_logger(__name__)
 
 __all__ = ["UserCommands"]
 
@@ -141,6 +142,7 @@ class UserCommands:
 
     """
 
+    @top_level_catch
     def __init__(self, **kwargs):
 
         self.cmds = copy.deepcopy(rc.__config__)
@@ -155,11 +157,10 @@ class UserCommands:
 
     def update(self, **kwargs):
         """
-        Updates the current parameters with a yaml dictionary
+        Update the current parameters with a yaml dictionary.
 
         See the ``UserCommands`` main docstring for acceptable kwargs
         """
-
         if "use_instrument" in kwargs:
             self.package_name = kwargs["use_instrument"]
             self.update(packages=[kwargs["use_instrument"]],
@@ -181,7 +182,7 @@ class UserCommands:
                         if yaml_input == "default.yaml":
                             self.default_yamls = yaml_dict
                     else:
-                        logging.warning("%s could not be found", yaml_input)
+                        logger.warning("%s could not be found", yaml_input)
 
                 elif isinstance(yaml_input, dict):
                     self.cmds.update(yaml_input)
@@ -232,7 +233,7 @@ class UserCommands:
                     if mode in self.modes_dict:
                         defyam["properties"]["modes"].append(mode)
                         if "deprecate" in self.modes_dict[mode]:
-                            logging.warning(self.modes_dict[mode]["deprecate"])
+                            logger.warning(self.modes_dict[mode]["deprecate"])
                     else:
                         raise ValueError(f"mode '{mode}' was not recognised")
 
@@ -279,10 +280,9 @@ class UserCommands:
         else:
             p.text(str(self))
 
+
 def check_for_updates(package_name):
-    """
-    Asks IRDB server if there are newer versions of the instrument package
-    """
+    """Ask IRDB server if there are newer versions of instrument package."""
     response = {}
 
     # tracking **exclusively** your IP address for our internal stats
@@ -291,14 +291,14 @@ def check_for_updates(package_name):
         front_matter = rc.__currsys__["!SIM.file.server_base_url"]
         back_matter = f"api.php?package_name={package_name}"
         try:
-            response = requests.get(url=front_matter+back_matter).json()
+            response = httpx.get(url=front_matter+back_matter).json()
         except:
             print(f"Offline. Cannot check for updates for {package_name}")
     return response
 
 
 def patch_fake_symlinks(path: Path):
-    """Fixes broken symlinks in path.
+    """Fix broken symlinks in path.
 
     The irdb has some symlinks in it, which work fine under linux, but not
     always under windows, see https://stackoverflow.com/a/11664406 .
@@ -345,7 +345,7 @@ def patch_fake_symlinks(path: Path):
 
 def add_packages_to_rc_search(local_path, package_list):
     """
-    Adds the paths of a list of locally saved packages to the search path list
+    Add the paths of a list of locally saved packages to the search path list.
 
     Parameters
     ----------
@@ -363,19 +363,14 @@ def add_packages_to_rc_search(local_path, package_list):
         if not pkg_dir.exists():
             # todo: keep here, but add test for this by downloading test_package
             # raise ValueError("Package could not be found: {}".format(pkg_dir))
-            logging.warning("Package could not be found: %s", pkg_dir)
+            logger.warning("Package could not be found: %s", pkg_dir)
 
-        if pkg_dir in rc.__search_path__:
-            # if package is already in search_path, move it to the first place
-            ii = np.where(np.array(rc.__search_path__) == pkg_dir)[0][0]
-            rc.__search_path__.pop(ii)
-
-        rc.__search_path__ = [pkg_dir] + rc.__search_path__
+        rc.__search_path__.append_first(pkg_dir)
 
 
 def load_yaml_dicts(filename):
     """
-    Loads one or more dicts stored in a YAML file under ``filename``
+    Load one or more dicts stored in a YAML file under `filename`.
 
     Parameters
     ----------
@@ -388,7 +383,6 @@ def load_yaml_dicts(filename):
         A list of dicts
 
     """
-
     yaml_dicts = []
     with open(filename) as f:
         yaml_dicts += [dic for dic in yaml.full_load_all(f)]
@@ -398,7 +392,7 @@ def load_yaml_dicts(filename):
 
 def list_local_packages(action="display"):
     """
-    Lists the packages on the local disk that ScopeSim can find
+    List the packages on the local disk that ScopeSim can find.
 
     Packages can only be found in the directory listed under::
 
@@ -428,7 +422,6 @@ def list_local_packages(action="display"):
         If action="return": Lists containing the names of locally saved packages
 
     """
-
     local_path = Path(rc.__config__["!SIM.file.local_packages_path"]).absolute()
     pkgs = [d for d in local_path.iterdir() if d.is_dir()]
 

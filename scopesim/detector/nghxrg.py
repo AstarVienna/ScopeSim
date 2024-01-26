@@ -10,7 +10,7 @@ import datetime
 # import warnings
 
 import numpy as np
-from scipy.ndimage.interpolation import zoom
+from scipy.ndimage import zoom
 from astropy.io import fits
 from astropy.stats.funcs import median_absolute_deviation as mad
 
@@ -199,7 +199,7 @@ class HXRGNoise:
         """
 
         # Configure depending on mode setting
-        if mode is 'pink':
+        if mode == 'pink':
             nstep = 2*self.nstep
             f = self.f2
             p_filter = self.p_filter2

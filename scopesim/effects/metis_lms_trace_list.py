@@ -1,4 +1,5 @@
-"""SpectralTraceList and SpectralTrace for the METIS LM spectrograph"""
+"""SpectralTraceList and SpectralTrace for the METIS LM spectrograph."""
+
 from copy import deepcopy
 import logging
 
@@ -23,9 +24,8 @@ from ..optics.fov import FieldOfView
 
 
 class MetisLMSSpectralTraceList(SpectralTraceList):
-    """
-    SpectralTraceList for the METIS LM spectrograph
-    """
+    """SpectralTraceList for the METIS LM spectrograph."""
+
     _class_params = {
         "naxis1": 122,
         "nslice": 28,
@@ -38,24 +38,40 @@ class MetisLMSSpectralTraceList(SpectralTraceList):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
+        # self.params = {"wavelen": "!OBS.wavelen"}
+        # self.params.update(kwargs)
+
         self.wavelen = self.meta["wavelen"]
 
         # field of view of the instrument
         self.slicelist = self._file["Aperture List"].data
+
+        # self.view = np.array([self.meta["naxis1"] * self.meta["pixscale"],
+        #                       self.meta["nslice"] * self.meta["slicewidth"]])
+
         self.view = np.array([self.slicelist["right"].max() -
                               self.slicelist["left"].min(),
                               self.slicelist["top"].max() -
                               self.slicelist["bottom"].min()])
 
+        # for sli, spt in enumerate(self.spectral_traces.values()):
+        #     spt.meta["xmin"] = self.slicelist["left"][sli]
+        #     spt.meta["xmax"] = self.slicelist["right"][sli]
+        #     spt.meta["ymin"] = self.slicelist["bottom"][sli]
+        #     spt.meta["ymax"] = self.slicelist["top"][sli]
+
+        # if self._file is not None:
+        #     print(self._file)
+        #     self.make_spectral_traces()
+
     def apply_to(self, obj, **kwargs):
-        """
-        overrides SpectralTraceList.apply_to()
-        """
+        """See parent docstring."""
         if isinstance(obj, FOVSetupBase):
             # Create a single volume that covers the aperture and
             # the maximum wavelength range of LMS
-            volumes = [spt.fov_grid()
-                       for spt in self.spectral_traces.values()]
+            volumes = [spectral_trace.fov_grid()
+                       for spectral_trace in self.spectral_traces.values()]
+
             wave_min = min(vol["wave_min"] for vol in volumes)
             wave_max = max(vol["wave_max"] for vol in volumes)
             extracted_vols = obj.extract(axes=["wave"],
@@ -75,7 +91,7 @@ class MetisLMSSpectralTraceList(SpectralTraceList):
             # Make this linear to avoid jump at RA 0 deg
             fovwcs.wcs.ctype = ["LINEAR", "LINEAR", fovwcs.wcs.ctype[2]]
             fovwcs_spat = fovwcs.sub(2)
-            ny_slice = self.meta["slice_samples"] #
+            ny_slice = self.meta["slice_samples"]
 
             # Spatial pixel coordinates
             xslice, yslice = np.meshgrid(np.arange(n_x),
@@ -85,14 +101,14 @@ class MetisLMSSpectralTraceList(SpectralTraceList):
                                  obj.detector_header["NAXIS1"]),
                                 dtype=np.float32)
 
-
             for sptid, spt in self.spectral_traces.items():
                 ymin = spt.meta["fov"]["y_min"]
                 ymax = spt.meta["fov"]["y_max"]
 
                 slicewcs = deepcopy(fovwcs)
 
-                slicewcs.wcs.ctype = ["LINEAR", "LINEAR", slicewcs.wcs.ctype[2]]
+                slicewcs.wcs.ctype = ["LINEAR", "LINEAR",
+                                      slicewcs.wcs.ctype[2]]
                 slicewcs.wcs.crpix[1] = (ny_slice + 1) / 2
                 slicewcs.wcs.crval[1] = (ymin + ymax) / 2 / 3600
                 slicewcs.wcs.cdelt[1] = (ymax - ymin) / ny_slice / 3600
@@ -112,14 +128,15 @@ class MetisLMSSpectralTraceList(SpectralTraceList):
                     slicecube[islice] = ifov(yfov, xfov, grid=False)
 
                 slicefov = FieldOfView(obj.header,
-                                       [obj.meta["wave_min"], obj.meta["wave_max"]])
+                                       [obj.meta["wave_min"],
+                                        obj.meta["wave_max"]])
                 slicefov.detector_header = obj.detector_header
                 slicefov.meta["xi_min"] = obj.meta["xi_min"]
                 slicefov.meta["xi_max"] = obj.meta["xi_max"]
                 slicefov.meta["trace_id"] = sptid
                 slicefov.cube = fits.ImageHDU(header=slicewcs.to_header(),
                                               data=slicecube)
-                #slicefov.cube.writeto(f"slicefov_{sptid}.fits", overwrite=True)
+                # slicefov.cube.writeto(f"slicefov_{sptid}.fits", overwrite=True)
                 slicefov.hdu = spt.map_spectra_to_focal_plane(slicefov)
 
                 sxmin = slicefov.hdu.header["XMIN"]
@@ -133,10 +150,8 @@ class MetisLMSSpectralTraceList(SpectralTraceList):
         return obj
 
     def make_spectral_traces(self):
-        """
-        Compute the transformations by interpolation
-        """
-        #nslice = len(self._file["Aperture List"].data)
+        """Compute the transformations by interpolation."""
+        # nslice = len(self._file["Aperture List"].data)
         # determine echelle order and angle from specified wavelength
         tempres = self._angle_from_lambda()
         self.meta["order"] = tempres["Ord"]
@@ -236,9 +251,7 @@ class MetisLMSSpectralTraceList(SpectralTraceList):
         return cubehdu
 
     def _angle_from_lambda(self):
-        """
-        Determine optimal echelle rotation angle for wavelength
-        """
+        """Determine optimal echelle rotation angle for wavelength."""
         lam = from_currsys(self.meta["wavelen"])
         grat_spacing = self.meta["grat_spacing"]
         wcal = self._file["WCAL"].data
@@ -246,9 +259,8 @@ class MetisLMSSpectralTraceList(SpectralTraceList):
 
 
 class MetisLMSSpectralTrace(SpectralTrace):
-    """
-    SpectralTrace for the METIS LM spectrograph
-    """
+    """SpectralTrace for the METIS LM spectrograph."""
+
     _class_params = {
         "naxis1": 122,
         "nslice": 28,
@@ -274,7 +286,7 @@ class MetisLMSSpectralTrace(SpectralTrace):
 
     def fov_grid(self):
         """
-        Provide information on the source space volume required by the effect
+        Provide information on the source space volume required by the effect.
 
         Returns
         -------
@@ -282,13 +294,11 @@ class MetisLMSSpectralTrace(SpectralTrace):
         `x_max`, `y_max`. Spatial limits refer to the sky and are given in
         arcsec.
         """
-
         aperture = self._file["Aperture list"].data[self.meta["slice"]]
         x_min = aperture["left"]
         x_max = aperture["right"]
         y_min = aperture["bottom"]
         y_max = aperture["top"]
-        trace_id = self.meta["trace_id"]
 
         layout = ioascii.read(find_file("!DET.layout.file_name"))
         det_lims = {}
@@ -308,10 +318,10 @@ class MetisLMSSpectralTrace(SpectralTrace):
                 "y_min": y_min, "y_max": y_max,
                 "xi_min": xi_min, "xi_max": xi_max,
                 "wave_min": wave_min, "wave_max": wave_max,
-                "trace_id": trace_id}
+                "trace_id": self.trace_id}
 
     def get_waverange(self, det_mm_lims):
-        """Determine wavelength range that spectral trace covers on image plane"""
+        """Determine wavelength range covered by spec. trace on image plane."""
         xmin = det_mm_lims["xd_min"]
         xmax = det_mm_lims["xd_max"]
 
@@ -326,6 +336,7 @@ class MetisLMSSpectralTrace(SpectralTrace):
     def compute_interpolation_functions(self):
         """
         Define the transforms between (xi, lam) and (x, y).
+
         The LMS transforms actually operate on phase rather than
         wavelength, hence the necessity of defining pre- and
         posttransforms on the lam variable.
@@ -344,10 +355,9 @@ class MetisLMSSpectralTrace(SpectralTrace):
         self.xy2xi = Transform2D(matrices["BI"],
                                  posttransform=self.fp2sky)
 
-
     def get_matrices(self):
         """
-        Extract matrix from lms_dist_poly.txt
+        Extract matrix from lms_dist_poly.txt.
 
         Evaluate polynomial to obtain matrices A, B, AI and BI at grism angle
         given echelle order and slice number
@@ -393,10 +403,9 @@ class MetisLMSSpectralTrace(SpectralTrace):
 
         return matrices
 
-
     def lam2phase(self, lam):
         """
-        Convert wavelength to phase
+        Convert wavelength to phase.
 
         Phase is lam * order / (2 * grat_spacing).
 
@@ -413,7 +422,7 @@ class MetisLMSSpectralTrace(SpectralTrace):
 
     def phase2lam(self, phase):
         """
-        Convert phase to wavelength
+        Convert phase to wavelength.
 
         Wavelength is phase * 2 * grat_spacing / order
 
@@ -429,15 +438,11 @@ class MetisLMSSpectralTrace(SpectralTrace):
         return 2 * self.meta["grat_spacing"] * phase / self.meta["order"]
 
     def sky2fp(self, xi):
-        """
-        Convert position in arcsec to position in FP2
-        """
+        """Convert position in arcsec to position in FP2."""
         return xi / self.meta["fp2_platescale"]
 
     def fp2sky(self, fp_x):
-        """
-        Convert position in FP2 to position on sky
-        """
+        """Convert position in FP2 to position on sky."""
         return fp_x * self.meta["fp2_platescale"]
 
     def __repr__(self):
@@ -454,7 +459,7 @@ class MetisLMSSpectralTrace(SpectralTrace):
 
 def echelle_setting(wavelength, grat_spacing, wcal_def):
     """
-    Determine optimal echelle rotation angle for wavelength
+    Determine optimal echelle rotation angle for wavelength.
 
     Parameters
     ----------
@@ -505,13 +510,16 @@ def echelle_setting(wavelength, grat_spacing, wcal_def):
 
 class MetisLMSImageSlicer(ApertureMask):
     """
-    Treats the METIS LMS image slicer as an aperture mask effect. This helps
-    in building a FieldOfView object that combines the spatial field of the slicer
-    with the spectral range covered by the LMS setting.
+    Treats the METIS LMS image slicer as an aperture mask effect.
 
-    The effect differs from its parent class `ApertureMask` in the initialisation
-    from the `Aperture List` extension of the trace file `!OBS.trace_file`.
+    This helps in building a ``FieldOfView`` object that combines the spatial
+    field of the slicer with the spectral range covered by the LMS setting.
+
+    The effect differs from its parent class ``ApertureMask`` in the
+    initialisation from the `Aperture List` extension of the trace file
+    `!OBS.trace_file`.
     """
+
     def __init__(self, filename, ext_id="Aperture List", **kwargs):
         filename = find_file(from_currsys(filename))
         ap_hdr = fits.getheader(filename, extname=ext_id)
@@ -538,6 +546,7 @@ class MetisLMSEfficiency(TERCurve):
     (determined by the central wavelength) the grating efficiency is modelled
     as a squared sinc function of wavelength via the grating angle.
     """
+
     _class_params = {
         "grat_spacing": 18.2,
         "eff_wid": 0.23,
@@ -566,7 +575,7 @@ class MetisLMSEfficiency(TERCurve):
                          **self.meta)
 
     def make_ter_curve(self, wcal, wavelen=None):
-        """Compute the blaze function for the selected order"""
+        """Compute the blaze function for the selected order."""
         order = self.meta["order"]
         eff_wid = self.meta["eff_wid"]
         eff_max = self.meta["eff_max"]

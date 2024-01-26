@@ -1,4 +1,4 @@
-import logging
+
 from inspect import isclass
 from typing import TextIO
 from io import StringIO
@@ -13,14 +13,17 @@ from .optical_element import OpticalElement
 from .. import effects as efs
 from ..effects.effects_utils import is_spectroscope
 from ..effects.effects_utils import combine_surface_effects
-from ..utils import write_report, from_currsys
+from ..utils import write_report, from_currsys, get_logger
 from ..reports.rst_utils import table_to_rst
 from .. import rc
 
 
+logger = get_logger(__name__)
+
+
 class OpticsManager:
     """
-    The workhorse class for dealing with all externally defined Effect objects
+    The workhorse class for dealing with all externally defined Effect objects.
 
     Parameters
     ----------
@@ -62,7 +65,7 @@ class OpticsManager:
 
     def load_effects(self, yaml_dicts, **kwargs):
         """
-        Generate an OpticalElement for each section of the Optical System
+        Generate an OpticalElement for each section of the Optical System.
 
         Make an ``OpticalElement`` for each YAML document in the system.
         For example there should be a YAML document for each of the following:
@@ -80,11 +83,10 @@ class OpticsManager:
         Parameters
         ----------
         yaml_dicts : list of dicts
-            Each YAML dict should contain the descriptions of the Effects needed
-            by each ``OpticalElement``
+            Each YAML dict should contain the descriptions of the Effects
+            needed by each ``OpticalElement``.
 
         """
-
         if not isinstance(yaml_dicts, Sequence):
             yaml_dicts = [yaml_dicts]
         self.optical_elements.extend(OpticalElement(dic, **kwargs)
@@ -92,7 +94,7 @@ class OpticsManager:
 
     def add_effect(self, effect, ext=0):
         """
-        Add an Effect object to an OpticalElement at index ``ext``
+        Add an Effect object to an OpticalElement at index ``ext``.
 
         Parameters
         ----------
@@ -109,7 +111,7 @@ class OpticsManager:
 
     def update(self, **obs_dict):
         """
-        Update the meta dictionary with keyword-value pairs
+        Update the meta dictionary with keyword-value pairs.
 
         Parameters
         ----------
@@ -121,7 +123,7 @@ class OpticsManager:
 
     def get_all(self, class_type):
         """
-        Return a list of all effects from all optical elements with `class_type`
+        Return list of all effects from all optical elements with `class_type`.
 
         Parameters
         ----------
@@ -134,16 +136,15 @@ class OpticsManager:
         effects : list of Effect objects
 
         """
-
         effects = []
         for opt_el in self.optical_elements:
             effects += opt_el.get_all(class_type)
 
         return effects
 
-    def get_z_order_effects(self, z_level):
+    def get_z_order_effects(self, z_level: int):
         """
-        Return a list of all effects with a z_order keywords within z_level
+        Return a list of all effects with a z_order keywords within `z_level`.
 
         Effect z_order values are classified according to the following:
 
@@ -152,76 +153,90 @@ class OpticsManager:
         - Apply Source altering effects - z_order = 200..299
         - Apply FOV specific (3D) effects - z_order = 300..399
         - Apply FOV-independent (2D) effects - z_order = 400..499
+        - Apply XXX effects - z_order = 500..599
+        - Apply XXX effects - z_order = 600..699
+        - Apply lambda-independent 2D image plane effects - z_order = 700..799
+        - Apply detector effects - z_order = 800..899
+        - Apply detector array effects - z_order = 900..999
 
         Parameters
         ----------
-        z_level : int, tuple
-            [0, 100, 200, 300, 400, 500]
+        z_level : {0, 100, 200, 300, 400, 500, 600, 700, 800, 900}
+            100-range of z_orders.
 
         Returns
         -------
         effects : list of Effect objects
 
         """
+        def _gather_effects():
+            for opt_el in self.optical_elements:
+                yield from opt_el.get_z_order_effects(z_level)
 
-        effects = []
-        for opt_el in self.optical_elements:
-            effects += opt_el.get_z_order_effects(z_level)
+        def _sortkey(eff):
+            return next(z % 100 for z in eff.meta["z_order"] if z >= z_level)
 
-        return effects
+        # return sorted(_gather_effects(), key=_sortkey)
+        return list(_gather_effects())
 
     @property
     def is_spectroscope(self):
+        """Return True if any of the effects is a spectroscope."""
         return is_spectroscope(self.all_effects)
 
     @property
     def image_plane_headers(self):
+        """Get headers from detector setup effects."""
         detector_lists = self.detector_setup_effects
-        headers = [det_list.image_plane_header for det_list in detector_lists]
-
         if not detector_lists:
-            raise ValueError(f"No DetectorList objects found. {detector_lists}")
+            raise ValueError("No DetectorList objects found.")
 
-        return headers
+        return [det_list.image_plane_header for det_list in detector_lists]
 
     @property
     def detector_array_effects(self):
+        """Get effects with z_order = 900...999."""
         return self.get_z_order_effects(900)
 
     @property
     def detector_effects(self):
+        """Get effects with z_order = 800...899."""
         return self.get_z_order_effects(800)
 
     @property
     def image_plane_effects(self):
-        effects = self.get_z_order_effects(700)
-        return effects
+        """Get effects with z_order = 700...799."""
+        return self.get_z_order_effects(700)
 
     @property
     def fov_effects(self):
-        effects = self.get_z_order_effects(600)
-        return effects
+        """Get effects with z_order = 600...699."""
+        return self.get_z_order_effects(600)
 
     @property
     def source_effects(self):
+        """Get effects with z_order = 500...599."""
         return self.get_z_order_effects(500)   # Transmission
 
     @property
     def detector_setup_effects(self):
-        # !!! Only DetectorLists go in here !!!
+        """Get effects with z_order = 400...499 (DetectorLists only!)."""
         return self.get_z_order_effects(400)
 
     @property
     def image_plane_setup_effects(self):
+        """Get effects with z_order = 300...399."""
         return self.get_z_order_effects(300)
 
     @property
     def fov_setup_effects(self):
+        """Get effects with z_order = 200...299."""
         # Working out where to set wave_min, wave_max
         return self.get_z_order_effects(200)
 
     @property
     def surfaces_table(self):
+        """Get combined surface table from effects with z_order = 100...199."""
         if self._surfaces_table is None:
             surface_like_effects = self.get_z_order_effects(100)
             self._surfaces_table = combine_surface_effects(surface_like_effects)
@@ -229,6 +244,7 @@ class OpticsManager:
 
     @property
     def all_effects(self):
+        """Get all effects in all optical elements."""
         return [eff for opt_eff in self.optical_elements for eff in opt_eff]
 
     @property
@@ -343,7 +359,7 @@ Summary of Effects in Optical Elements:
     def __setitem__(self, key, value):
         obj = self.__getitem__(key)
         if isinstance(obj, list) and len(obj) > 1:
-            logging.warning("%s does not return a singular object:\n %s", key, obj)
+            logger.warning("%s does not return a singular object:\n %s", key, obj)
         elif isinstance(obj, efs.Effect) and isinstance(value, dict):
             obj.meta.update(value)
 
@@ -355,7 +371,7 @@ Summary of Effects in Optical Elements:
             opt_elem.write_string(stream, list_effects=False)
 
     def pretty_str(self) -> str:
-        """Return formatted string representation as str"""
+        """Return formatted string representation as str."""
         with StringIO() as str_stream:
             self.write_string(str_stream)
             output = str_stream.getvalue()

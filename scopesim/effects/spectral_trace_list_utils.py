@@ -1,5 +1,5 @@
 """
-Utility classes and functions for SpectralTraceList
+Utility classes and functions for ``SpectralTraceList``.
 
 This module contains
    - the definition of the `SpectralTrace` class. The visible effect should
@@ -9,26 +9,27 @@ This module contains
    - utility functions for use with spectral traces
 """
 
-import logging
-
 import numpy as np
 
 from scipy.interpolate import RectBivariateSpline
 from scipy.interpolate import interp1d
-from matplotlib import pyplot as plt
 
-from astropy.table import Table
+from astropy.table import Table, vstack
 from astropy.modeling import fitting
 from astropy.io import fits
 from astropy import units as u
 from astropy.wcs import WCS
 from astropy.modeling.models import Polynomial2D
 
-from ..utils import power_vector, quantify, from_currsys
+from ..utils import (power_vector, quantify, from_currsys, close_loop,
+                     figure_factory, get_logger)
+
+
+logger = get_logger(__name__)
 
 
 class SpectralTrace:
-    """Definition of one spectral trace
+    """Definition of one spectral trace.
 
     A SpectralTrace describes the mapping of spectral slit coordinates
     to the focal plane. The class reads an order layout and fits several
@@ -40,6 +41,7 @@ class SpectralTrace:
     Focal plane coordinates are:
     - x, y : [mm]
     """
+
     _class_params = {"x_colname": "x",
                      "y_colname": "y",
                      "s_colname": "s",
@@ -62,23 +64,30 @@ class SpectralTrace:
 
         if isinstance(trace_tbl, (fits.BinTableHDU, fits.TableHDU)):
             self.table = Table.read(trace_tbl)
-            self.meta["trace_id"] = trace_tbl.header.get("EXTNAME", "<unknown trace id>")
+            self.meta["trace_id"] = trace_tbl.header.get("EXTNAME",
+                                                         "<unknown trace id>")
             self.dispersion_axis = trace_tbl.header.get("DISPDIR", "unknown")
         elif isinstance(trace_tbl, Table):
             self.table = trace_tbl
             self.dispersion_axis = "unknown"
         else:
             raise ValueError("trace_tbl must be one of (fits.BinTableHDU, "
-                             f"fits.TableHDU, astropy.Table) but is {type(trace_tbl)}")
+                             "fits.TableHDU, astropy.Table) but is "
+                             f"{type(trace_tbl)}")
         self.compute_interpolation_functions()
 
         # Declaration of other attributes
         self._xilamimg = None
         self.dlam_per_pix = None
 
+    @property
+    def trace_id(self):
+        """Return the name of the trace."""
+        return self.meta["trace_id"]
+
     def fov_grid(self):
         """
-        Provide information on the source space volume required by the effect
+        Provide information on the source space volume required by the effect.
 
         Returns
         -------
@@ -86,7 +95,6 @@ class SpectralTrace:
         Spatial limits are determined by the `ApertureMask` effect
         and are not returned here.
         """
-        trace_id = self.meta["trace_id"]
         aperture_id = self.meta["aperture_id"]
         lam_arr = self.table[self.meta["wave_colname"]]
 
@@ -94,14 +102,15 @@ class SpectralTrace:
         wave_min = np.min(lam_arr)
 
         return {"wave_min": wave_min, "wave_max": wave_max,
-                "trace_id": trace_id, "aperture_id": aperture_id}
+                "trace_id": self.trace_id, "aperture_id": aperture_id}
 
     def compute_interpolation_functions(self):
         """
-        Compute various interpolation functions between slit and focal plane
+        Compute various interpolation functions between slit and focal plane.
 
         Focal plane coordinates are `x` and `y`, in mm. Slit coordinates are
-        `xi` (spatial coordinate along the slit, in arcsec) and `lam` (wavelength, in um).
+        `xi` (spatial coordinate along the slit, in arcsec) and `lam`
+        (wavelength, in um).
         """
         x_arr = self.table[self.meta["x_colname"]]
         y_arr = self.table[self.meta["y_colname"]]
@@ -118,7 +127,7 @@ class SpectralTrace:
         self._xiy2x = Transform2D.fit(xi_arr, y_arr, x_arr)
         self._xiy2lam = Transform2D.fit(xi_arr, y_arr, lam_arr)
 
-        if self.dispersion_axis == 'unknown':
+        if self.dispersion_axis == "unknown":
             dlam_dx, dlam_dy = self.xy2lam.gradient()
             wave_mid = 0.5 * (self.wave_min + self.wave_max)
             xi_mid = np.mean(xi_arr)
@@ -128,13 +137,12 @@ class SpectralTrace:
                 self.dispersion_axis = "x"
             else:
                 self.dispersion_axis = "y"
-            logging.warning("Dispersion axis determined to be %s",
+            logger.warning("Dispersion axis determined to be %s",
                             self.dispersion_axis)
-
 
     def map_spectra_to_focal_plane(self, fov):
         """
-        Apply the spectral trace mapping to a spectral cube
+        Apply the spectral trace mapping to a spectral cube.
 
         The cube is contained in a FieldOfView object, which also has
         world coordinate systems for the Source (sky coordinates and
@@ -142,7 +150,7 @@ class SpectralTrace:
         The method returns a section of the fov image along with info on
         where this image lies in the focal plane.
         """
-        logging.info("Mapping %s", fov.meta['trace_id'])
+        logger.info("Mapping %s", fov.trace_id)
         # Initialise the image based on the footprint of the spectral
         # trace and the focal plane WCS
         wave_min = fov.meta["wave_min"].value       # [um]
@@ -153,7 +161,7 @@ class SpectralTrace:
                                           xi_min=xi_min, xi_max=xi_max)
 
         if xlim_mm is None:
-            logging.warning("xlim_mm is None")
+            logger.warning("xlim_mm is None")
             return None
 
         fov_header = fov.header
@@ -173,10 +181,10 @@ class SpectralTrace:
         ymin = np.floor(ylim_px.min()).astype(int)
         ymax = np.ceil(ylim_px.max()).astype(int)
 
-        ## Check if spectral trace footprint is outside FoV
+        # Check if spectral trace footprint is outside FoV
         if xmax < 0 or xmin > naxis1d or ymax < 0 or ymin > naxis2d:
-            logging.info("Spectral trace %s: footprint is outside FoV",
-                         fov.meta['trace_id'])
+            logger.info("Spectral trace %s: footprint is outside FoV",
+                         fov.trace_id)
             return None
 
         # Only work on parts within the FoV
@@ -207,7 +215,7 @@ class SpectralTrace:
             xilam = XiLamImage(fov, self.dlam_per_pix)
             self._xilamimg = xilam   # ..todo: remove or make available with a debug flag?
         except ValueError:
-            print(f" ---> {self.meta['trace_id']} gave ValueError")
+            print(f" ---> {self.trace_id} gave ValueError")
 
         npix_xi, npix_lam = xilam.npix_xi, xilam.npix_lam
         xilam_wcs = xilam.wcs
@@ -267,14 +275,14 @@ class SpectralTrace:
         img_header["YMAX"] = ymax
 
         if np.any(image < 0):
-            logging.warning("map_spectra_to_focal_plane: %d negative pixels",
+            logger.warning("map_spectra_to_focal_plane: %d negative pixels",
                             np.sum(image < 0))
 
         image_hdu = fits.ImageHDU(header=img_header, data=image)
         return image_hdu
 
     def rectify(self, hdulist, interps=None, wcs=None, **kwargs):
-        """Create 2D spectrum for a trace
+        """Create 2D spectrum for a trace.
 
         Parameters
         ----------
@@ -301,18 +309,18 @@ class SpectralTrace:
            Spatial limits of the slit on the sky. This should be taken from
            the header of the hdulist, but this is not yet provided by scopesim
         """
-        logging.info("Rectifying %s", self.trace_id)
+        logger.info("Rectifying %s", self.trace_id)
 
         wave_min = kwargs.get("wave_min",
                               self.wave_min)
         wave_max = kwargs.get("wave_max",
                               self.wave_max)
         if wave_max < self.wave_min or wave_min > self.wave_max:
-            logging.info("   Outside filter range")
+            logger.info("   Outside filter range")
             return None
         wave_min = max(wave_min, self.wave_min)
         wave_max = min(wave_max, self.wave_max)
-        logging.debug("   %.02f .. %.02f um", wave_min, wave_max)
+        logger.info("   %.02f .. %.02f um", wave_min, wave_max)
 
         # bin_width is taken as the minimum dispersion of the trace
         # ..todo: if wcs is given take bin width from cdelt1
@@ -320,9 +328,9 @@ class SpectralTrace:
         if bin_width is None:
             self._set_dispersion(wave_min, wave_max)
             bin_width = np.abs(self.dlam_per_pix.y).min()
-        logging.debug("   Bin width %.02g um", bin_width)
+        logger.info("   Bin width %.02g um", bin_width)
 
-        pixscale = from_currsys(self.meta['pixel_scale'])
+        pixscale = from_currsys(self.meta["pixel_scale"])
 
         # Temporary solution to get slit length
         xi_min = kwargs.get("xi_min", None)
@@ -330,22 +338,22 @@ class SpectralTrace:
             try:
                 xi_min = hdulist[0].header["HIERARCH INS SLIT XIMIN"]
             except KeyError:
-                logging.error("xi_min not found")
+                logger.error("xi_min not found")
                 return None
         xi_max = kwargs.get("xi_max", None)
         if xi_max is None:
             try:
                 xi_max = hdulist[0].header["HIERARCH INS SLIT XIMAX"]
             except KeyError:
-                logging.error("xi_max not found")
+                logger.error("xi_max not found")
                 return None
 
         if wcs is None:
             wcs = WCS(naxis=2)
-            wcs.wcs.ctype = ['WAVE', 'LINEAR']
-            wcs.wcs.cunit = ['um', 'arcsec']
+            wcs.wcs.ctype = ["WAVE", "LINEAR"]
+            wcs.wcs.cunit = ["um", "arcsec"]
             wcs.wcs.crpix = [1, 1]
-            wcs.wcs.cdelt = [bin_width, pixscale] # PIXSCALE
+            wcs.wcs.cdelt = [bin_width, pixscale]  # PIXSCALE
 
         # crval set to wave_min to catch explicitely set value
         wcs.wcs.crval = [wave_min, xi_min]   # XIMIN
@@ -355,7 +363,7 @@ class SpectralTrace:
 
         # Create interpolation functions if not provided
         if interps is None:
-            logging.info("Computing image interpolations")
+            logger.info("Computing image interpolations")
             interps = make_image_interpolations(hdulist, kx=1, ky=1)
 
         # Create Xi, Lam images (do I need Iarr and Jarr or can I build Xi, Lam directly?)
@@ -373,13 +381,14 @@ class SpectralTrace:
         rect_spec = np.zeros_like(Xarr, dtype=np.float32)
 
         ihdu = 0
+        # TODO: make this more iteratory
         for hdu in hdulist:
             if not isinstance(hdu, fits.ImageHDU):
                 continue
 
             wcs_fp = WCS(hdu.header, key="D")
-            n_x = hdu.header['NAXIS1']
-            n_y = hdu.header['NAXIS2']
+            n_x = hdu.header["NAXIS1"]
+            n_y = hdu.header["NAXIS2"]
             iarr, jarr = wcs_fp.all_world2pix(Xarr, Yarr, 0)
             mask = (iarr > 0) * (iarr < n_x) * (jarr > 0) * (jarr < n_y)
             if np.any(mask):
@@ -389,29 +398,29 @@ class SpectralTrace:
             ihdu += 1
 
         header = wcs.to_header()
-        header['EXTNAME'] = self.trace_id
+        header["EXTNAME"] = self.trace_id
         return fits.ImageHDU(data=rect_spec, header=header)
 
     def footprint(self, wave_min=None, wave_max=None, xi_min=None, xi_max=None):
         """
-        Return corners of rectangle enclosing spectral trace
+        Return corners of rectangle enclosing spectral trace.
 
         Parameters
         ----------
         wave_min, wave_max : float [um], Quantity
             Minimum and maximum wavelength to compute the footprint on.
-            If `None`, use the full range that the spectral trace is defined on.
+            If `None`, use the full range that spectral trace is defined on.
             Float values are interpreted as microns.
         xi_min, xi_max : float [arcsec], Quantity
             Minimum and maximum slit position on the sky.
-            If `None`, use the full range that the spectral trace is defined on.
+            If `None`, use the full range that spectral trace is defined on.
             Float values are interpreted as arcsec.
         """
-        ## Define the wavelength range of the footprint. This is a compromise
-        ## between the requested range (by method args) and the definition
-        ## range of the spectral trace
-        ## This is only relevant if the trace is given by a table of reference
-        ## points. Otherwise (METIS LMS!) we assume that the range is valid.
+        # Define the wavelength range of the footprint. This is a compromise
+        # between the requested range (by method args) and the definition
+        # range of the spectral trace
+        # This is only relevant if the trace is given by a table of reference
+        # points. Otherwise (METIS LMS!) we assume that the range is valid.
         if ("wave_colname" in self.meta and
             self.meta["wave_colname"] in self.table.colnames):
             # Here, the parameters are obtained from a table of reference points
@@ -436,9 +445,9 @@ class SpectralTrace:
             wave_min = max(wave_min, np.min(wave_val)).value
             wave_max = min(wave_max, np.max(wave_val)).value
 
-            ## Define the slit range of the footprint. This is a compromise
-            ## between the requested range (by method args) and the definition
-            ## range of the spectral trace
+            # Define the slit range of the footprint. This is a compromise
+            # between the requested range (by method args) and the definition
+            # range of the spectral trace
             try:
                 xi_unit = self.table[self.meta["s_colname"]].unit
             except KeyError:
@@ -481,54 +490,122 @@ class SpectralTrace:
         return ([x_edge.min(), x_edge.max(), x_edge.max(), x_edge.min()],
                 [y_edge.min(), y_edge.min(), y_edge.max(), y_edge.max()])
 
-    def plot(self, wave_min=None, wave_max=None, c="r"):
-        """Plot control points of the SpectralTrace"""
+    def plot(self, wave_min=None, wave_max=None, xi_min=None, xi_max=None, *,
+             c="r", axes=None, plot_footprint=True, plot_wave=True,
+             plot_ctrlpnts=True, plot_outline=False, plot_trace_id=False):
+        """Plot control points (and/or footprint) of the SpectralTrace.
+
+        Parameters
+        ----------
+        wave_min : float, optional
+            Minimum wavelength, if any.
+        wave_max : float, optional
+            Maximum wavelength, if any.
+        xi_min : float, optional
+            Minimum slit, if any.
+        xi_max : float, optional
+            Maximum slit, if any.
+        c : str, optional
+            Colour, any valid matplotlib colour string. The default is "r".
+        axes : matplotlib axes, optional
+            The axes object to use for the plot. If None (default), a new
+            figure with one axes will be created.
+
+        Returns
+        -------
+        axes : matplotlib axes
+            The axes object containing the plot.
+
+        Other Parameters
+        ----------------
+        plot_footprint : bool, optional
+            Plot a rectangle encompassing all control points, which may be
+            larger than the area actually covered by the trace, if the trace is
+            not exactly perpendicular to the detector. The default is True.
+        plot_wave : bool, optional
+            Annotate the wavelength points. The default is True.
+        plot_ctrlpnts : bool, optional
+            Plot the individual control points as makers. The default is True.
+        plot_outline : bool, optional
+            Plot the smallest tetragon encompassing all control points.
+            The default is False.
+        plot_trace_id : bool, optional
+            Write the trace ID in the middle of the trace.
+            The default is False.
+        """
+        if axes is None:
+            _, axes = figure_factory()
 
         # Footprint (rectangle enclosing the trace)
-        xlim, ylim  = self.footprint(wave_min=wave_min, wave_max=wave_max)
+        xlim, ylim = self.footprint(wave_min=wave_min, wave_max=wave_max)
         if xlim is None:
-            return
+            return axes
 
-        xlim.append(xlim[0])
-        ylim.append(ylim[0])
-        plt.plot(xlim, ylim)
+        if plot_footprint:
+            axes.plot(list(close_loop(xlim)), list(close_loop(ylim)))
+
+        # for convenience...
+        xname = self.meta["x_colname"]
+        yname = self.meta["y_colname"]
+        wname = self.meta["wave_colname"]
+        sname = self.meta["s_colname"]
 
         # Control points
-        waves = self.table[self.meta["wave_colname"]]
+        waves = self.table[wname]
         if wave_min is None:
             wave_min = waves.min()
         if wave_max is None:
             wave_max = waves.max()
+        xis = self.table[sname]
+        if xi_min is None:
+            xi_min = xis.min()
+        if xi_max is None:
+            xi_max = xis.max()
 
-        mask = (waves >= wave_min) * (waves <= wave_max)
-        if sum(mask) > 2:
-            w = waves[mask]
+        mask = ((waves >= wave_min) & (waves <= wave_max)
+                & (xis >= xi_min) & (xis <= xi_max))
+        if sum(mask) <= 2:
+            return axes
 
-            x = self.table[self.meta["x_colname"]][mask]
-            y = self.table[self.meta["y_colname"]][mask]
-            plt.plot(x, y, "o", c=c)
+        w = waves[mask]
 
-            for wave in np.unique(w):
-                xx = x[w==wave]
-                xx.sort()
-                dx = xx[-1] - xx[-2]
+        x = self.table[xname][mask]
+        y = self.table[yname][mask]
+        if plot_ctrlpnts:
+            axes.plot(x, y, "o", c=c)
 
-                plt.text(x[w==wave].max() + 0.5 * dx,
-                         y[w==wave].mean(),
-                         str(wave), va='center', ha='left')
+        if plot_outline:
+            blue_end = self.table[mask][w == w.min()]
+            red_end = self.table[mask][w == w.max()]
+            blue_end.sort(sname)
+            red_end.sort(sname)
+            corners = vstack([blue_end[[0, -1]][xname, yname],
+                              red_end[[-1, 0]][xname, yname],
+                              blue_end[0][xname, yname]])
+            axes.plot(corners[xname], corners[yname], c=c)
 
-            plt.gca().set_aspect("equal")
+        if plot_trace_id:
+            axes.text(corners[xname][:-1].mean(), corners[yname][:-1].mean(),
+                      self.trace_id, c=c, rotation="vertical",
+                      ha="center", va="center")
 
-    @property
-    def trace_id(self):
-        """Return the name of the trace"""
-        return self.meta['trace_id']
+        for wave in np.unique(w):
+            xx = x[w == wave]
+            xx.sort()
+            dx = xx[-1] - xx[-2]
+
+            if plot_wave:
+                axes.text(x[w == wave].max() + 0.5 * dx,
+                          y[w == wave].mean(),
+                          str(wave), va="center", ha="left")
+
+        axes.set_aspect("equal")
+        return axes
 
     def _set_dispersion(self, wave_min, wave_max, pixsize=None):
-        """Computation of dispersion dlam_per_pix along xi=0
-        """
-        #..todo: This may have to be generalised - xi=0 is at the centre
-        #of METIS slits and the short MICADO slit.
+        """Compute of dispersion dlam_per_pix along xi=0."""
+        # ..todo: This may have to be generalised - xi=0 is at the centre
+        # of METIS slits and the short MICADO slit.
 
         xi = np.array([0] * 1001)
         lam = np.linspace(wave_min, wave_max, 1001)
@@ -538,8 +615,8 @@ class SpectralTrace:
             dlam_grad = self.xy2lam.gradient()[0]  # dlam_by_dx
         else:
             dlam_grad = self.xy2lam.gradient()[1]  # dlam_by_dy
-        pixsize = (from_currsys(self.meta['pixel_scale']) /
-                   from_currsys(self.meta['plate_scale']))
+        pixsize = (from_currsys(self.meta["pixel_scale"]) /
+                   from_currsys(self.meta["plate_scale"]))
         self.dlam_per_pix = interp1d(lam,
                                      dlam_grad(x_mm, y_mm) * pixsize,
                                      fill_value="extrapolate")
@@ -548,7 +625,7 @@ class SpectralTrace:
         return f"{self.__class__.__name__}({self.table!r}, **{self.meta!r})"
 
     def __str__(self):
-        msg = (f"<SpectralTrace> \"{self.meta['trace_id']}\" : "
+        msg = (f"<SpectralTrace> \"{self.trace_id}\" : "
                f"[{self.wave_min:.4f}, {self.wave_max:.4f}]um : "
                f"Ext {self.meta['extension_id']} : "
                f"Aperture {self.meta['aperture_id']} : "
@@ -558,7 +635,7 @@ class SpectralTrace:
 
 class XiLamImage():
     """
-    Class to compute a rectified 2D spectrum
+    Class to compute a rectified 2D spectrum.
 
     The class produces and holds an image of xi (relative position along
     the spatial slit direction) and wavelength lambda.
@@ -566,8 +643,9 @@ class XiLamImage():
     Parameters
     ----------
     fov : FieldOfView
-    dlam_per_pix : a 1-D interpolation function from wavelength (in um) to dispersion
-          (in um/pixel); alternatively a number giving an average dispersion
+    dlam_per_pix : a 1-D interpolation function from wavelength (in um) to
+          dispersion (in um/pixel); alternatively a number giving an average
+          dispersion
     """
 
     def __init__(self, fov, dlam_per_pix):
@@ -600,8 +678,8 @@ class XiLamImage():
             dlam_per_pix_val = dlam_per_pix(np.asarray(self.lam))
         except TypeError:
             dlam_per_pix_val = dlam_per_pix
-            logging.warning("Using scalar dlam_per_pix = %.2g",
-                            dlam_per_pix_val)
+            logger.warning("Using scalar dlam_per_pix = %.2g",
+                           dlam_per_pix_val)
 
         for i, eta in enumerate(cube_eta):
             lam0 = self.lam + dlam_per_pix_val * eta / d_eta
@@ -652,7 +730,7 @@ class XiLamImage():
 
 class Transform2D():
     """
-    2-dimensional polynomial transform
+    2-dimensional polynomial transform.
 
     The class is instantiated from a m x n matrix A that contains the
     coefficients of the polynomial. Along rows, the power of x increases;
@@ -700,14 +778,14 @@ class Transform2D():
         self.posttransform = self._repackage(posttransform)
 
     def _repackage(self, trafo):
-        """Make sure `trafo` is a tuple"""
+        """Make sure `trafo` is a tuple."""
         if trafo is not None and not isinstance(trafo, tuple):
             trafo = (trafo, {})
         return trafo
 
     def __call__(self, x, y, grid=False, **kwargs):
         """
-        Apply the polynomial transform
+        Apply the polynomial transform.
 
         The transformation is a polynomial based on the simple
         monomials x^i y^j. When grid=True, the transform is applied to the grid
@@ -743,7 +821,8 @@ class Transform2D():
         orig_shape = x.shape
 
         if not grid and x.shape != y.shape:
-            raise ValueError("x and y must have the same length when grid is False")
+            raise ValueError("x and y must have the same length when grid "
+                             "is False")
 
         # Apply pre transforms
         if self.pretransform_x is not None:
@@ -776,17 +855,14 @@ class Transform2D():
 
     @classmethod
     def fit(cls, xin, yin, xout, degree=4):
-        """
-        Determine polynomial fits
-        """
+        """Determine polynomial fits."""
         pinit = Polynomial2D(degree=degree)
         fitter = fitting.LinearLSQFitter()
         fit = fitter(pinit, xin, yin, xout)
         return Transform2D(fit2matrix(fit))
 
     def gradient(self):
-        """Compute the gradient of a 2d polynomial transformation"""
-
+        """Compute the gradient of a 2d polynomial transformation."""
         mat = self.matrix
 
         dmat_x = (mat * np.arange(self.nx))[:, 1:]
@@ -797,14 +873,15 @@ class Transform2D():
 
 def fit2matrix(fit):
     """
-    Return coefficients from a polynomial fit as a matrix
+    Return coefficients from a polynomial fit as a matrix.
 
-    The Polynomial2D fits of degree n have coefficients for all i, j with i + j <= n.
+    The Polynomial2D fits of degree n have coefficients for all i, j
+    with i + j <= n.
     How would one rearrange those?
     """
     coeffs = dict(zip(fit.param_names, fit.parameters))
     deg = fit.degree
-    mat = np.zeros((deg + 1 , deg + 1), dtype=np.float32)
+    mat = np.zeros((deg + 1, deg + 1), dtype=np.float32)
     for i in range(deg + 1):
         for j in range(deg + 1):
             try:
@@ -813,10 +890,11 @@ def fit2matrix(fit):
                 pass
     return mat
 
+
 # ..todo: should the next three functions be combined and return a dictionary of fits?
 def xilam2xy_fit(layout, params):
     """
-    Determine polynomial fits of FPA position
+    Determine polynomial fits of FPA position.
 
     Fits are of degree 4 as a function of slit position and wavelength.
     """
@@ -825,13 +903,13 @@ def xilam2xy_fit(layout, params):
     x_arr = layout[params["x_colname"]]
     y_arr = layout[params["y_colname"]]
 
-    ## Filter the lists: remove any points with x==0
-    ## ..todo: this may not be necessary after sanitising the table
-    #good = x != 0
-    #xi = xi[good]
-    #lam = lam[good]
-    #x = x[good]
-    #y = y[good]
+    # Filter the lists: remove any points with x==0
+    # ..todo: this may not be necessary after sanitising the table
+    # good = x != 0
+    # xi = xi[good]
+    # lam = lam[good]
+    # x = x[good]
+    # y = y[good]
 
     # compute the fits
     pinit_x = Polynomial2D(degree=4)
@@ -842,13 +920,13 @@ def xilam2xy_fit(layout, params):
 
     return xilam2x, xilam2y
 
+
 def xy2xilam_fit(layout, params):
     """
-    Determine polynomial fits of wavelength/slit position
+    Determine polynomial fits of wavelength/slit position.
 
     Fits are of degree 4 as a function of focal plane position
     """
-
     xi_arr = layout[params["s_colname"]]
     lam_arr = layout[params["wave_colname"]]
     x_arr = layout[params["x_colname"]]
@@ -864,11 +942,10 @@ def xy2xilam_fit(layout, params):
 
 
 def _xiy2xlam_fit(layout, params):
-    """Determine polynomial fits of wavelength/slit position
+    """Determine polynomial fits of wavelength/slit position.
 
     Fits are of degree 4 as a function of focal plane position
     """
-
     # These are helper functions to allow fitting of left/right edges
     # for the purpose of checking whether a trace is on a chip or not.
 
@@ -884,37 +961,37 @@ def _xiy2xlam_fit(layout, params):
     xiy2lam = fitter(pinit_lam, xi_arr, y_arr, lam_arr)
     return xiy2x, xiy2lam
 
+
 def make_image_interpolations(hdulist, **kwargs):
-    """
-    Create 2D interpolation functions for images
-    """
+    """Create 2D interpolation functions for images."""
     interps = []
     for hdu in hdulist:
         if isinstance(hdu, fits.ImageHDU):
             interps.append(
-                RectBivariateSpline(np.arange(hdu.header['NAXIS1']),
-                                    np.arange(hdu.header['NAXIS2']),
+                RectBivariateSpline(np.arange(hdu.header["NAXIS1"]),
+                                    np.arange(hdu.header["NAXIS2"]),
                                     hdu.data, **kwargs)
             )
     return interps
 
 # ..todo: Check whether the following functions are actually used
 def rolling_median(x, n):
-    """ Calculates the rolling median of a sequence for +/- n entries """
+    """Calculate the rolling median of a sequence for +/- n entries."""
     y = [np.median(x[max(0, i-n):min(len(x), i+n+1)]) for i in range(len(x))]
     return np.array(y)
 
 
 def fill_zeros(x):
-    """ Fills in zeros in a sequence with the previous non-zero number """
+    """Fill in zeros in a sequence with the previous non-zero number."""
     for i in range(1, len(x)):
         if x[i] == 0:
             x[i] = x[i-1]
     return x
 
+
 def get_affine_parameters(coords):
     """
-    Returns rotation and shear for each MTC point along a SpectralTrace
+    Return rotation and shear for each MTC point along a ``SpectralTrace``.
 
     .. note: Restrictions of this method:
 
@@ -938,7 +1015,6 @@ def get_affine_parameters(coords):
         [deg] Shear angles for M positions along the Trace
 
     """
-
     rad2deg = 180 / np.pi
     dxs = coords["x"][-1, :] - coords["x"][0, :]
     dys = coords["y"][-1, :] - coords["y"][0, :]

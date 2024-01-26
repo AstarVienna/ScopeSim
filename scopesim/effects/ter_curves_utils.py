@@ -1,3 +1,5 @@
+"""TBA."""
+
 from pathlib import Path
 
 import numpy as np
@@ -11,7 +13,11 @@ from synphot.units import PHOTLAM
 
 from scopesim.source.source_templates import vega_spectrum, st_spectrum, \
     ab_spectrum
-from ..utils import find_file, quantity_from_table, from_currsys
+from ..utils import find_file, quantity_from_table, from_currsys, get_logger
+
+
+logger = get_logger(__name__)
+
 
 FILTER_DEFAULTS = {"U": "Generic/Bessell.U",
                    "B": "Generic/Bessell.B",
@@ -59,7 +65,7 @@ def get_filter_effective_wavelength(filter_name):
 
 def download_svo_filter(filter_name, return_style="synphot"):
     """
-    Query the SVO service for the true transmittance for a given filter
+    Query the SVO service for the true transmittance for a given filter.
 
     Copied 1 to 1 from tynt by Brett Morris
 
@@ -92,9 +98,15 @@ def download_svo_filter(filter_name, return_style="synphot"):
         silent=True,
     )
     if not path:
+        logger.debug("File not found in %s, downloading...", PATH_SVO_DATA)
         path = download_file(url, cache=True)
 
-    tbl = Table.read(path, format='votable')
+    try:
+        tbl = Table.read(path, format='votable')
+    except ValueError:
+        logger.error("Unable to load %s from %s.", filter_name, path)
+        raise
+
     wave = u.Quantity(tbl['Wavelength'].data.data, u.Angstrom, copy=False)
     trans = tbl['Transmission'].data.data
 
@@ -118,7 +130,7 @@ def download_svo_filter(filter_name, return_style="synphot"):
 def download_svo_filter_list(observatory, instrument, short_names=False,
                              include=None, exclude=None):
     """
-    Query the SVO service for a list of filter names for an instrument
+    Query the SVO service for a list of filter names for an instrument.
 
     Parameters
     ----------
@@ -207,12 +219,12 @@ def get_zero_mag_spectrum(system_name="AB"):
 
 def zero_mag_flux(filter_name, photometric_system, return_filter=False):
     """
-    Returns the zero magnitude photon flux for a filter
+    Return the zero magnitude photon flux for a filter.
 
     Acceptable filter names are those given in
     ``scopesim.effects.ter_curves_utils.FILTER_DEFAULTS`` or a string with an
-    appropriate name for a filter in the Spanish-VO filter-service. Such strings
-    must use the naming convention: observatory/instrument.filter. E.g:
+    appropriate name for a filter in the Spanish-VO filter-service. Such
+    strings must use the naming convention: observatory/instrument.filter. E.g:
     ``paranal/HAWKI.Ks``, or ``Gemini/GMOS-N.CaT``.
 
     Parameters
@@ -234,7 +246,6 @@ def zero_mag_flux(filter_name, photometric_system, return_filter=False):
         If ``return_filter`` is True
 
     """
-
     filt = get_filter(filter_name)
     spec = get_zero_mag_spectrum(photometric_system)
 
@@ -249,7 +260,7 @@ def zero_mag_flux(filter_name, photometric_system, return_filter=False):
 
 def scale_spectrum(spectrum, filter_name, amplitude):
     """
-    Scales a SourceSpectrum to a value in a filter
+    Scale a SourceSpectrum to a value in a filter.
 
     Parameters
     ----------
@@ -289,7 +300,6 @@ def scale_spectrum(spectrum, filter_name, amplitude):
         >>> jy_3630 = ter_utils.scale_spectrum(spec, "Ks", 3630 * u.Jy)
 
     """
-
     if isinstance(amplitude, u.Quantity):
         if amplitude.unit.physical_type == "spectral flux density":
             if amplitude.unit != u.ABmag:
@@ -322,7 +332,7 @@ def scale_spectrum(spectrum, filter_name, amplitude):
 
 def apply_throughput_to_cube(cube, thru):
     """
-    Apply throughput curve to a spectroscopic cube
+    Apply throughput curve to a spectroscopic cube.
 
     Parameters
     ----------
@@ -333,8 +343,8 @@ def apply_throughput_to_cube(cube, thru):
 
     Returns
     -------
-    cube : ImageHDU, header unchanged, data multiplied with wavelength-dependent
-         throughput
+    cube : ImageHDU, header unchanged, data multiplied with
+         wavelength-dependent throughput.
     """
     wcs = WCS(cube.header).spectral
     wave_cube = wcs.all_pix2world(np.arange(cube.data.shape[0]), 0)[0]
@@ -345,7 +355,7 @@ def apply_throughput_to_cube(cube, thru):
 
 def combine_two_spectra(spec_a, spec_b, action, wave_min, wave_max):
     """
-    Combines transmission and/or emission spectrum with a common waverange
+    Combine transmission and/or emission spectrum with a common waverange.
 
     Spec_A is the source spectrum
     Spec_B is either the transmission or emission that should be applied

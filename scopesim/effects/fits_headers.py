@@ -14,13 +14,14 @@ from ..utils import from_currsys, find_file
 
 class ExtraFitsKeywords(Effect):
     """
-    Extra FITS header keywords to be added to the pipeline FITS files
+    Extra FITS header keywords to be added to the pipeline FITS files.
 
     These keywords are ONLY for keywords that should be MANUALLY ADDED to the
     headers after a simulation is read-out by the detector.
 
-    Simulation parameters (Effect kwargs values, etc) will be added automatically
-    by ScopeSim in a different function, but following this format.
+    Simulation parameters (Effect kwargs values, etc) will be added
+    automatically by ScopeSim in a different function, but following this
+    format.
 
     The dictionaries should be split into different HIERARCH lists, e.g.:
 
@@ -31,7 +32,8 @@ class ExtraFitsKeywords(Effect):
     - HIERARCH MIC
       For MICADO specific keywords, (unsure what these would be yet)
 
-    More HIERARCH style keywords can also be added as needed for other use-cases
+    More HIERARCH style keywords can also be added as needed for other
+    use-cases.
 
     Parameters
     ----------
@@ -44,7 +46,8 @@ class ExtraFitsKeywords(Effect):
     header_dict : nested dicts, optional
         A series of nested python dictionaries following the format of the
         examples below. This keyword allows these dicts to be definied directly
-        in the Effect yaml file, rather than in a seperate header keywords file.
+        in the Effect yaml file, rather than in a seperate header keywords
+        file.
 
     Examples
     --------
@@ -93,8 +96,8 @@ class ExtraFitsKeywords(Effect):
     This document is a yaml document.
     Hence all new keywords should be specified in the form of yaml nested
     dictionaries.
-    As each ``astropy.HDUList`` contains one or more extensions, the inital level is
-    reserved for a list of keyword groups.
+    As each ``astropy.HDUList`` contains one or more extensions, the inital
+    level is reserved for a list of keyword groups.
     For example::
 
         - ext_type: PrimaryHDU
@@ -214,9 +217,10 @@ class ExtraFitsKeywords(Effect):
                 salud: el mundo
 
     """
+
     def __init__(self, **kwargs):
         # don't pass kwargs, as DataContainer can't handle yaml files
-        super(ExtraFitsKeywords, self).__init__()
+        super().__init__()
         params = {"name": "extra_fits_keywords",
                   "description": "Extra FITS headers",
                   "z_order": [999],
@@ -230,10 +234,10 @@ class ExtraFitsKeywords(Effect):
         tmp_dicts = []
         if self.meta["filename"] is not None:
             yaml_file = find_file(self.meta["filename"])
-            with open(yaml_file) as f:
+            with open(yaml_file, encoding="utf-8") as file:
                 # possible multiple yaml docs in a file
                 # --> returns list even for a single doc
-                tmp_dicts.extend(dic for dic in yaml.full_load_all(f))
+                tmp_dicts.extend(dic for dic in yaml.full_load_all(file))
 
         if self.meta["yaml_string"] is not None:
             yml = self.meta["yaml_string"]
@@ -256,7 +260,7 @@ class ExtraFitsKeywords(Effect):
 
     def apply_to(self, hdul, **kwargs):
         """
-        Adds extra fits keywords from a yaml file including !,#-stings
+        Add extra fits keywords from a yaml file including !,#-stings.
 
         Parameters
         ----------
@@ -274,7 +278,9 @@ class ExtraFitsKeywords(Effect):
                 for i in exts:
                     # On windows machines Â appears in the string when using §
                     resolved_with_counters = {
-                        k: v.replace("Â", "").replace("§", str(i)).replace("++", str(i))
+                        k: v.replace("Â",
+                                     "").replace("§",
+                                                 str(i)).replace("++", str(i))
                         if isinstance(v, str) else v for k, v in resolved.items()
                     }
                     hdul[i].header.update(resolved_with_counters)
@@ -290,7 +296,7 @@ def get_relevant_extensions(dic, hdul):
                     if hdu.header["EXTNAME"] == dic["ext_name"])
     elif dic.get("ext_number") is not None:
         ext_n = np.array(dic["ext_number"])
-        exts.extend(ext_n[ext_n<len(hdul)])
+        exts.extend(ext_n[ext_n < len(hdul)])
     elif dic.get("ext_type") is not None:
         if isinstance(dic["ext_type"], list):
             ext_type_list = dic["ext_type"]
@@ -305,7 +311,7 @@ def get_relevant_extensions(dic, hdul):
 def flatten_dict(dic, base_key="", flat_dict=None,
                  resolve=False, optics_manager=None):
     """
-    Flattens nested yaml dictionaries into a single level dictionary
+    Flattens nested yaml dictionaries into a single level dictionary.
 
     Parameters
     ----------
@@ -326,7 +332,7 @@ def flatten_dict(dic, base_key="", flat_dict=None,
     if flat_dict is None:
         flat_dict = {}
     for key, val in dic.items():
-        flat_key = base_key + f"{key} "
+        flat_key = f"{base_key}{key} "
         if isinstance(val, dict):
             flatten_dict(val, flat_key, flat_dict, resolve, optics_manager)
         else:
@@ -334,23 +340,25 @@ def flatten_dict(dic, base_key="", flat_dict=None,
 
             # catch any value+comments lists
             comment = ""
-            if isinstance(val, list) and len(val) == 2 and isinstance(val[1], str):
+            if isinstance(val, list) and len(val) == 2 and isinstance(val[1],
+                                                                      str):
                 value, comment = val
             else:
                 value = deepcopy(val)
 
             # resolve any bang or hash strings
-            if resolve and isinstance(value, str) and len(value) > 0:
-                if value[0] == "!":
+            if resolve and isinstance(value, str):
+                if value.startswith("!"):
                     value = from_currsys(value)
-                elif value[0] == "#":
+                elif value.startswith("#"):
                     if optics_manager is None:
                         raise ValueError("An OpticsManager object must be "
-                                         "passed in order to resolve #-strings")
+                                         "passed in order to resolve "
+                                         "#-strings")
                     value = optics_manager[value]
 
             if isinstance(value, u.Quantity):
-                comment = f"[{str(value.unit)}] " + comment
+                comment = f"[{str(value.unit)}] {comment}"
                 value = value.value
 
             # Convert e.g.  Unit(mag) to just "mag". Not sure how this will
@@ -362,13 +370,14 @@ def flatten_dict(dic, base_key="", flat_dict=None,
                 value = f"{value.__class__.__name__}:{str(list(value))}"
                 max_len = 80 - len(flat_key)
                 if len(value) > max_len:
-                    value = value[:max_len-4] + " ..."
+                    value = f"{value[:max_len-4]} ..."
 
-            if isinstance(value, (datetime.time, datetime.date, datetime.datetime)):
+            if isinstance(value, (datetime.time, datetime.date,
+                                  datetime.datetime)):
                 value = value.isoformat()
 
             # Add the flattened KEYWORD = (value, comment) to the header dict
-            if len(comment) > 0:
+            if comment:
                 flat_dict[flat_key] = (value, str(comment))
             else:
                 flat_dict[flat_key] = value
@@ -378,7 +387,7 @@ def flatten_dict(dic, base_key="", flat_dict=None,
 
 class EffectsMetaKeywords(ExtraFitsKeywords):
     """
-    Adds meta dictionary info from all Effects to the FITS headers
+    Adds meta dictionary info from all Effects to the FITS headers.
 
     Parameters
     ----------
@@ -387,7 +396,8 @@ class EffectsMetaKeywords(ExtraFitsKeywords):
         should be added
 
     add_excluded_effects : bool, optional
-        Default False. Add meta dict for effects with ``<effect>.include=False``
+        Default False. Add meta dict for effects with
+        ``<effect>.include=False``
 
     keyword_prefix : str, optional
         Default "HIERARCH SIM". Custom FITS header keyword prefix. Effect meta
@@ -408,6 +418,7 @@ class EffectsMetaKeywords(ExtraFitsKeywords):
           keyword_prefix: HIERARCH SIM
 
     """
+
     def __init__(self, **kwargs):
         super(ExtraFitsKeywords, self).__init__()
         params = {"name": "effects_fits_keywords",
@@ -420,6 +431,7 @@ class EffectsMetaKeywords(ExtraFitsKeywords):
         self.meta.update(kwargs)
 
     def apply_to(self, hdul, **kwargs):
+        """See parent docstring."""
         opt_train = kwargs.get("optical_train")
         if isinstance(hdul, fits.HDUList) and opt_train is not None:
             # todo: use a different way of getting all the effect names
@@ -449,20 +461,25 @@ class EffectsMetaKeywords(ExtraFitsKeywords):
                 # add effect under the EFFn keyword
                 prefix = self.meta["keyword_prefix"]
                 class_name = opt_train[eff_name].__class__.__name__
-                self.dict_list = [{"ext_number": self.meta["ext_number"],
-                                   "keywords": {
-                                       f"{prefix} EFF{i} class": [class_name, "ScopeSim class name"],
-                                       f"{prefix} EFF{i}": eff_meta}
-                                   }]
-                super_apply_to = super(EffectsMetaKeywords, self).apply_to
-                hdul = super_apply_to(hdul=hdul, optical_train=opt_train)
+                self.dict_list = [
+                    {"ext_number": self.meta["ext_number"],
+                     "keywords": {
+                         f"{prefix} EFF{i} class": [
+                             class_name,
+                             "ScopeSim class name"
+                             ],
+                         f"{prefix} EFF{i}": eff_meta
+                         }
+                     }
+                    ]
+                hdul = super().apply_to(hdul=hdul, optical_train=opt_train)
 
         return hdul
 
 
 class SourceDescriptionFitsKeywords(ExtraFitsKeywords):
     """
-    Adds parameters from all Source fields to the FITS headers
+    Adds parameters from all Source fields to the FITS headers.
 
     Parameters
     ----------
@@ -488,6 +505,7 @@ class SourceDescriptionFitsKeywords(ExtraFitsKeywords):
           keyword_prefix: HIERARCH SIM
 
     """
+
     def __init__(self, **kwargs):
         super(ExtraFitsKeywords, self).__init__()
         params = {"name": "source_fits_keywords",
@@ -499,6 +517,7 @@ class SourceDescriptionFitsKeywords(ExtraFitsKeywords):
         self.meta.update(kwargs)
 
     def apply_to(self, hdul, **kwargs):
+        """See parent docstring."""
         opt_train = kwargs.get("optical_train")
         if not isinstance(hdul, fits.HDUList) or opt_train is None:
             return hdul
@@ -538,7 +557,7 @@ class SourceDescriptionFitsKeywords(ExtraFitsKeywords):
 
 class SimulationConfigFitsKeywords(ExtraFitsKeywords):
     """
-    Adds parameters from all config dictionaries to the FITS headers
+    Adds parameters from all config dictionaries to the FITS headers.
 
     Parameters
     ----------
@@ -570,6 +589,7 @@ class SimulationConfigFitsKeywords(ExtraFitsKeywords):
           keyword_prefix: HIERARCH SIM
 
     """
+
     def __init__(self, **kwargs):
         super(ExtraFitsKeywords, self).__init__()
         params = {"name": "simulation_fits_keywords",
@@ -582,6 +602,7 @@ class SimulationConfigFitsKeywords(ExtraFitsKeywords):
         self.meta.update(kwargs)
 
     def apply_to(self, hdul, **kwargs):
+        """See parent docstring."""
         opt_train = kwargs.get("optical_train")
         if isinstance(hdul, fits.HDUList) and opt_train is not None:
             cmds = opt_train.cmds.cmds.dic
@@ -592,7 +613,6 @@ class SimulationConfigFitsKeywords(ExtraFitsKeywords):
                                f"{resolve_prefix}keywords": {
                                    f"{sim_prefix} CONFIG": cmds}
                                }]
-            super_apply_to = super(SimulationConfigFitsKeywords, self).apply_to
-            hdul = super_apply_to(hdul=hdul, optical_train=opt_train)
+            hdul = super().apply_to(hdul=hdul, optical_train=opt_train)
 
         return hdul

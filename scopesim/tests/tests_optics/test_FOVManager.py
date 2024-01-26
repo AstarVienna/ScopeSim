@@ -1,29 +1,21 @@
-import os
 import pytest
+from pytest import approx
 
-import numpy as np
-
-from scopesim.optics.fov import FieldOfView
 from scopesim.optics.fov_manager import FOVManager
-
 from scopesim.tests.mocks.py_objects import effects_objects as eo
-from scopesim.tests.mocks.py_objects import yaml_objects as yo
-from scopesim.tests.mocks.py_objects import integr_spectroscopy_objects as iso
-
-import matplotlib.pyplot as plt
-
-PLOTS = False
 
 
 class TestInit:
     def test_initialises_with_nothing(self):
         assert isinstance(FOVManager(preload_fovs=False), FOVManager)
 
+    @pytest.mark.usefixtures("patch_mock_path")
     def test_initialises_with_list_of_effects(self):
         effects = eo._mvs_effects_list()
         assert isinstance(FOVManager(effects, preload_fovs=False), FOVManager)
 
 
+@pytest.mark.usefixtures("patch_mock_path")
 class TestGenerateFovList:
     def test_returns_default_single_entry_fov_list_for_no_effects(self):
         fov_man = FOVManager(pixel_scale=1, plate_scale=1)
@@ -37,7 +29,7 @@ class TestGenerateFovList:
         fov_volume = fovs[0].volume()
 
         assert len(fovs) == 1
-        assert fov_volume["xs"][0] == -1024 / 3600      # [deg] 2k detector / pixel_scale
+        assert fov_volume["xs"][0] == approx(-1024 / 3600)      # [deg] 2k detector / pixel_scale
         assert fov_volume["waves"][0] == 0.6            # [um] filter blue edge
 
     @pytest.mark.parametrize("chunk_size, n_fovs",
@@ -50,13 +42,13 @@ class TestGenerateFovList:
         fov_volume = fovs[0].volume()
 
         assert len(fovs) == 4
-        assert fov_volume["xs"][0] == -1024 / 3600      # [deg] 2k detector / pixel_scale
+        assert fov_volume["xs"][0] == approx(-1024 / 3600)     # [deg] 2k detector / pixel_scale
         assert fov_volume["waves"][0] == 0.6            # [um] filter blue edge
 
     def test_fov_volumes_have_detector_dimensions_from_detector_list(self):
         effects = eo._mvs_effects_list()
         fov_man = FOVManager(effects=effects, pixel_scale=1, plate_scale=1)
-        fovs = fov_man.generate_fovs_list()
+        _ = fov_man.generate_fovs_list()
         detector_limits = fov_man.volumes_list.detector_limits
 
         assert detector_limits["xd_min"] != 0.0

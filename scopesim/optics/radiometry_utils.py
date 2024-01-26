@@ -1,19 +1,22 @@
 from collections import OrderedDict
 from copy import deepcopy
-import logging
 
 from astropy import units as u
 from astropy.io import ascii as ioascii
 from astropy.table import Table, vstack
 
 from .surface import SpectralSurface
-from ..utils import real_colname, insert_into_ordereddict, \
-    change_table_entry, convert_table_comments_to_dict, from_currsys
+from ..utils import (real_colname, insert_into_ordereddict,
+                     change_table_entry, convert_table_comments_to_dict,
+                     from_currsys, get_logger)
+
+
+logger = get_logger(__name__)
 
 
 def combine_emissions(tbl, surfaces, row_indexes, etendue, use_area=False):
     """
-    Combine thermal emission from a series of surfaces
+    Combine thermal emission from a series of surfaces.
 
     The function traces thermal emission through an optical system, taking
     into account the finite reflectivities/transmissivities and emissivities
@@ -58,7 +61,6 @@ def combine_emissions(tbl, surfaces, row_indexes, etendue, use_area=False):
                 emission = emission + surf.emission
 
     return emission
-
 
 
 def combine_throughputs(tbl, surfaces, rows_indexes):
@@ -136,8 +138,8 @@ def add_surface_to_table(tbl, surf, name, position, silent=True):
                                          position=position)
         else:
             if not silent:
-                logging.warning(("%s was not found in the meta dictionary of %s. "
-                                 "This could cause problems"), colname, name)
+                logger.warning(("%s was not found in the meta dictionary of %s. "
+                                "This could cause problems"), colname, name)
 
     colname = real_colname("name", new_tbl.colnames)
     new_tbl = change_table_entry(new_tbl, colname, name, position=position)

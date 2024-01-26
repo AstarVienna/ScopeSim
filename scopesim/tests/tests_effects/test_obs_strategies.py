@@ -35,7 +35,6 @@ class TestChopNodCombinerInit:
             ChopNodCombiner()
 
 
-@pytest.mark.usefixtures("basic_detector")
 class TestChopNodCombinerApplyTo:
     def test_creates_image_for_parallel_chop(self, basic_detector):
         cnc = ChopNodCombiner(pixel_scale=0.004, chop_offsets=(0.12, 0))

@@ -1,15 +1,18 @@
-import logging
 
 import numpy as np
 from astropy import units as u
 from synphot import SourceSpectrum, BlackBody1D, Empirical1D
 
-from ..utils import quantify, extract_type_from_unit, extract_base_from_unit
+from ..utils import (quantify, extract_type_from_unit, extract_base_from_unit,
+                     get_logger)
+
+
+logger = get_logger(__name__)
 
 
 def make_emission_from_emissivity(temp, emiss_src_spec):
     """
-    Create an emission SourceSpectrum using a blackbody and an emissivity curve
+    Create an emission SourceSpectrum using blackbody and emissivity curves.
 
     Parameters
     ----------
@@ -23,12 +26,11 @@ def make_emission_from_emissivity(temp, emiss_src_spec):
     flux : synphot.SourceSpectrum
 
     """
-
     if isinstance(temp, u.Quantity):
         temp = temp.to(u.Kelvin, equivalencies=u.temperature()).value
 
     if emiss_src_spec is None:
-        logging.warning("Either emission or emissivity must be set")
+        logger.warning("Either emission or emissivity must be set")
         flux = None
     else:
         flux = SourceSpectrum(BlackBody1D, temperature=temp)
@@ -42,10 +44,10 @@ def make_emission_from_emissivity(temp, emiss_src_spec):
 
 def make_emission_from_array(flux, wave, meta):
     """
-    Create an emission SourceSpectrum using array.
+    Create an emission SourceSpectrum using an array.
 
-    Takes care of bins and solid angles. The solid_angle is kept in the returned
-    SourceSpectrum meta dictionary under self.meta["solid_angle"]
+    Takes care of bins and solid angles. The solid_angle is kept in the
+    returned SourceSpectrum meta dictionary under self.meta["solid_angle"].
 
     Parameters
     ----------
@@ -60,13 +62,12 @@ def make_emission_from_array(flux, wave, meta):
     flux : synphot.SourceSpectrum
 
     """
-
     if not isinstance(flux, u.Quantity):
         if "emission_unit" in meta:
             flux = quantify(flux, meta["emission_unit"])
         else:
-            logging.warning("emission_unit must be set in self.meta, "
-                            "or emission must be an astropy.Quantity")
+            logger.warning("emission_unit must be set in self.meta, "
+                           "or emission must be an astropy.Quantity")
             flux = None
 
     if isinstance(wave, u.Quantity) and isinstance(flux, u.Quantity):
@@ -83,8 +84,8 @@ def make_emission_from_array(flux, wave, meta):
         flux.meta["history"] = [("Created from emission array with units "
                                  f"{orig_unit}")]
     else:
-        logging.warning("wavelength and emission must be "
-                        "astropy.Quantity py_objects")
+        logger.warning("wavelength and emission must be "
+                       "astropy.Quantity py_objects")
         flux = None
 
     return flux
@@ -92,9 +93,10 @@ def make_emission_from_array(flux, wave, meta):
 
 def normalise_binned_flux(flux, wave):
     """
-    Convert a binned flux Quantity array back into flux density
+    Convert a binned flux Quantity array back into flux density.
 
-    The flux density normalising unit is taken from the wavelength Quantity unit
+    The flux density normalising unit is taken from the wavelength Quantity
+    unit.
 
     Parameters
     ----------
@@ -107,7 +109,6 @@ def normalise_binned_flux(flux, wave):
     flux : array-like Quantity
 
     """
-
     bins = np.zeros(len(wave)) * wave.unit
     bins[:-1] = 0.5 * np.diff(wave)
     bins[1:] += 0.5 * np.diff(wave)
@@ -122,7 +123,7 @@ def normalise_binned_flux(flux, wave):
 
 def is_flux_binned(unit):
     """
-    Checks if the (flux) unit is a binned unit
+    Check if the (flux) unit is a binned unit.
 
     Parameters
     ----------

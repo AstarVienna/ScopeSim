@@ -1,4 +1,3 @@
-import logging
 from pathlib import Path
 from dataclasses import dataclass
 from typing import Any
@@ -13,15 +12,19 @@ from synphot import SpectralElement
 from synphot.models import Empirical1D
 
 from ..effects import ter_curves_utils as ter_utils
-from ..utils import get_meta_quantity, quantify, extract_type_from_unit
-from ..utils import from_currsys, convert_table_comments_to_dict, find_file
 from .surface_utils import make_emission_from_emissivity,\
     make_emission_from_array
+from ..utils import (get_meta_quantity, quantify, extract_type_from_unit,
+                     from_currsys, convert_table_comments_to_dict, find_file,
+                     get_logger)
+
+
+logger = get_logger(__name__)
 
 
 @dataclass
 class PoorMansSurface:
-    """Solely used by SurfaceList """
+    """Solely used by SurfaceList."""
     # FIXME: Use correct types instead of Any
     emission: Any
     throughput: Any
@@ -39,12 +42,13 @@ class SpectralSurface:
     If temperature is not given as a Quantity, it defaults to degrees Celsius.
 
     """
+
     def __init__(self, filename=None, **kwargs):
         filename = find_file(filename)
-        self.meta = {"filename"         : filename,
-                     "temperature"      : -270*u.deg_C,  # deg C
-                     "emission_unit"    : "",
-                     "wavelength_unit"  : u.um}
+        self.meta = {"filename": filename,
+                     "temperature": -270 * u.deg_C,  # deg C
+                     "emission_unit": "",
+                     "wavelength_unit": u.um}
 
         self.table = Table()
         if filename is not None and Path(filename).exists():
@@ -101,14 +105,14 @@ class SpectralSurface:
     @property
     def emission(self):
         """
-        Looks for an emission array in self.meta. If it doesn't find this, it
-        defaults to creating a blackbody and multiplies this by the emissivity.
-        Assumption is that self.meta["temperature"] is in deg_C, unless it is
-        a u.Quantity with attached temperature unit.
-        Return units are in PHOTLAM arcsec^-2, even though arcsec^-2 is not
-        given
+        Look for an emission array in self.meta.
+        
+        If it doesn't find this, it defaults to creating a blackbody and
+        multiplies this by the emissivity. Assumption is that
+        ``self.meta["temperature"]`` is in ``deg_C``, unless it is a
+        ``u.Quantity`` with temperature unit attached. Return units are in
+        ``PHOTLAM arcsec^-2``, even though ``arcsec^-2`` is not given.
         """
-
         flux = self._get_array("emission")
         if flux is not None:
             wave = self._get_array("wavelength")
@@ -144,7 +148,7 @@ class SpectralSurface:
 
     def from_meta(self, key, default_unit=None):
         """
-        Converts a specific value in the meta dict to a ``Quantity``
+        Convert a specific value in the meta dict to a ``Quantity``.
 
         Parameters
         ----------
@@ -158,7 +162,6 @@ class SpectralSurface:
         meta_quantity : Quantity
 
         """
-
         if default_unit is None:
             default_unit = ""
         meta_quantity = get_meta_quantity(self.meta, key, u.Unit(default_unit))
@@ -167,7 +170,7 @@ class SpectralSurface:
 
     def _get_ter_property(self, ter_property, fmt="synphot"):
         """
-        Looks for arrays for transmission, emissivity, or reflection
+        Look for arrays for transmission, emissivity, or reflection.
 
         Parameters
         ----------
@@ -180,7 +183,6 @@ class SpectralSurface:
             response_curve : ``synphot.SpectralElement``
 
         """
-
         compliment_names = ["transmission", "emissivity", "reflection"]
         ii = np.where([ter_property == name for name in compliment_names])[0][0]
         compliment_names.pop(ii)
@@ -197,13 +199,13 @@ class SpectralSurface:
             response_curve = value_arr
         else:
             response_curve = None
-            logging.warning("Both wavelength and %s must be set", ter_property)
+            logger.warning("Both wavelength and %s must be set", ter_property)
 
         return response_curve
 
     def _compliment_array(self, colname_a, colname_b):
         """
-        Returns an complimentary array using: ``a + b + c = 1``
+        Return an complimentary array using: ``a + b + c = 1``.
 
         E.g. ``Emissivity = 1 - (Transmission + Reflection)``
 
@@ -220,7 +222,6 @@ class SpectralSurface:
             Complimentary spectrum to those given
 
         """
-
         compliment_a = self._get_array(colname_a)
         compliment_b = self._get_array(colname_b)
 
@@ -237,7 +238,7 @@ class SpectralSurface:
 
     def _get_array(self, colname):
         """
-        Looks for an array in either the self.meta or self.table attributes
+        Look for an array in either the self.meta or self.table attributes.
 
         Order of search goes: 1. self.meta, 2. self.table
 
@@ -251,14 +252,13 @@ class SpectralSurface:
             val_out : array-like Quantity
 
         """
-
         if colname in self.meta:
             val = self.meta[colname]
         elif colname in self.table.colnames:
             val = self.table[colname].data
         else:
-            logging.debug("%s not found in either '.meta' or '.table': [%s]",
-                          colname, self.meta.get("name", self.meta["filename"]))
+            logger.debug("%s not found in either '.meta' or '.table': [%s]",
+                         colname, self.meta.get("name", self.meta["filename"]))
             return None
 
         col_units = colname+"_unit"
@@ -290,6 +290,6 @@ class SpectralSurface:
         meta = self.meta
         name = meta["name"] if "name" in meta else meta["filename"]
         cols = "".join([col[0].upper() for col in self.table.colnames])
-        msg = "SpectralSurface [{cols}] \"{name}\""
+        msg = f"SpectralSurface [{cols}] \"{name}\""
 
         return msg

@@ -2,13 +2,23 @@ name: Check Markdown links
 
 on:
   push:
+    branches:
+      - main
+      - master
+      - dev_master
+  pull_request:
+    branches:
+      - main
+      - master
+      - dev_master
+
+  # Allows you to run this workflow manually from the Actions tab.
+  workflow_dispatch:
+
+  # Run every day at 5:00 UTC
   schedule:
-    - # Run every day at 5:00 UTC
     - cron: "0 5 * * *"
 
 jobs:
   markdown-link-check:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@master
-    - uses: gaurav-nelson/github-action-markdown-link-check@v1
+    uses: AstarVienna/DevOps/.github/workflows/markdown_link_check.yml@master

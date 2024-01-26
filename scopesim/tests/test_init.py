@@ -1,9 +1,10 @@
-import sys
-import os
-import logging
+from pathlib import Path
 import yaml
 
 from scopesim import __version__, rc
+
+
+DEAULT_YAML = Path(rc.__pkg_dir__, "defaults.yaml")
 
 
 class TestBasicLoading:
@@ -20,12 +21,11 @@ class TestBasicLoading:
 
 class TestDefaultsYamlFile:
     def test_default_yaml_file_exists(self):
-        assert os.path.exists(os.path.join(rc.__pkg_dir__, "defaults.yaml"))
+        assert DEAULT_YAML.exists()
 
     def test_rc_file_readable_by_scopesim_parser(self):
-        default_file = os.path.join(rc.__pkg_dir__, "defaults.yaml")
-        with open(default_file, "r") as f:
-            default_dict = [dic for dic in yaml.full_load_all(f)]
+        with DEAULT_YAML.open("r", encoding="utf-8") as file:
+            default_dict = list(yaml.full_load_all(file))
 
         assert isinstance(default_dict[0], dict)
         assert len(default_dict[0]) > 0

@@ -1,21 +1,19 @@
 """Tests for class SlitWheel"""
-import os
-import pytest
 
-from scopesim import rc
+import pytest
+from unittest.mock import patch
+
 from scopesim.effects import ApertureMask, SlitWheel
 
-FILES_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),
-                                          "../mocks/files/"))
-if FILES_PATH not in rc.__search_path__:
-    rc.__search_path__ += [FILES_PATH]
 
-@pytest.fixture(name="swheel", scope="class")
-def fixture_swheel():
+@pytest.fixture(name="swheel", scope="function")
+def fixture_swheel(mock_path):
     """Instantiate a SlitWheel"""
-    return SlitWheel(slit_names=["A", "B"],
-                     filename_format="MASK_slit_{}.dat",
-                     current_slit="B")
+    with patch("scopesim.rc.__search_path__", [mock_path]):
+        return SlitWheel(slit_names=["A", "B"],
+                         filename_format="MASK_slit_{}.dat",
+                         current_slit="B")
+
 
 # pylint: disable=no-self-use, missing-class-docstring,
 # pylint: disable=missing-function-docstring
@@ -40,10 +38,11 @@ class TestSlitWheel:
         with pytest.raises(ValueError):
             swheel.change_slit('X')
 
-    def test_reports_current_slit_false(self):
-        swheel = SlitWheel(slit_names=["A", "B"],
-                           filename_format="MASK_slit_{}.dat",
-                           current_slit=False)
+    def test_reports_current_slit_false(self, mock_path):
+        with patch("scopesim.rc.__search_path__", [mock_path]):
+            swheel = SlitWheel(slit_names=["A", "B"],
+                               filename_format="MASK_slit_{}.dat",
+                               current_slit=False)
         assert not swheel.current_slit
 
     def test_changes_to_false(self, swheel):
