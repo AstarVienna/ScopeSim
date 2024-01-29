@@ -1,5 +1,4 @@
 """Transmission, emissivity, reflection curves."""
-import logging
 from collections.abc import Collection
 
 import numpy as np
