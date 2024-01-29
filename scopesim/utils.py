@@ -873,7 +873,7 @@ def from_currsys(item):
             item = None
         try:
             item = float(item)
-        except:
+        except TypeError:
             pass
 
     return item
