@@ -20,7 +20,8 @@ class SurfaceList(TERCurve):
         self.meta.update(params)
         self.meta.update(kwargs)
 
-        self.surfaces = rad_utils.make_surface_dict_from_table(self.table)
+        tbl = from_currsys(self.table, self.cmds)
+        self.surfaces = rad_utils.make_surface_dict_from_table(tbl)
         self._surface = None
         self._throughput = None
         self._emission = None

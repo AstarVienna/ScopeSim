@@ -58,10 +58,15 @@ class DataContainer:
 
     """
 
-    def __init__(self, filename=None, table=None, array_dict=None, **kwargs):
+    def __init__(self, filename=None, table=None, array_dict=None, cmds=None,
+                 **kwargs):
 
+        self.cmds = cmds
         if filename is None and "file_name" in kwargs:
             filename = kwargs["file_name"]
+
+        if isinstance(filename, str) and filename.startswith("!"):
+            filename = utils.from_currsys(filename, self.cmds)
 
         filename = utils.find_file(filename)
         self.meta = {"filename": filename,

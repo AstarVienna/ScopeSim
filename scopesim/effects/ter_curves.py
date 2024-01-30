@@ -863,10 +863,11 @@ class PupilTransmission(TERCurve):
     The emissivity is set to zero, assuming that the mask is cold.
     """
 
-    def __init__(self, transmission, **kwargs):
+    def __init__(self, transmission, cmds=None, **kwargs):
         self.params = {"wave_min": "!SIM.spectral.wave_min",
                        "wave_max": "!SIM.spectral.wave_max"}
         self.params.update(kwargs)
+        self.cmds = cmds
         wave_min = from_currsys(self.params["wave_min"], self.cmds) * u.um
         wave_max = from_currsys(self.params["wave_max"], self.cmds) * u.um
         transmission = from_currsys(transmission)

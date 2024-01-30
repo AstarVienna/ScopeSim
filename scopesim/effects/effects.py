@@ -34,12 +34,11 @@ class Effect(DataContainer):
 
     """
 
-    def __init__(self, cmds=None, **kwargs):
+    def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.meta["z_order"] = []
         self.meta["include"] = True
         self.meta.update(kwargs)
-        self.cmds = cmds
 
     def apply_to(self, obj, **kwargs):
         """TBA."""
