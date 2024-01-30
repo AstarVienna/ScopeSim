@@ -1,4 +1,7 @@
 """Transmission, emissivity, reflection curves."""
+
+import warnings
+
 from collections.abc import Collection
 
 import numpy as np
@@ -420,6 +423,8 @@ class FilterCurve(TERCurve):
         self.table["transmission"][mask] = 0
 
     def fov_grid(self, which="waveset", **kwargs):
+        warnings.warn("The fov_grid method is deprecated and will be removed "
+                      "in a future release.", DeprecationWarning, stacklevel=2)
         if which == "waveset":
             self.meta.update(kwargs)
             self.meta = from_currsys(self.meta)
@@ -601,6 +606,8 @@ class FilterWheelBase(Effect):
         return self.current_filter.throughput
 
     def fov_grid(self, which="waveset", **kwargs):
+        warnings.warn("The fov_grid method is deprecated and will be removed "
+                      "in a future release.", DeprecationWarning, stacklevel=2)
         return self.current_filter.fov_grid(which=which, **kwargs)
 
     def change_filter(self, filtername=None):

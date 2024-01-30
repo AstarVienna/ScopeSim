@@ -3,6 +3,7 @@ import math
 from pathlib import Path
 import sys
 import logging
+from logging.config import dictConfig
 from collections import OrderedDict
 from collections.abc import Iterable, Generator
 from copy import deepcopy
@@ -1034,3 +1035,35 @@ def top_level_catch(func):
             raise
         return output
     return wrapper
+
+
+def update_logging(capture_warnings=True):
+    """Reload logging configuration from ``rc.__config__``."""
+    dictConfig(rc.__config__["!SIM.logging"])
+    logging.captureWarnings(capture_warnings)
+
+    # This cannot be in the dict config (yet) because NestedMapping doesn't like
+    #   "." in keys (yet) ...
+    # Set the "astar.scopesim" logger
+    get_logger(__package__).setLevel(logging.DEBUG)
+
+
+def log_to_file(enable=True):
+    """Enable or disable logging to file (convenience function)."""
+    if enable:
+        handlers = ["console", "file"]
+    else:
+        handlers = ["console"]
+
+    rc.__config__["!SIM.logging.loggers.astar.handlers"] = handlers
+    update_logging()
+
+
+def set_console_log_level(level="INFO"):
+    """Set the level for the console handler (convenience function).
+
+    This controls what is actually printed to the console by ScopeSim.
+    Accepted values are: DEBUG, INFO (default), WARNING, ERROR and CRITICAL.
+    """
+    rc.__config__["!SIM.logging.handlers.console.level"] = level
+    update_logging()
