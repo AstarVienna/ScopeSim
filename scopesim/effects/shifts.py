@@ -1,3 +1,4 @@
+import warnings
 import numpy as np
 from astropy import units as u
 from astropy.table import Table
@@ -24,6 +25,8 @@ class Shift3D(Effect):
 
     def fov_grid(self, which="shifts", **kwargs):
         """See parent docstring."""
+        warnings.warn("The fov_grid method is deprecated and will be removed "
+                      "in a future release.", DeprecationWarning, stacklevel=2)
         if which == "shifts":
             col_names = ["wavelength", "dx", "dy"]
             waves, dx, dy = [self.get_table(**kwargs)[col]
@@ -222,6 +225,8 @@ class AtmosphericDispersionCorrection(Shift3D):
 
     def fov_grid(self, which="shifts", **kwargs):
         """See parent docstring."""
+        warnings.warn("The fov_grid method is deprecated and will be removed "
+                      "in a future release.", DeprecationWarning, stacklevel=2)
         kwargs.update(self.meta)
         if "quick_adc" in self.meta:
             ad = AtmosphericDispersion(**self.meta)

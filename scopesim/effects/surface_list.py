@@ -1,5 +1,6 @@
 """TBA."""
 
+import warnings
 import numpy as np
 from astropy import units as u
 
@@ -26,6 +27,8 @@ class SurfaceList(TERCurve):
         self._emission = None
 
     def fov_grid(self, which="waveset", **kwargs):
+        warnings.warn("The fov_grid method is deprecated and will be removed "
+                      "in a future release.", DeprecationWarning, stacklevel=2)
         wave_edges = []
         if which == "waveset":
             self.meta.update(kwargs)

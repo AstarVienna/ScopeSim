@@ -1,5 +1,6 @@
 """Effects related to field masks, including spectroscopic slits."""
 
+import warnings
 import yaml
 
 import numpy as np
@@ -127,7 +128,8 @@ class ApertureMask(Effect):
     # Outdated. Remove when removing all old FOVManager code from effects
     def fov_grid(self, which="edges", **kwargs):
         """Return a header with the sky coordinates."""
-        logger.warning("DetectorList.fov_grid will be depreciated in v1.0")
+        warnings.warn("The fov_grid method is deprecated and will be removed "
+                      "in a future release.", DeprecationWarning, stacklevel=2)
         if which == "edges":
             self.meta.update(kwargs)
             return self.header
@@ -205,16 +207,6 @@ class RectangularApertureMask(ApertureMask):
         check_keys(self.meta, ["x", "y", "width", "height"])
 
         self.table = self.get_table(**kwargs)
-
-    # def fov_grid(self, which="edges", **kwargs):
-    #     """ Returns a header with the sky coordinates """
-    #     if which == "edges":
-    #         self.table = self.get_table(**kwargs)
-    #         return self.header      # from base class ApertureMask
-    #
-    #     elif which == "masks":
-    #         self.meta.update(kwargs)
-    #         return self.mask
 
     def get_table(self, **kwargs):
         self.meta.update(kwargs)
@@ -314,14 +306,6 @@ class ApertureList(Effect):
             obj.volumes = new_vols
 
         return obj
-
-    # def fov_grid(self, which="edges", **kwargs):
-    #     params = deepcopy(self.meta)
-    #     params.update(kwargs)
-    #     if which == "edges":
-    #         return [ap.fov_grid(which=which, **params) for ap in self.apertures]
-    #     if which == "masks":
-    #         return {ap.meta["id"]: ap.mask for ap in self.apertures}
 
     @property
     def apertures(self):
@@ -459,6 +443,8 @@ class SlitWheel(Effect):
 
     def fov_grid(self, which="edges", **kwargs):
         """See parent docstring."""
+        warnings.warn("The fov_grid method is deprecated and will be removed "
+                      "in a future release.", DeprecationWarning, stacklevel=2)
         return self.current_slit.fov_grid(which=which, **kwargs)
 
     def change_slit(self, slitname=None):
