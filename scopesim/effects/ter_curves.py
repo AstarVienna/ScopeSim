@@ -1,5 +1,5 @@
 """Transmission, emissivity, reflection curves."""
-from collections.abc import Collection
+from collections.abc import Collection, Iterable
 
 import numpy as np
 import skycalc_ipy
@@ -220,7 +220,8 @@ class TERCurve(Effect):
         abbrs = {"t": "transmission", "e": "emission",
                  "r": "reflection", "x": "throughput"}
 
-        if not isinstance(axes, list):
+
+        if not isinstance(axes, Iterable):
             axes = [axes]
         for ter, ax in zip(which, axes):
             y_name = abbrs.get(ter, "throughput")

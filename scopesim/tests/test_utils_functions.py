@@ -185,6 +185,16 @@ class TestFromCurrSys:
     def test_converts_dict(self):
         assert utils.from_currsys({"seed": "!SIM.random.seed"})["seed"] is None
 
+    def test_converts_layered_bang_strings(self):
+        old = rc.__currsys__["!SIM.sub_pixel.flag"]
+        rc.__currsys__["!SIM.sub_pixel.flag"] = "!SIM.sub_pixel.fraction"
+
+        result = utils.from_currsys("!SIM.sub_pixel.flag")
+        assert not isinstance(result, str)
+        assert result == 1
+
+        rc.__currsys__["!SIM.sub_pixel.flag"] = old
+
     def test_converts_astropy_table(self):
         tbl = Table(data=[["!SIM.random.seed"]*2, ["!SIM.random.seed"]*2],
                     names=["seeds", "seeds2"])
