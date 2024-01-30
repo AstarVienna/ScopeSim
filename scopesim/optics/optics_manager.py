@@ -247,7 +247,7 @@ class OpticsManager:
             else:
                 # Avoid infinite recursion in Wheel effects (filter, adc)
                 eff_copy = eff
-            sle_list_copy += [eff_copy]
+            sle_list_copy.append(eff_copy)
 
         comb_table = combine_surface_effects(sle_list_copy)
         return comb_table

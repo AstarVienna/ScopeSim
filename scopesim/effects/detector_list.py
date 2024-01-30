@@ -1,5 +1,7 @@
 """TBA."""
 
+import warnings
+
 import numpy as np
 from astropy import units as u
 from astropy.table import Table
@@ -158,7 +160,8 @@ class DetectorList(Effect):
 
     def fov_grid(self, which="edges", **kwargs):
         """Return an ApertureMask object. kwargs are "pixel_scale" [arcsec]."""
-        logger.warning("DetectorList.fov_grid will be depreciated in v1.0")
+        warnings.warn("The fov_grid method is deprecated and will be removed "
+                      "in a future release.", DeprecationWarning, stacklevel=2)
         aperture_mask = None
         if which == "edges":
             self.meta.update(kwargs)

@@ -3,9 +3,7 @@
 
 import re
 
-# Python 3.8 doesn't yet know these things.......
-# from collections.abc import Iterator, Iterable, Mapping
-from typing import Iterator
+from collections.abc import Iterator
 
 from zipfile import ZipFile
 from pathlib import Path
@@ -17,6 +15,7 @@ import bs4
 from tqdm import tqdm
 # from tqdm.contrib.logging import logging_redirect_tqdm
 # put with logging_redirect_tqdm(loggers=all_loggers): around tqdm
+# Note: seems to work without that so far...
 
 from ..utils import get_logger
 
