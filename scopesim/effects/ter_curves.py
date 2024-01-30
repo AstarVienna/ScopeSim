@@ -204,10 +204,12 @@ class TERCurve(Effect):
             wunit = params["wave_unit"]
             # TODO: shouldn't need both, make sure they're equal
             if wunit != wave_unit:
-                logger.warning(f"wavelength units in the meta dict of "
-                             f"{self.meta.get('name')} are inconsistent: \n"
-                             f"- wavelength_unit : {wave_unit} \n"
-                             f"- wave_unit : {wunit}")
+                logger.warning("wavelength units in the meta dict of "
+                             "%s are inconsistent:\n"
+                             "- wavelength_unit : %s\n"
+                             "- wave_unit : %s",
+                             {self.meta.get("name")},
+                             wave_unit, wunit)
 
             wave = np.arange(quantify(params["wave_min"], wunit).value,
                              quantify(params["wave_max"], wunit).value,
