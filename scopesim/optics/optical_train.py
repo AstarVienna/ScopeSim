@@ -19,8 +19,7 @@ from ..commands.user_commands import UserCommands
 from ..detector import DetectorArray
 from ..effects import ExtraFitsKeywords
 from ..utils import from_currsys, top_level_catch
-from ..version import version
-from .. import rc
+from .. import rc, __version__
 
 
 class OpticalTrain:
@@ -353,7 +352,7 @@ class OpticalTrain:
         # Primary hdu
         pheader = hdulist[0].header
         pheader["DATE"] = datetime.now().isoformat(timespec="seconds")
-        pheader["ORIGIN"] = "Scopesim " + version
+        pheader["ORIGIN"] = f"Scopesim {__version__}"
         pheader["INSTRUME"] = from_currsys("!OBS.instrument")
         pheader["INSTMODE"] = ", ".join(from_currsys("!OBS.modes"))
         pheader["TELESCOP"] = from_currsys("!TEL.telescope")
