@@ -200,6 +200,15 @@ class TestFromCurrSys:
                     names=["seeds", "seeds2"])
         assert utils.from_currsys(tbl["seeds2"][1]) is None
 
+    def test_converts_string_numericals_to_floats(self):
+        old = rc.__currsys__["!SIM.sub_pixel.fraction"]
+        rc.__currsys__["!SIM.sub_pixel.fraction"] = "1e0"
+
+        result = utils.from_currsys("!SIM.sub_pixel.fraction")
+        assert isinstance(result, float)
+        assert result == 1
+
+        rc.__currsys__["!SIM.sub_pixel.flag"] = old
 
 
 # load_example_optical_train modifies __currsys__!
