@@ -1,6 +1,7 @@
 import os
 import copy
 from pathlib import Path
+from collections.abc import Mapping
 
 import yaml
 import httpx
@@ -184,7 +185,7 @@ class UserCommands:
                     else:
                         logger.warning("%s could not be found", yaml_input)
 
-                elif isinstance(yaml_input, dict):
+                elif isinstance(yaml_input, Mapping):
                     self.cmds.update(yaml_input)
                     self.yaml_dicts.append(yaml_input)
 
@@ -240,7 +241,7 @@ class UserCommands:
         self.__init__(yamls=self.default_yamls)
 
     def list_modes(self):
-        if isinstance(self.modes_dict, dict):
+        if isinstance(self.modes_dict, Mapping):
             modes = {}
             for mode_name in self.modes_dict:
                 dic = self.modes_dict[mode_name]
