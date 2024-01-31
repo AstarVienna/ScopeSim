@@ -124,6 +124,13 @@ class FOVManager:
                             (vol["y_max"] - vol["y_min"]) / pixel_scale**2)
             if vol_pix_area > max_seg_size:
                 step = chunk_size * pixel_scale
+
+                # I'd like to see if these are always integers, as in the tests
+                # If they are, the np.arange could be changed to just a range
+                for chkval in (vol["x_min"], vol["x_max"],
+                               vol["y_min"], vol["y_max"], step):
+                    assert not round(chkval, 7) % 1, chkval
+
                 yield (np.arange(vol["x_min"], vol["x_max"], step),
                        np.arange(vol["y_min"], vol["y_max"], step))
 
