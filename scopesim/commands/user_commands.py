@@ -291,8 +291,9 @@ def check_for_updates(package_name):
         back_matter = f"api.php?package_name={package_name}"
         try:
             response = httpx.get(url=front_matter+back_matter).json()
-        except:
-            print(f"Offline. Cannot check for updates for {package_name}")
+        except httpx.HTTPError:
+            logger.warning("Offline. Cannot check for updates for %s.",
+                           package_name)
     return response
 
 
