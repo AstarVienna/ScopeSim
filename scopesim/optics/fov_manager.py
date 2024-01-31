@@ -297,6 +297,8 @@ class FovVolumeList(FOVSetupBase, MutableSequence):
 
     def shrink(self, axis, values, aperture_id=None) -> None:
         """
+        Trim axes to new min/max value(s).
+
         - Loop through all volume dict
         - Replace any entries where min < values.min
         - Replace any entries where max > values.max
@@ -420,7 +422,7 @@ class FovVolumeList(FOVSetupBase, MutableSequence):
     def write_string(self, stream: TextIO) -> None:
         """Write formatted string representation to I/O stream."""
         n_vol = len(self.volumes)
-        stream.write(f"FovVolumeList with {n_vol} volumes:")
+        stream.write(f"FovVolumeList with {n_vol} volume{'s'*(n_vol>1)}:")
         max_digits = len(str(n_vol))
 
         for i_vol, vol in enumerate(self.volumes):
@@ -448,6 +450,13 @@ class FovVolumeList(FOVSetupBase, MutableSequence):
         new_self += other
 
         return new_self
+
+    def _repr_pretty_(self, p, cycle):
+        """For ipython."""
+        if cycle:
+            p.text(f"{self.__class__.__name__}(...)")
+        else:
+            p.text(str(self))
 
 
 def _volume_in_range(vol: dict, axis: str, edge) -> bool:
