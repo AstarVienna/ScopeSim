@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-from typing import Tuple
 from itertools import product
 from collections.abc import Iterable
 
@@ -157,7 +156,7 @@ def _make_bounding_header_for_tables(*tables, pixel_scale=1*u.arcsec):
 
 def create_wcs_from_points(points: np.ndarray,
                            pixel_scale: float,
-                           wcs_suffix: str = "") -> Tuple[WCS, np.ndarray]:
+                           wcs_suffix: str = "") -> tuple[WCS, np.ndarray]:
     """
     Create `astropy.wcs.WCS` instance that fits all points inside.
 
@@ -1034,7 +1033,7 @@ def _get_unit_from_headers(*headers, wcs_suffix: str = "") -> str:
 def det_wcs_from_sky_wcs(sky_wcs: WCS,
                          pixel_scale: float,
                          plate_scale: float,
-                         naxis=None) -> Tuple[WCS, np.ndarray]:
+                         naxis=None) -> tuple[WCS, np.ndarray]:
     """
     Create detector WCS from celestial WCS using pixel and plate scales.
 
@@ -1081,7 +1080,7 @@ def det_wcs_from_sky_wcs(sky_wcs: WCS,
 def sky_wcs_from_det_wcs(det_wcs: WCS,
                          pixel_scale: float,
                          plate_scale: float,
-                         naxis=None) -> Tuple[WCS, np.ndarray]:
+                         naxis=None) -> tuple[WCS, np.ndarray]:
     """
     Create celestial WCS from detector WCS using pixel and plate scales.
 
