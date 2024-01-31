@@ -1,5 +1,4 @@
-import os
-import copy
+from copy import deepcopy
 from pathlib import Path
 from collections.abc import Mapping
 
@@ -146,7 +145,7 @@ class UserCommands:
     @top_level_catch
     def __init__(self, **kwargs):
 
-        self.cmds = copy.deepcopy(rc.__config__)
+        self.cmds = deepcopy(rc.__config__)
         self.yaml_dicts = []
         self.kwargs = kwargs
         self.ignore_effects = []
@@ -287,8 +286,7 @@ def check_for_updates(package_name):
     response = {}
 
     # tracking **exclusively** your IP address for our internal stats
-    if rc.__currsys__["!SIM.reports.ip_tracking"] and \
-            "TRAVIS" not in os.environ:
+    if rc.__currsys__["!SIM.reports.ip_tracking"]:
         front_matter = str(rc.__currsys__["!SIM.file.server_base_url"])
         back_matter = f"api.php?package_name={package_name}"
         try:
