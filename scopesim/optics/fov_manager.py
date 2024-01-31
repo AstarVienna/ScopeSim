@@ -1,46 +1,47 @@
-# """
-# Influences
-#
-# Spectral:
-# - Red and blue edges of full spectrum
-# - Chunks of a large spectral range
-#
-# Spatial:
-# - On-sky borders of Detector Array
-# - On-sky borders of Aperture Mask
-# - Chunks of large on-sky area
-# - Slit mask borders
-# - Multiple slits for IFU, mirror-MOS
-# - Multiple lenses for fibre-fed MOS
-# - each Effect should submit a list of volumes
-#
-# IFU spectroscopy depends on:
-# - the tracelist
-# - the list of apertures
-# - the detector array borders
-# - PSF wavelength granularity
-# - Atmospheric dispersion
-#
-# MOS spectroscopy depends on:
-# - the tracelist
-# - the list of apertures
-# - Atmospheric dispersion
-# - PSF wavelength granularity
-# - the detector array borders
-#
-# Long slit spectroscopy depends on:
-# - the tracelist ra, dec, lam vol --> x, y area
-# - the slit aperture
-# - the detector array borders
-# - PSF wavelength granularity
-# - Atmospheric dispersion
-#
-# Imaging dependent on:
-# - Detector array borders
-# - PSF wavelength granularity
-# - Atmospheric dispersion
-#
-# """
+# -*- coding: utf-8 -*-
+"""
+Influences.
+
+Spectral:
+- Red and blue edges of full spectrum
+- Chunks of a large spectral range
+
+Spatial:
+- On-sky borders of Detector Array
+- On-sky borders of Aperture Mask
+- Chunks of large on-sky area
+- Slit mask borders
+- Multiple slits for IFU, mirror-MOS
+- Multiple lenses for fibre-fed MOS
+- each Effect should submit a list of volumes
+
+IFU spectroscopy depends on:
+- the tracelist
+- the list of apertures
+- the detector array borders
+- PSF wavelength granularity
+- Atmospheric dispersion
+
+MOS spectroscopy depends on:
+- the tracelist
+- the list of apertures
+- Atmospheric dispersion
+- PSF wavelength granularity
+- the detector array borders
+
+Long slit spectroscopy depends on:
+- the tracelist ra, dec, lam vol --> x, y area
+- the slit aperture
+- the detector array borders
+- PSF wavelength granularity
+- Atmospheric dispersion
+
+Imaging dependent on:
+- Detector array borders
+- PSF wavelength granularity
+- Atmospheric dispersion
+
+"""
 
 from copy import deepcopy
 from typing import TextIO
