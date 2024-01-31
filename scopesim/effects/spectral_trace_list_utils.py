@@ -143,7 +143,7 @@ class SpectralTrace:
                 self.dispersion_axis = "x"
             else:
                 self.dispersion_axis = "y"
-            logger.warning(
+            logger.info(
                 "Dispersion axis determined to be %s", self.dispersion_axis)
 
     def map_spectra_to_focal_plane(self, fov):
