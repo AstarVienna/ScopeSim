@@ -98,15 +98,14 @@ class TestObserveSpectroscopyMode:
             plt.imshow(det_im)
             plt.show()
 
-        xs = [(175, 200), (500, 525), (825, 850)]
+        xs = [slice(172, 199), slice(495, 525), slice(821, 850)]
         dlams = np.array([0.35, 0.5, 0.75])
-        n_spots = dlams / 0.05
+        n_spots = (dlams / 0.05).round().astype(int)
 
         spot_flux = 28000       # due to psf flux losses in narrow slit (0.5")
-        for i in range(3):
-            x0, x1 = xs[i]
-            trace_flux = det_im[:, x0:x1].sum()     # sum along a trace
-            assert round(trace_flux / spot_flux) == round(n_spots[i])
+        for sl, n in zip(xs, n_spots):
+            trace_flux = det_im[:, sl].sum()     # sum along a trace
+            assert round(trace_flux / spot_flux) == n
 
 
 @pytest.mark.usefixtures("protect_currsys", "patch_all_mock_paths")

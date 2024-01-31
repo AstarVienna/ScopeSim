@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Contains tests for Shutter class."""
+"""Contains tests for Quantization class."""
 
 import pytest
 import numpy as np

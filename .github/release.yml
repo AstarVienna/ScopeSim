@@ -6,6 +6,9 @@ changelog:
     - title: API Changes
       labels:
         - API
+    - title: Changes to or addition of Effects
+      labels:
+        - effects
     - title: New Features or Improvements
       labels:
         - enhancement
@@ -18,4 +21,3 @@ changelog:
     - title: Other Changes
       labels:
         - "*"
-        

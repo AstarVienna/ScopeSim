@@ -166,6 +166,12 @@ class FOVManager:
 
     @property
     def fovs(self):
+        # There two lines were not here before #258, but somehow not including
+        # them will mess things up as FOVs multipy like rabbits...
+        # Should investigate why at some point...
+        if self._fovs_list:
+            return self._fovs_list
+
         if from_currsys(self.meta["preload_fovs"]) is False:
             self._fovs_list = self.generate_fovs_list()
         return self._fovs_list

@@ -9,7 +9,7 @@ This module contains
    - utility functions for use with spectral traces
 """
 
-import logging
+import warnings
 
 import numpy as np
 
@@ -27,8 +27,11 @@ from astropy.modeling.models import Polynomial2D
 import pandas as pd
 
 from ..optics import image_plane_utils as imp_utils
-from ..utils import deriv_polynomial2d, power_vector, interp2, check_keys,\
-    from_currsys, quantify, close_loop, figure_factory
+from ..utils import (deriv_polynomial2d, power_vector, interp2, check_keys,
+                     from_currsys, quantify, close_loop, figure_factory, get_logger)
+
+
+logger = get_logger(__name__)
 
 
 class SpectralTrace:
@@ -45,17 +48,19 @@ class SpectralTrace:
     - x, y : [mm]
     """
 
-    _class_params = {"x_colname": "x",
-                     "y_colname": "y",
-                     "s_colname": "s",
-                     "wave_colname": "wavelength",
-                     "dwave": 0.002,
-                     "aperture_id": 0,
-                     "image_plane_id": 0,
-                     "extension_id": 2,
-                     "spline_order": 4,
-                     "pixel_size": None,
-                     "description": "<no description>"}
+    _class_params = {
+        "x_colname": "x",
+        "y_colname": "y",
+        "s_colname": "s",
+        "wave_colname": "wavelength",
+        "dwave": 0.002,
+        "aperture_id": 0,
+        "image_plane_id": 0,
+        "extension_id": 2,
+        "spline_order": 4,
+        "pixel_size": None,
+        "description": "<no description>",
+    }
 
     def __init__(self, trace_tbl, **kwargs):
         # Within scopesim, the actual parameter values are
@@ -98,6 +103,8 @@ class SpectralTrace:
         Spatial limits are determined by the `ApertureMask` effect
         and are not returned here.
         """
+        warnings.warn("The fov_grid method is deprecated and will be removed "
+                      "in a future release.", DeprecationWarning, stacklevel=2)
         aperture_id = self.meta["aperture_id"]
         lam_arr = self.table[self.meta["wave_colname"]]
 
@@ -143,8 +150,8 @@ class SpectralTrace:
                 self.dispersion_axis = "x"
             else:
                 self.dispersion_axis = "y"
-            logging.warning("Dispersion axis determined to be %s",
-                            self.dispersion_axis)
+            logger.warning(
+                "Dispersion axis determined to be %s", self.dispersion_axis)
 
     def map_spectra_to_focal_plane(self, fov):
         """
@@ -156,7 +163,7 @@ class SpectralTrace:
         The method returns a section of the fov image along with info on
         where this image lies in the focal plane.
         """
-        logging.info("Mapping %s", fov.trace_id)
+        logger.info("Mapping %s", fov.trace_id)
         # Initialise the image based on the footprint of the spectral
         # trace and the focal plane WCS
         wave_min = fov.meta["wave_min"].value       # [um]
@@ -167,7 +174,7 @@ class SpectralTrace:
                                           xi_min=xi_min, xi_max=xi_max)
 
         if xlim_mm is None:
-            logging.warning("xlim_mm is None")
+            logger.warning("xlim_mm is None")
             return None
 
         fov_header = fov.header
@@ -189,8 +196,8 @@ class SpectralTrace:
 
         # Check if spectral trace footprint is outside FoV
         if xmax < 0 or xmin > naxis1d or ymax < 0 or ymin > naxis2d:
-            logging.info("Spectral trace %s: footprint is outside FoV",
-                         fov.trace_id)
+            logger.info(
+                "Spectral trace %d: footprint is outside FoV", fov.trace_id)
             return None
 
         # Only work on parts within the FoV
@@ -221,7 +228,7 @@ class SpectralTrace:
             xilam = XiLamImage(fov, self.dlam_per_pix)
             self._xilamimg = xilam   # ..todo: remove or make available with a debug flag?
         except ValueError:
-            print(f" ---> {self.trace_id} gave ValueError")
+            logger.warning(" ---> %d gave ValueError", self.trace_id)
 
         npix_xi, npix_lam = xilam.npix_xi, xilam.npix_lam
         xilam_wcs = xilam.wcs
@@ -281,8 +288,8 @@ class SpectralTrace:
         img_header["YMAX"] = ymax
 
         if np.any(image < 0):
-            logging.warning("map_spectra_to_focal_plane: %d negative pixels",
-                            np.sum(image < 0))
+            logger.warning("map_spectra_to_focal_plane: %d negative pixels",
+                           np.sum(image < 0))
 
         image_hdu = fits.ImageHDU(header=img_header, data=image)
         return image_hdu
@@ -315,25 +322,26 @@ class SpectralTrace:
            Spatial limits of the slit on the sky. This should be taken from
            the header of the hdulist, but this is not yet provided by scopesim
         """
-        logging.info("Rectifying %s", self.trace_id)
+        logger.info("Rectifying %d", self.trace_id)
 
         wave_min = kwargs.get("wave_min",
                               self.wave_min)
         wave_max = kwargs.get("wave_max",
                               self.wave_max)
         if wave_max < self.wave_min or wave_min > self.wave_max:
-            logging.info("   Outside filter range")
+            logger.info("   Outside filter range")
             return None
         wave_min = max(wave_min, self.wave_min)
         wave_max = min(wave_max, self.wave_max)
-        logging.info("   %.02f .. %.02f um", wave_min, wave_max)
+        logger.info("   %.02f .. %.02f um", wave_min, wave_max)
 
         # bin_width is taken as the minimum dispersion of the trace
+        # ..todo: if wcs is given take bin width from cdelt1
         bin_width = kwargs.get("bin_width", None)
         if bin_width is None:
             self._set_dispersion(wave_min, wave_max)
             bin_width = np.abs(self.dlam_per_pix.y).min()
-        logging.info("   Bin width %.02g um", bin_width)
+        logger.info("   Bin width %.02g um", bin_width)
 
         pixscale = from_currsys(self.meta["pixel_scale"])
 
@@ -343,14 +351,14 @@ class SpectralTrace:
             try:
                 xi_min = hdulist[0].header["HIERARCH INS SLIT XIMIN"]
             except KeyError:
-                logging.error("xi_min not found")
+                logger.error("xi_min not found")
                 return None
         xi_max = kwargs.get("xi_max", None)
         if xi_max is None:
             try:
                 xi_max = hdulist[0].header["HIERARCH INS SLIT XIMAX"]
             except KeyError:
-                logging.error("xi_max not found")
+                logger.error("xi_max not found")
                 return None
 
         if wcs is None:
@@ -368,7 +376,7 @@ class SpectralTrace:
 
         # Create interpolation functions if not provided
         if interps is None:
-            logging.info("Computing image interpolations")
+            logger.info("Computing image interpolations")
             interps = make_image_interpolations(hdulist, kx=1, ky=1)
 
         # Create Xi, Lam images (do I need Iarr and Jarr or can I build Xi, Lam directly?)
@@ -433,7 +441,7 @@ class SpectralTrace:
         # This is only relevant if the trace is given by a table of reference
         # points. Otherwise (METIS LMS!) we assume that the range is valid.
         if ("wave_colname" in self.meta and
-            self.meta["wave_colname"] in self.table.colnames):
+                self.meta["wave_colname"] in self.table.colnames):
             # Here, the parameters are obtained from a table of reference points
             wave_unit = self.table[self.meta["wave_colname"]].unit
             wave_val = quantify(self.table[self.meta["wave_colname"]].data,
@@ -693,8 +701,8 @@ class XiLamImage():
             dlam_per_pix_val = dlam_per_pix(np.asarray(self.lam))
         except TypeError:
             dlam_per_pix_val = dlam_per_pix
-            logging.warning("Using scalar dlam_per_pix = %.2g",
-                            dlam_per_pix_val)
+            logger.warning("Using scalar dlam_per_pix = %.2g",
+                           dlam_per_pix_val)
 
         for i, eta in enumerate(cube_eta):
             lam0 = self.lam + dlam_per_pix_val * eta / d_eta
@@ -989,7 +997,6 @@ def make_image_interpolations(hdulist, **kwargs):
             )
     return interps
 
-
 # ..todo: Check whether the following functions are actually used
 def rolling_median(x, n):
     """Calculate the rolling median of a sequence for +/- n entries."""
@@ -1038,11 +1045,13 @@ def get_affine_parameters(coords):
 
     dxs = np.diff(coords["x"], axis=1)
     dys = np.diff(coords["y"], axis=1)
-    shears = np.array([np.arctan2(dys[i], dxs[i]) for i in range(dxs.shape[0])])
+    shears = np.array([np.arctan2(dys[i], dxs[i])
+                      for i in range(dxs.shape[0])])
     shears = np.array(list(shears.T) + [shears.T[-1]]).T
     shears = (np.average(shears, axis=0) * rad2deg) - (90 + rotations)
 
     return rotations, shears
+
 
 class TraceGenerator:
 

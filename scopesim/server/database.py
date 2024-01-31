@@ -1,97 +1,60 @@
 # -*- coding: utf-8 -*-
-"""
-Functions to download instrument packages and example data
-"""
-import re
-import logging
+"""Functions to download instrument packages and example data."""
+
 from datetime import date
 from warnings import warn
 from pathlib import Path
-from typing import Optional, Union, List, Tuple, Set, Dict
-# Python 3.8 doesn't yet know these things.......
-# from collections.abc import Iterator, Iterable, Mapping
-from typing import Iterator, Iterable, Mapping
+from typing import Optional, Union
+from collections.abc import Iterator, Iterable, Mapping
 
-from urllib.error import HTTPError
-from urllib3.exceptions import HTTPError as HTTPError3
 from more_itertools import first, last, groupby_transform
-
-import requests
-from requests.packages.urllib3.util.retry import Retry
-from requests.adapters import HTTPAdapter
-import bs4
 
 from scopesim import rc
 from .github_utils import download_github_folder
 from .example_data_utils import (download_example_data, list_example_data,
                                  get_server_elements)
-from .download_utils import initiate_download, handle_download, handle_unzipping
+from .download_utils import (get_server_folder_contents, handle_download,
+                             handle_unzipping, create_client, ServerError)
+from ..utils import get_logger
+
+
+logger = get_logger(__name__)
 
 _GrpVerType = Mapping[str, Iterable[str]]
-_GrpItrType = Iterator[Tuple[str, List[str]]]
+_GrpItrType = Iterator[tuple[str, list[str]]]
 
-
-HTTP_RETRY_CODES = [403, 404, 429, 500, 501, 502, 503]
-
-
-class ServerError(Exception):
-    """Some error with the server or connection to the server."""
 
 class PkgNotFoundError(Exception):
     """Unable to find given package or given release of that package."""
+
+
+def get_base_url():
+    """Get instrument package server URL from rc.__config__."""
+    return rc.__config__["!SIM.file.server_base_url"]
+
 
 def get_server_package_list():
     warn("Function Depreciated", DeprecationWarning, stacklevel=2)
 
     # Emulate legacy API without using the problematic yaml file
-    folders = list(dict(crawl_server_dirs()).keys())
-    pkgs_dict = {}
-    for dir_name in folders:
-        p_list = [_parse_package_version(package) for package
-                  in get_server_folder_contents(dir_name)]
-        grouped = dict(group_package_versions(p_list))
-        for p_name in grouped:
-            p_dict = {
-            "latest": _unparse_raw_version(get_latest(grouped[p_name]),
-                                           p_name).strip(".zip"),
-            "path": dir_name.strip("/"),
-            "stable": _unparse_raw_version(get_stable(grouped[p_name]),
-                                           p_name).strip(".zip"),
-            }
-            pkgs_dict[p_name] = p_dict
+    with create_client(get_base_url()) as client:
+        folders = list(dict(crawl_server_dirs(client)).keys())
+        pkgs_dict = {}
+        for dir_name in folders:
+            p_list = [_parse_package_version(package) for package
+                      in get_server_folder_contents(client, dir_name)]
+            grouped = dict(group_package_versions(p_list))
+            for p_name in grouped:
+                p_dict = {
+                    "latest": _unparse_raw_version(get_latest(grouped[p_name]),
+                                                   p_name).strip(".zip"),
+                    "path": dir_name.strip("/"),
+                    "stable": _unparse_raw_version(get_stable(grouped[p_name]),
+                                                   p_name).strip(".zip"),
+                }
+                pkgs_dict[p_name] = p_dict
 
     return pkgs_dict
-
-
-def get_server_folder_contents(dir_name: str,
-                               unique_str: str = ".zip$") -> Iterator[str]:
-    url = rc.__config__["!SIM.file.server_base_url"] + dir_name
-
-    retry_strategy = Retry(total=2,
-                           status_forcelist=HTTP_RETRY_CODES,
-                           allowed_methods=["GET"])
-    adapter = HTTPAdapter(max_retries=retry_strategy)
-
-    try:
-        with requests.Session() as session:
-            session.mount("https://", adapter)
-            result = session.get(url).content
-    except (requests.exceptions.ConnectionError,
-            requests.exceptions.RetryError) as error:
-        logging.error(error)
-        raise ServerError("Cannot connect to server. "
-                          f"Attempted URL was: {url}.") from error
-    except Exception as error:
-        logging.error(("Unhandled exception occured while accessing server."
-                      "Attempted URL was: %s."), url)
-        logging.error(error)
-        raise error
-
-    soup = bs4.BeautifulSoup(result, features="lxml")
-    hrefs = soup.find_all("a", href=True, string=re.compile(unique_str))
-    pkgs = (href.string for href in hrefs)
-
-    return pkgs
 
 
 def _get_package_name(package: str) -> str:
@@ -99,7 +62,7 @@ def _get_package_name(package: str) -> str:
 
 
 def _parse_raw_version(raw_version: str) -> str:
-    """Catch initial package version which has no date info
+    """Catch initial package version which has no date info.
 
     Set initial package version to basically "minus infinity".
     """
@@ -109,8 +72,8 @@ def _parse_raw_version(raw_version: str) -> str:
 
 
 def _unparse_raw_version(raw_version: str, package_name: str) -> str:
-    """Turn version string back into full zip folder name
-    
+    """Turn version string back into full zip folder name.
+
     If initial version was set with `_parse_raw_version`, revert that.
     """
     if raw_version == str(date(1, 1, 1)):
@@ -118,7 +81,7 @@ def _unparse_raw_version(raw_version: str, package_name: str) -> str:
     return f"{package_name}.{raw_version}.zip"
 
 
-def _parse_package_version(package: str) -> Tuple[str, str]:
+def _parse_package_version(package: str) -> tuple[str, str]:
     p_name, p_version = package.split(".", maxsplit=1)
     return p_name, _parse_raw_version(p_version)
 
@@ -137,7 +100,7 @@ def get_latest(versions: Iterable[str]) -> str:
     return max(versions)
 
 
-def get_all_stable(version_groups: _GrpVerType) -> Iterator[Tuple[str, str]]:
+def get_all_stable(version_groups: _GrpVerType) -> Iterator[tuple[str, str]]:
     """
     Yield the most recent version (stable or dev) of each package.
 
@@ -148,7 +111,7 @@ def get_all_stable(version_groups: _GrpVerType) -> Iterator[Tuple[str, str]]:
 
     Yields
     ------
-    Iterator[Tuple[str, str]]
+    Iterator[tuple[str, str]]
         Iterator of package name - latest stable version pairs.
 
     """
@@ -156,7 +119,7 @@ def get_all_stable(version_groups: _GrpVerType) -> Iterator[Tuple[str, str]]:
         yield (package_name, get_stable(versions))
 
 
-def get_all_latest(version_groups: _GrpVerType) -> Iterator[Tuple[str, str]]:
+def get_all_latest(version_groups: _GrpVerType) -> Iterator[tuple[str, str]]:
     """
     Yield the most recent stable (not "dev") version of each package.
 
@@ -167,7 +130,7 @@ def get_all_latest(version_groups: _GrpVerType) -> Iterator[Tuple[str, str]]:
 
     Yields
     ------
-    Iterator[Tuple[str, str]]
+    Iterator[tuple[str, str]]
         Iterator of package name - latest version pairs.
 
     """
@@ -175,8 +138,8 @@ def get_all_latest(version_groups: _GrpVerType) -> Iterator[Tuple[str, str]]:
         yield (package_name, get_latest(versions))
 
 
-def group_package_versions(all_packages: Iterable[Tuple[str, str]]) -> _GrpItrType:
-    """Group different versions of packages by package name"""
+def group_package_versions(all_packages: Iterable[tuple[str, str]]) -> _GrpItrType:
+    """Group different versions of packages by package name."""
     version_groups = groupby_transform(sorted(all_packages),
                                        keyfunc=first,
                                        valuefunc=last,
@@ -184,43 +147,56 @@ def group_package_versions(all_packages: Iterable[Tuple[str, str]]) -> _GrpItrTy
     return version_groups
 
 
-def crawl_server_dirs() -> Iterator[Tuple[str, Set[str]]]:
-    """Search all folders on server for .zip files"""
-    for dir_name in get_server_folder_contents("", "/"):
-        logging.info("Searching folder '%s'", dir_name)
+def crawl_server_dirs(client=None) -> Iterator[tuple[str, set[str]]]:
+    """Search all folders on server for .zip files."""
+    if client is None:
+        with create_client(get_base_url()) as client:
+            yield from crawl_server_dirs(client)
+        return
+
+    for dir_name in get_server_folder_contents(client, "", "/"):
+        logger.debug("Searching folder '%s'", dir_name)
         try:
-            p_dir = get_server_folder_package_names(dir_name)
+            p_dir = get_server_folder_package_names(client, dir_name)
         except ValueError as err:
-            logging.info(err)
+            logger.debug(err)
             continue
-        logging.info("Found packages %s.", p_dir)
+        logger.debug("Found packages %s.", p_dir)
         yield dir_name, p_dir
 
 
-def get_all_package_versions() -> Dict[str, List[str]]:
-    """Gather all versions for all packages present in any folder on server"""
+def get_all_package_versions(client=None) -> dict[str, list[str]]:
+    """Gather all versions for all packages present in any folder on server."""
+    if client is None:
+        with create_client(get_base_url()) as client:
+            return get_all_package_versions(client)
+
     grouped = {}
-    folders = list(dict(crawl_server_dirs()).keys())
+    folders = list(dict(crawl_server_dirs(client)).keys())
     for dir_name in folders:
         p_list = [_parse_package_version(package) for package
-                  in get_server_folder_contents(dir_name)]
+                  in get_server_folder_contents(client, dir_name)]
         grouped.update(group_package_versions(p_list))
     return grouped
 
 
-def get_package_folders() -> Dict[str, str]:
-    folder_dict = {pkg: path.strip("/")
-                   for path, pkgs in dict(crawl_server_dirs()).items()
-                   for pkg in pkgs}
-    return folder_dict
+def get_package_folders(client) -> dict[str, str]:
+    """Map package names to server locations."""
+    folders_dict = {pkg: path.strip("/")
+                    for path, pkgs in dict(crawl_server_dirs(client)).items()
+                    for pkg in pkgs}
+    return folders_dict
 
 
-def get_server_folder_package_names(dir_name: str) -> Set[str]:
+def get_server_folder_package_names(client, dir_name: str) -> set[str]:
     """
     Retrieve all unique package names present on server in `dir_name` folder.
 
     Parameters
     ----------
+    client : httpx.Client
+        Pre-existing httpx Client context manager.
+
     dir_name : str
         Name of the folder on the server.
 
@@ -236,7 +212,7 @@ def get_server_folder_package_names(dir_name: str) -> Set[str]:
 
     """
     package_names = {package.split(".", maxsplit=1)[0] for package
-                     in get_server_folder_contents(dir_name)}
+                     in get_server_folder_contents(client, dir_name)}
 
     if not package_names:
         raise ValueError(f"No packages found in directory \"{dir_name}\".")
@@ -244,7 +220,7 @@ def get_server_folder_package_names(dir_name: str) -> Set[str]:
     return package_names
 
 
-def get_all_packages_on_server() -> Iterator[Tuple[str, set]]:
+def get_all_packages_on_server() -> Iterator[tuple[str, set]]:
     """
     Retrieve all unique package names present on server in known folders.
 
@@ -260,19 +236,16 @@ def get_all_packages_on_server() -> Iterator[Tuple[str, set]]:
 
     Yields
     ------
-    Iterator[Tuple[str, set]]
+    Iterator[tuple[str, set]]
         Key-value pairs of folder and corresponding package names.
 
     """
-    # TODO: this basically does the same as the crawl function...
-    for dir_name in ("locations", "telescopes", "instruments"):
-        package_names = get_server_folder_package_names(dir_name)
-        yield dir_name, package_names
+    yield from crawl_server_dirs()
 
 
-def list_packages(pkg_name: Optional[str] = None) -> List[str]:
+def list_packages(pkg_name: Optional[str] = None) -> list[str]:
     """
-    List all packages, or all variants of a single package
+    List all packages, or all variants of a single package.
 
     Parameters
     ----------
@@ -303,7 +276,7 @@ def list_packages(pkg_name: Optional[str] = None) -> List[str]:
         all_stable = list(dict(get_all_stable(all_grouped)).keys())
         return all_stable
 
-    if not pkg_name in all_grouped:
+    if pkg_name not in all_grouped:
         raise ValueError(f"Package name {pkg_name} not found on server.")
 
     p_versions = [_unparse_raw_version(version, pkg_name)
@@ -327,18 +300,18 @@ def _get_zipname(pkg_name: str, release: str, all_versions) -> str:
     return _unparse_raw_version(zip_name, pkg_name)
 
 
-def _download_single_package(pkg_name: str, release: str, all_versions,
-                             folder_dict: Path, base_url: str, save_dir: Path,
-                             padlen: int, from_cache: bool) -> Path:
+def _download_single_package(client, pkg_name: str, release: str, all_versions,
+                             folders_dict: Path, save_dir: Path,
+                             padlen: int) -> Path:
     if pkg_name not in all_versions:
         maybe = ""
-        for key in folder_dict:
+        for key in folders_dict:
             if pkg_name in key or key in pkg_name:
                 maybe = f"\nDid you mean '{key}' instead of '{pkg_name}'?"
 
-        raise PkgNotFoundError(f"Unable to find {release} release for "
-                               f"package '{pkg_name}' on server {base_url}."
-                               + maybe)
+        raise PkgNotFoundError(
+            f"Unable to find {release} release for package '{pkg_name}' on "
+            f"server {client.base_url!s}.{maybe}")
 
     if save_dir is None:
         save_dir = rc.__config__["!SIM.file.local_packages_path"]
@@ -353,43 +326,20 @@ def _download_single_package(pkg_name: str, release: str, all_versions,
         return save_dir.absolute()
 
     zip_name = _get_zipname(pkg_name, release, all_versions)
-    pkg_url = f"{base_url}{folder_dict[pkg_name]}/{zip_name}"
+    pkg_url = f"{folders_dict[pkg_name]}/{zip_name}"
 
-    try:
-        if from_cache is None:
-            from_cache = rc.__config__["!SIM.file.use_cached_downloads"]
-
-        response = initiate_download(pkg_url, from_cache, "test_cache")
-        save_path = save_dir / f"{pkg_name}.zip"
-        handle_download(response, save_path, pkg_name, padlen)
-        handle_unzipping(save_path, save_dir, pkg_name, padlen)
-
-    except HTTPError3 as error:
-        logging.error(error)
-        msg = f"Unable to find file: {pkg_url + pkg_name}"
-        raise ValueError(msg) from error
-    except HTTPError as error:
-        logging.error("urllib (not urllib3) error was raised, this should "
-                      "not happen anymore!")
-        logging.error(error)
-    except requests.exceptions.ConnectionError as error:
-        logging.error(error)
-        raise ServerError("Cannot connect to server.") from error
-    except Exception as error:
-        logging.error(("Unhandled exception occured while accessing server."
-                      "Attempted URL was: %s."), base_url)
-        logging.error(error)
-        raise error
+    save_path = save_dir / f"{pkg_name}.zip"
+    handle_download(client, pkg_url, save_path, pkg_name, padlen)
+    handle_unzipping(save_path, save_dir, pkg_name, padlen)
 
     return save_path.absolute()
 
 
 def download_packages(pkg_names: Union[Iterable[str], str],
                       release: str = "stable",
-                      save_dir: Optional[str] = None,
-                      from_cache: Optional[bool] = None) -> List[Path]:
+                      save_dir: Optional[str] = None) -> list[Path]:
     """
-    Download one or more packages to the local disk
+    Download one or more packages to the local disk.
 
     1. Download stable, dev
     2. Download specific version
@@ -443,31 +393,34 @@ def download_packages(pkg_names: Union[Iterable[str], str],
         download_packages("ELT", release="github@dev_master")
 
     """
-    base_url = rc.__config__["!SIM.file.server_base_url"]
+    base_url = get_base_url()
+    logger.info("Gathering information from server ...")
+    logger.debug("Accessing %s", base_url)
 
-    print("Gathering information from server ...")
+    with create_client(base_url) as client:
+        all_versions = get_all_package_versions(client)
+        folders_dict = get_package_folders(client)
 
-    all_versions = get_all_package_versions()
-    folder_dict = get_package_folders()
+        logger.info("Connection successful, starting download ...")
 
-    print("Connection successful, starting download ...")
+        if isinstance(pkg_names, str):
+            pkg_names = [pkg_names]
 
-    if isinstance(pkg_names, str):
-        pkg_names = [pkg_names]
-
-    padlen = len(max(pkg_names, key=len))
-    save_paths = []
-    for pkg_name in pkg_names:
-        try:
-            pkg_path = _download_single_package(pkg_name, release, all_versions,
-                                                folder_dict, base_url, save_dir,
-                                                padlen, from_cache)
-        except PkgNotFoundError as error:
-            logging.error("\n")  # needed until tqdm redirect is implemented
-            logging.error(error)
-            logging.error("Skipping download of package '%s'", pkg_name)
-            continue
-        save_paths.append(pkg_path)
+        padlen = max(len(name) for name in pkg_names)
+        save_paths = []
+        for pkg_name in pkg_names:
+            try:
+                pkg_path = _download_single_package(
+                    client, pkg_name, release, all_versions, folders_dict,
+                    save_dir, padlen)
+            except PkgNotFoundError as error:
+                # Whole stack trace not useful for enduser.
+                # Could log it to file though...
+                # logger.exception(error)
+                logger.error(error)
+                logger.warning("Skipping download of package '%s'", pkg_name)
+                continue
+            save_paths.append(pkg_path)
 
     return save_paths
 
@@ -513,5 +466,4 @@ def download_package(pkg_path, save_dir=None, url=None, from_cache=None):
         pkg_path = [pkg_path]
 
     pkg_names = [pkg.replace(".zip", "").split("/")[-1] for pkg in pkg_path]
-    return download_packages(pkg_names, release="stable", save_dir=save_dir,
-                             from_cache=from_cache)
+    return download_packages(pkg_names, release="stable", save_dir=save_dir)

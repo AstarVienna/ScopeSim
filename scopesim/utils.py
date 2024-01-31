@@ -3,6 +3,7 @@ import math
 from pathlib import Path
 import sys
 import logging
+from logging.config import dictConfig
 from collections import OrderedDict
 from collections.abc import Iterable, Generator
 from copy import deepcopy
@@ -12,7 +13,7 @@ from importlib import metadata
 import functools
 
 from docutils.core import publish_string
-import requests
+import httpx
 import yaml
 import numpy as np
 from matplotlib import pyplot as plt
@@ -20,7 +21,13 @@ from astropy import units as u
 from astropy.io import fits
 from astropy.table import Column, Table
 
+from astar_utils import get_logger
+
 from . import rc
+
+
+logger = get_logger(__name__)
+bug_logger = get_logger("bug_report")
 
 
 def unify(x, unit, length=1):
@@ -373,51 +380,6 @@ def angle_in_arcseconds(distance, width):
     return np.arctan2(width, distance) * u.rad.to(u.arcsec)
 
 
-def setup_loggers(**kwargs):
-    """
-    Set up both console and file loggers.
-
-    Acceptable parameters are the same as the ``!SIM.logging`` sub dictionary
-
-    """
-    logd = rc.__currsys__["!SIM.logging"]
-    logd.update(kwargs)
-
-    logger = logging.getLogger()
-    hdlr_names = [hdlr.name for hdlr in logger.handlers]
-
-    if logd["log_to_file"] and "scopesim_file_logger" not in hdlr_names:
-        f_handler = logging.FileHandler(logd["file_path"],
-                                        logd["file_open_mode"])
-        f_handler.name = "scopesim_file_logger"
-        f_handler.setLevel(logd["file_level"])
-        logger.addHandler(f_handler)
-
-    if logd["log_to_console"] and "scopesim_console_logger" not in hdlr_names:
-        s_handler = logging.StreamHandler(sys.stdout)
-        s_handler.name = "scopesim_console_logger"
-        s_handler.setLevel(logd["console_level"])
-        logger.addHandler(s_handler)
-
-
-def set_logger_level(which="console", level="ERROR"):
-    """
-    Set the level of logging for either the console or file logger.
-
-    Parameters
-    ----------
-    which : {"console", "file"}
-    level : {"ON", "OFF", "DEBUG", "INFO", "WARN", "ERROR", "CRITICAL"}
-    """
-    hdlr_name = f"scopesim_{which}_logger"
-    level = {"ON": "INFO", "OFF": "CRITICAL"}.get(level.upper(), level)
-    logger = logging.getLogger()
-    logger.setLevel(level)
-    for hdlr in logger.handlers:
-        if hdlr.name == hdlr_name:
-            hdlr.setLevel(level)
-
-
 def _get_required_packages():
     reqs = metadata.requires(__package__)
     for req in reqs:
@@ -494,7 +456,7 @@ def log_bug_report(level=logging.DEBUG) -> None:
     """Emit bug report as logging message."""
     with StringIO() as str_stream:
         _write_bug_report(str_stream)
-        logging.log(level, str_stream.getvalue())
+        bug_logger.log(level, str_stream.getvalue())
 
 
 def find_file(filename, path=None, silent=False):
@@ -547,7 +509,7 @@ def find_file(filename, path=None, silent=False):
     # no file found
     msg = f"File cannot be found: {filename}"
     if not silent:
-        logging.error(msg)
+        logger.error(msg)
 
     if from_currsys("!SIM.file.error_on_missing_file"):
         raise ValueError(msg)
@@ -592,16 +554,16 @@ def convert_table_comments_to_dict(tbl):
             comments_str = "\n".join(tbl.meta["comments"])
             comments_dict = yaml.full_load(comments_str)
         except yaml.error.YAMLError:
-            logging.warning("Couldn't convert <table>.meta['comments'] to dict")
+            logger.warning("Couldn't convert <table>.meta['comments'] to dict")
             comments_dict = tbl.meta["comments"]
     elif "COMMENT" in tbl.meta:
         try:
             comments_dict = yaml.full_load("\n".join(tbl.meta["COMMENT"]))
         except yaml.error.YAMLError:
-            logging.warning("Couldn't convert <table>.meta['COMMENT'] to dict")
+            logger.warning("Couldn't convert <table>.meta['COMMENT'] to dict")
             comments_dict = tbl.meta["COMMENT"]
     else:
-        logging.debug("No comments in table")
+        logger.debug("No comments in table")
 
     return comments_dict
 
@@ -633,7 +595,7 @@ def real_colname(name, colnames, silent=True):
     if not real_name:
         real_name = None
         if not silent:
-            logging.warning("None of %s were found in %s", names, colnames)
+            logger.warning("None of %s were found in %s", names, colnames)
     else:
         real_name = real_name[0]
 
@@ -823,7 +785,7 @@ def unit_from_table(colname: str, table: Table,
         return u.Unit(com_tbl[colname_u])
 
     tbl_name = table.meta.get("name", table.meta.get("filename"))
-    logging.info(("%s_unit was not found in table.meta: %s. Default to: %s"),
+    logger.debug("%s_unit was not found in table.meta: %s. Default to: %s",
                  colname, tbl_name, default_unit)
 
     return u.Unit(default_unit)
@@ -902,11 +864,18 @@ def from_currsys(item):
     if isinstance(item, str) and len(item) and item.startswith("!"):
         if item in rc.__currsys__:
             item = rc.__currsys__[item]
+            if isinstance(item, str) and item.startswith("!"):
+                item = from_currsys(item)
         else:
             raise ValueError(f"{item} was not found in rc.__currsys__")
 
-    if isinstance(item, str) and item.lower() == "none":
-        item = None
+    if isinstance(item, str):
+        if item.lower() == "none":
+            item = None
+        try:
+            item = float(item)
+        except (TypeError, ValueError):
+            pass
 
     return item
 
@@ -929,9 +898,9 @@ def check_keys(input_dict, required_keys, action="error", all_any="all"):
                              f"input_dict: \n{required_keys} "
                              f"\n{input_dict.keys()}")
         if "warn" in action:
-            logging.warning(("One or more of the following keys missing "
-                             "from input_dict: \n%s \n%s"), required_keys,
-                            input_dict.keys())
+            logger.warning(
+                "One or more of the following keys missing from input_dict: "
+                "\n%s \n%s", required_keys, input_dict.keys())
 
     return keys_present
 
@@ -984,14 +953,14 @@ def return_latest_github_actions_jobs_status(
         actions_yaml_name="tests.yml",
     ):
     """Get the status of the latest test run."""
-    response = requests.get(
+    response = httpx.get(
         f"https://api.github.com/repos/{owner_name}/{repo_name}/actions/"
         f"workflows/{actions_yaml_name}/runs?branch={branch}&per_page=1"
     )
     dic = response.json()
     run_id = dic["workflow_runs"][0]["id"]
 
-    response = requests.get(
+    response = httpx.get(
         f"https://api.github.com/repos/{owner_name}/{repo_name}/actions/runs/"
         f"{run_id}/jobs"
     )
@@ -1053,16 +1022,48 @@ def top_level_catch(func):
             output = func(*args, **kwargs)
         except Exception as err:
             # FIXME: This try-except should not be necessary, but
-            # logging.exception has an issue in some versions.
+            # logger.exception has an issue in some versions.
             try:
-                logging.exception(
+                bug_logger.exception(
                     "Unhandled exception occured, see log file for details.")
             except TypeError:
-                logging.error(
+                bug_logger.error(
                     "Unhandled exception occured, see log file for details.")
-                logging.error("Couldn't log full exception stack.")
-                logging.error("Error message was: '%s'", err)
+                bug_logger.error("Couldn't log full exception stack.")
+                bug_logger.error("Error message was: '%s'", err)
             log_bug_report(logging.ERROR)
             raise
         return output
     return wrapper
+
+
+def update_logging(capture_warnings=True):
+    """Reload logging configuration from ``rc.__config__``."""
+    dictConfig(rc.__config__["!SIM.logging"])
+    logging.captureWarnings(capture_warnings)
+
+    # This cannot be in the dict config (yet) because NestedMapping doesn't like
+    #   "." in keys (yet) ...
+    # Set the "astar.scopesim" logger
+    get_logger(__package__).setLevel(logging.DEBUG)
+
+
+def log_to_file(enable=True):
+    """Enable or disable logging to file (convenience function)."""
+    if enable:
+        handlers = ["console", "file"]
+    else:
+        handlers = ["console"]
+
+    rc.__config__["!SIM.logging.loggers.astar.handlers"] = handlers
+    update_logging()
+
+
+def set_console_log_level(level="INFO"):
+    """Set the level for the console handler (convenience function).
+
+    This controls what is actually printed to the console by ScopeSim.
+    Accepted values are: DEBUG, INFO (default), WARNING, ERROR and CRITICAL.
+    """
+    rc.__config__["!SIM.logging.handlers.console.level"] = level
+    update_logging()

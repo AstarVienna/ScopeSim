@@ -1,77 +1,79 @@
-[project]
+[tool.poetry]
 name = "ScopeSim"
-version = "0.7.1"
+version = "0.8.0a0"
 description = "Generalised telescope observation simulator"
-readme = "README.md"
-requires-python = ">=3.8"
-license = {text = "License :: OSI Approved :: GNU General Public License v3 (GPLv3)"}
-authors = [
-    {name = "Kieran Leschinski", email="kieran.leschinski@unive.ac.at"},
-]
+license = "GPL-3.0-or-later"
+authors = ["Kieran Leschinski <kieran.leschinski@unive.ac.at>"]
 maintainers = [
-    {name = "Kieran Leschinski", email="kieran.leschinski@unive.ac.at"},
-    {name = "Hugo Buddelmeijer", email="hugo@buddelmeijer.nl"},
+    "Kieran Leschinski <kieran.leschinski@unive.ac.at>",
+    "Hugo Buddelmeijer <hugo@buddelmeijer.nl>",
+    "Fabian Haberhauer <fabian.haberhauer@univie.ac.at>",
 ]
-classifiers=[
-    "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
-    "Operating System :: OS Independent",
+readme = "README.md"
+repository = "https://github.com/AstarVienna/ScopeSim"
+documentation = "https://scopesim.readthedocs.io/en/latest/"
+classifiers = [
     "Intended Audience :: Science/Research",
+    "Operating System :: OS Independent",
     "Topic :: Scientific/Engineering :: Astronomy",
 ]
-dependencies = [
-    "numpy>=1.20.0",
-    "scipy>=1.10.0",
-    "astropy>=5.0",
-    "matplotlib>=3.7.2",
-    "pooch>=1.7.0",  # for scipy.datasets
 
-    "docutils>=0.15",
-    "requests>=2.28.2",
-    "beautifulsoup4>=4.4",
-    "lxml>=4.5.0",
-    "pyyaml>5.1",
-    "more-itertools>=9.0",
-    "tqdm>=4.66.1",
-    "requests-cache>1.0",
+[tool.poetry.dependencies]
+python = "^3.9"
+numpy = "^1.26.3"
+scipy = "^1.11.4"
+astropy = "^5.3.3"
+matplotlib = "^3.7.2"
+pooch = "^1.7.0"
 
-    "synphot>=1.1.0",
-    "skycalc_ipy>=0.2.0",
-    "anisocado>=0.3.0",
-]
+docutils = "^0.19"
+httpx = "^0.23.0"
+beautifulsoup4 = "^4.12.1"
+lxml = "^4.9.3"
+pyyaml = "^6.0.1"
+more-itertools = "^10.1.0"
+tqdm = "^4.66.1"
 
-[project.optional-dependencies]
-dev = [
-    "jupyter",
-    "jupytext",
-    "ipykernel",
-]
-test = [
-    "pytest>=5.0.0",
-    "pytest-cov",
-    "scopesim_templates>=0.4.4",
-    # Just so that readthedocs doesn't include the tests module - yes it's hacky
-    "skycalc_cli",
-    "ipykernel",
-]
-docs = [
-    "sphinx>=4.3.0",
-    "sphinx-rtd-theme>=0.5.1",
-    "jupyter_sphinx==0.2.3",
-    "sphinxcontrib-apidoc",
-    "nbsphinx",
-    "numpydoc",
-    "scopesim_templates>=0.4.4",
-    "ipykernel"
-]
+synphot = "^1.2.1"
+skycalc_ipy = "^0.3.0"
+anisocado = "^0.3.0"
+astar-utils = {version = "^0.2.0b1", allow-prereleases = true}
 
-[project.urls]
-"Homepage" = "https://scopesim.readthedocs.io/en/latest/"
-"Source" = "https://github.com/AstarVienna/ScopeSim"
-"Bug Reports" = "https://github.com/AstarVienna/ScopeSim/issues"
+[tool.poetry.group.dev]
+optional = true
 
-[tool.setuptools.packages]
-find = {}
+[tool.poetry.group.dev.dependencies]
+jupyter = "^1.0"
+jupytext = "^1.10.0"
+ipykernel = "^6.24.0"
+
+[tool.poetry.group.test.dependencies]
+pytest = "^7.4.3"
+pytest-cov = "^4.1.0"
+scopesim_templates = "^0.5.0"
+# Just so that readthedocs doesn't include the tests module - yes it's hacky
+skycalc_cli = "*"
+ipykernel = "^6.24.0"
+
+[tool.poetry.group.docs]
+optional = true
+
+[tool.poetry.group.docs.dependencies]
+sphinx = "^5.3.0"
+sphinx-rtd-theme = "^0.5.1"
+jupyter-sphinx = "^0.2.3"
+sphinxcontrib-apidoc = "^0.4.0"
+nbsphinx = "^0.9.3"
+numpydoc = "^1.6.0"
+scopesim_templates = "^0.5.0"
+ipykernel = "^6.24.0"
+
+[tool.poetry.urls]
+"Bug Tracker" = "https://github.com/AstarVienna/ScopeSim/issues"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
 
 [tool.pytest.ini_options]
 addopts = "--strict-markers"
@@ -88,6 +90,7 @@ filterwarnings = [
     "ignore:divide by zero encountered in double_scalars:RuntimeWarning",
     "ignore:invalid value encountered in multiply:RuntimeWarning",
     "ignore:Cannot merge meta key.*:astropy.utils.metadata.MergeConflictWarning",
+    "default:The fov_grid*:DeprecationWarning",
     # Raised when saving fits files, not so important to fix:
     "ignore:.*a HIERARCH card will be created.*:astropy.io.fits.verify.VerifyWarning",
     # Web-related issues, fix at some point
@@ -97,4 +100,10 @@ filterwarnings = [
     "ignore:'cgi'*:DeprecationWarning",
     "ignore:The py23*:DeprecationWarning",
     "ignore:datetime.datetime.utcfromtimestamp()*:DeprecationWarning",
+    # Pytest Notebook stuff
+    "ignore:The*:pytest.PytestRemovedIn8Warning",
+    "ignore:Proactor*:RuntimeWarning"
 ]
+
+[tool.coverage.report]
+omit = ["scopesim/tests/*", "docs/*"]

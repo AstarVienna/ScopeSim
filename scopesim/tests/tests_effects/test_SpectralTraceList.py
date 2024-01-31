@@ -22,13 +22,13 @@ from scopesim.tests.mocks.py_objects import header_objects as ho
 from scopesim.base_classes import PoorMansHeader
 from scopesim import rc
 
-MOCK_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),
-                                         "../mocks/MICADO_SPEC/"))
-if MOCK_PATH not in rc.__search_path__:
-    rc.__search_path__ += [MOCK_PATH]
-
-if rc.__basic_inst_path__ not in rc.__search_path__:
-    rc.__search_path__ += [rc.__basic_inst_path__]
+# MOCK_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),
+#                                          "../mocks/MICADO_SPEC/"))
+# if MOCK_PATH not in rc.__search_path__:
+#     rc.__search_path__ += [MOCK_PATH]
+#
+# if rc.__basic_inst_path__ not in rc.__search_path__:
+#     rc.__search_path__ += [rc.__basic_inst_path__]
 
 PLOTS = False
 
@@ -56,7 +56,7 @@ class TestInit:
     def test_initialises_with_nothing(self):
         assert isinstance(SpectralTraceList(), SpectralTraceList)
 
-    @pytest.mark.usefixtures("full_trace_list")
+    # @pytest.mark.usefixtures("full_trace_list")
     def test_initialises_with_a_hdulist(self, full_trace_list):
         spt = SpectralTraceList(hdulist=full_trace_list)
         assert isinstance(spt, SpectralTraceList)

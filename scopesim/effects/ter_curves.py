@@ -1,7 +1,6 @@
 """Transmission, emissivity, reflection curves."""
-
-import logging
-from collections.abc import Collection
+import warnings
+from collections.abc import Collection, Iterable
 
 import numpy as np
 import skycalc_ipy
@@ -16,13 +15,19 @@ from .ter_curves_utils import download_svo_filter, download_svo_filter_list
 from ..base_classes import SourceBase, FOVSetupBase
 from ..optics.surface import SpectralSurface
 from ..source.source import Source
-from ..utils import from_currsys, quantify, check_keys, find_file, \
-    figure_factory
+from ..utils import (from_currsys, quantify, check_keys, find_file,
+                     figure_factory, get_logger)
+
+
+logger = get_logger(__name__)
 
 
 class TERCurve(Effect):
     """
     Transmission, Emissivity, Reflection Curve.
+
+    note:: This is basically an ``Effect`` wrapper for the
+           ``SpectralSurface`` object
 
     Must contain a wavelength column, and one or more of the following:
     ``transmission``, ``emissivity``, ``reflection``.
@@ -199,7 +204,14 @@ class TERCurve(Effect):
         if wavelength is None:
             wunit = params["wave_unit"]
             # TODO: shouldn't need both, make sure they're equal
-            assert wunit == wave_unit
+            if wunit != wave_unit:
+                logger.warning("wavelength units in the meta dict of "
+                             "%s are inconsistent:\n"
+                             "- wavelength_unit : %s\n"
+                             "- wave_unit : %s",
+                             {self.meta.get("name")},
+                             wave_unit, wunit)
+
             wave = np.arange(quantify(params["wave_min"], wunit).value,
                              quantify(params["wave_max"], wunit).value,
                              quantify(params["wave_bin"], wunit).value)
@@ -211,6 +223,8 @@ class TERCurve(Effect):
         abbrs = {"t": "transmission", "e": "emission",
                  "r": "reflection", "x": "throughput"}
 
+        if not isinstance(axes, Iterable):
+            axes = [axes]
         for ter, ax in zip(which, axes):
             y_name = abbrs.get(ter, "throughput")
             y = getattr(self.surface, y_name)
@@ -338,7 +352,7 @@ class SkycalcTERCurve(AtmosphericTERCurve):
             tbl = self.skycalc_conn.get_sky_spectrum(return_type="table")
         except ConnectionError:
             msg = "Could not connect to skycalc server"
-            logging.exception(msg)
+            logger.exception(msg)
             raise ValueError(msg)
 
         return tbl
@@ -407,6 +421,8 @@ class FilterCurve(TERCurve):
         self.table["transmission"][mask] = 0
 
     def fov_grid(self, which="waveset", **kwargs):
+        warnings.warn("The fov_grid method is deprecated and will be removed "
+                      "in a future release.", DeprecationWarning, stacklevel=2)
         if which == "waveset":
             self.meta.update(kwargs)
             self.meta = from_currsys(self.meta)
@@ -579,7 +595,17 @@ class FilterWheelBase(Effect):
         """Use apply_to of current filter."""
         return self.current_filter.apply_to(obj, **kwargs)
 
+    @property
+    def surface(self):
+        return self.current_filter.surface
+
+    @property
+    def throughput(self):
+        return self.current_filter.throughput
+
     def fov_grid(self, which="waveset", **kwargs):
+        warnings.warn("The fov_grid method is deprecated and will be removed "
+                      "in a future release.", DeprecationWarning, stacklevel=2)
         return self.current_filter.fov_grid(which=which, **kwargs)
 
     def change_filter(self, filtername=None):

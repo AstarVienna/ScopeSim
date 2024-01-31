@@ -1,9 +1,10 @@
 """TBA."""
 
+import warnings
 import numpy as np
 from astropy import units as u
 
-from .ter_curves import TERCurve
+from .ter_curves import TERCurve, FilterWheelBase
 from ..optics import radiometry_utils as rad_utils
 from ..optics.surface import PoorMansSurface
 from ..utils import quantify, from_currsys, figure_factory
@@ -26,6 +27,8 @@ class SurfaceList(TERCurve):
         self._emission = None
 
     def fov_grid(self, which="waveset", **kwargs):
+        warnings.warn("The fov_grid method is deprecated and will be removed "
+                      "in a future release.", DeprecationWarning, stacklevel=2)
         wave_edges = []
         if which == "waveset":
             self.meta.update(kwargs)
@@ -119,7 +122,7 @@ class SurfaceList(TERCurve):
     def add_surface(self, surface, name=None, position=-1, add_to_table=True):
         if name is None:
             name = surface.meta.get("name", "<unknown surface>")
-        if isinstance(surface, TERCurve):
+        if isinstance(surface, (TERCurve, FilterWheelBase)):
             ter_meta = surface.meta
             surface = surface.surface
             surface.meta.update(ter_meta)

@@ -1,6 +1,5 @@
 import copy
 import sys
-from pathlib import Path
 
 from datetime import datetime
 
@@ -8,6 +7,9 @@ import numpy as np
 from scipy.interpolate import interp1d
 from astropy import units as u
 
+from tqdm import tqdm
+
+from synphot import SourceSpectrum, Empirical1D
 from synphot.units import PHOTLAM
 
 from .optics_manager import OpticsManager
@@ -17,8 +19,7 @@ from ..commands.user_commands import UserCommands
 from ..detector import DetectorArray
 from ..effects import ExtraFitsKeywords
 from ..utils import from_currsys, top_level_catch
-from ..version import version
-from .. import rc
+from .. import rc, __version__
 
 
 class OpticalTrain:
@@ -183,7 +184,7 @@ class OpticalTrain:
 
         # [3D - Atmospheric shifts, PSF, NCPAs, Grating shift/distortion]
         fovs = self.fov_manager.fovs
-        for fov in fovs:
+        for fov in tqdm(fovs, desc=" FOVs", position=0):
             # print("FOV", fov_i+1, "of", n_fovs, flush=True)
             # .. todo: possible bug with bg flux not using plate_scale
             #          see fov_utils.combine_imagehdu_fields
@@ -191,7 +192,8 @@ class OpticalTrain:
 
             hdu_type = "cube" if self.fov_manager.is_spectroscope else "image"
             fov.view(hdu_type)
-            for effect in self.optics_manager.fov_effects:
+            for effect in tqdm(self.optics_manager.fov_effects,
+                               desc=" FOV effects", position=1, leave=False):
                 fov = effect.apply_to(fov)
 
             fov.flatten()
@@ -199,7 +201,8 @@ class OpticalTrain:
             # ..todo: finish off the multiple image plane stuff
 
         # [2D - Vibration, flat fielding, chopping+nodding]
-        for effect in self.optics_manager.image_plane_effects:
+        for effect in tqdm(self.optics_manager.image_plane_effects,
+                           desc=" Image Plane effects"):
             for ii, image_plane in enumerate(self.image_planes):
                 self.image_planes[ii] = effect.apply_to(image_plane)
 
@@ -223,6 +226,19 @@ class OpticalTrain:
         # Convert to PHOTLAM per arcsec2
         # ..todo: this is not sufficiently general
 
+        for ispec, spec in enumerate(source.spectra):
+            # Put on fov wavegrid
+            wave_min = min(fov.meta["wave_min"] for fov in self.fov_manager.fovs)
+            wave_max = max(fov.meta["wave_max"] for fov in self.fov_manager.fovs)
+            wave_unit = u.Unit(from_currsys("!SIM.spectral.wave_unit"))
+            dwave = from_currsys("!SIM.spectral.spectral_bin_width")  # Not a quantity
+            fov_waveset = np.arange(wave_min.value, wave_max.value, dwave) * wave_unit
+            fov_waveset = fov_waveset.to(u.um)
+
+            source.spectra[ispec] = SourceSpectrum(Empirical1D,
+                                                   points=fov_waveset,
+                                                   lookup_table=spec(fov_waveset))
+
         for cube in source.cube_fields:
             header, data, wave = cube.header, cube.data, cube.wave
 
@@ -232,7 +248,7 @@ class OpticalTrain:
             factor = 1
             for base, power in zip(inunit.bases, inunit.powers):
                 if (base**power).is_equivalent(u.arcsec**(-2)):
-                    conversion =(base**power).to(u.arcsec**(-2)) / base**power
+                    conversion = (base**power).to(u.arcsec**(-2)) / base**power
                     data *= conversion
                     factor = u.arcsec**(-2)
 
@@ -336,7 +352,7 @@ class OpticalTrain:
         # Primary hdu
         pheader = hdulist[0].header
         pheader["DATE"] = datetime.now().isoformat(timespec="seconds")
-        pheader["ORIGIN"] = "Scopesim " + version
+        pheader["ORIGIN"] = f"Scopesim {__version__}"
         pheader["INSTRUME"] = from_currsys("!OBS.instrument")
         pheader["INSTMODE"] = ", ".join(from_currsys("!OBS.modes"))
         pheader["TELESCOP"] = from_currsys("!TEL.telescope")

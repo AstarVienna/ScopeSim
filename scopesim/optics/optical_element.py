@@ -1,4 +1,3 @@
-import logging
 from inspect import isclass
 from typing import TextIO
 from io import StringIO
@@ -8,9 +7,12 @@ from astropy.table import Table
 from .. import effects as efs
 from ..effects.effects_utils import (make_effect, get_all_effects,
                                      z_order_in_range)
-from ..utils import write_report
+from ..utils import write_report, get_logger
 from ..reports.rst_utils import table_to_rst
 from .. import rc
+
+
+logger = get_logger(__name__)
 
 
 class OpticalElement:
@@ -83,8 +85,8 @@ class OpticalElement:
         if isinstance(effect, efs.Effect):
             self.effects.append(effect)
         else:
-            logging.warning("%s is not an Effect object and was not added",
-                            effect)
+            logger.warning("%s is not an Effect object and was not added",
+                           effect)
 
     def get_all(self, effect_class):
         return get_all_effects(self.effects, effect_class)
@@ -216,8 +218,8 @@ class OpticalElement:
         if isinstance(obj, list) and len(obj) == 1:
             obj = obj[0]
         # if obj is None or len(obj) == 0:
-        #     logging.warning(f'No result for key: "{item}". '
-        #                     f'Did you mean "#{item}"?')
+        #     logger.warning(
+        #         "No result for key: '%s'. Did you mean '#%s'?", item, item)
 
         return obj
 

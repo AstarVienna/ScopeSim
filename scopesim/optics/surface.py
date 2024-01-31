@@ -1,4 +1,3 @@
-import logging
 from pathlib import Path
 from dataclasses import dataclass
 from typing import Any
@@ -13,10 +12,14 @@ from synphot import SpectralElement
 from synphot.models import Empirical1D
 
 from ..effects import ter_curves_utils as ter_utils
-from ..utils import get_meta_quantity, quantify, extract_type_from_unit
-from ..utils import from_currsys, convert_table_comments_to_dict, find_file
 from .surface_utils import make_emission_from_emissivity,\
     make_emission_from_array
+from ..utils import (get_meta_quantity, quantify, extract_type_from_unit,
+                     from_currsys, convert_table_comments_to_dict, find_file,
+                     get_logger)
+
+
+logger = get_logger(__name__)
 
 
 @dataclass
@@ -196,7 +199,7 @@ class SpectralSurface:
             response_curve = value_arr
         else:
             response_curve = None
-            logging.warning("Both wavelength and %s must be set", ter_property)
+            logger.warning("Both wavelength and %s must be set", ter_property)
 
         return response_curve
 
@@ -254,8 +257,8 @@ class SpectralSurface:
         elif colname in self.table.colnames:
             val = self.table[colname].data
         else:
-            logging.debug("%s not found in either '.meta' or '.table': [%s]",
-                          colname, self.meta.get("name", self.meta["filename"]))
+            logger.debug("%s not found in either '.meta' or '.table': [%s]",
+                         colname, self.meta.get("name", self.meta["filename"]))
             return None
 
         col_units = colname+"_unit"

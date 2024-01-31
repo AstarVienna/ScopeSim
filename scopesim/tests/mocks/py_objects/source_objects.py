@@ -30,6 +30,31 @@ def _table_source():
     return tbl_source
 
 
+def _table_source_overlapping():
+    """A table with sources that are exactly at the same place.
+
+    This allows testing whether the fluxes are correctly stacked.
+
+    Four sources are stacked at (-1, -1), and one source with 4 times
+    the weight is at (1, 1). Both regions should have the same flux.
+    """
+    n = 101
+    unit = u.Unit("ph s-1 m-2 um-1")
+    wave = np.linspace(0.1150, 2.5, n) * u.um
+    specs = [SourceSpectrum(Empirical1D, points=wave,
+                            lookup_table=1e9 * np.ones(n) * unit)]
+    w1 = 0.0005
+    tbl = Table(names=["x", "y", "ref", "weight", "spec_types"],
+                data=[[-20, -20, -20, -20, 20] * u.arcsec,
+                      [-20, -20, -20, -20, 20] * u.arcsec,
+                      [0,  0,  0,  0, 0],
+                      [w1,  w1,  w1, w1, 4 * w1],
+                      ["F0II",] * 5,
+                ])
+    tbl_source = Source(table=tbl, spectra=specs)
+    return tbl_source
+
+
 def _image_source(dx=0, dy=0, angle=0, weight=1):
     """
     Produce a source with 3 point sources on a random BG.

@@ -1,7 +1,6 @@
 """TBA."""
 
 from pathlib import Path
-import logging
 
 import numpy as np
 from astropy import units as u
@@ -14,7 +13,11 @@ from synphot.units import PHOTLAM
 
 from scopesim.source.source_templates import vega_spectrum, st_spectrum, \
     ab_spectrum
-from ..utils import find_file, quantity_from_table, from_currsys
+from ..utils import find_file, quantity_from_table, from_currsys, get_logger
+
+
+logger = get_logger(__name__)
+
 
 FILTER_DEFAULTS = {"U": "Generic/Bessell.U",
                    "B": "Generic/Bessell.B",
@@ -95,13 +98,13 @@ def download_svo_filter(filter_name, return_style="synphot"):
         silent=True,
     )
     if not path:
-        logging.debug("File not found in %s, downloading...", PATH_SVO_DATA)
+        logger.debug("File not found in %s, downloading...", PATH_SVO_DATA)
         path = download_file(url, cache=True)
 
     try:
         tbl = Table.read(path, format='votable')
     except ValueError:
-        logging.error("Unable to load %s from %s.", filter_name, path)
+        logger.error("Unable to load %s from %s.", filter_name, path)
         raise
 
     wave = u.Quantity(tbl['Wavelength'].data.data, u.Angstrom, copy=False)
