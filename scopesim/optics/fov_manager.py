@@ -79,19 +79,21 @@ class FOVManager:
     """
 
     def __init__(self, effects=None, cmds=None, **kwargs):
-        self.meta = {"area": "!TEL.area",
-                     "pixel_scale": "!INST.pixel_scale",
-                     "plate_scale": "!INST.plate_scale",
-                     "wave_min": "!SIM.spectral.wave_min",
-                     "wave_mid": "!SIM.spectral.wave_mid",
-                     "wave_max": "!SIM.spectral.wave_max",
-                     "chunk_size": "!SIM.computing.chunk_size",
-                     "max_segment_size": "!SIM.computing.max_segment_size",
-                     "sub_pixel": "!SIM.sub_pixel.flag",
-                     "sub_pixel_fraction": "!SIM.sub_pixel.fraction",
-                     "preload_fovs": "!SIM.computing.preload_field_of_views",
-                     "decouple_sky_det_hdrs": "!INST.decouple_detector_from_sky_headers",
-                     "aperture_id": 0}
+        self.meta = {
+            "area": "!TEL.area",
+            "pixel_scale": "!INST.pixel_scale",
+            "plate_scale": "!INST.plate_scale",
+            "wave_min": "!SIM.spectral.wave_min",
+            "wave_mid": "!SIM.spectral.wave_mid",
+            "wave_max": "!SIM.spectral.wave_max",
+            "chunk_size": "!SIM.computing.chunk_size",
+            "max_segment_size": "!SIM.computing.max_segment_size",
+            "sub_pixel": "!SIM.sub_pixel.flag",
+            "sub_pixel_fraction": "!SIM.sub_pixel.fraction",
+            "preload_fovs": "!SIM.computing.preload_field_of_views",
+            "decouple_sky_det_hdrs": "!INST.decouple_detector_from_sky_headers",
+            "aperture_id": 0,
+        }
         self.meta.update(kwargs)
         self.cmds = cmds
 
@@ -214,20 +216,25 @@ class FovVolumeList(FOVSetupBase, MutableSequence):
         if initial_volume is None:
             initial_volume = {}
 
-        self.volumes = [{"wave_min": 0.3,
-                         "wave_max": 30,
-                         "x_min": -1800,
-                         "x_max": 1800,
-                         "y_min": -1800,
-                         "y_max": 1800,
-                         "meta": {"area": 0 * u.um**2,
-                                  "aperture_id": 0}
-                         }]
+        self.volumes = [{
+            "wave_min": 0.3,
+            "wave_max": 30,
+            "x_min": -1800,
+            "x_max": 1800,
+            "y_min": -1800,
+            "y_max": 1800,
+            "meta": {
+                "area": 0 * u.um**2,
+                "aperture_id": 0,
+            },
+        }]
         self.volumes[0].update(initial_volume)  # .. TODO: Careful! This overwrites meta
-        self.detector_limits = {"xd_min": 0,
-                                "xd_max": 0,
-                                "yd_min": 0,
-                                "yd_max": 0}
+        self.detector_limits = {
+            "xd_min": 0,
+            "xd_max": 0,
+            "yd_min": 0,
+            "yd_max": 0,
+        }
 
     def split(self, axis, value, aperture_id=None) -> None:
         """
