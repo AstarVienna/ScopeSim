@@ -47,6 +47,7 @@ from copy import deepcopy
 from typing import TextIO
 from io import StringIO
 from collections.abc import Iterable, Iterator, MutableSequence
+from itertools import chain
 
 import numpy as np
 from astropy import units as u
@@ -114,6 +115,18 @@ class FOVManager:
             logger.debug("Generating initial fovs_list.")
             self._fovs_list = list(self.generate_fovs_list())
 
+    def _get_splits(self, pixel_scale):
+        chunk_size = from_currsys(self.meta["chunk_size"], self.cmds)
+        max_seg_size = from_currsys(self.meta["max_segment_size"], self.cmds)
+
+        for vol in self.volumes_list:
+            vol_pix_area = ((vol["x_max"] - vol["x_min"]) *
+                            (vol["y_max"] - vol["y_min"]) / pixel_scale**2)
+            if vol_pix_area > max_seg_size:
+                step = chunk_size * pixel_scale
+                yield (np.arange(vol["x_min"], vol["x_max"], step),
+                       np.arange(vol["y_min"], vol["y_max"], step))
+
     def generate_fovs_list(self) -> Iterator[FieldOfView]:
         """
         Generate a series of FieldOfViews objects based self.effects.
@@ -137,20 +150,10 @@ class FOVManager:
         pixel_scale = from_currsys(self.meta["pixel_scale"], self.cmds)
         plate_scale = from_currsys(self.meta["plate_scale"], self.cmds)
 
-        chunk_size = from_currsys(self.meta["chunk_size"], self.cmds)
-        max_seg_size = from_currsys(self.meta["max_segment_size"], self.cmds)
+        splits = (chain.from_iterable(split)
+                  for split in zip(*self._get_splits(pixel_scale)))
 
-        split_xs = []
-        split_ys = []
-        for vol in self.volumes_list:
-            vol_pix_area = (vol["x_max"] - vol["x_min"]) * \
-                           (vol["y_max"] - vol["y_min"]) / pixel_scale**2
-            if vol_pix_area > max_seg_size:
-                step = chunk_size * pixel_scale
-                split_xs.extend(np.arange(vol["x_min"], vol["x_max"], step))
-                split_ys.extend(np.arange(vol["y_min"], vol["y_max"], step))
-
-        self.volumes_list.split(axis=["x", "y"], value=(split_xs, split_ys))
+        self.volumes_list.split(axis=["x", "y"], value=splits)
 
         for vol in self.volumes_list:
             xs_min, xs_max = vol["x_min"] / 3600., vol["x_max"] / 3600.
