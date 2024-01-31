@@ -104,7 +104,7 @@ class FOVManager:
         self._fovs_list = []
         self.is_spectroscope = eu.is_spectroscope(self.effects)
 
-        if from_currsys(self.meta["preload_fovs"]) is True:
+        if from_currsys(self.meta["preload_fovs"]):
             logger.debug("Generating initial fovs_list.")
             self._fovs_list = self.generate_fovs_list()
 
@@ -159,7 +159,7 @@ class FOVManager:
             # useful for spectroscopy mode where slit dimensions is not the same
             # as detector dimensions
             # ..todo: Make sure this changes for multiple image planes
-            if from_currsys(self.meta["decouple_sky_det_hdrs"]) is True:
+            if from_currsys(self.meta["decouple_sky_det_hdrs"]):
                 det_eff = eu.get_all_effects(self.effects, DetectorList)[0]
                 dethdr = det_eff.image_plane_header
 
@@ -177,7 +177,7 @@ class FOVManager:
             logger.debug("Returning existing fovs_list.")
             return self._fovs_list
 
-        if from_currsys(self.meta["preload_fovs"]) is False:
+        if not from_currsys(self.meta["preload_fovs"]):
             logger.debug("Generating new fovs_list.")
             self._fovs_list = self.generate_fovs_list()
         return self._fovs_list
