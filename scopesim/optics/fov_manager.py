@@ -286,8 +286,7 @@ class FovVolumeList(FOVSetupBase, MutableSequence):
             return
 
         for vol in self:
-            if (aperture_id is not None and
-                aperture_id != vol["meta"]["aperture_id"]):
+            if _chk_ap_id(aperture_id, vol):
                 continue
             if vol[f"{axis}_min"] >= value or vol[f"{axis}_max"] <= value:
                 continue
@@ -332,8 +331,7 @@ class FovVolumeList(FOVSetupBase, MutableSequence):
         to_pop = []
 
         for vol in self:
-            if (aperture_id is not None and
-                aperture_id != vol["meta"]["aperture_id"]):
+            if _chk_ap_id(aperture_id, vol):
                 continue
 
             if values[0] is not None:
@@ -391,8 +389,7 @@ class FovVolumeList(FOVSetupBase, MutableSequence):
         """
         def _get_new_vols():
             for vol in self:
-                if (aperture_id is not None and
-                    aperture_id != vol["meta"]["aperture_id"]):
+                if _chk_ap_id(aperture_id, vol):
                     continue
                 if not all(_volume_in_range(vol, axis, edge) for axis, edge
                            in zip(axes, edges)):
@@ -455,6 +452,10 @@ class FovVolumeList(FOVSetupBase, MutableSequence):
 
 def _volume_in_range(vol: dict, axis: str, edge) -> bool:
     return edge[0] <= vol[f"{axis}_max"] and edge[1] >= vol[f"{axis}_min"]
+
+
+def _chk_ap_id(ap_id, vol):
+    return ap_id is not None and ap_id != vol["meta"]["aperture_id"]
 
 
 # Spectroscopy FOV setup
