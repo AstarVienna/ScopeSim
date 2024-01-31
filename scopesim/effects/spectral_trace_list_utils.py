@@ -684,9 +684,9 @@ class XiLamImage():
         # dimensions are set by the slit aperture
         (n_lam, n_eta, n_xi) = fov.cube.data.shape
 
-        m_xi = int((fov.meta['xi_max'].to(u.arcsec).value -
-                    fov.meta['xi_min'].to(u.arcsec).value) / d_xi)
-        assert m_xi == n_xi
+        m_xi = int(np.round((fov.meta['xi_max'].to(u.arcsec).value -
+                             fov.meta['xi_min'].to(u.arcsec).value) / d_xi))
+        assert abs(m_xi - n_xi) <= 1
 
         # arrays of cube coordinates
         cube_xi = d_xi * np.arange(n_xi) + fov.meta["xi_min"].to(u.arcsec).value

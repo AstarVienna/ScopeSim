@@ -445,7 +445,7 @@ class TestMakeSpectrum:
 
         assert in_sum == approx(out_sum)
 
-        if not PLOTS:
+        if PLOTS:
             waves = fov.waveset
             plt.plot(waves, spec(waves), "r--")
             for spectrum in src_all.spectra:

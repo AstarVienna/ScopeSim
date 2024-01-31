@@ -238,7 +238,7 @@ class SpectralTraceList(Effect):
 
             # Cut off FOV extended borders
             pixel_scale = obj.meta["pixel_scale"]
-            dr = obj.meta["extend_fov_beyond_slit"]
+            dr = obj.meta.get("extend_fov_beyond_slit", 0)
             dr_p = round(dr / pixel_scale)      # int or round?
             if dr_p > 0:
                 obj.cube.data = obj.cube.data[:, dr_p:-dr_p, dr_p:-dr_p]
@@ -270,6 +270,7 @@ class SpectralTraceList(Effect):
                         self.cube = kwargs.get("cube")
                         self.header = kwargs.get("header")
                         self.detector_header = kwargs.get("detector_header")
+                        self.trace_id = kwargs.get("trace_id")
 
                     @classmethod
                     def from_real_fov(cls, fov, row):
@@ -490,7 +491,7 @@ class SpectralTraceList(Effect):
         return msg
 
     def __getitem__(self, item):
-        return self.spectral_traces[item]
+        return self.spectral_traces.get(item, {})
 
     def __setitem__(self, key, value):
         self.spectral_traces[key] = value
@@ -608,10 +609,6 @@ class UnresolvedSpectralTraceList(SpectralTraceList):
         self.ext_cat = self._file[0].header["ECAT"]
         self.catalog = Table(self._file[self.ext_cat].data)
 
-        self._pixel_scale = from_currsys(self.meta["pixel_scale"])
-        self._plate_scale = from_currsys(self.meta["plate_scale"])
-        self._pixel_size = self._pixel_scale / self._plate_scale
-
         spec_traces = {}
         for row in self.catalog:
             params = {col: row[col] for col in row.colnames}
@@ -626,6 +623,12 @@ class UnresolvedSpectralTraceList(SpectralTraceList):
             spec_traces[row["description"]] = SpectralTrace(tbl_big, **params)
 
         self.spectral_traces = spec_traces
+
+    @property
+    def pixel_size(self):
+        pixel_scale = from_currsys(self.meta["pixel_scale"])
+        plate_scale = from_currsys(self.meta["plate_scale"])
+        return pixel_scale / plate_scale
 
     def apply_to(self, fov, **kwargs):
         """
@@ -646,8 +649,7 @@ class UnresolvedSpectralTraceList(SpectralTraceList):
                     xs, ys, zs = self.get_xyz_for_trace(trace, spec, wmin, wmax,
                                                         fov.meta["area"])
                     image = self.trace_to_image(xs, ys, zs)
-                    pixel_size = self._pixel_size
-                    hdr = ipu.header_from_list_of_xy(xs, ys, pixel_size, "D")
+                    hdr = ipu.header_from_list_of_xy(xs, ys, self.pixel_size, "D")
 
                     fov.cube = fov.hdu
                     fov.hdu = fits.ImageHDU(data=image, header=hdr)
@@ -660,11 +662,12 @@ class UnresolvedSpectralTraceList(SpectralTraceList):
         # Define dispersion direction
         x = spec_trace.table[self.meta["x_colname"]]
         y = spec_trace.table[self.meta["y_colname"]]
+        dx = dy = self.pixel_size
         if max(x) - min(x) > max(y) - min(y):
-            xs = np.arange(min(x), max(x) + self._pixel_size, self._pixel_size)
+            xs = np.arange(min(x), max(x) + dx, dx)
             waves = spec_trace._xix2lam([0] * len(xs), xs)
         else:
-            ys = np.arange(min(y), max(y) + self._pixel_size, self._pixel_size)
+            ys = np.arange(min(y), max(y) + dy, dy)
             waves = spec_trace._xiy2lam([0] * len(ys), ys)
 
         if wave_min is not None and wave_max is not None:
@@ -688,13 +691,14 @@ class UnresolvedSpectralTraceList(SpectralTraceList):
         return xs, ys, zs
 
     def trace_to_image(self, xs, ys, zs, image=None):
-        xs_pix = (xs - min(xs)) / self._pixel_size
+        dx = dy = self.pixel_size
+        xs_pix = (xs - min(xs)) / dx
         xfrac1 = xs_pix - xs_pix.astype(int)
         xfrac0 = 1 - xfrac1
 
         xp0 = xs_pix.astype(int)
         xp1 = xp0 + 1
-        yp = ((ys - min(ys)) / self._pixel_size).astype(int)
+        yp = ((ys - min(ys)) / dy).astype(int)
 
         if image is None:
             image = np.zeros((max(yp) + 1, max(xp1) + 1))
@@ -737,17 +741,14 @@ class MosaicSpectralTraceList(UnresolvedSpectralTraceList):
                   "distance_between_bundles": 32, #pixels
                   }
         params.update(**kwargs)
+        required_keys = ["pixel_scale", "plate_scale"]
+        check_keys(kwargs, required_keys)
         super(SpectralTraceList, self).__init__(**params)
-
-        self._pixel_scale = from_currsys(self.meta["pixel_scale"])
-        self._plate_scale = from_currsys(self.meta["plate_scale"])
-        self._pixel_size = self._pixel_scale / self._plate_scale
-
 
         t = TraceGenerator(l_low = from_currsys(self.meta["wave_min"]),
                            l_high = from_currsys(self.meta["wave_max"]),
                            delta_lambda = from_currsys("!SIM.spectral.spectral_bin_width"),
-                           pixel_size = self._pixel_size,  # mm
+                           pixel_size = self.pixel_size,  # mm
                            trace_distances = from_currsys(self.meta["distance_between_fibers"]),  # pixels
                            fiber_per_mos = from_currsys(self.meta["fiber_per_bundle"]),
                            nbr_mos = from_currsys(self.meta["n_bundles"]),

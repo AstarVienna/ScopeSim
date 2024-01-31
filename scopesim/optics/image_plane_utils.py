@@ -10,6 +10,7 @@ from astropy.wcs import WCS
 from astropy.io import fits
 from astropy.table import Table
 from astropy.utils.exceptions import AstropyWarning
+from astropy.wcs import wcs
 from scipy import ndimage as ndi
 
 from ..utils import (unit_from_table, quantity_from_table, has_needed_keywords,

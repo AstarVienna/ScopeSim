@@ -16,6 +16,7 @@ PLOTS = False
 inst_pkgs = os.path.join(os.path.dirname(__file__), "../mocks")
 sim.rc.__currsys__["!SIM.file.local_packages_path"] = inst_pkgs
 
+
 @pytest.mark.usefixtures("protect_currsys", "patch_all_mock_paths")
 class TestLoadsUserCommands:
     def test_loads(self):
@@ -236,6 +237,7 @@ class TestObserveIfuMode:
         assert imp_im.sum() == pytest.approx(5251, rel=1e-3)
 
 
+@pytest.mark.usefixtures("protect_currsys", "patch_all_mock_paths")
 class TestObserveMosMode:
     def test_loads(self):
         wave = np.arange(0.7, 2.5, 0.001)
@@ -257,7 +259,7 @@ class TestObserveMosMode:
         imp_im = opt.image_planes[0].data
         det_im = hdul[1].data
 
-        if not PLOTS:
+        if PLOTS:
             plt.subplot(121)
             plt.imshow(imp_im)
             plt.subplot(122)
@@ -302,6 +304,6 @@ class TestFitsHeader:
         hdr = hdul[0].header
 
         assert hdr["SIM SRC0 object"] == 'star'
-        assert hdr["SIM EFF14 class"] == 'SourceDescriptionFitsKeywords'
+        assert hdr["SIM EFF15 class"] == 'SourceDescriptionFitsKeywords'
         assert hdr["SIM CONFIG OBS filter_name"] == 'J'
         assert hdr["ESO ATM SEEING"] == sim.utils.from_currsys("!OBS.psf_fwhm")
