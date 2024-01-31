@@ -63,4 +63,7 @@ from .tests.mocks.load_basic_instrument import load_example_optical_train
 #                          VERSION INFORMATION                                #
 ###############################################################################
 
-__version__ = metadata.version(__package__)
+try:
+    __version__ = metadata.version(__package__)
+except metadata.PackageNotFoundError:
+    __version__ = "undetermined"

@@ -185,11 +185,24 @@ class TestFromCurrSys:
     def test_converts_dict(self):
         assert utils.from_currsys({"seed": "!SIM.random.seed"})["seed"] is None
 
+    def test_converts_layered_bang_strings(self):
+        patched = {"!SIM.sub_pixel.flag": "!SIM.sub_pixel.fraction"}
+        with patch.dict("scopesim.rc.__currsys__", patched):
+            result = utils.from_currsys("!SIM.sub_pixel.flag")
+            assert not isinstance(result, str)
+            assert result == 1
+
     def test_converts_astropy_table(self):
         tbl = Table(data=[["!SIM.random.seed"]*2, ["!SIM.random.seed"]*2],
                     names=["seeds", "seeds2"])
         assert utils.from_currsys(tbl["seeds2"][1]) is None
 
+    def test_converts_string_numericals_to_floats(self):
+        patched = {"!SIM.sub_pixel.fraction": "1e0"}
+        with patch.dict("scopesim.rc.__currsys__", patched):
+            result = utils.from_currsys("!SIM.sub_pixel.fraction")
+            assert isinstance(result, float)
+            assert result == 1
 
 
 # load_example_optical_train modifies __currsys__!

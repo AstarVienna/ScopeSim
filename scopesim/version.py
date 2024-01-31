@@ -1,2 +1,5 @@
 from importlib import metadata
-version = metadata.version(__package__)
+try:
+    version = metadata.version(__package__)
+except:
+    version = 0.8

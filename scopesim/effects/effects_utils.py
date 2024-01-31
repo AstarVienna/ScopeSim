@@ -41,7 +41,7 @@ def combine_surface_effects(surface_effects):
     surflist_list = [eff for eff in surface_effects
                      if isinstance(eff, efs.SurfaceList)]
     surf_list = [eff for eff in surface_effects
-                 if isinstance(eff, (efs.TERCurve, efs.FilterWheel))
+                 if isinstance(eff, (efs.TERCurve, efs.FilterWheelBase))
                  and not isinstance(eff, efs.SurfaceList)]
 
     if not surflist_list:
