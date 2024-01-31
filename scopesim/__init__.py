@@ -1,12 +1,23 @@
 """Generalised telescope observation simulator."""
 
+from importlib import metadata
+
+###############################################################################
+#                          VERSION INFORMATION                                #
+###############################################################################
+
+try:
+    __version__ = metadata.version(__package__)
+except metadata.PackageNotFoundError:
+    __version__ = "undetermined"
+
+
 ###############################################################################
 #                            TURN OFF WARNINGS                                #
 ###############################################################################
 
 import warnings
 import yaml
-from importlib import metadata
 from astropy.utils.exceptions import AstropyWarning
 
 warnings.simplefilter('ignore', UserWarning)
@@ -58,12 +69,3 @@ from .server.database import (list_packages, download_packages, download_package
                               list_example_data, download_example_data)
 
 from .tests.mocks.load_basic_instrument import load_example_optical_train
-
-###############################################################################
-#                          VERSION INFORMATION                                #
-###############################################################################
-
-try:
-    __version__ = metadata.version(__package__)
-except metadata.PackageNotFoundError:
-    __version__ = "undetermined"
