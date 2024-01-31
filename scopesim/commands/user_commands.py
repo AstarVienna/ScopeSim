@@ -289,7 +289,7 @@ def check_for_updates(package_name):
     # tracking **exclusively** your IP address for our internal stats
     if rc.__currsys__["!SIM.reports.ip_tracking"] and \
             "TRAVIS" not in os.environ:
-        front_matter = rc.__currsys__["!SIM.file.server_base_url"]
+        front_matter = str(rc.__currsys__["!SIM.file.server_base_url"])
         back_matter = f"api.php?package_name={package_name}"
         try:
             response = httpx.get(url=front_matter+back_matter).json()
