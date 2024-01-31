@@ -54,10 +54,13 @@ from astropy.wcs import WCS
 from . import image_plane_utils as ipu
 from ..effects import DetectorList
 from ..effects import effects_utils as eu
-from ..utils import from_currsys
+from ..utils import from_currsys, get_logger
 
 from .fov import FieldOfView
 from ..base_classes import FOVSetupBase
+
+
+logger = get_logger(__name__)
 
 
 class FOVManager:
@@ -102,6 +105,7 @@ class FOVManager:
         self.is_spectroscope = eu.is_spectroscope(self.effects)
 
         if from_currsys(self.meta["preload_fovs"]) is True:
+            logger.debug("Generating initial fovs_list.")
             self._fovs_list = self.generate_fovs_list()
 
     def generate_fovs_list(self):
@@ -170,9 +174,11 @@ class FOVManager:
         # them will mess things up as FOVs multipy like rabbits...
         # Should investigate why at some point...
         if self._fovs_list:
+            logger.debug("Returning existing fovs_list.")
             return self._fovs_list
 
         if from_currsys(self.meta["preload_fovs"]) is False:
+            logger.debug("Generating new fovs_list.")
             self._fovs_list = self.generate_fovs_list()
         return self._fovs_list
 
