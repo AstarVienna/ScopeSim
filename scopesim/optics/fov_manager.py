@@ -45,7 +45,7 @@
 from copy import deepcopy
 from typing import TextIO
 from io import StringIO
-from collections.abc import Iterable, MutableSequence
+from collections.abc import Iterable, Iterator, MutableSequence
 
 import numpy as np
 from astropy import units as u
@@ -111,17 +111,21 @@ class FOVManager:
 
         if from_currsys(self.meta["preload_fovs"], self.cmds):
             logger.debug("Generating initial fovs_list.")
-            self._fovs_list = self.generate_fovs_list()
+            self._fovs_list = list(self.generate_fovs_list())
 
-    def generate_fovs_list(self):
+    def generate_fovs_list(self) -> Iterator[FieldOfView]:
         """
         Generate a series of FieldOfViews objects based self.effects.
 
-        Returns
-        -------
-        fovs : list of FieldOfView objects
+        Yields
+        ------
+        Iterator[FieldOfView]
+            Generator-Iterator of FieldOfView objects.
 
         """
+        # TODO: The generator is currently always converted to a list, but that
+        #       might not be necessary. Investigate in the future...
+
         # Ask all the effects to alter the volume_
         params = {"pixel_scale": self.meta["pixel_scale"]}
 
@@ -142,12 +146,10 @@ class FOVManager:
                            (vol["y_max"] - vol["y_min"]) / pixel_scale**2
             if vol_pix_area > max_seg_size:
                 step = chunk_size * pixel_scale
-                split_xs += list(np.arange(vol["x_min"], vol["x_max"], step))
-                split_ys += list(np.arange(vol["y_min"], vol["y_max"], step))
+                split_xs.extend(np.arange(vol["x_min"], vol["x_max"], step))
+                split_ys.extend(np.arange(vol["y_min"], vol["y_max"], step))
 
         self.volumes_list.split(axis=["x", "y"], value=(split_xs, split_ys))
-
-        fovs = []
 
         for vol in self.volumes_list:
             xs_min, xs_max = vol["x_min"] / 3600., vol["x_max"] / 3600.
@@ -168,15 +170,11 @@ class FOVManager:
                 det_eff = eu.get_all_effects(self.effects, DetectorList)[0]
                 dethdr = det_eff.image_plane_header
 
-            fovs.append(FieldOfView(
-                skyhdr,
-                waverange,
-                detector_header=dethdr,
-                cmds=self.cmds,
-                **vol["meta"],
-            ))
-
-        return fovs
+            yield FieldOfView(skyhdr,
+                              waverange,
+                              detector_header=dethdr,
+                              cmds=self.cmds,
+                              **vol["meta"])
 
     @property
     def fovs(self):
@@ -189,7 +187,7 @@ class FOVManager:
 
         if not from_currsys(self.meta["preload_fovs"], self.cmds):
             logger.debug("Generating new fovs_list.")
-            self._fovs_list = self.generate_fovs_list()
+            self._fovs_list = list(self.generate_fovs_list())
         return self._fovs_list
 
     @property
