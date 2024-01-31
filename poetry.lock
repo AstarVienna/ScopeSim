@@ -142,13 +142,13 @@ test = ["dateparser (==1.*)", "pre-commit", "pytest", "pytest-cov", "pytest-mock
 
 [[package]]
 name = "astar-utils"
-version = "0.2.0b1"
+version = "0.2.0"
 description = "Contains commonly-used utilities for AstarVienna's projects."
 optional = false
 python-versions = ">=3.9,<4.0"
 files = [
-    {file = "astar_utils-0.2.0b1-py3-none-any.whl", hash = "sha256:b59aaeb5920333c528aa7bef07a04a009e9a1e668e84e3cfbc09fdd8dae7fdda"},
-    {file = "astar_utils-0.2.0b1.tar.gz", hash = "sha256:f9a5fd493623c36d79f7df97f011e073fadddfe9ea94fe35d0abee82bbbf1a2b"},
+    {file = "astar_utils-0.2.0-py3-none-any.whl", hash = "sha256:c3518c857ece09d86159e7ee91f3f7933759eb679ff618c69607d0d71f0cf2b5"},
+    {file = "astar_utils-0.2.0.tar.gz", hash = "sha256:d65cfd776df533710b46e256febe1b1b891f21827fd9dcf21867fdb7b0bc8e93"},
 ]
 
 [package.dependencies]
@@ -2692,7 +2692,6 @@ files = [
     {file = "PyYAML-6.0.1-cp311-cp311-win_amd64.whl", hash = "sha256:bf07ee2fef7014951eeb99f56f39c9bb4af143d8aa3c21b1677805985307da34"},
     {file = "PyYAML-6.0.1-cp312-cp312-macosx_10_9_x86_64.whl", hash = "sha256:855fb52b0dc35af121542a76b9a84f8d1cd886ea97c84703eaa6d88e37a2ad28"},
     {file = "PyYAML-6.0.1-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:40df9b996c2b73138957fe23a16a4f0ba614f4c0efce1e9406a184b6d07fa3a9"},
-    {file = "PyYAML-6.0.1-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:a08c6f0fe150303c1c6b71ebcd7213c2858041a7e01975da3a99aed1e7a378ef"},
     {file = "PyYAML-6.0.1-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:6c22bec3fbe2524cde73d7ada88f6566758a8f7227bfbf93a408a9d86bcc12a0"},
     {file = "PyYAML-6.0.1-cp312-cp312-musllinux_1_1_x86_64.whl", hash = "sha256:8d4e9c88387b0f5c7d5f281e55304de64cf7f9c0021a3525bd3b1c542da3b0e4"},
     {file = "PyYAML-6.0.1-cp312-cp312-win32.whl", hash = "sha256:d483d2cdf104e7c9fa60c544d92981f12ad66a457afae824d146093b8c294c54"},
@@ -3192,23 +3191,24 @@ setuptools = "*"
 
 [[package]]
 name = "skycalc-ipy"
-version = "0.3.0"
+version = "0.4.0"
 description = "Get atmospheric spectral information from the ESO skycalc server."
 optional = false
-python-versions = ">=3.8,<4.0"
+python-versions = ">=3.9,<4.0"
 files = [
-    {file = "skycalc_ipy-0.3.0-py3-none-any.whl", hash = "sha256:70885c54816cf204bfd9ce142587cacec450820f4cc200daa7f68651dcaa61e3"},
-    {file = "skycalc_ipy-0.3.0.tar.gz", hash = "sha256:aa115488201539a3b93cece8cbb5d6bf99004bb7f026fcce3e800ecffd171764"},
+    {file = "skycalc_ipy-0.4.0-py3-none-any.whl", hash = "sha256:dc5de52de8850c6750abc2bc02e4b7f0de93447a41a4d20d62c1fca44ca7e937"},
+    {file = "skycalc_ipy-0.4.0.tar.gz", hash = "sha256:0b5c59f42120be4acb65fec5d50a19f1584ec9a4315b7f227af3a682c78d8578"},
 ]
 
 [package.dependencies]
-astropy = ">=5.2.2,<6.0.0"
+astar-utils = ">=0.2.0"
+astropy = ">=5.3.3,<6.0.0"
 httpx = ">=0.23.0,<0.24.0"
-numpy = ">=1.24.4,<2.0.0"
-pyyaml = ">=6.0.0,<7.0.0"
+numpy = ">=1.26.3,<2.0.0"
+pyyaml = ">=6.0.1,<7.0.0"
 
 [package.extras]
-syn = ["synphot (>=1.1.0,<2.0.0)"]
+syn = ["synphot (>=1.2.1,<2.0.0)"]
 
 [[package]]
 name = "sniffio"
@@ -3731,4 +3731,4 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "p
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.9"
-content-hash = "14abc3786229999350744030ad20b0113c41a61a9495e96d9e002dc5fa046037"
+content-hash = "a44bd7110fb45a5a7f92136989e341016c9303bedfa77e81b8f50884cab7f17e"

@@ -35,9 +35,9 @@ more-itertools = "^10.1.0"
 tqdm = "^4.66.1"
 
 synphot = "^1.2.1"
-skycalc_ipy = "^0.3.0"
-anisocado = "^0.3.0"
-astar-utils = {version = "^0.2.0b1", allow-prereleases = true}
+skycalc_ipy = ">=0.4.0"
+anisocado = ">=0.3.0"
+astar-utils = ">=0.2.0"
 
 [tool.poetry.group.dev]
 optional = true
