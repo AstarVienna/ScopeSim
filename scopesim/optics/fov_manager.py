@@ -275,7 +275,7 @@ class FovVolumeList(FOVSetupBase, MutableSequence):
             >>> fvl.split(axis="wave", value=3.0, aperture_id=None)
 
         """
-        if isinstance(axis, (tuple, list)):
+        if isinstance(axis, Iterable) and not isinstance(axis, str):
             for ax, val in zip(axis, value):
                 self.split(ax, val)
             return
@@ -454,7 +454,7 @@ def _volume_in_range(vol: dict, axis: str, edge) -> bool:
     return edge[0] <= vol[f"{axis}_max"] and edge[1] >= vol[f"{axis}_min"]
 
 
-def _chk_ap_id(ap_id, vol):
+def _chk_ap_id(ap_id, vol) -> bool:
     return ap_id is not None and ap_id != vol["meta"]["aperture_id"]
 
 
