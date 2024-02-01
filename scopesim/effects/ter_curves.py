@@ -502,9 +502,11 @@ class TopHatFilterCurve(FilterCurve):
 
     """
 
+    required_keys = {"transmission", "blue_cutoff", "red_cutoff"}
+
     def __init__(self, cmds=None, **kwargs):
         required_keys = ["transmission", "blue_cutoff", "red_cutoff"]
-        check_keys(kwargs, required_keys, action="error")
+        check_keys(kwargs, self.required_keys, action="error")
         self.cmds = cmds
 
         wave_min = from_currsys("!SIM.spectral.wave_min", self.cmds)
@@ -525,9 +527,10 @@ class TopHatFilterCurve(FilterCurve):
 
 
 class DownloadableFilterCurve(FilterCurve):
+    required_keys = {"filter_name", "filename_format"}
+
     def __init__(self, **kwargs):
-        required_keys = ["filter_name", "filename_format"]
-        check_keys(kwargs, required_keys, action="error")
+        check_keys(kwargs, self.required_keys, action="error")
         filt_str = kwargs["filename_format"].format(kwargs["filter_name"])
         tbl = download_svo_filter(filt_str, return_style="table")
         super().__init__(table=tbl, **kwargs)
@@ -556,9 +559,10 @@ class SpanishVOFilterCurve(FilterCurve):
 
     """
 
+    required_keys = {"observatory", "instrument", "filter_name"}
+
     def __init__(self, **kwargs):
-        required_keys = ["observatory", "instrument", "filter_name"]
-        check_keys(kwargs, required_keys, action="error")
+        check_keys(kwargs, self.required_keys, action="error")
         filt_str = "{}/{}.{}".format(kwargs["observatory"],
                                      kwargs["instrument"],
                                      kwargs["filter_name"])

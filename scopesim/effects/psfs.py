@@ -166,13 +166,14 @@ class AnalyticalPSF(PSF):
 class Vibration(AnalyticalPSF):
     """Creates a wavelength independent kernel image."""
 
+    required_keys = {"fwhm", "pixel_scale"}
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.meta["z_order"] = [244, 744]
         self.meta["width_n_fwhms"] = 4
         self.convolution_classes = ImagePlaneBase
 
-        self.required_keys = ["fwhm", "pixel_scale"]
         check_keys(self.meta, self.required_keys, action="error")
         self.kernel = None
 
@@ -197,6 +198,8 @@ class NonCommonPathAberration(AnalyticalPSF):
     Accepted: kernel_width, strehl_drift
     """
 
+    required_keys = {"pixel_scale"}
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.meta["z_order"] = [241, 641]
@@ -210,7 +213,6 @@ class NonCommonPathAberration(AnalyticalPSF):
         self.valid_waverange = [0.1 * u.um, 0.2 * u.um]
 
         self.convolution_classes = FieldOfViewBase
-        self.required_keys = ["pixel_scale"]
         check_keys(self.meta, self.required_keys, action="error")
 
     def fov_grid(self, which="waveset", **kwargs):
@@ -435,6 +437,8 @@ class AnisocadoConstPSF(SemiAnalyticalPSF):
 
     """
 
+    required_keys = {"filename", "strehl", "wavelength"}
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         params = {
@@ -446,7 +450,6 @@ class AnisocadoConstPSF(SemiAnalyticalPSF):
         self.meta.update(params)
         self.meta.update(kwargs)
 
-        self.required_keys = ["filename", "strehl", "wavelength"]
         check_keys(self.meta, self.required_keys, action="error")
         self.nmRms      # check to see if it throws an error
 
@@ -593,11 +596,13 @@ class FieldConstantPSF(DiscretePSF):
     For spectroscopy, a wavelength-dependent PSF cube is built, where for each
     wavelength the reference PSF is scaled proportional to wavelength.
     """
+
+    required_keys = {"filename"}
+
     def __init__(self, **kwargs):
         # sub_pixel_flag and flux_accuracy are taken care of in PSF base class
         super().__init__(**kwargs)
 
-        self.required_keys = ["filename"]
         check_keys(self.meta, self.required_keys, action="error")
 
         self.meta["z_order"] = [262, 662]
@@ -723,11 +728,12 @@ class FieldVaryingPSF(DiscretePSF):
 
     """
 
+    required_keys = {"filename"}
+
     def __init__(self, **kwargs):
         # sub_pixel_flag and flux_accuracy are taken care of in PSF base class
         super().__init__(**kwargs)
 
-        self.required_keys = ["filename"]
         check_keys(self.meta, self.required_keys, action="error")
 
         self.meta["z_order"] = [261, 661]
