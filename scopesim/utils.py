@@ -5,9 +5,9 @@ from pathlib import Path
 import sys
 import logging
 from logging.config import dictConfig
-from collections.abc import Iterable, Generator, Set
+from collections.abc import Iterable, Generator, Set, Mapping
 from copy import deepcopy
-from typing import TextIO
+from typing import TextIO, Union
 from io import StringIO
 from importlib import metadata
 import functools
@@ -555,8 +555,40 @@ def from_rc_config(item):
     return from_currsys(item, rc.__config__)
 
 
-def check_keys(input_dict, required_keys, action="error", all_any="all"):
-    """Check to see if all/any of the required keys are present in a dict."""
+def check_keys(input_dict: Union[Mapping, Iterable],
+               required_keys: Set,
+               action: str = "error",
+               all_any: str = "all") -> bool:
+    """
+    Check to see if all/any of the required keys are present in a dict.
+
+    .. versionchanged:: v0.8.0
+        The `required_keys` parameter should now be a set.
+
+    Parameters
+    ----------
+    input_dict : Union[Mapping, Iterable]
+        The mapping to be checked.
+    required_keys : Set
+        Set containing the keys to look for.
+    action : {"error", "warn", "warning"}, optional
+        What to do in case the check does not pass. The default is "error".
+    all_any : {"all", "any"}, optional
+        Whether to check if "all" or "any" of the `required_keys` are present.
+        The default is "all".
+
+    Raises
+    ------
+    ValueError
+        Raised when an invalid parameter was passed or when `action` was set to
+        "error" (the default) and the `required_keys` were not found.
+
+    Returns
+    -------
+    keys_present : bool
+        ``True`` if check succeded, ``False`` otherwise.
+
+    """
     # Checking for Set from collections.abc instead of builtin set to allow
     # for any duck typing (e.g. dict keys view or whatever)
     if not isinstance(required_keys, Set):
