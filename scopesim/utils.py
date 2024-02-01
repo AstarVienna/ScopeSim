@@ -5,7 +5,7 @@ from pathlib import Path
 import sys
 import logging
 from logging.config import dictConfig
-from collections.abc import Iterable, Generator
+from collections.abc import Iterable, Generator, Set
 from copy import deepcopy
 from typing import TextIO
 from io import StringIO
@@ -557,25 +557,39 @@ def from_rc_config(item):
 
 def check_keys(input_dict, required_keys, action="error", all_any="all"):
     """Check to see if all/any of the required keys are present in a dict."""
-    if isinstance(input_dict, (list, tuple)):
-        input_dict = {key: None for key in input_dict}
+    # Checking for Set from collections.abc instead of builtin set to allow
+    # for any duck typing (e.g. dict keys view or whatever)
+    if not isinstance(required_keys, Set):
+        logger.warning("required_keys should implement the Set protocol, "
+                       "found %s instead.", type(required_keys))
+        required_keys = set(required_keys)
+
+    # First assume it's a Mapping, otherwise attempt to convert to set.
+    try:
+        input_keys = input_dict.keys()
+    except AttributeError:
+        try:
+            input_keys = set(input_dict)
+        except Exception as err:
+            raise ValueError("input_dict must be mapping or iterable, but was "
+                             f"{type(input_dict)}") from err
 
     if all_any == "all":
-        keys_present = all(key in input_dict for key in required_keys)
+        keys_present = required_keys.issubset(input_keys)
     elif all_any == "any":
-        keys_present = any(key in input_dict for key in required_keys)
+        keys_present = not required_keys.isdisjoint(input_keys)
     else:
         raise ValueError("all_any must be either 'all' or 'any'")
 
     if not keys_present:
         if "error" in action:
-            raise ValueError("One or more of the following keys missing from "
-                             f"input_dict: \n{required_keys} "
-                             f"\n{input_dict.keys()}")
+            raise ValueError(
+                f"The keys {', '.join(required_keys - input_keys) or '<none>'}"
+                " are missing from input_dict.")
         if "warn" in action:
             logger.warning(
-                "One or more of the following keys missing from input_dict: "
-                "\n%s \n%s", required_keys, input_dict.keys())
+                "The keys '%s' are missing from input_dict.",
+                "', '".join(required_keys - input_keys) or "<none>")
 
     return keys_present
 
