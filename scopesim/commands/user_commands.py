@@ -99,15 +99,15 @@ class UserCommands:
     and ``yamls`` must be specified, otherwise scopesim will not know
     where to look for yaml files (only relevant if reading in yaml files)::
 
-        >>> from scopesim.server.database import download_package
-        >>> from scopesim.commands import UserCommands
-        >>>
-        >>> download_package("test_package")
-        >>> cmd = UserCommands(packages=["test_package"],
-        ...                    yamls=["test_telescope.yaml",
-        ...                           {"alias": "ATMO",
-        ...                            "properties": {"pwv": 9001}}],
-        ...                    properties={"!ATMO.pwv": 8999})
+    >>> from scopesim.server.database import download_package
+    >>> from scopesim.commands import UserCommands
+    >>>
+    >>> download_package("test_package")
+    >>> cmd = UserCommands(packages=["test_package"],
+    >>>                    yamls=["test_telescope.yaml",
+    >>>                           {"alias": "ATMO",
+    >>>                            "properties": {"pwv": 9001}}],
+    >>>                    properties={"!ATMO.pwv": 8999})
 
     Notes
     -----
@@ -128,14 +128,14 @@ class UserCommands:
         However, if you would still like to avoid your IP address being stored,
         you can run ``scopesim`` 100% anonymously by setting::
 
-            >>> scopsim.rc.__config__["!SIM.reports.ip_tracking"] = True
+        >>> scopsim.rc.__config__["!SIM.reports.ip_tracking"] = True
 
         at the beginning of each session. Alternatively you can also pass the
         same bang keyword when generating a ``UserCommand`` object::
 
-            >>> from scopesim import UserCommands
-            >>> UserCommands(use_instrument="MICADO",
-            >>>              properties={"!SIM.reports.ip_tracking": False})
+        >>> from scopesim import UserCommands
+        >>> UserCommands(use_instrument="MICADO",
+        >>>              properties={"!SIM.reports.ip_tracking": False})
 
         If you use a custom ``yaml`` configuration file, you can also add this
         keyword to the ``properties`` section of the ``yaml`` file.
