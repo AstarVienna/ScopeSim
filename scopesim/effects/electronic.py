@@ -479,9 +479,11 @@ class LinearityCurve(Effect):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        params = {"z_order": [840],
-                  "report_plot_include": True,
-                  "report_table_include": False}
+        params = {
+            "z_order": [840],
+            "report_plot_include": True,
+            "report_table_include": False,
+        }
         self.meta.update(params)
         self.meta.update(kwargs)
 
@@ -604,7 +606,7 @@ class Quantization(Effect):
         new_dtype = self.meta["dtype"]
         if not np.issubdtype(new_dtype, np.integer):
             logger.warning("Setting quantized data to dtype %s, which is not "
-                            "an integer subtype.", new_dtype)
+                           "an integer subtype.", new_dtype)
 
         # This used to create a new ImageHDU with the same header but the data
         # set to the modified data. It should be fine to simply re-assign the

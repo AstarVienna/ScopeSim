@@ -75,15 +75,17 @@ class TERCurve(Effect):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        params = {"z_order": [10, 110, 510],
-                  "ignore_wings": False,
-                  "wave_min": "!SIM.spectral.wave_min",
-                  "wave_max": "!SIM.spectral.wave_max",
-                  "wave_unit": "!SIM.spectral.wave_unit",
-                  "wave_bin": "!SIM.spectral.spectral_bin_width",
-                  "bg_cell_width": "!SIM.computing.bg_cell_width",
-                  "report_plot_include": True,
-                  "report_table_include": False}
+        params = {
+            "z_order": [10, 110, 510],
+            "ignore_wings": False,
+            "wave_min": "!SIM.spectral.wave_min",
+            "wave_max": "!SIM.spectral.wave_max",
+            "wave_unit": "!SIM.spectral.wave_unit",
+            "wave_bin": "!SIM.spectral.spectral_bin_width",
+            "bg_cell_width": "!SIM.computing.bg_cell_width",
+            "report_plot_include": True,
+            "report_table_include": False,
+        }
         self.meta.update(params)
         self.meta.update(kwargs)
 
@@ -582,10 +584,12 @@ class FilterWheelBase(Effect):
         super().__init__(**kwargs)
         check_keys(kwargs, self.required_keys, action="error")
 
-        params = {"z_order": [124, 224, 524],
-                  "report_plot_include": True,
-                  "report_table_include": True,
-                  "report_table_rounding": 4}
+        params = {
+            "z_order": [124, 224, 524],
+            "report_plot_include": True,
+            "report_table_include": True,
+            "report_table_rounding": 4,
+        }
         self.meta.update(params)
         self.meta.update(kwargs)
 

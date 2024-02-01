@@ -64,10 +64,12 @@ class DataContainer:
             filename = kwargs["file_name"]
 
         filename = utils.find_file(filename)
-        self.meta = {"filename": filename,
-                     "description": "",
-                     "history": [],
-                     "name": "<empty>"}
+        self.meta = {
+            "filename": filename,
+            "description": "",
+            "history": [],
+            "name": "<empty>",
+        }
         self.meta.update(kwargs)
 
         self.headers = []

@@ -88,15 +88,17 @@ class ApertureMask(Effect):
                 kwargs["filename"] = kwargs["filename_format"].format(w, h)
 
         super().__init__(**kwargs)
-        params = {"pixel_scale": "!INST.pixel_scale",
-                  "no_mask": True,
-                  "angle": 0,
-                  "shape": "rect",
-                  "conserve_image": True,
-                  "id": 0,
-                  "report_plot_include": False,
-                  "report_table_include": True,
-                  "report_table_rounding": 4}
+        params = {
+            "pixel_scale": "!INST.pixel_scale",
+            "no_mask": True,
+            "angle": 0,
+            "shape": "rect",
+            "conserve_image": True,
+            "id": 0,
+            "report_plot_include": False,
+            "report_table_include": True,
+            "report_table_rounding": 4,
+        }
 
         self.meta["z_order"] = [80, 280, 380]
         self.meta.update(params)
@@ -269,12 +271,14 @@ class ApertureList(Effect):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        params = {"pixel_scale": "!INST.pixel_scale",
-                  "n_round_corners": 32,        # number of corners use to estimate ellipse
-                  "no_mask": False,             # .. todo:: is this necessary when we have conserve_image?
-                  "report_plot_include": True,
-                  "report_table_include": True,
-                  "report_table_rounding": 4}
+        params = {
+            "pixel_scale": "!INST.pixel_scale",
+            "n_round_corners": 32,        # number of corners use to estimate ellipse
+            "no_mask": False,             # .. todo:: is this necessary when we have conserve_image?
+            "report_plot_include": True,
+            "report_table_include": True,
+            "report_table_rounding": 4,
+        }
         self.meta["z_order"] = [81, 281]
         self.meta.update(params)
         self.meta.update(kwargs)
@@ -321,15 +325,17 @@ class ApertureList(Effect):
             row_dict = {col: row[col] for col in row.colnames}
             row_dict["n_round"] = self.meta["n_round_corners"]
             array_dict = make_aperture_polygon(**row_dict)
-            params = {"id": row["id"],
-                      "angle": row["angle"],
-                      "shape": row["shape"],
-                      "conserve_image": yaml.full_load(str(row["conserve_image"])),
-                      "no_mask": self.meta["no_mask"],
-                      "pixel_scale": self.meta["pixel_scale"],
-                      "x_unit": "arcsec",
-                      "y_unit": "arcsec",
-                      "angle_unit": "arcsec"}
+            params = {
+                "id": row["id"],
+                "angle": row["angle"],
+                "shape": row["shape"],
+                "conserve_image": yaml.full_load(str(row["conserve_image"])),
+                "no_mask": self.meta["no_mask"],
+                "pixel_scale": self.meta["pixel_scale"],
+                "x_unit": "arcsec",
+                "y_unit": "arcsec",
+                "angle_unit": "arcsec",
+            }
             apertures_list.append(ApertureMask(array_dict=array_dict, **params))
 
         return apertures_list
@@ -420,11 +426,13 @@ class SlitWheel(Effect):
         super().__init__(**kwargs)
         check_keys(kwargs, self.required_keys, action="error")
 
-        params = {"z_order": [80, 280, 580],
-                  "path": "",
-                  "report_plot_include": False,
-                  "report_table_include": True,
-                  "report_table_rounding": 4}
+        params = {
+            "z_order": [80, 280, 580],
+            "path": "",
+            "report_plot_include": False,
+            "report_table_include": True,
+            "report_table_rounding": 4,
+        }
         self.meta.update(params)
         self.meta.update(kwargs)
 
