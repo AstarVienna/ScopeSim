@@ -461,7 +461,7 @@ class LinearityCurve(Effect):
         - name: detector_linearity
           class: LinearityCurve
           kwargs:
-            file_name: FPA_linearity.dat
+            filename: FPA_linearity.dat
 
         - name: detector_linearity
           class: LinearityCurve

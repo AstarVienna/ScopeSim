@@ -221,7 +221,7 @@ effects :
     description : Quantum efficiency curves for each detector
     class : QuantumEfficiencyCurve
     kwargs :
-        file_name : QE_detector_H2RG.dat
+        filename : QE_detector_H2RG.dat
 
 -   name: dark_current
     description : MICADO dark current
@@ -244,4 +244,4 @@ effects :
     description : Readout noise frames
     class : ReadoutNoise
     kwargs :
-        file_name : FPA_noise.fits
+        filename : FPA_noise.fits
