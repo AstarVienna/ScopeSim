@@ -202,20 +202,22 @@ class Effect(DataContainer):
         cls_doc = self.__doc__ if self.__doc__ is not None else "<no docstring>"
         cls_descr = cls_doc.lstrip().splitlines()[0]
 
-        params = {"report_plot_filename": None,
-                  "report_plot_file_formats": ["png"],
-                  "report_plot_caption": "",
-                  "report_plot_include": False,
-                  "report_table_include": False,
-                  "report_table_caption": "",
-                  "report_table_rounding": None,
-                  "report_image_path": "!SIM.reports.image_path",
-                  "report_rst_path": "!SIM.reports.rst_path",
-                  "report_latex_path": "!SIM.reports.latex_path",
-                  "file_description": self.meta.get("description",
-                                                    "<no description>"),
-                  "class_description": cls_descr,
-                  "changes_str": changes_str}
+        params = {
+            "report_plot_filename": None,
+            "report_plot_file_formats": ["png"],
+            "report_plot_caption": "",
+            "report_plot_include": False,
+            "report_table_include": False,
+            "report_table_caption": "",
+            "report_table_rounding": None,
+            "report_image_path": "!SIM.reports.image_path",
+            "report_rst_path": "!SIM.reports.rst_path",
+            "report_latex_path": "!SIM.reports.latex_path",
+            "file_description": self.meta.get("description",
+                                              "<no description>"),
+            "class_description": cls_descr,
+            "changes_str": changes_str,
+        }
         params.update(self.meta)
         params.update(kwargs)
         params = from_currsys(params)

@@ -41,17 +41,18 @@ class PSF(Effect):
         self._waveset = []
         super().__init__(**kwargs)
 
-        params = {"flux_accuracy": "!SIM.computing.flux_accuracy",
-                  "sub_pixel_flag": "!SIM.sub_pixel.flag",
-                  "z_order": [40, 640],
-                  "convolve_mode": "same",      # "full", "same"
-                  "bkg_width": -1,
-                  "wave_key": "WAVE0",
-                  "normalise_kernel": True,
-                  "rotational_blur_angle": 0,
-                  "report_plot_include": True,
-                  "report_table_include": False,
-                  }
+        params = {
+            "flux_accuracy": "!SIM.computing.flux_accuracy",
+            "sub_pixel_flag": "!SIM.sub_pixel.flag",
+            "z_order": [40, 640],
+            "convolve_mode": "same",      # "full", "same"
+            "bkg_width": -1,
+            "wave_key": "WAVE0",
+            "normalise_kernel": True,
+            "rotational_blur_angle": 0,
+            "report_plot_include": True,
+            "report_table_include": False,
+        }
         self.meta.update(params)
         self.meta.update(kwargs)
         self.meta = utils.from_currsys(self.meta)
@@ -431,10 +432,12 @@ class AnisocadoConstPSF(SemiAnalyticalPSF):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        params = {"z_order": [42, 652],
-                  "psf_side_length": 512,
-                  "offset": (0, 0),
-                  "rounded_edges": True}
+        params = {
+            "z_order": [42, 652],
+            "psf_side_length": 512,
+            "offset": (0, 0),
+            "rounded_edges": True,
+        }
         self.meta.update(params)
         self.meta.update(kwargs)
 

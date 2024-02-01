@@ -12,10 +12,11 @@ from ..base_classes import FieldOfViewBase
 class Shift3D(Effect):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        params = {"z_order": [30, 230],
-                  "report_plot_include": True,
-                  "report_table_include": False,
-                  }
+        params = {
+            "z_order": [30, 230],
+            "report_plot_include": True,
+            "report_table_include": False,
+        }
         self.meta.update(params)
         self.meta.update(kwargs)
 
@@ -102,12 +103,14 @@ class AtmosphericDispersion(Shift3D):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        params = {"z_order": [231],
-                  "wave_min": "!SIM.spectral.wave_min",
-                  "wave_mid": "!SIM.spectral.wave_mid",
-                  "wave_max": "!SIM.spectral.wave_max",
-                  "sub_pixel_fraction": "!SIM.sub_pixel.fraction",
-                  "num_steps": 1000,}
+        params = {
+            "z_order": [231],
+            "wave_min": "!SIM.spectral.wave_min",
+            "wave_mid": "!SIM.spectral.wave_mid",
+            "wave_max": "!SIM.spectral.wave_max",
+            "sub_pixel_fraction": "!SIM.sub_pixel.fraction",
+            "num_steps": 1000,
+        }
         self.meta.update(params)
         self.meta.update(kwargs)
 
