@@ -104,10 +104,10 @@ class UserCommands:
     >>>
     >>> download_package("test_package")
     >>> cmd = UserCommands(packages=["test_package"],
-    >>>                    yamls=["test_telescope.yaml",
-    >>>                           {"alias": "ATMO",
-    >>>                            "properties": {"pwv": 9001}}],
-    >>>                    properties={"!ATMO.pwv": 8999})
+    ...                    yamls=["test_telescope.yaml",
+    ...                           {"alias": "ATMO",
+    ...                            "properties": {"pwv": 9001}}],
+    ...                    properties={"!ATMO.pwv": 8999})
 
     Notes
     -----
