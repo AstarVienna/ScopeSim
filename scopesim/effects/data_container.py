@@ -1,3 +1,5 @@
+from warnings import warn
+
 from astropy.table import Table
 from astropy.io import ascii as ioascii
 from astropy.io import fits
@@ -61,6 +63,9 @@ class DataContainer:
     def __init__(self, filename=None, table=None, array_dict=None, **kwargs):
 
         if filename is None and "file_name" in kwargs:
+            warn("The 'file_name' kwarg is deprecated and will raise an error "
+                 "in the future, please use 'filename' instead!",
+                 DeprecationWarning, stacklevel=2)
             filename = kwargs["file_name"]
 
         filename = utils.find_file(filename)

@@ -308,7 +308,7 @@ class MetisLMSSpectralTrace(SpectralTrace):
         y_min = aperture["bottom"]
         y_max = aperture["top"]
 
-        layout = ioascii.read(find_file("!DET.layout.file_name"))
+        layout = ioascii.read(find_file("!DET.layout.filename"))
         det_lims = {}
         xhw = layout["pixel_size"] * layout["x_size"] / 2
         yhw = layout["pixel_size"] * layout["y_size"] / 2
