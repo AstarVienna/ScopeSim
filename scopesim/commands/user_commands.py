@@ -1,6 +1,6 @@
-import os
-import copy
+from copy import deepcopy
 from pathlib import Path
+from collections.abc import Mapping
 
 import yaml
 import httpx
@@ -99,15 +99,15 @@ class UserCommands:
     and ``yamls`` must be specified, otherwise scopesim will not know
     where to look for yaml files (only relevant if reading in yaml files)::
 
-        >>> from scopesim.server.database import download_package
-        >>> from scopesim.commands import UserCommands
-        >>>
-        >>> download_package("test_package")
-        >>> cmd = UserCommands(packages=["test_package"],
-        ...                    yamls=["test_telescope.yaml",
-        ...                           {"alias": "ATMO",
-        ...                            "properties": {"pwv": 9001}}],
-        ...                    properties={"!ATMO.pwv": 8999})
+    >>> from scopesim.server.database import download_package
+    >>> from scopesim.commands import UserCommands
+    >>>
+    >>> download_package("test_package")
+    >>> cmd = UserCommands(packages=["test_package"],
+    ...                    yamls=["test_telescope.yaml",
+    ...                           {"alias": "ATMO",
+    ...                            "properties": {"pwv": 9001}}],
+    ...                    properties={"!ATMO.pwv": 8999})
 
     Notes
     -----
@@ -128,14 +128,14 @@ class UserCommands:
         However, if you would still like to avoid your IP address being stored,
         you can run ``scopesim`` 100% anonymously by setting::
 
-            >>> scopsim.rc.__config__["!SIM.reports.ip_tracking"] = True
+        >>> scopsim.rc.__config__["!SIM.reports.ip_tracking"] = True
 
         at the beginning of each session. Alternatively you can also pass the
         same bang keyword when generating a ``UserCommand`` object::
 
-            >>> from scopesim import UserCommands
-            >>> UserCommands(use_instrument="MICADO",
-            >>>              properties={"!SIM.reports.ip_tracking": False})
+        >>> from scopesim import UserCommands
+        >>> UserCommands(use_instrument="MICADO",
+        ...              properties={"!SIM.reports.ip_tracking": False})
 
         If you use a custom ``yaml`` configuration file, you can also add this
         keyword to the ``properties`` section of the ``yaml`` file.
@@ -145,7 +145,7 @@ class UserCommands:
     @top_level_catch
     def __init__(self, **kwargs):
 
-        self.cmds = copy.deepcopy(rc.__config__)
+        self.cmds = deepcopy(rc.__config__)
         self.yaml_dicts = []
         self.kwargs = kwargs
         self.ignore_effects = []
@@ -184,7 +184,7 @@ class UserCommands:
                     else:
                         logger.warning("%s could not be found", yaml_input)
 
-                elif isinstance(yaml_input, dict):
+                elif isinstance(yaml_input, Mapping):
                     self.cmds.update(yaml_input)
                     self.yaml_dicts.append(yaml_input)
 
@@ -240,7 +240,7 @@ class UserCommands:
         self.__init__(yamls=self.default_yamls)
 
     def list_modes(self):
-        if isinstance(self.modes_dict, dict):
+        if isinstance(self.modes_dict, Mapping):
             modes = {}
             for mode_name in self.modes_dict:
                 dic = self.modes_dict[mode_name]
@@ -286,9 +286,8 @@ def check_for_updates(package_name):
     response = {}
 
     # tracking **exclusively** your IP address for our internal stats
-    if rc.__currsys__["!SIM.reports.ip_tracking"] and \
-            "TRAVIS" not in os.environ:
-        front_matter = rc.__currsys__["!SIM.file.server_base_url"]
+    if rc.__currsys__["!SIM.reports.ip_tracking"]:
+        front_matter = str(rc.__currsys__["!SIM.file.server_base_url"])
         back_matter = f"api.php?package_name={package_name}"
         try:
             response = httpx.get(url=front_matter+back_matter).json()
