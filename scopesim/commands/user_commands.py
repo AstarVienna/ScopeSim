@@ -135,7 +135,7 @@ class UserCommands:
 
         >>> from scopesim import UserCommands
         >>> UserCommands(use_instrument="MICADO",
-        >>>              properties={"!SIM.reports.ip_tracking": False})
+        ...              properties={"!SIM.reports.ip_tracking": False})
 
         If you use a custom ``yaml`` configuration file, you can also add this
         keyword to the ``properties`` section of the ``yaml`` file.
