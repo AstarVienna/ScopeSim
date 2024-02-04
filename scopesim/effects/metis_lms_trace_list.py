@@ -63,7 +63,6 @@ class MetisLMSSpectralTraceList(SpectralTraceList):
         #     spt.meta["ymax"] = self.slicelist["top"][sli]
 
         # if self._file is not None:
-        #     print(self._file)
         #     self.make_spectral_traces()
 
     def apply_to(self, obj, **kwargs):

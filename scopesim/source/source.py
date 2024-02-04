@@ -289,10 +289,11 @@ class Source(SourceBase):
         try:
             bunit = u.Unit(bunit)
         except ValueError:
-            print(f"Astropy cannot parse BUNIT [{bunit}].\n"
-                  "You can bypass this check by passing an astropy Unit to "
-                  "the flux parameter:\n"
-                  ">>> Source(image_hdu=..., flux=u.Unit(bunit), ...)")
+            logger.error(
+                "Astropy cannot parse BUNIT [%s].\n"
+                "You can bypass this check by passing an astropy Unit to the "
+                "flux parameter:\n"
+                ">>> Source(image_hdu=..., flux=u.Unit(bunit), ...)", bunit)
 
         value = 0 if bunit in [u.mag, u.ABmag] else 1
         self._from_imagehdu_and_flux(image_hdu, value * bunit)
@@ -341,10 +342,10 @@ class Source(SourceBase):
             u.Unit(bunit)
         except KeyError:
             bunit = "erg / (s cm2 arcsec2)"
-            logger.warning("Keyword \"BUNIT\" not found, setting to %s by default",
-                           bunit)
-        except ValueError as errcode:
-            print("\"BUNIT\" keyword is malformed:", errcode)
+            logger.warning(
+                "Keyword \"BUNIT\" not found, setting to %s by default", bunit)
+        except ValueError as error:
+            logger.error("\"BUNIT\" keyword is malformed: %s", error)
             raise
 
         # Compute the wavelength vector. This will be attached to the cube_hdu

@@ -1,5 +1,6 @@
+# -*- coding: utf-8 -*-
+
 import copy
-import sys
 
 from datetime import datetime
 
@@ -18,8 +19,11 @@ from .image_plane import ImagePlane
 from ..commands.user_commands import UserCommands
 from ..detector import DetectorArray
 from ..effects import ExtraFitsKeywords
-from ..utils import from_currsys, top_level_catch
+from ..utils import from_currsys, top_level_catch, get_logger
 from .. import rc, __version__
+
+
+logger = get_logger(__name__)
 
 
 class OpticalTrain:
@@ -185,7 +189,6 @@ class OpticalTrain:
         # [3D - Atmospheric shifts, PSF, NCPAs, Grating shift/distortion]
         fovs = self.fov_manager.fovs
         for fov in tqdm(fovs, desc=" FOVs", position=0):
-            # print("FOV", fov_i+1, "of", n_fovs, flush=True)
             # .. todo: possible bug with bg flux not using plate_scale
             #          see fov_utils.combine_imagehdu_fields
             fov.extract_from(source)
@@ -333,9 +336,10 @@ class OpticalTrain:
             else:
                 try:
                     hdul = self.write_header(hdul)
-                except Exception as error:
-                    print("\nWarning: header update failed, data will be saved with incomplete header.")
-                    print(f"Reason: {sys.exc_info()[0]} {error}\n")
+                except Exception:
+                    logger.exception("Header update failed, data will be "
+                                     "saved with incomplete header. See stack "
+                                     "trace for details.")
 
             if filename is not None and isinstance(filename, str):
                 fname = filename

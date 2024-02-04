@@ -376,7 +376,6 @@ def extract_area_from_imagehdu(imagehdu, fov_volume):
         # f0, f1 : the scaling factors for the blue and red edge cube slices
         #
         # w0, w1 = hdu_waves[i0p], hdu_waves[i1p]
-        # print(f"\nw0: {w0}, f0: {f0}, {fov_waves}, f1: {f1}, w1: {w1}")
 
         new_hdr.update({"NAXIS": 3,
                         "NAXIS3": data.shape[0],
