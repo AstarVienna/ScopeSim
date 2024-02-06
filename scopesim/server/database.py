@@ -4,10 +4,8 @@
 from datetime import date
 from warnings import warn
 from pathlib import Path
-from typing import Optional, Union, List, Tuple, Set, Dict
-# Python 3.8 doesn't yet know these things.......
-# from collections.abc import Iterator, Iterable, Mapping
-from typing import Iterator, Iterable, Mapping
+from typing import Optional, Union
+from collections.abc import Iterator, Iterable, Mapping
 
 from more_itertools import first, last, groupby_transform
 
@@ -23,7 +21,7 @@ from ..utils import get_logger
 logger = get_logger(__name__)
 
 _GrpVerType = Mapping[str, Iterable[str]]
-_GrpItrType = Iterator[Tuple[str, List[str]]]
+_GrpItrType = Iterator[tuple[str, list[str]]]
 
 
 class PkgNotFoundError(Exception):
@@ -83,7 +81,7 @@ def _unparse_raw_version(raw_version: str, package_name: str) -> str:
     return f"{package_name}.{raw_version}.zip"
 
 
-def _parse_package_version(package: str) -> Tuple[str, str]:
+def _parse_package_version(package: str) -> tuple[str, str]:
     p_name, p_version = package.split(".", maxsplit=1)
     return p_name, _parse_raw_version(p_version)
 
@@ -102,7 +100,7 @@ def get_latest(versions: Iterable[str]) -> str:
     return max(versions)
 
 
-def get_all_stable(version_groups: _GrpVerType) -> Iterator[Tuple[str, str]]:
+def get_all_stable(version_groups: _GrpVerType) -> Iterator[tuple[str, str]]:
     """
     Yield the most recent version (stable or dev) of each package.
 
@@ -113,7 +111,7 @@ def get_all_stable(version_groups: _GrpVerType) -> Iterator[Tuple[str, str]]:
 
     Yields
     ------
-    Iterator[Tuple[str, str]]
+    Iterator[tuple[str, str]]
         Iterator of package name - latest stable version pairs.
 
     """
@@ -121,7 +119,7 @@ def get_all_stable(version_groups: _GrpVerType) -> Iterator[Tuple[str, str]]:
         yield (package_name, get_stable(versions))
 
 
-def get_all_latest(version_groups: _GrpVerType) -> Iterator[Tuple[str, str]]:
+def get_all_latest(version_groups: _GrpVerType) -> Iterator[tuple[str, str]]:
     """
     Yield the most recent stable (not "dev") version of each package.
 
@@ -132,7 +130,7 @@ def get_all_latest(version_groups: _GrpVerType) -> Iterator[Tuple[str, str]]:
 
     Yields
     ------
-    Iterator[Tuple[str, str]]
+    Iterator[tuple[str, str]]
         Iterator of package name - latest version pairs.
 
     """
@@ -140,7 +138,7 @@ def get_all_latest(version_groups: _GrpVerType) -> Iterator[Tuple[str, str]]:
         yield (package_name, get_latest(versions))
 
 
-def group_package_versions(all_packages: Iterable[Tuple[str, str]]) -> _GrpItrType:
+def group_package_versions(all_packages: Iterable[tuple[str, str]]) -> _GrpItrType:
     """Group different versions of packages by package name."""
     version_groups = groupby_transform(sorted(all_packages),
                                        keyfunc=first,
@@ -149,7 +147,7 @@ def group_package_versions(all_packages: Iterable[Tuple[str, str]]) -> _GrpItrTy
     return version_groups
 
 
-def crawl_server_dirs(client=None) -> Iterator[Tuple[str, Set[str]]]:
+def crawl_server_dirs(client=None) -> Iterator[tuple[str, set[str]]]:
     """Search all folders on server for .zip files."""
     if client is None:
         with create_client(get_base_url()) as client:
@@ -157,17 +155,17 @@ def crawl_server_dirs(client=None) -> Iterator[Tuple[str, Set[str]]]:
         return
 
     for dir_name in get_server_folder_contents(client, "", "/"):
-        logger.info("Searching folder '%s'", dir_name)
+        logger.debug("Searching folder '%s'", dir_name)
         try:
             p_dir = get_server_folder_package_names(client, dir_name)
         except ValueError as err:
-            logger.info(err)
+            logger.debug(err)
             continue
-        logger.info("Found packages %s.", p_dir)
+        logger.debug("Found packages %s.", p_dir)
         yield dir_name, p_dir
 
 
-def get_all_package_versions(client=None) -> Dict[str, List[str]]:
+def get_all_package_versions(client=None) -> dict[str, list[str]]:
     """Gather all versions for all packages present in any folder on server."""
     if client is None:
         with create_client(get_base_url()) as client:
@@ -182,7 +180,7 @@ def get_all_package_versions(client=None) -> Dict[str, List[str]]:
     return grouped
 
 
-def get_package_folders(client) -> Dict[str, str]:
+def get_package_folders(client) -> dict[str, str]:
     """Map package names to server locations."""
     folders_dict = {pkg: path.strip("/")
                     for path, pkgs in dict(crawl_server_dirs(client)).items()
@@ -190,7 +188,7 @@ def get_package_folders(client) -> Dict[str, str]:
     return folders_dict
 
 
-def get_server_folder_package_names(client, dir_name: str) -> Set[str]:
+def get_server_folder_package_names(client, dir_name: str) -> set[str]:
     """
     Retrieve all unique package names present on server in `dir_name` folder.
 
@@ -222,7 +220,7 @@ def get_server_folder_package_names(client, dir_name: str) -> Set[str]:
     return package_names
 
 
-def get_all_packages_on_server() -> Iterator[Tuple[str, set]]:
+def get_all_packages_on_server() -> Iterator[tuple[str, set]]:
     """
     Retrieve all unique package names present on server in known folders.
 
@@ -238,14 +236,14 @@ def get_all_packages_on_server() -> Iterator[Tuple[str, set]]:
 
     Yields
     ------
-    Iterator[Tuple[str, set]]
+    Iterator[tuple[str, set]]
         Key-value pairs of folder and corresponding package names.
 
     """
     yield from crawl_server_dirs()
 
 
-def list_packages(pkg_name: Optional[str] = None) -> List[str]:
+def list_packages(pkg_name: Optional[str] = None) -> list[str]:
     """
     List all packages, or all variants of a single package.
 
@@ -339,7 +337,7 @@ def _download_single_package(client, pkg_name: str, release: str, all_versions,
 
 def download_packages(pkg_names: Union[Iterable[str], str],
                       release: str = "stable",
-                      save_dir: Optional[str] = None) -> List[Path]:
+                      save_dir: Optional[str] = None) -> list[Path]:
     """
     Download one or more packages to the local disk.
 
@@ -396,14 +394,14 @@ def download_packages(pkg_names: Union[Iterable[str], str],
 
     """
     base_url = get_base_url()
-    print("Gathering information from server ...")
-    logger.info("Accessing %s", base_url)
+    logger.info("Gathering information from server ...")
+    logger.debug("Accessing %s", base_url)
 
     with create_client(base_url) as client:
         all_versions = get_all_package_versions(client)
         folders_dict = get_package_folders(client)
 
-        print("Connection successful, starting download ...")
+        logger.info("Connection successful, starting download ...")
 
         if isinstance(pkg_names, str):
             pkg_names = [pkg_names]
@@ -416,9 +414,11 @@ def download_packages(pkg_names: Union[Iterable[str], str],
                     client, pkg_name, release, all_versions, folders_dict,
                     save_dir, padlen)
             except PkgNotFoundError as error:
-                logger.error("\n")  # needed until tqdm redirect implemented
+                # Whole stack trace not useful for enduser.
+                # Could log it to file though...
+                # logger.exception(error)
                 logger.error(error)
-                logger.error("Skipping download of package '%s'", pkg_name)
+                logger.warning("Skipping download of package '%s'", pkg_name)
                 continue
             save_paths.append(pkg_path)
 

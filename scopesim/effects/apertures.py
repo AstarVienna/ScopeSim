@@ -1,5 +1,6 @@
 """Effects related to field masks, including spectroscopic slits."""
 
+import warnings
 import yaml
 
 import numpy as np
@@ -87,15 +88,17 @@ class ApertureMask(Effect):
                 kwargs["filename"] = kwargs["filename_format"].format(w, h)
 
         super().__init__(**kwargs)
-        params = {"pixel_scale": "!INST.pixel_scale",
-                  "no_mask": True,
-                  "angle": 0,
-                  "shape": "rect",
-                  "conserve_image": True,
-                  "id": 0,
-                  "report_plot_include": False,
-                  "report_table_include": True,
-                  "report_table_rounding": 4}
+        params = {
+            "pixel_scale": "!INST.pixel_scale",
+            "no_mask": True,
+            "angle": 0,
+            "shape": "rect",
+            "conserve_image": True,
+            "id": 0,
+            "report_plot_include": False,
+            "report_table_include": True,
+            "report_table_rounding": 4,
+        }
 
         self.meta["z_order"] = [80, 280, 380]
         self.meta.update(params)
@@ -127,7 +130,8 @@ class ApertureMask(Effect):
     # Outdated. Remove when removing all old FOVManager code from effects
     def fov_grid(self, which="edges", **kwargs):
         """Return a header with the sky coordinates."""
-        logger.warning("DetectorList.fov_grid will be depreciated in v1.0")
+        warnings.warn("The fov_grid method is deprecated and will be removed "
+                      "in a future release.", DeprecationWarning, stacklevel=2)
         if which == "edges":
             self.meta.update(kwargs)
             return self.header
@@ -206,16 +210,6 @@ class RectangularApertureMask(ApertureMask):
 
         self.table = self.get_table(**kwargs)
 
-    # def fov_grid(self, which="edges", **kwargs):
-    #     """ Returns a header with the sky coordinates """
-    #     if which == "edges":
-    #         self.table = self.get_table(**kwargs)
-    #         return self.header      # from base class ApertureMask
-    #
-    #     elif which == "masks":
-    #         self.meta.update(kwargs)
-    #         return self.mask
-
     def get_table(self, **kwargs):
         self.meta.update(kwargs)
         x = from_currsys(self.meta["x"], self.cmds)
@@ -277,12 +271,14 @@ class ApertureList(Effect):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        params = {"pixel_scale": "!INST.pixel_scale",
-                  "n_round_corners": 32,        # number of corners use to estimate ellipse
-                  "no_mask": False,             # .. todo:: is this necessary when we have conserve_image?
-                  "report_plot_include": True,
-                  "report_table_include": True,
-                  "report_table_rounding": 4}
+        params = {
+            "pixel_scale": "!INST.pixel_scale",
+            "n_round_corners": 32,        # number of corners use to estimate ellipse
+            "no_mask": False,             # .. todo:: is this necessary when we have conserve_image?
+            "report_plot_include": True,
+            "report_table_include": True,
+            "report_table_rounding": 4,
+        }
         self.meta["z_order"] = [81, 281]
         self.meta.update(params)
         self.meta.update(kwargs)
@@ -315,14 +311,6 @@ class ApertureList(Effect):
 
         return obj
 
-    # def fov_grid(self, which="edges", **kwargs):
-    #     params = deepcopy(self.meta)
-    #     params.update(kwargs)
-    #     if which == "edges":
-    #         return [ap.fov_grid(which=which, **params) for ap in self.apertures]
-    #     if which == "masks":
-    #         return {ap.meta["id"]: ap.mask for ap in self.apertures}
-
     @property
     def apertures(self):
         return self.get_apertures(range(len(self.table)))
@@ -337,15 +325,17 @@ class ApertureList(Effect):
             row_dict = {col: row[col] for col in row.colnames}
             row_dict["n_round"] = self.meta["n_round_corners"]
             array_dict = make_aperture_polygon(**row_dict)
-            params = {"id": row["id"],
-                      "angle": row["angle"],
-                      "shape": row["shape"],
-                      "conserve_image": yaml.full_load(str(row["conserve_image"])),
-                      "no_mask": self.meta["no_mask"],
-                      "pixel_scale": self.meta["pixel_scale"],
-                      "x_unit": "arcsec",
-                      "y_unit": "arcsec",
-                      "angle_unit": "arcsec"}
+            params = {
+                "id": row["id"],
+                "angle": row["angle"],
+                "shape": row["shape"],
+                "conserve_image": yaml.full_load(str(row["conserve_image"])),
+                "no_mask": self.meta["no_mask"],
+                "pixel_scale": self.meta["pixel_scale"],
+                "x_unit": "arcsec",
+                "y_unit": "arcsec",
+                "angle_unit": "arcsec",
+            }
             apertures_list.append(ApertureMask(array_dict=array_dict, **params))
 
         return apertures_list
@@ -436,11 +426,13 @@ class SlitWheel(Effect):
         super().__init__(**kwargs)
         check_keys(kwargs, self.required_keys, action="error")
 
-        params = {"z_order": [80, 280, 580],
-                  "path": "",
-                  "report_plot_include": False,
-                  "report_table_include": True,
-                  "report_table_rounding": 4}
+        params = {
+            "z_order": [80, 280, 580],
+            "path": "",
+            "report_plot_include": False,
+            "report_table_include": True,
+            "report_table_rounding": 4,
+        }
         self.meta.update(params)
         self.meta.update(kwargs)
 
@@ -459,6 +451,8 @@ class SlitWheel(Effect):
 
     def fov_grid(self, which="edges", **kwargs):
         """See parent docstring."""
+        warnings.warn("The fov_grid method is deprecated and will be removed "
+                      "in a future release.", DeprecationWarning, stacklevel=2)
         return self.current_slit.fov_grid(which=which, **kwargs)
 
     def change_slit(self, slitname=None):

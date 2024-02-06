@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Electronic detector effects - related to detector readout.
 
@@ -100,7 +101,7 @@ class DetectorModePropertiesSetter(Effect):
                                             self.cmds))
         if isinstance(obj, ImagePlaneBase) and mode_name == "auto":
             mode_name = self.select_mode(obj, **kwargs)
-            print("Detector mode set to", mode_name)
+            logger.info("Detector mode set to %s", mode_name)
 
         self.meta["detector_readout_mode"] = mode_name
         props_dict = self.mode_properties[mode_name]
@@ -198,10 +199,10 @@ class AutoExposure(Effect):
             if exptime is None:
                 exptime = from_currsys("!OBS.dit", self.cmds) * \
                           from_currsys("!OBS.ndit", self.cmds)
-            print(f"Requested exposure time: {exptime:.3f} s")
+            logger.info("Requested exposure time: %.3f s", exptime)
 
             if exptime < mindit:
-                print(f"    increased to MINDIT: {mindit:.3f} s")
+                logger.info("    increased to MINDIT: %.3f s", mindit)
                 exptime = mindit
 
             full_well = from_currsys(self.meta["full_well"], self.cmds)
@@ -219,12 +220,11 @@ class AutoExposure(Effect):
             if dit < from_currsys(self.meta["mindit"], self.cmds):
                 dit = from_currsys(self.meta["mindit"], self.cmds)
                 ndit = int(np.floor(exptime / dit))
-                print("Warning: The detector will be saturated!")
+                logger.warning("The detector will be saturated!")
                 # ..todo: turn into proper warning
 
-            print("Exposure parameters:")
-            print(f"                DIT: {dit:.3f} s  NDIT: {ndit}")
-            print(f"Total exposure time: {dit * ndit:.3f} s")
+            logger.info("Exposure parameters: DIT=%.3f s  NDIT=%d", dit, ndit)
+            logger.info("Total exposure time: %.3f s", dit * ndit)
 
             rc.__currsys__["!OBS.dit"] = dit
             rc.__currsys__["!OBS.ndit"] = ndit
@@ -468,7 +468,7 @@ class LinearityCurve(Effect):
         - name: detector_linearity
           class: LinearityCurve
           kwargs:
-            file_name: FPA_linearity.dat
+            filename: FPA_linearity.dat
 
         - name: detector_linearity
           class: LinearityCurve
@@ -486,9 +486,11 @@ class LinearityCurve(Effect):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        params = {"z_order": [840],
-                  "report_plot_include": True,
-                  "report_table_include": False}
+        params = {
+            "z_order": [840],
+            "report_plot_include": True,
+            "report_table_include": False,
+        }
         self.meta.update(params)
         self.meta.update(kwargs)
 
@@ -613,7 +615,7 @@ class Quantization(Effect):
         new_dtype = self.meta["dtype"]
         if not np.issubdtype(new_dtype, np.integer):
             logger.warning("Setting quantized data to dtype %s, which is not "
-                            "an integer subtype.", new_dtype)
+                           "an integer subtype.", new_dtype)
 
         # This used to create a new ImageHDU with the same header but the data
         # set to the modified data. It should be fine to simply re-assign the

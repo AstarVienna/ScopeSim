@@ -1,6 +1,6 @@
+# -*- coding: utf-8 -*-
+
 import copy
-import sys
-from pathlib import Path
 
 from datetime import datetime
 
@@ -10,6 +10,7 @@ from astropy import units as u
 
 from tqdm import tqdm
 
+from synphot import SourceSpectrum, Empirical1D
 from synphot.units import PHOTLAM
 
 from .optics_manager import OpticsManager
@@ -18,9 +19,11 @@ from .image_plane import ImagePlane
 from ..commands.user_commands import UserCommands
 from ..detector import DetectorArray
 from ..effects import ExtraFitsKeywords
-from ..utils import from_currsys, top_level_catch
-from ..version import version
-from .. import rc
+from ..utils import from_currsys, top_level_catch, get_logger
+from .. import rc, __version__
+
+
+logger = get_logger(__name__)
 
 import multiprocessing as mp
 
@@ -271,6 +274,19 @@ class OpticalTrain:
         # Convert to PHOTLAM per arcsec2
         # ..todo: this is not sufficiently general
 
+        for ispec, spec in enumerate(source.spectra):
+            # Put on fov wavegrid
+            wave_min = min(fov.meta["wave_min"] for fov in self.fov_manager.fovs)
+            wave_max = max(fov.meta["wave_max"] for fov in self.fov_manager.fovs)
+            wave_unit = u.Unit(from_currsys("!SIM.spectral.wave_unit", self.cmds))
+            dwave = from_currsys("!SIM.spectral.spectral_bin_width", self.cmds)  # Not a quantity
+            fov_waveset = np.arange(wave_min.value, wave_max.value, dwave) * wave_unit
+            fov_waveset = fov_waveset.to(u.um)
+
+            source.spectra[ispec] = SourceSpectrum(Empirical1D,
+                                                   points=fov_waveset,
+                                                   lookup_table=spec(fov_waveset))
+
         for cube in source.cube_fields:
             header, data, wave = cube.header, cube.data, cube.wave
 
@@ -280,7 +296,7 @@ class OpticalTrain:
             factor = 1
             for base, power in zip(inunit.bases, inunit.powers):
                 if (base**power).is_equivalent(u.arcsec**(-2)):
-                    conversion =(base**power).to(u.arcsec**(-2)) / base**power
+                    conversion = (base**power).to(u.arcsec**(-2)) / base**power
                     data *= conversion
                     factor = u.arcsec**(-2)
 
@@ -365,9 +381,10 @@ class OpticalTrain:
             else:
                 try:
                     hdul = self.write_header(hdul)
-                except Exception as error:
-                    print("\nWarning: header update failed, data will be saved with incomplete header.")
-                    print(f"Reason: {sys.exc_info()[0]} {error}\n")
+                except Exception:
+                    logger.exception("Header update failed, data will be "
+                                     "saved with incomplete header. See stack "
+                                     "trace for details.")
 
             if filename is not None and isinstance(filename, str):
                 fname = filename
@@ -384,7 +401,7 @@ class OpticalTrain:
         # Primary hdu
         pheader = hdulist[0].header
         pheader["DATE"] = datetime.now().isoformat(timespec="seconds")
-        pheader["ORIGIN"] = "Scopesim " + version
+        pheader["ORIGIN"] = f"Scopesim {__version__}"
         pheader["INSTRUME"] = from_currsys("!OBS.instrument", self.cmds)
         pheader["INSTMODE"] = ", ".join(from_currsys("!OBS.modes", self.cmds))
         pheader["TELESCOP"] = from_currsys("!TEL.telescope", self.cmds)

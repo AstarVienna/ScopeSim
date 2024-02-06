@@ -12,9 +12,9 @@ effects :
 -   name : detector_qe_curve
     class : TERCurve
     kwargs :
-        file_name : h4rg_QE.dat
+        filename : h4rg_QE.dat
 
 -   name : micado_detector_geometry
     class : DetectorList
     kwargs:
-        file_name: micado_detector_geometry.tbl
+        filename: micado_detector_geometry.tbl

@@ -13,10 +13,12 @@ from . import ter_curves_utils as tu
 from . import psf_utils as pu
 from ..base_classes import ImagePlaneBase, FieldOfViewBase, FOVSetupBase
 from ..utils import (figure_grid_factory, from_currsys, quantify, figure_factory,
-                     check_keys)
+                     check_keys, get_logger)
 
 # TODO: directly import currsys stuff, replace utils.
 # DONE (KL 19.01.2024)
+
+#logger = get_logger()
 
 
 class PoorMansFOV:
@@ -40,17 +42,18 @@ class PSF(Effect):
         self._waveset = []
         super().__init__(**kwargs)
 
-        params = {"flux_accuracy": "!SIM.computing.flux_accuracy",
-                  "sub_pixel_flag": "!SIM.sub_pixel.flag",
-                  "z_order": [40, 640],
-                  "convolve_mode": "same",      # "full", "same"
-                  "bkg_width": -1,
-                  "wave_key": "WAVE0",
-                  "normalise_kernel": True,
-                  "rotational_blur_angle": 0,
-                  "report_plot_include": True,
-                  "report_table_include": False,
-                  }
+        params = {
+            "flux_accuracy": "!SIM.computing.flux_accuracy",
+            "sub_pixel_flag": "!SIM.sub_pixel.flag",
+            "z_order": [40, 640],
+            "convolve_mode": "same",      # "full", "same"
+            "bkg_width": -1,
+            "wave_key": "WAVE0",
+            "normalise_kernel": True,
+            "rotational_blur_angle": 0,
+            "report_plot_include": True,
+            "report_table_include": False,
+        }
         self.meta.update(params)
         self.meta.update(kwargs)
         self.meta = from_currsys(self.meta, self.cmds)
@@ -210,6 +213,8 @@ class NonCommonPathAberration(AnalyticalPSF):
 
     def fov_grid(self, which="waveset", **kwargs):
         """See parent docstring."""
+        warnings.warn("The fov_grid method is deprecated and will be removed "
+                      "in a future release.", DeprecationWarning, stacklevel=2)
         if which == "waveset":
             self.meta.update(kwargs)
             self.meta = from_currsys(self.meta, self.cmds)
@@ -285,18 +290,6 @@ class SeeingPSF(AnalyticalPSF):
         self.meta["fwhm"] = fwhm
         self.meta["z_order"] = [242, 642]
 
-    # def fov_grid(self, which="waveset", **kwargs):
-    #     wavelengths = []
-    #     if which == "waveset" and \
-    #             "waverange" in kwargs and \
-    #             "pixel_scale" in kwargs:
-    #         waverange = quantify(kwargs["waverange"], u.um)
-    #         wavelengths = waverange
-    #         # ..todo: return something useful
-    #
-    #     # .. todo: check that this is actually correct
-    #     return wavelengths
-
     def get_kernel(self, fov):
         # called by .apply_to() from the base PSF class
 
@@ -326,6 +319,8 @@ class GaussianDiffractionPSF(AnalyticalPSF):
 
     def fov_grid(self, which="waveset", **kwargs):
         """See parent docstring."""
+        logger.warn("The fov_grid method is deprecated and will be removed "
+                      "in a future release.", DeprecationWarning, stacklevel=2)
         wavelengths = []
         if which == "waveset" and \
                 "waverange" in kwargs and \
@@ -440,10 +435,12 @@ class AnisocadoConstPSF(SemiAnalyticalPSF):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        params = {"z_order": [42, 652],
-                  "psf_side_length": 512,
-                  "offset": (0, 0),
-                  "rounded_edges": True}
+        params = {
+            "z_order": [42, 652],
+            "psf_side_length": 512,
+            "offset": (0, 0),
+            "rounded_edges": True,
+        }
         self.meta.update(params)
         self.meta.update(kwargs)
 

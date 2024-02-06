@@ -1,6 +1,6 @@
 """Transmission, emissivity, reflection curves."""
-import logging
-from collections.abc import Collection
+import warnings
+from collections.abc import Collection, Iterable
 
 import numpy as np
 import skycalc_ipy
@@ -75,15 +75,17 @@ class TERCurve(Effect):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        params = {"z_order": [10, 110, 510],
-                  "ignore_wings": False,
-                  "wave_min": "!SIM.spectral.wave_min",
-                  "wave_max": "!SIM.spectral.wave_max",
-                  "wave_unit": "!SIM.spectral.wave_unit",
-                  "wave_bin": "!SIM.spectral.spectral_bin_width",
-                  "bg_cell_width": "!SIM.computing.bg_cell_width",
-                  "report_plot_include": True,
-                  "report_table_include": False}
+        params = {
+            "z_order": [10, 110, 510],
+            "ignore_wings": False,
+            "wave_min": "!SIM.spectral.wave_min",
+            "wave_max": "!SIM.spectral.wave_max",
+            "wave_unit": "!SIM.spectral.wave_unit",
+            "wave_bin": "!SIM.spectral.spectral_bin_width",
+            "bg_cell_width": "!SIM.computing.bg_cell_width",
+            "report_plot_include": True,
+            "report_table_include": False,
+        }
         self.meta.update(params)
         self.meta.update(kwargs)
 
@@ -205,10 +207,12 @@ class TERCurve(Effect):
             wunit = params["wave_unit"]
             # TODO: shouldn't need both, make sure they're equal
             if wunit != wave_unit:
-                logger.warning(f"wavelength units in the meta dict of "
-                             f"{self.meta.get('name')} are inconsistent: \n"
-                             f"- wavelength_unit : {wave_unit} \n"
-                             f"- wave_unit : {wunit}")
+                logger.warning("wavelength units in the meta dict of "
+                             "%s are inconsistent:\n"
+                             "- wavelength_unit : %s\n"
+                             "- wave_unit : %s",
+                             {self.meta.get("name")},
+                             wave_unit, wunit)
 
             wave = np.arange(quantify(params["wave_min"], wunit).value,
                              quantify(params["wave_max"], wunit).value,
@@ -221,7 +225,7 @@ class TERCurve(Effect):
         abbrs = {"t": "transmission", "e": "emission",
                  "r": "reflection", "x": "throughput"}
 
-        if not isinstance(axes, list):
+        if not isinstance(axes, Iterable):
             axes = [axes]
         for ter, ax in zip(which, axes):
             y_name = abbrs.get(ter, "throughput")
@@ -422,6 +426,8 @@ class FilterCurve(TERCurve):
         self.table["transmission"][mask] = 0
 
     def fov_grid(self, which="waveset", **kwargs):
+        warnings.warn("The fov_grid method is deprecated and will be removed "
+                      "in a future release.", DeprecationWarning, stacklevel=2)
         if which == "waveset":
             self.meta.update(kwargs)
             self.meta = from_currsys(self.meta, self.cmds)
@@ -582,10 +588,12 @@ class FilterWheelBase(Effect):
         super().__init__(**kwargs)
         check_keys(kwargs, self.required_keys, action="error")
 
-        params = {"z_order": [124, 224, 524],
-                  "report_plot_include": True,
-                  "report_table_include": True,
-                  "report_table_rounding": 4}
+        params = {
+            "z_order": [124, 224, 524],
+            "report_plot_include": True,
+            "report_table_include": True,
+            "report_table_rounding": 4,
+        }
         self.meta.update(params)
         self.meta.update(kwargs)
 
@@ -604,6 +612,8 @@ class FilterWheelBase(Effect):
         return self.current_filter.throughput
 
     def fov_grid(self, which="waveset", **kwargs):
+        warnings.warn("The fov_grid method is deprecated and will be removed "
+                      "in a future release.", DeprecationWarning, stacklevel=2)
         return self.current_filter.fov_grid(which=which, **kwargs)
 
     def change_filter(self, filtername=None):

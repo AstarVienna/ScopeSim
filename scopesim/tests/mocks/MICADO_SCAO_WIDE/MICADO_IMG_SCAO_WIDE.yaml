@@ -25,13 +25,13 @@ effects :
     effect_type : 1D_multiplication
     function_name : import_ter_curve
     kwargs : 
-        file_name : ter_atmo.fits
+        filename : ter_atmo.fits
 
 -   name : atmospheric_emission_map
     effect_type : 2D_multiplication
     function_name : import_multiplication_map
     kwargs : 
-        file_name : atmo_background_emission_map.fits
+        filename : atmo_background_emission_map.fits
         extension : 2
 
 ---
@@ -54,14 +54,14 @@ effects :
     effect_type : 3D_convolution
     function_name : import_psf_cube
     kwargs : 
-        file_name : PSF_MICADO_SCAO-FV_NIR.fits
+        filename : PSF_MICADO_SCAO-FV_NIR.fits
         field_varying : False
     
 -   name : telescope_surface_list
     effect_type : 1D_list
     function_name : import_ter_curve_list
     kwargs : 
-        file_name : elt_mirror_list.tbl
+        filename : elt_mirror_list.tbl
         
 -   name : telescope_vibration
     effect_type : 2D_convolution
@@ -81,7 +81,7 @@ effects :
     effect_type : 2D_distortion
     function_name : import_distortion_map
     kwargs : 
-        file_name : elt_distortion_map.fits
+        filename : elt_distortion_map.fits
         
 ---
 
@@ -100,13 +100,13 @@ effects :
     effect_type : 1D_list
     function_name : import_ter_curve_list
     kwargs : 
-        file_name : relay_mirror_list.tbl
+        filename : relay_mirror_list.tbl
         
 -   name : relay_distortion
     effect_type : 2D_distortion
     function_name : import_distortion_map
     kwargs : 
-        file_name : relay_distortion_map.fits
+        filename : relay_distortion_map.fits
 
         
 ---
@@ -128,25 +128,25 @@ effects :
     effect_type : 1D_list
     function_name : import_ter_curve_list
     kwargs : 
-        file_name : micado_mirror_list.tbl
+        filename : micado_mirror_list.tbl
       
 -   name : micado_distortion
     effect_type : 2D_distortion
     function_name : import_distortion_map
     kwargs : 
-        file_name : micado_distortion_map.fits
+        filename : micado_distortion_map.fits
         
 -   name : filter
     effect_type : 1D_multiplication
     function_name : import_ter_curve
     kwargs :
-        file_name : micado_Ks_filter.dat
+        filename : micado_Ks_filter.dat
         
 -   name : micado_ncpas
     effect_type : 3D_convolution
     function_name : import_ter_curve
     kwargs :
-        file_name : micado_Ks_filter.dat
+        filename : micado_Ks_filter.dat
         
 -   name : micado_adc
     effect_type : 3D_shift
@@ -172,13 +172,13 @@ effects :
     effect_type : 1D_multiplication
     function_name : import_ter_curve
     kwargs :
-        file_name : h4rg_QE.dat
+        filename : h4rg_QE.dat
     
 -   name : noise_frames
     effect_type : 0D_addition
     function_name : import_ter_curve
     kwargs :
-        file_name : h4rg_QE.dat
+        filename : h4rg_QE.dat
     
 -   name : micado_wide_chip_geometry.tbl
     effect_type : 2D_mask_list
