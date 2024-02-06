@@ -321,7 +321,7 @@ class GaussianDiffractionPSF(AnalyticalPSF):
 
     def fov_grid(self, which="waveset", **kwargs):
         """See parent docstring."""
-        logger.warn("The fov_grid method is deprecated and will be removed "
+        warnings.warn("The fov_grid method is deprecated and will be removed "
                       "in a future release.", DeprecationWarning, stacklevel=2)
         wavelengths = []
         if which == "waveset" and \
