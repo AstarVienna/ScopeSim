@@ -15,10 +15,12 @@ from ..base_classes import ImagePlaneBase, FieldOfViewBase, FOVSetupBase
 from ..utils import (figure_grid_factory, from_currsys, quantify, figure_factory,
                      check_keys, get_logger)
 
+import warnings
+
 # TODO: directly import currsys stuff, replace utils.
 # DONE (KL 19.01.2024)
 
-#logger = get_logger()
+logger = get_logger(__name__)
 
 
 class PoorMansFOV:
