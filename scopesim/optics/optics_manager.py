@@ -38,11 +38,15 @@ class OpticsManager:
 
     def __init__(self, yaml_dicts=None, cmds=None, **kwargs):
         self.optical_elements = []
-        self.cmds = cmds
         self.meta = {}
         self.meta.update(kwargs)
         self._surfaces_table = None
         self._surface_like_effects = None
+
+        self.cmds = cmds
+        if self.cmds is None:
+            logger.warning("No UserCommands object was passed when initialising OpticsManager")
+            self.cmds = rc.__currsys__
 
         if yaml_dicts is not None:
             self.load_effects(yaml_dicts, **self.meta)

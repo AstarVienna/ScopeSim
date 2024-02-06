@@ -141,8 +141,7 @@ class SpectralTraceList(Effect):
             params = {col: row[col] for col in row.colnames}
             params.update(self.meta)
             hdu = self._file[row["extension_id"]]
-            spec_traces[row["description"]] = SpectralTrace(hdu, cmds=self.cmds,
-                                                            **params)
+            spec_traces[row["description"]] = SpectralTrace(hdu, **params)
 
         self.spectral_traces = spec_traces
 

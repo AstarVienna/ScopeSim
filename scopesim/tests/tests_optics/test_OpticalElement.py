@@ -42,12 +42,14 @@ class TestOpticalElementInit:
         assert len(opt_el.effects) == 3
         assert opt_el.effects[2].include is False
 
+    # TODO: Check whether the test below actually does what I think it's testing.
+    # Should be obsolete once the currsys is removed from rc
     def test_currsys_ignore_effects_have_false_include_flag(self, atmo_yaml_dict):
         with patch("scopesim.rc.__currsys__", UserCommands()) as patched:
-            patched.ignore_effects = ["super_psf", "atmo_dispersion"]
-            opt_el = opt_elem.OpticalElement(atmo_yaml_dict)
-            for ii in range(2):
-                assert opt_el.effects[ii].include is False
+            patched.ignore_effects = ["super_psf"]
+            opt_el = opt_elem.OpticalElement(atmo_yaml_dict, cmds=patched)
+            for ii in patched.ignore_effects:
+                assert opt_el["super_psf"].include is False
 
 
 @pytest.mark.usefixtures("patch_mock_path")

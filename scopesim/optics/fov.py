@@ -43,7 +43,7 @@ class FieldOfView(FieldOfViewBase):
 
     """
 
-    def __init__(self, header, waverange, detector_header=None, **kwargs):
+    def __init__(self, header, waverange, detector_header=None, cmds=None, **kwargs):
         self.meta = {
             "id": None,
             "wave_min": quantify(waverange[0], u.um),
@@ -64,6 +64,8 @@ class FieldOfView(FieldOfViewBase):
             "aperture_id": None,
         }
         self.meta.update(kwargs)
+
+        self.cmds = cmds
 
         if not any((has_needed_keywords(header, s) for s in ["", "S"])):
             raise ValueError(
@@ -365,7 +367,7 @@ class FieldOfView(FieldOfViewBase):
             [ph s-1 pixel-1] or PHOTLAM (if use_photlam=True)
 
         """
-        spline_order = from_currsys("!SIM.computing.spline_order", self.cmds)
+        spline_order = from_currsys("!SIM.computing.spline_order")
 
         # Make waveset and canvas image
         fov_waveset = self.waveset

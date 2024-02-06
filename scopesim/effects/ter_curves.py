@@ -508,6 +508,7 @@ class TopHatFilterCurve(FilterCurve):
     def __init__(self, **kwargs):
         required_keys = ["transmission", "blue_cutoff", "red_cutoff"]
         check_keys(kwargs, required_keys, action="error")
+        self.cmds = kwargs.get("cmds", None)
 
         wave_min = from_currsys("!SIM.spectral.wave_min", self.cmds)
         wave_max = from_currsys("!SIM.spectral.wave_max", self.cmds)
@@ -522,7 +523,7 @@ class TopHatFilterCurve(FilterCurve):
         tbl = Table(names=["wavelength", "transmission"],
                     data=[waveset, transmission])
         super().__init__(table=tbl, wavelength_unit="um",
-                         action="transmission")
+                         action="transmission", cmds=self.cmds)
         self.meta.update(kwargs)
 
 

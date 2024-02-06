@@ -25,7 +25,7 @@ from .. import rc
 import multiprocessing as mp
 
 N_PROCESSES = mp.cpu_count() - 1
-USE_MULTIPROCESSING = True
+USE_MULTIPROCESSING = False
 
 def extract_source(fov, source):
     fov.extract_from(source)
