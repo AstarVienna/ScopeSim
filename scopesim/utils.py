@@ -869,8 +869,10 @@ def from_currsys(item, cmds=None):
     if isinstance(item, str) and len(item) and item.startswith("!"):
         # if not isinstance(cmds, UserCommands)
         #     raise TypeError
+
         if not cmds:
             cmds = rc.__currsys__
+            # raise ValueError(f"No cmds dict passed for resolving {item}")
 
         if item in cmds:
             item = cmds[item]
@@ -888,6 +890,10 @@ def from_currsys(item, cmds=None):
             pass
 
     return item
+
+
+def from_rc_config(item):
+    return from_currsys(item, rc.__config__)
 
 
 def check_keys(input_dict, required_keys, action="error", all_any="all"):

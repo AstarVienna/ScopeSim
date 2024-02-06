@@ -396,11 +396,12 @@ class FilterCurve(TERCurve):
     """
 
     def __init__(self, **kwargs):
+        # super().__init__(**kwargs)
         if not np.any([key in kwargs for key in ["filename", "table",
                                                  "array_dict"]]):
             if "filter_name" in kwargs and "filename_format" in kwargs:
-                filt_name = from_currsys(kwargs["filter_name"], self.cmds)
-                file_format = from_currsys(kwargs["filename_format"], self.cmds)
+                filt_name = from_currsys(kwargs["filter_name"], kwargs["cmds"])
+                file_format = from_currsys(kwargs["filename_format"], kwargs["cmds"])
                 kwargs["filename"] = file_format.format(filt_name)
             else:
                 raise ValueError("FilterCurve must be passed one of "
