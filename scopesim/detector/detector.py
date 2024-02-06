@@ -12,12 +12,13 @@ logger = get_logger(__name__)
 
 
 class Detector(DetectorBase):
-    def __init__(self, header, **kwargs):
+    def __init__(self, header, cmds=None, **kwargs):
         image = np.zeros((header["NAXIS2"], header["NAXIS1"]))
         self._hdu = fits.ImageHDU(header=header, data=image)
         self.meta = {}
         self.meta.update(header)
         self.meta.update(kwargs)
+        self.cmds = cmds
 
     def extract_from(self, image_plane, spline_order=1, reset=True):
         if reset:
@@ -38,8 +39,8 @@ class Detector(DetectorBase):
         new_meta = stringify_dict(self.meta)
         self._hdu.header.update(new_meta)
 
-        pixel_scale = from_currsys("!INST.pixel_scale")
-        plate_scale = from_currsys("!INST.plate_scale")
+        pixel_scale = from_currsys("!INST.pixel_scale", self.cmds)
+        plate_scale = from_currsys("!INST.plate_scale", self.cmds)
         if pixel_scale == 0 or plate_scale == 0:
             logger.warning("Could not create sky WCS.")
         else:

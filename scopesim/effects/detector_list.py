@@ -143,7 +143,7 @@ class DetectorList(Effect):
             xy_mm = calc_footprint(hdr, "D")
             pixel_size = hdr["CDELT1D"]              # mm
             pixel_scale = kwargs.get("pixel_scale", self.meta["pixel_scale"])   # ["]
-            pixel_scale = from_currsys(pixel_scale)
+            pixel_scale = from_currsys(pixel_scale, self.cmds)
 
             # x["] = x[mm] * ["] / [mm]
             xy_sky = xy_mm * pixel_scale / pixel_size
@@ -165,7 +165,7 @@ class DetectorList(Effect):
         aperture_mask = None
         if which == "edges":
             self.meta.update(kwargs)
-            self.meta = from_currsys(self.meta)
+            self.meta = from_currsys(self.meta, self.cmds)
 
             hdr = self.image_plane_header
             xy_mm = calc_footprint(hdr, "D")
@@ -224,7 +224,7 @@ class DetectorList(Effect):
         else:
             raise ValueError("Could not determine which detectors are active: "
                              f"{self.meta['active_detectors']}, {self.table},")
-        tbl = from_currsys(tbl)
+        tbl = from_currsys(tbl, self.cmds)
 
         return tbl
 
@@ -232,7 +232,7 @@ class DetectorList(Effect):
         if ids is not None and all(isinstance(ii, int) for ii in ids):
             self.meta["active_detectors"] = list(ids)
 
-        tbl = from_currsys(self.active_table)
+        tbl = from_currsys(self.active_table, self.cmds)
         hdrs = []
         for row in tbl:
             pixel_size = row["pixel_size"]

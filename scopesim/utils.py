@@ -479,7 +479,9 @@ def find_file(filename, path=None, silent=False):
         return None
 
     if filename.startswith("!"):
-        filename = from_currsys(filename)
+        raise ValueError(f"!-string filename should be resolved upstream: "
+                         f"{filename}")
+        # filename = from_currsys(filename)
     # Turn into pathlib.Path object for better manipulation afterwards
     filename = Path(filename)
 
@@ -511,6 +513,7 @@ def find_file(filename, path=None, silent=False):
     if not silent:
         logger.error(msg)
 
+    # TODO: Not sure what to do here
     if from_currsys("!SIM.file.error_on_missing_file"):
         raise ValueError(msg)
 
@@ -646,7 +649,8 @@ def get_meta_quantity(meta_dict, name, fallback_unit=""):
 
     """
     if isinstance(meta_dict[name], str) and meta_dict[name].startswith("!"):
-        meta_dict[name] = from_currsys(meta_dict[name])
+        raise ValueError(f"!-strings should be resolved upstream: "
+                         f"{meta_dict[name]}")
 
     if isinstance(meta_dict[name], u.Quantity):
         unit = meta_dict[name].unit
@@ -660,7 +664,7 @@ def get_meta_quantity(meta_dict, name, fallback_unit=""):
     return quant
 
 
-def quantify(item, unit):
+def quantify(item, unit, cmds=None):
     """
     Ensure an item is a Quantity.
 
@@ -675,7 +679,8 @@ def quantify(item, unit):
 
     """
     if isinstance(item, str) and item.startswith("!"):
-        item = from_currsys(item)
+        raise ValueError(f"Quantify cannot resolve {item}")
+        # item = from_currsys(item, cmds)
     if isinstance(item, u.Quantity):
         quant = item.to(u.Unit(unit))
     else:
@@ -841,29 +846,36 @@ def clean_dict(orig_dict, new_entries):
     return orig_dict
 
 
-def from_currsys(item):
+def from_currsys(item, cmds=None):
     """Return the current value of a bang-string from ``rc.__currsys__``."""
     if isinstance(item, Table):
         tbl_dict = {col: item[col].data for col in item.colnames}
-        tbl_dict = from_currsys(tbl_dict)
+        tbl_dict = from_currsys(tbl_dict, cmds)
         item_meta = item.meta
         item = Table(data=list(tbl_dict.values()),
                      names=list(tbl_dict.keys()))
         item.meta = item_meta
 
     if isinstance(item, np.ndarray) and not isinstance(item, u.Quantity):
-        item = np.array([from_currsys(x) for x in item])
+        item = np.array([from_currsys(x, cmds) for x in item])
 
     if isinstance(item, list):
-        item = [from_currsys(x) for x in item]
+        item = [from_currsys(x, cmds) for x in item]
 
     if isinstance(item, dict):
         for key in item:
-            item[key] = from_currsys(item[key])
+            item[key] = from_currsys(item[key], cmds)
 
     if isinstance(item, str) and len(item) and item.startswith("!"):
-        if item in rc.__currsys__:
-            item = rc.__currsys__[item]
+        # if not isinstance(cmds, UserCommands)
+        #     raise TypeError
+
+        if not cmds:
+            cmds = rc.__currsys__
+            # raise ValueError(f"No cmds dict passed for resolving {item}")
+
+        if item in cmds:
+            item = cmds[item]
             if isinstance(item, str) and item.startswith("!"):
                 item = from_currsys(item)
         else:
@@ -878,6 +890,10 @@ def from_currsys(item):
             pass
 
     return item
+
+
+def from_rc_config(item):
+    return from_currsys(item, rc.__config__)
 
 
 def check_keys(input_dict, required_keys, action="error", all_any="all"):

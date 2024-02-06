@@ -78,7 +78,7 @@ class FOVManager:
 
     """
 
-    def __init__(self, effects=None, **kwargs):
+    def __init__(self, effects=None, cmds=None, **kwargs):
         self.meta = {"area": "!TEL.area",
                      "pixel_scale": "!INST.pixel_scale",
                      "plate_scale": "!INST.plate_scale",
@@ -93,18 +93,21 @@ class FOVManager:
                      "decouple_sky_det_hdrs": "!INST.decouple_detector_from_sky_headers",
                      "aperture_id": 0}
         self.meta.update(kwargs)
+        self.cmds = cmds
 
         params = from_currsys({"wave_min": self.meta["wave_min"],
-                               "wave_max": self.meta["wave_max"]})
+                               "wave_max": self.meta["wave_max"]},
+                              self.cmds)
         fvl_meta = ["area", "pixel_scale", "aperture_id"]
-        params["meta"] = from_currsys({key: self.meta[key] for key in fvl_meta})
+        params["meta"] = from_currsys({key: self.meta[key] for key in fvl_meta},
+                                      self.cmds)
         self.volumes_list = FovVolumeList(initial_volume=params)
 
         self.effects = effects or []
         self._fovs_list = []
         self.is_spectroscope = eu.is_spectroscope(self.effects)
 
-        if from_currsys(self.meta["preload_fovs"]):
+        if from_currsys(self.meta["preload_fovs"], self.cmds):
             logger.debug("Generating initial fovs_list.")
             self._fovs_list = self.generate_fovs_list()
 
@@ -124,11 +127,11 @@ class FOVManager:
             self.volumes_list = effect.apply_to(self.volumes_list, **params)
 
         # ..todo: add catch to split volumes larger than chunk_size
-        pixel_scale = from_currsys(self.meta["pixel_scale"])
-        plate_scale = from_currsys(self.meta["plate_scale"])
+        pixel_scale = from_currsys(self.meta["pixel_scale"], self.cmds)
+        plate_scale = from_currsys(self.meta["plate_scale"], self.cmds)
 
-        chunk_size = from_currsys(self.meta["chunk_size"])
-        max_seg_size = from_currsys(self.meta["max_segment_size"])
+        chunk_size = from_currsys(self.meta["chunk_size"], self.cmds)
+        max_seg_size = from_currsys(self.meta["max_segment_size"], self.cmds)
 
         split_xs = []
         split_ys = []
@@ -159,7 +162,7 @@ class FOVManager:
             # useful for spectroscopy mode where slit dimensions is not the same
             # as detector dimensions
             # ..todo: Make sure this changes for multiple image planes
-            if from_currsys(self.meta["decouple_sky_det_hdrs"]):
+            if from_currsys(self.meta["decouple_sky_det_hdrs"], self.cmds):
                 det_eff = eu.get_all_effects(self.effects, DetectorList)[0]
                 dethdr = det_eff.image_plane_header
 
@@ -177,7 +180,7 @@ class FOVManager:
             logger.debug("Returning existing fovs_list.")
             return self._fovs_list
 
-        if not from_currsys(self.meta["preload_fovs"]):
+        if not from_currsys(self.meta["preload_fovs"], self.cmds):
             logger.debug("Generating new fovs_list.")
             self._fovs_list = self.generate_fovs_list()
         return self._fovs_list

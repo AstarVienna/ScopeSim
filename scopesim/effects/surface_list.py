@@ -21,7 +21,8 @@ class SurfaceList(TERCurve):
         self.meta.update(params)
         self.meta.update(kwargs)
 
-        self.surfaces = rad_utils.make_surface_dict_from_table(self.table)
+        tbl = from_currsys(self.table, self.cmds)
+        self.surfaces = rad_utils.make_surface_dict_from_table(tbl)
         self._surface = None
         self._throughput = None
         self._emission = None
@@ -32,7 +33,7 @@ class SurfaceList(TERCurve):
         wave_edges = []
         if which == "waveset":
             self.meta.update(kwargs)
-            self.meta = from_currsys(self.meta)
+            self.meta = from_currsys(self.meta, self.cmds)
             wave_min = quantify(self.meta["wave_min"], u.um)
             wave_max = quantify(self.meta["wave_max"], u.um)
             # ..todo:: add 1001 to default.yaml somewhere
@@ -61,7 +62,8 @@ class SurfaceList(TERCurve):
     def emission(self):
         if "etendue" not in self.meta:
             raise ValueError("self.meta['etendue'] must be set")
-        etendue = quantify(from_currsys(self.meta["etendue"]), "m2 arcsec2")
+        etendue = quantify(from_currsys(self.meta["etendue"], self.cmds),
+                           "m2 arcsec2")
         if self._emission is None:
             self._emission = self.get_emission(etendue)
 
@@ -135,8 +137,8 @@ class SurfaceList(TERCurve):
     def add_surface_list(self, surface_list, prepend=False):
         if isinstance(surface_list, SurfaceList):
             self.surfaces.update(surface_list.surfaces)
-            self.table = rad_utils.combine_tables(surface_list.table,
-                                                  self.table, prepend)
+            new_tbl = from_currsys(surface_list.table, self.cmds),
+            self.table = rad_utils.combine_tables(new_tbl, self.table, prepend)
 
     def plot(self, which="x", wavelength=None, *, axes=None, **kwargs):
         """Plot TER curves.

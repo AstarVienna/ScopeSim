@@ -58,13 +58,14 @@ class SpectralTrace:
         "description": "<no description>",
     }
 
-    def __init__(self, trace_tbl, **kwargs):
+    def __init__(self, trace_tbl, cmds=None, **kwargs):
         # Within scopesim, the actual parameter values are
         # passed as kwargs from the SpectralTraceList.
         # The values need to be here for stand-alone use.
         self.meta = {}
         self.meta.update(self._class_params)
         self.meta.update(kwargs)
+        self.cmds = cmds
 
         if isinstance(trace_tbl, (fits.BinTableHDU, fits.TableHDU)):
             self.table = Table.read(trace_tbl)
@@ -336,7 +337,7 @@ class SpectralTrace:
             bin_width = np.abs(self.dlam_per_pix.y).min()
         logger.info("   Bin width %.02g um", bin_width)
 
-        pixscale = from_currsys(self.meta["pixel_scale"])
+        pixscale = from_currsys(self.meta["pixel_scale"], self.cmds)
 
         # Temporary solution to get slit length
         xi_min = kwargs.get("xi_min", None)
@@ -621,8 +622,8 @@ class SpectralTrace:
             dlam_grad = self.xy2lam.gradient()[0]  # dlam_by_dx
         else:
             dlam_grad = self.xy2lam.gradient()[1]  # dlam_by_dy
-        pixsize = (from_currsys(self.meta["pixel_scale"]) /
-                   from_currsys(self.meta["plate_scale"]))
+        pixsize = (from_currsys(self.meta["pixel_scale"], self.cmds) /
+                   from_currsys(self.meta["plate_scale"], self.cmds))
         self.dlam_per_pix = interp1d(lam,
                                      dlam_grad(x_mm, y_mm) * pixsize,
                                      fill_value="extrapolate")

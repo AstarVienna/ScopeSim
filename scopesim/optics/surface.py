@@ -277,7 +277,7 @@ class SpectralSurface:
             val_out = None
         else:
             raise ValueError(f"{colname} must be of type: Quantity, array, "
-                             f"list, tuple, but is {type(colname)}")
+                             f"list, tuple, but is {type(val)}")
 
         return val_out
 
