@@ -132,8 +132,8 @@ class OpticalTrain:
 
         self.cmds = user_commands
         # FIXME: Setting rc.__currsys__ to user_commands causes many problems:
-        #        UserCommands used SystemDict internally, but is itself not an
-        #        instance or subclas thereof. So rc.__currsys__ actually
+        #        UserCommands used NestedMapping internally, but is itself not
+        #        an instance or subclas thereof. So rc.__currsys__ actually
         #        changes type as a result of this line. On one hand, some other
         #        code relies on this change, i.e. uses attributes from
         #        UserCommands via rc.__currsys__, but on the other hand some

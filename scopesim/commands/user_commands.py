@@ -82,7 +82,7 @@ class UserCommands:
 
     Attributes
     ----------
-    cmds : SystemDict
+    cmds : NestedMapping
         Built from the ``properties`` dictionary of a yaml dictionary. All
         values here are accessible globally by all ``Effects`` objects in an
         ``OpticalTrain`` once the ``UserCommands`` has been passed to the

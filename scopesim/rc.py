@@ -6,7 +6,7 @@ import yaml
 
 from copy import deepcopy
 
-from .system_dict import SystemDict, UniqueList
+from astar_utils import NestedMapping, UniqueList
 
 __pkg_dir__ = Path(__file__).parent
 
@@ -21,7 +21,7 @@ except FileNotFoundError:
     pass
 
 
-__config__ = SystemDict(dicts)
+__config__ = NestedMapping(dicts, title="SystemDict")
 __currsys__ = deepcopy(__config__)
 
 # Order matters!

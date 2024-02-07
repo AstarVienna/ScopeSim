@@ -142,13 +142,13 @@ test = ["dateparser (==1.*)", "pre-commit", "pytest", "pytest-cov", "pytest-mock
 
 [[package]]
 name = "astar-utils"
-version = "0.2.0b1"
+version = "0.2.1"
 description = "Contains commonly-used utilities for AstarVienna's projects."
 optional = false
 python-versions = ">=3.9,<4.0"
 files = [
-    {file = "astar_utils-0.2.0b1-py3-none-any.whl", hash = "sha256:b59aaeb5920333c528aa7bef07a04a009e9a1e668e84e3cfbc09fdd8dae7fdda"},
-    {file = "astar_utils-0.2.0b1.tar.gz", hash = "sha256:f9a5fd493623c36d79f7df97f011e073fadddfe9ea94fe35d0abee82bbbf1a2b"},
+    {file = "astar_utils-0.2.1-py3-none-any.whl", hash = "sha256:29428d3629337093c14f5283ee9f5d424cb194530adc16ab3632b8205aa385b2"},
+    {file = "astar_utils-0.2.1.tar.gz", hash = "sha256:edae507fd3d5589640c2d60eb1b3880c50a6e1ac76fbe8efcfffe6b7e1fd573a"},
 ]
 
 [package.dependencies]
@@ -1764,16 +1764,6 @@ files = [
     {file = "MarkupSafe-2.1.3-cp311-cp311-musllinux_1_1_x86_64.whl", hash = "sha256:5bbe06f8eeafd38e5d0a4894ffec89378b6c6a625ff57e3028921f8ff59318ac"},
     {file = "MarkupSafe-2.1.3-cp311-cp311-win32.whl", hash = "sha256:dd15ff04ffd7e05ffcb7fe79f1b98041b8ea30ae9234aed2a9168b5797c3effb"},
     {file = "MarkupSafe-2.1.3-cp311-cp311-win_amd64.whl", hash = "sha256:134da1eca9ec0ae528110ccc9e48041e0828d79f24121a1a146161103c76e686"},
-    {file = "MarkupSafe-2.1.3-cp312-cp312-macosx_10_9_universal2.whl", hash = "sha256:f698de3fd0c4e6972b92290a45bd9b1536bffe8c6759c62471efaa8acb4c37bc"},
-    {file = "MarkupSafe-2.1.3-cp312-cp312-macosx_10_9_x86_64.whl", hash = "sha256:aa57bd9cf8ae831a362185ee444e15a93ecb2e344c8e52e4d721ea3ab6ef1823"},
-    {file = "MarkupSafe-2.1.3-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:ffcc3f7c66b5f5b7931a5aa68fc9cecc51e685ef90282f4a82f0f5e9b704ad11"},
-    {file = "MarkupSafe-2.1.3-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:47d4f1c5f80fc62fdd7777d0d40a2e9dda0a05883ab11374334f6c4de38adffd"},
-    {file = "MarkupSafe-2.1.3-cp312-cp312-manylinux_2_5_i686.manylinux1_i686.manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:1f67c7038d560d92149c060157d623c542173016c4babc0c1913cca0564b9939"},
-    {file = "MarkupSafe-2.1.3-cp312-cp312-musllinux_1_1_aarch64.whl", hash = "sha256:9aad3c1755095ce347e26488214ef77e0485a3c34a50c5a5e2471dff60b9dd9c"},
-    {file = "MarkupSafe-2.1.3-cp312-cp312-musllinux_1_1_i686.whl", hash = "sha256:14ff806850827afd6b07a5f32bd917fb7f45b046ba40c57abdb636674a8b559c"},
-    {file = "MarkupSafe-2.1.3-cp312-cp312-musllinux_1_1_x86_64.whl", hash = "sha256:8f9293864fe09b8149f0cc42ce56e3f0e54de883a9de90cd427f191c346eb2e1"},
-    {file = "MarkupSafe-2.1.3-cp312-cp312-win32.whl", hash = "sha256:715d3562f79d540f251b99ebd6d8baa547118974341db04f5ad06d5ea3eb8007"},
-    {file = "MarkupSafe-2.1.3-cp312-cp312-win_amd64.whl", hash = "sha256:1b8dd8c3fd14349433c79fa8abeb573a55fc0fdd769133baac1f5e07abf54aeb"},
     {file = "MarkupSafe-2.1.3-cp37-cp37m-macosx_10_9_x86_64.whl", hash = "sha256:8e254ae696c88d98da6555f5ace2279cf7cd5b3f52be2b5cf97feafe883b58d2"},
     {file = "MarkupSafe-2.1.3-cp37-cp37m-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:cb0932dc158471523c9637e807d9bfb93e06a95cbf010f1a38b98623b929ef2b"},
     {file = "MarkupSafe-2.1.3-cp37-cp37m-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:9402b03f1a1b4dc4c19845e5c749e3ab82d5078d16a2a4c2cd2df62d57bb0707"},
@@ -3104,28 +3094,29 @@ test = ["asv", "gmpy2", "mpmath", "pooch", "pytest", "pytest-cov", "pytest-timeo
 
 [[package]]
 name = "scopesim-templates"
-version = "0.5.0"
+version = "0.5.1"
 description = "On-sky source templates for ScopeSim"
 optional = false
-python-versions = ">=3.8"
+python-versions = ">=3.9"
 files = [
-    {file = "ScopeSim_Templates-0.5.0-py3-none-any.whl", hash = "sha256:5b7f7e882e2ed60fe7b636ecb4b4201aaa5c115bf01561880bd502adf376ce62"},
-    {file = "ScopeSim_Templates-0.5.0.tar.gz", hash = "sha256:ccef56687b510f139eaa5d352661594b6c0cd774024cc4e338450d2577c45b41"},
+    {file = "ScopeSim_Templates-0.5.1-py3-none-any.whl", hash = "sha256:f26c810d5d8dc91a22dc42da09acbe9da6a5dda5c4e770083bd8f9462181de70"},
+    {file = "ScopeSim_Templates-0.5.1.tar.gz", hash = "sha256:8c0d9f8ee914300e633adc7b4d8c93b4342a3ce4fdce6bc6379371400df4c503"},
 ]
 
 [package.dependencies]
-astropy = ">=5.0"
-beautifulsoup4 = ">=4.4"
-docutils = ">=0.15"
-lxml = ">=4.5.0"
-matplotlib = ">=3.2.0"
-numpy = ">=1.19.5"
+astar-utils = ">=0.2.1"
+astropy = ">=5.3.3"
+beautifulsoup4 = ">=4.12.1"
+docutils = ">=0.19"
+lxml = ">=4.9.3"
+matplotlib = ">=3.7.2"
+numpy = ">=1.26.3"
 pyckles = ">=0.2"
-pyyaml = ">=5.3"
-scipy = ">=1.10.0"
+pyyaml = ">=6.0.1"
+scipy = ">=1.11.4"
 scopesim = ">=0.7.0"
 spextra = ">=0.33"
-synphot = ">=1.1.0"
+synphot = ">=1.2.1"
 
 [package.extras]
 dev = ["jupyter", "jupytext"]
@@ -3192,23 +3183,24 @@ setuptools = "*"
 
 [[package]]
 name = "skycalc-ipy"
-version = "0.3.0"
+version = "0.4.0"
 description = "Get atmospheric spectral information from the ESO skycalc server."
 optional = false
-python-versions = ">=3.8,<4.0"
+python-versions = ">=3.9,<4.0"
 files = [
-    {file = "skycalc_ipy-0.3.0-py3-none-any.whl", hash = "sha256:70885c54816cf204bfd9ce142587cacec450820f4cc200daa7f68651dcaa61e3"},
-    {file = "skycalc_ipy-0.3.0.tar.gz", hash = "sha256:aa115488201539a3b93cece8cbb5d6bf99004bb7f026fcce3e800ecffd171764"},
+    {file = "skycalc_ipy-0.4.0-py3-none-any.whl", hash = "sha256:dc5de52de8850c6750abc2bc02e4b7f0de93447a41a4d20d62c1fca44ca7e937"},
+    {file = "skycalc_ipy-0.4.0.tar.gz", hash = "sha256:0b5c59f42120be4acb65fec5d50a19f1584ec9a4315b7f227af3a682c78d8578"},
 ]
 
 [package.dependencies]
-astropy = ">=5.2.2,<6.0.0"
+astar-utils = ">=0.2.0"
+astropy = ">=5.3.3,<6.0.0"
 httpx = ">=0.23.0,<0.24.0"
-numpy = ">=1.24.4,<2.0.0"
-pyyaml = ">=6.0.0,<7.0.0"
+numpy = ">=1.26.3,<2.0.0"
+pyyaml = ">=6.0.1,<7.0.0"
 
 [package.extras]
-syn = ["synphot (>=1.1.0,<2.0.0)"]
+syn = ["synphot (>=1.2.1,<2.0.0)"]
 
 [[package]]
 name = "sniffio"
@@ -3731,4 +3723,4 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "p
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.9"
-content-hash = "14abc3786229999350744030ad20b0113c41a61a9495e96d9e002dc5fa046037"
+content-hash = "ceba4b1307de878693215268470e2572645d11b00c73832bcfae3fa9820b43c1"

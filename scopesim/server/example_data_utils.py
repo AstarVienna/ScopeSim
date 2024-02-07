@@ -1,11 +1,10 @@
 # -*- coding: utf-8 -*-
-"""
-Store the example data functions here instead of polluting database.py
-"""
+"""Store the example data functions here instead of polluting database.py."""
 
 import shutil
 from pathlib import Path
-from typing import List, Optional, Union, Iterable
+from typing import Optional, Union
+from collections.abc import Iterable
 
 import httpx
 import bs4
@@ -14,9 +13,10 @@ from astropy.utils.data import download_file
 
 from scopesim import rc
 
-def get_server_elements(url: str, unique_str: str = "/") -> List[str]:
+
+def get_server_elements(url: str, unique_str: str = "/") -> list[str]:
     """
-    Returns a list of file and/or directory paths on the HTTP server ``url``
+    Return a list of file and/or directory paths on the HTTP server ``url``.
 
     Parameters
     ----------
@@ -52,9 +52,9 @@ def get_server_elements(url: str, unique_str: str = "/") -> List[str]:
 
 def list_example_data(url: Optional[str] = None,
                       return_files: bool = False,
-                      silent: bool = False) -> List[str]:
+                      silent: bool = False) -> list[str]:
     """
-    List all example files found under ``url``
+    List all example files found under ``url``.
 
     Parameters
     ----------
@@ -102,9 +102,9 @@ def list_example_data(url: Optional[str] = None,
 def download_example_data(file_path: Union[Iterable[str], str],
                           save_dir: Optional[Union[Path, str]] = None,
                           url: Optional[str] = None,
-                          from_cache: Optional[bool] = None) -> List[Path]:
+                          from_cache: Optional[bool] = None) -> list[Path]:
     """
-    Downloads example fits files to the local disk
+    Download example fits files to the local disk.
 
     Parameters
     ----------

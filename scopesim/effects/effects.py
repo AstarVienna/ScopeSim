@@ -312,13 +312,13 @@ Meta-data
         if isinstance(item, str) and item.startswith("#"):
             if len(item) > 1:
                 if item.endswith("!"):
-                    key = item[1:-1]
+                    key = item.removeprefix("#").removesuffix("!")
                     if len(key) > 0:
                         value = from_currsys(self.meta[key], self.cmds)
                     else:
                         value = from_currsys(self.meta, self.cmds)
                 else:
-                    value = self.meta[item[1:]]
+                    value = self.meta[item.removeprefix("#")]
             else:
                 value = self.meta
         else:
