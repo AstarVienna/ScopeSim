@@ -43,7 +43,7 @@ class FieldOfView(FieldOfViewBase):
 
     """
 
-    def __init__(self, header, waverange, detector_header=None, **kwargs):
+    def __init__(self, header, waverange, detector_header=None, cmds=None, **kwargs):
         self.meta = {
             "id": None,
             "wave_min": quantify(waverange[0], u.um),
@@ -64,6 +64,8 @@ class FieldOfView(FieldOfViewBase):
             "aperture_id": None,
         }
         self.meta.update(kwargs)
+
+        self.cmds = cmds
 
         if not any((has_needed_keywords(header, s) for s in ["", "S"])):
             raise ValueError(
@@ -324,7 +326,7 @@ class FieldOfView(FieldOfViewBase):
             xpix, ypix = imp_utils.val2pix(self.header,
                                            field["x"] / 3600,
                                            field["y"] / 3600)
-            if from_currsys(self.meta["sub_pixel"]):
+            if from_currsys(self.meta["sub_pixel"], self.cmds):
                 for idx, row in enumerate(field):
                     xs, ys, fracs = imp_utils.sub_pixel_fractions(xpix[idx],
                                                                   ypix[idx])
@@ -374,7 +376,7 @@ class FieldOfView(FieldOfViewBase):
         fov_waveset = self.waveset
         bin_widths = np.diff(fov_waveset)       # u.um
         bin_widths = 0.5 * (np.r_[0, bin_widths] + np.r_[bin_widths, 0])
-        area = from_currsys(self.meta["area"])    # u.m2
+        area = from_currsys(self.meta["area"], self.cmds)    # u.m2
 
         # PHOTLAM * u.um * u.m2 --> ph / s
         specs = {ref: spec(fov_waveset) if use_photlam

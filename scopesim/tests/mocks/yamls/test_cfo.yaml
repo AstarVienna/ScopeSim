@@ -11,4 +11,4 @@ effects :
 -   name : relay_surface_list
     class : SurfaceList
     kwargs :
-        file_name : relay_mirror_list.tbl
+        filename : relay_mirror_list.tbl

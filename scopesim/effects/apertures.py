@@ -87,21 +87,23 @@ class ApertureMask(Effect):
                                                  "array_dict"]]):
             if "width" in kwargs and "height" in kwargs and \
                     "filename_format" in kwargs:
-                kwargs = from_currsys(kwargs)
+                kwargs = from_currsys(kwargs, self.cmds)
                 w, h = kwargs["width"], kwargs["height"]
                 kwargs["filename"] = kwargs["filename_format"].format(w, h)
 
         super().__init__(**kwargs)
-        params = {"extend_fov_beyond_slit": 0,
-                  "pixel_scale": "!INST.pixel_scale",
-                  "no_mask": True,
-                  "angle": 0,
-                  "shape": "rect",
-                  "conserve_image": True,
-                  "id": 0,
-                  "report_plot_include": False,
-                  "report_table_include": True,
-                  "report_table_rounding": 4}
+        params = {
+            "extend_fov_beyond_slit": 0,
+            "pixel_scale": "!INST.pixel_scale",
+            "no_mask": True,
+            "angle": 0,
+            "shape": "rect",
+            "conserve_image": True,
+            "id": 0,
+            "report_plot_include": False,
+            "report_table_include": True,
+            "report_table_rounding": 4,
+        }
 
         self.meta["z_order"] = [80, 280, 380]
         self.meta.update(params)
@@ -158,7 +160,7 @@ class ApertureMask(Effect):
         return self._header
 
     def get_header(self):
-        self.meta = from_currsys(self.meta)
+        self.meta = from_currsys(self.meta, self.cmds)
         x = quantity_from_table("x", self.table, u.arcsec).to(u.deg).value
         y = quantity_from_table("y", self.table, u.arcsec).to(u.deg).value
         pix_scale_deg = self.meta["pixel_scale"] / 3600.
@@ -180,7 +182,7 @@ class ApertureMask(Effect):
         """
         For placing over FOVs if the Aperture is rotated w.r.t. the field.
         """
-        self.meta = from_currsys(self.meta)
+        self.meta = from_currsys(self.meta, self.cmds)
 
         if self.meta["no_mask"] is False:
             x = quantity_from_table("x", self.table, u.arcsec).to(u.deg).value
@@ -219,10 +221,10 @@ class RectangularApertureMask(ApertureMask):
 
     def get_table(self, **kwargs):
         self.meta.update(kwargs)
-        x = from_currsys(self.meta["x"])
-        y = from_currsys(self.meta["y"])
-        dx = 0.5 * from_currsys(self.meta["width"])
-        dy = 0.5 * from_currsys(self.meta["height"])
+        x = from_currsys(self.meta["x"], self.cmds)
+        y = from_currsys(self.meta["y"], self.cmds)
+        dx = 0.5 * from_currsys(self.meta["width"], self.cmds)
+        dy = 0.5 * from_currsys(self.meta["height"], self.cmds)
         xs = [x - dx, x + dx, x + dx, x - dx]
         ys = [y - dy, y - dy, y + dy, y + dy]
         tbl = Table(names=["x", "y"], data=[xs, ys], meta=self.meta)
@@ -236,8 +238,6 @@ class ApertureList(Effect):
 
     Parameters
     ----------
-
-
 
     Examples
     --------
@@ -299,14 +299,16 @@ class ApertureList(Effect):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        params = {"fov_for_each_aperture": True,
-                  "extend_fov_beyond_slit": 0,
-                  "pixel_scale": "!INST.pixel_scale",
-                  "n_round_corners": 32,        # number of corners use to estimate ellipse
-                  "no_mask": False,             # .. todo:: is this necessary when we have conserve_image?
-                  "report_plot_include": True,
-                  "report_table_include": True,
-                  "report_table_rounding": 4}
+        params = {
+            "fov_for_each_aperture": True,
+            "extend_fov_beyond_slit": 0,
+            "pixel_scale": "!INST.pixel_scale",
+            "n_round_corners": 32,        # number of corners use to estimate ellipse
+            "no_mask": False,             # .. todo:: is this necessary when we have conserve_image?
+            "report_plot_include": True,
+            "report_table_include": True,
+            "report_table_rounding": 4
+        }
         self.meta["z_order"] = [81, 281]
         self.meta.update(params)
         self.meta.update(kwargs)
@@ -379,15 +381,17 @@ class ApertureList(Effect):
             row_dict = {col: row[col] for col in row.colnames}
             row_dict["n_round"] = self.meta["n_round_corners"]
             array_dict = make_aperture_polygon(**row_dict)
-            params = {"id": row["id"],
-                      "angle": row["angle"],
-                      "shape": row["shape"],
-                      "conserve_image": yaml.full_load(str(row["conserve_image"])),
-                      "no_mask": self.meta["no_mask"],
-                      "pixel_scale": self.meta["pixel_scale"],
-                      "x_unit": "arcsec",
-                      "y_unit": "arcsec",
-                      "angle_unit": "arcsec"}
+            params = {
+                "id": row["id"],
+                "angle": row["angle"],
+                "shape": row["shape"],
+                "conserve_image": yaml.full_load(str(row["conserve_image"])),
+                "no_mask": self.meta["no_mask"],
+                "pixel_scale": self.meta["pixel_scale"],
+                "x_unit": "arcsec",
+                "y_unit": "arcsec",
+                "angle_unit": "arcsec",
+            }
             apertures_list.append(ApertureMask(array_dict=array_dict, **params))
 
         return apertures_list
@@ -533,17 +537,19 @@ class SlitWheel(Effect):
         super().__init__(**kwargs)
         check_keys(kwargs, self.required_keys, action="error")
 
-        params = {"z_order": [80, 280, 580],
-                  "path": "",
-                  "report_plot_include": False,
-                  "report_table_include": True,
-                  "report_table_rounding": 4}
+        params = {
+            "z_order": [80, 280, 580],
+            "path": "",
+            "report_plot_include": False,
+            "report_table_include": True,
+            "report_table_rounding": 4,
+        }
         self.meta.update(params)
         self.meta.update(kwargs)
 
         path = self._get_path()
         self.slits = {}
-        for name in from_currsys(self.meta["slit_names"]):
+        for name in from_currsys(self.meta["slit_names"], self.cmds):
             kwargs["name"] = name
             fname = str(path).format(name)
             self.slits[name] = ApertureMask(filename=fname, **kwargs)
@@ -586,7 +592,7 @@ class SlitWheel(Effect):
     @property
     def current_slit(self):
         """Return the currently used slit."""
-        currslit = from_currsys(self.meta["current_slit"])
+        currslit = from_currsys(self.meta["current_slit"], self.cmds)
         if not currslit:
             return False
         return self.slits[currslit]

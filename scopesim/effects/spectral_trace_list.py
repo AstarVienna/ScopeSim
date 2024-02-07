@@ -20,7 +20,6 @@ from .effects import Effect
 from .ter_curves import FilterCurve
 from .spectral_trace_list_utils import (SpectralTrace, TraceGenerator,
                                         make_image_interpolations)
-from ..utils import from_currsys, check_keys, figure_factory
 from ..optics import image_plane_utils as ipu
 from ..base_classes import FieldOfViewBase, FOVSetupBase
 from ..utils import from_currsys, check_keys, figure_factory, get_logger
@@ -346,7 +345,7 @@ class SpectralTraceList(Effect):
     def image_plane_header(self):
         """Create and return header for the ImagePlane."""
         x, y = self.footprint
-        pixel_scale = from_currsys(self.meta["pixel_scale"])
+        pixel_scale = from_currsys(self.meta["pixel_scale"], self.cmds)
         hdr = ipu.header_from_list_of_xy(x, y, pixel_scale, "D")
 
         return hdr
@@ -385,13 +384,13 @@ class SpectralTraceList(Effect):
         # keywords for the filter... We try to make it work for METIS
         # and MICADO for the time being.
         try:
-            filter_name = from_currsys("!OBS.filter_name")
+            filter_name = from_currsys("!OBS.filter_name", self.cmds)
         except ValueError:
-            filter_name = from_currsys("!OBS.filter_name_fw1")
+            filter_name = from_currsys("!OBS.filter_name_fw1", self.cmds)
 
         filtcurve = FilterCurve(
             filter_name=filter_name,
-            filename_format=from_currsys("!INST.filter_file_format"))
+            filename_format=from_currsys("!INST.filter_file_format", self.cmds))
         filtwaves = filtcurve.table["wavelength"]
         filtwave = filtwaves[filtcurve.table["transmission"] > 0.01]
         wave_min, wave_max = min(filtwave), max(filtwave)
@@ -422,7 +421,7 @@ class SpectralTraceList(Effect):
         pdu = fits.PrimaryHDU()
         pdu.header["FILETYPE"] = "Rectified spectra"
         # pdu.header["INSTRUME"] = inhdul[0].header["HIERARCH ESO OBS INSTRUME"]
-        # pdu.header["FILTER"] = from_currsys("!OBS.filter_name_fw1")
+        # pdu.header["FILTER"] = from_currsys("!OBS.filter_name_fw1", self.cmds)
         outhdul = fits.HDUList([pdu])
 
         for i, trace_id in tqdm(enumerate(self.spectral_traces, start=1),
@@ -467,9 +466,9 @@ class SpectralTraceList(Effect):
 
         """
         if wave_min is None:
-            wave_min = from_currsys("!SIM.spectral.wave_min")
+            wave_min = from_currsys("!SIM.spectral.wave_min", self.cmds)
         if wave_max is None:
-            wave_max = from_currsys("!SIM.spectral.wave_max")
+            wave_max = from_currsys("!SIM.spectral.wave_max", self.cmds)
 
         if axes is None:
             fig, axes = figure_factory()
@@ -491,7 +490,7 @@ class SpectralTraceList(Effect):
         return msg
 
     def __getitem__(self, item):
-        return self.spectral_traces.get(item, {})
+        return self.spectral_traces[item]
 
     def __setitem__(self, key, value):
         self.spectral_traces[key] = value
@@ -578,10 +577,11 @@ class SpectralTraceListWheel(Effect):
 
         path = self._get_path()
         self.trace_lists = {}
-        for name in from_currsys(self.meta["trace_list_names"]):
+        for name in from_currsys(self.meta["trace_list_names"], self.cmds):
             kwargs["name"] = name
             fname = str(path).format(name)
             self.trace_lists[name] = SpectralTraceList(filename=fname,
+                                                       cmds=self.cmds,
                                                        **kwargs)
 
     def apply_to(self, obj, **kwargs):
@@ -591,7 +591,8 @@ class SpectralTraceListWheel(Effect):
     @property
     def current_trace_list(self):
         trace_list_eff = None
-        trace_list_name = from_currsys(self.meta["current_trace_list"])
+        trace_list_name = from_currsys(self.meta["current_trace_list"],
+                                       self.cmds)
         if trace_list_name is not None:
             trace_list_eff = self.trace_lists[trace_list_name]
         return trace_list_eff
@@ -599,7 +600,8 @@ class SpectralTraceListWheel(Effect):
     @property
     def display_name(self):
         name = self.meta.get("name", self.meta.get("filename", "<untitled>"))
-        return f'{name} : [{from_currsys(self.meta["current_trace_list"])}]'
+        return f'{name} : [{from_currsys(self.meta["current_trace_list"], 
+                                         self.cmds)}]'
 
 
 class UnresolvedSpectralTraceList(SpectralTraceList):
@@ -626,8 +628,8 @@ class UnresolvedSpectralTraceList(SpectralTraceList):
 
     @property
     def pixel_size(self):
-        pixel_scale = from_currsys(self.meta["pixel_scale"])
-        plate_scale = from_currsys(self.meta["plate_scale"])
+        pixel_scale = from_currsys(self.meta["pixel_scale"], self.cmds)
+        plate_scale = from_currsys(self.meta["plate_scale"], self.cmds)
         return pixel_scale / plate_scale
 
     def apply_to(self, fov, **kwargs):
@@ -745,14 +747,15 @@ class MosaicSpectralTraceList(UnresolvedSpectralTraceList):
         check_keys(kwargs, required_keys)
         super(SpectralTraceList, self).__init__(**params)
 
-        t = TraceGenerator(l_low = from_currsys(self.meta["wave_min"]),
-                           l_high = from_currsys(self.meta["wave_max"]),
-                           delta_lambda = from_currsys("!SIM.spectral.spectral_bin_width"),
+        resolved_dict = from_currsys(self.meta, self.cmds)
+        t = TraceGenerator(l_low = resolved_dict("wave_min"),
+                           l_high = resolved_dict("wave_max"),
+                           delta_lambda = resolved_dict("!SIM.spectral.spectral_bin_width"),
                            pixel_size = self.pixel_size,  # mm
-                           trace_distances = from_currsys(self.meta["distance_between_fibers"]),  # pixels
-                           fiber_per_mos = from_currsys(self.meta["fiber_per_bundle"]),
-                           nbr_mos = from_currsys(self.meta["n_bundles"]),
-                           mos_distance = from_currsys(self.meta["distance_between_bundles"]),  # pixels
+                           trace_distances = resolved_dict("distance_between_fibers"),  # pixels
+                           fiber_per_mos = resolved_dict("fiber_per_bundle"),
+                           nbr_mos = resolved_dict("n_bundles"),
+                           mos_distance = resolved_dict("distance_between_bundles"),  # pixels
         )
         self._file = t.make_fits()
         super().make_spectral_traces()

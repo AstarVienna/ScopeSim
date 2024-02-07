@@ -1,4 +1,3 @@
-import warnings
 import numpy as np
 from scipy.signal import convolve
 from scipy.interpolate import RectBivariateSpline, interp1d
@@ -13,25 +12,29 @@ from .effects import Effect
 from . import ter_curves_utils as tu
 from . import psf_utils as pu
 from ..base_classes import ImagePlaneBase, FieldOfViewBase, FOVSetupBase
-from .. import utils
-from ..utils import figure_grid_factory
+from ..utils import (figure_grid_factory, from_currsys, quantify, figure_factory,
+                     check_keys, get_logger)
+
+import warnings
 
 # TODO: directly import currsys stuff, replace utils.
+# DONE (KL 19.01.2024)
+
+logger = get_logger(__name__)
 
 
 class PoorMansFOV:
-    def __init__(self, recursion_call=False):
-        pixel_scale = utils.from_currsys("!INST.pixel_scale")
+    def __init__(self, pixel_scale, spec_dict, recursion_call=False):
         self.header = {"CDELT1": pixel_scale / 3600.,
                        "CDELT2": pixel_scale / 3600.,
                        "NAXIS": 2,
                        "NAXIS1": 128,
                        "NAXIS2": 128,
                        }
-        self.meta = utils.from_currsys("!SIM.spectral")
-        self.wavelength = self.meta["wave_mid"] * u.um
+        self.meta = spec_dict
+        self.wavelength = spec_dict["wave_mid"] * u.um
         if not recursion_call:
-            self.hdu = PoorMansFOV(recursion_call=True)
+            self.hdu = PoorMansFOV(pixel_scale, recursion_call=True)
 
 
 class PSF(Effect):
@@ -41,20 +44,21 @@ class PSF(Effect):
         self._waveset = []
         super().__init__(**kwargs)
 
-        params = {"flux_accuracy": "!SIM.computing.flux_accuracy",
-                  "sub_pixel_flag": "!SIM.sub_pixel.flag",
-                  "z_order": [40, 640],
-                  "convolve_mode": "same",      # "full", "same"
-                  "bkg_width": -1,
-                  "wave_key": "WAVE0",
-                  "normalise_kernel": True,
-                  "rotational_blur_angle": 0,
-                  "report_plot_include": True,
-                  "report_table_include": False,
-                  }
+        params = {
+            "flux_accuracy": "!SIM.computing.flux_accuracy",
+            "sub_pixel_flag": "!SIM.sub_pixel.flag",
+            "z_order": [40, 640],
+            "convolve_mode": "same",      # "full", "same"
+            "bkg_width": -1,
+            "wave_key": "WAVE0",
+            "normalise_kernel": True,
+            "rotational_blur_angle": 0,
+            "report_plot_include": True,
+            "report_table_include": False,
+        }
         self.meta.update(params)
         self.meta.update(kwargs)
-        self.meta = utils.from_currsys(self.meta)
+        self.meta = from_currsys(self.meta, self.cmds)
         self.convolution_classes = (FieldOfViewBase, ImagePlaneBase)
 
     def apply_to(self, obj, **kwargs):
@@ -64,7 +68,7 @@ class PSF(Effect):
             waveset = self._waveset
             if len(waveset) != 0:
                 waveset_edges = 0.5 * (waveset[:-1] + waveset[1:])
-                obj.split("wave", utils.quantify(waveset_edges, u.um).value)
+                obj.split("wave", quantify(waveset_edges, u.um).value)
 
         # 2. During observe: convolution
         elif isinstance(obj, self.convolution_classes):
@@ -79,7 +83,7 @@ class PSF(Effect):
                     kernel = pu.rotational_blur(kernel, rot_blur_angle)
 
                 # normalise psf kernel      KERNEL SHOULD BE normalised within get_kernel()
-                # if utils.from_currsys(self.meta["normalise_kernel"]) is True:
+                # if from_currsys(self.meta["normalise_kernel"], self.cmds):
                 #    kernel /= np.sum(kernel)
                 #    kernel[kernel < 0.] = 0.
 
@@ -89,7 +93,7 @@ class PSF(Effect):
                 bkg_level = pu.get_bkg_level(image, self.meta["bkg_width"])
 
                 # do the convolution
-                mode = utils.from_currsys(self.meta["convolve_mode"])
+                mode = from_currsys(self.meta["convolve_mode"], self.cmds)
 
                 if image.ndim == 2 and kernel.ndim == 2:
                     new_image = convolve(image - bkg_level, kernel, mode=mode)
@@ -119,8 +123,6 @@ class PSF(Effect):
 
     def fov_grid(self, which="waveset", **kwargs):
         """See parent docstring."""
-        warnings.warn("The fov_grid method is deprecated and will be removed "
-                      "in a future release.", DeprecationWarning, stacklevel=2)
         waveset = []
         if which == "waveset":
             if self._waveset is not None:
@@ -143,7 +145,7 @@ class PSF(Effect):
 
     def plot(self, obj=None, **kwargs):
         from matplotlib.colors import LogNorm
-        fig, axes = utils.figure_factory()
+        fig, axes = figure_factory()
 
         kernel = self.get_kernel(obj)
         axes.imshow(kernel, norm=LogNorm(), origin="lower", **kwargs)
@@ -171,12 +173,12 @@ class Vibration(AnalyticalPSF):
         self.convolution_classes = ImagePlaneBase
 
         self.required_keys = ["fwhm", "pixel_scale"]
-        utils.check_keys(self.meta, self.required_keys, action="error")
+        check_keys(self.meta, self.required_keys, action="error")
         self.kernel = None
 
     def get_kernel(self, obj):
         if self.kernel is None:
-            utils.from_currsys(self.meta)
+            from_currsys(self.meta, self.cmds)
             fwhm_pix = self.meta["fwhm"] / self.meta["pixel_scale"]
             sigma = fwhm_pix / 2.35
             width = max(1, int(fwhm_pix * self.meta["width_n_fwhms"]))
@@ -251,7 +253,7 @@ class NonCommonPathAberration(AnalyticalPSF):
 
         self.convolution_classes = FieldOfViewBase
         self.required_keys = ["pixel_scale"]
-        utils.check_keys(self.meta, self.required_keys, action="error")
+        check_keys(self.meta, self.required_keys, action="error")
 
     def fov_grid(self, which="waveset", **kwargs):
         """See parent docstring."""
@@ -259,14 +261,14 @@ class NonCommonPathAberration(AnalyticalPSF):
                       "in a future release.", DeprecationWarning, stacklevel=2)
         if which == "waveset":
             self.meta.update(kwargs)
-            self.meta = utils.from_currsys(self.meta)
+            self.meta = from_currsys(self.meta, self.cmds)
 
             min_sr = pu.wfe2strehl(self.total_wfe, self.meta["wave_min"])
             max_sr = pu.wfe2strehl(self.total_wfe, self.meta["wave_max"])
 
             srs = np.arange(min_sr, max_sr, self.meta["strehl_drift"])
             waves = 6.2831853 * self.total_wfe * (-np.log(srs))**-0.5
-            waves = utils.quantify(waves, u.um).value
+            waves = quantify(waves, u.um).value
             waves = (list(waves) + [self.meta["wave_max"]]) * u.um
         else:
             waves = [] * u.um
@@ -300,10 +302,10 @@ class NonCommonPathAberration(AnalyticalPSF):
         return self._total_wfe
 
     def plot(self):
-        fig, axes = utils.figure_factory()
+        fig, axes = figure_factory()
 
-        wave_min, wave_max = utils.from_currsys([self.meta["wave_min"],
-                                                 self.meta["wave_max"]])
+        wave_min, wave_max = from_currsys([self.meta["wave_min"],
+                                           self.meta["wave_max"]], self.cmds)
         waves = np.linspace(wave_min, wave_max, 1001) * u.um
         wfe = self.total_wfe
         strehl = pu.wfe2strehl(wfe=wfe, wave=waves)
@@ -336,10 +338,10 @@ class SeeingPSF(AnalyticalPSF):
         # called by .apply_to() from the base PSF class
 
         pixel_scale = fov.header["CDELT1"] * u.deg.to(u.arcsec)
-        pixel_scale = utils.quantify(pixel_scale, u.arcsec)
+        pixel_scale = quantify(pixel_scale, u.arcsec)
 
         # add in the conversion to fwhm from seeing and wavelength here
-        fwhm = utils.from_currsys(self.meta["fwhm"]) * u.arcsec / pixel_scale
+        fwhm = from_currsys(self.meta["fwhm"], self.cmds) * u.arcsec / pixel_scale
 
         sigma = fwhm.value / 2.35
         kernel = Gaussian2DKernel(sigma, mode="center").array
@@ -348,7 +350,9 @@ class SeeingPSF(AnalyticalPSF):
         return kernel
 
     def plot(self):
-        return super().plot(PoorMansFOV())
+        pixel_scale = from_currsys("!INST.pixel_scale", self.cmds)
+        spec_dict = from_currsys("!SIM.spectral", self.cmds)
+        return super().plot(PoorMansFOV(pixel_scale, spec_dict))
 
 
 class GaussianDiffractionPSF(AnalyticalPSF):
@@ -365,11 +369,11 @@ class GaussianDiffractionPSF(AnalyticalPSF):
         if which == "waveset" and \
                 "waverange" in kwargs and \
                 "pixel_scale" in kwargs:
-            waverange = utils.quantify(kwargs["waverange"], u.um)
-            diameter = utils.quantify(self.meta["diameter"], u.m).to(u.um)
+            waverange = quantify(kwargs["waverange"], u.um)
+            diameter = quantify(self.meta["diameter"], u.m).to(u.um)
             fwhm = 1.22 * (waverange / diameter).value  # in rad
 
-            pixel_scale = utils.quantify(kwargs["pixel_scale"], u.deg)
+            pixel_scale = quantify(kwargs["pixel_scale"], u.deg)
             pixel_scale = pixel_scale.to(u.rad).value
             fwhm_range = np.arange(fwhm[0], fwhm[1], pixel_scale)
             wavelengths = list(fwhm_range / 1.22 * diameter.to(u.m))
@@ -385,12 +389,12 @@ class GaussianDiffractionPSF(AnalyticalPSF):
         # called by .apply_to() from the base PSF class
 
         pixel_scale = fov.header["CDELT1"] * u.deg.to(u.arcsec)
-        pixel_scale = utils.quantify(pixel_scale, u.arcsec)
+        pixel_scale = quantify(pixel_scale, u.arcsec)
 
         wave = 0.5 * (fov.meta["wave_max"] + fov.meta["wave_min"])
 
-        wave = utils.quantify(wave, u.um)
-        diameter = utils.quantify(self.meta["diameter"], u.m).to(u.um)
+        wave = quantify(wave, u.um)
+        diameter = quantify(self.meta["diameter"], u.m).to(u.um)
         fwhm = 1.22 * (wave / diameter) * u.rad.to(u.arcsec) / pixel_scale
 
         sigma = fwhm.value / 2.35
@@ -400,7 +404,9 @@ class GaussianDiffractionPSF(AnalyticalPSF):
         return kernel
 
     def plot(self):
-        return super().plot(PoorMansFOV())
+        pixel_scale = from_currsys("!INST.pixel_scale", self.cmds)
+        spec_dict = from_currsys("!SIM.spectral", self.cmds)
+        return super().plot(PoorMansFOV(pixel_scale, spec_dict))
 
 
 ##############################################################################
@@ -473,15 +479,17 @@ class AnisocadoConstPSF(SemiAnalyticalPSF):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        params = {"z_order": [42, 652],
-                  "psf_side_length": 512,
-                  "offset": (0, 0),
-                  "rounded_edges": True}
+        params = {
+            "z_order": [42, 652],
+            "psf_side_length": 512,
+            "offset": (0, 0),
+            "rounded_edges": True,
+        }
         self.meta.update(params)
         self.meta.update(kwargs)
 
         self.required_keys = ["filename", "strehl", "wavelength"]
-        utils.check_keys(self.meta, self.required_keys, action="error")
+        check_keys(self.meta, self.required_keys, action="error")
         self.nmRms      # check to see if it throws an error
 
         self._psf_object = None
@@ -527,10 +535,10 @@ class AnisocadoConstPSF(SemiAnalyticalPSF):
 
     @property
     def wavelength(self):
-        wave = utils.from_currsys(self.meta["wavelength"])
+        wave = from_currsys(self.meta["wavelength"], self.cmds)
         if isinstance(wave, str) and wave in tu.FILTER_DEFAULTS:
             wave = tu.get_filter_effective_wavelength(wave)
-        wave = utils.quantify(wave, u.um).value
+        wave = quantify(wave, u.um).value
 
         return wave
 
@@ -544,7 +552,7 @@ class AnisocadoConstPSF(SemiAnalyticalPSF):
 
     @property
     def nmRms(self):
-        strehl = utils.from_currsys(self.meta["strehl"])
+        strehl = from_currsys(self.meta["strehl"], self.cmds)
         wave = self.wavelength
         hdu = self._file[0]
         nm_rms = pu.nmrms_from_strehl_and_wavelength(strehl, wave, hdu)
@@ -559,7 +567,7 @@ class AnisocadoConstPSF(SemiAnalyticalPSF):
             wspace=0.05, hspace=0.05)
         # or no height_ratios and bottom=0.1, top=0.9
 
-        pixel_scale = utils.from_currsys("!INST.pixel_scale")
+        pixel_scale = from_currsys("!INST.pixel_scale", self.cmds)
         kernel = self.get_kernel(pixel_scale)
 
         ax = fig.add_subplot(gs[0, 0])
@@ -631,7 +639,7 @@ class FieldConstantPSF(DiscretePSF):
         super().__init__(**kwargs)
 
         self.required_keys = ["filename"]
-        utils.check_keys(self.meta, self.required_keys, action="error")
+        check_keys(self.meta, self.required_keys, action="error")
 
         self.meta["z_order"] = [262, 662]
         self._waveset, self.kernel_indexes = pu.get_psf_wave_exts(
@@ -738,7 +746,9 @@ class FieldConstantPSF(DiscretePSF):
         # fits.writeto("test_psfcube.fits", data=self.kernel, overwrite=True)
 
     def plot(self):
-        return super().plot(PoorMansFOV())
+        pixel_scale = from_currsys("!INST.pixel_scale", self.cmds)
+        spec_dict = from_currsys("!SIM.spectral", self.cmds)
+        return super().plot(PoorMansFOV(pixel_scale, spec_dict))
 
 
 class FieldVaryingPSF(DiscretePSF):
@@ -758,7 +768,7 @@ class FieldVaryingPSF(DiscretePSF):
         super().__init__(**kwargs)
 
         self.required_keys = ["filename"]
-        utils.check_keys(self.meta, self.required_keys, action="error")
+        check_keys(self.meta, self.required_keys, action="error")
 
         self.meta["z_order"] = [261, 661]
 
@@ -886,4 +896,6 @@ class FieldVaryingPSF(DiscretePSF):
         return self._strehl_imagehdu
 
     def plot(self):
-        return super().plot(PoorMansFOV())
+        pixel_scale = from_currsys("!INST.pixel_scale", self.cmds)
+        spec_dict = from_currsys("!SIM.spectral", self.cmds)
+        return super().plot(PoorMansFOV(pixel_scale, spec_dict))

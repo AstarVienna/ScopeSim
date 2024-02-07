@@ -75,15 +75,17 @@ class TERCurve(Effect):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        params = {"z_order": [10, 110, 510],
-                  "ignore_wings": False,
-                  "wave_min": "!SIM.spectral.wave_min",
-                  "wave_max": "!SIM.spectral.wave_max",
-                  "wave_unit": "!SIM.spectral.wave_unit",
-                  "wave_bin": "!SIM.spectral.spectral_bin_width",
-                  "bg_cell_width": "!SIM.computing.bg_cell_width",
-                  "report_plot_include": True,
-                  "report_table_include": False}
+        params = {
+            "z_order": [10, 110, 510],
+            "ignore_wings": False,
+            "wave_min": "!SIM.spectral.wave_min",
+            "wave_max": "!SIM.spectral.wave_max",
+            "wave_unit": "!SIM.spectral.wave_unit",
+            "wave_bin": "!SIM.spectral.spectral_bin_width",
+            "bg_cell_width": "!SIM.computing.bg_cell_width",
+            "report_plot_include": True,
+            "report_table_include": False,
+        }
         self.meta.update(params)
         self.meta.update(kwargs)
 
@@ -103,7 +105,7 @@ class TERCurve(Effect):
     def apply_to(self, obj, **kwargs):
         if isinstance(obj, SourceBase):
             assert isinstance(obj, Source), "Only Source supported."
-            self.meta = from_currsys(self.meta)
+            self.meta = from_currsys(self.meta, self.cmds)
             wave_min = quantify(self.meta["wave_min"], u.um).to(u.AA)
             wave_max = quantify(self.meta["wave_max"], u.um).to(u.AA)
 
@@ -198,7 +200,7 @@ class TERCurve(Effect):
             _guard_plot_axes(which, axes)
 
         self.meta.update(kwargs)
-        params = from_currsys(self.meta)
+        params = from_currsys(self.meta, self.cmds)
 
         wave_unit = self.meta.get("wavelength_unit")
         if wavelength is None:
@@ -294,7 +296,7 @@ class SkycalcTERCurve(AtmosphericTERCurve):
 
     @property
     def include(self):
-        return from_currsys(self.meta["include"])
+        return from_currsys(self.meta["include"], self.cmds)
 
     @include.setter
     def include(self, item):
@@ -303,7 +305,8 @@ class SkycalcTERCurve(AtmosphericTERCurve):
             self.load_skycalc_table()
 
     def load_skycalc_table(self):
-        use_local_file = from_currsys(self.meta["use_local_skycalc_file"])
+        use_local_file = from_currsys(self.meta["use_local_skycalc_file"],
+                                      self.cmds)
         if not use_local_file:
             self.skycalc_conn = skycalc_ipy.SkyCalc()
             tbl = self.query_server()
@@ -338,14 +341,16 @@ class SkycalcTERCurve(AtmosphericTERCurve):
         self.meta.update(kwargs)
 
         if "wunit" in self.meta:
-            scale_factor = u.Unit(from_currsys(self.meta["wunit"])).to(u.nm)
+            scale_factor = u.Unit(from_currsys(self.meta["wunit"],
+                                               self.cmds)).to(u.nm)
             for key in ["wmin", "wmax", "wdelta"]:
                 if key in self.meta:
-                    self.meta[key] = from_currsys(self.meta[key]) * scale_factor
+                    self.meta[key] = from_currsys(self.meta[key],
+                                                  self.cmds) * scale_factor
 
         conn_kwargs = {key: self.meta[key] for key in self.meta
                        if key in self.skycalc_conn.defaults}
-        conn_kwargs = from_currsys(conn_kwargs)
+        conn_kwargs = from_currsys(conn_kwargs, self.cmds)
         self.skycalc_conn.values.update(conn_kwargs)
 
         try:
@@ -391,11 +396,12 @@ class FilterCurve(TERCurve):
     """
 
     def __init__(self, **kwargs):
+        # super().__init__(**kwargs)
         if not np.any([key in kwargs for key in ["filename", "table",
                                                  "array_dict"]]):
             if "filter_name" in kwargs and "filename_format" in kwargs:
-                filt_name = from_currsys(kwargs["filter_name"])
-                file_format = from_currsys(kwargs["filename_format"])
+                filt_name = from_currsys(kwargs["filter_name"], kwargs["cmds"])
+                file_format = from_currsys(kwargs["filename_format"], kwargs["cmds"])
                 kwargs["filename"] = file_format.format(filt_name)
             else:
                 raise ValueError("FilterCurve must be passed one of "
@@ -416,7 +422,7 @@ class FilterCurve(TERCurve):
         self.meta["z_order"] = [114, 214, 514]
         self.meta.update(kwargs)
 
-        min_thru = from_currsys(self.meta["minimum_throughput"])
+        min_thru = from_currsys(self.meta["minimum_throughput"], self.cmds)
         mask = self.table["transmission"] < min_thru
         self.table["transmission"][mask] = 0
 
@@ -425,7 +431,7 @@ class FilterCurve(TERCurve):
                       "in a future release.", DeprecationWarning, stacklevel=2)
         if which == "waveset":
             self.meta.update(kwargs)
-            self.meta = from_currsys(self.meta)
+            self.meta = from_currsys(self.meta, self.cmds)
             # ..todo:: replace the 101 with a variable in !SIM
             wave = np.linspace(self.meta["wave_min"],
                                self.meta["wave_max"], 101)
@@ -509,9 +515,10 @@ class TopHatFilterCurve(FilterCurve):
     def __init__(self, **kwargs):
         required_keys = ["transmission", "blue_cutoff", "red_cutoff"]
         check_keys(kwargs, required_keys, action="error")
+        self.cmds = kwargs.get("cmds", None)
 
-        wave_min = from_currsys("!SIM.spectral.wave_min")
-        wave_max = from_currsys("!SIM.spectral.wave_max")
+        wave_min = from_currsys("!SIM.spectral.wave_min", self.cmds)
+        wave_max = from_currsys("!SIM.spectral.wave_max", self.cmds)
         blue = kwargs["blue_cutoff"]
         red = kwargs["red_cutoff"]
         peak = kwargs["transmission"]
@@ -523,7 +530,7 @@ class TopHatFilterCurve(FilterCurve):
         tbl = Table(names=["wavelength", "transmission"],
                     data=[waveset, transmission])
         super().__init__(table=tbl, wavelength_unit="um",
-                         action="transmission")
+                         action="transmission", cmds=self.cmds)
         self.meta.update(kwargs)
 
 
@@ -582,10 +589,12 @@ class FilterWheelBase(Effect):
         super().__init__(**kwargs)
         check_keys(kwargs, self.required_keys, action="error")
 
-        params = {"z_order": [124, 224, 524],
-                  "report_plot_include": True,
-                  "report_table_include": True,
-                  "report_table_rounding": 4}
+        params = {
+            "z_order": [124, 224, 524],
+            "report_plot_include": True,
+            "report_table_include": True,
+            "report_table_rounding": 4,
+        }
         self.meta.update(params)
         self.meta.update(kwargs)
 
@@ -633,7 +642,7 @@ class FilterWheelBase(Effect):
     @property
     def current_filter(self):
         filter_eff = None
-        filt_name = from_currsys(self.meta["current_filter"])
+        filt_name = from_currsys(self.meta["current_filter"], self.cmds)
         if filt_name is not None:
             filter_eff = self.filters[filt_name]
         return filter_eff
@@ -715,7 +724,7 @@ class FilterWheel(FilterWheelBase):
         self.meta.update(kwargs)
 
         path = self._get_path()
-        for name in from_currsys(self.meta["filter_names"]):
+        for name in from_currsys(self.meta["filter_names"], self.cmds):
             kwargs["name"] = name
             self.filters[name] = FilterCurve(filename=str(path).format(name),
                                              **kwargs)
@@ -866,12 +875,13 @@ class PupilTransmission(TERCurve):
     The emissivity is set to zero, assuming that the mask is cold.
     """
 
-    def __init__(self, transmission, **kwargs):
+    def __init__(self, transmission, cmds=None, **kwargs):
         self.params = {"wave_min": "!SIM.spectral.wave_min",
                        "wave_max": "!SIM.spectral.wave_max"}
         self.params.update(kwargs)
-        wave_min = from_currsys(self.params["wave_min"]) * u.um
-        wave_max = from_currsys(self.params["wave_max"]) * u.um
+        self.cmds = cmds
+        wave_min = from_currsys(self.params["wave_min"], self.cmds) * u.um
+        wave_max = from_currsys(self.params["wave_max"], self.cmds) * u.um
         transmission = from_currsys(transmission)
 
         super().__init__(wavelength=[wave_min, wave_max],

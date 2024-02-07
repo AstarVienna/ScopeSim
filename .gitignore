@@ -52,7 +52,7 @@ dist
 *TEST.fits
 *temp*
 *speclecado*.fits
-/inst_pkgs/
+*inst_pkgs/
 
 # Spyder project settings
 .spyderproject

@@ -1130,10 +1130,10 @@ def det_wcs_from_sky_wcs(sky_wcs: WCS,
     # TODO: add check if cunit is consistent along all axes
     cunit = sky_wcs.wcs.cunit[0]
     corners = sky_wcs.calc_footprint(center=False, axes=naxis) * cunit
-    logger.debug("WCS sky corners: %s", corners)
+    logger.debug("WCS sky corners:\n%s", corners)
     corners /= plate_scale
     corners = corners.to(u.mm)
-    logger.debug("WCS det corners: %s", corners)
+    logger.debug("WCS det corners:\n%s", corners)
 
     return create_wcs_from_points(corners, pixel_size, "D")
 

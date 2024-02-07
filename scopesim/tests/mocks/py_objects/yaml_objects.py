@@ -58,7 +58,7 @@ effects :
 -   name : micado_surface_list
     class : SurfaceList
     kwargs :
-        file_name : LIST_mirrors_MICADO_Wide.tbl
+        filename : LIST_mirrors_MICADO_Wide.tbl
 
 -   name : micado_adc
     class : AtmosphericDispersion

@@ -17,9 +17,10 @@ class DetectorArray:
     #       FOVManager and OpticsManager classes?
     # TODO: Either way this could inherit from some collections.abc
 
-    def __init__(self, detector_list=None, **kwargs):
+    def __init__(self, detector_list=None, cmds=None, **kwargs):
         self.meta = {}
         self.meta.update(kwargs)
+        self.cmds = cmds
 
         # The effect from which the instance is constructed
         self._detector_list = detector_list
@@ -82,7 +83,7 @@ class DetectorArray:
             image_plane = effect.apply_to(image_plane, **self.meta)
 
         # 3. make a series of Detectors for each row in a DetectorList object
-        self.detectors = [Detector(hdr, **self.meta)
+        self.detectors = [Detector(hdr, cmds=self.cmds, **self.meta)
                           for hdr in self._detector_list.detector_headers()]
 
         # 4. iterate through all Detectors, extract image from image_plane

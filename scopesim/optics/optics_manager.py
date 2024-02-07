@@ -36,12 +36,17 @@ class OpticsManager:
 
     """
 
-    def __init__(self, yaml_dicts=None, **kwargs):
+    def __init__(self, yaml_dicts=None, cmds=None, **kwargs):
         self.optical_elements = []
         self.meta = {}
         self.meta.update(kwargs)
         self._surfaces_table = None
         self._surface_like_effects = None
+
+        self.cmds = cmds
+        if self.cmds is None:
+            logger.warning("No UserCommands object was passed when initialising OpticsManager")
+            self.cmds = rc.__currsys__
 
         if yaml_dicts is not None:
             self.load_effects(yaml_dicts, **self.meta)
@@ -50,15 +55,15 @@ class OpticsManager:
 
     def set_derived_parameters(self):
 
-        if "!INST.pixel_scale" not in rc.__currsys__:
+        if "!INST.pixel_scale" not in self.cmds:
             raise ValueError("'!INST.pixel_scale' is missing from the current"
                              "system. Please add this to the instrument (INST)"
                              "properties dict for the system.")
-        pixel_scale = rc.__currsys__["!INST.pixel_scale"] * u.arcsec
+        pixel_scale = self.cmds["!INST.pixel_scale"] * u.arcsec
         area = self.area
         etendue = area * pixel_scale**2
-        rc.__currsys__["!TEL.etendue"] = etendue
-        rc.__currsys__["!TEL.area"] = area
+        self.cmds["!TEL.etendue"] = etendue
+        self.cmds["!TEL.area"] = area
 
         params = {"area": area, "pixel_scale": pixel_scale, "etendue": etendue}
         self.meta.update(params)
@@ -243,7 +248,7 @@ class OpticsManager:
         for eff in sle_list:
             if isinstance(eff, efs.SurfaceList):
                 eff_copy = deepcopy(eff)
-                eff_copy.table = from_currsys(eff.table)
+                eff_copy.table = from_currsys(eff.table, self.cmds)
             else:
                 # Avoid infinite recursion in Wheel effects (filter, adc)
                 eff_copy = eff
@@ -260,10 +265,10 @@ class OpticsManager:
     @property
     def system_transmission(self):
 
-        wave_unit = u.Unit(rc.__currsys__["!SIM.spectral.wave_unit"])
-        dwave = rc.__currsys__["!SIM.spectral.spectral_bin_width"]
-        wave_min = rc.__currsys__["!SIM.spectral.wave_min"]
-        wave_max = rc.__currsys__["!SIM.spectral.wave_max"]
+        wave_unit = u.Unit(from_currsys("!SIM.spectral.wave_unit", self.cmds))
+        dwave = from_currsys("!SIM.spectral.spectral_bin_width", self.cmds)
+        wave_min = from_currsys("!SIM.spectral.wave_min", self.cmds)
+        wave_max = from_currsys("!SIM.spectral.wave_max", self.cmds)
         wave = np.arange(wave_min, wave_max, dwave)
         trans = np.ones_like(wave)
         sys_trans = SpectralElement(Empirical1D, points=wave*u.Unit(wave_unit),
@@ -303,7 +308,7 @@ class OpticsManager:
 
         colnames = ["element", "name", "class", "included"]     #, "z_orders"
         data = [elements, names, classes, included]             #, z_orders
-        data = from_currsys(data)
+        data = from_currsys(data, self.cmds)
         tbl = Table(names=colnames, data=data, copy=False)
 
         return tbl

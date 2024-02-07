@@ -54,11 +54,13 @@ class ChopNodCombiner(Effect):
         check_keys(kwargs, ["chop_offsets", "pixel_scale"])
 
         super().__init__(**kwargs)
-        params = {"chop_offsets": None,
-                  "nod_offsets": None,
-                  "pixel_scale": None,
-                  "include": True,
-                  "z_order": [863]}
+        params = {
+            "chop_offsets": None,
+            "nod_offsets": None,
+            "pixel_scale": None,
+            "include": True,
+            "z_order": [863],
+        }
         self.meta.update(params)
         self.meta.update(kwargs)
 
