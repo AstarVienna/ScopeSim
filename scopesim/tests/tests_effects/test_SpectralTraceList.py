@@ -267,15 +267,16 @@ class TestUnresolvedSpectralTraceListInit:
         flux[::10] = 10
         spec = SourceSpectrum(Empirical1D, points=waves, lookup_table=flux)
 
-        for i, trace in enumerate(sptl.spectral_traces.values()):
+        fig, axes = plt.subplots(2, 3)
+
+        for ax, trace in zip(axes.flatten(), sptl.spectral_traces.values()):
             x, y, z = sptl.get_xyz_for_trace(trace, spec)
             image = sptl.trace_to_image(x, y, z)
-            plt.subplot(2, 3, i+1)
-            plt.imshow(image, origin="lower")
+            ax.imshow(image, origin="lower")
 
         if PLOTS:
-            plt.pause(0)
-            plt.show()
+            fig.show()
+
 
 class TestMosaicSpectralTraceList():
     def test_intit(self):

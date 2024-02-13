@@ -206,7 +206,7 @@ class RadialProfilePSF(AnalyticalPSF):
         self.required_keys = ["r", "z", "unit"]
         if self.meta["unit"] == "mm":
             self.required_keys += ["pixel_scale", "plate_scale"]
-        utils.check_keys(self.meta, self.required_keys, action="error")
+        check_keys(self.meta, self.required_keys, action="error")
 
         self.kernel = None
 
@@ -214,8 +214,8 @@ class RadialProfilePSF(AnalyticalPSF):
         if self.kernel is None:
             dr = 1
             if self.meta["unit"] == "mm":
-                dr = utils.from_currsys(self.meta["pixel_scale"]) / \
-                     utils.from_currsys(self.meta["plate_scale"])
+                dr = from_currsys(self.meta["pixel_scale"], self.cmds) / \
+                     from_currsys(self.meta["plate_scale"], self.cmds)
 
             rpix = np.array(self.meta["r"]) / dr
             z = np.array(self.meta["z"])

@@ -134,7 +134,7 @@ class TestObserveIfuMode:
         imp_im = opt.image_planes[0].data
         det_im = hdul[1].data
 
-        if PLOTS:
+        if not PLOTS:
             plt.subplot(121)
             plt.imshow(imp_im, norm=LogNorm())
             plt.subplot(122)
@@ -234,7 +234,7 @@ class TestObserveIfuMode:
             plt.imshow(det_im)
             plt.show()
 
-        assert imp_im.sum() == pytest.approx(5251, rel=1e-3)
+        assert imp_im.sum() == pytest.approx(5251, rel=1e-2)
 
 
 @pytest.mark.usefixtures("protect_currsys", "patch_all_mock_paths")

@@ -1048,7 +1048,9 @@ def extract_region_from_imagehdu(hdu, x_edges, y_edges, wcs_suffix=""):
     w = wcs.WCS(hdu.header, key=s, naxis=2)
     xps, yps = w.all_world2pix([min(x_edges), max(x_edges)],
                                [min(y_edges), max(y_edges)], 1)
-    xps, yps = np.round(xps).astype(int), np.round(yps).astype(int)
+    #xps, yps = np.round(xps).astype(int), np.round(yps).astype(int)
+    xps = [int(np.floor(min(xps))), int(np.floor(max(xps)))]
+    yps = [int(np.floor(min(yps))), int(np.floor(max(yps)))]
 
     w, h = hdu.header["NAXIS1"], hdu.header["NAXIS2"]
     assert xps[0] >= 0 and xps[1] <= w and yps[0] >= 0 and yps[1] <= h, \

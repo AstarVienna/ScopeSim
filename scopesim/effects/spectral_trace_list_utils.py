@@ -1055,7 +1055,6 @@ def get_affine_parameters(coords):
 
 
 class TraceGenerator:
-
     def __init__(self,
                  l_low: float=1.420,      # um
                  l_high: float=1.857,     # um
@@ -1069,21 +1068,30 @@ class TraceGenerator:
                  ):
         """Build a trace Generator for MOSAIC MOS.
 
-        :param l_low: the minimum wavelength of the trace , defaults to 0.770
-        :type l_low: float, optional
-        :param l_high: the maximum lambda of the trace , defaults to 1.063
-        :type l_high: float, optional
-        :param delta_lambda: delta lambda of the trace, defaults to 0.183
-        :type delta_lambda: float, optional
-        :param sampling: sampling in pixels, defaults to 2.56
-        :type sampling: float, optional
-        :param fiber_per_mos: number of fiber per mos, optinonal
-        :type fiber_per_mos: int, defaults to 7
-        :param nbr_mos: number of mos, defaults to 2
-        :type nbr_mos: int, optional
-        :param mos_distance: distances between 2 mos in pixel, defaults to 32
-        :type mos_distance: float, optional
+        Parameters
+        ----------
+        l_low : float, optional
+            The minimum wavelength of the trace. Defaults to 0.770.
+
+        l_high : float, optional
+            The maximum lambda of the trace. Defaults to 1.063.
+
+        delta_lambda : float, optional
+            Delta lambda of the trace. Defaults to 0.183.
+
+        sampling : float, optional
+            Sampling in pixels. Defaults to 2.56.
+
+        fiber_per_mos : int, optional
+            Number of fiber per MOS. Defaults to 7.
+
+        nbr_mos : int, optional
+            Number of MOS. Defaults to 2.
+
+        mos_distance : float, optional
+            Distances between 2 MOS in pixels. Defaults to 32.
         """
+
         self._l_low = l_low
         self._l_high = l_high
         self._delta_lambda = delta_lambda

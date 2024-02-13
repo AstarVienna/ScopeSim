@@ -490,7 +490,10 @@ class SpectralTraceList(Effect):
         return msg
 
     def __getitem__(self, item):
-        return self.spectral_traces[item]
+        if isinstance(item, str) and item.startswith("#"):
+            return super().__getitem__(item)
+        else:
+            return self.spectral_traces[item]
 
     def __setitem__(self, key, value):
         self.spectral_traces[key] = value
@@ -600,8 +603,7 @@ class SpectralTraceListWheel(Effect):
     @property
     def display_name(self):
         name = self.meta.get("name", self.meta.get("filename", "<untitled>"))
-        return f'{name} : [{from_currsys(self.meta["current_trace_list"], 
-                                         self.cmds)}]'
+        return f'{name} : [{from_currsys(self.meta["current_trace_list"], self.cmds)}]'
 
 
 class UnresolvedSpectralTraceList(SpectralTraceList):
@@ -737,6 +739,7 @@ class MosaicSpectralTraceList(UnresolvedSpectralTraceList):
                   "wave_min": "!SIM.spectral.wave_min",  # [um]
                   "wave_mid": "!SIM.spectral.wave_mid",  # [um]
                   "wave_max": "!SIM.spectral.wave_max",  # [um]
+                  "spectral_bin_width": "!SIM.spectral.spectral_bin_width",  # [um]
                   "distance_between_fibers": 8, #pixels
                   "fiber_per_bundle" : 7,
                   "n_bundles" : 2,
@@ -748,14 +751,14 @@ class MosaicSpectralTraceList(UnresolvedSpectralTraceList):
         super(SpectralTraceList, self).__init__(**params)
 
         resolved_dict = from_currsys(self.meta, self.cmds)
-        t = TraceGenerator(l_low = resolved_dict("wave_min"),
-                           l_high = resolved_dict("wave_max"),
-                           delta_lambda = resolved_dict("!SIM.spectral.spectral_bin_width"),
+        t = TraceGenerator(l_low = resolved_dict["wave_min"],
+                           l_high = resolved_dict["wave_max"],
+                           delta_lambda = resolved_dict["spectral_bin_width"],
                            pixel_size = self.pixel_size,  # mm
-                           trace_distances = resolved_dict("distance_between_fibers"),  # pixels
-                           fiber_per_mos = resolved_dict("fiber_per_bundle"),
-                           nbr_mos = resolved_dict("n_bundles"),
-                           mos_distance = resolved_dict("distance_between_bundles"),  # pixels
+                           trace_distances = resolved_dict["distance_between_fibers"],  # pixels
+                           fiber_per_mos = resolved_dict["fiber_per_bundle"],
+                           nbr_mos = resolved_dict["n_bundles"],
+                           mos_distance = resolved_dict["distance_between_bundles"],  # pixels
         )
         self._file = t.make_fits()
         super().make_spectral_traces()
