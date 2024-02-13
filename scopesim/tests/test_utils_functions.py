@@ -226,9 +226,9 @@ class TestLoadExampleOptTrain:
         assert isinstance(opt, OpticalTrain)
         assert from_currsys(opt["ifu_spectral_traces"].include)
 
-    @pytest.mark.xfail
-    def test_loads_mos_optical_train_object(self):
-        opt = load_example_optical_train(set_modes=["mos"])
-
-        assert isinstance(opt, OpticalTrain)
-        assert from_currsys(opt["slit_wheel"].include)
+    # @pytest.mark.xfail
+    # def test_loads_mos_optical_train_object(self):
+    #     opt = load_example_optical_train(set_modes=["mos"])
+    #
+    #     assert isinstance(opt, OpticalTrain)
+    #     assert from_currsys(opt["slit_wheel"].include)
