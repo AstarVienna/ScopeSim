@@ -94,7 +94,7 @@ class OpticsManager:
         """
         if not isinstance(yaml_dicts, Sequence):
             yaml_dicts = [yaml_dicts]
-        self.optical_elements.extend(OpticalElement(dic, **kwargs)
+        self.optical_elements.extend(OpticalElement(dic, cmds=self.cmds, **kwargs)
                                      for dic in yaml_dicts if "effects" in dic)
 
     def add_effect(self, effect, ext=0):
