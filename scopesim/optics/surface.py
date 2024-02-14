@@ -12,12 +12,11 @@ from synphot import SpectralElement
 from synphot.models import Empirical1D
 
 from ..effects import ter_curves_utils as ter_utils
-from .surface_utils import make_emission_from_emissivity,\
+from .surface_utils import make_emission_from_emissivity, \
     make_emission_from_array
 from ..utils import (get_meta_quantity, quantify, extract_type_from_unit,
                      from_currsys, convert_table_comments_to_dict, find_file,
                      get_logger)
-
 
 logger = get_logger(__name__)
 
@@ -43,13 +42,14 @@ class SpectralSurface:
 
     """
 
-    def __init__(self, filename=None, **kwargs):
+    def __init__(self, filename=None, cmds=None, **kwargs):
         filename = find_file(filename)
         self.meta = {"filename": filename,
                      "temperature": -270 * u.deg_C,  # deg C
                      "emission_unit": "",
                      "wavelength_unit": u.um}
 
+        self.cmds = cmds
         self.table = Table()
         if filename is not None and Path(filename).exists():
             self.table = ioascii.read(filename)
@@ -62,10 +62,10 @@ class SpectralSurface:
     @property
     def area(self):
         if "area" in self.meta:
-            the_area = self.from_meta("area", u.m**2)
+            the_area = self.from_meta("area", u.m ** 2)
         elif "outer" in self.meta:
             outer_diameter = self.from_meta("outer", u.m)
-            the_area = np.pi * (0.5 * outer_diameter)**2
+            the_area = np.pi * (0.5 * outer_diameter) ** 2
             if "inner" in self.meta:
                 inner_diameter = self.from_meta("inner", u.m)
                 the_area -= np.pi * (0.5 * inner_diameter) ** 2
@@ -106,7 +106,7 @@ class SpectralSurface:
     def emission(self):
         """
         Look for an emission array in self.meta.
-        
+
         If it doesn't find this, it defaults to creating a blackbody and
         multiplies this by the emissivity. Assumption is that
         ``self.meta["temperature"]`` is in ``deg_C``, unless it is a
@@ -118,8 +118,8 @@ class SpectralSurface:
             wave = self._get_array("wavelength")
             flux = make_emission_from_array(flux, wave, meta=self.meta)
         elif "temperature" in self.meta:
-            emiss = self.emissivity                     # SpectralElement [0..1]
-            temp = from_currsys(self.meta["temperature"])
+            emiss = self.emissivity  # SpectralElement [0..1]
+            temp = from_currsys(self.meta["temperature"], self.cmds)
             if not isinstance(temp, u.Quantity):
                 temp = quantify(temp, u.deg_C)
             temp = temp.to(u.Kelvin, equivalencies=u.temperature())
@@ -133,11 +133,11 @@ class SpectralSurface:
         if flux is not None and has_solid_angle:
             conversion_factor = flux.meta["solid_angle"].to(u.arcsec ** -2)
             flux = flux * conversion_factor
-            flux.meta["solid_angle"] = u.arcsec**-2
+            flux.meta["solid_angle"] = u.arcsec ** -2
             flux.meta["history"].append(f"Converted to arcsec-2: {conversion_factor}")
 
         if flux is not None and "rescale_emission" in self.meta:
-            dic = from_currsys(self.meta["rescale_emission"])
+            dic = from_currsys(self.meta["rescale_emission"], self.cmds)
             amplitude = dic["value"] * u.Unit(dic["unit"])
             filter_name = dic["filter_name"]
             if "filename_format" in dic:
@@ -226,11 +226,11 @@ class SpectralSurface:
         compliment_b = self._get_array(colname_b)
 
         if compliment_a is not None and compliment_b is not None:
-            actual = 1*compliment_a.unit - (compliment_a + compliment_b)
+            actual = 1 * compliment_a.unit - (compliment_a + compliment_b)
         elif compliment_a is not None and compliment_b is None:
-            actual = 1*compliment_a.unit - compliment_a
+            actual = 1 * compliment_a.unit - compliment_a
         elif compliment_b is not None and compliment_a is None:
-            actual = 1*compliment_b.unit - compliment_b
+            actual = 1 * compliment_b.unit - compliment_b
         elif compliment_b is None and compliment_a is None:
             actual = None
 
@@ -261,7 +261,7 @@ class SpectralSurface:
                          colname, self.meta.get("name", self.meta["filename"]))
             return None
 
-        col_units = colname+"_unit"
+        col_units = colname + "_unit"
         if isinstance(val, u.Quantity):
             units = val.unit
         elif col_units in self.meta:

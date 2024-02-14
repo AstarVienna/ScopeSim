@@ -195,6 +195,7 @@ class TestFlattenDict:
         assert flat_dict["HIERARCH SIM SRC0 scaling_unit"] == "mag"
 
     def test_resolves_bang_strings(self):
+        # TODO: Use fixtures, because success depends on order of tests.
         dic = {"SIM": {"random_seed": "!SIM.random.seed"}}
         flat_dict = fh.flatten_dict(dic, resolve=True)
         assert flat_dict["SIM random_seed"] is None

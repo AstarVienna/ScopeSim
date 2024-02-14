@@ -128,6 +128,9 @@ class DataContainer:
         self.meta.update(hdr_dict)
         # self.table.meta.update(hdr_dict)
         self.table.meta.update(self.meta)
+        if self.table.meta.get("cmds"):
+            self.table.meta.pop("cmds")
+
         self.meta["history"] += ["ASCII table read from "
                                  f"{self.meta['filename']}"]
 

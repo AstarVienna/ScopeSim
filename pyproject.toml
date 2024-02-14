@@ -85,10 +85,12 @@ filterwarnings = [
     # Should probably be fixed:
     "ignore::ResourceWarning",
     "ignore:The fit may be poorly conditioned:astropy.utils.exceptions.AstropyUserWarning",
+    "ignore::astropy.units.core.UnitsWarning",
     # Perhaps fix?
     "ignore:divide by zero encountered in scalar divide:RuntimeWarning",
     "ignore:divide by zero encountered in double_scalars:RuntimeWarning",
     "ignore:invalid value encountered in multiply:RuntimeWarning",
+    "ignore:invalid value encountered in divide:RuntimeWarning",
     "ignore:Cannot merge meta key.*:astropy.utils.metadata.MergeConflictWarning",
     "default:The fov_grid*:DeprecationWarning",
     # Raised when saving fits files, not so important to fix:
@@ -102,7 +104,7 @@ filterwarnings = [
     "ignore:datetime.datetime.utcfromtimestamp()*:DeprecationWarning",
     # Pytest Notebook stuff
     "ignore:The*:pytest.PytestRemovedIn8Warning",
-    "ignore:Proactor*:RuntimeWarning"
+    "ignore:Proactor*:RuntimeWarning",
 ]
 
 [tool.coverage.report]

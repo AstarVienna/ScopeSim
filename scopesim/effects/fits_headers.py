@@ -218,7 +218,7 @@ class ExtraFitsKeywords(Effect):
 
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self, cmds=None, **kwargs):
         # don't pass kwargs, as DataContainer can't handle yaml files
         super().__init__()
         params = {"name": "extra_fits_keywords",
@@ -419,7 +419,7 @@ class EffectsMetaKeywords(ExtraFitsKeywords):
 
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self, cmds=None, **kwargs):
         super(ExtraFitsKeywords, self).__init__()
         params = {"name": "effects_fits_keywords",
                   "description": "Effect Meta FITS headers",
@@ -453,7 +453,7 @@ class EffectsMetaKeywords(ExtraFitsKeywords):
                 keys = list(eff_meta.keys())
                 for key in keys:
                     value = eff_meta[key]
-                    if key in ["history", "notes", "changes"]:
+                    if key in ["history", "notes", "changes", "cmds"]:
                         eff_meta.pop(key)
                     if isinstance(value, Table):
                         eff_meta[key] = f"Table object of length: {len(value)}"
@@ -506,7 +506,7 @@ class SourceDescriptionFitsKeywords(ExtraFitsKeywords):
 
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self,  cmds=None, **kwargs):
         super(ExtraFitsKeywords, self).__init__()
         params = {"name": "source_fits_keywords",
                   "description": "Source description FITS headers",
@@ -590,7 +590,7 @@ class SimulationConfigFitsKeywords(ExtraFitsKeywords):
 
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self, cmds=None, **kwargs):
         super(ExtraFitsKeywords, self).__init__()
         params = {"name": "simulation_fits_keywords",
                   "description": "Simulation Config FITS headers",
