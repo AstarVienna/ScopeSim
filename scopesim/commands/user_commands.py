@@ -160,7 +160,9 @@ class UserCommands(NestedChainMap):
         super().__init__(RecursiveNestedMapping(title="CurrSys"), *maps)
 
         self.yaml_dicts = []
-        self._kwargs = kwargs
+        # HACK: the deepcopy is necessary because otherwise some subdicts
+        #       e.g. properties gets emptied, not sure why
+        self._kwargs = deepcopy(kwargs)
         self.ignore_effects = []
         self.package_name = ""
         self.default_yamls = []

@@ -76,9 +76,7 @@ class TestInit:
         """Check whether we can recreate a UserCommand by evaluating its __repr__."""
         cmd1 = UserCommands(use_instrument="test_package")
         cmd2 = eval(repr(cmd1))
-        # TODO: Create a proper __eq__ so we can assert cmd1 == cmd2
-        assert str(cmd1) == str(cmd2)
-        assert cmd1.cmds == cmd2.cmds
+        assert cmd1 == cmd2
 
 
 @pytest.mark.usefixtures("patch_all_mock_paths")
