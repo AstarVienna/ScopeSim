@@ -185,15 +185,18 @@ class UserCommands(NestedChainMap):
         self.update_alias(self.maps[0], yaml_dict)
         self.yaml_dicts.append(yaml_dict)
 
+        if "packages" in yaml_dict:
+            logger.info("        found packages")
+            self.update(packages=yaml_dict["packages"])
+
         # recursive
         sub_yamls = yaml_dict.get("yamls", [])
         logger.info("      found %d sub-yamls", len(sub_yamls))
         self._load_yamls(sub_yamls)
 
-        for key in ["packages", "mode_yamls"]:
-            if key in yaml_dict:
-                logger.info("        found %s", key)
-                self.update(**{key: yaml_dict[key]})
+        if "mode_yamls" in yaml_dict:
+            logger.info("        found mode_yamls")
+            self.update(mode_yamls=yaml_dict["mode_yamls"])
         logger.info("      dict yaml done")
 
     def _load_yamls(self, yamls: Collection) -> None:
