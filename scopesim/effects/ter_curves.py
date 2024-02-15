@@ -395,13 +395,13 @@ class FilterCurve(TERCurve):
 
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self, cmds=None, **kwargs):
         # super().__init__(**kwargs)
         if not np.any([key in kwargs for key in ["filename", "table",
                                                  "array_dict"]]):
             if "filter_name" in kwargs and "filename_format" in kwargs:
-                filt_name = from_currsys(kwargs["filter_name"], kwargs["cmds"])
-                file_format = from_currsys(kwargs["filename_format"], kwargs["cmds"])
+                filt_name = from_currsys(kwargs["filter_name"], cmds)
+                file_format = from_currsys(kwargs["filename_format"], cmds)
                 kwargs["filename"] = file_format.format(filt_name)
             else:
                 raise ValueError("FilterCurve must be passed one of "
@@ -512,10 +512,10 @@ class TopHatFilterCurve(FilterCurve):
 
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self, cmds=None, **kwargs):
         required_keys = ["transmission", "blue_cutoff", "red_cutoff"]
         check_keys(kwargs, required_keys, action="error")
-        self.cmds = kwargs.get("cmds", None)
+        self.cmds = cmds
 
         wave_min = from_currsys("!SIM.spectral.wave_min", self.cmds)
         wave_max = from_currsys("!SIM.spectral.wave_max", self.cmds)
