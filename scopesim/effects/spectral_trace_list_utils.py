@@ -316,7 +316,7 @@ class SpectralTrace:
            Spatial limits of the slit on the sky. This should be taken from
            the header of the hdulist, but this is not yet provided by scopesim
         """
-        logger.info("Rectifying %d", self.trace_id)
+        logger.info("Rectifying %s", self.trace_id)
 
         wave_min = kwargs.get("wave_min",
                               self.wave_min)
