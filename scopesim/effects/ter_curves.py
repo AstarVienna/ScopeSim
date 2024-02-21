@@ -149,18 +149,8 @@ class TERCurve(Effect):
     @property
     def background_source(self):
         if self._background_source is None:
-            # add a single pixel ImageHDU for the extended background with a
-            # size of 1 degree
-            # bg_cell_width = from_currsys(self.meta["bg_cell_width"])
-
             flux = self.emission
             bg_hdu = fits.ImageHDU()
-            # TODO: The make_imagehdu_from_table below has been replaced with
-            #       the empty ImageHDU above in fbca416. That change might,
-            #       have been fine (or not?), but now there is no use anywhere
-            #       in the code of make_imagehdu_from_table or bg_cell_width,
-            #       so maybe these need to be removed?
-            # bg_hdu = make_imagehdu_from_table([0], [0], [1], bg_cell_width * u.arcsec)
 
             bg_hdu.header.update({"BG_SRC": True,
                                   "BG_SURF": self.display_name,
