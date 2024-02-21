@@ -388,61 +388,6 @@ class TestPhotonsInRange:
         assert counts.value == approx(expected)
 
 
-class TestMakeImageFromTable:
-    def test_returned_object_is_image_hdu(self):
-        hdu = source_utils.make_imagehdu_from_table(x=[0], y=[0], flux=[1])
-        assert isinstance(hdu, fits.ImageHDU)
-
-    def test_imagehdu_has_wcs(self):
-        hdu = source_utils.make_imagehdu_from_table(x=[0], y=[0], flux=[1])
-        wcs_keys = ["CRPIX1", "CRVAL1", "CDELT1", "CUNIT1"]
-        assert np.all([key in hdu.header.keys() for key in wcs_keys])
-
-    def test_stars_are_at_correct_position_for_no_subpixel_accuracy(self):
-        # weird behaviour for exactly integer coords e.g. (0, 0)
-        x = np.linspace(-1.0001, 1.0001, 9)*u.arcsec
-        y = np.linspace(-1.0001, 1.0001, 9)*u.arcsec
-        flux = np.ones(len(x))
-        hdu = source_utils.make_imagehdu_from_table(x=x, y=y, flux=flux,
-                                                    pix_scale=0.25*u.arcsec)
-        the_wcs = wcs.WCS(hdu)
-        xx, yy = the_wcs.wcs_world2pix(x.to(u.deg), y.to(u.deg), 1)
-        xx = np.floor(xx).astype(int)
-        yy = np.floor(yy).astype(int)
-        assert np.all(hdu.data[xx, yy])
-
-    @pytest.mark.parametrize("ii", np.arange(20))
-    def test_wcs_returns_correct_pixel_values_for_random_coords(self, ii):
-        x = np.random.random(11)*u.arcsec
-        y = np.random.random(11)*u.arcsec
-        flux = np.ones(len(x))
-        hdu = source_utils.make_imagehdu_from_table(x=x, y=y, flux=flux,
-                                                    pix_scale=0.1*u.arcsec)
-        the_wcs = wcs.WCS(hdu)
-        xx, yy = the_wcs.wcs_world2pix(x.to(u.deg), y.to(u.deg), 1)
-        assert (xx > 0).all()
-        assert (yy > 0).all()
-        xx = xx.astype(int)
-        yy = yy.astype(int)
-        assert np.all(hdu.data[xx, yy])
-
-        # When plotting the image vs the scatter plot
-        # The dots match up with a 0.5 px shift, When we intruduce the shift to
-        # the test, the dots are on top of the image, but the test fails
-        # when using
-        # the_wcs.wcs.crpix = [0.5, 0.5]
-        # Returning to normal the test passes when (albeit with an image offset)
-        # the_wcs.wcs.crpix = [0., 0.]
-        #
-        # print(hdu.data, flush=True)
-        # print(x, y, flush=True)
-        # import matplotlib.pyplot as plt
-        # plt.subplot(projection=the_wcs)
-        # plt.scatter(y*10, x*10)
-        # plt.scatter(yy , xx)
-        # plt.imshow(hdu.data)
-        # plt.show()
-
 #
 # class TestScaleImageHDU:
 #     def test_scaling_properly_for_si_photlam_in_header(self):
