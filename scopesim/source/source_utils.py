@@ -145,7 +145,7 @@ def make_imagehdu_from_table(x, y, flux, pix_scale=1*u.arcsec):
     the_wcs.wcs.cunit = [unit, unit]
     the_wcs.wcs.ctype = ["RA---TAN", "DEC--TAN"]
 
-    ypix, xpix = the_wcs.wcs_world2pix(y.to(u.deg), x.to(u.deg), 1)
+    xpix, ypix = the_wcs.wcs_world2pix(x.to(u.deg), y.to(u.deg), 1)
     yint, xint  = ypix.astype(int), xpix.astype(int)
 
     image = np.zeros((np.max(xint) + 1, np.max(yint) + 1))

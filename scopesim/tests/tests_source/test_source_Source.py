@@ -406,7 +406,7 @@ class TestMakeImageFromTable:
         hdu = source_utils.make_imagehdu_from_table(x=x, y=y, flux=flux,
                                                     pix_scale=0.25*u.arcsec)
         the_wcs = wcs.WCS(hdu)
-        yy, xx = the_wcs.wcs_world2pix(y.to(u.deg), x.to(u.deg), 1)
+        xx, yy = the_wcs.wcs_world2pix(x.to(u.deg), y.to(u.deg), 1)
         xx = np.floor(xx).astype(int)
         yy = np.floor(yy).astype(int)
         assert np.all(hdu.data[xx, yy])
@@ -419,7 +419,9 @@ class TestMakeImageFromTable:
         hdu = source_utils.make_imagehdu_from_table(x=x, y=y, flux=flux,
                                                     pix_scale=0.1*u.arcsec)
         the_wcs = wcs.WCS(hdu)
-        yy, xx = the_wcs.wcs_world2pix(y.to(u.deg), x.to(u.deg), 1)
+        xx, yy = the_wcs.wcs_world2pix(x.to(u.deg), y.to(u.deg), 1)
+        assert (xx > 0).all()
+        assert (yy > 0).all()
         xx = xx.astype(int)
         yy = yy.astype(int)
         assert np.all(hdu.data[xx, yy])
