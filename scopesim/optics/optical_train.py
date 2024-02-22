@@ -159,7 +159,7 @@ class OpticalTrain:
 
         self.fov_manager = FOVManager(opt_man.fov_setup_effects, cmds=self.cmds,
                                       **kwargs)
-        self.image_planes = [ImagePlane(hdr, **kwargs)
+        self.image_planes = [ImagePlane(hdr, self.cmds, **kwargs)
                              for hdr in opt_man.image_plane_headers]
         self.detector_arrays = [DetectorArray(det_list, cmds=self.cmds, **kwargs)
                                 for det_list in opt_man.detector_setup_effects]

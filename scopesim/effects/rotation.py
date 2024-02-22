@@ -35,7 +35,7 @@ class Rotate90CCD(Effect):
     def apply_to(self, obj, **kwargs):
         """See parent docstring."""
         if isinstance(obj, DetectorBase):
-            rotations = from_currsys(self.meta["rotations"])
+            rotations = from_currsys(self.meta["rotations"], self.cmds)
             obj._hdu.data = np.rot90(obj._hdu.data, rotations)
 
         return obj

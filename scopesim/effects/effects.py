@@ -22,7 +22,7 @@ class Effect(DataContainer):
     Essentially, a sub-classed Effects object must only contain the following
     attributes:
 
-    * ``self.meta`` - a dictionary to contain meta data.
+    * ``self.meta`` - a dictionary to contain metadata.
     * ``self.apply_to(obj, **kwargs)`` - a method which accepts a
       Source-derivative and returns an instance of the same class as ``obj``
     * ``self.fov_grid(which="", **kwargs)``
@@ -34,7 +34,7 @@ class Effect(DataContainer):
 
     """
 
-    def __init__(self, cmds=None, **kwargs):
+    def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.meta["z_order"] = []
         self.meta["include"] = True
@@ -112,7 +112,8 @@ class Effect(DataContainer):
         name = self.meta.get("name", self.meta.get("filename", "<untitled>"))
         if not hasattr(self, "_current_str"):
             return name
-        return f"{name} : [{from_currsys(self.meta[self._current_str], self.cmds)}]"
+        current_str = from_currsys(self.meta[self._current_str], self.cmds)
+        return f"{name} : [{current_str}]"
 
     @property
     def meta_string(self):
