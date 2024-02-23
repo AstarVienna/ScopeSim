@@ -13,30 +13,6 @@ from ..utils import get_logger
 logger = get_logger(__name__)
 
 
-def combine_surface_effects_OLD(surface_effects):
-    surflist_list = [eff for eff in surface_effects
-                     if isinstance(eff, efs.SurfaceList)]
-    surf_list = [eff for eff in surface_effects
-                 if isinstance(eff, efs.TERCurve)]
-
-    if len(surflist_list) == 0:
-        surf = empty_surface_list()
-        surf.meta["name"] = "Radiometry Table"
-        surflist_list += [surf]
-
-    new_surflist = deepcopy(surflist_list[0])
-    for surflist in surflist_list[1:]:
-        new_surflist.add_surface_list(surflist)
-
-    for surf in surf_list:
-        position = surf.meta["position"] if "position" in surf.meta else -1
-        new_surflist.add_surface(surf, surf.meta["name"], position=position)
-
-    new_surflist.table = new_surflist.radiometry_table.table
-
-    return new_surflist
-
-
 def combine_surface_effects(surface_effects):
     surflist_list = [eff for eff in surface_effects
                      if isinstance(eff, efs.SurfaceList)]

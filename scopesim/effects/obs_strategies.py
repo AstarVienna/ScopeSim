@@ -66,13 +66,13 @@ class ChopNodCombiner(Effect):
 
     def apply_to(self, obj, **kwargs):
         if isinstance(obj, DetectorBase):
-            chop_offsets = from_currsys(self.meta["chop_offsets"])
-            nod_offsets = from_currsys(self.meta["nod_offsets"])
+            chop_offsets = from_currsys(self.meta["chop_offsets"], self.cmds)
+            nod_offsets = from_currsys(self.meta["nod_offsets"], self.cmds)
             if nod_offsets is None:
                 nod_offsets = -np.array(chop_offsets)
 
             # these offsets are in pixels, not in arcsec or mm
-            pixel_scale = float(from_currsys(self.meta["pixel_scale"]))
+            pixel_scale = float(from_currsys(self.meta["pixel_scale"], self.cmds))
             chop_offsets_pixel = np.array(chop_offsets) / pixel_scale
             nod_offsets_pixel = np.array(nod_offsets) / pixel_scale
 

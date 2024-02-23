@@ -35,9 +35,9 @@ more-itertools = "^10.1.0"
 tqdm = "^4.66.1"
 
 synphot = "^1.2.1"
-skycalc_ipy = "^0.3.0"
-anisocado = "^0.3.0"
-astar-utils = {version = "^0.2.0b1", allow-prereleases = true}
+skycalc_ipy = ">=0.4.0"
+anisocado = ">=0.3.0"
+astar-utils = ">=0.2.0"
 
 [tool.poetry.group.dev]
 optional = true
@@ -50,7 +50,7 @@ ipykernel = "^6.24.0"
 [tool.poetry.group.test.dependencies]
 pytest = "^7.4.3"
 pytest-cov = "^4.1.0"
-scopesim_templates = "^0.5.0"
+scopesim_templates = ">=0.5.1"
 # Just so that readthedocs doesn't include the tests module - yes it's hacky
 skycalc_cli = "*"
 ipykernel = "^6.24.0"
@@ -65,7 +65,7 @@ jupyter-sphinx = "^0.2.3"
 sphinxcontrib-apidoc = "^0.4.0"
 nbsphinx = "^0.9.3"
 numpydoc = "^1.6.0"
-scopesim_templates = "^0.5.0"
+scopesim_templates = ">=0.5.1"
 ipykernel = "^6.24.0"
 
 [tool.poetry.urls]
@@ -85,10 +85,12 @@ filterwarnings = [
     # Should probably be fixed:
     "ignore::ResourceWarning",
     "ignore:The fit may be poorly conditioned:astropy.utils.exceptions.AstropyUserWarning",
+    "ignore::astropy.units.core.UnitsWarning",
     # Perhaps fix?
     "ignore:divide by zero encountered in scalar divide:RuntimeWarning",
     "ignore:divide by zero encountered in double_scalars:RuntimeWarning",
     "ignore:invalid value encountered in multiply:RuntimeWarning",
+    "ignore:invalid value encountered in divide:RuntimeWarning",
     "ignore:Cannot merge meta key.*:astropy.utils.metadata.MergeConflictWarning",
     "default:The fov_grid*:DeprecationWarning",
     # Raised when saving fits files, not so important to fix:
@@ -102,7 +104,7 @@ filterwarnings = [
     "ignore:datetime.datetime.utcfromtimestamp()*:DeprecationWarning",
     # Pytest Notebook stuff
     "ignore:The*:pytest.PytestRemovedIn8Warning",
-    "ignore:Proactor*:RuntimeWarning"
+    "ignore:Proactor*:RuntimeWarning",
 ]
 
 [tool.coverage.report]

@@ -144,28 +144,3 @@ def add_surface_to_table(tbl, surf, name, position, silent=True):
     new_tbl = change_table_entry(new_tbl, colname, name, position=position)
 
     return new_tbl
-
-
-def add_surface_to_dict(dic, surf, name, position=0):
-    new_entry = OrderedDict({name : surf})
-    dic = insert_into_ordereddict(dic, new_entry, position)
-
-    return dic
-
-
-def make_surface_dict_from_table(tbl):
-    surf_dict = OrderedDict({})
-    if tbl is not None and len(tbl) > 0:
-        names = tbl[real_colname("name", tbl.colnames)]
-        for ii, row in enumerate(tbl):
-            surf_dict[names[ii]] = make_surface_from_row(row, **tbl.meta)
-
-    return surf_dict
-
-
-def make_surface_from_row(row, **kwargs):
-    row_dict = {colname.lower(): row[colname] for colname in row.colnames}
-    kwargs.update(row_dict)
-    surface = SpectralSurface(**kwargs)
-
-    return surface

@@ -8,7 +8,7 @@ import pytest
 from unittest.mock import patch
 
 import scopesim as sim
-from scopesim.system_dict import UniqueList
+from astar_utils import UniqueList
 
 
 MOCK_DIR = Path(__file__).parent / "mocks"

@@ -580,11 +580,12 @@ class SpectralTraceListWheel(Effect):
 
         path = self._get_path()
         self.trace_lists = {}
+        if "name" in kwargs:
+            kwargs.pop("name")
         for name in from_currsys(self.meta["trace_list_names"], self.cmds):
-            kwargs["name"] = name
             fname = str(path).format(name)
             self.trace_lists[name] = SpectralTraceList(filename=fname,
-                                                       cmds=self.cmds,
+                                                       name=name,
                                                        **kwargs)
 
     def apply_to(self, obj, **kwargs):

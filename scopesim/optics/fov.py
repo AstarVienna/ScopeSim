@@ -370,7 +370,7 @@ class FieldOfView(FieldOfViewBase):
             [ph s-1 pixel-1] or PHOTLAM (if use_photlam=True)
 
         """
-        spline_order = from_currsys("!SIM.computing.spline_order")
+        spline_order = from_currsys("!SIM.computing.spline_order", self.cmds)
 
         # Make waveset and canvas image
         fov_waveset = self.waveset
@@ -396,7 +396,7 @@ class FieldOfView(FieldOfViewBase):
                 spline_order=spline_order)
 
         for flux, weight, x, y in self._make_image_tablefields(fluxes):
-            if from_currsys(self.meta["sub_pixel"]):
+            if from_currsys(self.meta["sub_pixel"], self.cmds):
                 # These x and y should not be arrays when sub_pixel is
                 # enabled, it is therefore not necessary to deploy the fix
                 # below in the else-branch.
@@ -496,7 +496,7 @@ class FieldOfView(FieldOfViewBase):
                 xpix, ypix = imp_utils.val2pix(self.header, xsky, ysky)
                 flux_vector = specs[row["ref"]].value * row["weight"] / self.pixel_area
 
-                if from_currsys(self.meta["sub_pixel"]):
+                if from_currsys(self.meta["sub_pixel"], self.cmds):
                     xs, ys, fracs = imp_utils.sub_pixel_fractions(xpix, ypix)
                     for i, j, k in zip(xs, ys, fracs):
                         yield flux_vector * k, i, j
@@ -562,14 +562,14 @@ class FieldOfView(FieldOfViewBase):
             [ph s-1 AA-1 arcsec-2]      # as needed by SpectralTrace
 
         """
-        spline_order = from_currsys("!SIM.computing.spline_order")
+        spline_order = from_currsys("!SIM.computing.spline_order", self.cmds)
 
         # 1. Make waveset and canvas cube (area, bin_width are applied at end)
         # TODO: Why is this not self.waveset? What's different?
-        wave_unit = u.Unit(from_currsys("!SIM.spectral.wave_unit"))
+        wave_unit = u.Unit(from_currsys("!SIM.spectral.wave_unit"), self.cmds)
         fov_waveset = np.arange(
             self.meta["wave_min"].value, self.meta["wave_max"].value,
-            from_currsys("!SIM.spectral.spectral_bin_width")) * wave_unit
+            from_currsys("!SIM.spectral.spectral_bin_width"), self.cmds) * wave_unit
         fov_waveset = fov_waveset.to(u.um)
 
         # TODO: what's with this code??
@@ -616,7 +616,7 @@ class FieldOfView(FieldOfViewBase):
         #    PHOTLAM = ph/s/cm-2/AA
         #    area = m2, fov_waveset = um
         # SpectralTrace wants ph/s/um/arcsec2 --> get rid of m2, leave um
-        area = from_currsys(self.meta["area"])  # u.m2
+        area = from_currsys(self.meta["area"], self.cmds)  # u.m2
         canvas_cube_hdu.data *= area.to(u.cm ** 2).value
         canvas_cube_hdu.data *= 1e4       # ph/s/AA/arcsec2 --> ph/s/um/arcsec2
 

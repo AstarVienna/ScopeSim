@@ -1,4 +1,6 @@
 """TBA."""
+from collections import OrderedDict
+from copy import deepcopy
 
 import warnings
 import numpy as np
@@ -6,7 +8,7 @@ from astropy import units as u
 
 from .ter_curves import TERCurve, FilterWheelBase
 from ..optics import radiometry_utils as rad_utils
-from ..optics.surface import PoorMansSurface
+from ..optics.surface import PoorMansSurface, SpectralSurface
 from ..utils import quantify, from_currsys, figure_factory
 
 
@@ -21,11 +23,18 @@ class SurfaceList(TERCurve):
         self.meta.update(params)
         self.meta.update(kwargs)
 
-        tbl = from_currsys(self.table, self.cmds)
-        self.surfaces = rad_utils.make_surface_dict_from_table(tbl)
         self._surface = None
         self._throughput = None
         self._emission = None
+        self.surfaces = OrderedDict({})
+
+        if self.table is not None:
+            for row in self.table:
+                surf_kwargs = deepcopy(self.table.meta)
+                surf_kwargs.update(dict(row))
+                surf_kwargs["cmds"] = self.cmds
+                surf_kwargs["filename"] = from_currsys(surf_kwargs["filename"], self.cmds)
+                self.surfaces[surf_kwargs["name"]] = SpectralSurface(**surf_kwargs)
 
     def fov_grid(self, which="waveset", **kwargs):
         warnings.warn("The fov_grid method is deprecated and will be removed "
@@ -137,8 +146,8 @@ class SurfaceList(TERCurve):
     def add_surface_list(self, surface_list, prepend=False):
         if isinstance(surface_list, SurfaceList):
             self.surfaces.update(surface_list.surfaces)
-            new_tbl = from_currsys(surface_list.table, self.cmds),
-            self.table = rad_utils.combine_tables(new_tbl, self.table, prepend)
+            # new_tbl = from_currsys(surface_list.table, self.cmds),
+            self.table = rad_utils.combine_tables(surface_list.table, self.table, prepend)
 
     def plot(self, which="x", wavelength=None, *, axes=None, **kwargs):
         """Plot TER curves.

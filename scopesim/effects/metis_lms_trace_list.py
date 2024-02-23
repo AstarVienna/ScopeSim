@@ -198,7 +198,7 @@ class MetisLMSSpectralTraceList(SpectralTraceList):
             interps = make_image_interpolations(inhdul, kx=1, ky=1)
 
         # Create a common wcs for the rectification
-        dwave = from_currsys("!SIM.spectral.spectral_bin_width")
+        dwave = from_currsys("!SIM.spectral.spectral_bin_width", self.cmds)
         xi_min = np.min(self.slicelist["left"])
         xi_max = np.max(self.slicelist["right"])
         wave_min = self.meta["wave_min"]
@@ -231,8 +231,8 @@ class MetisLMSSpectralTraceList(SpectralTraceList):
 
         # FIXME: use wcs object here
         cubehdr = fits.Header()
-        cubehdr["INSMODE"] = from_currsys(self.meta["element_name"])
-        cubehdr["WAVELEN"] = from_currsys(self.meta["wavelen"])
+        cubehdr["INSMODE"] = from_currsys(self.meta["element_name"], self.cmds)
+        cubehdr["WAVELEN"] = from_currsys(self.meta["wavelen"], self.cmds)
         cubehdr["CTYPE1"] = "LINEAR"
         cubehdr["CTYPE2"] = "LINEAR"
         cubehdr["CTYPE3"] = "WAVE"
@@ -254,7 +254,7 @@ class MetisLMSSpectralTraceList(SpectralTraceList):
 
     def _angle_from_lambda(self):
         """Determine optimal echelle rotation angle for wavelength."""
-        lam = from_currsys(self.meta["wavelen"])
+        lam = from_currsys(self.meta["wavelen"], self.cmds)
         grat_spacing = self.meta["grat_spacing"]
         wcal = self._file["WCAL"].data
         return echelle_setting(lam, grat_spacing, wcal)
@@ -332,7 +332,7 @@ class MetisLMSSpectralTrace(SpectralTrace):
         xmin = det_mm_lims["xd_min"]
         xmax = det_mm_lims["xd_max"]
 
-        lam0 = from_currsys(self.meta["wavelen"])
+        lam0 = from_currsys(self.meta["wavelen"], self.cmds)
         xi0 = 0.
         ymid = self.xilam2y(xi0, lam0)[0]   # estimate y level of trace
         waverange = self.xy2lam(np.array([xmin, xmax]), np.array([ymid, ymid]),
@@ -459,7 +459,7 @@ class MetisLMSSpectralTrace(SpectralTrace):
 
     def __str__(self):
         msg = (f"<MetisLMSSpectralTrace> \"{self.meta['description']}\" : "
-               f"{from_currsys(self.meta['wavelen'])} um : "
+               f"{from_currsys(self.meta['wavelen'], self.cmds)} um : "
                f"Order {self.meta['order']} : Angle {self.meta['angle']}")
         return msg
 
@@ -528,7 +528,7 @@ class MetisLMSImageSlicer(ApertureMask):
     """
 
     def __init__(self, filename, ext_id="Aperture List", **kwargs):
-        filename = find_file(from_currsys(filename))
+        filename = find_file(from_currsys(filename, kwargs.get("cmds")))
         ap_hdr = fits.getheader(filename, extname=ext_id)
         ap_list = fits.getdata(filename, extname=ext_id)
         xmin, xmax = ap_list["left"].min(), ap_list["right"].max()
@@ -567,7 +567,7 @@ class MetisLMSEfficiency(TERCurve):
         filename = find_file(self.meta["filename"])
         wcal = fits.getdata(filename, extname="WCAL")
         if "wavelen" in kwargs:
-            wavelen = from_currsys(kwargs["wavelen"])
+            wavelen = from_currsys(kwargs["wavelen"], kwargs.get("cmds"))
             grat_spacing = self.meta["grat_spacing"]
             ech = echelle_setting(wavelen, grat_spacing, wcal)
             self.meta["order"] = ech["Ord"]

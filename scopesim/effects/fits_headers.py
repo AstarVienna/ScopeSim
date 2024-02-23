@@ -218,9 +218,9 @@ class ExtraFitsKeywords(Effect):
 
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self, cmds=None, **kwargs):
         # don't pass kwargs, as DataContainer can't handle yaml files
-        super().__init__()
+        super().__init__(cmds=cmds)
         params = {"name": "extra_fits_keywords",
                   "description": "Extra FITS headers",
                   "z_order": [999],
@@ -308,8 +308,8 @@ def get_relevant_extensions(dic, hdul):
     return exts
 
 
-def flatten_dict(dic, base_key="", flat_dict=None,
-                 resolve=False, optics_manager=None):
+def flatten_dict(dic, base_key="", flat_dict=None, resolve=False,
+                 optics_manager=None, cmds=None):
     """
     Flattens nested yaml dictionaries into a single level dictionary.
 
@@ -323,18 +323,23 @@ def flatten_dict(dic, base_key="", flat_dict=None,
         If True, resolves !-str via from_currsys and #-str via optics_manager
     optics_manager : scopesim.OpticsManager
         Required for resolving #-strings
+    cmds : UserCommands
+        To use for resolving !-strings
 
     Returns
     -------
     flat_dict : dict
 
     """
+    if cmds is None and optics_manager is not None:
+        cmds = optics_manager.cmds
+
     if flat_dict is None:
         flat_dict = {}
     for key, val in dic.items():
         flat_key = f"{base_key}{key} "
         if isinstance(val, dict):
-            flatten_dict(val, flat_key, flat_dict, resolve, optics_manager)
+            flatten_dict(val, flat_key, flat_dict, resolve, optics_manager, cmds)
         else:
             flat_key = flat_key[:-1]
 
@@ -349,7 +354,7 @@ def flatten_dict(dic, base_key="", flat_dict=None,
             # resolve any bang or hash strings
             if resolve and isinstance(value, str):
                 if value.startswith("!"):
-                    value = from_currsys(value)
+                    value = from_currsys(value, cmds)
                 elif value.startswith("#"):
                     if optics_manager is None:
                         raise ValueError("An OpticsManager object must be "
@@ -419,7 +424,7 @@ class EffectsMetaKeywords(ExtraFitsKeywords):
 
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self, cmds=None, **kwargs):
         super(ExtraFitsKeywords, self).__init__()
         params = {"name": "effects_fits_keywords",
                   "description": "Effect Meta FITS headers",
@@ -453,7 +458,7 @@ class EffectsMetaKeywords(ExtraFitsKeywords):
                 keys = list(eff_meta.keys())
                 for key in keys:
                     value = eff_meta[key]
-                    if key in ["history", "notes", "changes"]:
+                    if key in ["history", "notes", "changes", "cmds"]:
                         eff_meta.pop(key)
                     if isinstance(value, Table):
                         eff_meta[key] = f"Table object of length: {len(value)}"
@@ -506,7 +511,7 @@ class SourceDescriptionFitsKeywords(ExtraFitsKeywords):
 
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self,  cmds=None, **kwargs):
         super(ExtraFitsKeywords, self).__init__()
         params = {"name": "source_fits_keywords",
                   "description": "Source description FITS headers",
@@ -590,7 +595,7 @@ class SimulationConfigFitsKeywords(ExtraFitsKeywords):
 
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self, cmds=None, **kwargs):
         super(ExtraFitsKeywords, self).__init__()
         params = {"name": "simulation_fits_keywords",
                   "description": "Simulation Config FITS headers",

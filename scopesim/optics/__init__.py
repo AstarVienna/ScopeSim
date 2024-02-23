@@ -9,7 +9,6 @@ from . import spectrograph
 
 from .surface import SpectralSurface
 from . import surface_utils
-from .radiometry import RadiometryTable
 from . import radiometry_utils
 
 from .fov import FieldOfView

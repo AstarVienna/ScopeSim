@@ -132,8 +132,8 @@ class OpticalTrain:
 
         self.cmds = user_commands
         # FIXME: Setting rc.__currsys__ to user_commands causes many problems:
-        #        UserCommands used SystemDict internally, but is itself not an
-        #        instance or subclas thereof. So rc.__currsys__ actually
+        #        UserCommands used NestedMapping internally, but is itself not
+        #        an instance or subclas thereof. So rc.__currsys__ actually
         #        changes type as a result of this line. On one hand, some other
         #        code relies on this change, i.e. uses attributes from
         #        UserCommands via rc.__currsys__, but on the other hand some
@@ -159,7 +159,7 @@ class OpticalTrain:
 
         self.fov_manager = FOVManager(opt_man.fov_setup_effects, cmds=self.cmds,
                                       **kwargs)
-        self.image_planes = [ImagePlane(hdr, **kwargs)
+        self.image_planes = [ImagePlane(hdr, self.cmds, **kwargs)
                              for hdr in opt_man.image_plane_headers]
         self.detector_arrays = [DetectorArray(det_list, cmds=self.cmds, **kwargs)
                                 for det_list in opt_man.detector_setup_effects]

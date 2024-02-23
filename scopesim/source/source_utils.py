@@ -126,40 +126,6 @@ def photons_in_range(spectra, wave_min, wave_max, area=None, bandpass=None):
     return counts
 
 
-def make_imagehdu_from_table(x, y, flux, pix_scale=1*u.arcsec):
-
-    pix_scale = pix_scale.to(u.deg)
-    unit = pix_scale.unit
-    x = quantify(x, unit)
-    y = quantify(y, unit)
-
-    xpixmin = int(np.floor(np.min(x) / pix_scale))
-    ypixmin = int(np.floor(np.min(y) / pix_scale))
-    xvalmin = (xpixmin * pix_scale).value
-    yvalmin = (ypixmin * pix_scale).value
-
-    the_wcs = wcs.WCS(naxis=2)
-    the_wcs.wcs.crpix = [0.25, 0.25]
-    the_wcs.wcs.cdelt = [pix_scale.value, pix_scale.value]
-    the_wcs.wcs.crval = [xvalmin, yvalmin]
-    the_wcs.wcs.cunit = [unit, unit]
-    the_wcs.wcs.ctype = ["RA---TAN", "DEC--TAN"]
-
-    ypix, xpix = the_wcs.wcs_world2pix(y.to(u.deg), x.to(u.deg), 1)
-    yint, xint  = ypix.astype(int), xpix.astype(int)
-
-    image = np.zeros((np.max(xint) + 1, np.max(yint) + 1))
-    for xi, yi, fluxi in zip(xint, yint, flux):
-        # To prevent adding array values in this manner.
-        assert not isinstance(xi, Iterable), "xi should be integer"
-        image[xi, yi] += fluxi
-
-    hdu = fits.ImageHDU(data=image)
-    hdu.header.extend(the_wcs.to_header())
-
-    return hdu
-
-
 def scale_imagehdu(imagehdu, waverange, area=None):
     # ..todo: implement this
     # For the moment, all imagehdu must be accompanied by a spectrum in PHOTLAM
