@@ -1,0 +1,26 @@
+# MOS Spectroscopy mode specific Effects and properties
+name : mode_mos
+alias : INST
+
+properties :
+  decouple_detector_from_sky_headers: True
+
+effects :
+- name : mos_spectral_traces
+  description : list of mos trace geometries on the focal plane
+  class : UnresolvedSpectralTraceList
+  kwargs :
+    filename : "INS_mos_traces.fits"
+
+---
+
+name: config_overrides
+alias: SIM
+description: SIM config param overrides
+
+properties:
+  spectral:
+    wave_min: 1.7
+    wave_mid: 2.1
+    wave_max: 2.5
+    spectral_bin_width: !!float 9E-4

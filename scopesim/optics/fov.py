@@ -87,9 +87,13 @@ class FieldOfView(FieldOfViewBase):
         self.fields = []
         self.spectra = {}
 
-        self.cube = None        # 3D array for IFU, long-lit, Slicer-MOS
+        self.sub_fovs_table = None  # To be filled with an SubApertureList.table
+
+        self.cube = None        # 3D array for IFU, long-slit, Slicer-MOS
         self.image = None       # 2D array for Imagers
         self.spectrum = None    # SourceSpectrum for Fibre-fed MOS
+
+
 
         self._waverange = None
         self._wavelength = None

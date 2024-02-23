@@ -1,6 +1,6 @@
 import numpy as np
 from scipy.signal import convolve
-from scipy.interpolate import RectBivariateSpline
+from scipy.interpolate import RectBivariateSpline, interp1d
 
 from astropy import units as u
 from astropy.io import fits
@@ -185,6 +185,48 @@ class Vibration(AnalyticalPSF):
             self.kernel = Gaussian2DKernel(sigma, x_size=width, y_size=width,
                                            mode="center").array
             self.kernel /= np.sum(self.kernel)
+
+        return self.kernel.astype(float)
+
+
+class RadialProfilePSF(AnalyticalPSF):
+    """
+    Creates a wavelength independent kernel image
+    """
+    def __init__(self, **kwargs):
+        params = {"unit": "pixel",
+                  "pixel_scale": "!INST.pixel_scale",
+                  "plate_scale": "!INST.plate_scale"}
+        params.update(kwargs)
+        super().__init__(**params)
+        self.meta["z_order"] = [244, 744]
+
+        self.convolution_classes = ImagePlaneBase
+
+        self.required_keys = ["r", "z", "unit"]
+        if self.meta["unit"] == "mm":
+            self.required_keys += ["pixel_scale", "plate_scale"]
+        check_keys(self.meta, self.required_keys, action="error")
+
+        self.kernel = None
+
+    def get_kernel(self, obj):
+        if self.kernel is None:
+            dr = 1
+            if self.meta["unit"] == "mm":
+                dr = from_currsys(self.meta["pixel_scale"], self.cmds) / \
+                     from_currsys(self.meta["plate_scale"], self.cmds)
+
+            rpix = np.array(self.meta["r"]) / dr
+            z = np.array(self.meta["z"])
+            fn = interp1d(rpix, z, "linear", fill_value=0, bounds_error=False)
+            rmax = np.ceil(max(rpix))
+            xx, yy = np.mgrid[-rmax:rmax+1, -rmax:rmax+1]
+            rr = (xx**2 + yy**2)**0.5
+            kernel = fn(rr)
+            kernel[kernel<0] = 0
+            kernel /= np.sum(kernel)
+            self.kernel = kernel
 
         return self.kernel.astype(float)
 
