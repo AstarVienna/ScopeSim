@@ -493,7 +493,6 @@ class SpectralTraceListWheel(Effect):
             fname = str(path).format(name)
             self.trace_lists[name] = SpectralTraceList(filename=fname,
                                                        name=name,
-                                                       cmds=self.cmds,
                                                        **kwargs)
 
     def apply_to(self, obj, **kwargs):
