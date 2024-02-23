@@ -653,7 +653,12 @@ class UnresolvedSpectralTraceList(SpectralTraceList):
                     wmax = fov.meta["wave_max"].value
                     xs, ys, zs = self.get_xyz_for_trace(trace, spec, wmin, wmax,
                                                         fov.meta["area"])
-                    image = self.trace_to_image(xs, ys, zs)
+                    # catch for horizontal traces
+                    if max(ys) - min(ys) > max(xs) - min(xs):
+                        image = self.trace_to_image(xs, ys, zs)
+                    else:
+                        image = self.trace_to_image(ys, xs, zs)
+                        image = image.transpose()
                     hdr = ipu.header_from_list_of_xy(xs, ys, self.pixel_size, "D")
 
                     fov.cube = fov.hdu
@@ -695,7 +700,30 @@ class UnresolvedSpectralTraceList(SpectralTraceList):
 
         return xs, ys, zs
 
-    def trace_to_image(self, xs, ys, zs, image=None):
+    def trace_to_image(self, xs: np.ndarray, ys: np.ndarray, zs: np.ndarray, image=None) -> np.ndarray:
+        """
+        Turn a trace line into an image.
+
+        .. note:: The trace must be primarily vertical, with a maximum tilt of
+            <45 degrees from the vertical. For Horizontal traces, flip the
+            x- and y-axis and then transpose the returned image
+
+        Parameters
+        ----------
+        xs, ys : np.ndarray
+            The coordinates of the trace
+        zs : np.ndarray
+            The flux values for each coordinate in (xs,ys)
+        image : np.ndarray, optional
+            If None, a 2D array is created with the size set to contain all
+            points in xs, ys
+
+        Returns
+        -------
+        image: np.ndarray
+
+        """
+
         dx = dy = self.pixel_size
         xs_pix = (xs - min(xs)) / dx
         xfrac1 = xs_pix - xs_pix.astype(int)
