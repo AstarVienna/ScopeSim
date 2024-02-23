@@ -45,8 +45,9 @@ class ImagePlane(ImagePlaneBase):
 
     """
 
-    def __init__(self, header, **kwargs):
+    def __init__(self, header, cmds=None, **kwargs):
 
+        self.cmds = cmds
         max_seg_size = rc.__config__["!SIM.computing.max_segment_size"]
         self.meta = {"SIM_MAX_SEGMENT_SIZE": max_seg_size}
         self.meta.update(kwargs)
@@ -109,9 +110,9 @@ class ImagePlane(ImagePlaneBase):
 
         """
         if sub_pixel is None:
-            sub_pixel = from_currsys("!SIM.sub_pixel.flag")
+            sub_pixel = from_currsys("!SIM.sub_pixel.flag", self.cmds)
         if spline_order is None:
-            spline_order = from_currsys("!SIM.computing.spline_order")
+            spline_order = from_currsys("!SIM.computing.spline_order", self.cmds)
 
         if isinstance(hdus_or_tables, (list, tuple)):
             for hdu_or_table in hdus_or_tables:

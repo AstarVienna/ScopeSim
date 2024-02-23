@@ -132,7 +132,7 @@ def combine_table_fields(fov_header, src, field_indexes):
 
 
 def combine_imagehdu_fields(fov_header, src, fields_indexes, wave_min, wave_max,
-                            area, wcs_suffix=""):
+                            area, wcs_suffix="", cmds=None):
     """
     Combine list of ImageHDUs into a single one bounded by the Header WCS.
 
@@ -161,7 +161,7 @@ def combine_imagehdu_fields(fov_header, src, fields_indexes, wave_min, wave_max,
     """
     image = np.zeros((fov_header["NAXIS2"], fov_header["NAXIS1"]))
     canvas_hdu = fits.ImageHDU(header=fov_header, data=image)
-    spline_order = from_currsys("!SIM.computing.spline_order")
+    spline_order = from_currsys("!SIM.computing.spline_order", cmds)
     pixel_area = (fov_header["CDELT1"] * fov_header["CDELT2"] *
                   u.Unit(fov_header["CUNIT1"].lower()).to(u.arcsec) ** 2)
 
