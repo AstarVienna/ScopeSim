@@ -1055,7 +1055,12 @@ def top_level_catch(func):
 
 def update_logging(capture_warnings=True):
     """Reload logging configuration from ``rc.__config__``."""
-    dictConfig(rc.__config__["!SIM.logging"])
+    # Need to access NestedMapping's internal dict here...
+    # HACK: remove this try-except after updating the minimum astar-utils version...
+    try:
+        dictConfig(rc.__config__["!SIM.logging"].dic)
+    except AttributeError:
+        dictConfig(rc.__config__["!SIM.logging"])
     logging.captureWarnings(capture_warnings)
 
     # This cannot be in the dict config (yet) because NestedMapping doesn't like
