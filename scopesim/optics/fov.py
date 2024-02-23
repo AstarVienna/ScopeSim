@@ -87,7 +87,7 @@ class FieldOfView(FieldOfViewBase):
         self.fields = []
         self.spectra = {}
 
-        self.cube = None        # 3D array for IFU, long-lit, Slicer-MOS
+        self.cube = None        # 3D array for IFU, long-slit, Slicer-MOS
         self.image = None       # 2D array for Imagers
         self.spectrum = None    # SourceSpectrum for Fibre-fed MOS
 
@@ -110,6 +110,9 @@ class FieldOfView(FieldOfViewBase):
             # [arcsec] (really?)
             self.meta["pixel_area"] = self._pixarea(self.header).value
         return self.meta["pixel_area"]
+
+    def sub_fov(self, left, right, top, bottom):
+        raise NotImplementedError
 
     def extract_from(self, src):
         """..assumption: Bandpass has been applied.

@@ -75,12 +75,13 @@ def make_lss_trace_file():
 
 # make_lss_trace_file()
 
+
 def make_ifu_trace_file():
     names = [f"Ap{i}" for i in range(5)]
     wave_min = 1.75
     wave_max = 2.5
-    s_cens = np.array([-64., -32., 0., 32., 64.])   # across detector
-    dss = np.array([-14., -7., 0., 7., 14.])     # across slit
+    s_cens = np.array([-64., -32., 0., 32., 64.])   # across detector [arcsec]
+    dss = np.array([-14., -7., 0., 7., 14.])     # across slit [arcsec]
 
     hdus = []
     for s_cen, name in zip(s_cens, names):
@@ -118,3 +119,45 @@ def make_ifu_trace_file():
     hdul.writeto("../INS_ifu_traces.fits", overwrite=True)
 
 # make_ifu_trace_file()
+
+
+def make_mos_trace_file():
+    names = [f"Ap{i}" for i in range(5)]
+    wave_min = 1.75
+    wave_max = 2.5
+    # detector edges (x,y) +/-5.12 [mm]
+    traces = [([-4, -4, -4], [-4, 0, 4]),                   # vertical line
+              ([-2.5, -2, -1.5], [-4, 0, 4]),               # tilted line
+              ([0, 0.5, 0.7, 0.5, 0], [-4, -2, -0, 2, 4]),  # curve
+              ([2, 2.5, 2, 1.5, 2], [-4, -2, -0, 2, 4]),    # S-shape
+              ([3, 4, 5], [-0.1, 0, 0.1])]                  # horizontal line
+
+    hdus = []
+    for trace, name in zip(traces, names):
+        xs, ys = trace
+        waves = np.geomspace(wave_min, wave_max, len(xs))
+
+        tbl = Table(names=["wavelength", "x", "y"],
+                    data=[waves, xs, ys],
+                    units=[u.um, u.mm, u.mm])
+        hdu = fits.table_to_hdu(tbl)
+        hdu.header["EXTNAME"] = f"TRACE_{name}"
+        hdus += [hdu]
+
+    tbl = Table(
+        names=["description", "extension_id", "aperture_id", "image_plane_id"],
+        data=[[hdu.header["EXTNAME"] for hdu in hdus],
+              [2, 3, 4, 5, 6],
+              [0, 1, 2, 3, 4],
+              [0, 0, 0, 0, 0]])
+    cat_hdu = fits.table_to_hdu(tbl)
+    cat_hdu.header["EXTNAME"] = "TOC"
+
+    pri_hdr = fits.PrimaryHDU()
+    pri_hdr.header["ECAT"] = 1  # where to find the catalogue table
+    pri_hdr.header["EDATA"] = 2  # where the data tables start
+
+    hdul = fits.HDUList([pri_hdr, cat_hdu] + hdus)
+    hdul.writeto("../INS_mos_traces.fits", overwrite=True)
+
+# make_mos_trace_file()

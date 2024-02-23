@@ -447,7 +447,7 @@ class TestMakeSpectrum:
 
         if PLOTS:
             waves = fov.waveset
-            plt.plot(waves, spec(waves))
+            plt.plot(waves, spec(waves), "r--")
             for spectrum in src_all.spectra:
                 plt.plot(waves, spectrum(waves))
             plt.show()

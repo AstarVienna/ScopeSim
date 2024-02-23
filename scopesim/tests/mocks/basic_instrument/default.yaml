@@ -27,6 +27,7 @@ mode_yamls :
   properties :
     include_slit : False
     include_slicer: False
+    include_fibres : False
     filter_name : "J"
 
 - name : spectroscopy
@@ -35,16 +36,29 @@ mode_yamls :
   properties :
     include_slit : True
     include_slicer: False
+    include_fibres : False
     filter_name : "open"
   yamls :
     - YAML_mode_spectroscopy.yaml   # mode specific effects and properties
 
 - name : ifu
-  description: Basic three-trace integral-field-unit spectrograph
+  description: Basic five-trace integral-field-unit spectrograph
   alias: OBS
   properties:
     include_slit: False
     include_slicer: True
+    include_fibres : False
     filter_name: "open"
   yamls:
     - YAML_mode_ifu.yaml   # mode specific effects and properties
+
+- name : mos
+  description: Basic five-fibre multi-object spectrograph
+  alias: OBS
+  properties:
+    include_slit: False
+    include_slicer: False
+    include_fibres : True
+    filter_name: "open"
+  yamls:
+    - YAML_mode_mos.yaml   # mode specific effects and properties

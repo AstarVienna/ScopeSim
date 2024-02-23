@@ -14,7 +14,8 @@ import warnings
 import numpy as np
 
 from scipy.interpolate import RectBivariateSpline
-from scipy.interpolate import interp1d
+from scipy.interpolate import InterpolatedUnivariateSpline, interp1d
+from matplotlib import pyplot as plt
 
 from astropy.table import Table, vstack
 from astropy.modeling import fitting
@@ -23,8 +24,11 @@ from astropy import units as u
 from astropy.wcs import WCS
 from astropy.modeling.models import Polynomial2D
 
-from ..utils import (power_vector, quantify, from_currsys, close_loop,
-                     figure_factory, get_logger)
+import pandas as pd
+
+from ..optics import image_plane_utils as imp_utils
+from ..utils import (deriv_polynomial2d, power_vector, interp2, check_keys,
+                     from_currsys, quantify, close_loop, figure_factory, get_logger)
 
 
 logger = get_logger(__name__)
@@ -131,7 +135,10 @@ class SpectralTrace:
         self.xy2lam = Transform2D.fit(x_arr, y_arr, lam_arr)
         self.xilam2x = Transform2D.fit(xi_arr, lam_arr, x_arr)
         self.xilam2y = Transform2D.fit(xi_arr, lam_arr, y_arr)
+
+        self._xix2y = Transform2D.fit(xi_arr, x_arr, y_arr)
         self._xiy2x = Transform2D.fit(xi_arr, y_arr, x_arr)
+        self._xix2lam = Transform2D.fit(xi_arr, x_arr, lam_arr)
         self._xiy2lam = Transform2D.fit(xi_arr, y_arr, lam_arr)
 
         if self.dispersion_axis == "unknown":
@@ -422,6 +429,12 @@ class SpectralTrace:
             Minimum and maximum slit position on the sky.
             If `None`, use the full range that spectral trace is defined on.
             Float values are interpreted as arcsec.
+
+        Returns
+        -------
+        xy_edges : tuple of lists
+            (x_edges, y_edges) in [mm]
+
         """
         # Define the wavelength range of the footprint. This is a compromise
         # between the requested range (by method args) and the definition
@@ -672,8 +685,12 @@ class XiLamImage():
         # dimensions are set by the slit aperture
         (n_lam, n_eta, n_xi) = fov.cube.data.shape
 
+        m_xi = int(np.round((fov.meta['xi_max'].to(u.arcsec).value -
+                             fov.meta['xi_min'].to(u.arcsec).value) / d_xi))
+        assert abs(m_xi - n_xi) <= 1
+
         # arrays of cube coordinates
-        cube_xi = d_xi * np.arange(n_xi) + fov.meta["xi_min"].value
+        cube_xi = d_xi * np.arange(n_xi) + fov.meta["xi_min"].to(u.arcsec).value
         cube_eta = d_eta * (np.arange(n_eta) - (n_eta - 1) / 2)
         cube_lam = wcs_lam.all_pix2world(np.arange(n_lam), 1)[0]
         cube_lam *= u.Unit(wcs_lam.wcs.cunit[0]).to(u.um)
@@ -982,8 +999,6 @@ def make_image_interpolations(hdulist, **kwargs):
     return interps
 
 # ..todo: Check whether the following functions are actually used
-
-
 def rolling_median(x, n):
     """Calculate the rolling median of a sequence for +/- n entries."""
     y = [np.median(x[max(0, i-n):min(len(x), i+n+1)]) for i in range(len(x))]
@@ -1037,3 +1052,126 @@ def get_affine_parameters(coords):
     shears = (np.average(shears, axis=0) * rad2deg) - (90 + rotations)
 
     return rotations, shears
+
+
+class TraceGenerator:
+    def __init__(self,
+                 l_low: float=1.420,      # um
+                 l_high: float=1.857,     # um
+                 delta_lambda: float=0.273e-3,      # um
+                 sampling: float=2.56,  # pixels
+                 pixel_size: float=0.015,  # mm
+                 trace_distances=8,  # pixels
+                 fiber_per_mos: int=7,
+                 nbr_mos: int=2,
+                 mos_distance: float=32,  # pixels
+                 ):
+        """Build a trace Generator for MOSAIC MOS.
+
+        Parameters
+        ----------
+        l_low : float, optional
+            The minimum wavelength of the trace. Defaults to 0.770.
+
+        l_high : float, optional
+            The maximum lambda of the trace. Defaults to 1.063.
+
+        delta_lambda : float, optional
+            Delta lambda of the trace. Defaults to 0.183.
+
+        sampling : float, optional
+            Sampling in pixels. Defaults to 2.56.
+
+        fiber_per_mos : int, optional
+            Number of fiber per MOS. Defaults to 7.
+
+        nbr_mos : int, optional
+            Number of MOS. Defaults to 2.
+
+        mos_distance : float, optional
+            Distances between 2 MOS in pixels. Defaults to 32.
+        """
+
+        self._l_low = l_low
+        self._l_high = l_high
+        self._delta_lambda = delta_lambda
+        self._sampling = sampling
+        self._pixel_size = pixel_size
+        self._trace_distance = trace_distances
+        self._fiber_per_mos = fiber_per_mos
+        self._nbr_mos = nbr_mos
+        self._mos_distance = mos_distance
+
+        self._set_xmos()
+        self._set_wavelength()
+        self._set_y()
+        self._set_x()
+
+    def _set_xmos(self):
+        self._xmos = np.arange(self._fiber_per_mos) * self._trace_distance * self._pixel_size
+
+    def _trace_names(self):
+        return [f"Trace_Ap{fib + self._fiber_per_mos * bun}"
+                for bun in range(self._nbr_mos)
+                for fib in range(self._fiber_per_mos)]
+
+    def _set_wavelength(self):
+        self._wavelengths = np.arange(self._l_low, self._l_high, self._delta_lambda)
+
+    def _set_y(self):
+        self._y = np.arange(self._wavelengths.size) * self._sampling * self._pixel_size
+        self._y = self._y - (self._y[-1] - self._y[0])/2
+
+    def _set_x(self):
+        tmp = [self._xmos]
+        for i in range(1,self._nbr_mos):
+            locx = self._xmos + tmp[-1].max() + self._mos_distance * self._pixel_size
+            tmp += [locx]
+        self._x = np.concatenate(tmp)
+        self._x = self._x - (self._x[-1] - self._x[0])/2
+
+    def _generate_trace(self,id:int) -> pd.DataFrame:
+        res = pd.DataFrame({"wavelength":self._wavelengths, "y":self._y})
+        res["x"] = self._x[id]
+
+        return res
+
+    def _generate_trace_descriptor(self) -> pd.DataFrame:
+        res = pd.DataFrame({"aperture_id":np.arange(self._x.size)})
+        res["description"] = [f"Trace_Ap{i}" for i in res["aperture_id"]]
+        res["extension_id"] = res["aperture_id"] + 2
+        res["image_plane_id"] = 0
+
+        return res.loc[:,["description", "extension_id", "aperture_id","image_plane_id"]]
+
+    def _generate_primary_header(self) -> fits.Header:
+        hdr = fits.Header()
+        hdr.update({"ECAT": 1,
+                    "EDATA": 2})
+
+        return hdr
+
+    def make_fits(self) -> fits.HDUList:
+        li = [fits.PrimaryHDU(header=self._generate_primary_header()),
+              fits.BinTableHDU(Table.from_pandas(self._generate_trace_descriptor()))]
+        ttbls = [Table.from_pandas(self._generate_trace(i))
+                 for i in range(self._x.size)]
+
+        for tbl in ttbls:
+            tbl.units = [u.um, u.mm, u.mm]
+            tbl["x"] *= u.mm
+            tbl["y"] *= u.mm
+            tbl["wavelength"] *= u.um
+
+        bintbls = [fits.table_to_hdu(tbl) for tbl in ttbls]
+
+        extnames = self._trace_names()
+        for i, tbl in enumerate(bintbls):
+            tbl.header["EXTNAME"] = extnames[i]
+            tbl.header["TUNIT1"] = "um"
+            tbl.header["TUNIT2"] = "mm"
+            tbl.header["TUNIT3"] = "mm"
+
+        li = li + bintbls
+
+        return fits.HDUList(li)

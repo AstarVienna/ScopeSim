@@ -19,6 +19,7 @@ class TestInit:
         assert isinstance(fvl, FovVolumeList)
         assert len(fvl.volumes) == 1
 
+
 class TestSplit:
     @pytest.mark.parametrize("axis, value", [("wave", 3.0),
                                              ("x", 0.),
