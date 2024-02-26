@@ -171,7 +171,7 @@ class UserCommands(NestedChainMap):
         self.update(**kwargs)
 
     def _load_yaml_dict(self, yaml_dict):
-        logger.info("    called load dict yaml")
+        logger.debug("    called load dict yaml")
 
         # FIXME: See if this occurs outside the test_package. If not, remove
         #        the if statement and the logging call and just put the assert
@@ -186,37 +186,37 @@ class UserCommands(NestedChainMap):
         self.yaml_dicts.append(yaml_dict)
 
         if "packages" in yaml_dict:
-            logger.info("        found packages")
+            logger.debug("        found packages")
             self.update(packages=yaml_dict["packages"])
 
         # recursive
         sub_yamls = yaml_dict.get("yamls", [])
-        logger.info("      found %d sub-yamls", len(sub_yamls))
+        logger.debug("      found %d sub-yamls", len(sub_yamls))
         self._load_yamls(sub_yamls)
 
         if "mode_yamls" in yaml_dict:
-            logger.info("        found mode_yamls")
+            logger.debug("        found mode_yamls")
             self.update(mode_yamls=yaml_dict["mode_yamls"])
-        logger.info("      dict yaml done")
+        logger.debug("      dict yaml done")
 
     def _load_yamls(self, yamls: Collection) -> None:
-        logger.info("called load yaml with %d yamls", len(yamls))
+        logger.debug("called load yaml with %d yamls", len(yamls))
         for yaml_input in yamls:
             if isinstance(yaml_input, str):
-                logger.info("  found str yaml: %s", yaml_input)
+                logger.debug("  found str yaml: %s", yaml_input)
                 if (yaml_file := find_file(yaml_input)) is None:
                     logger.error("%s could not be found.", yaml_input)
                     continue
 
                 yaml_dicts = load_yaml_dicts(yaml_file)
-                logger.info("  loaded %d yamls from %s", len(yaml_dicts), yaml_input)
+                logger.debug("  loaded %d yamls from %s", len(yaml_dicts), yaml_input)
                 # recursive
                 for yaml_dict in yaml_dicts:
                     self._load_yaml_dict(yaml_dict)
                 if yaml_input == "default.yaml":
-                    logger.info("    setting default yaml")
+                    logger.debug("    setting default yaml")
                     self.default_yamls = yaml_dicts
-                logger.info("  str yaml done")
+                logger.debug("  str yaml done")
 
             elif isinstance(yaml_input, Mapping):
                 self._load_yaml_dict(yaml_input)
@@ -295,7 +295,7 @@ class UserCommands(NestedChainMap):
             new_dict = new_dict.dic  # Avoid updating with another one
 
         if alias := new_dict.get("alias"):
-            logger.info("updating alias %s", alias)
+            logger.debug("updating alias %s", alias)
             propdict = new_dict.get("properties", {})
             if alias in mapping:
                 mapping[alias] = recursive_update(mapping[alias], propdict)
