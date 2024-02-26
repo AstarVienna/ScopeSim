@@ -495,7 +495,7 @@ class AnisocadoConstPSF(SemiAnalyticalPSF):
     def wavelength(self):
         wave = from_currsys(self.meta["wavelength"], self.cmds)
         if isinstance(wave, str) and wave in tu.FILTER_DEFAULTS:
-            wave = tu.get_filter_effective_wavelength(wave)
+            wave = tu.get_filter_effective_wavelength(wave, cmds=self.cmds)
         wave = quantify(wave, u.um).value
 
         return wave
