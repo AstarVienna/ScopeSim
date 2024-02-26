@@ -918,6 +918,7 @@ class ADCWheel(Effect):
         for name in from_currsys(self.meta["adc_names"], cmds=self.cmds):
             kwargs["name"] = name
             self.adcs[name] = TERCurve(filename=str(path).format(name),
+                                       cmds=cmds,
                                        **kwargs)
 
         self.table = self.get_table()
