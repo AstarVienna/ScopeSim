@@ -89,7 +89,7 @@ class TERCurve(Effect):
         self.meta.update(params)
         self.meta.update(kwargs)
 
-        self.surface = SpectralSurface()
+        self.surface = SpectralSurface(cmds=self.cmds)
         self.surface.meta.update(self.meta)
         self._background_source = None
 
