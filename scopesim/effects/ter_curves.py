@@ -73,8 +73,8 @@ class TERCurve(Effect):
 
     """
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, filename=None, **kwargs):
+        super().__init__(filename=filename, **kwargs)
         params = {
             "z_order": [10, 110, 510],
             "ignore_wings": False,

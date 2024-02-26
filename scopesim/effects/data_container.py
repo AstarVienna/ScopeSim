@@ -60,6 +60,8 @@ class DataContainer:
 
     """
 
+    meta = None
+
     def __init__(self, filename=None, table=None, array_dict=None, cmds=None,
                  **kwargs):
 
@@ -74,12 +76,15 @@ class DataContainer:
             filename = utils.from_currsys(filename, self.cmds)
 
         filename = utils.find_file(filename)
-        self.meta = {
+        # A derived clas might have set .meta before calling super().__init__()
+        if self.meta is None:
+            self.meta = {}
+        self.meta.update({
             "filename": filename,
             "description": "",
             "history": [],
             "name": "<empty>",
-        }
+        })
         self.meta.update(kwargs)
 
         self.headers = []

@@ -34,8 +34,8 @@ class Effect(DataContainer):
 
     """
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, filename=None, **kwargs):
+        super().__init__(filename=filename, **kwargs)
         self.meta["z_order"] = []
         self.meta["include"] = True
         self.meta.update(kwargs)
