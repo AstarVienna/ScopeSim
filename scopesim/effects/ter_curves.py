@@ -398,7 +398,7 @@ class FilterCurve(TERCurve):
                                  "(`filename`, `array_dict`, `table`) or both "
                                  f"(`filter_name`, `filename_format`): {kwargs}")
 
-        super().__init__(**kwargs)
+        super().__init__(cmds=cmds, **kwargs)
         if self.table is None:
             raise ValueError("Could not initialise filter. Either filename "
                              "not found, or array are not compatible")
