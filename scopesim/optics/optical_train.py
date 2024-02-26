@@ -139,7 +139,10 @@ class OpticalTrain:
         #        UserCommands via rc.__currsys__, but on the other hand some
         #        tests (now with proper patching) fail because of this type
         #        change. THIS IS A PROBLEM!
-        rc.__currsys__ = user_commands
+        # NOTE: All tests pass without setting rc.__currsys__ to user_commands.
+        #       Nevertheless, I'm a bit reluctant to removing this code just
+        #       yet. So it is commented out.
+        # rc.__currsys__ = user_commands
         self.yaml_dicts = self.cmds.yaml_dicts
         self.optics_manager = OpticsManager(self.yaml_dicts, self.cmds)
         self.update()
