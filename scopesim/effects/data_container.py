@@ -100,7 +100,9 @@ class DataContainer:
         self.table = None
         self._file = None
 
-        if filename is not None:
+        # Need to check whether the file exists before trying to load it.
+        filename_full = utils.find_file(self.meta["filename"])
+        if filename_full is not None:
             if self.is_fits:
                 self._load_fits()
             else:
