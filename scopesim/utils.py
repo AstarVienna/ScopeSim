@@ -877,7 +877,7 @@ def from_currsys(item, cmds=None):
         if item in cmds:
             item = cmds[item]
             if isinstance(item, str) and item.startswith("!"):
-                item = from_currsys(item)
+                item = from_currsys(item, cmds=cmds)
         else:
             raise ValueError(f"{item} was not found in rc.__currsys__")
 
