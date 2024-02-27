@@ -185,6 +185,9 @@ class AutoExposure(Effect):
         params = {"z_order": [902]}
         self.meta.update(params)
         self.meta.update(kwargs)
+        if self.cmds is None:
+            from scopesim import UserCommands
+            self.cmds = UserCommands()
 
         required_keys = ["fill_frac", "full_well", "mindit"]
         check_keys(self.meta, required_keys, action="error")
@@ -225,10 +228,6 @@ class AutoExposure(Effect):
 
             logger.info("Exposure parameters: DIT=%.3f s  NDIT=%d", dit, ndit)
             logger.info("Total exposure time: %.3f s", dit * ndit)
-
-            if self.cmds is None:
-                from scopesim import UserCommands
-                self.cmds = UserCommands()
 
             self.cmds["!OBS.dit"] = dit
             self.cmds["!OBS.ndit"] = ndit
