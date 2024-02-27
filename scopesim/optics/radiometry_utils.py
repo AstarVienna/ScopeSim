@@ -6,9 +6,8 @@ from astropy.io import ascii as ioascii
 from astropy.table import Table, vstack
 
 from .surface import SpectralSurface
-from ..utils import (real_colname, insert_into_ordereddict,
-                     change_table_entry, convert_table_comments_to_dict,
-                     from_currsys, get_logger)
+from ..utils import (real_colname, change_table_entry,
+                     convert_table_comments_to_dict, get_logger)
 
 
 logger = get_logger(__name__)
