@@ -64,7 +64,12 @@ class DataContainer:
 
     def __init__(self, filename=None, table=None, array_dict=None, cmds=None,
                  **kwargs):
+
         self.cmds = cmds
+        if self.cmds is None:
+            from scopesim import UserCommands
+            self.cmds = UserCommands()
+
         if filename is None and "file_name" in kwargs:
             warn("The 'file_name' kwarg is deprecated and will raise an error "
                  "in the future, please use 'filename' instead!",
