@@ -105,6 +105,23 @@ properties :
 
 
 ---
+### OBSERVATION PARAMETERS
+object : observation
+name : default_observation_config
+alias : OBS
+description : observation confiugration parameters
+
+packages : []
+yamls : []
+properties : {}
+
+use_instrument : ""
+ignore_effects : []
+add_effects : []
+override_effect_values : []
+
+
+---
 # MANDATORY TELESCOPE PARAMETERS
 alias : TEL
 
