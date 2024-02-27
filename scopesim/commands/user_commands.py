@@ -317,7 +317,6 @@ class UserCommands(NestedChainMap):
             if len(new_dict) > 0:
                 mapping = recursive_update(mapping, new_dict)
 
-
     def set_modes(self, *modes) -> None:
         """Reload with the specified `modes`.
 
@@ -326,6 +325,16 @@ class UserCommands(NestedChainMap):
         This used to take a single list-like argument, now used a "*args"
         approach to deal with multiple modes.
         """
+        # TODO: Remove this as soon as we can be sure enough it won't break
+        #       stuff or annoy anyone too badly.
+        if (len(modes) == 1 and isinstance(modes, Iterable)
+                and not isinstance(modes[0], str)):
+            warn(
+                "Passing a list to set_modes is deprecated and will no longer "
+                "work in future versions. Please just pass all modes as "
+                "arguments instead.", DeprecationWarning, stacklevel=2)
+            modes = modes[0]
+
         for defyam in self.default_yamls:
             if "properties" not in defyam:
                 continue
