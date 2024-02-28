@@ -487,13 +487,6 @@ class OpticalTrain:
 
         return hdulist
 
-    # def set_focus(self, **kwargs):
-    #     self.cmds.update(**kwargs)
-    #     dy = self.cmds.default_yamls
-    #     if len(dy) > 0 and "packages" in dy:
-    #         self.cmds.update(packages=self.default_yamls[0]["packages"])
-    #     rc.__currsys__ = self.cmds
-
     def shutdown(self):
         """
         Shut down the instrument.
