@@ -50,9 +50,9 @@ PATH_HERE = Path(__file__).parent
 PATH_SVO_DATA = PATH_HERE.parent / "data" / "svo"
 
 
-def get_filter_effective_wavelength(filter_name, cmds=None):
+def get_filter_effective_wavelength(filter_name):
     if isinstance(filter_name, str):
-        filter_name = from_currsys(filter_name, cmds=cmds)
+        assert FILTER_DEFAULTS.get(filter_name), f"{filter_name} not found in FILTER_DEFAULTS"
         wave, trans = download_svo_filter(FILTER_DEFAULTS[filter_name],
                                           return_style="quantity")
         eff_wave = np.sum(wave * trans) / np.sum(trans)      # convert from Angstrom

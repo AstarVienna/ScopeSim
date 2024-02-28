@@ -109,9 +109,7 @@ def make_strehl_map_from_table(tbl, pixel_scale=1*u.arcsec):
     return map_hdu
 
 
-def rescale_kernel(image, scale_factor, spline_order=None, cmds=None):
-    if spline_order is None:
-        spline_order = utils.from_currsys("!SIM.computing.spline_order", cmds=cmds)
+def rescale_kernel(image, scale_factor, spline_order):
     sum_image = np.sum(image)
     image = zoom(image, scale_factor, order=spline_order)
     image = np.nan_to_num(image, copy=False)        # numpy version >=1.13

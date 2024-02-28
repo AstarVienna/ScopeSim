@@ -495,7 +495,8 @@ class AnisocadoConstPSF(SemiAnalyticalPSF):
     def wavelength(self):
         wave = from_currsys(self.meta["wavelength"], self.cmds)
         if isinstance(wave, str) and wave in tu.FILTER_DEFAULTS:
-            wave = tu.get_filter_effective_wavelength(wave, cmds=self.cmds)
+            filter_name = from_currsys(wave, cmds=self.cmds)
+            wave = tu.get_filter_effective_wavelength(filter_name)
         wave = quantify(wave, u.um).value
 
         return wave
@@ -634,7 +635,8 @@ class FieldConstantPSF(DiscretePSF):
                 # rescaling kept inside loop to avoid rescaling for every fov
                 pix_ratio = kernel_pixel_scale / fov_pixel_scale
                 if abs(pix_ratio - 1) > self.meta["flux_accuracy"]:
-                    self.kernel = pu.rescale_kernel(self.kernel, pix_ratio)
+                    spline_order = from_currsys("!SIM.computing.spline_order", cmds=self.cmds)
+                    self.kernel = pu.rescale_kernel(self.kernel, pix_ratio, spline_order)
 
                 if ((fov.header["NAXIS1"] < hdr["NAXIS1"]) or
                     (fov.header["NAXIS2"] < hdr["NAXIS2"])):
@@ -830,8 +832,9 @@ class FieldVaryingPSF(DiscretePSF):
         # rescale the pixel scale of the kernel to match the fov images
         pix_ratio = fov_pixel_scale / kernel_pixel_scale
         if abs(pix_ratio - 1) > self.meta["flux_accuracy"]:
+            spline_order = from_currsys("!SIM.computing.spline_order", cmds=self.cmds)
             for ii, kern in enumerate(self.kernel):
-                self.kernel[ii][0] = pu.rescale_kernel(kern[0], pix_ratio)
+                self.kernel[ii][0] = pu.rescale_kernel(kern[0], pix_ratio, spline_order)
 
         for i, kern in enumerate(self.kernel):
             self.kernel[i][0] /= np.sum(kern[0])
