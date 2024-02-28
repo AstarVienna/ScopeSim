@@ -610,7 +610,13 @@ class SimulationConfigFitsKeywords(ExtraFitsKeywords):
         """See parent docstring."""
         opt_train = kwargs.get("optical_train")
         if isinstance(hdul, fits.HDUList) and opt_train is not None:
-            cmds = opt_train.cmds.cmds.dic
+            # HACK: This workaround was added after the ChainMap change, to
+            #       have a simply but save way of getting the final dict out.
+            # TODO: Improve this at some point.....
+            cmds = deepcopy(opt_train.cmds.maps[-1].dic)
+            for m in opt_train.cmds.maps[-2::-1]:
+                cmds |= deepcopy(m.dic)
+
             sim_prefix = self.meta["keyword_prefix"]
             resolve_prefix = "unresolved_" if not self.meta["resolve"] else ""
             # needed for the super().apply_to method
