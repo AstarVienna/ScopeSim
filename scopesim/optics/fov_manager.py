@@ -166,8 +166,13 @@ class FOVManager:
                 det_eff = eu.get_all_effects(self.effects, DetectorList)[0]
                 dethdr = det_eff.image_plane_header
 
-            fovs.append(FieldOfView(skyhdr, waverange, detector_header=dethdr,
-                                    **vol["meta"]))
+            fovs.append(FieldOfView(
+                skyhdr,
+                waverange,
+                detector_header=dethdr,
+                cmds=self.cmds,
+                **vol["meta"],
+            ))
 
         return fovs
 

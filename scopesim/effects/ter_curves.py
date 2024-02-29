@@ -89,7 +89,7 @@ class TERCurve(Effect):
         self.meta.update(params)
         self.meta.update(kwargs)
 
-        self.surface = SpectralSurface()
+        self.surface = SpectralSurface(cmds=self.cmds)
         self.surface.meta.update(self.meta)
         self._background_source = None
 
@@ -918,6 +918,7 @@ class ADCWheel(Effect):
         for name in from_currsys(self.meta["adc_names"], cmds=self.cmds):
             kwargs["name"] = name
             self.adcs[name] = TERCurve(filename=str(path).format(name),
+                                       cmds=cmds,
                                        **kwargs)
 
         self.table = self.get_table()

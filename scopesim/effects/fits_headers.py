@@ -425,7 +425,7 @@ class EffectsMetaKeywords(ExtraFitsKeywords):
     """
 
     def __init__(self, cmds=None, **kwargs):
-        super(ExtraFitsKeywords, self).__init__()
+        super(ExtraFitsKeywords, self).__init__(cmds=cmds, **kwargs)
         params = {"name": "effects_fits_keywords",
                   "description": "Effect Meta FITS headers",
                   "z_order": [998],
@@ -512,7 +512,7 @@ class SourceDescriptionFitsKeywords(ExtraFitsKeywords):
     """
 
     def __init__(self,  cmds=None, **kwargs):
-        super(ExtraFitsKeywords, self).__init__()
+        super(ExtraFitsKeywords, self).__init__(cmds=cmds, **kwargs)
         params = {"name": "source_fits_keywords",
                   "description": "Source description FITS headers",
                   "z_order": [997],
@@ -596,7 +596,7 @@ class SimulationConfigFitsKeywords(ExtraFitsKeywords):
     """
 
     def __init__(self, cmds=None, **kwargs):
-        super(ExtraFitsKeywords, self).__init__()
+        super(ExtraFitsKeywords, self).__init__(cmds=cmds, **kwargs)
         params = {"name": "simulation_fits_keywords",
                   "description": "Simulation Config FITS headers",
                   "z_order": [996],
