@@ -1,5 +1,5 @@
 """SpectralTraceList and SpectralTrace for the METIS LM spectrograph."""
-
+import copy
 import warnings
 
 import numpy as np
@@ -307,7 +307,8 @@ class MetisLMSSpectralTrace(SpectralTrace):
         y_min = aperture["bottom"]
         y_max = aperture["top"]
 
-        layout = ioascii.read(find_file("!DET.layout.filename"))
+        filename_det_layout = from_currsys("!DET.layout.file_name", cmds=self.cmds)
+        layout = ioascii.read(find_file(filename_det_layout))
         det_lims = {}
         xhw = layout["pixel_size"] * layout["x_size"] / 2
         yhw = layout["pixel_size"] * layout["y_size"] / 2
@@ -561,8 +562,11 @@ class MetisLMSEfficiency(TERCurve):
     }
 
     def __init__(self, **kwargs):
-        self.meta = self._class_params
-        self.meta.update(kwargs)
+        # TODO: Refactor these _class_params?
+        self.meta = copy.copy(self._class_params)
+        assert "grat_spacing" in self.meta, "grat_spacing is missing from self.meta 1"
+        super().__init__(**kwargs)
+        assert "grat_spacing" in self.meta, "grat_spacing is missing from self.meta 2"
 
         filename = find_file(self.meta["filename"])
         wcal = fits.getdata(filename, extname="WCAL")

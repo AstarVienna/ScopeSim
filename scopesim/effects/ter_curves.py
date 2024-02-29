@@ -73,8 +73,8 @@ class TERCurve(Effect):
 
     """
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, filename=None, **kwargs):
+        super().__init__(filename=filename, **kwargs)
         params = {
             "z_order": [10, 110, 510],
             "ignore_wings": False,
@@ -398,7 +398,7 @@ class FilterCurve(TERCurve):
                                  "(`filename`, `array_dict`, `table`) or both "
                                  f"(`filter_name`, `filename_format`): {kwargs}")
 
-        super().__init__(**kwargs)
+        super().__init__(cmds=cmds, **kwargs)
         if self.table is None:
             raise ValueError("Could not initialise filter. Either filename "
                              "not found, or array are not compatible")
@@ -872,7 +872,7 @@ class PupilTransmission(TERCurve):
         self.cmds = cmds
         wave_min = from_currsys(self.params["wave_min"], self.cmds) * u.um
         wave_max = from_currsys(self.params["wave_max"], self.cmds) * u.um
-        transmission = from_currsys(transmission)
+        transmission = from_currsys(transmission, cmds=self.cmds)
 
         super().__init__(wavelength=[wave_min, wave_max],
                          transmission=[transmission, transmission],
@@ -901,8 +901,8 @@ class ADCWheel(Effect):
     required_keys = {"adc_names", "filename_format", "current_adc"}
     _current_str = "current_adc"
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, cmds=None, **kwargs):
+        super().__init__(cmds=cmds, **kwargs)
         check_keys(kwargs, self.required_keys, action="error")
 
         params = {"z_order": [125, 225, 525],
@@ -915,7 +915,7 @@ class ADCWheel(Effect):
 
         path = self._get_path()
         self.adcs = {}
-        for name in from_currsys(self.meta["adc_names"]):
+        for name in from_currsys(self.meta["adc_names"], cmds=self.cmds):
             kwargs["name"] = name
             self.adcs[name] = TERCurve(filename=str(path).format(name),
                                        **kwargs)
@@ -937,7 +937,7 @@ class ADCWheel(Effect):
     @property
     def current_adc(self):
         """Return the currently used ADC."""
-        curradc = from_currsys(self.meta["current_adc"])
+        curradc = from_currsys(self.meta["current_adc"], cmds=self.cmds)
         if not curradc:
             return False
         return self.adcs[curradc]

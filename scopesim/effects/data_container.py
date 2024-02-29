@@ -60,9 +60,10 @@ class DataContainer:
 
     """
 
+    meta = None
+
     def __init__(self, filename=None, table=None, array_dict=None, cmds=None,
                  **kwargs):
-
         self.cmds = cmds
         if filename is None and "file_name" in kwargs:
             warn("The 'file_name' kwarg is deprecated and will raise an error "
@@ -70,23 +71,38 @@ class DataContainer:
                  DeprecationWarning, stacklevel=2)
             filename = kwargs["file_name"]
 
+        # A !-string filename is immediately resolved, but the file is not yet
+        # searched for. This makes sense, as the filename should end up in the
+        # FITS headers, and should therefor be independent of any particular
+        # system.
+        #
+        # It would perhaps be even better to not resolve a !-string filename
+        # here, but that currently does not make sense because the file is
+        # directly read in. That is, the file would not be read again if
+        # someone changes the value that the !-string points to. So changing
+        # the value a !-string points to would lead to an inconsistent state.
+        # Immediately resolving the !-string prevents such an inconsistency.
         if isinstance(filename, str) and filename.startswith("!"):
             filename = utils.from_currsys(filename, self.cmds)
 
-        filename = utils.find_file(filename)
-        self.meta = {
+        # A derived clas might have set .meta before calling super().__init__()
+        if self.meta is None:
+            self.meta = {}
+        self.meta.update({
             "filename": filename,
             "description": "",
             "history": [],
             "name": "<empty>",
-        }
+        })
         self.meta.update(kwargs)
 
         self.headers = []
         self.table = None
         self._file = None
 
-        if filename is not None:
+        # Need to check whether the file exists before trying to load it.
+        filename_full = utils.find_file(self.meta["filename"])
+        if filename_full is not None:
             if self.is_fits:
                 self._load_fits()
             else:
@@ -116,7 +132,8 @@ class DataContainer:
         self.table.meta.update(self.meta)
 
     def _load_ascii(self):
-        self.table = ioascii.read(self.meta["filename"],
+        filename_full = utils.find_file(self.meta["filename"])
+        self.table = ioascii.read(filename_full,
                                   format="basic", guess=False)
         hdr_dict = utils.convert_table_comments_to_dict(self.table)
         if isinstance(hdr_dict, dict):
@@ -135,7 +152,8 @@ class DataContainer:
                                  f"{self.meta['filename']}"]
 
     def _load_fits(self):
-        self._file = fits.open(self.meta["filename"])
+        filename_full = utils.find_file(self.meta["filename"])
+        self._file = fits.open(filename_full)
         for ext in self._file:
             self.headers += [ext.header]
 
@@ -186,7 +204,8 @@ class DataContainer:
         if isinstance(self._file, fits.HDUList):
             flag = True
         elif isinstance(self.meta["filename"], str):
-            flag = utils.is_fits(self.meta["filename"])
+            filename_full = utils.find_file(self.meta["filename"])
+            flag = utils.is_fits(filename_full)
 
         return flag
 

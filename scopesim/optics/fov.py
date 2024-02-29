@@ -563,10 +563,10 @@ class FieldOfView(FieldOfViewBase):
 
         # 1. Make waveset and canvas cube (area, bin_width are applied at end)
         # TODO: Why is this not self.waveset? What's different?
-        wave_unit = u.Unit(from_currsys("!SIM.spectral.wave_unit"), self.cmds)
+        wave_unit = u.Unit(from_currsys("!SIM.spectral.wave_unit", self.cmds))
         fov_waveset = np.arange(
             self.meta["wave_min"].value, self.meta["wave_max"].value,
-            from_currsys("!SIM.spectral.spectral_bin_width"), self.cmds) * wave_unit
+            from_currsys("!SIM.spectral.spectral_bin_width", self.cmds)) * wave_unit
         fov_waveset = fov_waveset.to(u.um)
 
         # TODO: what's with this code??
