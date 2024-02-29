@@ -50,7 +50,7 @@ PATH_HERE = Path(__file__).parent
 PATH_SVO_DATA = PATH_HERE.parent / "data" / "svo"
 
 
-def get_filter_effective_wavelength(filter_name):
+def get_filter_effective_wavelength(filter_name, cmds=None):
     if isinstance(filter_name, str):
         assert FILTER_DEFAULTS.get(filter_name), f"{filter_name} not found in FILTER_DEFAULTS"
         wave, trans = download_svo_filter(FILTER_DEFAULTS[filter_name],

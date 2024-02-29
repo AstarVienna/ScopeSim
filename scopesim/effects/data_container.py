@@ -64,7 +64,6 @@ class DataContainer:
 
     def __init__(self, filename=None, table=None, array_dict=None, cmds=None,
                  **kwargs):
-
         self.cmds = cmds
         # Setting a default for cmds cannot be done here, because from_currsys
         # checks whether cmds is None. TODO: make this possible.
