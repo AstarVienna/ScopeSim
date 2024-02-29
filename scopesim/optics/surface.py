@@ -12,11 +12,10 @@ from synphot import SpectralElement
 from synphot.models import Empirical1D
 
 from ..effects import ter_curves_utils as ter_utils
-from .surface_utils import make_emission_from_emissivity, \
-    make_emission_from_array
-from ..utils import (get_meta_quantity, quantify, extract_type_from_unit,
-                     from_currsys, convert_table_comments_to_dict, find_file,
-                     get_logger)
+from .surface_utils import (make_emission_from_emissivity,
+                            make_emission_from_array, extract_type_from_unit)
+from ..utils import (get_meta_quantity, quantify, from_currsys,
+                     convert_table_comments_to_dict, find_file, get_logger)
 
 logger = get_logger(__name__)
 
@@ -24,6 +23,7 @@ logger = get_logger(__name__)
 @dataclass
 class PoorMansSurface:
     """Solely used by SurfaceList."""
+
     # FIXME: Use correct types instead of Any
     emission: Any
     throughput: Any
@@ -32,7 +32,8 @@ class PoorMansSurface:
 
 class SpectralSurface:
     """
-    Initialised by a file containing one or more of the following columns:
+    Initialised by a file containing one or more of the following columns.
+
     transmission, emissivity, reflection. The column wavelength must be given.
     Alternatively kwargs for the above mentioned quantities can be passed as
     arrays. If they are not Quantities, then a unit should also be passed with
@@ -114,6 +115,9 @@ class SpectralSurface:
         ``PHOTLAM arcsec^-2``, even though ``arcsec^-2`` is not given.
         """
         flux = self._get_array("emission")
+        if flux is None and "temperature" not in self.meta:
+            return None
+
         if flux is not None:
             wave = self._get_array("wavelength")
             flux = make_emission_from_array(flux, wave, meta=self.meta)
@@ -124,9 +128,6 @@ class SpectralSurface:
                 temp = quantify(temp, u.deg_C)
             temp = temp.to(u.Kelvin, equivalencies=u.temperature())
             flux = make_emission_from_emissivity(temp, emiss)
-            flux.meta["temperature"] = temp
-        else:
-            flux = None
 
         has_solid_angle = extract_type_from_unit(flux.meta["solid_angle"],
                                                  "solid angle")[1] != u.Unit("")
@@ -134,7 +135,8 @@ class SpectralSurface:
             conversion_factor = flux.meta["solid_angle"].to(u.arcsec ** -2)
             flux = flux * conversion_factor
             flux.meta["solid_angle"] = u.arcsec ** -2
-            flux.meta["history"].append(f"Converted to arcsec-2: {conversion_factor}")
+            flux.meta["history"].append(
+                f"Converted to arcsec-2: {conversion_factor}")
 
         if flux is not None and "rescale_emission" in self.meta:
             dic = from_currsys(self.meta["rescale_emission"], self.cmds)
