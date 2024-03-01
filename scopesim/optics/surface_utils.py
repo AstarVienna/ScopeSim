@@ -30,6 +30,13 @@ def make_emission_from_emissivity(temp: u.Quantity[u.K],
         logger.warning("Either emission or emissivity must be set")
         return None
 
+    # This line is redundant for all the places we actually call this function.
+    # But the tests want this to work, so I'll include it. Ultimately, this is
+    # an internal utils function, so it should be fine to just to static type
+    # checking to ensure temp is always in K.
+    with u.set_enabled_equivalencies(u.temperature()):
+        temp <<= u.K
+
     flux = SourceSpectrum(BlackBody1D, temperature=temp.value)
     flux *= emiss_src_spec
     flux.meta["temperature"] = temp
@@ -108,8 +115,8 @@ def normalise_flux_if_binned(flux, wave):
     flux : array-like Quantity
 
     """
-    if (u.bin not in flux.unit.bases or
-            "flux density" in flux.unit.physical_type):
+    if (u.bin not in flux.unit.bases and
+            "flux density" in str(flux.unit.physical_type)):
         # not binned, return as-is
         return flux
 
