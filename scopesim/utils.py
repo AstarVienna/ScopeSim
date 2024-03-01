@@ -21,7 +21,7 @@ from astropy import units as u
 from astropy.io import fits
 from astropy.table import Column, Table
 
-from astar_utils import get_logger
+from astar_utils import get_logger, is_bangkey
 
 from . import rc
 
@@ -398,9 +398,9 @@ def get_meta_quantity(meta_dict, name, fallback_unit=""):
     quant : Quantity
 
     """
-    if isinstance(meta_dict[name], str) and meta_dict[name].startswith("!"):
-        raise ValueError(f"!-strings should be resolved upstream: "
-                         f"{meta_dict[name]}")
+    if is_bangkey(meta_dict[name]):
+        raise ValueError(
+            f"!-strings should be resolved upstream: {meta_dict[name]}")
 
     if isinstance(meta_dict[name], u.Quantity):
         unit = meta_dict[name].unit
@@ -409,9 +409,7 @@ def get_meta_quantity(meta_dict, name, fallback_unit=""):
     else:
         unit = u.Unit(fallback_unit)
 
-    quant = quantify(meta_dict[name], unit)
-
-    return quant
+    return quantify(meta_dict[name], unit)
 
 
 def quantify(item, unit, cmds=None):
@@ -432,68 +430,11 @@ def quantify(item, unit, cmds=None):
         raise ValueError(f"Quantify cannot resolve {item}")
         # item = from_currsys(item, cmds)
     if isinstance(item, u.Quantity):
-        quant = item.to(u.Unit(unit))
-    else:
-        if isinstance(item, (np.ndarray, list, tuple)) and np.size(item) > 1000:
-            quant = item << u.Unit(unit)
-        else:
-            quant = item * u.Unit(unit)
-    return quant
+        return item.to(u.Unit(unit))
 
-
-def extract_type_from_unit(unit, unit_type):
-    """
-    Extract ``astropy`` physical type from a compound unit.
-
-    Parameters
-    ----------
-    unit : astropy.Unit
-    unit_type : str
-        The physical type of the unit as given by ``astropy``
-
-    Returns
-    -------
-    new_unit : Unit
-        The input unit minus any base units corresponding to `unit_type`.
-    extracted_units : Unit
-        Any base units corresponding to `unit_type`.
-
-    """
-    extracted_units = u.Unit("")
-    for base, power in zip(unit.bases, unit.powers):
-        if unit_type == (base ** abs(power)).physical_type:
-            extracted_units *= base ** power
-
-    new_unit = unit / extracted_units
-
-    return new_unit, extracted_units
-
-
-def extract_base_from_unit(unit, base_unit):
-    """
-    Extract ``astropy`` base unit from a compound unit.
-
-    Parameters
-    ----------
-    unit : astropy.Unit
-    base_unit : Unit, str
-
-   Returns
-    -------
-    new_unit : Unit
-        The input unit minus any base units corresponding to `base_unit`.
-    extracted_units : Unit
-        Any base units corresponding to `base_unit`.
-
-    """
-    extracted_units = u.Unit("")
-    for base, power in zip(unit.bases, unit.powers):
-        if base == base_unit:
-            extracted_units *= base ** power
-
-    new_unit = unit * extracted_units ** -1
-
-    return new_unit, extracted_units
+    if isinstance(item, (np.ndarray, list, tuple)) and np.size(item) > 1000:
+        return item << u.Unit(unit)
+    return item * u.Unit(unit)
 
 
 def is_fits(filename) -> bool:
