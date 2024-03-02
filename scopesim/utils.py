@@ -596,15 +596,11 @@ def check_keys(input_dict: Union[Mapping, Iterable],
                        "found %s instead.", type(required_keys))
         required_keys = set(required_keys)
 
-    # First assume it's a Mapping, otherwise attempt to convert to set.
     try:
-        input_keys = input_dict.keys()
-    except AttributeError:
-        try:
-            input_keys = set(input_dict)
-        except Exception as err:
-            raise ValueError("input_dict must be mapping or iterable, but was "
-                             f"{type(input_dict)}") from err
+        input_keys = set(input_dict)
+    except Exception as err:
+        raise ValueError("input_dict must be mapping or iterable, but was "
+                         f"{type(input_dict)}") from err
 
     if all_any == "all":
         keys_present = required_keys.issubset(input_keys)
