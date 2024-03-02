@@ -596,28 +596,21 @@ def check_keys(input_dict: Union[Mapping, Iterable],
                        "found %s instead.", type(required_keys))
         required_keys = set(required_keys)
 
-    try:
-        input_keys = set(input_dict)
-    except Exception as err:
-        raise ValueError("input_dict must be mapping or iterable, but was "
-                         f"{type(input_dict)}") from err
-
     if all_any == "all":
-        keys_present = required_keys.issubset(input_keys)
+        keys_present = required_keys.issubset(input_dict)
     elif all_any == "any":
-        keys_present = not required_keys.isdisjoint(input_keys)
+        keys_present = not required_keys.isdisjoint(input_dict)
     else:
         raise ValueError("all_any must be either 'all' or 'any'")
 
     if not keys_present:
+        missing = "', '".join(required_keys.difference(input_dict)) or "<none>"
         if "error" in action:
             raise ValueError(
-                f"The keys {', '.join(required_keys - input_keys) or '<none>'}"
-                " are missing from input_dict.")
+                f"The keys '{missing}' are missing from input_dict.")
         if "warn" in action:
             logger.warning(
-                "The keys '%s' are missing from input_dict.",
-                "', '".join(required_keys - input_keys) or "<none>")
+                "The keys '%s' are missing from input_dict.", missing)
 
     return keys_present
 
