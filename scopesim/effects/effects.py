@@ -34,6 +34,8 @@ class Effect(DataContainer):
 
     """
 
+    required_keys = set()
+
     def __init__(self, filename=None, **kwargs):
         super().__init__(filename=filename, **kwargs)
         self.meta["z_order"] = []

@@ -576,7 +576,6 @@ class SpanishVOFilterCurve(FilterCurve):
 class FilterWheelBase(Effect):
     """Base class for Filter Wheels."""
 
-    required_keys = set()
     _current_str = "current_filter"
 
     def __init__(self, **kwargs):
