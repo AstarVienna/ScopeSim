@@ -505,7 +505,6 @@ class TopHatFilterCurve(FilterCurve):
     required_keys = {"transmission", "blue_cutoff", "red_cutoff"}
 
     def __init__(self, cmds=None, **kwargs):
-        required_keys = ["transmission", "blue_cutoff", "red_cutoff"]
         check_keys(kwargs, self.required_keys, action="error")
         self.cmds = cmds
 
