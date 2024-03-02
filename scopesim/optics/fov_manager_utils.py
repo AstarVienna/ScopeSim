@@ -38,8 +38,13 @@ def get_3d_shifts(effects, **kwargs):
     - x_shift, y_shift: [deg]
 
     """
-    required_keys = ["wave_min", "wave_mid", "wave_max",
-                     "sub_pixel_fraction", "pixel_scale"]
+    required_keys = {
+        "wave_min",
+        "wave_mid",
+        "wave_max",
+        "sub_pixel_fraction",
+        "pixel_scale",
+    }
     check_keys(kwargs, required_keys, action="warning")
 
     effects = get_all_effects(effects, efs.Shift3D)
@@ -100,7 +105,7 @@ def get_imaging_waveset(effects_list, **kwargs):
         [um] list of wavelengths
 
     """
-    required_keys = ["wave_min", "wave_max"]
+    required_keys = {"wave_min", "wave_max"}
     check_keys(kwargs, required_keys, action="error")
 
     # get the filter wavelengths first to set (wave_min, wave_max)
@@ -163,8 +168,12 @@ def get_imaging_headers(effects, **kwargs):
     #   if larger than max_chunk_size, split into smaller headers
     # add image plane WCS information for a direct projection
 
-    required_keys = ["pixel_scale", "plate_scale",
-                     "chunk_size", "max_segment_size"]
+    required_keys = {
+        "pixel_scale",
+        "plate_scale",
+        "chunk_size",
+        "max_segment_size",
+    }
     check_keys(kwargs, required_keys, action="error")
 
     plate_scale = kwargs["plate_scale"]     # ["/mm]
@@ -284,8 +293,12 @@ def get_imaging_fovs(headers, waveset, shifts, **kwargs):
 
 def get_spectroscopy_headers(effects, **kwargs):
     """Return generator of Header objects."""
-    required_keys = ["pixel_scale", "plate_scale",
-                     "wave_min", "wave_max"]
+    required_keys = {
+        "pixel_scale",
+        "plate_scale",
+        "wave_min",
+        "wave_max",
+    }
     check_keys(kwargs, required_keys, action="error")
 
     surface_list_effects = get_all_effects(effects, (efs.SurfaceList,

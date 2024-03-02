@@ -23,14 +23,15 @@ class Rotate90CCD(Effect):
 
     """
 
+    required_keys = {"rotations"}
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         params = {"z_order": [809]}
         self.meta.update(params)
         self.meta.update(kwargs)
 
-        required_keys = ["rotations"]
-        utils.check_keys(self.meta, required_keys, action="error")
+        utils.check_keys(self.meta, self.required_keys, action="error")
 
     def apply_to(self, obj, **kwargs):
         """See parent docstring."""

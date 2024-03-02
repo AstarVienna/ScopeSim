@@ -50,8 +50,10 @@ class ChopNodCombiner(Effect):
 
     """
 
+    required_keys = {"chop_offsets", "pixel_scale"}
+
     def __init__(self, **kwargs):
-        check_keys(kwargs, ["chop_offsets", "pixel_scale"])
+        check_keys(kwargs, self.required_keys)
 
         super().__init__(**kwargs)
         params = {

@@ -84,14 +84,15 @@ class DetectorModePropertiesSetter(Effect):
 
     """
 
+    required_keys = {"mode_properties"}
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         params = {"z_order": [299, 900]}
         self.meta.update(params)
         self.meta.update(kwargs)
 
-        required_keys = ["mode_properties"]
-        check_keys(self.meta, required_keys, action="error")
+        check_keys(self.meta, self.required_keys, action="error")
 
         self.mode_properties = kwargs["mode_properties"]
 
@@ -176,6 +177,8 @@ class AutoExposure(Effect):
 
     """
 
+    required_keys = {"fill_frac", "full_well", "mindit"}
+
     def __init__(self, **kwargs):
         """
         The effect is the first detector effect, hence essentially operates
@@ -189,8 +192,7 @@ class AutoExposure(Effect):
             from scopesim import UserCommands
             self.cmds = UserCommands()
 
-        required_keys = ["fill_frac", "full_well", "mindit"]
-        check_keys(self.meta, required_keys, action="error")
+        check_keys(self.meta, self.required_keys, action="error")
 
     def apply_to(self, obj, **kwargs):
         if isinstance(obj, (ImagePlaneBase, DetectorBase)):
@@ -238,14 +240,15 @@ class AutoExposure(Effect):
 class SummedExposure(Effect):
     """Simulates a summed stack of ``ndit`` exposures."""
 
+    required_keys = {"dit", "ndit"}
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         params = {"z_order": [860]}
         self.meta.update(params)
         self.meta.update(kwargs)
 
-        required_keys = ["dit", "ndit"]
-        check_keys(self.meta, required_keys, action="error")
+        check_keys(self.meta, self.required_keys, action="error")
 
     def apply_to(self, obj, **kwargs):
         if isinstance(obj, DetectorBase):
@@ -260,14 +263,15 @@ class SummedExposure(Effect):
 class Bias(Effect):
     """Adds a constant bias level to readout."""
 
+    required_keys = {"bias"}
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         params = {"z_order": [855]}
         self.meta.update(params)
         self.meta.update(kwargs)
 
-        required_keys = ["bias"]
-        check_keys(self.meta, required_keys, action="error")
+        check_keys(self.meta, self.required_keys, action="error")
 
     def apply_to(self, obj, **kwargs):
         if isinstance(obj, DetectorBase):
@@ -277,20 +281,23 @@ class Bias(Effect):
         return obj
 
 class PoorMansHxRGReadoutNoise(Effect):
+    required_keys = {"noise_std", "n_channels", "ndit"}
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        params = {"z_order": [811],
-                  "pedestal_fraction": 0.3,
-                  "read_fraction": 0.4,
-                  "line_fraction": 0.25,
-                  "channel_fraction": 0.05,
-                  "random_seed": "!SIM.random.seed",
-                  "report_plot_include": False,
-                  "report_table_include": False}
+        params = {
+            "z_order": [811],
+            "pedestal_fraction": 0.3,
+            "read_fraction": 0.4,
+            "line_fraction": 0.25,
+            "channel_fraction": 0.05,
+            "random_seed": "!SIM.random.seed",
+            "report_plot_include": False,
+            "report_table_include": False,
+        }
         self.meta.update(params)
         self.meta.update(kwargs)
 
-        self.required_keys = ["noise_std", "n_channels", "ndit"]
         check_keys(self.meta, self.required_keys, action="error")
 
     def apply_to(self, det, **kwargs):
@@ -332,13 +339,14 @@ class PoorMansHxRGReadoutNoise(Effect):
 class BasicReadoutNoise(Effect):
     """Readout noise computed as: ron * sqrt(NDIT)."""
 
+    required_keys = {"noise_std", "ndit"}
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.meta["z_order"] = [811]
         self.meta["random_seed"] = "!SIM.random.seed"
         self.meta.update(kwargs)
 
-        self.required_keys = ["noise_std", "ndit"]
         check_keys(self.meta, self.required_keys, action="error")
 
     def apply_to(self, det, **kwargs):
@@ -417,12 +425,14 @@ class DarkCurrent(Effect):
     """
     required: dit, ndit, value
     """
+
+    required_keys = {"value", "dit", "ndit"}
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.meta["z_order"] = [830]
 
-        required_keys = ["value", "dit", "ndit"]
-        check_keys(self.meta, required_keys, action="error")
+        check_keys(self.meta, self.required_keys, action="error")
 
     def apply_to(self, obj, **kwargs):
         if isinstance(obj, DetectorBase):
@@ -487,6 +497,8 @@ class LinearityCurve(Effect):
 
     """
 
+    required_keys = {"ndit"}
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         params = {
@@ -497,7 +509,6 @@ class LinearityCurve(Effect):
         self.meta.update(params)
         self.meta.update(kwargs)
 
-        self.required_keys = ["ndit"]
         check_keys(self.meta, self.required_keys, action="error")
 
     def apply_to(self, obj, **kwargs):
@@ -562,11 +573,12 @@ class ReferencePixelBorder(Effect):
 
 
 class BinnedImage(Effect):
+    required_keys = {"bin_size"}
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.meta["z_order"] = [870]
 
-        self.required_keys = ["bin_size"]
         check_keys(self.meta, self.required_keys, action="error")
 
     def apply_to(self, det, **kwargs):
@@ -580,11 +592,12 @@ class BinnedImage(Effect):
         return det
 
 class UnequalBinnedImage(Effect):
+    required_keys = {"binx","biny"}
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.meta["z_order"] = [870]
 
-        self.required_keys = ["binx","biny"]
         check_keys(self.meta, self.required_keys, action="error")
 
     def apply_to(self, det, **kwargs):

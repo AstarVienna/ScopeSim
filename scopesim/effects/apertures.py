@@ -78,6 +78,8 @@ class ApertureMask(Effect):
 
     """
 
+    required_keys = {"filename", "table", "array_dict"}
+
     def __init__(self, **kwargs):
         if not np.any([key in kwargs for key in ["filename", "table",
                                                  "array_dict"]]):
@@ -108,7 +110,6 @@ class ApertureMask(Effect):
         self._mask = None
         self.mask_sum = None
 
-        self.required_keys = ["filename", "table", "array_dict"]
         check_keys(kwargs, self.required_keys, "warning", all_any="any")
 
     def apply_to(self, obj, **kwargs):
@@ -200,13 +201,15 @@ class ApertureMask(Effect):
 
 
 class RectangularApertureMask(ApertureMask):
+    required_keys = {"x", "y", "width", "height"}
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         params = {"x_unit": "arcsec",
                   "y_unit": "arcsec"}
         self.meta.update(params)
         self.meta.update(kwargs)
-        check_keys(self.meta, ["x", "y", "width", "height"])
+        check_keys(self.meta, self.required_keys)
 
         self.table = self.get_table(**kwargs)
 
@@ -284,8 +287,9 @@ class ApertureList(Effect):
         self.meta.update(kwargs)
 
         if self.table is not None:
-            required_keys = ["id", "left", "right", "top", "bottom", "angle",
-                             "conserve_image", "shape"]
+            # Why not always?
+            required_keys = {"id", "left", "right", "top", "bottom", "angle",
+                             "conserve_image", "shape"}
             check_keys(self.table.colnames, required_keys)
 
     def apply_to(self, obj, **kwargs):
