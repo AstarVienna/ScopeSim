@@ -19,13 +19,13 @@ class TestInit:
 class TestGenerateFovList:
     def test_returns_default_single_entry_fov_list_for_no_effects(self):
         fov_man = FOVManager(pixel_scale=1, plate_scale=1)
-        fovs = fov_man.generate_fovs_list()
+        fovs = list(fov_man.generate_fovs_list())
         assert len(fovs) == 1
 
     def test_returns_single_fov_for_mvs_system(self):
         effects = eo._mvs_effects_list()
         fov_man = FOVManager(effects=effects, pixel_scale=1, plate_scale=1)
-        fovs = fov_man.generate_fovs_list()
+        fovs = list(fov_man.generate_fovs_list())
         fov_volume = fovs[0].volume()
 
         assert len(fovs) == 1
@@ -38,7 +38,7 @@ class TestGenerateFovList:
         effects = eo._mvs_effects_list()
         fov_man = FOVManager(effects=effects, pixel_scale=1, plate_scale=1,
                              max_segment_size=1024**2, chunk_size=1024)
-        fovs = fov_man.generate_fovs_list()
+        fovs = list(fov_man.generate_fovs_list())
         fov_volume = fovs[0].volume()
 
         assert len(fovs) == 4
@@ -48,7 +48,7 @@ class TestGenerateFovList:
     def test_fov_volumes_have_detector_dimensions_from_detector_list(self):
         effects = eo._mvs_effects_list()
         fov_man = FOVManager(effects=effects, pixel_scale=1, plate_scale=1)
-        _ = fov_man.generate_fovs_list()
+        _ = list(fov_man.generate_fovs_list())
         detector_limits = fov_man.volumes_list.detector_limits
 
         assert detector_limits["xd_min"] != 0.0
