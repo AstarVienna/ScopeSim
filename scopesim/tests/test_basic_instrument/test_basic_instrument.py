@@ -12,6 +12,16 @@ from scopesim.source import source_templates as st
 
 PLOTS = False
 
+SWITCHOFF = [
+    "shot_noise",
+    "dark_current",
+    "readout_noise",
+    "atmospheric_radiometry",
+    "source_fits_keywords",
+    "effects_fits_keywords",
+    "config_fits_keywords",
+]
+
 
 @pytest.mark.usefixtures("protect_currsys", "patch_all_mock_paths")
 class TestLoadsUserCommands:
@@ -74,13 +84,12 @@ class TestObserveSpectroscopyMode:
         src = sim.Source(lam=wave*u.um, spectra=spec,
                          x=[0], y=[0], ref=[0], weight=[1e-3])
 
-        cmd = sim.UserCommands(use_instrument="basic_instrument",
-                               set_modes=["spectroscopy"])
+        cmd = sim.UserCommands(
+            use_instrument="basic_instrument",
+            set_modes=["spectroscopy"],
+            ignore_effects=SWITCHOFF,
+        )
         opt = sim.OpticalTrain(cmd)
-        for effect_name in ["shot_noise", "dark_current", "readout_noise",
-                            "atmospheric_radiometry", "source_fits_keywords",
-                            "effects_fits_keywords", "config_fits_keywords"]:
-            opt[effect_name].include = False
 
         opt.observe(src)
         hdul = opt.readout()[0]
@@ -116,13 +125,12 @@ class TestObserveIfuMode:
         src = sim.Source(lam=wave*u.um, spectra=spec,
                          x=x, y=y, ref=[0]*len(x), weight=[1e-3]*len(x))
 
-        cmd = sim.UserCommands(use_instrument="basic_instrument",
-                               set_modes=["ifu"])
+        cmd = sim.UserCommands(
+            use_instrument="basic_instrument",
+            set_modes=["ifu"],
+            ignore_effects=SWITCHOFF,
+        )
         opt = sim.OpticalTrain(cmd)
-        for effect_name in ["shot_noise", "dark_current", "readout_noise",
-                            "atmospheric_radiometry", "source_fits_keywords",
-                            "effects_fits_keywords", "config_fits_keywords"]:
-            opt[effect_name].include = False
 
         opt.observe(src)
         hdul = opt.readout()[0]
@@ -145,14 +153,19 @@ class TestObserveIfuMode:
             assert round(trace_flux / spot_flux) == 15 * 5
 
     def test_random_star_field(self):
-        src = sim.source.source_templates.star_field(n=100, mmin=8, mmax=18, width=10)
+        src = sim.source.source_templates.star_field(
+            n=100, mmin=8, mmax=18, width=10)
 
-        cmd = sim.UserCommands(use_instrument="basic_instrument",
-                               set_modes=["ifu"])
+        cmd = sim.UserCommands(
+            use_instrument="basic_instrument",
+            set_modes=["ifu"],
+            ignore_effects=[
+                "source_fits_keywords",
+                "effects_fits_keywords",
+                "config_fits_keywords",
+            ],
+        )
         opt = sim.OpticalTrain(cmd)
-        for effect_name in ["source_fits_keywords", "effects_fits_keywords",
-                            "config_fits_keywords"]:
-            opt[effect_name].include = False
 
         opt.observe(src)
         hdul = opt.readout()[0]
