@@ -209,7 +209,7 @@ class TestSourceAddition:
         image_source.append(table_source)
         comb_refs = image_source.fields[1]["ref"]
         tbl_refs = table_source.fields[0]["ref"]
-        assert np.all(tbl_refs.data + 1 == comb_refs.data)
+        assert all(tbl_refs.data + 1 == comb_refs.data)
         assert image_source.fields[0].header["SPEC_REF"] == 0
         assert len(image_source.fields) == len(image_source._meta_dicts)
         image_source.shift(0.1, 0.2)
@@ -218,7 +218,7 @@ class TestSourceAddition:
         new_source = table_source + image_source
         comb_refs = new_source.fields[0]["ref"]
         tbl_refs = table_source.fields[0]["ref"]
-        assert np.all(tbl_refs.data == comb_refs.data)
+        assert all(tbl_refs.data == comb_refs.data)
         assert new_source.fields[1].header["SPEC_REF"] == 3
         assert len(new_source.fields) == len(new_source._meta_dicts)
         new_source.shift(0.1, 0.2)
@@ -245,7 +245,7 @@ class TestSourceAddition:
         assert len(img_fits_src.fields) == len(img_fits_src._meta_dicts)
         assert len(fits_img_src.fields) == 2
         assert len(img_fits_src.fields) == len(img_fits_src._meta_dicts)
-        assert np.all(fits_img_src.fields[0].data == fits_src.fields[0].data)
+        assert (fits_img_src.fields[0].data == fits_src.fields[0].data).all()
         assert img_fits_src.fields[0] is not img_src.fields[0]
 
     def test_meta_data_is_passed_on_when_added(self, table_source, image_source):
@@ -309,11 +309,11 @@ class TestSourceImageInRange:
 class TestSourcePhotonsInRange:
     def test_correct_photons_are_returned_for_table_source(self, table_source):
         ph = table_source.photons_in_range(1, 2)
-        assert np.all(np.isclose(ph.value, [4., 2., 2.]))
+        assert np.allclose(ph.value, [4., 2., 2.])
 
     def test_correct_photons_are_returned_for_image_source(self, image_source):
         ph = image_source.photons_in_range(1, 2)
-        assert np.all(np.isclose(ph.value, [2.]))
+        assert np.allclose(ph.value, [2.])
 
     def test_correct_photons_are_returned_for_no_spectra(self, image_source):
         image_source.spectra = []
@@ -328,7 +328,7 @@ class TestSourcePhotonsInRange:
     def test_photons_returned_only_for_indexes(self, table_source):
         ph = table_source.photons_in_range(1, 2, indexes=[0, 2])
         assert len(ph) == 2
-        assert np.all(np.isclose(ph.value, [4, 2]))
+        assert np.allclose(ph.value, [4, 2])
 
 
 class TestSourceShift:
@@ -387,7 +387,7 @@ class TestPhotonsInRange:
                               (np.linspace(0, 1, 11)**0.5, 100,  34.931988)])
     def test_with_bandpass_and_area_returns_correct_value(self, flux, area,
                                                           expected):
-        flux = flux * u.Unit("ph s-1 m-2 um-1")
+        flux *= u.Unit("ph s-1 m-2 um-1")
         spec = SourceSpectrum(Empirical1D,
                               points=np.linspace(0.5, 2.5, 11) * u.um,
                               lookup_table=flux)
