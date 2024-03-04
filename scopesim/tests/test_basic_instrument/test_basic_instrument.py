@@ -69,7 +69,7 @@ class TestObserveSpectroscopyMode:
 
     def test_runs(self):
         wave = np.arange(0.7, 2.5, 0.001)
-        spec = np.zeros(len(wave))
+        spec = np.zeros_like(wave)
         spec[25::50] += 100      # every 0.05µm, offset by 0.025µm
         src = sim.Source(lam=wave*u.um, spectra=spec,
                          x=[0], y=[0], ref=[0], weight=[1e-3])
@@ -109,10 +109,10 @@ class TestObserveSpectroscopyMode:
 class TestObserveIfuMode:
     def test_runs(self):
         wave = np.arange(0.7, 2.5, 0.001)
-        spec = np.zeros(len(wave))
+        spec = np.zeros_like(wave)
         spec[25::50] += 100      # every 0.05µm, offset by 0.025µm
-        x = [-4, -2, 0, 2, 4] * 5
-        y = [y0 for y0 in range(-4, 5, 2) for i in range(5)]
+        x = np.tile(np.arange(-4, 5, 2), 5)
+        y = np.repeat(np.arange(-4, 5, 2), 5)
         src = sim.Source(lam=wave*u.um, spectra=spec,
                          x=x, y=y, ref=[0]*len(x), weight=[1e-3]*len(x))
 
@@ -137,11 +137,11 @@ class TestObserveIfuMode:
             plt.imshow(det_im)
             plt.show()
 
-        xs = [(157, 226), (317, 386), (476, 545), (640, 706), (797, 866)]
+        xs = [slice(157, 226), slice(317, 386), slice(476, 545),
+              slice(640, 706), slice(797, 866)]
         spot_flux = 100000       # due to psf flux in large IFU slices (2")
-        for i in range(5):
-            x0, x1 = xs[i]
-            trace_flux = det_im[:, x0:x1].sum()     # sum along a trace
+        for sl in xs:
+            trace_flux = det_im[:, sl].sum()     # sum along a trace
             assert round(trace_flux / spot_flux) == 15 * 5
 
     def test_random_star_field(self):
