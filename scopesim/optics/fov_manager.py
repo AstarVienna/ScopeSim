@@ -125,12 +125,9 @@ class FOVManager:
             if vol_pix_area > max_seg_size:
                 step = chunk_size * pixel_scale
 
-                # I'd like to see if these are always integers, as in the tests
-                # If they are, the np.arange could be changed to just a range
-                for chkval in (vol["x_min"], vol["x_max"],
-                               vol["y_min"], vol["y_max"], step):
-                    assert not round(chkval, 7) % 1, chkval
-
+                # These are not always integers, unlike in the tests.
+                # See for example HAWKI/test_hawki/test_full_package_hawki.py.
+                # The np.arange can therefore not be changed to just a range.
                 yield (np.arange(vol["x_min"], vol["x_max"], step),
                        np.arange(vol["y_min"], vol["y_max"], step))
 
