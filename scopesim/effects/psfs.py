@@ -231,6 +231,56 @@ class RadialProfilePSF(AnalyticalPSF):
         return self.kernel.astype(float)
 
 
+class MosaicBundleTracePSF(RadialProfilePSF):
+    """
+    A hack to get the mosaic bundle traces onto the detector, assuming full ADC
+
+    Basically it creates a 5x5 RadialProfilePSF (defined by r and z) and then
+    copies and pastes the kernel side-by-side for each fibre in the mosaic
+    bundle. Each fibre PSF kernel can be weighted by the filling factor of the
+    PSF in said fibre.
+
+    The main problem here is that it doesn't take into account any wavelength
+    dependent effects on the PSF. This could be an issue down the line.
+
+    """
+
+    def __init__(self, **kwargs):
+        params = {"unit": "pixel",
+                  "pixel_scale": "!INST.pixel_scale",
+                  "plate_scale": "!INST.plate_scale",
+                  "r": [0, 1, 2],               # distance from centre of trace in [unit]
+                  "z": [0.6, 0.2, 0],           # relative flux of PSF for values in "r"
+                  "trace_spacing": 2,           # [unit]
+                  "trace_flux_weights": [0.7] + [0.05] * 6      # Number of traces taken from the length of this list
+                  }
+        params.update(kwargs)
+        super().__init__(**params)
+        self.meta["z_order"] = [244, 744]
+
+        self.convolution_classes = ImagePlaneBase
+        self.kernel = None
+        self.single_kernel = None
+
+    def get_kernel(self, obj):
+        self.single_kernel = super().get_kernel(obj)
+        kernel_list = [self.single_kernel * weight
+                       for weight in self.meta["trace_flux_weights"]]
+
+        dr = 1
+        if self.meta["unit"] == "mm":
+            dr = from_currsys(self.meta["pixel_scale"], self.cmds) / \
+                 from_currsys(self.meta["plate_scale"], self.cmds)
+        pad_arr = np.zeros([self.single_kernel.shape[0],
+                            int(dr * self.meta["trace_spacing"])])
+        pad_list = [pad_arr] * len(kernel_list)
+
+        zipped_list = [j for i in zip(kernel_list, pad_list) for j in i][:-1]     # this zips together the psf and pad lists
+        self.kernel = np.concatenate(zipped_list, axis=1)
+
+        return self.kernel.astype(float)
+
+
 class NonCommonPathAberration(AnalyticalPSF):
     """
     TBA.
