@@ -765,6 +765,31 @@ class MosaicSpectralTraceList(UnresolvedSpectralTraceList):
     def __init__(self, **kwargs):
         params = {"pixel_scale": "!INST.pixel_scale",  # [arcsec / pix]}
                   "plate_scale": "!INST.plate_scale",  # [arcsec / mm]
+                  "trace_"
+                  "wave_min": "!SIM.spectral.wave_min",  # [um]
+                  "wave_mid": "!SIM.spectral.wave_mid",  # [um]
+                  "wave_max": "!SIM.spectral.wave_max",  # [um]
+                  "spectral_bin_width": "!SIM.spectral.spectral_bin_width",  # [um]
+                  "n_bundles" : 2,
+                  "distance_between_bundles": 32, #pixels
+                  }
+
+        params.update(**kwargs)
+        required_keys = ["pixel_scale", "plate_scale"]
+        check_keys(kwargs, required_keys)
+        super(SpectralTraceList, self).__init__(**params)
+
+        self._file = self.make_spectral_trace_list()
+        super().make_spectral_traces()
+
+    def make_spectral_trace_list(self):
+        pass
+
+
+class MosaicSpectralTraceList_old(UnresolvedSpectralTraceList):
+    def __init__(self, **kwargs):
+        params = {"pixel_scale": "!INST.pixel_scale",  # [arcsec / pix]}
+                  "plate_scale": "!INST.plate_scale",  # [arcsec / mm]
                   "wave_min": "!SIM.spectral.wave_min",  # [um]
                   "wave_mid": "!SIM.spectral.wave_mid",  # [um]
                   "wave_max": "!SIM.spectral.wave_max",  # [um]
