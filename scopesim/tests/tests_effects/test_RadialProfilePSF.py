@@ -1,11 +1,8 @@
-import os
 import pytest
 from pytest import approx
 
 from matplotlib import pyplot as plt
-
 import numpy as np
-from astropy.io import fits
 
 from scopesim.effects import RadialProfilePSF
 
