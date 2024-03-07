@@ -6,13 +6,20 @@
 import pytest
 
 import numpy as np
-
 from astropy.io import fits
+from astropy.table import Table
+import matplotlib.pyplot as plt
 
 from scopesim.effects.spectral_trace_list_utils import SpectralTrace
 from scopesim.effects.spectral_trace_list_utils import Transform2D, power_vector
 from scopesim.effects.spectral_trace_list_utils import make_image_interpolations
+from scopesim.effects.spectral_trace_list_utils import coords_from_lines_of_const_wavelength as const_wave
+from scopesim.effects.spectral_trace_list_utils import TraceHDUGenerator
+from scopesim.effects.spectral_trace_list_utils import TracesHDUListGenerator
 from scopesim.tests.mocks.py_objects import trace_list_objects as tlo
+
+
+PLOTS = False
 
 class TestSpectralTrace:
     """Tests not covered in test_SpectralTraceList.py"""
@@ -153,3 +160,100 @@ class TestImageInterpolations:
         interps = make_image_interpolations(hdul, kx=1, ky=1)
         imginterp = interps[0](yy, xx, grid=False)
         assert np.allclose(imginterp, img)
+
+
+class TestTracesHDUListGenerator:
+    def test_returns_hdulist_with_4_ext_for_2_traces(self):
+        dict_list = [{"wave": 1.9, "x": [0, 1], "y": [-2, -2]},
+                     {"wave": 2.4, "x": [0, 1], "y": [2, 2]}]
+        tg = TraceHDUGenerator(dict_list, n_extra_points=3)
+        sptl = TracesHDUListGenerator([tg.trace_hdu, tg.trace_hdu],
+                                     [0, 0], [0, 0])
+
+        assert isinstance(sptl.hdulist, fits.HDUList)
+        assert len(sptl.hdulist) == 4
+
+
+class TestTraceHDUGenerator:
+    def test_returns_tablehdu_with_straight_trace(self):
+        dict_list = [{"wave": 1.9, "x": [0, 1], "y": [-2, -2]},
+                     {"wave": 2.4, "x": [0, 1], "y": [2, 2]}]
+
+        tg = TraceHDUGenerator(dict_list, n_extra_points=3)
+        assert isinstance(tg.trace_hdu, fits.BinTableHDU)
+        assert len(Table(tg.trace_hdu.data)) == (2 + 3) ** 2
+
+
+class TestCoordsFromLinesOfConstWavelength:
+    def test_returns_input_for_no_expansion(self):
+        dict_list = [{"wave": 1.9, "x": [0, 1], "y": [-2, -2]},
+                     {"wave": 2.4, "x": [0, 1], "y": [2, 2]}]
+        w, x, y = const_wave(dict_list)
+
+        assert min(w) == 1.9 and max(w) == 2.4
+        assert min(x) == 0. and max(x) == 1.
+        assert min(y) == -2 and max(y) == 2.
+
+    def test_returns_same_edges_when_expanded(self):
+        dict_list = [{"wave": 1.9, "x": [0, 1], "y": [-2, -2]},
+                     {"wave": 2.4, "x": [0, 1], "y": [2, 2]}]
+        w, x, y = const_wave(dict_list, n_extra_points=2)
+
+        assert min(w) == 1.9 and max(w) == 2.4
+        assert min(x) == 0. and max(x) == 1.
+        assert min(y) == -2 and max(y) == 2.
+
+        assert len(x) == 4
+
+    def test_linear_interpolation_for_spline_1(self):
+        dict_list = [{"wave": 1.9, "x": [0, 1], "y": [-2, -2]},
+                     {"wave": 2.15, "x": [1, 2], "y": [0, 0]},
+                     {"wave": 2.4, "x": [0, 1], "y": [2, 2]}]
+        w, x, y = const_wave(dict_list, n_extra_points=2)
+
+        if PLOTS:
+            plt.plot(x, y, "o")
+            plt.show()
+
+        assert x[1] == 0.5 and x[2] == 1
+
+    def test_cubic_interpolation_for_spline_2(self):
+        dict_list = [{"wave": 1.9, "x": [0, 1, 2], "y": [-2, -2, -2]},
+                     {"wave": 2.15, "x": [1, 2, 3], "y": [0, 0, 0]},
+                     {"wave": 2.4, "x": [0, 1, 2], "y": [2, 2, 2]}]
+        w, x, y = const_wave(dict_list, n_extra_points=20, spline_order=2)
+
+        if not PLOTS:
+            plt.scatter(x, y, c=w)
+            plt.show()
+
+    def test_echelle_type_expansion(self):
+        dict_list = [{"wave": 1.9, "x": [0, 1, 2], "y": [-2.5, -2, -1.5]},
+                     {"wave": 2.15, "x": [1, 2, 3], "y": [0., 0, 0.]},
+                     {"wave": 2.4, "x": [0, 1, 2], "y": [1.5, 2, 2.5]}]
+        w, x, y = const_wave(dict_list, n_extra_points=20, spline_order=2)
+
+        if PLOTS:
+            plt.scatter(x, y, c=w)
+            plt.show()
+
+    def test_super_funky_expansions(self):
+        dict_list = [{"wave": 2.0, "x": [0, 1, 2], "y": [0, 0, 0]},
+                     {"wave": 2.1, "x": [0.5, 1, 1.5], "y": [2., 2, 2.]},
+                     {"wave": 2.2, "x": [0, 1, 2], "y": [4, 4, 4]},
+                     {"wave": 2.3, "x": [0.5, 1.5, 2.5], "y": [5.5, 6, 5.5]},
+                     {"wave": 2.4, "x": [0, 1, 2], "y": [8, 8, 8]}]
+        w, x, y = const_wave(dict_list, n_extra_points=(100, 10), spline_order=3)
+
+        if not PLOTS:
+            plt.scatter(x, y, c=w)
+            plt.show()
+
+    def test_expands_only_wave_direction_with_tuple_extra_points(self):
+        dict_list = [{"wave": 1.9, "x": [0, 1], "y": [-2, -2]},
+                     {"wave": 2.4, "x": [0, 1], "y": [2, 2]}]
+        w, x, y = const_wave(dict_list, n_extra_points=(3, 0))
+
+        assert len(w) == 5 * 2
+        assert len(set(w)) == 5
+        assert len(set(x)) == 2

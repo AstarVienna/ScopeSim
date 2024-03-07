@@ -15,6 +15,7 @@ import numpy as np
 
 from scipy.interpolate import RectBivariateSpline
 from scipy.interpolate import InterpolatedUnivariateSpline, interp1d
+from scipy.ndimage import zoom
 from matplotlib import pyplot as plt
 
 from astropy.table import Table, vstack
@@ -1056,9 +1057,9 @@ def get_affine_parameters(coords):
 
 class TraceGenerator:
     def __init__(self,
-                 l_low: float=1.420,      # um
-                 l_high: float=1.857,     # um
-                 delta_lambda: float=0.273e-3,      # um
+                 wave_min: float=1.420,  # um
+                 wave_max: float=1.857,  # um
+                 wave_bin_size: float=0.273e-3,  # um
                  sampling: float=2.56,  # pixels
                  pixel_size: float=0.015,  # mm
                  trace_distances=8,  # pixels
@@ -1070,13 +1071,13 @@ class TraceGenerator:
 
         Parameters
         ----------
-        l_low : float, optional
+        wave_min : float, optional
             The minimum wavelength of the trace. Defaults to 0.770.
 
-        l_high : float, optional
+        wave_max : float, optional
             The maximum lambda of the trace. Defaults to 1.063.
 
-        delta_lambda : float, optional
+        wave_bin_size : float, optional
             Delta lambda of the trace. Defaults to 0.183.
 
         sampling : float, optional
@@ -1092,9 +1093,9 @@ class TraceGenerator:
             Distances between 2 MOS in pixels. Defaults to 32.
         """
 
-        self._l_low = l_low
-        self._l_high = l_high
-        self._delta_lambda = delta_lambda
+        self._l_low = wave_min
+        self._l_high = wave_max
+        self._delta_lambda = wave_bin_size
         self._sampling = sampling
         self._pixel_size = pixel_size
         self._trace_distance = trace_distances
@@ -1175,3 +1176,150 @@ class TraceGenerator:
         li = li + bintbls
 
         return fits.HDUList(li)
+
+
+class TracesHDUListGenerator:
+    def __init__(self, trace_hdus, aperture_ids, image_plane_ids):
+        self.trace_hdus = trace_hdus
+        self.aperture_ids = aperture_ids
+        self.image_plane_ids = image_plane_ids
+
+    def make_hdulist(self, filename=None, overwrite=False):
+        trace_hdulist = fits.HDUList([self.pri_hdu, self.cat_hdu] +
+                                     self.trace_hdus)
+
+        if filename:
+            trace_hdulist.writeto(filename, overwrite=overwrite)
+
+        return trace_hdulist
+
+    @property
+    def hdulist(self):
+        return self.make_hdulist()
+
+    @property
+    def pri_hdu(self):
+        pri_hdu = fits.PrimaryHDU()
+        pri_hdu.header["ECAT"] = 1
+        pri_hdu.header["EDATA"] = 2
+
+        meta = {"author": "",
+                "source": "",
+                "descript": "Spectral Trace List",
+                "date-cre": "",
+                "date-mod": "",
+                }
+        pri_hdu.header.update(meta)
+
+        return pri_hdu
+
+    @property
+    def cat_hdu(self):
+        trace_names = [f"TRACE_{i}" for i in range(len(self.trace_hdus))]
+        cat_table = Table(names=["description", "extension_id",
+                                 "aperture_id", "image_plane_id"],
+                          data=[trace_names,
+                                2 + np.arange(len(self.trace_hdus)),
+                                self.aperture_ids,
+                                self.image_plane_ids
+                                ])
+        cat_hdu = fits.table_to_hdu(cat_table)
+        cat_hdu.header["EXTNAME"] = "TOC"
+
+        return cat_hdu
+
+
+class TraceHDUGenerator:
+    def __init__(self, const_wave_coords_dicts: list[dict],
+                 n_extra_points: int = 0,
+                 spline_order: int = 1):
+        """
+        Creates the BinTableHDU objects needed to make a spectral trace HDUList
+
+        Parameters
+        ----------
+        const_wave_coords_dicts : list of dicts
+            A list containing dictionaries for every line of constant wavelength
+            [{"wave": w [um], "x": list(xs) [mm],"y": list(ys) [mm]},
+             {..}, ..]
+        n_extra_points : int, 2-tuple
+            Default = 0. How many extra points to put in the spectral table
+            If a 2-tuple is passed, then n extra points will be added such:
+            (wavelength, spatial)
+        spline_order : int
+            Default = 1
+
+        Examples
+        --------
+        ::
+            dict_list = [{"wave": 1.9, "x": [0, 1], "y": [-2, -2]},
+                         {"wave": 2.4, "x": [0, 1], "y": [2, 2]}]
+            tg = TraceHDUGenerator(dict_list, n_extra_points=3)
+            tg.trace_hdu
+
+        """
+        self.const_wave_coords_dicts = const_wave_coords_dicts
+        self.n_extra_points = n_extra_points
+        self.spline_order = spline_order
+
+    @property
+    def trace_hdu(self):
+
+        wave, x, y = coords_from_lines_of_const_wavelength(self.const_wave_coords_dicts,
+                                                           self.n_extra_points,
+                                                           self.spline_order)
+        tbl = Table(names=["wavelength", "x", "y"],
+                    units=[u.um, u.mm, u.mm],
+                    data=[wave, x, y])
+
+        return fits.table_to_hdu(tbl)
+
+
+def coords_from_lines_of_const_wavelength(const_wave_coords_dicts,
+                                          n_extra_points=0, spline_order=1):
+    """
+    Returns expanded coordinates for constant wavelength in a spectral trace
+
+    Parameters
+    ----------
+    const_wave_coords_dicts : list of dicts
+        A list containing dictionaries for every line of constant wavelength
+        [{"wave": w [um], "x": list(xs) [mm],"y": list(ys) [mm]},
+         {..}, ..]
+    n_extra_points : int, 2-tuple
+        Default = 0. How many extra points to put in the spectral table
+        If a 2-tuple is passed, then n extra points will be added such:
+        (wavelength, spatial)
+    spline_order : int
+        Default = 1
+
+    Examples
+    --------
+    The following code creates a vertically bent trace with horizontal lines of
+    constant wavelength, with 20 additional points along the wavelength
+    direction, but 0 additional points along the slit direction
+    ::
+        dict_list = [{"wave": 1.9, "x": [0, 1, 2], "y": [-2.5, -2, -1.5]},
+                     {"wave": 2.15, "x": [1, 2, 3], "y": [0., 0, 0.]},
+                     {"wave": 2.4, "x": [0, 1, 2], "y": [1.5, 2, 2.5]}]
+        w, x, y = coords_from_lines_of_const_wavelength(dict_list,
+                                                        n_extra_points=(20, 0),
+                                                        spline_order=2)
+
+    """
+    # assert spline_order < len(const_wave_coords_dicts)
+    # assert spline_order < len(const_wave_coords_dicts[0]["x"])
+
+    x_im = np.array([dic["x"] for dic in const_wave_coords_dicts])
+    y_im = np.array([dic["y"] for dic in const_wave_coords_dicts])
+    w_im = np.array([[dic["wave"]]*len(dic["x"]) for dic in const_wave_coords_dicts])
+
+    cube = np.dstack([w_im, x_im, y_im])
+
+    xy_scale = 1 + np.array(n_extra_points) / np.array(x_im.shape)
+    if any(s != 1. for s in xy_scale):
+        cube = zoom(cube.astype(float), zoom=(*xy_scale, 1),
+                         order=spline_order)
+
+    ws, xs, ys = cube.reshape(-1, cube.shape[-1]).T
+    return ws, xs, ys

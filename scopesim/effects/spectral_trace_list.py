@@ -783,6 +783,15 @@ class MosaicSpectralTraceList(UnresolvedSpectralTraceList):
         super().make_spectral_traces()
 
     def make_spectral_trace_list(self):
+
+
+
+
+
+
+
+
+
         pass
 
 
@@ -805,14 +814,14 @@ class MosaicSpectralTraceList_old(UnresolvedSpectralTraceList):
         super(SpectralTraceList, self).__init__(**params)
 
         resolved_dict = from_currsys(self.meta, self.cmds)
-        t = TraceGenerator(l_low = resolved_dict["wave_min"],
-                           l_high = resolved_dict["wave_max"],
-                           delta_lambda = resolved_dict["spectral_bin_width"],
+        t = TraceGenerator(wave_min= resolved_dict["wave_min"],
+                           wave_max= resolved_dict["wave_max"],
+                           wave_bin_size= resolved_dict["spectral_bin_width"],
                            pixel_size = self.pixel_size,  # mm
                            trace_distances = resolved_dict["distance_between_fibers"],  # pixels
                            fiber_per_mos = resolved_dict["fiber_per_bundle"],
                            nbr_mos = resolved_dict["n_bundles"],
                            mos_distance = resolved_dict["distance_between_bundles"],  # pixels
-        )
+                           )
         self._file = t.make_fits()
         super().make_spectral_traces()
