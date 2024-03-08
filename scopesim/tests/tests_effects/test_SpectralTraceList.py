@@ -284,9 +284,14 @@ class TestMosaicSpectralTraceList():
             plate_scale=6.33333,
             pixel_scale=0.095,
             wave_min=1.420,
+            wave_mid=1.6385,
             wave_max=1.857,
+            spectral_bin_width=0.0001
         )
-        assert len(sptl.spectral_traces) == 14
-        print(sptl.spectral_traces["Trace_Ap0"].table)
 
-        # assert sptl.spectral_traces["TRACE_Ap0"].meta["trace_id"] == "TRACE_Ap0"
+        if PLOTS:
+            sptl.plot("proj")
+            plt.show()
+
+        # print(sptl.spectral_traces["TRACE_0"].table)
+        assert len(sptl.spectral_traces) == 14

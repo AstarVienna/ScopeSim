@@ -20,6 +20,7 @@ from .effects import Effect
 from .ter_curves import FilterCurve
 from .spectral_trace_list_utils import (SpectralTrace, TraceGenerator,
                                         make_image_interpolations)
+import scopesim.effects.spectral_trace_list_utils as sptlu
 from ..optics import image_plane_utils as ipu
 from ..base_classes import FieldOfViewBase, FOVSetupBase
 from ..utils import from_currsys, check_keys, figure_factory, get_logger
@@ -466,9 +467,9 @@ class SpectralTraceList(Effect):
 
         """
         if wave_min is None:
-            wave_min = from_currsys("!SIM.spectral.wave_min", self.cmds)
+            wave_min = from_currsys(self.meta["wave_min"], self.cmds)
         if wave_max is None:
-            wave_max = from_currsys("!SIM.spectral.wave_max", self.cmds)
+            wave_max = from_currsys(self.meta["wave_max"], self.cmds)
 
         if axes is None:
             fig, axes = figure_factory()
@@ -765,13 +766,16 @@ class MosaicSpectralTraceList(UnresolvedSpectralTraceList):
     def __init__(self, **kwargs):
         params = {"pixel_scale": "!INST.pixel_scale",  # [arcsec / pix]}
                   "plate_scale": "!INST.plate_scale",  # [arcsec / mm]
-                  "trace_"
                   "wave_min": "!SIM.spectral.wave_min",  # [um]
                   "wave_mid": "!SIM.spectral.wave_mid",  # [um]
                   "wave_max": "!SIM.spectral.wave_max",  # [um]
-                  "spectral_bin_width": "!SIM.spectral.spectral_bin_width",  # [um]
-                  "n_bundles" : 2,
-                  "distance_between_bundles": 32, #pixels
+                  "spectral_bin_width": "!SIM.spectral.spectral_bin_width",  # [um/pix]
+                  "n_bundles": 2,
+                  "distance_between_bundles": 30,   # [pixels]
+                  "n_fibres_per_bundle": 7,
+                  "distance_between_fibres": 5,    # [pixels]
+                  "n_extra_points": 0,
+                  "spline_order": 2
                   }
 
         params.update(**kwargs)
@@ -779,49 +783,44 @@ class MosaicSpectralTraceList(UnresolvedSpectralTraceList):
         check_keys(kwargs, required_keys)
         super(SpectralTraceList, self).__init__(**params)
 
-        self._file = self.make_spectral_trace_list()
+        self._file = self.make_spectral_trace_hdulist()
         super().make_spectral_traces()
 
-    def make_spectral_trace_list(self):
+    def make_spectral_trace_hdulist(self):
 
+        w_min, w_max = self.meta["wave_min"], self.meta["wave_max"]
+        w_mid = self.meta["wave_mid"]  # [um]
+        dw = self.meta["spectral_bin_width"]  # [um/pix]
+        pix_size = self.meta["pixel_scale"] / self.meta["plate_scale"]  # [mm/pix]
+        dw_per_mm = dw / pix_size  # [um/mm]
 
+        y_min_mm = (w_min - w_mid) / dw_per_mm
+        y_mid_mm = 0
+        y_max_mm = (w_max - w_mid) / dw_per_mm
 
+        n_bundles = self.meta["n_bundles"]
+        n_fibres = self.meta["n_fibres_per_bundle"]
+        dx_fibres = self.meta["distance_between_fibres"]
+        dx_bundles = self.meta["distance_between_bundles"]
+        xs = np.array([x * dx_fibres + y * (dx_fibres * n_fibres + dx_bundles)
+                       for y in range(n_bundles) for x in range(n_fibres)],
+                      dtype=float)
+        xs -= (max(xs) - min(xs)) / 2.
+        xs *= pix_size
 
+        def make_dict_list(x):
+            return [{"wave": w_min, "x": [x], "y": [y_min_mm]},
+                    {"wave": w_mid, "x": [x], "y": [y_mid_mm]},
+                    {"wave": w_max, "x": [x], "y": [y_max_mm]}]
 
+        n_extra_points = (self.meta["n_extra_points"], 0)
+        spline_order = self.meta["spline_order"]
+        trace_hdus = [sptlu.make_trace_hdu(make_dict_list(x), n_extra_points,
+                                           spline_order) for x in xs]
 
+        aperture_ids = [b for b in range(n_bundles) for _ in range(n_fibres)]
+        image_plane_ids = [0] * len(aperture_ids)
+        sptl = sptlu.TracesHDUListGenerator(trace_hdus, aperture_ids,
+                                            image_plane_ids)
 
-
-
-        pass
-
-
-class MosaicSpectralTraceList_old(UnresolvedSpectralTraceList):
-    def __init__(self, **kwargs):
-        params = {"pixel_scale": "!INST.pixel_scale",  # [arcsec / pix]}
-                  "plate_scale": "!INST.plate_scale",  # [arcsec / mm]
-                  "wave_min": "!SIM.spectral.wave_min",  # [um]
-                  "wave_mid": "!SIM.spectral.wave_mid",  # [um]
-                  "wave_max": "!SIM.spectral.wave_max",  # [um]
-                  "spectral_bin_width": "!SIM.spectral.spectral_bin_width",  # [um]
-                  "distance_between_fibers": 8, #pixels
-                  "fiber_per_bundle" : 7,
-                  "n_bundles" : 2,
-                  "distance_between_bundles": 32, #pixels
-                  }
-        params.update(**kwargs)
-        required_keys = ["pixel_scale", "plate_scale"]
-        check_keys(kwargs, required_keys)
-        super(SpectralTraceList, self).__init__(**params)
-
-        resolved_dict = from_currsys(self.meta, self.cmds)
-        t = TraceGenerator(wave_min= resolved_dict["wave_min"],
-                           wave_max= resolved_dict["wave_max"],
-                           wave_bin_size= resolved_dict["spectral_bin_width"],
-                           pixel_size = self.pixel_size,  # mm
-                           trace_distances = resolved_dict["distance_between_fibers"],  # pixels
-                           fiber_per_mos = resolved_dict["fiber_per_bundle"],
-                           nbr_mos = resolved_dict["n_bundles"],
-                           mos_distance = resolved_dict["distance_between_bundles"],  # pixels
-                           )
-        self._file = t.make_fits()
-        super().make_spectral_traces()
+        return sptl.hdulist

@@ -14,8 +14,8 @@ from scopesim.effects.spectral_trace_list_utils import SpectralTrace
 from scopesim.effects.spectral_trace_list_utils import Transform2D, power_vector
 from scopesim.effects.spectral_trace_list_utils import make_image_interpolations
 from scopesim.effects.spectral_trace_list_utils import coords_from_lines_of_const_wavelength as const_wave
-from scopesim.effects.spectral_trace_list_utils import TraceHDUGenerator
 from scopesim.effects.spectral_trace_list_utils import TracesHDUListGenerator
+from scopesim.effects.spectral_trace_list_utils import make_trace_hdu
 from scopesim.tests.mocks.py_objects import trace_list_objects as tlo
 
 
@@ -166,22 +166,22 @@ class TestTracesHDUListGenerator:
     def test_returns_hdulist_with_4_ext_for_2_traces(self):
         dict_list = [{"wave": 1.9, "x": [0, 1], "y": [-2, -2]},
                      {"wave": 2.4, "x": [0, 1], "y": [2, 2]}]
-        tg = TraceHDUGenerator(dict_list, n_extra_points=3)
-        sptl = TracesHDUListGenerator([tg.trace_hdu, tg.trace_hdu],
+        trace_hdu = make_trace_hdu(dict_list, n_extra_points=3)
+        sptl = TracesHDUListGenerator([trace_hdu, trace_hdu],
                                      [0, 0], [0, 0])
 
         assert isinstance(sptl.hdulist, fits.HDUList)
         assert len(sptl.hdulist) == 4
 
 
-class TestTraceHDUGenerator:
+class TestMakeTraceHDU:
     def test_returns_tablehdu_with_straight_trace(self):
         dict_list = [{"wave": 1.9, "x": [0, 1], "y": [-2, -2]},
                      {"wave": 2.4, "x": [0, 1], "y": [2, 2]}]
 
-        tg = TraceHDUGenerator(dict_list, n_extra_points=3)
-        assert isinstance(tg.trace_hdu, fits.BinTableHDU)
-        assert len(Table(tg.trace_hdu.data)) == (2 + 3) ** 2
+        trace_hdu = make_trace_hdu(dict_list, n_extra_points=3)
+        assert isinstance(trace_hdu, fits.BinTableHDU)
+        assert len(Table(trace_hdu.data)) == (2 + 3) ** 2
 
 
 class TestCoordsFromLinesOfConstWavelength:
@@ -245,7 +245,7 @@ class TestCoordsFromLinesOfConstWavelength:
                      {"wave": 2.4, "x": [0, 1, 2], "y": [8, 8, 8]}]
         w, x, y = const_wave(dict_list, n_extra_points=(100, 10), spline_order=3)
 
-        if not PLOTS:
+        if PLOTS:
             plt.scatter(x, y, c=w)
             plt.show()
 
