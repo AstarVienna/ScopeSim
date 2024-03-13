@@ -1,12 +1,19 @@
 import pytest
-
 import numpy as np
 from matplotlib import pyplot as plt
-from astropy import units as u
 
+from astropy import units as u
+from astropy.wcs import wcs
+from astropy.table import Table
+
+from synphot import Empirical1D, SourceSpectrum
+from synphot.units import PHOTLAM
+
+from scopesim.optics import FieldOfView
 from scopesim.effects import ter_curves as tc
 from scopesim.tests.mocks.py_objects import source_objects as so
 from scopesim.tests.mocks.py_objects import effects_objects as eo
+from scopesim.tests.mocks.py_objects import header_objects as ho
 
 
 PLOTS = False
@@ -19,6 +26,37 @@ def _filter_wheel(mock_path_micado):
     return tc.FilterWheel(**{"filter_names": ["Ks", "Br-gamma"],
                              "filename_format": fname,
                              "current_filter": "Br-gamma"})
+
+@pytest.fixture(scope="function")
+def mos_bundle_tc(mock_path_basic_instrument):
+    fname = str(mock_path_basic_instrument / "INS_mos_bundle_ter_corrections.dat")
+    return tc.AirmassDependantFibreBundleTransmission(filename=fname,
+                                                      zenith_dist=15,
+                                                      n_fibres=7)
+
+
+def mock_fov(trace_id=0, aperture_id=0, src_type="both"):
+    skyhdr = ho._basic_fov_header(w=7, h=7, cdelt=0.1)
+    waverange = (0.92, 1.638) * u.um
+    fov = FieldOfView(header=skyhdr,
+                      waverange=waverange,
+                      area=1*u.m**2,
+                      sub_pixel=False,
+                      conserve_image=False,
+                      aperture_id=aperture_id,
+                      trace_id=trace_id)
+
+    fields = [so._unity_source(),
+              Table(names=["x", "y", "ref", "weight"],
+                    data=[[0], [0], [0], [1]])
+              ]
+    if "point" in src_type: fields = fields[1:]
+    elif "ext" in src_type: fields = fields[0:1]
+    fov.fields += fields
+    fov.spectra[0] = SourceSpectrum(Empirical1D, points=waverange,
+                                    lookup_table=[1, 1]*PHOTLAM)
+
+    return fov
 
 
 class TestTERCurveApplyTo:
@@ -192,3 +230,48 @@ class TestTopHatFilterList:
         assert filt_wheel.filters["J"].throughput(1.15*u.um) == 0.9
         assert filt_wheel.filters["J"].throughput(1.13*u.um) == 0.
         assert filt_wheel.meta["current_filter"] == "K"
+
+
+class TestAirmassDependantFibreBundleTransmission:
+    def test_init_with_real_input(self, mos_bundle_tc):
+        assert isinstance(mos_bundle_tc,
+                          tc.AirmassDependantFibreBundleTransmission)
+        assert mos_bundle_tc.ter_cube.shape == (5, 3)
+
+    def test_get_table_for_zenith_dist(self, mos_bundle_tc):
+        tbl15 = mos_bundle_tc.get_table_for_zenith_dist(15)
+        tbl20 = mos_bundle_tc.get_table_for_zenith_dist(20)
+
+        assert tbl15["TRACE_ALL"][0] > tbl20["TRACE_ALL"][0]
+        assert tbl15["TRACE_1"][1] > tbl20["TRACE_1"][1]
+
+    def test_apply_to_correction_factor_on_single_bundle(self, mos_bundle_tc):
+        wave = 0.92 * u.um
+        fovs = [mock_fov(trace_id=i) for i in range(7)]
+        flux_0 = [fov.spectra[0](wave) for fov in fovs]
+        for fov in fovs:
+            mos_bundle_tc.apply_to(fov)
+        flux_1 = [fov.spectra[0](wave) for fov in fovs]
+
+        # print(f"{flux_0=}")
+        # print(f"{flux_1=}")
+        assert all([f0 > f1 for f0, f1 in zip(flux_0, flux_1)])
+
+    def test_apply_to_correction_factor_on_three_bundle(self, mos_bundle_tc):
+        wave = 1.638 * u.um
+        fovs = [mock_fov(trace_id=i) for i in range(7 * 3)]
+        for fov in fovs:
+            mos_bundle_tc.apply_to(fov)
+        flux = [fov.spectra[0](wave) for fov in fovs]
+
+        assert all([flux[i] == flux[i+7] == flux[i+7*2] for i in range(7)])
+
+    def test_apply_to_extended_source(self, mos_bundle_tc):
+        wave = 1.638 * u.um
+        fovs = [mock_fov(trace_id=i, src_type="ext") for i in range(7 * 3)]
+        flux_0 = [fov.spectra[0](wave) for fov in fovs]
+        for fov in fovs:
+            mos_bundle_tc.apply_to(fov)
+        flux_1 = [fov.spectra[0](wave) for fov in fovs]
+
+        assert all([f0 == f1 for f0, f1 in zip(flux_0, flux_1)])

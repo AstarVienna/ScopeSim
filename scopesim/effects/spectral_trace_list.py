@@ -18,8 +18,7 @@ from astropy import units as u
 
 from .effects import Effect
 from .ter_curves import FilterCurve
-from .spectral_trace_list_utils import (SpectralTrace, TraceGenerator,
-                                        make_image_interpolations)
+from .spectral_trace_list_utils import (SpectralTrace, make_image_interpolations)
 import scopesim.effects.spectral_trace_list_utils as sptlu
 from ..optics import image_plane_utils as ipu
 from ..base_classes import FieldOfViewBase, FOVSetupBase

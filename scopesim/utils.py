@@ -225,24 +225,6 @@ def add_keyword(filename, keyword, value, comment="", ext=0):
     f.close()
 
 
-def airmass_to_zenith_dist(airmass):
-    """
-    Return zenith distance in degrees.
-
-    Z = arccos(1/X)
-    """
-    return np.rad2deg(np.arccos(1. / airmass))
-
-
-def zenith_dist_to_airmass(zenith_dist):
-    """
-    `zenith_dist` is in degrees.
-
-    X = sec(Z)
-    """
-    return 1. / np.cos(np.deg2rad(zenith_dist))
-
-
 def seq(start, stop, step=1):
     """Replacement for numpy.arange modelled after R's seq function.
 
@@ -523,6 +505,8 @@ def find_file(filename, path=None, silent=False):
 def zendist2airmass(zendist):
     """Convert zenith distance to airmass.
 
+    AM = sec(ZD)
+
     Parameters
     ----------
     zenith distance : [deg]
@@ -537,6 +521,8 @@ def zendist2airmass(zendist):
 
 def airmass2zendist(airmass):
     """Convert airmass to zenith distance.
+
+    ZD = arccos(1/AM)
 
     Parameters
     ----------

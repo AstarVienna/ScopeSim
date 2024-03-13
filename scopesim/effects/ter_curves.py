@@ -1,6 +1,7 @@
 """Transmission, emissivity, reflection curves."""
 import warnings
 from collections.abc import Collection, Iterable
+import copy
 
 import numpy as np
 import skycalc_ipy
@@ -8,15 +9,17 @@ from astropy import units as u
 from astropy.io import fits
 from astropy.table import Table
 
+from synphot import Empirical1D, SpectralElement
+
 from .effects import Effect
 from .ter_curves_utils import add_edge_zeros
 from .ter_curves_utils import combine_two_spectra, apply_throughput_to_cube
 from .ter_curves_utils import download_svo_filter, download_svo_filter_list
-from ..base_classes import SourceBase, FOVSetupBase
+from ..base_classes import SourceBase, FOVSetupBase, FieldOfViewBase
 from ..optics.surface import SpectralSurface
 from ..source.source import Source
 from ..utils import (from_currsys, quantify, check_keys, find_file,
-                     figure_factory, get_logger)
+                     figure_factory, get_logger, airmass2zendist)
 
 
 logger = get_logger(__name__)
@@ -880,6 +883,60 @@ class PupilTransmission(TERCurve):
 
     def update_transmission(self, transmission, **kwargs):
         self.__init__(transmission, **kwargs)
+
+
+class AirmassDependantFibreBundleTransmission(Effect):
+    def __init__(self, **kwargs):
+
+        params = {"n_fibres": 7,
+                  "airmass": None,
+                  "zenith_dist": None,
+                  "z_order": [690],
+                  "trace_id_format": "TRACE_{}"
+                  }
+        params.update(kwargs)
+        super().__init__(**params)
+
+        if self.meta["airmass"] is not None:
+            self.meta["zenith_dist"] = airmass2zendist((self.meta["airmass"]))
+
+        tbl = self.table
+        self.ter_cube = np.array([tbl[tbl["zenith_dist"] == zd]
+                                  for zd in np.unique(tbl["zenith_dist"].data)])
+        self.zen_dists = np.unique(self.ter_cube["zenith_dist"])
+        self.wavelengths = np.unique(self.ter_cube["wavelength"])
+
+    def apply_to(self, fov, **kwargs):
+        if isinstance(fov, FieldOfViewBase):
+
+            fibre_id = fov.meta["aperture_id"] % self.meta["n_fibres"]
+            tbl = self.get_table_for_zenith_dist(self.meta["zenith_dist"])
+            waves = tbl["wavelength"] * u.um
+            trace_id = self.meta["trace_id_format"].format(fibre_id)
+            tc = tbl[trace_id]
+            trans = SpectralElement(Empirical1D, points=waves, lookup_table=tc)
+
+            refs = np.unique([f["ref"].data for f in fov.table_fields])
+            for ref in refs:
+                fov.spectra[ref] = combine_two_spectra(fov.spectra[ref], trans,
+                                                       "mult",
+                                                       fov.meta["wave_min"].to(u.AA),
+                                                       fov.meta["wave_max"].to(u.AA))
+
+        return fov
+
+    def get_table_for_zenith_dist(self, zd):
+        i = np.where(self.zen_dists > zd)[0][0]
+        tbl = self.ter_cube[i]
+        if i > 0:
+            tbl1 = self.ter_cube[i-1]
+            w = (self.zen_dists[i] - zd) / np.diff(self.zen_dists[i-1:i+1])[0]
+            tbl2 = copy.copy(tbl)
+            for name in tbl2.dtype.names:
+                tbl2[name] = tbl[name] * (1-w) + tbl1[name] * w
+            tbl = tbl2
+
+        return tbl
 
 
 class ADCWheel(Effect):

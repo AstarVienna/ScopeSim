@@ -1055,7 +1055,6 @@ def get_affine_parameters(coords):
     return rotations, shears
 
 
-
 class TracesHDUListGenerator:
     def __init__(self, trace_hdus, aperture_ids, image_plane_ids):
         """
@@ -1150,7 +1149,9 @@ def make_trace_hdu(const_wave_coords_dicts: list[dict],
                 units=[u.um, u.mm, u.mm],
                 data=[wave, x, y])
 
-    return fits.table_to_hdu(tbl)
+    hdu = fits.table_to_hdu(tbl)
+    hdu.header[""]
+    return
 
 
 def coords_from_lines_of_const_wavelength(const_wave_coords_dicts,
