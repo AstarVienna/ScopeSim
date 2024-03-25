@@ -584,6 +584,13 @@ class MetisLMSEfficiency(TERCurve):
 
         lam, efficiency = self.make_ter_curve(wcal, wavelen)
 
+        # HACK: Somehow we end up with duplicate keywords here. This hack
+        #       should not be necessary at all! Investigate what's really
+        #       going on...
+        self.meta.pop("wavelength", None)
+        self.meta.pop("transmission", None)
+        self.meta.pop("emissivity", None)
+
         super().__init__(wavelength=lam,
                          transmission=efficiency,
                          emissivity=np.zeros_like(lam),
