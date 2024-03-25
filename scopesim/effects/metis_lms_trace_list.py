@@ -13,9 +13,9 @@ from astropy import units as u
 
 from ..utils import from_currsys, find_file, quantify, get_logger
 from .spectral_trace_list import SpectralTraceList
-from .spectral_trace_list_utils import SpectralTrace
-from .spectral_trace_list_utils import Transform2D
-from .spectral_trace_list_utils import make_image_interpolations
+from .spectral_trace_list_utils import (SpectralTrace, Transform2D,
+                                        make_image_interpolations,
+                                        SpecTraceError)
 from .apertures import ApertureMask
 from .ter_curves import TERCurve
 from ..base_classes import FieldOfViewBase, FOVSetupBase
@@ -138,7 +138,11 @@ class MetisLMSSpectralTraceList(SpectralTraceList):
                 slicefov.cube = fits.ImageHDU(header=slicewcs.to_header(),
                                               data=slicecube)
                 # slicefov.cube.writeto(f"slicefov_{sptid}.fits", overwrite=True)
-                slicefov.hdu = spt.map_spectra_to_focal_plane(slicefov)
+                try:
+                    slicefov.hdu = spt.map_spectra_to_focal_plane(slicefov)
+                except SpecTraceError as err:
+                    logger.warning(err)
+                    continue
 
                 sxmin = slicefov.hdu.header["XMIN"]
                 sxmax = slicefov.hdu.header["XMAX"]
@@ -223,10 +227,13 @@ class MetisLMSSpectralTraceList(SpectralTraceList):
         for i, spt in enumerate(self.spectral_traces.values()):
             spt.wave_min = wave_min
             spt.wave_max = wave_max
-            result = spt.rectify(hdulist, interps=interps,
-                                 wave_min=wave_min, wave_max=wave_max,
-                                 xi_min=xi_min, xi_max=xi_max,
-                                 bin_width=dwave)
+            try:
+                result = spt.rectify(hdulist, interps=interps,
+                                     wave_min=wave_min, wave_max=wave_max,
+                                     xi_min=xi_min, xi_max=xi_max,
+                                     bin_width=dwave)
+            except SpecTraceError as err:
+                logger.warning(err)
             cube[:, i, :] = result.data.T
 
         # FIXME: use wcs object here
