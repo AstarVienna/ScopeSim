@@ -315,8 +315,7 @@ class MetisLMSSpectralTrace(SpectralTrace):
         y_min = aperture["bottom"]
         y_max = aperture["top"]
 
-        filename_det_layout = from_currsys("!DET.layout.file_name", cmds=self.cmds)
-        layout = ioascii.read(find_file(filename_det_layout))
+        layout = ioascii.read(find_file(self.cmds["!DET.layout.filename"]))
         det_lims = {}
         xhw = layout["pixel_size"] * layout["x_size"] / 2
         yhw = layout["pixel_size"] * layout["y_size"] / 2
@@ -570,13 +569,10 @@ class MetisLMSEfficiency(TERCurve):
     }
 
     def __init__(self, **kwargs):
-        # TODO: Refactor these _class_params?
-        self.meta = copy.copy(self._class_params)
-        assert "grat_spacing" in self.meta, "grat_spacing is missing from self.meta 1"
-        super().__init__(**kwargs)
-        assert "grat_spacing" in self.meta, "grat_spacing is missing from self.meta 2"
+        self.meta = self._class_params
+        self.meta.update(kwargs)
 
-        filename = find_file(self.meta["filename"])
+        filename = find_file(from_currsys(self.meta["filename"], kwargs.get("cmds")))
         wcal = fits.getdata(filename, extname="WCAL")
         if "wavelen" in kwargs:
             wavelen = from_currsys(kwargs["wavelen"], kwargs.get("cmds"))
