@@ -30,6 +30,26 @@ from ..utils import (power_vector, quantify, from_currsys, close_loop,
 logger = get_logger(__name__)
 
 
+class SpecTraceError(Exception):
+    """Base class for exceptions in this module."""
+
+
+class NoXlimError(SpecTraceError):
+    """Dunno."""
+
+
+class TraceOutsideFovError(SpecTraceError):
+    """The spectral trace falls outside the given FOV."""
+
+
+class OutsideFilterRangeError(SpecTraceError):
+    """Trace wavelength is not within filter waverange."""
+
+
+class KwNotFoundError(SpecTraceError):
+    """Required keyword for rectification was not found."""
+
+
 class SpectralTrace:
     """Definition of one spectral trace.
 
@@ -168,8 +188,7 @@ class SpectralTrace:
                                           xi_min=xi_min, xi_max=xi_max)
 
         if xlim_mm is None:
-            logger.warning("xlim_mm is None")
-            return None
+            raise NoXlimError("xlim_mm is None")
 
         fov_header = fov.header
         det_header = fov.detector_header
@@ -190,9 +209,8 @@ class SpectralTrace:
 
         # Check if spectral trace footprint is outside FoV
         if xmax < 0 or xmin > naxis1d or ymax < 0 or ymin > naxis2d:
-            logger.info(
-                "Spectral trace %d: footprint is outside FoV", fov.trace_id)
-            return None
+            raise TraceOutsideFovError(
+                f"Spectral trace {fov.trace_id}: footprint is outside FoV")
 
         # Only work on parts within the FoV
         xmin = max(xmin, 0)
@@ -222,7 +240,7 @@ class SpectralTrace:
             xilam = XiLamImage(fov, self.dlam_per_pix)
             self._xilamimg = xilam   # ..todo: remove or make available with a debug flag?
         except ValueError:
-            logger.warning(" ---> %d gave ValueError", self.trace_id)
+            logger.warning(" ---> %s gave ValueError", self.trace_id)
 
         npix_xi, npix_lam = xilam.npix_xi, xilam.npix_lam
         xilam_wcs = xilam.wcs
@@ -323,8 +341,8 @@ class SpectralTrace:
         wave_max = kwargs.get("wave_max",
                               self.wave_max)
         if wave_max < self.wave_min or wave_min > self.wave_max:
-            logger.info("   Outside filter range")
-            return None
+            raise OutsideFilterRangeError("   Outside filter range")
+
         wave_min = max(wave_min, self.wave_min)
         wave_max = min(wave_max, self.wave_max)
         logger.info("   %.02f .. %.02f um", wave_min, wave_max)
@@ -345,15 +363,14 @@ class SpectralTrace:
             try:
                 xi_min = hdulist[0].header["HIERARCH INS SLIT XIMIN"]
             except KeyError:
-                logger.error("xi_min not found")
-                return None
+                raise KwNotFoundError("xi_min not found")
+
         xi_max = kwargs.get("xi_max", None)
         if xi_max is None:
             try:
                 xi_max = hdulist[0].header["HIERARCH INS SLIT XIMAX"]
             except KeyError:
-                logger.error("xi_max not found")
-                return None
+                raise KwNotFoundError("xi_max not found")
 
         if wcs is None:
             wcs = WCS(naxis=2)

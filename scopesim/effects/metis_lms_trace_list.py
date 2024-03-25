@@ -1,5 +1,5 @@
 """SpectralTraceList and SpectralTrace for the METIS LM spectrograph."""
-import copy
+
 import warnings
 
 import numpy as np
@@ -13,9 +13,9 @@ from astropy import units as u
 
 from ..utils import from_currsys, find_file, quantify, get_logger
 from .spectral_trace_list import SpectralTraceList
-from .spectral_trace_list_utils import SpectralTrace
-from .spectral_trace_list_utils import Transform2D
-from .spectral_trace_list_utils import make_image_interpolations
+from .spectral_trace_list_utils import (SpectralTrace, Transform2D,
+                                        make_image_interpolations,
+                                        SpecTraceError)
 from .apertures import ApertureMask
 from .ter_curves import TERCurve
 from ..base_classes import FieldOfViewBase, FOVSetupBase
@@ -138,7 +138,11 @@ class MetisLMSSpectralTraceList(SpectralTraceList):
                 slicefov.cube = fits.ImageHDU(header=slicewcs.to_header(),
                                               data=slicecube)
                 # slicefov.cube.writeto(f"slicefov_{sptid}.fits", overwrite=True)
-                slicefov.hdu = spt.map_spectra_to_focal_plane(slicefov)
+                try:
+                    slicefov.hdu = spt.map_spectra_to_focal_plane(slicefov)
+                except SpecTraceError as err:
+                    logger.warning(err)
+                    continue
 
                 sxmin = slicefov.hdu.header["XMIN"]
                 sxmax = slicefov.hdu.header["XMAX"]
@@ -159,11 +163,12 @@ class MetisLMSSpectralTraceList(SpectralTraceList):
         self.meta["angle"] = tempres["Angle"]
 
         spec_traces = {}
-        for sli in np.arange(self.meta["nslice"]):
-            slicename = "Slice " + str(sli + 1)
+        for sli in range(self.meta["nslice"]):
+            slicename = f"Slice {sli + 1}"
             spec_traces[slicename] = MetisLMSSpectralTrace(
                 self._file,
-                spslice=sli, params=self.meta)
+                spslice=sli,
+                params=self.meta)
 
         self.spectral_traces = spec_traces
 
@@ -223,10 +228,13 @@ class MetisLMSSpectralTraceList(SpectralTraceList):
         for i, spt in enumerate(self.spectral_traces.values()):
             spt.wave_min = wave_min
             spt.wave_max = wave_max
-            result = spt.rectify(hdulist, interps=interps,
-                                 wave_min=wave_min, wave_max=wave_max,
-                                 xi_min=xi_min, xi_max=xi_max,
-                                 bin_width=dwave)
+            try:
+                result = spt.rectify(hdulist, interps=interps,
+                                     wave_min=wave_min, wave_max=wave_max,
+                                     xi_min=xi_min, xi_max=xi_max,
+                                     bin_width=dwave)
+            except SpecTraceError as err:
+                logger.warning(err)
             cube[:, i, :] = result.data.T
 
         # FIXME: use wcs object here
@@ -280,7 +288,7 @@ class MetisLMSSpectralTrace(SpectralTrace):
         super().__init__(polyhdu, **params)
 
         self._file = hdulist
-        self.meta["description"] = "Slice " + str(spslice + 1)
+        self.meta["description"] = f"Slice {spslice + 1}"
         self.meta["trace_id"] = f"Slice {spslice + 1}"
         self.meta.update(params)
         # Provisional:
@@ -307,8 +315,7 @@ class MetisLMSSpectralTrace(SpectralTrace):
         y_min = aperture["bottom"]
         y_max = aperture["top"]
 
-        filename_det_layout = from_currsys("!DET.layout.file_name", cmds=self.cmds)
-        layout = ioascii.read(find_file(filename_det_layout))
+        layout = ioascii.read(find_file(self.cmds["!DET.layout.filename"]))
         det_lims = {}
         xhw = layout["pixel_size"] * layout["x_size"] / 2
         yhw = layout["pixel_size"] * layout["y_size"] / 2
@@ -562,13 +569,10 @@ class MetisLMSEfficiency(TERCurve):
     }
 
     def __init__(self, **kwargs):
-        # TODO: Refactor these _class_params?
-        self.meta = copy.copy(self._class_params)
-        assert "grat_spacing" in self.meta, "grat_spacing is missing from self.meta 1"
-        super().__init__(**kwargs)
-        assert "grat_spacing" in self.meta, "grat_spacing is missing from self.meta 2"
+        self.meta = self._class_params
+        self.meta.update(kwargs)
 
-        filename = find_file(self.meta["filename"])
+        filename = find_file(from_currsys(self.meta["filename"], kwargs.get("cmds")))
         wcal = fits.getdata(filename, extname="WCAL")
         if "wavelen" in kwargs:
             wavelen = from_currsys(kwargs["wavelen"], kwargs.get("cmds"))
@@ -579,6 +583,13 @@ class MetisLMSEfficiency(TERCurve):
             wavelen = None
 
         lam, efficiency = self.make_ter_curve(wcal, wavelen)
+
+        # HACK: Somehow we end up with duplicate keywords here. This hack
+        #       should not be necessary at all! Investigate what's really
+        #       going on...
+        self.meta.pop("wavelength", None)
+        self.meta.pop("transmission", None)
+        self.meta.pop("emissivity", None)
 
         super().__init__(wavelength=lam,
                          transmission=efficiency,
