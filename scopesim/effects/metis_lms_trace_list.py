@@ -1,5 +1,5 @@
 """SpectralTraceList and SpectralTrace for the METIS LM spectrograph."""
-import copy
+
 import warnings
 
 import numpy as np
@@ -163,11 +163,12 @@ class MetisLMSSpectralTraceList(SpectralTraceList):
         self.meta["angle"] = tempres["Angle"]
 
         spec_traces = {}
-        for sli in np.arange(self.meta["nslice"]):
-            slicename = "Slice " + str(sli + 1)
+        for sli in range(self.meta["nslice"]):
+            slicename = f"Slice {sli + 1}"
             spec_traces[slicename] = MetisLMSSpectralTrace(
                 self._file,
-                spslice=sli, params=self.meta)
+                spslice=sli,
+                params=self.meta)
 
         self.spectral_traces = spec_traces
 
@@ -287,7 +288,7 @@ class MetisLMSSpectralTrace(SpectralTrace):
         super().__init__(polyhdu, **params)
 
         self._file = hdulist
-        self.meta["description"] = "Slice " + str(spslice + 1)
+        self.meta["description"] = f"Slice {spslice + 1}"
         self.meta["trace_id"] = f"Slice {spslice + 1}"
         self.meta.update(params)
         # Provisional:
