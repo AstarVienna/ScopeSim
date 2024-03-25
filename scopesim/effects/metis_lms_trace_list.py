@@ -17,9 +17,12 @@ from astropy import units as u
 
 from ..utils import from_currsys, find_file, quantify, get_logger
 from .spectral_trace_list import SpectralTraceList
-from .spectral_trace_list_utils import SpectralTrace
-from .spectral_trace_list_utils import Transform2D
-from .spectral_trace_list_utils import make_image_interpolations
+from .spectral_trace_list_utils import (
+    SpectralTrace,
+    Transform2D,
+    make_image_interpolations,
+    SpecTraceError,
+)
 from .apertures import ApertureMask
 from .ter_curves import TERCurve
 from ..optics.fov import FieldOfView, FieldOfView3D
@@ -141,13 +144,22 @@ class MetisLMSSpectralTraceList(SpectralTraceList):
                 slicefov.cube = fits.ImageHDU(header=slicewcs.to_header(),
                                               data=slicecube)
                 # slicefov.cube.writeto(f"slicefov_{sptid}.fits", overwrite=True)
-                slicefov.hdu = spt.map_spectra_to_focal_plane(slicefov)
-                if slicefov.hdu is not None:
-                    sxmin = slicefov.hdu.header["XMIN"]
-                    sxmax = slicefov.hdu.header["XMAX"]
-                    symin = slicefov.hdu.header["YMIN"]
-                    symax = slicefov.hdu.header["YMAX"]
-                    fovimage[symin:symax, sxmin:sxmax] += slicefov.hdu.data
+                try:
+                    slicefov.hdu = spt.map_spectra_to_focal_plane(slicefov)
+                except (KeyError, ValueError) as err:
+                    # Should also match NoXlimError, KwNotFound
+                    logger.error(err)
+                except SpecTraceError as err:
+                    # If we need specific behavior for any of these, we can
+                    # import the subclass and deal with it separately.
+                    logger.info(err)
+                    continue
+
+                sxmin = slicefov.hdu.header["XMIN"]
+                sxmax = slicefov.hdu.header["XMAX"]
+                symin = slicefov.hdu.header["YMIN"]
+                symax = slicefov.hdu.header["YMAX"]
+                fovimage[symin:symax, sxmin:sxmax] += slicefov.hdu.data
 
             obj.hdu = fits.ImageHDU(data=fovimage, header=obj.detector_header)
 
@@ -163,11 +175,13 @@ class MetisLMSSpectralTraceList(SpectralTraceList):
         self.meta["predisperser"] = tempres["Predisperser"]
 
         spec_traces = {}
-        for sli in np.arange(self.meta["nslice"]):
-            slicename = "Slice " + str(sli + 1)
+        for sli in range(self.meta["nslice"]):
+            slicename = f"Slice {sli + 1}"
             spec_traces[slicename] = MetisLMSSpectralTrace(
                 self._file,
-                spslice=sli, params=self.meta)
+                spslice=sli,
+                params=self.meta,
+            )
 
         self.spectral_traces = spec_traces
 
@@ -235,11 +249,27 @@ class MetisLMSSpectralTraceList(SpectralTraceList):
         for i, spt in enumerate(self.spectral_traces.values()):
             spt.wave_min = wave_min
             spt.wave_max = wave_max
-            result = spt.rectify(hdulist, interps=interps,
-                                 wave_min=wave_min, wave_max=wave_max,
-                                 xi_min=xi_min, xi_max=xi_max,
-                                 bin_width=dwave,
-                                 fit_inverse=fit_inverse)
+
+            try:
+                result = spt.rectify(
+                    hdulist,
+                    interps=interps,
+                    wave_min=wave_min,
+                    wave_max=wave_max,
+                    xi_min=xi_min,
+                    xi_max=xi_max,
+                    bin_width=dwave,
+                    fit_inverse=fit_inverse,
+                )
+            except (KeyError, ValueError) as err:
+                # Should also match NoXlimError, KwNotFound
+                logger.error(err)
+            except SpecTraceError as err:
+                # If we need specific behavior for any of these, we can
+                # import the subclass and deal with it separately.
+                logger.info(err)
+                continue
+
             cube[:, i, :] = result.data.T
 
         # FIXME: use wcs object here
@@ -307,7 +337,7 @@ class MetisLMSSpectralTrace(SpectralTrace):
         super().__init__(polyhdu, **params)
 
         self._file = hdulist
-        self.meta["description"] = "Slice " + str(spslice + 1)
+        self.meta["description"] = f"Slice {spslice + 1}"
         self.meta["trace_id"] = f"Slice {spslice + 1}"
         self.meta.update(params)
         # Provisional:
