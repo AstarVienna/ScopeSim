@@ -203,7 +203,7 @@ def create_wcs_from_points(points: np.ndarray,
         naxis = naxis.value
 
     crpix = (naxis + 1) / 2
-    crval = (points.min(axis=0) + points.max(axis=0)) / 2
+    crval = ((points.min(axis=0) + points.max(axis=0)) / 2).round(10)
 
     ctype = "LINEAR" if wcs_suffix in "DX" else "RA---TAN"
 

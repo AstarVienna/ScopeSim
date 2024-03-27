@@ -292,6 +292,7 @@ def extract_area_from_imagehdu(imagehdu, fov_volume):
     image_wcs = WCS(hdr, naxis=2)
     naxis1, naxis2 = hdr["NAXIS1"], hdr["NAXIS2"]
     xy_hdu = image_wcs.calc_footprint(center=False, axes=(naxis1, naxis2))
+    logger.debug("Image WCS:\n%s", image_wcs)
 
     if image_wcs.wcs.cunit[0] == "deg":
         logger.debug("Found 'deg' in image WCS, applying 360 fix.")
@@ -299,17 +300,20 @@ def extract_area_from_imagehdu(imagehdu, fov_volume):
     elif image_wcs.wcs.cunit[0] == "arcsec":
         logger.debug("Found 'arcsec' in image WCS, converting to deg.")
         xy_hdu *= u.arcsec.to(u.deg)
-    logger.debug("XY HDU:\n%s", xy_hdu)
+    logger.debug("XY HDU:\n%s", xy_hdu * 3600)
 
     xy_fov = np.array([fov_volume["xs"], fov_volume["ys"]]).T
 
     if fov_volume["xy_unit"] == "arcsec":
         xy_fov *= u.arcsec.to(u.deg)
 
-    logger.debug("XY FOV:\n%s", xy_fov)
+    logger.debug("XY FOV:\n%s", xy_fov * 3600)
 
     xy0s = np.array((xy_hdu.min(axis=0), xy_fov.min(axis=0))).max(axis=0)
     xy1s = np.array((xy_hdu.max(axis=0), xy_fov.max(axis=0))).min(axis=0)
+
+    logger.debug("\n  xy0s: %s\n  xy1s: %s", xy0s, xy1s)
+    logger.debug("\n  xy0s: %s\n  xy1s: %s", xy0s * 3600, xy1s * 3600)
 
     # Round to avoid floating point madness
     xyp = image_wcs.wcs_world2pix(np.array([xy0s, xy1s]), 0).round(7)
@@ -320,15 +324,22 @@ def extract_area_from_imagehdu(imagehdu, fov_volume):
     logger.debug("xyp:\n%s", xyp)
 
     xy0p = np.max(((0, 0), np.floor(xyp[0]).astype(int)), axis=0)
-    xy1p = np.min(((naxis1, naxis2), np.ceil(xyp[1]).astype(int)), axis=0)
+    xy1p = np.min(((naxis1-1, naxis2-1), np.ceil(xyp[1]).astype(int)), axis=0)
 
     # Add 1 if the same
     xy1p += (xy0p == xy1p)
 
-    logger.debug("xy0p: %s; xy1p: %s", xy0p, xy1p)
+    logger.debug("\n  xy0p: %s\n  xy1p: %s", xy0p, xy1p)
+
+    # Note: This used to just be np.array([xy0s, xy1s]), but that caused some
+    #       edgy edge cases where the header would fit into one less pixel
+    #       than the data -.-
+    sky_points = image_wcs.wcs_pix2world(np.array([xy0p-.5, xy1p+.5]), 0)
+    # sky_points = image_wcs.wcs_pix2world(np.array([xy0p, xy1p]), 0)
+    # sky_points = np.array([xy0s, xy1s])
 
     new_wcs, new_naxis = imp_utils.create_wcs_from_points(
-        np.array([xy0s, xy1s]), pixel_scale=hdr["CDELT1"])
+        sky_points, pixel_scale=hdr["CDELT1"])
     new_hdr = new_wcs.to_header()
     new_hdr.update({"NAXIS1": new_naxis[0], "NAXIS2": new_naxis[1]})
 
@@ -387,8 +398,8 @@ def extract_area_from_imagehdu(imagehdu, fov_volume):
                         "BUNIT":  hdr["BUNIT"]})
 
     else:
-        data = imagehdu.data[xy0p[1]:xy1p[1],
-                             xy0p[0]:xy1p[0]]
+        data = imagehdu.data[xy0p[1]:xy1p[1]+1,
+                             xy0p[0]:xy1p[0]+1]
         new_hdr["SPEC_REF"] = hdr.get("SPEC_REF")
 
     if not data.size:
