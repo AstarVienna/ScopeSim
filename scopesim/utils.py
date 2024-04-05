@@ -143,6 +143,7 @@ def _get_required_packages():
             continue
 
         name = req.split(">", maxsplit=1)[0].strip()
+        name = name.split("(", maxsplit=1)[0].strip()
         yield name
 
 
