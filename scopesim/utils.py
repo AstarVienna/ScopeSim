@@ -166,7 +166,7 @@ def _write_bug_report(stream: TextIO) -> None:
     # Check package dependencies
     stream.write("\nInstalled Python packages:\n")
     packages = set(_get_required_packages())
-    packages.update({"scopesim_templates", "scopesim_data", "anisocado"})
+    packages.update({"scopesim", "scopesim_templates", "scopesim_data", "anisocado"})
     maxkeylen = max(len(pkg) for pkg in packages)
     for package_name in sorted(packages):
         stream.write(f"{package_name:>{maxkeylen+2}}: ")
