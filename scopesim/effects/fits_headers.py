@@ -9,7 +9,10 @@ from astropy import units as u
 from astropy.table import Table
 
 from . import Effect
-from ..utils import from_currsys, find_file
+from ..utils import from_currsys, find_file, get_logger
+
+
+logger = get_logger(__name__)
 
 
 class ExtraFitsKeywords(Effect):
@@ -360,7 +363,11 @@ def flatten_dict(dic, base_key="", flat_dict=None, resolve=False,
                         raise ValueError("An OpticsManager object must be "
                                          "passed in order to resolve "
                                          "#-strings")
-                    value = optics_manager[value]
+                    try:
+                        value = optics_manager[value]
+                    except ValueError as err:
+                        logger.warning("Skipping %s, got error %s", value, err)
+                        value = "<unavailable>"
 
             if isinstance(value, u.Quantity):
                 comment = f"[{str(value.unit)}] {comment}"
