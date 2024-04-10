@@ -236,8 +236,10 @@ class AutoExposure(Effect):
             logger.info("Exposure parameters: DIT=%.3f s  NDIT=%d", dit, ndit)
             logger.info("Total exposure time: %.3f s", dit * ndit)
 
-            self.cmds["!OBS.autoexpset"] = (self.cmds["!OBS.dit"] != dit or
-                                            self.cmds["!OBS.ndit"] != ndit)
+            self.cmds["!OBS.autoexpset"] = (
+                from_currsys("!OBS.dit", self.cmds) != dit or
+                from_currsys("!OBS.ndit", self.cmds) != ndit
+            )
             self.cmds["!OBS.dit"] = dit
             self.cmds["!OBS.ndit"] = ndit
 
