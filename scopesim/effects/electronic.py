@@ -189,6 +189,7 @@ class AutoExposure(Effect):
         self.meta.update(params)
         self.meta.update(kwargs)
         if self.cmds is None:
+            logger.error("No cmds present, using default.")
             from scopesim import UserCommands
             self.cmds = UserCommands()
 
