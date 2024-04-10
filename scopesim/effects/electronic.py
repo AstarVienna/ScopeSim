@@ -236,10 +236,19 @@ class AutoExposure(Effect):
             logger.info("Exposure parameters: DIT=%.3f s  NDIT=%d", dit, ndit)
             logger.info("Total exposure time: %.3f s", dit * ndit)
 
-            self.cmds["!OBS.autoexpset"] = (
-                from_currsys("!OBS.dit", self.cmds) != dit or
-                from_currsys("!OBS.ndit", self.cmds) != ndit
-            )
+            # TODO: once the whole currsys works properly, this could be a
+            #       much simpler .get or something, also the previous (n)dit
+            #       lookup in this method.....
+            try:
+                self.cmds["!OBS.autoexpset"] = (
+                    from_currsys("!OBS.dit", self.cmds) != dit or
+                    from_currsys("!OBS.ndit", self.cmds) != ndit
+                )
+            except (KeyError, ValueError):
+                logger.debug("Failed to lookup dit or ndit,"
+                             "setting autoexpset to True.")
+                self.cmds["!OBS.autoexpset"] = True
+
             self.cmds["!OBS.dit"] = dit
             self.cmds["!OBS.ndit"] = ndit
 
