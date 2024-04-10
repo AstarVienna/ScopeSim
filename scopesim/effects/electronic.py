@@ -626,8 +626,27 @@ class Quantization(Effect):
         self.meta.update(params)
         self.meta.update(kwargs)
 
+    def _should_apply(self) -> bool:
+        if self.cmds is None:
+            logger.warning("Cannot access cmds for Quantization effect.")
+            return True
+
+        if self.cmds.get("!OBS.autoexpset", False):
+            logger.debug("DIT, NDIT determined by AutoExposure -> "
+                         "quantization is not applied.")
+            return False
+
+        if self.cmds["!OBS.NDIT"] > 1:
+            logger.debug("NDIT set to 1 -> quantization is not applied.")
+            return False
+
+        return True
+
     def apply_to(self, obj, **kwargs):
         if not isinstance(obj, DetectorBase):
+            return obj
+
+        if not self._should_apply():
             return obj
 
         new_dtype = self.meta["dtype"]
@@ -638,6 +657,7 @@ class Quantization(Effect):
         # This used to create a new ImageHDU with the same header but the data
         # set to the modified data. It should be fine to simply re-assign the
         # data attribute, but just in case it's not...
+        logger.debug("Applying quantization to dtype %s.", new_dtype)
         obj._hdu.data = np.floor(obj._hdu.data).astype(new_dtype)
 
         return obj
