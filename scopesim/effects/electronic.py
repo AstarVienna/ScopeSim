@@ -205,6 +205,10 @@ class AutoExposure(Effect):
             if exptime is None:
                 exptime = from_currsys("!OBS.dit", self.cmds) * \
                           from_currsys("!OBS.ndit", self.cmds)
+                logger.debug("Exptime auto-determined from DIT and NDIT.")
+            else:
+                logger.debug("Exptime supplied by user (or default).")
+
             logger.info("Requested exposure time: %.3f s", exptime)
 
             if exptime < mindit:
