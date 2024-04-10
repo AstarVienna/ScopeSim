@@ -636,7 +636,7 @@ class Quantization(Effect):
                          "quantization is not applied.")
             return False
 
-        if self.cmds["!OBS.NDIT"] > 1:
+        if self.cmds["!OBS.ndit"] > 1:
             logger.debug("NDIT set to 1 -> quantization is not applied.")
             return False
 
