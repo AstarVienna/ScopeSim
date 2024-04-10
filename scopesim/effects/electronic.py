@@ -234,6 +234,7 @@ class AutoExposure(Effect):
 
             self.cmds["!OBS.dit"] = dit
             self.cmds["!OBS.ndit"] = ndit
+            self.cmds["!OBS.autoexpset"] = True
 
         return obj
 
