@@ -224,7 +224,7 @@ class AutoExposure(Effect):
             # ndit changed so that exptime is not exceeded (hence np.floor)
             if dit < from_currsys(self.meta["mindit"], self.cmds):
                 dit = from_currsys(self.meta["mindit"], self.cmds)
-                ndit = int(np.floor(exptime / dit))
+                ndit = exptime // dit
                 logger.warning("The detector will be saturated!")
                 # ..todo: turn into proper warning
 
