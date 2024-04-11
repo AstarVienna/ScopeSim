@@ -199,7 +199,6 @@ class AutoExposure(Effect):
         if not isinstance(obj, (ImagePlaneBase, DetectorBase)):
             return obj
 
-        implane_max = obj.data.max()
         exptime = kwargs.get("exptime",
                              from_currsys("!OBS.exptime", self.cmds))
         mindit = from_currsys(self.meta["mindit"], self.cmds)
@@ -220,7 +219,7 @@ class AutoExposure(Effect):
         fill_frac = kwargs.get("fill_frac",
                                from_currsys(self.meta["fill_frac"],
                                             self.cmds))
-        dit = fill_frac * full_well / implane_max
+        dit = fill_frac * full_well / obj.data.max()
 
         # np.ceil so that dit is at most what is required for fill_frac
         ndit = np.ceil(exptime / dit).astype(int)
@@ -251,6 +250,7 @@ class AutoExposure(Effect):
                          "setting autoexpset to True.")
             self.cmds["!OBS.autoexpset"] = True
 
+        # TODO: Make sure this goes up far enough in the ChainMap...
         self.cmds["!OBS.dit"] = dit
         self.cmds["!OBS.ndit"] = ndit
 
