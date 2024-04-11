@@ -199,7 +199,7 @@ class AutoExposure(Effect):
         if not isinstance(obj, (ImagePlaneBase, DetectorBase)):
             return obj
 
-        implane_max = np.max(obj.data)
+        implane_max = obj.data.max()
         exptime = kwargs.get("exptime",
                              from_currsys("!OBS.exptime", self.cmds))
         mindit = from_currsys(self.meta["mindit"], self.cmds)
@@ -224,7 +224,7 @@ class AutoExposure(Effect):
         dit = fill_frac * full_well / implane_max
 
         # np.ceil so that dit is at most what is required for fill_frac
-        ndit = int(np.ceil(exptime / dit))
+        ndit = np.ceil(exptime / dit).astype(int)
         dit = exptime / ndit
 
         # dit must be at least mindit, this might lead to saturation
