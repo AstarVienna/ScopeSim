@@ -214,8 +214,7 @@ class AutoExposure(Effect):
         logger.info("Requested exposure time: %.3f s", exptime)
 
         if exptime < mindit:
-            logger.info("    increased to MINDIT: %.3f s", mindit)
-            exptime = mindit
+            logger.warning("Exposure time is below MINDIT: %.3f s", mindit)
 
         full_well = from_currsys(self.meta["full_well"], self.cmds)
         fill_frac = kwargs.get("fill_frac",
@@ -229,9 +228,10 @@ class AutoExposure(Effect):
 
         # dit must be at least mindit, this might lead to saturation
         # ndit changed so that exptime is not exceeded (hence np.floor)
-        if dit < from_currsys(self.meta["mindit"], self.cmds):
-            dit = from_currsys(self.meta["mindit"], self.cmds)
-            ndit = exptime // dit
+        if dit < mindit:
+            # dit = mindit
+            # ndit = exptime // dit
+            logger.warning("DIT < MINDIT: %.3f s", mindit)
             logger.warning("The detector will be saturated!")
             # ..todo: turn into proper warning
 
