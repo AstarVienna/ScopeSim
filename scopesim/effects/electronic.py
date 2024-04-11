@@ -195,6 +195,63 @@ class AutoExposure(Effect):
 
         check_keys(self.meta, self.required_keys, action="error")
 
+    def _dit_above_mindit(self, dit: float) -> bool:
+        mindit = from_currsys(self.meta["mindit"], self.cmds)
+        if dit < mindit:
+            logger.warning("DIT=%.3f s < MINDIT=%.3f s", dit, mindit)
+            return False
+        return True
+
+    def estimate_dit_ndit(
+            self,
+            exptime: float,
+            image_plane_max: float,
+            **kwargs
+    ) -> tuple[float, int]:
+        """
+        Automatically determine DIT and NDIT from exposure time.
+
+        Parameters
+        ----------
+        exptime : float
+            Exposure time in seconds.
+        image_plane_max : float
+            Maximum pixel value from image plane, used to avoid saturation.
+
+        Returns
+        -------
+        dit : float
+            Detector Integration Time.
+        ndit : int
+            Number of Integrations.
+
+        """
+        # TODO: Remove this silly stuff once currsys works properly...
+        full_well = kwargs.get(
+            "full_well",
+            from_currsys(self.meta["full_well"], self.cmds)
+        )
+        fill_frac = kwargs.get(
+            "fill_frac",
+            from_currsys(self.meta["fill_frac"], self.cmds)
+        )
+
+        dit_nosat = fill_frac * full_well / image_plane_max
+
+        # np.ceil so that dit is at most what is required for fill_frac
+        ndit = np.ceil(exptime / dit_nosat).astype(int)
+        dit = exptime / ndit
+
+        # Note: If the DIT required to avoid saturation is less than MINDIT,
+        #       the observation is only possible with likely saturation...
+        if not self._dit_above_mindit(dit):
+            dit = from_currsys(self.meta["mindit"], self.cmds)
+            # NDIT changed so that exptime is not exceeded (hence floor div)
+            ndit = exptime // dit
+            logger.warning("The detector will likely be saturated!")
+
+        return dit, ndit
+
     def apply_to(self, obj, **kwargs):
         if not isinstance(obj, (ImagePlaneBase, DetectorBase)):
             return obj
@@ -203,52 +260,43 @@ class AutoExposure(Effect):
                              from_currsys("!OBS.exptime", self.cmds))
         mindit = from_currsys(self.meta["mindit"], self.cmds)
 
-        if exptime is None:
-            exptime = from_currsys("!OBS.dit", self.cmds) * \
-                      from_currsys("!OBS.ndit", self.cmds)
-            logger.debug("Exptime auto-determined from DIT and NDIT.")
-        else:
-            logger.debug("Exptime supplied by user (or default).")
-
-        logger.info("Requested exposure time: %.3f s", exptime)
-
-        if exptime < mindit:
-            logger.warning("Exposure time is below MINDIT: %.3f s", mindit)
-
-        full_well = from_currsys(self.meta["full_well"], self.cmds)
-        fill_frac = kwargs.get("fill_frac",
-                               from_currsys(self.meta["fill_frac"],
-                                            self.cmds))
-        dit = fill_frac * full_well / obj.data.max()
-
-        # np.ceil so that dit is at most what is required for fill_frac
-        ndit = np.ceil(exptime / dit).astype(int)
-        dit = exptime / ndit
-
-        # dit must be at least mindit, this might lead to saturation
-        # ndit changed so that exptime is not exceeded (hence np.floor)
-        if dit < mindit:
-            # dit = mindit
-            # ndit = exptime // dit
-            logger.warning("DIT < MINDIT: %.3f s", mindit)
-            logger.warning("The detector will be saturated!")
-            # ..todo: turn into proper warning
-
-        logger.info("Exposure parameters: DIT=%.3f s  NDIT=%d", dit, ndit)
-        logger.info("Total exposure time: %.3f s", dit * ndit)
-
-        # TODO: once the whole currsys works properly, this could be a
-        #       much simpler .get or something, also the previous (n)dit
-        #       lookup in this method.....
+        # TODO: Remove this silly try-except once currsys works properly...
         try:
-            self.cmds["!OBS.autoexpset"] = (
-                from_currsys("!OBS.dit", self.cmds) != dit or
-                from_currsys("!OBS.ndit", self.cmds) != ndit
-            )
+            dit = from_currsys("!OBS.dit", self.cmds)
         except (KeyError, ValueError):
-            logger.debug("Failed to lookup dit or ndit,"
-                         "setting autoexpset to True.")
-            self.cmds["!OBS.autoexpset"] = True
+            dit = None
+        try:
+            ndit = from_currsys("!OBS.ndit", self.cmds)
+        except (KeyError, ValueError):
+            ndit = None
+
+        if dit and ndit:
+            # Both DIT and NDIT are supplied (not None and non-zero), so just
+            # use those regardless.
+            self.cmds["!OBS.autoexpset"] = False
+            # Just log warning in case DIT < MINDIT, don't actually change DIT
+            self._dit_above_mindit(dit)
+            return obj
+
+        # No DIT or NDIT given, need to determine from exptime
+        self.cmds["!OBS.autoexpset"] = True
+        if exptime is None:
+            logger.warning(
+                "Please provide either !OBS.exptime or !OBS.dit + !OBS.ndit")
+            if mindit is not None:
+                logger.info("Using MINDIT = %.3f s for exposure time.", mindit)
+                exptime = mindit
+            else:
+                logger.warning(
+                    "MINDIT not found, falling back to 1 s for exposure time.")
+                exptime = 1
+        else:
+            logger.info("Requested exposure time: %.3f s", exptime)
+
+        dit, ndit = self.estimate_dit_ndit(exptime, obj.data.max(), **kwargs)
+
+        logger.info("Exposure parameters: DIT = %.3f s, NDIT = %d", dit, ndit)
+        logger.info("Total exposure time: %.3f s", dit * ndit)
 
         # TODO: Make sure this goes up far enough in the ChainMap...
         self.cmds["!OBS.dit"] = dit
