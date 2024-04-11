@@ -198,7 +198,7 @@ class AutoExposure(Effect):
     def _dit_above_mindit(self, dit: float) -> bool:
         mindit = from_currsys(self.meta["mindit"], self.cmds)
         if dit < mindit:
-            logger.warning("DIT=%.3f s < MINDIT=%.3f s", dit, mindit)
+            logger.warning("DIT = %.3f s < MINDIT = %.3f s", dit, mindit)
             return False
         return True
 
@@ -237,6 +237,7 @@ class AutoExposure(Effect):
         )
 
         dit_nosat = fill_frac * full_well / image_plane_max
+        logger.debug("Required DIT without saturation: %.3f s", dit_nosat)
 
         # np.ceil so that dit is at most what is required for fill_frac
         ndit = np.ceil(exptime / dit_nosat).astype(int)
@@ -247,7 +248,7 @@ class AutoExposure(Effect):
         if not self._dit_above_mindit(dit):
             dit = from_currsys(self.meta["mindit"], self.cmds)
             # NDIT changed so that exptime is not exceeded (hence floor div)
-            ndit = exptime // dit
+            ndit = max(exptime // dit, 1)
             logger.warning("The detector will likely be saturated!")
 
         return dit, ndit
