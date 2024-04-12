@@ -148,7 +148,7 @@ class UserCommands(NestedChainMap):
         If you use a custom ``yaml`` configuration file, you can also add this
         keyword to the ``properties`` section of the ``yaml`` file.
 
-    .. versionchanged:: PLACEHOLDER_NEXT_STABLE_VERSION
+    .. versionchanged:: v0.8.0
 
     This now inherits from (a subclass of) `collections.ChainMap`.
     """
@@ -320,7 +320,7 @@ class UserCommands(NestedChainMap):
     def set_modes(self, *modes) -> None:
         """Reload with the specified `modes`.
 
-        .. versionchanged:: PLACEHOLDER_NEXT_STABLE_VERSION
+        .. versionchanged:: v0.8.0
 
         This used to take a single list-like argument, now used a "*args"
         approach to deal with multiple modes.
@@ -361,7 +361,7 @@ class UserCommands(NestedChainMap):
     def list_modes(self) -> Iterable[tuple[str, ...]]:
         """Yield tuples of length >= 2 with mode names and descriptions.
 
-        .. versionchanged:: PLACEHOLDER_NEXT_STABLE_VERSION
+        .. versionchanged:: v0.8.0
 
         This used to return the formatted string. For a broader range of use
         cases, it now returns a generator of tuples of strings.
