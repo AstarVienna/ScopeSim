@@ -1,3 +1,91 @@
+# Version 0.8.0
+**2024-04-15**
+
+Many small fixes, some new effects, some important fixes related to coordinates, and lots of cleanup.
+
+## What's Changed
+
+### API Changes
+* Add more useful error message to download functions by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/309
+* Migrate from `requests` ➡️ `httpx` by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/312
+* Improve logging by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/339
+* Use ChainMap for UserCommands by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/375
+
+### Changes to or addition of Effects
+* Add Shutter effect by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/304
+* Add Quantization effect by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/308
+* Implement apply decision for quantization by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/396
+
+### New Features or Improvements
+* Add basic sky coordinates (WCS) to ScopeSim output by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/307
+* Include more progress bars by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/311
+* Further improvements to logging by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/349
+* Add IFU cube rectification and more by @oczoske in https://github.com/AstarVienna/ScopeSim/pull/258
+* Resolve recursive bang-strings by @astronomyk in https://github.com/AstarVienna/ScopeSim/pull/351
+* Also show scopsim version in bug_report by @hugobuddel in https://github.com/AstarVienna/ScopeSim/pull/394
+
+### Dependency Changes
+* Improve CI run for notebooks by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/300
+* Migrate to Poetry by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/314
+* Bump nbconvert from 6.4.5 to 6.5.1 by @dependabot in https://github.com/AstarVienna/ScopeSim/pull/315
+* Bump jupyter-server from 1.13.5 to 2.11.2 by @dependabot in https://github.com/AstarVienna/ScopeSim/pull/316
+* Bump requests from 2.28.2 to 2.31.0 by @dependabot in https://github.com/AstarVienna/ScopeSim/pull/317
+* Upgrade numpy to 1.26.3 and some other dependencies by @hugobuddel in https://github.com/AstarVienna/ScopeSim/pull/336
+* Drop support for Python 3.8 by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/327
+* Bump jinja2 from 3.1.2 to 3.1.3 by @dependabot in https://github.com/AstarVienna/ScopeSim/pull/338
+* Bump jupyter-lsp from 2.2.1 to 2.2.2 by @dependabot in https://github.com/AstarVienna/ScopeSim/pull/344
+* Bump notebook from 7.0.6 to 7.0.7 by @dependabot in https://github.com/AstarVienna/ScopeSim/pull/347
+* Bump jupyterlab from 4.0.10 to 4.0.11 by @dependabot in https://github.com/AstarVienna/ScopeSim/pull/346
+* Bump pillow from 10.1.0 to 10.2.0 by @dependabot in https://github.com/AstarVienna/ScopeSim/pull/350
+* Some small dependency- and version-related changes by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/363
+* Bump pillow from 10.2.0 to 10.3.0 by @dependabot in https://github.com/AstarVienna/ScopeSim/pull/393
+* Bump idna from 3.6 to 3.7 by @dependabot in https://github.com/AstarVienna/ScopeSim/pull/398
+
+### Documentation Improvements
+* Add config file for auto-generated release notes by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/301
+* Move changelog to dedicated file, add more readme badges by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/302
+* Use PyPI badge for Python versions by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/326
+* Replace "Telescopy" with "ScopeSim" in README by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/348
+* Also make pdf and epub by @hugobuddel in https://github.com/AstarVienna/ScopeSim/pull/370
+* Fix RTD Poetry configuration by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/379
+
+### Other Changes
+* Some refactoring of z_order fuctionality by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/303
+* Fix notebook tests by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/320
+* Include ScopeSim_Data in notebook tests by @hugobuddel in https://github.com/AstarVienna/ScopeSim/pull/324
+* Allow runnotebooks.sh to run without arguments by @hugobuddel in https://github.com/AstarVienna/ScopeSim/pull/330
+* Revert "Also use poetry for calling jupytext" by @hugobuddel in https://github.com/AstarVienna/ScopeSim/pull/334
+* Use new linkchecker action by @hugobuddel in https://github.com/AstarVienna/ScopeSim/pull/335
+* Properly stack stars by @hugobuddel in https://github.com/AstarVienna/ScopeSim/pull/337
+* Remove obsolete files by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/340
+* Rearrange CI tests by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/341
+* Add test to see whether all Python files can be imported. by @hugobuddel in https://github.com/AstarVienna/ScopeSim/pull/343
+* Ensure logging messages don't reach the root logger by @hugobuddel in https://github.com/AstarVienna/ScopeSim/pull/345
+* Sort corner pixels to deal with negative CDELTs by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/321
+* Use logger instead of print by @hugobuddel in https://github.com/AstarVienna/ScopeSim/pull/353
+* Minor logging fixes in download module by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/354
+* Add DeprecationWarnings for fov_grid methods by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/313
+* Delete redundant vesion.py by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/355
+* Minor formatting changes by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/358
+* Add more debug logging by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/356
+* Further harmonize `filename` kwarg by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/361
+* Minor cleanup in `user_commands.py` by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/362
+* Replace printing with logging by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/360
+* Removing currsys as global parameter by @astronomyk in https://github.com/AstarVienna/ScopeSim/pull/364
+* Additional hotfix for the removed currsys by @astronomyk in https://github.com/AstarVienna/ScopeSim/pull/368
+* More cmds and kwargs stuff by @hugobuddel in https://github.com/AstarVienna/ScopeSim/pull/369
+* Remove unused and broken `make_imagehdu_from_table()` by @hugobuddel in https://github.com/AstarVienna/ScopeSim/pull/371
+* Fixes needed for IFU/LMS mode by @hugobuddel in https://github.com/AstarVienna/ScopeSim/pull/376
+* Do not set user commands as rc.__currsys__ by @hugobuddel in https://github.com/AstarVienna/ScopeSim/pull/377
+* Weed out unused utils functions by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/381
+* Refactor some rarely-used utils functions by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/382
+* Make `required_keys` always a `set` by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/383
+* Some minor improvements and refactoring in the FOVManager by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/384
+* Slightly more sophisticated use of numpy by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/385
+* Remove unsatisfied assert by @hugobuddel in https://github.com/AstarVienna/ScopeSim/pull/386
+
+**Full Changelog**: https://github.com/AstarVienna/ScopeSim/compare/v0.7.1...v0.8.0
+
 # Version 0.7.1
 **2023-11-07**
 
