@@ -1,18 +1,33 @@
 # -*- coding: utf-8 -*-
 """Global fixtures for pytest."""
 
+import logging
 from pathlib import Path
 
 import pytest
 from unittest.mock import patch
 
 import scopesim as sim
-from scopesim.system_dict import UniqueList
+from astar_utils import UniqueList
 
 
 MOCK_DIR = Path(__file__).parent / "mocks"
 
 sim.rc.__currsys__["!SIM.file.error_on_missing_file"] = True
+
+
+@pytest.fixture(scope="package", autouse=True)
+def configure_logging():
+    base_logger = logging.getLogger("astar")
+    handlers = base_logger.handlers
+    # Disable handlers
+    base_logger.handlers = []
+    # Make sure logging can reach pytest's caplog
+    base_logger.propagate = True
+    yield
+    # Restore
+    base_logger.handlers = handlers
+    base_logger.propagate = False
 
 
 @pytest.fixture(scope="package")

@@ -2,40 +2,22 @@
 
 import inspect
 from copy import deepcopy, copy
+from collections.abc import Iterable
+
 from astropy.table import Table
 
 from .. import effects as efs
+from ..utils import get_logger
 
 
-def combine_surface_effects_OLD(surface_effects):
-    surflist_list = [eff for eff in surface_effects
-                     if isinstance(eff, efs.SurfaceList)]
-    surf_list = [eff for eff in surface_effects
-                 if isinstance(eff, efs.TERCurve)]
-
-    if len(surflist_list) == 0:
-        surf = empty_surface_list()
-        surf.meta["name"] = "Radiometry Table"
-        surflist_list += [surf]
-
-    new_surflist = deepcopy(surflist_list[0])
-    for surflist in surflist_list[1:]:
-        new_surflist.add_surface_list(surflist)
-
-    for surf in surf_list:
-        position = surf.meta["position"] if "position" in surf.meta else -1
-        new_surflist.add_surface(surf, surf.meta["name"], position=position)
-
-    new_surflist.table = new_surflist.radiometry_table.table
-
-    return new_surflist
+logger = get_logger(__name__)
 
 
 def combine_surface_effects(surface_effects):
     surflist_list = [eff for eff in surface_effects
                      if isinstance(eff, efs.SurfaceList)]
     surf_list = [eff for eff in surface_effects
-                 if isinstance(eff, (efs.TERCurve, efs.FilterWheel))
+                 if isinstance(eff, (efs.TERCurve, efs.FilterWheelBase))
                  and not isinstance(eff, efs.SurfaceList)]
 
     if not surflist_list:
@@ -65,7 +47,7 @@ def get_all_effects(effects, effect_class):
     return my_effects
 
 
-def make_effect(effect_dict, **properties):
+def make_effect(effect_dict, cmds=None, **properties):
     effect_meta_dict = {key: effect_dict[key] for key in effect_dict
                         if key not in ["class", "kwargs"]}
     effect_class_name = effect_dict["class"]
@@ -78,8 +60,7 @@ def make_effect(effect_dict, **properties):
     if "kwargs" in effect_dict:
         effect_kwargs.update(effect_dict["kwargs"])  # individual effect kwargs
 
-    effect = effect_cls(**effect_kwargs)
-    # effect.meta.update(effect_meta_dict)  # is this needed? Seems redundant
+    effect = effect_cls(cmds=cmds, **effect_kwargs)
 
     return effect
 
@@ -107,3 +88,29 @@ def scopesim_effect_classes(base_effect=efs.Effect):
     sorted_effects = {key: efs_dict[key] for key in sorted(efs_dict)}
 
     return sorted_effects
+
+
+def z_order_in_range(z_eff, z_range: range) -> bool:
+    """
+    Return True if any of the z_orders in `z_eff` is in the given range.
+
+    The `z_range` parameter can be constructed as ``range(z_min, z_max)``.
+
+    Parameters
+    ----------
+    z_eff : int or list of ints
+        z_order(s) of the effect.
+    z_range : range
+        range object of allowed z_order values.
+
+    Returns
+    -------
+    bool
+        True if at least one z_order is in range, False otherwise.
+
+    """
+    if not isinstance(z_eff, Iterable):
+        logger.warning("z_order %d should be a single-item iterable", z_eff)
+        z_eff = [z_eff]
+
+    return any(zi in z_range for zi in z_eff)

@@ -1,6 +1,5 @@
 """Spectral grating efficiencies."""
 
-import logging
 import numpy as np
 
 from astropy.io import fits
@@ -11,7 +10,10 @@ from astropy.table import Table
 from .effects import Effect
 from .ter_curves import TERCurve
 from .ter_curves_utils import apply_throughput_to_cube
-from ..utils import figure_factory
+from ..utils import figure_factory, get_logger
+
+
+logger = get_logger(__name__)
 
 
 class SpectralEfficiency(Effect):
@@ -101,7 +103,7 @@ class SpectralEfficiency(Effect):
         try:
             effic = self.efficiencies[trace_id]
         except KeyError:
-            logging.warning("No grating efficiency for trace %s", trace_id)
+            logger.warning("No grating efficiency for trace %s", trace_id)
             return obj
 
         wcs = WCS(obj.hdu.header).spectral

@@ -1,7 +1,6 @@
 """Transmission, emissivity, reflection curves."""
-
-import logging
-from collections.abc import Collection
+import warnings
+from collections.abc import Collection, Iterable
 
 import numpy as np
 import skycalc_ipy
@@ -16,13 +15,19 @@ from .ter_curves_utils import download_svo_filter, download_svo_filter_list
 from ..base_classes import SourceBase, FOVSetupBase
 from ..optics.surface import SpectralSurface
 from ..source.source import Source
-from ..utils import from_currsys, quantify, check_keys, find_file, \
-    figure_factory
+from ..utils import (from_currsys, quantify, check_keys, find_file,
+                     figure_factory, get_logger)
+
+
+logger = get_logger(__name__)
 
 
 class TERCurve(Effect):
     """
     Transmission, Emissivity, Reflection Curve.
+
+    note:: This is basically an ``Effect`` wrapper for the
+           ``SpectralSurface`` object
 
     Must contain a wavelength column, and one or more of the following:
     ``transmission``, ``emissivity``, ``reflection``.
@@ -68,21 +73,23 @@ class TERCurve(Effect):
 
     """
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        params = {"z_order": [10, 110, 510],
-                  "ignore_wings": False,
-                  "wave_min": "!SIM.spectral.wave_min",
-                  "wave_max": "!SIM.spectral.wave_max",
-                  "wave_unit": "!SIM.spectral.wave_unit",
-                  "wave_bin": "!SIM.spectral.spectral_bin_width",
-                  "bg_cell_width": "!SIM.computing.bg_cell_width",
-                  "report_plot_include": True,
-                  "report_table_include": False}
+    def __init__(self, filename=None, **kwargs):
+        super().__init__(filename=filename, **kwargs)
+        params = {
+            "z_order": [10, 110, 510],
+            "ignore_wings": False,
+            "wave_min": "!SIM.spectral.wave_min",
+            "wave_max": "!SIM.spectral.wave_max",
+            "wave_unit": "!SIM.spectral.wave_unit",
+            "wave_bin": "!SIM.spectral.spectral_bin_width",
+            "bg_cell_width": "!SIM.computing.bg_cell_width",
+            "report_plot_include": True,
+            "report_table_include": False,
+        }
         self.meta.update(params)
         self.meta.update(kwargs)
 
-        self.surface = SpectralSurface()
+        self.surface = SpectralSurface(cmds=self.cmds)
         self.surface.meta.update(self.meta)
         self._background_source = None
 
@@ -98,7 +105,7 @@ class TERCurve(Effect):
     def apply_to(self, obj, **kwargs):
         if isinstance(obj, SourceBase):
             assert isinstance(obj, Source), "Only Source supported."
-            self.meta = from_currsys(self.meta)
+            self.meta = from_currsys(self.meta, self.cmds)
             wave_min = quantify(self.meta["wave_min"], u.um).to(u.AA)
             wave_max = quantify(self.meta["wave_max"], u.um).to(u.AA)
 
@@ -142,18 +149,8 @@ class TERCurve(Effect):
     @property
     def background_source(self):
         if self._background_source is None:
-            # add a single pixel ImageHDU for the extended background with a
-            # size of 1 degree
-            # bg_cell_width = from_currsys(self.meta["bg_cell_width"])
-
             flux = self.emission
             bg_hdu = fits.ImageHDU()
-            # TODO: The make_imagehdu_from_table below has been replaced with
-            #       the empty ImageHDU above in fbca416. That change might,
-            #       have been fine (or not?), but now there is no use anywhere
-            #       in the code of make_imagehdu_from_table or bg_cell_width,
-            #       so maybe these need to be removed?
-            # bg_hdu = make_imagehdu_from_table([0], [0], [1], bg_cell_width * u.arcsec)
 
             bg_hdu.header.update({"BG_SRC": True,
                                   "BG_SURF": self.display_name,
@@ -193,13 +190,20 @@ class TERCurve(Effect):
             _guard_plot_axes(which, axes)
 
         self.meta.update(kwargs)
-        params = from_currsys(self.meta)
+        params = from_currsys(self.meta, self.cmds)
 
         wave_unit = self.meta.get("wavelength_unit")
         if wavelength is None:
             wunit = params["wave_unit"]
             # TODO: shouldn't need both, make sure they're equal
-            assert wunit == wave_unit
+            if wunit != wave_unit:
+                logger.warning("wavelength units in the meta dict of "
+                             "%s are inconsistent:\n"
+                             "- wavelength_unit : %s\n"
+                             "- wave_unit : %s",
+                             {self.meta.get("name")},
+                             wave_unit, wunit)
+
             wave = np.arange(quantify(params["wave_min"], wunit).value,
                              quantify(params["wave_max"], wunit).value,
                              quantify(params["wave_bin"], wunit).value)
@@ -211,6 +215,8 @@ class TERCurve(Effect):
         abbrs = {"t": "transmission", "e": "emission",
                  "r": "reflection", "x": "throughput"}
 
+        if not isinstance(axes, Iterable):
+            axes = [axes]
         for ter, ax in zip(which, axes):
             y_name = abbrs.get(ter, "throughput")
             y = getattr(self.surface, y_name)
@@ -280,7 +286,7 @@ class SkycalcTERCurve(AtmosphericTERCurve):
 
     @property
     def include(self):
-        return from_currsys(self.meta["include"])
+        return from_currsys(self.meta["include"], self.cmds)
 
     @include.setter
     def include(self, item):
@@ -289,7 +295,8 @@ class SkycalcTERCurve(AtmosphericTERCurve):
             self.load_skycalc_table()
 
     def load_skycalc_table(self):
-        use_local_file = from_currsys(self.meta["use_local_skycalc_file"])
+        use_local_file = from_currsys(self.meta["use_local_skycalc_file"],
+                                      self.cmds)
         if not use_local_file:
             self.skycalc_conn = skycalc_ipy.SkyCalc()
             tbl = self.query_server()
@@ -324,21 +331,23 @@ class SkycalcTERCurve(AtmosphericTERCurve):
         self.meta.update(kwargs)
 
         if "wunit" in self.meta:
-            scale_factor = u.Unit(from_currsys(self.meta["wunit"])).to(u.nm)
+            scale_factor = u.Unit(from_currsys(self.meta["wunit"],
+                                               self.cmds)).to(u.nm)
             for key in ["wmin", "wmax", "wdelta"]:
                 if key in self.meta:
-                    self.meta[key] = from_currsys(self.meta[key]) * scale_factor
+                    self.meta[key] = from_currsys(self.meta[key],
+                                                  self.cmds) * scale_factor
 
         conn_kwargs = {key: self.meta[key] for key in self.meta
                        if key in self.skycalc_conn.defaults}
-        conn_kwargs = from_currsys(conn_kwargs)
+        conn_kwargs = from_currsys(conn_kwargs, self.cmds)
         self.skycalc_conn.values.update(conn_kwargs)
 
         try:
             tbl = self.skycalc_conn.get_sky_spectrum(return_type="table")
         except ConnectionError:
             msg = "Could not connect to skycalc server"
-            logging.exception(msg)
+            logger.exception(msg)
             raise ValueError(msg)
 
         return tbl
@@ -376,19 +385,20 @@ class FilterCurve(TERCurve):
 
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self, cmds=None, **kwargs):
+        # super().__init__(**kwargs)
         if not np.any([key in kwargs for key in ["filename", "table",
                                                  "array_dict"]]):
             if "filter_name" in kwargs and "filename_format" in kwargs:
-                filt_name = from_currsys(kwargs["filter_name"])
-                file_format = from_currsys(kwargs["filename_format"])
+                filt_name = from_currsys(kwargs["filter_name"], cmds)
+                file_format = from_currsys(kwargs["filename_format"], cmds)
                 kwargs["filename"] = file_format.format(filt_name)
             else:
                 raise ValueError("FilterCurve must be passed one of "
                                  "(`filename`, `array_dict`, `table`) or both "
                                  f"(`filter_name`, `filename_format`): {kwargs}")
 
-        super().__init__(**kwargs)
+        super().__init__(cmds=cmds, **kwargs)
         if self.table is None:
             raise ValueError("Could not initialise filter. Either filename "
                              "not found, or array are not compatible")
@@ -402,14 +412,16 @@ class FilterCurve(TERCurve):
         self.meta["z_order"] = [114, 214, 514]
         self.meta.update(kwargs)
 
-        min_thru = from_currsys(self.meta["minimum_throughput"])
+        min_thru = from_currsys(self.meta["minimum_throughput"], self.cmds)
         mask = self.table["transmission"] < min_thru
         self.table["transmission"][mask] = 0
 
     def fov_grid(self, which="waveset", **kwargs):
+        warnings.warn("The fov_grid method is deprecated and will be removed "
+                      "in a future release.", DeprecationWarning, stacklevel=2)
         if which == "waveset":
             self.meta.update(kwargs)
-            self.meta = from_currsys(self.meta)
+            self.meta = from_currsys(self.meta, self.cmds)
             # ..todo:: replace the 101 with a variable in !SIM
             wave = np.linspace(self.meta["wave_min"],
                                self.meta["wave_max"], 101)
@@ -490,12 +502,14 @@ class TopHatFilterCurve(FilterCurve):
 
     """
 
-    def __init__(self, **kwargs):
-        required_keys = ["transmission", "blue_cutoff", "red_cutoff"]
-        check_keys(kwargs, required_keys, action="error")
+    required_keys = {"transmission", "blue_cutoff", "red_cutoff"}
 
-        wave_min = from_currsys("!SIM.spectral.wave_min")
-        wave_max = from_currsys("!SIM.spectral.wave_max")
+    def __init__(self, cmds=None, **kwargs):
+        check_keys(kwargs, self.required_keys, action="error")
+        self.cmds = cmds
+
+        wave_min = from_currsys("!SIM.spectral.wave_min", self.cmds)
+        wave_max = from_currsys("!SIM.spectral.wave_max", self.cmds)
         blue = kwargs["blue_cutoff"]
         red = kwargs["red_cutoff"]
         peak = kwargs["transmission"]
@@ -507,14 +521,15 @@ class TopHatFilterCurve(FilterCurve):
         tbl = Table(names=["wavelength", "transmission"],
                     data=[waveset, transmission])
         super().__init__(table=tbl, wavelength_unit="um",
-                         action="transmission")
+                         action="transmission", cmds=self.cmds)
         self.meta.update(kwargs)
 
 
 class DownloadableFilterCurve(FilterCurve):
+    required_keys = {"filter_name", "filename_format"}
+
     def __init__(self, **kwargs):
-        required_keys = ["filter_name", "filename_format"]
-        check_keys(kwargs, required_keys, action="error")
+        check_keys(kwargs, self.required_keys, action="error")
         filt_str = kwargs["filename_format"].format(kwargs["filter_name"])
         tbl = download_svo_filter(filt_str, return_style="table")
         super().__init__(table=tbl, **kwargs)
@@ -543,9 +558,10 @@ class SpanishVOFilterCurve(FilterCurve):
 
     """
 
+    required_keys = {"observatory", "instrument", "filter_name"}
+
     def __init__(self, **kwargs):
-        required_keys = ["observatory", "instrument", "filter_name"]
-        check_keys(kwargs, required_keys, action="error")
+        check_keys(kwargs, self.required_keys, action="error")
         filt_str = "{}/{}.{}".format(kwargs["observatory"],
                                      kwargs["instrument"],
                                      kwargs["filter_name"])
@@ -559,17 +575,18 @@ class SpanishVOFilterCurve(FilterCurve):
 class FilterWheelBase(Effect):
     """Base class for Filter Wheels."""
 
-    required_keys = set()
     _current_str = "current_filter"
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         check_keys(kwargs, self.required_keys, action="error")
 
-        params = {"z_order": [124, 224, 524],
-                  "report_plot_include": True,
-                  "report_table_include": True,
-                  "report_table_rounding": 4}
+        params = {
+            "z_order": [124, 224, 524],
+            "report_plot_include": True,
+            "report_table_include": True,
+            "report_table_rounding": 4,
+        }
         self.meta.update(params)
         self.meta.update(kwargs)
 
@@ -579,7 +596,17 @@ class FilterWheelBase(Effect):
         """Use apply_to of current filter."""
         return self.current_filter.apply_to(obj, **kwargs)
 
+    @property
+    def surface(self):
+        return self.current_filter.surface
+
+    @property
+    def throughput(self):
+        return self.current_filter.throughput
+
     def fov_grid(self, which="waveset", **kwargs):
+        warnings.warn("The fov_grid method is deprecated and will be removed "
+                      "in a future release.", DeprecationWarning, stacklevel=2)
         return self.current_filter.fov_grid(which=which, **kwargs)
 
     def change_filter(self, filtername=None):
@@ -607,7 +634,7 @@ class FilterWheelBase(Effect):
     @property
     def current_filter(self):
         filter_eff = None
-        filt_name = from_currsys(self.meta["current_filter"])
+        filt_name = from_currsys(self.meta["current_filter"], self.cmds)
         if filt_name is not None:
             filter_eff = self.filters[filt_name]
         return filter_eff
@@ -689,7 +716,7 @@ class FilterWheel(FilterWheelBase):
         self.meta.update(kwargs)
 
         path = self._get_path()
-        for name in from_currsys(self.meta["filter_names"]):
+        for name in from_currsys(self.meta["filter_names"], self.cmds):
             kwargs["name"] = name
             self.filters[name] = FilterCurve(filename=str(path).format(name),
                                              **kwargs)
@@ -840,13 +867,14 @@ class PupilTransmission(TERCurve):
     The emissivity is set to zero, assuming that the mask is cold.
     """
 
-    def __init__(self, transmission, **kwargs):
+    def __init__(self, transmission, cmds=None, **kwargs):
         self.params = {"wave_min": "!SIM.spectral.wave_min",
                        "wave_max": "!SIM.spectral.wave_max"}
         self.params.update(kwargs)
-        wave_min = from_currsys(self.params["wave_min"]) * u.um
-        wave_max = from_currsys(self.params["wave_max"]) * u.um
-        transmission = from_currsys(transmission)
+        self.cmds = cmds
+        wave_min = from_currsys(self.params["wave_min"], self.cmds) * u.um
+        wave_max = from_currsys(self.params["wave_max"], self.cmds) * u.um
+        transmission = from_currsys(transmission, cmds=self.cmds)
 
         super().__init__(wavelength=[wave_min, wave_max],
                          transmission=[transmission, transmission],
@@ -875,8 +903,8 @@ class ADCWheel(Effect):
     required_keys = {"adc_names", "filename_format", "current_adc"}
     _current_str = "current_adc"
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, cmds=None, **kwargs):
+        super().__init__(cmds=cmds, **kwargs)
         check_keys(kwargs, self.required_keys, action="error")
 
         params = {"z_order": [125, 225, 525],
@@ -889,9 +917,10 @@ class ADCWheel(Effect):
 
         path = self._get_path()
         self.adcs = {}
-        for name in from_currsys(self.meta["adc_names"]):
+        for name in from_currsys(self.meta["adc_names"], cmds=self.cmds):
             kwargs["name"] = name
             self.adcs[name] = TERCurve(filename=str(path).format(name),
+                                       cmds=cmds,
                                        **kwargs)
 
         self.table = self.get_table()
@@ -911,7 +940,7 @@ class ADCWheel(Effect):
     @property
     def current_adc(self):
         """Return the currently used ADC."""
-        curradc = from_currsys(self.meta["current_adc"])
+        curradc = from_currsys(self.meta["current_adc"], cmds=self.cmds)
         if not curradc:
             return False
         return self.adcs[curradc]

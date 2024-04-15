@@ -1,7 +1,5 @@
 """Unit tests for module scopesim.utils"""
 
-from pathlib import Path
-import logging
 import pytest
 from unittest.mock import patch
 
@@ -187,44 +185,24 @@ class TestFromCurrSys:
     def test_converts_dict(self):
         assert utils.from_currsys({"seed": "!SIM.random.seed"})["seed"] is None
 
+    def test_converts_layered_bang_strings(self):
+        patched = {"!SIM.sub_pixel.flag": "!SIM.sub_pixel.fraction"}
+        with patch.dict("scopesim.rc.__currsys__", patched):
+            result = utils.from_currsys("!SIM.sub_pixel.flag")
+            assert not isinstance(result, str)
+            assert result == 1
+
     def test_converts_astropy_table(self):
         tbl = Table(data=[["!SIM.random.seed"]*2, ["!SIM.random.seed"]*2],
                     names=["seeds", "seeds2"])
         assert utils.from_currsys(tbl["seeds2"][1]) is None
 
-
-class TestSetupLoggers:
-    def test_no_loggers_present_in_initial_scopesim_load(self):
-        hdlrs = logging.getLogger().handlers
-
-        assert not any([hdlr.name == "scopesim_file_logger" for hdlr in hdlrs])
-
-    def test_setup_loggers_has_no_loggers(self):
-        utils.setup_loggers(log_to_file=False, log_to_console=False)
-        hdlrs = logging.getLogger().handlers
-
-        assert not any([hdlr.name == "scopesim_file_logger" for hdlr in hdlrs])
-
-    def test_log_file_exist_when_file_logging_turned_on(self):
-        utils.setup_loggers(log_to_file=True)
-        filepath = Path(rc.__config__["!SIM.logging.file_path"])
-        level = rc.__config__["!SIM.logging.file_level"]
-        f_handler = logging.getLogger().handlers[-1]
-
-        assert filepath.exists()
-        assert f_handler.level == logging._checkLevel(level)
-
-        logging.shutdown()
-        filepath.unlink()
-
-    def test_console_logger_has_output(self, capsys):
-        utils.setup_loggers(log_to_console=True)
-        utils.set_logger_level("console", "INFO")
-        logging.info("Hello World!")
-        captured = capsys.readouterr()
-        assert "Hello World!" in captured.out
-
-        logging.shutdown()
+    def test_converts_string_numericals_to_floats(self):
+        patched = {"!SIM.sub_pixel.fraction": "1e0"}
+        with patch.dict("scopesim.rc.__currsys__", patched):
+            result = utils.from_currsys("!SIM.sub_pixel.fraction")
+            assert isinstance(result, float)
+            assert result == 1
 
 
 # load_example_optical_train modifies __currsys__!
@@ -241,3 +219,16 @@ class TestLoadExampleOptTrain:
 
         assert isinstance(opt, OpticalTrain)
         assert from_currsys(opt["slit_wheel"].include)
+
+    def test_loads_ifu_optical_train_object(self):
+        opt = load_example_optical_train(set_modes=["ifu"])
+
+        assert isinstance(opt, OpticalTrain)
+        assert from_currsys(opt["ifu_spectral_traces"].include)
+
+    # @pytest.mark.xfail
+    # def test_loads_mos_optical_train_object(self):
+    #     opt = load_example_optical_train(set_modes=["mos"])
+    #
+    #     assert isinstance(opt, OpticalTrain)
+    #     assert from_currsys(opt["slit_wheel"].include)

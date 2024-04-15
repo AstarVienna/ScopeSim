@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Electronic detector effects - related to detector readout.
 
@@ -20,8 +21,6 @@ Functions:
 - pseudo_random_field
 """
 
-import logging
-
 import numpy as np
 
 from astropy.io import fits
@@ -29,8 +28,11 @@ from astropy.io import fits
 from .. import rc
 from . import Effect
 from ..base_classes import DetectorBase, ImagePlaneBase
-from ..utils import from_currsys, figure_factory
-from .. import utils
+from ..utils import (from_currsys, figure_factory, check_keys, real_colname,
+                     pretty_print_dict, get_logger)
+
+
+logger = get_logger(__name__)
 
 
 class DetectorModePropertiesSetter(Effect):
@@ -82,35 +84,37 @@ class DetectorModePropertiesSetter(Effect):
 
     """
 
+    required_keys = {"mode_properties"}
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         params = {"z_order": [299, 900]}
         self.meta.update(params)
         self.meta.update(kwargs)
 
-        required_keys = ["mode_properties"]
-        utils.check_keys(self.meta, required_keys, action="error")
+        check_keys(self.meta, self.required_keys, action="error")
 
         self.mode_properties = kwargs["mode_properties"]
 
     def apply_to(self, obj, **kwargs):
         mode_name = kwargs.get("detector_readout_mode",
-                               from_currsys("!OBS.detector_readout_mode"))
+                               from_currsys("!OBS.detector_readout_mode",
+                                            self.cmds))
         if isinstance(obj, ImagePlaneBase) and mode_name == "auto":
             mode_name = self.select_mode(obj, **kwargs)
-            print("Detector mode set to", mode_name)
+            logger.info("Detector mode set to %s", mode_name)
 
         self.meta["detector_readout_mode"] = mode_name
         props_dict = self.mode_properties[mode_name]
-        rc.__currsys__["!OBS.detector_readout_mode"] = mode_name
+        self.cmds["!OBS.detector_readout_mode"] = mode_name
         for key, value in props_dict.items():
-            rc.__currsys__[key] = value
+            self.cmds[key] = value
 
         return obj
 
     def list_modes(self):
         """Return list of available detector modes."""
-        return utils.pretty_print_dict(self.mode_properties)
+        return pretty_print_dict(self.mode_properties)
 
     def select_mode(self, obj, **kwargs):
         """Automatically select detector mode based on image plane peak value.
@@ -121,7 +125,8 @@ class DetectorModePropertiesSetter(Effect):
         """
         immax = np.max(obj.data)
         fillfrac = kwargs.get("fill_frac",
-                              from_currsys("!OBS.auto_exposure.fill_frac"))
+                              from_currsys("!OBS.auto_exposure.fill_frac",
+                                           self.cmds))
 
         goodmodes = []
         goodron = []
@@ -172,6 +177,8 @@ class AutoExposure(Effect):
 
     """
 
+    required_keys = {"fill_frac", "full_well", "mindit"}
+
     def __init__(self, **kwargs):
         """
         The effect is the first detector effect, hence essentially operates
@@ -181,47 +188,120 @@ class AutoExposure(Effect):
         params = {"z_order": [902]}
         self.meta.update(params)
         self.meta.update(kwargs)
+        if self.cmds is None:
+            logger.error("No cmds present, using default.")
+            from scopesim import UserCommands
+            self.cmds = UserCommands()
 
-        required_keys = ["fill_frac", "full_well", "mindit"]
-        utils.check_keys(self.meta, required_keys, action="error")
+        check_keys(self.meta, self.required_keys, action="error")
+
+    def _dit_above_mindit(self, dit: float) -> bool:
+        mindit = from_currsys(self.meta["mindit"], self.cmds)
+        if dit < mindit:
+            logger.warning("DIT = %.3f s < MINDIT = %.3f s", dit, mindit)
+            return False
+        return True
+
+    def estimate_dit_ndit(
+            self,
+            exptime: float,
+            image_plane_max: float,
+            **kwargs
+    ) -> tuple[float, int]:
+        """
+        Automatically determine DIT and NDIT from exposure time.
+
+        Parameters
+        ----------
+        exptime : float
+            Exposure time in seconds.
+        image_plane_max : float
+            Maximum pixel value from image plane, used to avoid saturation.
+
+        Returns
+        -------
+        dit : float
+            Detector Integration Time.
+        ndit : int
+            Number of Integrations.
+
+        """
+        # TODO: Remove this silly stuff once currsys works properly...
+        full_well = kwargs.get(
+            "full_well",
+            from_currsys(self.meta["full_well"], self.cmds)
+        )
+        fill_frac = kwargs.get(
+            "fill_frac",
+            from_currsys(self.meta["fill_frac"], self.cmds)
+        )
+
+        dit_nosat = fill_frac * full_well / image_plane_max
+        logger.debug("Required DIT without saturation: %.3f s", dit_nosat)
+
+        # np.ceil so that dit is at most what is required for fill_frac
+        ndit = np.ceil(exptime / dit_nosat).astype(int)
+        dit = exptime / ndit
+
+        # Note: If the DIT required to avoid saturation is less than MINDIT,
+        #       the observation is only possible with likely saturation...
+        if not self._dit_above_mindit(dit):
+            dit = from_currsys(self.meta["mindit"], self.cmds)
+            # NDIT changed so that exptime is not exceeded (hence floor div)
+            ndit = max(exptime // dit, 1)
+            logger.warning("The detector will likely be saturated!")
+
+        return dit, ndit
 
     def apply_to(self, obj, **kwargs):
-        if isinstance(obj, (ImagePlaneBase, DetectorBase)):
-            implane_max = np.max(obj.data)
-            exptime = kwargs.get("exptime", from_currsys("!OBS.exptime"))
-            mindit = from_currsys(self.meta["mindit"])
+        if not isinstance(obj, (ImagePlaneBase, DetectorBase)):
+            return obj
 
-            if exptime is None:
-                exptime = from_currsys("!OBS.dit") * from_currsys("!OBS.ndit")
-            print(f"Requested exposure time: {exptime:.3f} s")
+        exptime = kwargs.get("exptime",
+                             from_currsys("!OBS.exptime", self.cmds))
+        mindit = from_currsys(self.meta["mindit"], self.cmds)
 
-            if exptime < mindit:
-                print(f"    increased to MINDIT: {mindit:.3f} s")
+        # TODO: Remove this silly try-except once currsys works properly...
+        try:
+            dit = from_currsys("!OBS.dit", self.cmds)
+        except (KeyError, ValueError):
+            dit = None
+        try:
+            ndit = from_currsys("!OBS.ndit", self.cmds)
+        except (KeyError, ValueError):
+            ndit = None
+
+        if dit and ndit:
+            # Both DIT and NDIT are supplied (not None and non-zero), so just
+            # use those regardless.
+            self.cmds["!OBS.autoexpset"] = False
+            # Just log warning in case DIT < MINDIT, don't actually change DIT
+            self._dit_above_mindit(dit)
+            return obj
+
+        # No DIT or NDIT given, need to determine from exptime
+        self.cmds["!OBS.autoexpset"] = True
+        if exptime is None:
+            logger.warning(
+                "Please provide either !OBS.exptime or !OBS.dit + !OBS.ndit")
+            if mindit is not None:
+                logger.info("Using MINDIT = %.3f s for exposure time.", mindit)
                 exptime = mindit
+            else:
+                logger.warning(
+                    "MINDIT not found, falling back to 1 s for exposure time.")
+                exptime = 1
+        else:
+            logger.info("Requested exposure time: %.3f s", exptime)
 
-            full_well = from_currsys(self.meta["full_well"])
-            fill_frac = kwargs.get("fill_frac",
-                                   from_currsys(self.meta["fill_frac"]))
-            dit = fill_frac * full_well / implane_max
+        dit, ndit = self.estimate_dit_ndit(exptime, obj.data.max(), **kwargs)
 
-            # np.ceil so that dit is at most what is required for fill_frac
-            ndit = int(np.ceil(exptime / dit))
-            dit = exptime / ndit
+        logger.info("Exposure parameters: DIT = %.3f s, NDIT = %d", dit, ndit)
+        logger.info("Total exposure time: %.3f s", dit * ndit)
 
-            # dit must be at least mindit, this might lead to saturation
-            # ndit changed so that exptime is not exceeded (hence np.floor)
-            if dit < from_currsys(self.meta["mindit"]):
-                dit = from_currsys(self.meta["mindit"])
-                ndit = int(np.floor(exptime / dit))
-                print("Warning: The detector will be saturated!")
-                # ..todo: turn into proper warning
-
-            print("Exposure parameters:")
-            print(f"                DIT: {dit:.3f} s  NDIT: {ndit}")
-            print(f"Total exposure time: {dit * ndit:.3f} s")
-
-            rc.__currsys__["!OBS.dit"] = dit
-            rc.__currsys__["!OBS.ndit"] = ndit
+        # TODO: Make sure this goes up far enough in the ChainMap...
+        self.cmds["!OBS.dit"] = dit
+        self.cmds["!OBS.ndit"] = ndit
 
         return obj
 
@@ -229,19 +309,20 @@ class AutoExposure(Effect):
 class SummedExposure(Effect):
     """Simulates a summed stack of ``ndit`` exposures."""
 
+    required_keys = {"dit", "ndit"}
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         params = {"z_order": [860]}
         self.meta.update(params)
         self.meta.update(kwargs)
 
-        required_keys = ["dit", "ndit"]
-        utils.check_keys(self.meta, required_keys, action="error")
+        check_keys(self.meta, self.required_keys, action="error")
 
     def apply_to(self, obj, **kwargs):
         if isinstance(obj, DetectorBase):
-            dit = from_currsys(self.meta["dit"])
-            ndit = from_currsys(self.meta["ndit"])
+            dit = from_currsys(self.meta["dit"], self.cmds)
+            ndit = from_currsys(self.meta["ndit"], self.cmds)
 
             obj._hdu.data *= dit * ndit
 
@@ -251,46 +332,51 @@ class SummedExposure(Effect):
 class Bias(Effect):
     """Adds a constant bias level to readout."""
 
+    required_keys = {"bias"}
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         params = {"z_order": [855]}
         self.meta.update(params)
         self.meta.update(kwargs)
 
-        required_keys = ["bias"]
-        utils.check_keys(self.meta, required_keys, action="error")
+        check_keys(self.meta, self.required_keys, action="error")
 
     def apply_to(self, obj, **kwargs):
         if isinstance(obj, DetectorBase):
-            biaslevel = from_currsys(self.meta["bias"])
+            biaslevel = from_currsys(self.meta["bias"], self.cmds)
             obj._hdu.data += biaslevel
 
         return obj
 
 class PoorMansHxRGReadoutNoise(Effect):
+    required_keys = {"noise_std", "n_channels", "ndit"}
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        params = {"z_order": [811],
-                  "pedestal_fraction": 0.3,
-                  "read_fraction": 0.4,
-                  "line_fraction": 0.25,
-                  "channel_fraction": 0.05,
-                  "random_seed": "!SIM.random.seed",
-                  "report_plot_include": False,
-                  "report_table_include": False}
+        params = {
+            "z_order": [811],
+            "pedestal_fraction": 0.3,
+            "read_fraction": 0.4,
+            "line_fraction": 0.25,
+            "channel_fraction": 0.05,
+            "random_seed": "!SIM.random.seed",
+            "report_plot_include": False,
+            "report_table_include": False,
+        }
         self.meta.update(params)
         self.meta.update(kwargs)
 
-        self.required_keys = ["noise_std", "n_channels", "ndit"]
-        utils.check_keys(self.meta, self.required_keys, action="error")
+        check_keys(self.meta, self.required_keys, action="error")
 
     def apply_to(self, det, **kwargs):
         if isinstance(det, DetectorBase):
-            self.meta["random_seed"] = from_currsys(self.meta["random_seed"])
+            self.meta["random_seed"] = from_currsys(self.meta["random_seed"],
+                                                    self.cmds)
             if self.meta["random_seed"] is not None:
                 np.random.seed(self.meta["random_seed"])
 
-            from_currsys(self.meta)
+            self.meta = from_currsys(self.meta, self.cmds)
             ron_keys = ["noise_std", "n_channels", "channel_fraction",
                         "line_fraction", "pedestal_fraction", "read_fraction"]
             ron_kwargs = {key: self.meta[key] for key in ron_keys}
@@ -322,22 +408,23 @@ class PoorMansHxRGReadoutNoise(Effect):
 class BasicReadoutNoise(Effect):
     """Readout noise computed as: ron * sqrt(NDIT)."""
 
+    required_keys = {"noise_std", "ndit"}
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.meta["z_order"] = [811]
         self.meta["random_seed"] = "!SIM.random.seed"
         self.meta.update(kwargs)
 
-        self.required_keys = ["noise_std", "ndit"]
-        utils.check_keys(self.meta, self.required_keys, action="error")
+        check_keys(self.meta, self.required_keys, action="error")
 
     def apply_to(self, det, **kwargs):
         if isinstance(det, DetectorBase):
-            ndit = from_currsys(self.meta["ndit"])
-            ron = from_currsys(self.meta["noise_std"])
+            ndit = from_currsys(self.meta["ndit"], self.cmds)
+            ron = from_currsys(self.meta["noise_std"], self.cmds)
             noise_std = ron * np.sqrt(float(ndit))
 
-            random_seed = from_currsys(self.meta["random_seed"])
+            random_seed = from_currsys(self.meta["random_seed"], self.cmds)
             if random_seed is not None:
                 np.random.seed(random_seed)
             det._hdu.data += np.random.normal(loc=0, scale=noise_std,
@@ -365,7 +452,8 @@ class ShotNoise(Effect):
 
     def apply_to(self, det, **kwargs):
         if isinstance(det, DetectorBase):
-            self.meta["random_seed"] = from_currsys(self.meta["random_seed"])
+            self.meta["random_seed"] = from_currsys(self.meta["random_seed"],
+                                                    self.cmds)
             if self.meta["random_seed"] is not None:
                 np.random.seed(self.meta["random_seed"])
 
@@ -379,14 +467,13 @@ class ShotNoise(Effect):
             # Check if there are negative values in the data
             negvals = np.sum(data < 0)
             if negvals:
-                logging.warning(f"Effect ShotNoise: {negvals} negative pixels")
+                logger.warning(f"Effect ShotNoise: {negvals} negative pixels")
                 data[data < 0] = 0
 
             below = data < 2**20
             above = np.invert(below)
             data[below] = np.random.poisson(data[below]).astype(float)
             data[above] = np.random.normal(data[above], np.sqrt(data[above]))
-            data = np.floor(data)
             new_imagehdu = fits.ImageHDU(data=data, header=det._hdu.header)
             det._hdu = new_imagehdu
 
@@ -407,34 +494,36 @@ class DarkCurrent(Effect):
     """
     required: dit, ndit, value
     """
+
+    required_keys = {"value", "dit", "ndit"}
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.meta["z_order"] = [830]
 
-        required_keys = ["value", "dit", "ndit"]
-        utils.check_keys(self.meta, required_keys, action="error")
+        check_keys(self.meta, self.required_keys, action="error")
 
     def apply_to(self, obj, **kwargs):
         if isinstance(obj, DetectorBase):
-            if isinstance(from_currsys(self.meta["value"]), dict):
-                dtcr_id = obj.meta[utils.real_colname("id", obj.meta)]
-                dark = from_currsys(self.meta["value"][dtcr_id])
-            elif isinstance(from_currsys(self.meta["value"]), float):
-                dark = from_currsys(self.meta["value"])
+            if isinstance(from_currsys(self.meta["value"], self.cmds), dict):
+                dtcr_id = obj.meta[real_colname("id", obj.meta)]
+                dark = from_currsys(self.meta["value"][dtcr_id], self.cmds)
+            elif isinstance(from_currsys(self.meta["value"], self.cmds), float):
+                dark = from_currsys(self.meta["value"], self.cmds)
             else:
                 raise ValueError("<DarkCurrent>.meta['value'] must be either "
                                  f"dict or float, but is {self.meta['value']}")
 
-            dit = from_currsys(self.meta["dit"])
-            ndit = from_currsys(self.meta["ndit"])
+            dit = from_currsys(self.meta["dit"], self.cmds)
+            ndit = from_currsys(self.meta["ndit"], self.cmds)
 
             obj._hdu.data += dark * dit * ndit
 
         return obj
 
     def plot(self, det, **kwargs):
-        dit = from_currsys(self.meta["dit"])
-        ndit = from_currsys(self.meta["ndit"])
+        dit = from_currsys(self.meta["dit"], self.cmds)
+        ndit = from_currsys(self.meta["ndit"], self.cmds)
         total_time = dit * ndit
         times = np.linspace(0, 2*total_time, 10)
         dtcr = self.apply_to(det)
@@ -461,7 +550,7 @@ class LinearityCurve(Effect):
         - name: detector_linearity
           class: LinearityCurve
           kwargs:
-            file_name: FPA_linearity.dat
+            filename: FPA_linearity.dat
 
         - name: detector_linearity
           class: LinearityCurve
@@ -477,26 +566,31 @@ class LinearityCurve(Effect):
 
     """
 
+    required_keys = {"ndit"}
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        params = {"z_order": [840],
-                  "report_plot_include": True,
-                  "report_table_include": False}
+        params = {
+            "z_order": [840],
+            "report_plot_include": True,
+            "report_table_include": False,
+        }
         self.meta.update(params)
         self.meta.update(kwargs)
 
-        self.required_keys = ["ndit"]
-        utils.check_keys(self.meta, self.required_keys, action="error")
+        check_keys(self.meta, self.required_keys, action="error")
 
     def apply_to(self, obj, **kwargs):
         if isinstance(obj, DetectorBase):
-            ndit = from_currsys(self.meta["ndit"])
+            ndit = from_currsys(self.meta["ndit"], self.cmds)
             if self.table is not None:
                 incident = self.table["incident"] * ndit
                 measured = self.table["measured"] * ndit
             else:
-                incident = np.asarray(from_currsys(self.meta["incident"])) * ndit
-                measured = np.asarray(from_currsys(self.meta["measured"])) * ndit
+                incident = np.asarray(from_currsys(self.meta["incident"],
+                                                   self.cmds)) * ndit
+                measured = np.asarray(from_currsys(self.meta["measured"],
+                                                   self.cmds)) * ndit
             obj._hdu.data = np.interp(obj._hdu.data, incident, measured)
 
         return obj
@@ -504,7 +598,7 @@ class LinearityCurve(Effect):
     def plot(self, **kwargs):
         fig, ax = figure_factory()
 
-        ndit = from_currsys(self.meta["ndit"])
+        ndit = from_currsys(self.meta["ndit"], self.cmds)
         incident = self.table["incident"] * ndit
         measured = self.table["measured"] * ndit
 
@@ -548,16 +642,17 @@ class ReferencePixelBorder(Effect):
 
 
 class BinnedImage(Effect):
+    required_keys = {"bin_size"}
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.meta["z_order"] = [870]
 
-        self.required_keys = ["bin_size"]
-        utils.check_keys(self.meta, self.required_keys, action="error")
+        check_keys(self.meta, self.required_keys, action="error")
 
     def apply_to(self, det, **kwargs):
         if isinstance(det, DetectorBase):
-            bs = from_currsys(self.meta["bin_size"])
+            bs = from_currsys(self.meta["bin_size"], self.cmds)
             image = det._hdu.data
             h, w = image.shape
             new_image = image.reshape((h//bs, bs, w//bs, bs))
@@ -566,23 +661,73 @@ class BinnedImage(Effect):
         return det
 
 class UnequalBinnedImage(Effect):
+    required_keys = {"binx","biny"}
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.meta["z_order"] = [870]
 
-        self.required_keys = ["binx","biny"]
-        utils.check_keys(self.meta, self.required_keys, action="error")
+        check_keys(self.meta, self.required_keys, action="error")
 
     def apply_to(self, det, **kwargs):
         if isinstance(det, DetectorBase):
-            bx = from_currsys(self.meta["binx"])
-            by = from_currsys(self.meta["biny"])
+            bx = from_currsys(self.meta["binx"], self.cmds)
+            by = from_currsys(self.meta["biny"], self.cmds)
             image = det._hdu.data
             h, w = image.shape
             new_image = image.reshape((h//bx, bx, w//by, by))
             det._hdu.data = new_image.sum(axis=3).sum(axis=1)
 
         return det
+
+
+class Quantization(Effect):
+    """Converts raw data to whole photons."""
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        params = {
+            "z_order": [825],
+            "dtype": "uint32",
+        }
+        self.meta.update(params)
+        self.meta.update(kwargs)
+
+    def _should_apply(self) -> bool:
+        if self.cmds is None:
+            logger.warning("Cannot access cmds for Quantization effect.")
+            return True
+
+        if self.cmds.get("!OBS.autoexpset", False):
+            logger.debug("DIT, NDIT determined by AutoExposure -> "
+                         "quantization is not applied.")
+            return False
+
+        if self.cmds["!OBS.ndit"] > 1:
+            logger.debug("NDIT set to 1 -> quantization is not applied.")
+            return False
+
+        return True
+
+    def apply_to(self, obj, **kwargs):
+        if not isinstance(obj, DetectorBase):
+            return obj
+
+        if not self._should_apply():
+            return obj
+
+        new_dtype = self.meta["dtype"]
+        if not np.issubdtype(new_dtype, np.integer):
+            logger.warning("Setting quantized data to dtype %s, which is not "
+                           "an integer subtype.", new_dtype)
+
+        # This used to create a new ImageHDU with the same header but the data
+        # set to the modified data. It should be fine to simply re-assign the
+        # data attribute, but just in case it's not...
+        logger.debug("Applying quantization to dtype %s.", new_dtype)
+        obj._hdu.data = np.floor(obj._hdu.data).astype(new_dtype)
+
+        return obj
 
 
 def make_ron_frame(image_shape, noise_std, n_channels, channel_fraction,

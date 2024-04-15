@@ -10,39 +10,5 @@ on:
 
 
 jobs:
-  build:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        # Run all operating systems, because this is the first interaction
-        # that users have with ScopeSim / IRDB.
-        # However, only use minimum and maximum supported Python version,
-        # as the IRDB download often fails.
-        # As of 2023/07/19, this test still often fails. See
-        # https://github.com/AstarVienna/ScopeSim/issues/254
-        # For now, only run on one configuration, as having one green test
-        # is more useful than 5 green and one red. The others can be enabled
-        # once we fix the problem properly.
-        # os: [ubuntu-latest, windows-latest, macos-latest]
-        # python-version: ['3.8', '3.11']
-        os: [ubuntu-latest]
-        python-version: ['3.11']
-
-    steps:
-      - uses: actions/checkout@v3
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: ${{ matrix.python-version }}
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          # Install this version of ScopeSim. Otherwise the PyPI version of
-          # ScopeSim will be installed when the test-requriments
-          # are installed, because ScopeSim is a dependency of
-          # ScopeSim_Templates.
-          pip install .
-          pip install .[dev,test]
-      - name: Run notebooks
-        # No --checkout-irdb to download the IRDB as a normal end user would.
-        run: ./runnotebooks.sh --delete
+  call-notebooks-without-clone:
+    uses: ./.github/workflows/notebooks_dispatch.yml

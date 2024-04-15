@@ -1,6 +1,7 @@
 """SpectralTraceList and SpectralTrace for the METIS LM spectrograph."""
+import copy
+import warnings
 
-from copy import deepcopy
 import numpy as np
 from scipy.interpolate import RectBivariateSpline
 
@@ -10,14 +11,18 @@ from astropy.table import Table
 from astropy.wcs import WCS
 from astropy import units as u
 
-from ..utils import from_currsys, find_file, quantify
+from ..utils import from_currsys, find_file, quantify, get_logger
 from .spectral_trace_list import SpectralTraceList
 from .spectral_trace_list_utils import SpectralTrace
 from .spectral_trace_list_utils import Transform2D
+from .spectral_trace_list_utils import make_image_interpolations
 from .apertures import ApertureMask
 from .ter_curves import TERCurve
 from ..base_classes import FieldOfViewBase, FOVSetupBase
 from ..optics.fov import FieldOfView
+
+
+logger = get_logger(__name__)
 
 
 class MetisLMSSpectralTraceList(SpectralTraceList):
@@ -29,22 +34,23 @@ class MetisLMSSpectralTraceList(SpectralTraceList):
         "slicewidth": 0.0207,  # arcsec
         "pixscale": 0.0082,    # arcsec
         "grat_spacing": 18.2,
-        "plate_scale": 0.303,
+        "fp2_platescale": 0.303,
     }
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+
         # self.params = {"wavelen": "!OBS.wavelen"}
         # self.params.update(kwargs)
 
         self.wavelen = self.meta["wavelen"]
 
         # field of view of the instrument
-        # ..todo: get this from aperture list
-
         self.slicelist = self._file["Aperture List"].data
+
         # self.view = np.array([self.meta["naxis1"] * self.meta["pixscale"],
         #                       self.meta["nslice"] * self.meta["slicewidth"]])
+
         self.view = np.array([self.slicelist["right"].max() -
                               self.slicelist["left"].min(),
                               self.slicelist["top"].max() -
@@ -57,7 +63,6 @@ class MetisLMSSpectralTraceList(SpectralTraceList):
         #     spt.meta["ymax"] = self.slicelist["top"][sli]
 
         # if self._file is not None:
-        #     print(self._file)
         #     self.make_spectral_traces()
 
     def apply_to(self, obj, **kwargs):
@@ -67,6 +72,7 @@ class MetisLMSSpectralTraceList(SpectralTraceList):
             # the maximum wavelength range of LMS
             volumes = [spectral_trace.fov_grid()
                        for spectral_trace in self.spectral_traces.values()]
+
             wave_min = min(vol["wave_min"] for vol in volumes)
             wave_max = max(vol["wave_max"] for vol in volumes)
             extracted_vols = obj.extract(axes=["wave"],
@@ -100,7 +106,7 @@ class MetisLMSSpectralTraceList(SpectralTraceList):
                 ymin = spt.meta["fov"]["y_min"]
                 ymax = spt.meta["fov"]["y_max"]
 
-                slicewcs = deepcopy(fovwcs)
+                slicewcs = fovwcs.deepcopy()
 
                 slicewcs.wcs.ctype = ["LINEAR", "LINEAR",
                                       slicewcs.wcs.ctype[2]]
@@ -161,9 +167,94 @@ class MetisLMSSpectralTraceList(SpectralTraceList):
 
         self.spectral_traces = spec_traces
 
+    def rectify_cube(self, hdulist, xi_min=None, xi_max=None, interps=None,
+                     **kwargs):
+        """
+        Rectify an IFU observation into a data cube
+
+        The HDU list (or fits file) must have been created with the
+        present OpticalTrain (or an identically configured one).
+
+        Parameters
+        ----------
+        hdulist : str or fits.HDUList
+           an ifu observation created with the present OpticalTrain
+        xi_min, xi_max : float [arcsec]
+           Spatial limits of the image slicer on the sky. For METIS LMS,
+           these values need not be provided by the user.
+        interps : list of interpolation functions
+           If provided, there must be one for each image extension in `hdulist`.
+           The functions go from pixels to the images and can be created with,
+           e.g., RectBivariateSpline.
+        """
+        try:
+            inhdul = fits.open(hdulist)
+        except TypeError:
+            inhdul = hdulist
+
+        # Create interpolation functions
+        if interps is None:
+            logger.info("Computing interpolation functions")
+            interps = make_image_interpolations(inhdul, kx=1, ky=1)
+
+        # Create a common wcs for the rectification
+        dwave = from_currsys("!SIM.spectral.spectral_bin_width", self.cmds)
+        xi_min = np.min(self.slicelist["left"])
+        xi_max = np.max(self.slicelist["right"])
+        wave_min = self.meta["wave_min"]
+        wave_max = self.meta["wave_max"]
+        pixscale = self.meta["pixel_scale"]
+        naxis1 = int((xi_max - xi_min) / pixscale) + 1
+        naxis2 = len(self.spectral_traces)
+        naxis3 = int((wave_max - wave_min)/dwave) + 1
+        logger.debug("Cube: %d, %d, %d", naxis1, naxis2, naxis3)
+        logger.debug("Xi: %.2f, %.2f", xi_min, xi_max)
+        logger.debug("Wavelength: %.3f, %.3f", wave_min, wave_max)
+        slicewidth = (self.meta["y_max"] - self.meta["y_min"]) / naxis2
+
+        rectwcs = WCS(naxis=2)
+        rectwcs.wcs.ctype = ["WAVE", "LINEAR"]
+        rectwcs.wcs.crpix = [1, 1]
+        rectwcs.wcs.crval = [wave_min, xi_min]
+        rectwcs.wcs.cdelt = [dwave, pixscale]
+        rectwcs.wcs.cunit = ["um", "arcsec"]
+
+        cube = np.zeros((naxis3, naxis2, naxis1), dtype=np.float32)
+        for i, spt in enumerate(self.spectral_traces.values()):
+            spt.wave_min = wave_min
+            spt.wave_max = wave_max
+            result = spt.rectify(hdulist, interps=interps,
+                                 wave_min=wave_min, wave_max=wave_max,
+                                 xi_min=xi_min, xi_max=xi_max,
+                                 bin_width=dwave)
+            cube[:, i, :] = result.data.T
+
+        # FIXME: use wcs object here
+        cubehdr = fits.Header()
+        cubehdr["INSMODE"] = from_currsys(self.meta["element_name"], self.cmds)
+        cubehdr["WAVELEN"] = from_currsys(self.meta["wavelen"], self.cmds)
+        cubehdr["CTYPE1"] = "LINEAR"
+        cubehdr["CTYPE2"] = "LINEAR"
+        cubehdr["CTYPE3"] = "WAVE"
+        cubehdr["CRPIX1"] = (naxis1 + 1)/2
+        cubehdr["CRPIX2"] = (naxis2 + 1)/2
+        cubehdr["CRPIX3"] = 1.
+        cubehdr["CRVAL1"] = 0.
+        cubehdr["CRVAL2"] = 0.
+        cubehdr["CRVAL3"] = self.meta["wave_min"]
+        cubehdr["CDELT1"] = pixscale
+        cubehdr["CDELT2"] = slicewidth
+        cubehdr["CDELT3"] = dwave
+        cubehdr["CUNIT1"] = "arcsec"
+        cubehdr["CUNIT2"] = "arcsec"
+        cubehdr["CUNIT3"] = "um"
+
+        cubehdu = fits.ImageHDU(data=cube, header=cubehdr)
+        return cubehdu
+
     def _angle_from_lambda(self):
         """Determine optimal echelle rotation angle for wavelength."""
-        lam = from_currsys(self.meta["wavelen"])
+        lam = from_currsys(self.meta["wavelen"], self.cmds)
         grat_spacing = self.meta["grat_spacing"]
         wcal = self._file["WCAL"].data
         return echelle_setting(lam, grat_spacing, wcal)
@@ -178,7 +269,7 @@ class MetisLMSSpectralTrace(SpectralTrace):
         "slicewidth": 0.0207,  # arcsec
         "pixscale": 0.0082,    # arcsec
         "grat_spacing": 18.2,
-        "plate_scale": 0.303,
+        "fp2_platescale": 0.303,
     }
 
     def __init__(self, hdulist, spslice, params, **kwargs):
@@ -205,13 +296,19 @@ class MetisLMSSpectralTrace(SpectralTrace):
         `x_max`, `y_max`. Spatial limits refer to the sky and are given in
         arcsec.
         """
+        # TODO: Specify in the warning where the functionality should go!
+        warnings.warn("The fov_grid method is deprecated and will be removed "
+                      "in a future release. The functionality should be moved"
+                      " somewhere else.", DeprecationWarning, stacklevel=2)
+
         aperture = self._file["Aperture list"].data[self.meta["slice"]]
         x_min = aperture["left"]
         x_max = aperture["right"]
         y_min = aperture["bottom"]
         y_max = aperture["top"]
 
-        layout = ioascii.read(find_file("!DET.layout.file_name"))
+        filename_det_layout = from_currsys("!DET.layout.file_name", cmds=self.cmds)
+        layout = ioascii.read(find_file(filename_det_layout))
         det_lims = {}
         xhw = layout["pixel_size"] * layout["x_size"] / 2
         yhw = layout["pixel_size"] * layout["y_size"] / 2
@@ -236,10 +333,9 @@ class MetisLMSSpectralTrace(SpectralTrace):
         xmin = det_mm_lims["xd_min"]
         xmax = det_mm_lims["xd_max"]
 
-        lam0 = from_currsys(self.meta["wavelen"])
+        lam0 = from_currsys(self.meta["wavelen"], self.cmds)
         xi0 = 0.
         ymid = self.xilam2y(xi0, lam0)[0]   # estimate y level of trace
-
         waverange = self.xy2lam(np.array([xmin, xmax]), np.array([ymid, ymid]),
                                 grid=False)
 
@@ -306,10 +402,11 @@ class MetisLMSSpectralTrace(SpectralTrace):
             for i in range(4):
                 for j in range(4):
                     sel_ij = (subpoly["Row"] == i) * (subpoly["Col"] == j)
-                    thematrix[i, j] = (subpoly["A11"][sel_ij] * angle**3 +
-                                       subpoly["A12"][sel_ij] * angle**2 +
-                                       subpoly["A21"][sel_ij] * angle +
-                                       subpoly["A22"][sel_ij])
+                    thematrix[i, j] = (subpoly["P3"][sel_ij] * angle**3 +
+                                       subpoly["P2"][sel_ij] * angle**2 +
+                                       subpoly["P1"][sel_ij] * angle +
+                                       subpoly["P0"][sel_ij])
+
             matrices[matnames[matid]] = thematrix
 
         return matrices
@@ -350,11 +447,11 @@ class MetisLMSSpectralTrace(SpectralTrace):
 
     def sky2fp(self, xi):
         """Convert position in arcsec to position in FP2."""
-        return xi / self.meta["plate_scale"]
+        return xi / self.meta["fp2_platescale"]
 
     def fp2sky(self, fp_x):
         """Convert position in FP2 to position on sky."""
-        return fp_x * self.meta["plate_scale"]
+        return fp_x * self.meta["fp2_platescale"]
 
     def __repr__(self):
         msg = (f"{self.__class__.__name__}({self._file!r}, "
@@ -363,7 +460,7 @@ class MetisLMSSpectralTrace(SpectralTrace):
 
     def __str__(self):
         msg = (f"<MetisLMSSpectralTrace> \"{self.meta['description']}\" : "
-               f"{from_currsys(self.meta['wavelen'])} um : "
+               f"{from_currsys(self.meta['wavelen'], self.cmds)} um : "
                f"Order {self.meta['order']} : Angle {self.meta['angle']}")
         return msg
 
@@ -432,7 +529,7 @@ class MetisLMSImageSlicer(ApertureMask):
     """
 
     def __init__(self, filename, ext_id="Aperture List", **kwargs):
-        filename = find_file(from_currsys(filename))
+        filename = find_file(from_currsys(filename, kwargs.get("cmds")))
         ap_hdr = fits.getheader(filename, extname=ext_id)
         ap_list = fits.getdata(filename, extname=ext_id)
         xmin, xmax = ap_list["left"].min(), ap_list["right"].max()
@@ -465,13 +562,16 @@ class MetisLMSEfficiency(TERCurve):
     }
 
     def __init__(self, **kwargs):
-        self.meta = self._class_params
-        self.meta.update(kwargs)
+        # TODO: Refactor these _class_params?
+        self.meta = copy.copy(self._class_params)
+        assert "grat_spacing" in self.meta, "grat_spacing is missing from self.meta 1"
+        super().__init__(**kwargs)
+        assert "grat_spacing" in self.meta, "grat_spacing is missing from self.meta 2"
 
         filename = find_file(self.meta["filename"])
         wcal = fits.getdata(filename, extname="WCAL")
         if "wavelen" in kwargs:
-            wavelen = from_currsys(kwargs["wavelen"])
+            wavelen = from_currsys(kwargs["wavelen"], kwargs.get("cmds"))
             grat_spacing = self.meta["grat_spacing"]
             ech = echelle_setting(wavelen, grat_spacing, wcal)
             self.meta["order"] = ech["Ord"]

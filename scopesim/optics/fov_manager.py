@@ -1,62 +1,68 @@
-# """
-# Influences
-#
-# Spectral:
-# - Red and blue edges of full spectrum
-# - Chunks of a large spectral range
-#
-# Spatial:
-# - On-sky borders of Detector Array
-# - On-sky borders of Aperture Mask
-# - Chunks of large on-sky area
-# - Slit mask borders
-# - Multiple slits for IFU, mirror-MOS
-# - Multiple lenses for fibre-fed MOS
-# - each Effect should submit a list of volumes
-#
-# IFU spectroscopy depends on:
-# - the tracelist
-# - the list of apertures
-# - the detector array borders
-# - PSF wavelength granularity
-# - Atmospheric dispersion
-#
-# MOS spectroscopy depends on:
-# - the tracelist
-# - the list of apertures
-# - Atmospheric dispersion
-# - PSF wavelength granularity
-# - the detector array borders
-#
-# Long slit spectroscopy depends on:
-# - the tracelist ra, dec, lam vol --> x, y area
-# - the slit aperture
-# - the detector array borders
-# - PSF wavelength granularity
-# - Atmospheric dispersion
-#
-# Imaging dependent on:
-# - Detector array borders
-# - PSF wavelength granularity
-# - Atmospheric dispersion
-#
-# """
+# -*- coding: utf-8 -*-
+"""
+Influences.
+
+Spectral:
+- Red and blue edges of full spectrum
+- Chunks of a large spectral range
+
+Spatial:
+- On-sky borders of Detector Array
+- On-sky borders of Aperture Mask
+- Chunks of large on-sky area
+- Slit mask borders
+- Multiple slits for IFU, mirror-MOS
+- Multiple lenses for fibre-fed MOS
+- each Effect should submit a list of volumes
+
+IFU spectroscopy depends on:
+- the tracelist
+- the list of apertures
+- the detector array borders
+- PSF wavelength granularity
+- Atmospheric dispersion
+
+MOS spectroscopy depends on:
+- the tracelist
+- the list of apertures
+- Atmospheric dispersion
+- PSF wavelength granularity
+- the detector array borders
+
+Long slit spectroscopy depends on:
+- the tracelist ra, dec, lam vol --> x, y area
+- the slit aperture
+- the detector array borders
+- PSF wavelength granularity
+- Atmospheric dispersion
+
+Imaging dependent on:
+- Detector array borders
+- PSF wavelength granularity
+- Atmospheric dispersion
+
+"""
 
 from copy import deepcopy
 from typing import TextIO
 from io import StringIO
-from collections.abc import Iterable, MutableSequence
+from collections.abc import Iterable, Iterator, MutableSequence
+from itertools import chain
 
 import numpy as np
 from astropy import units as u
+from astropy.wcs import WCS
 
 from . import image_plane_utils as ipu
 from ..effects import DetectorList
 from ..effects import effects_utils as eu
-from ..utils import from_currsys
+from ..utils import from_currsys, get_logger
 
 from .fov import FieldOfView
 from ..base_classes import FOVSetupBase
+
+
+logger = get_logger(__name__)
 
 
 class FOVManager:
@@ -74,44 +80,70 @@ class FOVManager:
 
     """
 
-    def __init__(self, effects=None, **kwargs):
-        self.meta = {"area": "!TEL.area",
-                     "pixel_scale": "!INST.pixel_scale",
-                     "plate_scale": "!INST.plate_scale",
-                     "wave_min": "!SIM.spectral.wave_min",
-                     "wave_mid": "!SIM.spectral.wave_mid",
-                     "wave_max": "!SIM.spectral.wave_max",
-                     "chunk_size": "!SIM.computing.chunk_size",
-                     "max_segment_size": "!SIM.computing.max_segment_size",
-                     "sub_pixel": "!SIM.sub_pixel.flag",
-                     "sub_pixel_fraction": "!SIM.sub_pixel.fraction",
-                     "preload_fovs": "!SIM.computing.preload_field_of_views",
-                     "decouple_sky_det_hdrs": "!INST.decouple_detector_from_sky_headers",
-                     "aperture_id": 0}
+    def __init__(self, effects=None, cmds=None, **kwargs):
+        self.meta = {
+            "area": "!TEL.area",
+            "pixel_scale": "!INST.pixel_scale",
+            "plate_scale": "!INST.plate_scale",
+            "wave_min": "!SIM.spectral.wave_min",
+            "wave_mid": "!SIM.spectral.wave_mid",
+            "wave_max": "!SIM.spectral.wave_max",
+            "chunk_size": "!SIM.computing.chunk_size",
+            "max_segment_size": "!SIM.computing.max_segment_size",
+            "sub_pixel": "!SIM.sub_pixel.flag",
+            "sub_pixel_fraction": "!SIM.sub_pixel.fraction",
+            "preload_fovs": "!SIM.computing.preload_field_of_views",
+            "decouple_sky_det_hdrs": "!INST.decouple_detector_from_sky_headers",
+            "aperture_id": 0,
+        }
         self.meta.update(kwargs)
+        self.cmds = cmds
 
         params = from_currsys({"wave_min": self.meta["wave_min"],
-                               "wave_max": self.meta["wave_max"]})
+                               "wave_max": self.meta["wave_max"]},
+                              self.cmds)
         fvl_meta = ["area", "pixel_scale", "aperture_id"]
-        params["meta"] = from_currsys({key: self.meta[key] for key in fvl_meta})
+        params["meta"] = from_currsys({key: self.meta[key] for key in fvl_meta},
+                                      self.cmds)
         self.volumes_list = FovVolumeList(initial_volume=params)
 
         self.effects = effects or []
         self._fovs_list = []
         self.is_spectroscope = eu.is_spectroscope(self.effects)
 
-        if from_currsys(self.meta["preload_fovs"]) is True:
-            self._fovs_list = self.generate_fovs_list()
+        if from_currsys(self.meta["preload_fovs"], self.cmds):
+            logger.debug("Generating initial fovs_list.")
+            self._fovs_list = list(self.generate_fovs_list())
 
-    def generate_fovs_list(self):
+    def _get_splits(self, pixel_scale):
+        chunk_size = from_currsys(self.meta["chunk_size"], self.cmds)
+        max_seg_size = from_currsys(self.meta["max_segment_size"], self.cmds)
+
+        for vol in self.volumes_list:
+            vol_pix_area = ((vol["x_max"] - vol["x_min"]) *
+                            (vol["y_max"] - vol["y_min"]) / pixel_scale**2)
+            if vol_pix_area > max_seg_size:
+                step = chunk_size * pixel_scale
+
+                # These are not always integers, unlike in the tests.
+                # See for example HAWKI/test_hawki/test_full_package_hawki.py.
+                # The np.arange can therefore not be changed to just a range.
+                yield (np.arange(vol["x_min"], vol["x_max"], step),
+                       np.arange(vol["y_min"], vol["y_max"], step))
+
+    def generate_fovs_list(self) -> Iterator[FieldOfView]:
         """
         Generate a series of FieldOfViews objects based self.effects.
 
-        Returns
-        -------
-        fovs : list of FieldOfView objects
+        Yields
+        ------
+        Iterator[FieldOfView]
+            Generator-Iterator of FieldOfView objects.
 
         """
+        # TODO: The generator is currently always converted to a list, but that
+        #       might not be necessary. Investigate in the future...
+
         # Ask all the effects to alter the volume_
         params = {"pixel_scale": self.meta["pixel_scale"]}
 
@@ -119,27 +151,13 @@ class FOVManager:
             self.volumes_list = effect.apply_to(self.volumes_list, **params)
 
         # ..todo: add catch to split volumes larger than chunk_size
-        pixel_scale = from_currsys(self.meta["pixel_scale"])
-        plate_scale = from_currsys(self.meta["plate_scale"])
-        pixel_size = pixel_scale / plate_scale
-        plate_scale_deg = plate_scale / 3600.  # ["/mm] / 3600 = [deg/mm]
+        pixel_scale = from_currsys(self.meta["pixel_scale"], self.cmds)
+        plate_scale = from_currsys(self.meta["plate_scale"], self.cmds)
 
-        chunk_size = from_currsys(self.meta["chunk_size"])
-        max_seg_size = from_currsys(self.meta["max_segment_size"])
+        splits = (chain.from_iterable(split)
+                  for split in zip(*self._get_splits(pixel_scale)))
 
-        split_xs = []
-        split_ys = []
-        for vol in self.volumes_list:
-            vol_pix_area = (vol["x_max"] - vol["x_min"]) * \
-                           (vol["y_max"] - vol["y_min"]) / pixel_scale**2
-            if vol_pix_area > max_seg_size:
-                step = chunk_size * pixel_scale
-                split_xs += list(np.arange(vol["x_min"], vol["x_max"], step))
-                split_ys += list(np.arange(vol["y_min"], vol["y_max"], step))
-
-        self.volumes_list.split(axis=["x", "y"], value=(split_xs, split_ys))
-
-        fovs = []
+        self.volumes_list.split(axis=["x", "y"], value=splits)
 
         for vol in self.volumes_list:
             xs_min, xs_max = vol["x_min"] / 3600., vol["x_max"] / 3600.
@@ -149,28 +167,35 @@ class FOVManager:
                                                 [ys_min, ys_max],
                                                 pixel_scale=pixel_scale / 3600.)
 
-            xy_sky = ipu.calc_footprint(skyhdr)
-            xy_det = xy_sky / plate_scale_deg
-            dethdr = ipu.header_from_list_of_xy(xy_det[:, 0], xy_det[:, 1],
-                                                pixel_size, "D")
-            skyhdr.update(dethdr)
+            dethdr, _ = ipu.det_wcs_from_sky_wcs(
+                WCS(skyhdr), pixel_scale, plate_scale)
+            skyhdr.update(dethdr.to_header())
 
             # useful for spectroscopy mode where slit dimensions is not the same
             # as detector dimensions
             # ..todo: Make sure this changes for multiple image planes
-            if from_currsys(self.meta["decouple_sky_det_hdrs"]) is True:
+            if from_currsys(self.meta["decouple_sky_det_hdrs"], self.cmds):
                 det_eff = eu.get_all_effects(self.effects, DetectorList)[0]
                 dethdr = det_eff.image_plane_header
 
-            fovs.append(FieldOfView(skyhdr, waverange, detector_header=dethdr,
-                                    **vol["meta"]))
-
-        return fovs
+            yield FieldOfView(skyhdr,
+                              waverange,
+                              detector_header=dethdr,
+                              cmds=self.cmds,
+                              **vol["meta"])
 
     @property
     def fovs(self):
-        if from_currsys(self.meta["preload_fovs"]) is False:
-            self._fovs_list = self.generate_fovs_list()
+        # There two lines were not here before #258, but somehow not including
+        # them will mess things up as FOVs multipy like rabbits...
+        # Should investigate why at some point...
+        if self._fovs_list:
+            logger.debug("Returning existing fovs_list.")
+            return self._fovs_list
+
+        if not from_currsys(self.meta["preload_fovs"], self.cmds):
+            logger.debug("Generating new fovs_list.")
+            self._fovs_list = list(self.generate_fovs_list())
         return self._fovs_list
 
     @property
@@ -197,20 +222,25 @@ class FovVolumeList(FOVSetupBase, MutableSequence):
         if initial_volume is None:
             initial_volume = {}
 
-        self.volumes = [{"wave_min": 0.3,
-                         "wave_max": 30,
-                         "x_min": -1800,
-                         "x_max": 1800,
-                         "y_min": -1800,
-                         "y_max": 1800,
-                         "meta": {"area": 0 * u.um**2,
-                                  "aperture_id": 0}
-                         }]
+        self.volumes = [{
+            "wave_min": 0.3,
+            "wave_max": 30,
+            "x_min": -1800,
+            "x_max": 1800,
+            "y_min": -1800,
+            "y_max": 1800,
+            "meta": {
+                "area": 0 * u.um**2,
+                "aperture_id": 0,
+            },
+        }]
         self.volumes[0].update(initial_volume)  # .. TODO: Careful! This overwrites meta
-        self.detector_limits = {"xd_min": 0,
-                                "xd_max": 0,
-                                "yd_min": 0,
-                                "yd_max": 0}
+        self.detector_limits = {
+            "xd_min": 0,
+            "xd_max": 0,
+            "yd_min": 0,
+            "yd_max": 0,
+        }
 
     def split(self, axis, value, aperture_id=None) -> None:
         """
@@ -242,7 +272,7 @@ class FovVolumeList(FOVSetupBase, MutableSequence):
             >>> fvl.split(axis="wave", value=3.0, aperture_id=None)
 
         """
-        if isinstance(axis, (tuple, list)):
+        if isinstance(axis, Iterable) and not isinstance(axis, str):
             for ax, val in zip(axis, value):
                 self.split(ax, val)
             return
@@ -253,8 +283,7 @@ class FovVolumeList(FOVSetupBase, MutableSequence):
             return
 
         for vol in self:
-            if (aperture_id is not None and
-                aperture_id != vol["meta"]["aperture_id"]):
+            if _chk_ap_id(aperture_id, vol):
                 continue
             if vol[f"{axis}_min"] >= value or vol[f"{axis}_max"] <= value:
                 continue
@@ -265,6 +294,8 @@ class FovVolumeList(FOVSetupBase, MutableSequence):
 
     def shrink(self, axis, values, aperture_id=None) -> None:
         """
+        Trim axes to new min/max value(s).
+
         - Loop through all volume dict
         - Replace any entries where min < values.min
         - Replace any entries where max > values.max
@@ -299,8 +330,7 @@ class FovVolumeList(FOVSetupBase, MutableSequence):
         to_pop = []
 
         for vol in self:
-            if (aperture_id is not None and
-                aperture_id != vol["meta"]["aperture_id"]):
+            if _chk_ap_id(aperture_id, vol):
                 continue
 
             if values[0] is not None:
@@ -358,8 +388,7 @@ class FovVolumeList(FOVSetupBase, MutableSequence):
         """
         def _get_new_vols():
             for vol in self:
-                if (aperture_id is not None and
-                    aperture_id != vol["meta"]["aperture_id"]):
+                if _chk_ap_id(aperture_id, vol):
                     continue
                 if not all(_volume_in_range(vol, axis, edge) for axis, edge
                            in zip(axes, edges)):
@@ -390,7 +419,7 @@ class FovVolumeList(FOVSetupBase, MutableSequence):
     def write_string(self, stream: TextIO) -> None:
         """Write formatted string representation to I/O stream."""
         n_vol = len(self.volumes)
-        stream.write(f"FovVolumeList with {n_vol} volumes:")
+        stream.write(f"FovVolumeList with {n_vol} volume{'s'*(n_vol>1)}:")
         max_digits = len(str(n_vol))
 
         for i_vol, vol in enumerate(self.volumes):
@@ -419,9 +448,20 @@ class FovVolumeList(FOVSetupBase, MutableSequence):
 
         return new_self
 
+    def _repr_pretty_(self, p, cycle):
+        """For ipython."""
+        if cycle:
+            p.text(f"{self.__class__.__name__}(...)")
+        else:
+            p.text(str(self))
+
 
 def _volume_in_range(vol: dict, axis: str, edge) -> bool:
     return edge[0] <= vol[f"{axis}_max"] and edge[1] >= vol[f"{axis}_min"]
+
+
+def _chk_ap_id(ap_id, vol) -> bool:
+    return ap_id is not None and ap_id != vol["meta"]["aperture_id"]
 
 
 # Spectroscopy FOV setup

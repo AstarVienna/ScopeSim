@@ -40,6 +40,13 @@ def cmds(mock_path, mock_path_yamls):
     with patch("scopesim.rc.__search_path__", [mock_path, mock_path_yamls]):
         return UserCommands(yamls=[find_file("CMD_mvs_cmds.yaml")])
 
+@pytest.fixture(scope="class")
+def cmds_with_ignore(mock_path, mock_path_yamls):
+    with patch("scopesim.rc.__search_path__", [mock_path, mock_path_yamls]):
+        cmds = UserCommands(yamls=[find_file("CMD_mvs_cmds.yaml")])
+        cmds.ignore_effects += ["detector QE curve"]
+        return cmds
+
 
 # TODO: check if class scope breaks anything (used to be function scope)
 @pytest.fixture(scope="class")
@@ -70,6 +77,7 @@ def simplecado_opt(mock_path_yamls):
     return sim.OpticalTrain(cmd)
 
 
+@pytest.mark.usefixtures("patch_mock_path")
 class TestInit:
     def test_initialises_with_nothing(self):
         assert isinstance(OpticalTrain(), OpticalTrain)
@@ -98,6 +106,10 @@ class TestInit:
     def test_has_yaml_dict_object_after_initialising(self, cmds):
         opt = OpticalTrain(cmds=cmds)
         assert isinstance(opt.yaml_dicts, list) and len(opt.yaml_dicts) > 0
+
+    def test_ignore_effects_works(self, cmds_with_ignore):
+        opt = OpticalTrain(cmds=cmds_with_ignore)
+        assert opt["detector QE curve"].include is False
 
 
 @pytest.mark.usefixtures("patch_mock_path")
@@ -283,7 +295,8 @@ class TestShutdown:
         # Add an effect with a psf
         with patch("scopesim.rc.__search_path__", [mock_path]):
             psf = sim.effects.FieldConstantPSF(filename="test_ConstPSF.fits",
-                                               name="testpsf")
+                                               name="testpsf",
+                                               cmds=simplecado_opt.cmds)
         simplecado_opt.optics_manager.add_effect(psf)
         # This is just to make sure that we have an open file
         assert not simplecado_opt['testpsf']._file._file.closed

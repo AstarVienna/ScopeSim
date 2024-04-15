@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
-import logging
-from typing import Tuple
+
 from itertools import product
+from collections.abc import Iterable
 
 import numpy as np
 from astropy import units as u
@@ -11,7 +11,11 @@ from astropy.table import Table
 from astropy.utils.exceptions import AstropyWarning
 from scipy import ndimage as ndi
 
-from .. import utils
+from ..utils import (unit_from_table, quantity_from_table, has_needed_keywords,
+                     get_logger)
+
+
+logger = get_logger(__name__)
 
 
 def get_canvas_header(hdu_or_table_list, pixel_scale=1 * u.arcsec):
@@ -56,7 +60,7 @@ def get_canvas_header(hdu_or_table_list, pixel_scale=1 * u.arcsec):
     headers = list(_get_headers(hdu_or_table_list))
 
     if not headers:
-        logging.warning("No tables or ImageHDUs were passed")
+        logger.warning("No tables or ImageHDUs were passed")
         return None
 
     hdr = _make_bounding_header_from_headers(*headers, pixel_scale=pixel_scale)
@@ -66,8 +70,8 @@ def get_canvas_header(hdu_or_table_list, pixel_scale=1 * u.arcsec):
         raise MemoryError(size_warning.format(adverb="too", num_pix=num_pix,
                                               size="8 GB"))
     if num_pix > 2 ** 25:  # 2 * 4096**2
-        logging.warning(size_warning.format(adverb="", num_pix=num_pix,
-                                            size="256 MB"))
+        logger.warning(size_warning.format(adverb="", num_pix=num_pix,
+                                           size="256 MB"))
     return hdr
 
 
@@ -144,15 +148,15 @@ def _make_bounding_header_for_tables(*tables, pixel_scale=1*u.arcsec):
         extents.append(extent)
     pnts = np.vstack(extents)
 
+    # TODO: check if this could just use create_wcs_from_points
     hdr = header_from_list_of_xy(pnts[:, 0], pnts[:, 1], pixel_scale.value,
-                                 wcs_suffix, arcsec=True)
+                                 wcs_suffix, arcsec=wcs_suffix != "D")
     return hdr
 
 
 def create_wcs_from_points(points: np.ndarray,
                            pixel_scale: float,
-                           wcs_suffix: str = "",
-                           arcsec: bool = False) -> Tuple[WCS, np.ndarray]:
+                           wcs_suffix: str = "") -> tuple[WCS, np.ndarray]:
     """
     Create `astropy.wcs.WCS` instance that fits all points inside.
 
@@ -164,8 +168,6 @@ def create_wcs_from_points(points: np.ndarray,
         DESCRIPTION.
     wcs_suffix : str, optional
         DESCRIPTION. The default is "".
-    arcsec : bool, optional
-        DESCRIPTION. The default is False.
 
     Returns
     -------
@@ -175,9 +177,10 @@ def create_wcs_from_points(points: np.ndarray,
         Array of NAXIS needed to fit all points.
 
     """
-    # TODO: either make pixel_scale a quantity or deal with arcsec flag...
+    # TODO: should pixel_scale be called pixel_size by conventions elsewhere?
+    # TODO: add quantity stuff to docstring
     # TODO: find out how this plays with chunks
-    if wcs_suffix != "D" and not arcsec:
+    if wcs_suffix != "D":
         points = _fix_360(points)
 
     # TODO: test whether abs(pixel_scale) breaks anything
@@ -191,16 +194,29 @@ def create_wcs_from_points(points: np.ndarray,
     #     crpix = np.array([1., 1.])
     #     crval = points.min(axis=0)
     # else:
+
+    if isinstance(naxis, u.Quantity):
+        naxis = naxis.decompose()
+        if naxis.unit != "pixel":
+            raise u.UnitConversionError("If given quantities, must resolve to "
+                                        f"pix, got '{naxis.unit}' instead.")
+        naxis = naxis.value
+
     crpix = (naxis + 1) / 2
     crval = (points.min(axis=0) + points.max(axis=0)) / 2
 
     ctype = "LINEAR" if wcs_suffix in "DX" else "RA---TAN"
-    if wcs_suffix == "D":
-        cunit = "mm"
-    elif arcsec:
-        cunit = "arcsec"
+
+    if isinstance(points, u.Quantity):
+        cunit = points.unit
     else:
-        cunit = "deg"
+        if wcs_suffix == "D":
+            cunit = "mm"
+        else:
+            cunit = "deg"
+
+    if isinstance(pixel_scale, u.Quantity):
+        pixel_scale = pixel_scale.value
 
     new_wcs = WCS(key=wcs_suffix)
     new_wcs.wcs.ctype = 2 * [ctype]
@@ -229,8 +245,12 @@ def header_from_list_of_xy(x, y, pixel_scale, wcs_suffix="", arcsec=False):
 
     """
     points = np.column_stack((x, y))
-    new_wcs, naxis = create_wcs_from_points(points, pixel_scale,
-                                            wcs_suffix, arcsec)
+
+    if arcsec:
+        points <<= u.arcsec
+        pixel_scale <<= u.arcsec / u.pixel
+
+    new_wcs, naxis = create_wcs_from_points(points, pixel_scale, wcs_suffix)
 
     hdr = fits.Header()
     hdr["NAXIS"] = 2
@@ -271,22 +291,18 @@ def add_table_to_imagehdu(table: Table, canvas_hdu: fits.ImageHDU,
 
     """
     s = wcs_suffix
-    if not utils.has_needed_keywords(canvas_hdu.header, s):
+    if not has_needed_keywords(canvas_hdu.header, s):
         raise ValueError(f"canvas_hdu must include an appropriate WCS: {s}")
 
-    f = utils.quantity_from_table("flux", table, default_unit=u.Unit("ph s-1"))
+    f = quantity_from_table("flux", table, default_unit=u.Unit("ph s-1"))
     if s == "D":
-        x = utils.quantity_from_table("x_mm", table,
-                                      default_unit=u.mm).to(u.mm)
-        y = utils.quantity_from_table("y_mm", table,
-                                      default_unit=u.mm).to(u.mm)
+        x = quantity_from_table("x_mm", table, default_unit=u.mm).to(u.mm)
+        y = quantity_from_table("y_mm", table, default_unit=u.mm).to(u.mm)
     else:
         arcsec = u.arcsec
         canvas_unit = u.Unit(canvas_hdu.header[f"CUNIT1{s}"])
-        x = utils.quantity_from_table("x", table,
-                                      default_unit=arcsec.to(canvas_unit))
-        y = utils.quantity_from_table("y", table,
-                                      default_unit=arcsec.to(canvas_unit))
+        x = quantity_from_table("x", table, default_unit=arcsec.to(canvas_unit))
+        y = quantity_from_table("y", table, default_unit=arcsec.to(canvas_unit))
         x *= arcsec.to(canvas_unit)
         y *= arcsec.to(canvas_unit)
 
@@ -312,6 +328,8 @@ def _add_intpixel_sources_to_canvas(canvas_hdu, xpix, ypix, flux, mask):
     canvas_hdu.header["comment"] = f"Adding {len(flux)} int-pixel files"
     for xpx, ypx, flx, msk in zip(xpix.astype(int), ypix.astype(int),
                                   flux, mask):
+        # To prevent adding array values in this manner.
+        assert not isinstance(xpx, Iterable), "xpx should be integer"
         canvas_hdu.data[ypx, xpx] += flx.value * msk
 
     return canvas_hdu
@@ -325,6 +343,8 @@ def _add_subpixel_sources_to_canvas(canvas_hdu, xpix, ypix, flux, mask):
             xx, yy, fracs = sub_pixel_fractions(xpx, ypx)
             for x, y, frac in zip(xx, yy, fracs):
                 if y < canvas_shape[0] and x < canvas_shape[1]:
+                    # To prevent adding array values in this manner.
+                    assert not isinstance(x, Iterable), "x should be integer"
                     canvas_hdu.data[y, x] += frac * flx.value
 
     return canvas_hdu
@@ -470,12 +490,12 @@ def rescale_imagehdu(imagehdu: fits.ImageHDU, pixel_scale: float,
         # zoom = np.append(zoom, [1])
         zoom[2] = 1.
     if primary_wcs.naxis != imagehdu.data.ndim:
-        logging.warning("imagehdu.data.ndim is %d, but primary_wcs.naxis with "
+        logger.warning("imagehdu.data.ndim is %d, but primary_wcs.naxis with "
                         "key %s is %d, both should be equal.",
                         imagehdu.data.ndim, wcs_suffix, primary_wcs.naxis)
         zoom = zoom[:2]
 
-    logging.debug("zoom %s", zoom)
+    logger.debug("zoom %s", zoom)
 
     if all(zoom == 1.):
         # Nothing to do
@@ -498,18 +518,18 @@ def rescale_imagehdu(imagehdu: fits.ImageHDU, pixel_scale: float,
         ww = WCS(imagehdu.header, key=key)
 
         if ww.naxis != imagehdu.data.ndim:
-            logging.warning("imagehdu.data.ndim is %d, but wcs.naxis with key "
-                            "%s is %d, both should be equal.",
-                            imagehdu.data.ndim, key, ww.naxis)
+            logger.warning("imagehdu.data.ndim is %d, but wcs.naxis with key "
+                           "%s is %d, both should be equal.",
+                           imagehdu.data.ndim, key, ww.naxis)
             # TODO: could this be ww = ww.sub(2) instead? or .celestial?
             ww = WCS(imagehdu.header, key=key, naxis=imagehdu.data.ndim)
 
         if any(ctype != "LINEAR" for ctype in ww.wcs.ctype):
-            logging.warning("Non-linear WCS rescaled using linear procedure.")
+            logger.warning("Non-linear WCS rescaled using linear procedure.")
 
         new_crpix = (zoom + 1) / 2 + (ww.wcs.crpix - 1) * zoom
         new_crpix = np.round(new_crpix * 2) / 2  # round to nearest half-pixel
-        logging.debug("new crpix %s", new_crpix)
+        logger.debug("new crpix %s", new_crpix)
         ww.wcs.crpix = new_crpix
 
         # Keep CDELT3 if cube...
@@ -583,9 +603,9 @@ def reorient_imagehdu(imagehdu: fits.ImageHDU, wcs_suffix: str = "",
         imagehdu.header = hdr
 
     elif any("PC1_1" in key for key in imagehdu.header):
-        logging.warning(("PC Keywords were found, but not used due to "
-                         "different wcs_suffix given: %s \n %s"),
-                        wcs_suffix, dict(imagehdu.header))
+        logger.warning(("PC Keywords were found, but not used due to "
+                        "different wcs_suffix given: %s \n %s"),
+                       wcs_suffix, dict(imagehdu.header))
 
     return imagehdu
 
@@ -721,7 +741,8 @@ def add_imagehdu_to_imagehdu(image_hdu: fits.ImageHDU,
                                wcs_suffix=canvas_wcs.wcs.alt,
                                spline_order=spline_order,
                                conserve_flux=conserve_flux)
-    # logging.debug("fromrescale %s", WCS(new_hdu.header, key=canvas_wcs.wcs.alt))
+    # TODO: Perhaps add separately formatted WCS logger?
+    # logger.debug("fromrescale %s", WCS(new_hdu.header, key=canvas_wcs.wcs.alt))
     new_hdu = reorient_imagehdu(new_hdu,
                                 wcs_suffix=canvas_wcs.wcs.alt,
                                 spline_order=spline_order,
@@ -735,12 +756,12 @@ def add_imagehdu_to_imagehdu(image_hdu: fits.ImageHDU,
     sky_center = new_wcs.wcs_pix2world(img_center, 0)
     if new_wcs.wcs.cunit[0] == "deg":
         sky_center = _fix_360(sky_center)
-    # logging.debug("canvas %s", canvas_wcs)
-    # logging.debug("new %s", new_wcs)
-    logging.debug("sky %s", sky_center)
+    # logger.debug("canvas %s", canvas_wcs)
+    # logger.debug("new %s", new_wcs)
+    logger.debug("sky %s", sky_center)
     sky_center *= conv_fac
     pix_center = canvas_wcs.wcs_world2pix(sky_center, 0)
-    logging.debug("pix %s", pix_center)
+    logger.debug("pix %s", pix_center)
 
     canvas_hdu.data = overlay_image(new_hdu.data, canvas_hdu.data,
                                     coords=pix_center.squeeze())
@@ -773,7 +794,7 @@ def pix2val(header, x, y, wcs_suffix=""):
         pc11, pc12, pc21, pc22 = 1, 0, 0, 1
 
     if (pc11 * pc22 - pc12 * pc21) != 1.0:
-        logging.error("PC matrix det != 1.0")
+        logger.error("PC matrix det != 1.0")
 
     da = header["CDELT1"+s]
     db = header["CDELT2"+s]
@@ -816,7 +837,7 @@ def val2pix(header, a, b, wcs_suffix=""):
         pc11, pc12, pc21, pc22 = 1, 0, 0, 1
 
     if (pc11 * pc22 - pc12 * pc21) != 1.0:
-        logging.error("PC matrix det != 1.0")
+        logger.error("PC matrix det != 1.0")
 
     da = float(header["CDELT1"+s])
     db = float(header["CDELT2"+s])
@@ -862,8 +883,8 @@ def calc_footprint(header, wcs_suffix="", new_unit: str = None):
     wcs_suffix = wcs_suffix or " "
 
     if isinstance(header, fits.ImageHDU):
-        logging.warning("Passing a HDU to calc_footprint will be deprecated "
-                        "in v1.0. Please pass the header only.")
+        logger.warning("Passing a HDU to calc_footprint will be deprecated "
+                       "in v1.0. Please pass the header only.")
         header = header.header
 
     # TODO: maybe celestial instead??
@@ -932,8 +953,8 @@ def calc_table_footprint(table: Table, x_name: str, y_name: str,
     else:
         padding = 0.
 
-    x_convf = utils.unit_from_table(x_name, table, tbl_unit).to(new_unit)
-    y_convf = utils.unit_from_table(y_name, table, tbl_unit).to(new_unit)
+    x_convf = unit_from_table(x_name, table, tbl_unit).to(new_unit)
+    y_convf = unit_from_table(y_name, table, tbl_unit).to(new_unit)
 
     x_col = table[x_name] * x_convf
     y_col = table[y_name] * y_convf
@@ -990,9 +1011,13 @@ def split_header(hdr, chunk_size, wcs_suffix=""):
 
 def _fix_360(arr):
     """Fix the "full circle overflow" that occurs with deg."""
-    arr = np.asarray(arr)
-    arr[arr > 270] -= 360
-    arr[arr <= -90] += 360
+    if isinstance(arr, u.Quantity):
+        arr[arr > 270*u.deg] -= 360*u.deg
+        arr[arr <= -90*u.deg] += 360*u.deg
+    else:
+        arr = np.asarray(arr)
+        arr[arr > 270] -= 360
+        arr[arr <= -90] += 360
     return arr
 
 
@@ -1000,6 +1025,99 @@ def _get_unit_from_headers(*headers, wcs_suffix: str = "") -> str:
     unit = headers[0][f"CUNIT1{wcs_suffix}"].lower()
     assert all(header[f"CUNIT{i}{wcs_suffix}"].lower() == unit
                for header, i in product(headers, range(1, 3))), \
-        [header[f"CUNIT{i}{wcs_suffix}"]
+        [(i, header[f"CUNIT{i}{wcs_suffix}"])
          for header, i in product(headers, range(1, 3))]
     return unit
+
+
+def det_wcs_from_sky_wcs(sky_wcs: WCS,
+                         pixel_scale: float,
+                         plate_scale: float,
+                         naxis=None) -> tuple[WCS, np.ndarray]:
+    """
+    Create detector WCS from celestial WCS using pixel and plate scales.
+
+    Parameters
+    ----------
+    sky_wcs : astropy.wcs.WCS
+        Celestial WCS.
+    pixel_scale : float
+        Quantity or float (assumed to be arcsec / pixel).
+    plate_scale : float
+        Quantity or float (assumed to be arcsec / mm).
+    naxis : (int, int), optional
+        Shape of the image, usually ``NAXIS1`` and ``NAXIS2``. If the input WCS
+        holds this information, the default None will use that. Otherwise not
+        providing `naxis` will raise and error.
+
+    Returns
+    -------
+    det_wcs : astropy.wcs.WCS
+        Detector WCS.
+    det_naxis : (int, int)
+        Shape of the image (``NAXIS1``, ``NAXIS2``).
+
+    """
+    # TODO: Using astropy units for now to avoid deg vs. arcsec confusion.
+    #       Once Scopesim is consistent there, remove astropy units.
+    pixel_scale <<= u.arcsec / u.pixel
+    plate_scale <<= u.arcsec / u.mm
+    logger.debug("Pixel scale: %s", pixel_scale)
+    logger.debug("Plate scale: %s", plate_scale)
+
+    pixel_size = pixel_scale / plate_scale
+    # TODO: add check if cunit is consistent along all axes
+    cunit = sky_wcs.wcs.cunit[0]
+    corners = sky_wcs.calc_footprint(center=False, axes=naxis) * cunit
+    logger.debug("WCS sky corners:\n%s", corners)
+    corners /= plate_scale
+    corners = corners.to(u.mm)
+    logger.debug("WCS det corners:\n%s", corners)
+
+    return create_wcs_from_points(corners, pixel_size, "D")
+
+
+def sky_wcs_from_det_wcs(det_wcs: WCS,
+                         pixel_scale: float,
+                         plate_scale: float,
+                         naxis=None) -> tuple[WCS, np.ndarray]:
+    """
+    Create celestial WCS from detector WCS using pixel and plate scales.
+
+    Parameters
+    ----------
+    det_wcs : astropy.wcs.WCS
+        Detector WCS.
+    pixel_scale : float
+        Quantity or float (assumed to be arcsec / pixel).
+    plate_scale : float
+        Quantity or float (assumed to be arcsec / mm).
+    naxis : (int, int), optional
+        Shape of the image, usually ``NAXIS1`` and ``NAXIS2``. If the input WCS
+        holds this information, the default None will use that. Otherwise not
+        providing `naxis` will raise and error.
+
+    Returns
+    -------
+    sky_wcs : astropy.wcs.WCS
+        Celestial WCS.
+    sky_naxis : (int, int)
+        Shape of the image (``NAXIS1``, ``NAXIS2``).
+
+    """
+    # TODO: Using astropy units for now to avoid deg vs. arcsec confusion.
+    #       Once Scopesim is consistent there, remove astropy units.
+    pixel_scale <<= u.arcsec / u.pixel
+    plate_scale <<= u.arcsec / u.mm
+    logger.debug("Pixel scale: %s", pixel_scale)
+    logger.debug("Plate scale: %s", plate_scale)
+
+    # TODO: add check if cunit is consistent along all axes
+    cunit = det_wcs.wcs.cunit[0]
+    corners = det_wcs.calc_footprint(center=False, axes=naxis) * cunit
+    logger.debug("WCS det corners: %s", corners)
+    corners *= plate_scale
+    corners = corners.to(u.arcsec)
+    logger.debug("WCS sky corners: %s", corners)
+
+    return create_wcs_from_points(corners, pixel_scale)

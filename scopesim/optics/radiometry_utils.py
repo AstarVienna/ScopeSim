@@ -1,14 +1,16 @@
 from collections import OrderedDict
 from copy import deepcopy
-import logging
 
 from astropy import units as u
 from astropy.io import ascii as ioascii
 from astropy.table import Table, vstack
 
 from .surface import SpectralSurface
-from ..utils import real_colname, insert_into_ordereddict, \
-    change_table_entry, convert_table_comments_to_dict, from_currsys
+from ..utils import (real_colname, change_table_entry,
+                     convert_table_comments_to_dict, get_logger)
+
+
+logger = get_logger(__name__)
 
 
 def combine_emissions(tbl, surfaces, row_indexes, etendue, use_area=False):
@@ -100,7 +102,6 @@ def combine_tables(new_tables, old_table=None, prepend=False):
         if old_table is None:
             old_table = new_table
         else:
-            new_table = from_currsys(new_table)
             if prepend:
                 old_table = vstack([new_table, old_table])
             else:
@@ -135,35 +136,10 @@ def add_surface_to_table(tbl, surf, name, position, silent=True):
                                          position=position)
         else:
             if not silent:
-                logging.warning(("%s was not found in the meta dictionary of %s. "
-                                 "This could cause problems"), colname, name)
+                logger.warning(("%s was not found in the meta dictionary of %s. "
+                                "This could cause problems"), colname, name)
 
     colname = real_colname("name", new_tbl.colnames)
     new_tbl = change_table_entry(new_tbl, colname, name, position=position)
 
     return new_tbl
-
-
-def add_surface_to_dict(dic, surf, name, position=0):
-    new_entry = OrderedDict({name : surf})
-    dic = insert_into_ordereddict(dic, new_entry, position)
-
-    return dic
-
-
-def make_surface_dict_from_table(tbl):
-    surf_dict = OrderedDict({})
-    if tbl is not None and len(tbl) > 0:
-        names = tbl[real_colname("name", tbl.colnames)]
-        for ii, row in enumerate(tbl):
-            surf_dict[names[ii]] = make_surface_from_row(row, **tbl.meta)
-
-    return surf_dict
-
-
-def make_surface_from_row(row, **kwargs):
-    row_dict = {colname.lower(): row[colname] for colname in row.colnames}
-    kwargs.update(row_dict)
-    surface = SpectralSurface(**kwargs)
-
-    return surface

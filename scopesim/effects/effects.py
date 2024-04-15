@@ -22,7 +22,7 @@ class Effect(DataContainer):
     Essentially, a sub-classed Effects object must only contain the following
     attributes:
 
-    * ``self.meta`` - a dictionary to contain meta data.
+    * ``self.meta`` - a dictionary to contain metadata.
     * ``self.apply_to(obj, **kwargs)`` - a method which accepts a
       Source-derivative and returns an instance of the same class as ``obj``
     * ``self.fov_grid(which="", **kwargs)``
@@ -34,8 +34,10 @@ class Effect(DataContainer):
 
     """
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+    required_keys = set()
+
+    def __init__(self, filename=None, **kwargs):
+        super().__init__(filename=filename, **kwargs)
         self.meta["z_order"] = []
         self.meta["include"] = True
         self.meta.update(kwargs)
@@ -101,7 +103,7 @@ class Effect(DataContainer):
 
     @property
     def include(self):
-        return from_currsys(self.meta["include"])
+        return from_currsys(self.meta["include"], self.cmds)
 
     @include.setter
     def include(self, item):
@@ -112,7 +114,8 @@ class Effect(DataContainer):
         name = self.meta.get("name", self.meta.get("filename", "<untitled>"))
         if not hasattr(self, "_current_str"):
             return name
-        return f"{name} : [{from_currsys(self.meta[self._current_str])}]"
+        current_str = from_currsys(self.meta[self._current_str], self.cmds)
+        return f"{name} : [{current_str}]"
 
     @property
     def meta_string(self):
@@ -202,23 +205,25 @@ class Effect(DataContainer):
         cls_doc = self.__doc__ if self.__doc__ is not None else "<no docstring>"
         cls_descr = cls_doc.lstrip().splitlines()[0]
 
-        params = {"report_plot_filename": None,
-                  "report_plot_file_formats": ["png"],
-                  "report_plot_caption": "",
-                  "report_plot_include": False,
-                  "report_table_include": False,
-                  "report_table_caption": "",
-                  "report_table_rounding": None,
-                  "report_image_path": "!SIM.reports.image_path",
-                  "report_rst_path": "!SIM.reports.rst_path",
-                  "report_latex_path": "!SIM.reports.latex_path",
-                  "file_description": self.meta.get("description",
-                                                    "<no description>"),
-                  "class_description": cls_descr,
-                  "changes_str": changes_str}
+        params = {
+            "report_plot_filename": None,
+            "report_plot_file_formats": ["png"],
+            "report_plot_caption": "",
+            "report_plot_include": False,
+            "report_table_include": False,
+            "report_table_caption": "",
+            "report_table_rounding": None,
+            "report_image_path": "!SIM.reports.image_path",
+            "report_rst_path": "!SIM.reports.rst_path",
+            "report_latex_path": "!SIM.reports.latex_path",
+            "file_description": self.meta.get("description",
+                                              "<no description>"),
+            "class_description": cls_descr,
+            "changes_str": changes_str,
+        }
         params.update(self.meta)
         params.update(kwargs)
-        params = from_currsys(params)
+        params = from_currsys(params, self.cmds)
 
         rst_str = f"""
 {str(self)}
@@ -310,13 +315,13 @@ Meta-data
         if isinstance(item, str) and item.startswith("#"):
             if len(item) > 1:
                 if item.endswith("!"):
-                    key = item[1:-1]
+                    key = item.removeprefix("#").removesuffix("!")
                     if len(key) > 0:
-                        value = from_currsys(self.meta[key])
+                        value = from_currsys(self.meta[key], self.cmds)
                     else:
-                        value = from_currsys(self.meta)
+                        value = from_currsys(self.meta, self.cmds)
                 else:
-                    value = self.meta[item[1:]]
+                    value = self.meta[item.removeprefix("#")]
             else:
                 value = self.meta
         else:
@@ -328,4 +333,4 @@ Meta-data
         if any(key not in self.meta for key in ("path", "filename_format")):
             return None
         return Path(self.meta["path"],
-                    from_currsys(self.meta["filename_format"]))
+                    from_currsys(self.meta["filename_format"], self.cmds))

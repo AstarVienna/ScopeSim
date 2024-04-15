@@ -12,6 +12,16 @@ from scopesim.source import source_templates as st
 
 PLOTS = False
 
+SWITCHOFF = [
+    "shot_noise",
+    "dark_current",
+    "readout_noise",
+    "atmospheric_radiometry",
+    "source_fits_keywords",
+    "effects_fits_keywords",
+    "config_fits_keywords",
+]
+
 
 @pytest.mark.usefixtures("protect_currsys", "patch_all_mock_paths")
 class TestLoadsUserCommands:
@@ -69,18 +79,17 @@ class TestObserveSpectroscopyMode:
 
     def test_runs(self):
         wave = np.arange(0.7, 2.5, 0.001)
-        spec = np.zeros(len(wave))
+        spec = np.zeros_like(wave)
         spec[25::50] += 100      # every 0.05µm, offset by 0.025µm
         src = sim.Source(lam=wave*u.um, spectra=spec,
                          x=[0], y=[0], ref=[0], weight=[1e-3])
 
-        cmd = sim.UserCommands(use_instrument="basic_instrument",
-                               set_modes=["spectroscopy"])
+        cmd = sim.UserCommands(
+            use_instrument="basic_instrument",
+            set_modes=["spectroscopy"],
+            ignore_effects=SWITCHOFF,
+        )
         opt = sim.OpticalTrain(cmd)
-        for effect_name in ["shot_noise", "dark_current", "readout_noise",
-                            "atmospheric_radiometry", "source_fits_keywords",
-                            "effects_fits_keywords", "config_fits_keywords"]:
-            opt[effect_name].include = False
 
         opt.observe(src)
         hdul = opt.readout()[0]
@@ -95,35 +104,33 @@ class TestObserveSpectroscopyMode:
             plt.imshow(det_im)
             plt.show()
 
-        xs = [(175, 200), (500, 525), (825, 850)]
+        xs = [slice(172, 199), slice(495, 525), slice(821, 850)]
         dlams = np.array([0.35, 0.5, 0.75])
-        n_spots = dlams / 0.05
+        n_spots = (dlams / 0.05).round().astype(int)
 
         spot_flux = 28000       # due to psf flux losses in narrow slit (0.5")
-        for i in range(3):
-            x0, x1 = xs[i]
-            trace_flux = det_im[:, x0:x1].sum()     # sum along a trace
-            assert round(trace_flux / spot_flux) == round(n_spots[i])
+        for sl, n in zip(xs, n_spots):
+            trace_flux = det_im[:, sl].sum()     # sum along a trace
+            assert round(trace_flux / spot_flux) == n
 
 
 @pytest.mark.usefixtures("protect_currsys", "patch_all_mock_paths")
 class TestObserveIfuMode:
     def test_runs(self):
         wave = np.arange(0.7, 2.5, 0.001)
-        spec = np.zeros(len(wave))
+        spec = np.zeros_like(wave)
         spec[25::50] += 100      # every 0.05µm, offset by 0.025µm
-        x = [-4, -2, 0, 2, 4] * 5
-        y = [y0 for y0 in range(-4, 5, 2) for i in range(5)]
+        x = np.tile(np.arange(-4, 5, 2), 5)
+        y = np.repeat(np.arange(-4, 5, 2), 5)
         src = sim.Source(lam=wave*u.um, spectra=spec,
                          x=x, y=y, ref=[0]*len(x), weight=[1e-3]*len(x))
 
-        cmd = sim.UserCommands(use_instrument="basic_instrument",
-                               set_modes=["ifu"])
+        cmd = sim.UserCommands(
+            use_instrument="basic_instrument",
+            set_modes=["ifu"],
+            ignore_effects=SWITCHOFF,
+        )
         opt = sim.OpticalTrain(cmd)
-        for effect_name in ["shot_noise", "dark_current", "readout_noise",
-                            "atmospheric_radiometry", "source_fits_keywords",
-                            "effects_fits_keywords", "config_fits_keywords"]:
-            opt[effect_name].include = False
 
         opt.observe(src)
         hdul = opt.readout()[0]
@@ -138,22 +145,27 @@ class TestObserveIfuMode:
             plt.imshow(det_im)
             plt.show()
 
-        xs = [(157, 226), (317, 386), (476, 545), (640, 706), (797, 866)]
+        xs = [slice(157, 226), slice(317, 386), slice(476, 545),
+              slice(640, 706), slice(797, 866)]
         spot_flux = 100000       # due to psf flux in large IFU slices (2")
-        for i in range(5):
-            x0, x1 = xs[i]
-            trace_flux = det_im[:, x0:x1].sum()     # sum along a trace
+        for sl in xs:
+            trace_flux = det_im[:, sl].sum()     # sum along a trace
             assert round(trace_flux / spot_flux) == 15 * 5
 
     def test_random_star_field(self):
-        src = sim.source.source_templates.star_field(n=100, mmin=8, mmax=18, width=10)
+        src = sim.source.source_templates.star_field(
+            n=100, mmin=8, mmax=18, width=10)
 
-        cmd = sim.UserCommands(use_instrument="basic_instrument",
-                               set_modes=["ifu"])
+        cmd = sim.UserCommands(
+            use_instrument="basic_instrument",
+            set_modes=["ifu"],
+            ignore_effects=[
+                "source_fits_keywords",
+                "effects_fits_keywords",
+                "config_fits_keywords",
+            ],
+        )
         opt = sim.OpticalTrain(cmd)
-        for effect_name in ["source_fits_keywords", "effects_fits_keywords",
-                            "config_fits_keywords"]:
-            opt[effect_name].include = False
 
         opt.observe(src)
         hdul = opt.readout()[0]
@@ -183,4 +195,4 @@ class TestFitsHeader:
         assert hdr["SIM SRC0 object"] == 'star'
         assert hdr["SIM EFF14 class"] == 'SourceDescriptionFitsKeywords'
         assert hdr["SIM CONFIG OBS filter_name"] == 'J'
-        assert hdr["ESO ATM SEEING"] == sim.utils.from_currsys("!OBS.psf_fwhm")
+        assert hdr["ESO ATM SEEING"] == opt.cmds["!OBS.psf_fwhm"]

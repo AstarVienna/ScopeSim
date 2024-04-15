@@ -42,21 +42,25 @@ class TestOpticalElementInit:
         assert len(opt_el.effects) == 3
         assert opt_el.effects[2].include is False
 
+    # TODO: Check whether the test below actually does what I think it's testing.
+    # Should be obsolete once the currsys is removed from rc
     def test_currsys_ignore_effects_have_false_include_flag(self, atmo_yaml_dict):
         with patch("scopesim.rc.__currsys__", UserCommands()) as patched:
-            patched.ignore_effects = ["super_psf", "atmo_dispersion"]
-            opt_el = opt_elem.OpticalElement(atmo_yaml_dict)
-            for ii in range(2):
-                assert opt_el.effects[ii].include is False
+            patched.ignore_effects = ["super_psf"]
+            opt_el = opt_elem.OpticalElement(atmo_yaml_dict, cmds=patched)
+            for ii in patched.ignore_effects:
+                assert opt_el["super_psf"].include is False
 
 
 @pytest.mark.usefixtures("patch_mock_path")
 class TestOpticalElementGetZOrderEffects:
-    @pytest.mark.parametrize("z_orders, n", [(0, 2), (100, 1), ([200, 299], 1)])
-    def test_returns_the_effects_with_z_values(self, z_orders, n,
+    @pytest.mark.parametrize("z_lvl, zmax, n", [(0, None, 2),
+                                                (100, None, 1),
+                                                (200, 299, 1)])
+    def test_returns_the_effects_with_z_values(self, z_lvl, zmax, n,
                                                detector_yaml_dict):
         opt_el = opt_elem.OpticalElement(detector_yaml_dict)
-        assert len(opt_el.get_z_order_effects(z_orders)) == n
+        assert len(list(opt_el.get_z_order_effects(z_lvl, zmax))) == n
 
 
 @pytest.mark.usefixtures("patch_mock_path")

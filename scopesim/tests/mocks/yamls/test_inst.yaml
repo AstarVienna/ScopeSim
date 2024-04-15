@@ -12,7 +12,7 @@ effects :
 -   name : micado_surface_list
     class : SurfaceList
     kwargs :
-        file_name : micado_mirror_list.tbl
+        filename : micado_mirror_list.tbl
 
 -   name : micado_adc
     class : AtmosphericDispersion

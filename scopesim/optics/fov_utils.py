@@ -1,4 +1,3 @@
-import logging
 
 import numpy as np
 from astropy import units as u
@@ -7,8 +6,11 @@ from astropy.table import Table, Column
 from astropy.wcs import WCS
 from synphot import SourceSpectrum, Empirical1D
 
-from .. import utils
 from . import image_plane_utils as imp_utils
+from ..utils import from_currsys, quantify, quantity_from_table, get_logger
+
+
+logger = get_logger(__name__)
 
 
 def is_field_in_fov(fov_header, field, wcs_suffix=""):
@@ -34,18 +36,18 @@ def is_field_in_fov(fov_header, field, wcs_suffix=""):
         is_inside_fov = True
     else:
         if isinstance(field, Table):
-            x = list(utils.quantity_from_table("x", field,
+            x = list(quantity_from_table("x", field,
                                                u.arcsec).to(u.deg).value)
-            y = list(utils.quantity_from_table("y", field,
+            y = list(quantity_from_table("y", field,
                                                u.arcsec).to(u.deg).value)
             s = wcs_suffix
-            # cdelt = utils.quantify(fov_header["CDELT1" + s], u.deg).value
+            # cdelt = quantify(fov_header["CDELT1" + s], u.deg).value
             cdelt = fov_header[f"CDELT1{s}"] * u.Unit(fov_header[f"CUNIT1{s}"]).to(u.deg)
             field_header = imp_utils.header_from_list_of_xy(x, y, cdelt, s)
         elif isinstance(field, (fits.ImageHDU, fits.PrimaryHDU)):
             field_header = field.header
         else:
-            logging.warning("Input was neither Table nor ImageHDU: %s", field)
+            logger.warning("Input was neither Table nor ImageHDU: %s", field)
             return False
 
         xy = imp_utils.calc_footprint(field_header, wcs_suffix)
@@ -105,8 +107,8 @@ def combine_table_fields(fov_header, src, field_indexes):
     for ii in field_indexes:
         field = src.fields[ii]
         if isinstance(field, Table):
-            xcol = utils.quantity_from_table("x", field, u.arcsec)
-            ycol = utils.quantity_from_table("y", field, u.arcsec)
+            xcol = quantity_from_table("x", field, u.arcsec)
+            ycol = quantity_from_table("y", field, u.arcsec)
             x += list(xcol.to(u.deg).value)
             y += list(ycol.to(u.deg).value)
             ref += list(field["ref"])
@@ -130,7 +132,7 @@ def combine_table_fields(fov_header, src, field_indexes):
 
 
 def combine_imagehdu_fields(fov_header, src, fields_indexes, wave_min, wave_max,
-                            area, wcs_suffix=""):
+                            area, wcs_suffix="", cmds=None):
     """
     Combine list of ImageHDUs into a single one bounded by the Header WCS.
 
@@ -159,7 +161,7 @@ def combine_imagehdu_fields(fov_header, src, fields_indexes, wave_min, wave_max,
     """
     image = np.zeros((fov_header["NAXIS2"], fov_header["NAXIS1"]))
     canvas_hdu = fits.ImageHDU(header=fov_header, data=image)
-    spline_order = utils.from_currsys("!SIM.computing.spline_order")
+    spline_order = from_currsys("!SIM.computing.spline_order", cmds)
     pixel_area = (fov_header["CDELT1"] * fov_header["CDELT2"] *
                   u.Unit(fov_header["CUNIT1"].lower()).to(u.arcsec) ** 2)
 
@@ -292,14 +294,19 @@ def extract_area_from_imagehdu(imagehdu, fov_volume):
     xy_hdu = image_wcs.calc_footprint(center=False, axes=(naxis1, naxis2))
 
     if image_wcs.wcs.cunit[0] == "deg":
+        logger.debug("Found 'deg' in image WCS, applying 360 fix.")
         imp_utils._fix_360(xy_hdu)
     elif image_wcs.wcs.cunit[0] == "arcsec":
+        logger.debug("Found 'arcsec' in image WCS, converting to deg.")
         xy_hdu *= u.arcsec.to(u.deg)
+    logger.debug("XY HDU:\n%s", xy_hdu)
 
     xy_fov = np.array([fov_volume["xs"], fov_volume["ys"]]).T
 
     if fov_volume["xy_unit"] == "arcsec":
         xy_fov *= u.arcsec.to(u.deg)
+
+    logger.debug("XY FOV:\n%s", xy_fov)
 
     xy0s = np.array((xy_hdu.min(axis=0), xy_fov.min(axis=0))).max(axis=0)
     xy1s = np.array((xy_hdu.max(axis=0), xy_fov.max(axis=0))).min(axis=0)
@@ -307,11 +314,18 @@ def extract_area_from_imagehdu(imagehdu, fov_volume):
     # Round to avoid floating point madness
     xyp = image_wcs.wcs_world2pix(np.array([xy0s, xy1s]), 0).round(7)
 
+    # To deal with negative CDELTs
+    logger.debug("xyp:\n%s", xyp)
+    xyp.sort(axis=0)
+    logger.debug("xyp:\n%s", xyp)
+
     xy0p = np.max(((0, 0), np.floor(xyp[0]).astype(int)), axis=0)
     xy1p = np.min(((naxis1, naxis2), np.ceil(xyp[1]).astype(int)), axis=0)
 
     # Add 1 if the same
     xy1p += (xy0p == xy1p)
+
+    logger.debug("xy0p: %s; xy1p: %s", xy0p, xy1p)
 
     new_wcs, new_naxis = imp_utils.create_wcs_from_points(
         np.array([xy0s, xy1s]), pixel_scale=hdr["CDELT1"])
@@ -334,14 +348,14 @@ def extract_area_from_imagehdu(imagehdu, fov_volume):
         hdu_waves = get_cube_waveset(hdr)
         wdel = hdr["CDELT3"]
         wunit = u.Unit(hdr.get("CUNIT3", "AA"))
-        fov_waves = utils.quantify(fov_volume["waves"], u.um).to(wunit).value
+        fov_waves = quantify(fov_volume["waves"], u.um).to(wunit).value
         mask = ((hdu_waves > fov_waves[0] - 0.5 * wdel) *
                 (hdu_waves <= fov_waves[1] + 0.5 * wdel))  # need to go [+/-] half a bin
 
         # OC [2021-12-14] if fov range is not covered by the source return nothing
         if not np.any(mask):
-            logging.warning("FOV %s um - %s um: not covered by Source",
-                            fov_waves[0], fov_waves[1])
+            logger.warning("FOV %s um - %s um: not covered by Source",
+                           fov_waves[0], fov_waves[1])
             # FIXME: returning None here breaks the principle that a function
             #        should always return the same type. Maybe this should
             #        instead raise an exception that's caught higher up...
@@ -362,7 +376,6 @@ def extract_area_from_imagehdu(imagehdu, fov_volume):
         # f0, f1 : the scaling factors for the blue and red edge cube slices
         #
         # w0, w1 = hdu_waves[i0p], hdu_waves[i1p]
-        # print(f"\nw0: {w0}, f0: {f0}, {fov_waves}, f1: {f1}, w1: {w1}")
 
         new_hdr.update({"NAXIS": 3,
                         "NAXIS3": data.shape[0],
@@ -379,7 +392,7 @@ def extract_area_from_imagehdu(imagehdu, fov_volume):
         new_hdr["SPEC_REF"] = hdr.get("SPEC_REF")
 
     if not data.size:
-        logging.warning("Empty image HDU.")
+        logger.warning("Empty image HDU.")
 
     new_imagehdu = fits.ImageHDU(data=data)
     new_imagehdu.header.update(new_hdr)
@@ -412,17 +425,17 @@ def extract_range_from_spectrum(spectrum, waverange):
         raise ValueError(f"spectrum must be of type synphot.SourceSpectrum: "
                          f"{type(spectrum)}")
 
-    wave_min, wave_max = utils.quantify(waverange, u.um).to(u.AA).value
+    wave_min, wave_max = quantify(waverange, u.um).to(u.AA).value
     spec_waveset = spectrum.waveset.to(u.AA).value
     mask = (spec_waveset > wave_min) * (spec_waveset < wave_max)
 
     # if sum(mask) == 0:
-    #     logging.info(("Waverange does not overlap with Spectrum waveset: "
-    #                   "%s <> %s for spectrum %s"),
-    #                  [wave_min, wave_max], spec_waveset, spectrum)
+    #     logger.info(
+    #         "Waverange does not overlap with Spectrum waveset: %s <> %s for "
+    #         "spectrum %s", [wave_min, wave_max], spec_waveset, spectrum)
     if wave_min < min(spec_waveset) or wave_max > max(spec_waveset):
-        logging.info(("Waverange only partially overlaps with Spectrum waveset: "
-                      "%s <> %s for spectrum %s"),
+        logger.info(("Waverange only partially overlaps with Spectrum waveset: "
+                     "%s <> %s for spectrum %s"),
                      [wave_min, wave_max], spec_waveset, spectrum)
 
     wave = np.r_[wave_min, spec_waveset[mask], wave_max]

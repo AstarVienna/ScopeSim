@@ -195,6 +195,7 @@ class TestFlattenDict:
         assert flat_dict["HIERARCH SIM SRC0 scaling_unit"] == "mag"
 
     def test_resolves_bang_strings(self):
+        # TODO: Use fixtures, because success depends on order of tests.
         dic = {"SIM": {"random_seed": "!SIM.random.seed"}}
         flat_dict = fh.flatten_dict(dic, resolve=True)
         assert flat_dict["SIM random_seed"] is None
@@ -300,10 +301,11 @@ class TestAllFitsKeywordEffects:
                        }
                    }
                    }
-        extra_keys = fh.ExtraFitsKeywords(header_dict=hdr_dic)
-        opt_keys = fh.EffectsMetaKeywords()
-        src_keys = fh.SourceDescriptionFitsKeywords()
-        config_keys = fh.SimulationConfigFitsKeywords()
+        cmds = simplecado_opt.cmds
+        extra_keys = fh.ExtraFitsKeywords(header_dict=hdr_dic, cmds=cmds)
+        opt_keys = fh.EffectsMetaKeywords(cmds=cmds)
+        src_keys = fh.SourceDescriptionFitsKeywords(cmds=cmds)
+        config_keys = fh.SimulationConfigFitsKeywords(cmds=cmds)
 
         for eff in [src_keys, opt_keys, config_keys, extra_keys]:
             simplecado_opt.optics_manager.add_effect(eff)

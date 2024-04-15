@@ -5,8 +5,9 @@ The Effect is called `SpectralTraceList`, it applies a list of
 `spectral_trace_list_utils.SpectralTrace` objects to a `FieldOfView`.
 """
 
-import logging
 from itertools import cycle
+
+from tqdm import tqdm
 
 from astropy.io import fits
 from astropy.table import Table
@@ -14,9 +15,12 @@ from astropy.table import Table
 from .effects import Effect
 from .ter_curves import FilterCurve
 from .spectral_trace_list_utils import SpectralTrace, make_image_interpolations
-from ..utils import from_currsys, check_keys, figure_factory
 from ..optics.image_plane_utils import header_from_list_of_xy
 from ..base_classes import FieldOfViewBase, FOVSetupBase
+from ..utils import from_currsys, check_keys, figure_factory, get_logger
+
+
+logger = get_logger(__name__)
 
 
 class SpectralTraceList(Effect):
@@ -84,15 +88,16 @@ class SpectralTraceList(Effect):
 
     """
 
-    _class_params = {"x_colname": "x",
-                     "y_colname": "y",
-                     "s_colname": "s",
-                     "wave_colname": "wavelength",
-                     "col_number_start": 0,
-                     "center_on_wave_mid": False,
-                     "dwave": 0.002,  # [um] for finding best fit dispersion
-                     "invalid_value": None,  # for dodgy trace file values
-                     }
+    _class_params = {
+        "x_colname": "x",
+        "y_colname": "y",
+        "s_colname": "s",
+        "wave_colname": "wavelength",
+        "col_number_start": 0,
+        "center_on_wave_mid": False,
+        "dwave": 0.002,  # [um] for finding best fit dispersion
+        "invalid_value": None,  # for dodgy trace file values
+    }
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -100,23 +105,24 @@ class SpectralTraceList(Effect):
         if "hdulist" in kwargs and isinstance(kwargs["hdulist"], fits.HDUList):
             self._file = kwargs["hdulist"]
 
-        params = {"z_order": [70, 270, 670],
-                  "pixel_scale": "!INST.pixel_scale",  # [arcsec / pix]}
-                  "plate_scale": "!INST.plate_scale",  # [arcsec / mm]
-                  "spectral_bin_width": "!SIM.spectral.spectral_bin_width", # [um]
-                  "wave_min": "!SIM.spectral.wave_min",  # [um]
-                  "wave_mid": "!SIM.spectral.wave_mid",  # [um]
-                  "wave_max": "!SIM.spectral.wave_max",  # [um]
-                  "x_colname": "x",
-                  "y_colname": "y",
-                  "s_colname": "s",
-                  "wave_colname": "wavelength",
-                  "center_on_wave_mid": False,
-                  "dwave": 0.002,  # [um] for finding the best fit dispersion
-                  "invalid_value": None,  # for dodgy trace file values
-                  "report_plot_include": True,
-                  "report_table_include": False,
-                  }
+        params = {
+            "z_order": [70, 270, 670],
+            "pixel_scale": "!INST.pixel_scale",  # [arcsec / pix]}
+            "plate_scale": "!INST.plate_scale",  # [arcsec / mm]
+            "spectral_bin_width": "!SIM.spectral.spectral_bin_width", # [um]
+            "wave_min": "!SIM.spectral.wave_min",  # [um]
+            "wave_mid": "!SIM.spectral.wave_mid",  # [um]
+            "wave_max": "!SIM.spectral.wave_max",  # [um]
+            "x_colname": "x",
+            "y_colname": "y",
+            "s_colname": "s",
+            "wave_colname": "wavelength",
+            "center_on_wave_mid": False,
+            "dwave": 0.002,  # [um] for finding the best fit dispersion
+            "invalid_value": None,  # for dodgy trace file values
+            "report_plot_include": True,
+            "report_table_include": False,
+        }
         self.meta.update(params)
 
         # Parameters that are specific to the subclass
@@ -126,12 +132,13 @@ class SpectralTraceList(Effect):
         if self._file is not None:
             self.make_spectral_traces()
 
+            self.update_meta()
+
     def make_spectral_traces(self):
         """Return a dictionary of spectral traces read in from a file."""
         self.ext_data = self._file[0].header["EDATA"]
         self.ext_cat = self._file[0].header["ECAT"]
         self.catalog = Table(self._file[self.ext_cat].data)
-
         spec_traces = {}
         for row in self.catalog:
             params = {col: row[col] for col in row.colnames}
@@ -140,6 +147,33 @@ class SpectralTraceList(Effect):
             spec_traces[row["description"]] = SpectralTrace(hdu, **params)
 
         self.spectral_traces = spec_traces
+
+    def update_meta(self):
+        """
+        Update fov related meta values.
+
+        The values describe the full extent of the spectral trace
+        volume in wavelength and space
+        """
+        wlim, xlim, ylim = [], [], []
+        for thetrace in self.spectral_traces.values():
+            fov = thetrace.fov_grid()
+            if "wave_min" in fov:
+                wlim.extend([fov["wave_min"], fov["wave_max"]])
+            if "x_min" in fov:
+                xlim.extend([fov["x_min"], fov["x_max"]])
+            if "y_min" in fov:
+                ylim.extend([fov["y_min"], fov["y_max"]])
+
+        if wlim:
+            self.meta["wave_min"] = min(wlim)
+            self.meta["wave_max"] = max(wlim)
+        if xlim:
+            self.meta["x_min"] = min(xlim)
+            self.meta["x_max"] = max(xlim)
+        if ylim:
+            self.meta["y_min"] = min(ylim)
+            self.meta["y_max"] = max(ylim)
 
     def apply_to(self, obj, **kwargs):
         """
@@ -156,10 +190,14 @@ class SpectralTraceList(Effect):
         """
         if isinstance(obj, FOVSetupBase):
             # Setup of FieldOfView object
-            volumes = [spectral_trace.fov_grid()
-                       for spectral_trace in self.spectral_traces.values()]
+            # volumes = [spectral_trace.fov_grid()
+            #            for spectral_trace in self.spectral_traces.values()]
+
             new_vols_list = []
-            for vol in volumes:
+
+            # for vol in volumes:
+            for spt in self.spectral_traces.values():
+                vol = spt.fov_grid()
                 wave_edges = [vol["wave_min"], vol["wave_max"]]
                 if "x_min" in vol:
                     x_edges = [vol["x_min"], vol["x_max"]]
@@ -191,7 +229,7 @@ class SpectralTraceList(Effect):
                 # for MAAT
                 pass
             elif obj.hdu is None and obj.cube is None:
-                logging.info("Making cube")
+                logger.info("Making cube")
                 obj.cube = obj.make_cube_hdu()
 
             spt = self.spectral_traces[obj.trace_id]
@@ -215,8 +253,9 @@ class SpectralTraceList(Effect):
 
     @property
     def image_plane_header(self):
+        """Create and return header for the ImagePlane."""
         x, y = self.footprint
-        pixel_scale = from_currsys(self.meta["pixel_scale"])
+        pixel_scale = from_currsys(self.meta["pixel_scale"], self.cmds)
         hdr = header_from_list_of_xy(x, y, pixel_scale, "D")
 
         return hdr
@@ -255,47 +294,48 @@ class SpectralTraceList(Effect):
         # keywords for the filter... We try to make it work for METIS
         # and MICADO for the time being.
         try:
-            filter_name = from_currsys("!OBS.filter_name")
+            filter_name = from_currsys("!OBS.filter_name", self.cmds)
         except ValueError:
-            filter_name = from_currsys("!OBS.filter_name_fw1")
+            filter_name = from_currsys("!OBS.filter_name_fw1", self.cmds)
 
         filtcurve = FilterCurve(
             filter_name=filter_name,
-            filename_format=from_currsys("!INST.filter_file_format"))
+            filename_format=from_currsys("!INST.filter_file_format", self.cmds))
         filtwaves = filtcurve.table["wavelength"]
         filtwave = filtwaves[filtcurve.table["transmission"] > 0.01]
         wave_min, wave_max = min(filtwave), max(filtwave)
-        logging.info("Full wavelength range: %.02f .. %.02f um",
-                     wave_min, wave_max)
+        logger.info(
+            "Full wavelength range: %.02f .. %.02f um", wave_min, wave_max)
 
         if xi_min is None or xi_max is None:
             try:
                 xi_min = inhdul[0].header["HIERARCH INS SLIT XIMIN"]
                 xi_max = inhdul[0].header["HIERARCH INS SLIT XIMAX"]
-                logging.info(
+                logger.info(
                     "Slit limits taken from header: %.02f .. %.02f arcsec",
                     xi_min, xi_max)
             except KeyError:
-                logging.error("""
-                Spatial slit limits (in arcsec) must be provided:
-                - either as method parameters xi_min and xi_max
-                - or as header keywords HIERARCH INS SLIT XIMIN/XIMAX
-                """)
+                logger.error(
+                    "Spatial slit limits (in arcsec) must be provided:\n"
+                    "- either as method parameters xi_min and xi_max\n"
+                    "- or as header keywords HIERARCH INS SLIT XIMIN/XIMAX"
+                )
                 return None
 
         bin_width = kwargs.get("bin_width", None)
 
         if interps is None:
-            logging.info("Computing interpolation functions")
+            logger.info("Computing interpolation functions")
             interps = make_image_interpolations(hdulist)
 
         pdu = fits.PrimaryHDU()
         pdu.header["FILETYPE"] = "Rectified spectra"
         # pdu.header["INSTRUME"] = inhdul[0].header["HIERARCH ESO OBS INSTRUME"]
-        # pdu.header["FILTER"] = from_currsys("!OBS.filter_name_fw1")
+        # pdu.header["FILTER"] = from_currsys("!OBS.filter_name_fw1", self.cmds)
         outhdul = fits.HDUList([pdu])
 
-        for i, trace_id in enumerate(self.spectral_traces, start=1):
+        for i, trace_id in tqdm(enumerate(self.spectral_traces, start=1),
+                                desc=" Traces"):
             hdu = self[trace_id].rectify(hdulist,
                                          interps=interps,
                                          bin_width=bin_width,
@@ -336,9 +376,9 @@ class SpectralTraceList(Effect):
 
         """
         if wave_min is None:
-            wave_min = from_currsys("!SIM.spectral.wave_min")
+            wave_min = from_currsys("!SIM.spectral.wave_min", self.cmds)
         if wave_max is None:
-            wave_max = from_currsys("!SIM.spectral.wave_max")
+            wave_max = from_currsys("!SIM.spectral.wave_max", self.cmds)
 
         if axes is None:
             fig, axes = figure_factory()
@@ -424,28 +464,35 @@ class SpectralTraceListWheel(Effect):
 
     """
 
-    required_keys = {"trace_list_names", "filename_format",
-                     "current_trace_list"}
+    required_keys = {
+        "trace_list_names",
+        "filename_format",
+        "current_trace_list",
+    }
     _current_str = "current_trace_list"
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         check_keys(kwargs, self.required_keys, action="error")
 
-        params = {"z_order": [70, 270, 670],
-                  "path": "",
-                  "report_plot_include": True,
-                  "report_table_include": True,
-                  "report_table_rounding": 4}
+        params = {
+            "z_order": [70, 270, 670],
+            "path": "",
+            "report_plot_include": True,
+            "report_table_include": True,
+            "report_table_rounding": 4,
+        }
         self.meta.update(params)
         self.meta.update(kwargs)
 
         path = self._get_path()
         self.trace_lists = {}
-        for name in from_currsys(self.meta["trace_list_names"]):
-            kwargs["name"] = name
+        if "name" in kwargs:
+            kwargs.pop("name")
+        for name in from_currsys(self.meta["trace_list_names"], self.cmds):
             fname = str(path).format(name)
             self.trace_lists[name] = SpectralTraceList(filename=fname,
+                                                       name=name,
                                                        **kwargs)
 
     def apply_to(self, obj, **kwargs):
@@ -455,7 +502,8 @@ class SpectralTraceListWheel(Effect):
     @property
     def current_trace_list(self):
         trace_list_eff = None
-        trace_list_name = from_currsys(self.meta["current_trace_list"])
+        trace_list_name = from_currsys(self.meta["current_trace_list"],
+                                       self.cmds)
         if trace_list_name is not None:
             trace_list_eff = self.trace_lists[trace_list_name]
         return trace_list_eff

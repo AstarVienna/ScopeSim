@@ -15,10 +15,10 @@ effects :
 -   name : telescope_psf
     class : FieldVaryingPsfFromFile
     kwargs :
-        file_name : PSF_MICADO_SCAO-FV_NIR.fits
+        filename : PSF_MICADO_SCAO-FV_NIR.fits
         field_varying : False
 
 -   name : telescope_surface_list
     class : SurfaceList
     kwargs :
-        file_name : elt_mirror_list.tbl
+        filename : elt_mirror_list.tbl

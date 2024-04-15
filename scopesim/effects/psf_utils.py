@@ -1,5 +1,4 @@
 import numpy as np
-import logging
 
 from scipy import ndimage as spi
 from scipy.interpolate import RectBivariateSpline, griddata
@@ -10,7 +9,10 @@ from astropy.io import fits
 
 from .. import utils
 from ..optics import image_plane_utils as imp_utils
-from ..utils import figure_factory
+from ..utils import figure_factory, get_logger
+
+
+logger = get_logger(__name__)
 
 
 def round_kernel_edges(kernel):
@@ -97,18 +99,17 @@ def make_strehl_map_from_table(tbl, pixel_scale=1*u.arcsec):
                                          np.arange(-25, 26))).T,
                     method="nearest")
 
-    new_wcs, _ = imp_utils.create_wcs_from_points(np.array([[-25, -25],
-                                                            [25, 25]]),
-                                                  pixel_scale=1, arcsec=True)
+    new_wcs, _ = imp_utils.create_wcs_from_points(
+        np.array([[-25, -25],
+                  [25, 25]]) * u.arcsec,
+        pixel_scale=1*u.arcsec/u.pixel)
 
     map_hdu = fits.ImageHDU(header=new_wcs.to_header(), data=smap)
 
     return map_hdu
 
 
-def rescale_kernel(image, scale_factor, spline_order=None):
-    if spline_order is None:
-        spline_order = utils.from_currsys("!SIM.computing.spline_order")
+def rescale_kernel(image, scale_factor, spline_order):
     sum_image = np.sum(image)
     image = zoom(image, scale_factor, order=spline_order)
     image = np.nan_to_num(image, copy=False)        # numpy version >=1.13
@@ -140,7 +141,7 @@ def cutout_kernel(image, fov_header, kernel_header=None):
     xcen, ycen = 0.5 * w, 0.5 * h
     xcen_w, ycen_w = wk.wcs_world2pix(np.array([[0., 0.]]), 0).squeeze().round(7)
     if xcen != xcen_w or ycen != ycen_w:
-        logging.warning("PSF center off")
+        logger.warning("PSF center off")
 
     dx = 0.5 * fov_header["NAXIS1"]
     dy = 0.5 * fov_header["NAXIS2"]
