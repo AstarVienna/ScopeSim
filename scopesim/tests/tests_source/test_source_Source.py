@@ -140,7 +140,7 @@ class TestSourceInit:
 
     def test_initialises_with_image_and_1_spectrum(self, input_hdulist,
                                                    input_spectra):
-        src = Source(image_hdu=input_hdulist[0], spectra=input_spectra)
+        src = Source(image_hdu=input_hdulist[0], spectra=input_spectra[0])
         assert isinstance(src, Source)
         assert isinstance(src.spectra[0], SourceSpectrum)
         assert isinstance(src.fields[0], fits.ImageHDU)
@@ -177,7 +177,7 @@ class TestSourceInit:
     def test_initialises_with_filename_and_spectrum(self, ii, dtype,
                                                     input_files, input_spectra):
         fname = input_files[ii]
-        src = Source(filename=fname, spectra=input_spectra)
+        src = Source(filename=fname, spectra=input_spectra[0])
         assert isinstance(src, Source)
         assert isinstance(src.spectra[0], SourceSpectrum)
         assert isinstance(src.fields[0], dtype)
@@ -304,7 +304,7 @@ class TestSourcePhotonsInRange:
         assert np.allclose(ph.value, [2.])
 
     def test_correct_photons_are_returned_for_no_spectra(self, image_source):
-        image_source.spectra = []
+        image_source.spectra = {}
         ph = image_source.photons_in_range(1, 2)
         assert len(ph) == 0
 
