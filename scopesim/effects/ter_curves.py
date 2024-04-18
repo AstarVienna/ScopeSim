@@ -113,7 +113,7 @@ class TERCurve(Effect):
             thru = self.throughput
 
             # apply transmission to source spectra
-            for isp, spec in enumerate(obj.spectra):
+            for isp, spec in obj.spectra.items():
                 obj.spectra[isp] = combine_two_spectra(spec, thru, "multiply",
                                                        wave_min, wave_max)
 

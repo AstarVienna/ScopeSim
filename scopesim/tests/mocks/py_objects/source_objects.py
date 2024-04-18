@@ -142,7 +142,7 @@ def _cube_source(**kwargs):
 
     # Broadcast the array onto a 3rd dimension and scale along the new axis
     im_src.fields[0].data = data[None, :, :] * np.linspace(0, 4, n)[:, None, None]
-    im_src.spectra = []
+    im_src.spectra = {}
 
     # FIXME: CRPIX might be wrong here, aka off-by-one!!
     # But all other code assumes it like this, so I'm keeping it for now.
