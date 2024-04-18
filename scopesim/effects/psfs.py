@@ -87,7 +87,12 @@ class PSF(Effect):
                 #    kernel /= np.sum(kernel)
                 #    kernel[kernel < 0.] = 0.
 
-                image = obj.hdu.data.astype(float)
+                # This line copied the entire image, while below obj.hdu.data
+                # is updated anyway. So better do all modifications in place.
+                #image = obj.hdu.data.astype(float)
+                if obj.hdu.data.dtype != float:
+                    obj.hdu.data = obj.hdu.data.astype(float)
+                image = obj.hdu.data
 
                 # subtract background level before convolving, re-add afterwards
                 bkg_level = pu.get_bkg_level(image, self.meta["bkg_width"])
@@ -109,7 +114,10 @@ class PSF(Effect):
                             image[iplane,] - bkg_level[iplane,],
                             kernel[iplane,], mode=mode)
 
-                obj.hdu.data = new_image + bkg_level
+                # This line also copied all the data, better to do the
+                # modifications in place.
+                #obj.hdu.data = new_image + bkg_level
+                obj.hdu.data -= bkg_level
 
                 # ..todo: careful with which dimensions mean what
                 d_x = new_image.shape[-1] - image.shape[-1]
