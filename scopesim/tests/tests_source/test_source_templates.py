@@ -1,13 +1,11 @@
 import pytest
 from pytest import approx
-from unittest.mock import patch
 
 from matplotlib import pyplot as plt
 
 from astropy import units as u
 from astropy.table import Table
 
-from scopesim import rc
 from scopesim import load_example_optical_train
 from scopesim.source import source_templates as src_ts
 from scopesim.source.source import Source
@@ -35,7 +33,7 @@ class TestStarField:
 
     def test_star_fields_data(self):
         src = src_ts.star_field(100, 15, 25, 60)
-        assert isinstance(src.fields[0], Table)
+        assert isinstance(src.fields[0].field, Table)
         assert all(src.fields[0]["weight"] == 10**(-0.4 * src.fields[0]["mag"]))
         src.shift(0.1, 0.2)
 

@@ -32,16 +32,12 @@
 # [WCS = CRPIXn, CRVALn = (0,0), CTYPEn, CDn_m, NAXISn, CUNITn
 """
 
-# import pickle
 from copy import deepcopy
 from pathlib import Path
-from typing import Union, TextIO
 from io import StringIO
 
 import numpy as np
-
-from astropy.table import Table, Column
-from astropy.io import ascii as ioascii
+from astropy.table import Table
 from astropy.io import fits
 from astropy import units as u
 from astropy.wcs import WCS
@@ -53,11 +49,12 @@ from ..optics import image_plane_utils as imp_utils
 from .source_utils import validate_source_input, convert_to_list_of_spectra, \
     photons_in_range
 from . import source_templates as src_tmp
-
 from ..base_classes import SourceBase
-from ..utils import (find_file, is_fits, get_fits_type, quantify,
-                     quantity_from_table, convert_table_comments_to_dict,
-                     close_loop, figure_factory, get_logger)
+from .source_fields import (SourceField, TableSourceField, SpectrumSourceField,
+                            HDUSourceField, ImageSourceField, CubeSourceField)
+from ..utils import (find_file, is_fits, get_fits_type,
+                     quantity_from_table,
+                     figure_factory, get_logger)
 
 
 logger = get_logger(__name__)
@@ -133,8 +130,8 @@ class Source(SourceBase):
     fields : list
         The spatial distribution of the on-sky source, either as
         ``fits.ImageHDU`` or ``astropy.Table`` objects
-    spectra : list of ``synphot.SourceSpectrum`` objects
-        List of spectra associated with the fields
+    spectra : dict of ``synphot.SourceSpectrum`` objects
+        Dictionary of spectra associated with the fields
     meta : dict
         Dictionary of extra information about the source
 
@@ -148,45 +145,40 @@ class Source(SourceBase):
                  lam=None, spectra=None, x=None, y=None, ref=None, weight=None,
                  table=None, image_hdu=None, flux=None, **kwargs):
 
-        self.meta = {}
-        self.meta.update(kwargs)
-        # ._meta_dicts contains a meta for each of the .fields. It is primarily
-        # used to set proper FITS header keywords for each field so the source
-        # can be reconstructed from the FITS headers.
-        self._meta_dicts = [self.meta]
+        self._meta = {}
+        self.fields: list[SourceField] = []
 
-        self.fields: list[Union[Table, fits.ImageHDU]] = []
-        self.spectra: dict[int, SourceSpectrum] = {}
+        self._bandpass: SpectralElement | None = None
 
-        self.bandpass = None
-
-        validate_source_input(lam=lam, x=x, y=y, ref=ref, weight=weight,
-                              spectra=spectra, table=table, cube=cube,
-                              ext=ext, image_hdu=image_hdu, flux=flux,
-                              filename=filename)
+        # The rest of these is not implemented in validate_source_input
+        # validate_source_input(lam=lam, x=x, y=y, ref=ref, weight=weight,
+        #                       spectra=spectra, table=table, cube=cube,
+        #                       ext=ext, image_hdu=image_hdu, flux=flux,
+        #                       filename=filename)
+        validate_source_input(table=table, image_hdu=image_hdu, filename=filename)
 
         if spectra is not None:
             spectra = {i: spec for i, spec in
                        enumerate(convert_to_list_of_spectra(spectra, lam))}
 
         if filename is not None and spectra is not None:
-            self._from_file(filename, spectra, flux)
+            self._from_file(filename, spectra, flux, **kwargs)
 
         elif cube is not None:
-            self._from_cube(cube=cube, ext=ext)
+            self._from_cube(cube=cube, ext=ext, **kwargs)
 
         elif table is not None and spectra is not None:
-            self._from_table(table, spectra)
+            self._from_table(table, spectra, **kwargs)
 
         elif image_hdu is not None and spectra is not None:
-            self._from_imagehdu_and_spectra(image_hdu, spectra)
+            self._from_imagehdu_and_spectra(image_hdu, spectra, **kwargs)
 
         elif image_hdu is not None and flux is not None:
-            self._from_imagehdu_and_flux(image_hdu, flux)
+            self._from_imagehdu_and_flux(image_hdu, flux, **kwargs)
 
         elif image_hdu is not None and flux is None and spectra is None:
             if image_hdu.header.get("BUNIT") is not None:
-                self._from_imagehdu_only(image_hdu)
+                self._from_imagehdu_only(image_hdu, **kwargs)
             else:
                 msg = ("image_hdu must be accompanied by either spectra or "
                        f"flux:\n spectra: {spectra}, flux: {flux}")
@@ -194,55 +186,41 @@ class Source(SourceBase):
 
         elif x is not None and y is not None and \
                 ref is not None and spectra is not None:
-            self._from_arrays(x, y, ref, weight, spectra)
+            self._from_arrays(x, y, ref, weight, spectra, **kwargs)
 
-    def _from_file(self, filename, spectra, flux):
-        if self.spectra or self.fields:
-            raise ValueError("Constructor method must act on empty instance!")
+        self.meta.update(kwargs)
+
+    def _from_file(self, filename, spectra, flux, **kwargs):
+        assert not self.fields, "Constructor method must act on empty instance!"
 
         filename = find_file(filename)
 
-        if not is_fits(filename):
-            tbl = ioascii.read(filename)
-            tbl.meta.update(convert_table_comments_to_dict(tbl))
-            self._from_table(tbl, spectra)
+        if not is_fits(filename) or get_fits_type(filename) == "bintable":
+            self.fields = [
+                TableSourceField.from_file(filename, spectra, **kwargs)
+            ]
             return
 
-        fits_type = get_fits_type(filename)
         data = fits.getdata(filename)
         hdr = fits.getheader(filename)
         hdr["FILENAME"] = Path(filename).name
-        if fits_type == "image":
-            image = fits.ImageHDU(data=data, header=hdr)
-            if spectra is not None:
-                self._from_imagehdu_and_spectra(image, spectra)
-            elif flux is not None:
-                self._from_imagehdu_and_flux(image, flux)
-            else:
-                self._from_imagehdu_only(image)
-        elif fits_type == "bintable":
-            hdr1 = fits.getheader(filename, 1)
-            hdr.update(hdr1)
-            tbl = Table(data, meta=dict(hdr))
-            tbl.meta.update(convert_table_comments_to_dict(tbl))
-            self._from_table(tbl, spectra)
+        image = fits.ImageHDU(data=data, header=hdr)
+        if spectra is not None:
+            self._from_imagehdu_and_spectra(image, spectra, **kwargs)
+        elif flux is not None:
+            self._from_imagehdu_and_flux(image, flux, **kwargs)
+        else:
+            self._from_imagehdu_only(image, **kwargs)
 
-    def _from_table(self, tbl: Table, spectra: dict[int, SourceSpectrum]):
-        if self.spectra or self.fields:
-            raise ValueError("Constructor method must act on empty instance!")
+    def _from_table(self, tbl: Table, spectra: dict[int, SourceSpectrum],
+                    **kwargs):
+        assert not self.fields, "Constructor method must act on empty instance!"
+        self.fields = [TableSourceField(tbl, spectra, meta=kwargs)]
 
-        if "weight" not in tbl.colnames:
-            tbl.add_column(Column(name="weight", data=np.ones(len(tbl))))
-        # tbl["ref"] += len(self.spectra)
-        # self.fields.append(tbl)
-        # self.spectra += spectra
-
-        self.fields = [tbl]
-        self.spectra = spectra
-
-    def _from_imagehdu_and_spectra(self, image_hdu, spectra):
-        if self.spectra or self.fields:
-            raise ValueError("Constructor method must act on empty instance!")
+    def _from_imagehdu_and_spectra(self, image_hdu,
+                                   spectra: dict[int, SourceSpectrum],
+                                   **kwargs):
+        assert not self.fields, "Constructor method must act on empty instance!"
 
         if not image_hdu.header.get("BG_SRC"):
             pass
@@ -275,8 +253,6 @@ class Source(SourceBase):
         # image_hdu.header["SPEC_REF"] = len(self.spectra)
         assert len(spectra) == 1, f"_from_imagehdu_and_spectra needs single spectrum, ref was {image_hdu.header.get('SPEC_REF')}"
         image_hdu.header["SPEC_REF"] = 0
-        # self.spectra += spectra
-        self.spectra = spectra
 
         for i in [1, 2]:
             # Do not test for CUNIT or CDELT so that it throws an exception
@@ -285,12 +261,10 @@ class Source(SourceBase):
             image_hdu.header[f"CUNIT{i}"] = "deg"
             image_hdu.header[f"CDELT{i}"] = val * unit.to(u.deg)
 
-        # self.fields.append(image_hdu)
-        self.fields = [image_hdu]
+        self.fields = [ImageSourceField(image_hdu, spectra, meta=kwargs)]
 
-    def _from_imagehdu_and_flux(self, image_hdu, flux):
-        if self.spectra or self.fields:
-            raise ValueError("Constructor method must act on empty instance!")
+    def _from_imagehdu_and_flux(self, image_hdu, flux, **kwargs):
+        assert not self.fields, "Constructor method must act on empty instance!"
 
         if isinstance(flux, u.Unit):
             flux = 1 * flux
@@ -302,11 +276,10 @@ class Source(SourceBase):
                 flux = flux.to(u.ABmag)
             flux = flux.value
         spectra = {0: spec_template(flux)}
-        self._from_imagehdu_and_spectra(image_hdu, spectra)
+        self._from_imagehdu_and_spectra(image_hdu, spectra, **kwargs)
 
-    def _from_imagehdu_only(self, image_hdu):
-        if self.spectra or self.fields:
-            raise ValueError("Constructor method must act on empty instance!")
+    def _from_imagehdu_only(self, image_hdu, **kwargs):
+        assert not self.fields, "Constructor method must act on empty instance!"
 
         bunit = image_hdu.header.get("BUNIT")
         try:
@@ -319,31 +292,17 @@ class Source(SourceBase):
                 ">>> Source(image_hdu=..., flux=u.Unit(bunit), ...)", bunit)
 
         value = 0 if bunit in [u.mag, u.ABmag] else 1
-        self._from_imagehdu_and_flux(image_hdu, value * bunit)
+        self._from_imagehdu_and_flux(image_hdu, value * bunit, **kwargs)
 
     def _from_arrays(self, x, y, ref, weight,
-                     spectra: dict[int, SourceSpectrum]):
-        if self.spectra or self.fields:
-            raise ValueError("Constructor method must act on empty instance!")
+                     spectra: dict[int, SourceSpectrum],
+                     **kwargs):
+        assert not self.fields, "Constructor method must act on empty instance!"
+        self.fields = [
+            TableSourceField.from_arrays(x, y, ref, weight, spectra, **kwargs)
+        ]
 
-        if weight is None:
-            weight = np.ones(len(x))
-
-        x = quantify(x, u.arcsec)
-        y = quantify(y, u.arcsec)
-        # tbl = Table(names=["x", "y", "ref", "weight"],
-        #             data=[x, y, np.array(ref) + len(self.spectra), weight])
-        tbl = Table(names=["x", "y", "ref", "weight"],
-                    data=[x, y, ref, weight])
-        tbl.meta["x_unit"] = "arcsec"
-        tbl.meta["y_unit"] = "arcsec"
-
-        # self.fields.append(tbl)
-        # self.spectra += spectra
-        self.fields = [tbl]
-        self.spectra = spectra
-
-    def _from_cube(self, cube, ext=0):
+    def _from_cube(self, cube, ext=0, **kwargs):
         """
 
         Parameters
@@ -353,14 +312,13 @@ class Source(SourceBase):
             the extension where the cube is located if applicable.
 
         """
-        if self.spectra or self.fields:
-            raise ValueError("Constructor method must act on empty instance!")
+        assert not self.fields, "Constructor method must act on empty instance!"
 
         if isinstance(cube, fits.HDUList):
-            data = cube[ext].data
-            header = cube[ext].header
-            wcs = WCS(cube[ext], fobj=cube)
-        elif isinstance(cube, (fits.PrimaryHDU, fits.ImageHDU)):
+            self.fields = [CubeSourceField.from_hdulist(cube, ext, **kwargs)]
+            return
+
+        if isinstance(cube, (fits.PrimaryHDU, fits.ImageHDU)):
             data = cube.data
             header = cube.header
             wcs = WCS(cube)
@@ -400,37 +358,85 @@ class Source(SourceBase):
         cube_hdu = fits.ImageHDU(data=target_cube, header=target_hdr)
         cube_hdu.wave = wave          # ..todo: review wave attribute, bad practice
 
-        # self.fields.append(cube_hdu)
-        self.fields = [cube_hdu]
+        self.fields = [CubeSourceField(cube_hdu, meta=kwargs)]
+
+    def _get_fields(self, subclass):
+        """Yield fields of specific subclass."""
+        for field in self.fields:
+            if isinstance(field, subclass):
+                yield field
 
     @property
     def table_fields(self):
-        """List of fields that are defined through tables"""
-        fields = [field for field in self.fields if isinstance(field, Table)]
-        return fields
+        """Return list of fields that are defined through tables."""
+        return list(self._get_fields(TableSourceField))
 
     @property
     def image_fields(self):
-        """List of fields that are defined through two-dimensional images"""
-        fields = [field for field in self.fields if
-                  isinstance(field, fits.ImageHDU) and
-                  field.header["NAXIS"] == 2]
-        return fields
+        """Return list of fields that are defined through 2D images."""
+        return list(self._get_fields(ImageSourceField))
 
     @property
     def cube_fields(self):
-        """List of fields that are defined through three-dimensional cubes"""
-        fields = [field for field in self.fields if
-                  isinstance(field, fits.ImageHDU) and
-                  field.header["NAXIS"] == 3]
-        return fields
+        """Return list of fields that are defined through 3D datacubes."""
+        return list(self._get_fields(CubeSourceField))
+
+    @property
+    def spectra(self):
+        spectra = {}
+        for fld in self.fields:
+            if not isinstance(fld, SpectrumSourceField):
+                continue
+            try:
+                spectra.update(fld.spectra)
+            except TypeError:
+                logger.error("Error adding fields spectra.")
+        return spectra
+
+    @spectra.setter
+    def spectra(self, value):
+        logger.error("spectra setting is deprecated")
+        pass
+
+    @property
+    def meta(self):
+        if not self.fields:
+            return self._meta
+        return self.fields[0].meta
+
+    @meta.setter
+    def meta(self, value):
+        if not self.fields:
+            self._meta = value
+            return
+        self.fields[0].meta = value
+
+    @property
+    def _meta_dicts(self):
+        return [fld.meta for fld in self.fields]
+
+    @_meta_dicts.setter
+    def _meta_dicts(self, value):
+        logger.debug("_meta_dicts setting is deprecated")
+        pass
+
+    @property
+    def bandpass(self):
+        return self._bandpass
+
+    @bandpass.setter
+    def bandpass(self, bandpass):
+        if not isinstance(bandpass, SpectralElement):
+            raise ValueError("type(bandpass) must be synphot.SpectralElement")
+
+        self._bandpass = bandpass
 
     # ..todo: rewrite this method
     def image_in_range(self, wave_min, wave_max, pixel_scale=1*u.arcsec,
                        layers=None, area=None, spline_order=1, sub_pixel=False):
         if layers is None:
             layers = range(len(self.fields))
-        fields = [self.fields[ii] for ii in layers]
+        fields = [self.fields[ii].field for ii in layers]
 
         hdr = imp_utils.get_canvas_header(fields, pixel_scale=pixel_scale)
         im_plane = ImagePlane(hdr)
@@ -473,7 +479,7 @@ class Source(SourceBase):
 
         return im_plane
 
-    def photons_in_range(self, wave_min, wave_max, area=None, indexes=None):
+    def photons_in_range(self, wave_min, wave_max, area=None, indices=None):
         """
 
         Parameters
@@ -484,7 +490,7 @@ class Source(SourceBase):
             [um]
         area : float, u.Quantity, optional
             [m2]
-        indexes : list of integers, optional
+        indices : list of integers, optional
 
         Returns
         -------
@@ -493,11 +499,10 @@ class Source(SourceBase):
             [ph / s] if area is passed
 
         """
-        if indexes is None:
-            # indexes = range(len(self.spectra))
-            indexes = self.spectra.keys()
+        if indices is None:
+            indices = self.spectra.keys()
 
-        spectra = [self.spectra[ii] for ii in indexes]
+        spectra = [self.spectra[ii] for ii in indices]
         counts = photons_in_range(spectra, wave_min, wave_max, area=area,
                                   bandpass=self.bandpass)
         return counts
@@ -533,31 +538,13 @@ class Source(SourceBase):
 
         """
         if layers is None:
-            layers = np.arange(len(self.fields))
+            layers = range(len(self.fields))
 
         for ii in layers:
-            if isinstance(self.fields[ii], Table):
-                x = quantity_from_table("x", self.fields[ii], u.arcsec)
-                x += quantify(dx, u.arcsec)
-                self.fields[ii]["x"] = x
-
-                y = quantity_from_table("y", self.fields[ii], u.arcsec)
-                y += quantify(dy, u.arcsec)
-                self.fields[ii]["y"] = y
-            elif isinstance(self.fields[ii], (fits.ImageHDU, fits.PrimaryHDU)):
-                dx = quantify(dx, u.arcsec).to(u.deg)
-                dy = quantify(dy, u.arcsec).to(u.deg)
-                self.fields[ii].header["CRVAL1"] += dx.value
-                self.fields[ii].header["CRVAL2"] += dy.value
+            self.fields[ii].shift(dx, dy)
 
     def rotate(self, angle, offset=None, layers=None):
         pass
-
-    def add_bandpass(self, bandpass):
-        if not isinstance(bandpass, SpectralElement):
-            raise ValueError("type(bandpass) must be synphot.SpectralElement")
-
-        self.bandpass = bandpass
 
     def plot(self):
         """
@@ -571,29 +558,26 @@ class Source(SourceBase):
 
         colours = "rgbcymk" * (len(self.fields) // 7 + 1)
         for col, field in zip(colours, self.fields):
-            if isinstance(field, Table):
-                axes.plot(field["x"], field["y"], col+".")
-            elif isinstance(field, (fits.ImageHDU, fits.PrimaryHDU)):
-                xypts = imp_utils.calc_footprint(field.header)
-                convf = u.Unit(field.header["CUNIT1"]).to(u.arcsec)
-                outline = np.array(list(close_loop(xypts))) * convf
-                axes.plot(outline[:, 0], outline[:, 1], col)
-                axes.set_xlabel("x [arcsec]")
-                axes.set_ylabel("y [arcsec]")
+            field.plot(axes, col)
         axes.set_aspect("equal")
+        axes.set_xlabel("x [arcsec]")
+        axes.set_ylabel("y [arcsec]")
+        axes.legend()
         return axes
 
     def make_copy(self):
         new_source = Source()
         new_source.meta = deepcopy(self.meta)
-        new_source._meta_dicts = deepcopy(self._meta_dicts)
-        new_source.spectra = deepcopy(self.spectra)
+        # new_source._meta_dicts = deepcopy(self._meta_dicts)
+        # new_source.spectra = deepcopy(self.spectra)
         for field in self.fields:
-            if isinstance(field, (fits.ImageHDU, fits.PrimaryHDU)) \
-                    and field._file is not None:  # and field._data_loaded is False:
-                new_source.fields.append(field)
-            else:
-                new_source.fields.append(deepcopy(field))
+            new_source.fields.append(deepcopy(field))
+            # TODO: The code below refers to DataContainer??
+            # if isinstance(field, (fits.ImageHDU, fits.PrimaryHDU)) \
+            #         and field._file is not None:  # and field._data_loaded is False:
+            #     new_source.fields.append(field)
+            # else:
+            #     new_source.fields.append(deepcopy(field))
 
         return new_source
 
@@ -607,23 +591,23 @@ class Source(SourceBase):
         # updated at the same time. However, it is important that the fields
         # and _meta_dicts match when appending sources.
         if len(self.fields) == 0:
-            assert self._meta_dicts == [{}]
+            assert self._meta_dicts == [{}] or self._meta_dicts == []
             self._meta_dicts = []
 
         specrefoffset = max(self.spectra.keys()) + 1 if self.spectra else 0
         for field in new_source.fields:
-            if isinstance(field, Table):
-                field["ref"] += specrefoffset
+            if isinstance(field, TableSourceField):
+                field.field["ref"] += specrefoffset
                 self.fields.append(field)
 
-            elif isinstance(field, (fits.ImageHDU, fits.PrimaryHDU)):
+            elif isinstance(field, HDUSourceField):
                 if ("SPEC_REF" in field.header and
                         isinstance(field.header["SPEC_REF"], int)):
-                    field.header["SPEC_REF"] += specrefoffset
+                    field.field.header["SPEC_REF"] += specrefoffset
                 self.fields.append(field)
 
-            self.spectra.update({k + specrefoffset: v for k, v in
-                                 new_source.spectra.items()})
+            field.spectra = {k + specrefoffset: v for k, v in
+                             new_source.spectra.items()}
             self._meta_dicts += source_to_add._meta_dicts
 
     def __add__(self, new_source):
@@ -634,25 +618,10 @@ class Source(SourceBase):
     def __radd__(self, new_source):
         return self.__add__(new_source)
 
-    @staticmethod
-    def _write_tablefield(fld: Table, stream: TextIO) -> None:
-        stream.write(f"Table with {len(fld)} rows, referencing "
-                     f"spectra {set(fld['ref'])}")
-
-    @staticmethod
-    def _write_imagefield(fld: Union[fits.ImageHDU, fits.PrimaryHDU],
-                          stream: TextIO) -> None:
-        im_size = fld.data.shape if fld.data is not None else "<empty>"
-        stream.write(f"ImageHDU with size {im_size}, referencing "
-                     f"spectrum {fld.header.get('SPEC_REF', '-')}")
-
     def __repr__(self) -> str:
         with StringIO() as str_stream:
             for ifld, fld in enumerate(self.fields):
                 str_stream.write(f"[{ifld}]: ")
-                if isinstance(fld, Table):
-                    self._write_tablefield(fld, str_stream)
-                elif isinstance(fld, (fits.ImageHDU, fits.PrimaryHDU)):
-                    self._write_imagefield(fld, str_stream)
+                fld._write_stream(str_stream)
                 str_stream.write("\n")
             return str_stream.getvalue()

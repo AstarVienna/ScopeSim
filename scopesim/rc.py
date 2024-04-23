@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Global configurations for ScopeSim."""
+"""Global configurations for ScopeSim (rc ... runtime configuration)."""
 
 from pathlib import Path
 import yaml

@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from typing import Optional, Union
 from collections.abc import Iterable
+from pathlib import Path
 
 import numpy as np
 from astropy import wcs, units as u
@@ -8,7 +9,7 @@ from astropy.io import fits
 from astropy.table import Table
 from synphot import SourceSpectrum, Empirical1D, SpectralElement
 
-from ..utils import find_file, get_logger
+from ..utils import find_file, get_logger, convert_table_comments_to_dict
 
 
 logger = get_logger(__name__)
@@ -53,7 +54,6 @@ def validate_source_input(**kwargs) -> None:
                 "Image does not contain valid WCS. %s", wcs.WCS(image_hdu))
 
     if (tbl := kwargs.get("table")) is not None:
-        tbl = kwargs["table"]
         if not isinstance(tbl, Table):
             raise TypeError(
                 f"Table must be astropy.Table object: {type(tbl) = }")
@@ -114,8 +114,8 @@ def convert_to_list_of_spectra(spectra, lam) -> list[SourceSpectrum]:
 #        doing so currently causes a NameError. Not sure what's going on.
 def photons_in_range(
         spectra: SourceSpectrum,
-        wave_min: Union[u.Quantity[u.um], float],
-        wave_max: Union[u.Quantity[u.um], float],
+        wave_min: u.Quantity[u.um] | float,
+        wave_max: u.Quantity[u.um] | float,
         area: Optional[Union[u.Quantity[u.m**2], float]] = None,
         bandpass: Optional[SpectralElement] = None,
 ) -> Union[u.Quantity[u.ph * u.s**-1 * u.m**-2], u.Quantity[u.ph * u.s**-1]]:
@@ -142,8 +142,8 @@ def photons_in_range(
 
     """
     # Note: Assuming um if given as float.
-    wave_min = (wave_min << u.um).to(u.Angstrom).value
-    wave_max = (wave_max << u.um).to(u.Angstrom).value
+    wave_min = (wave_min << u.um << u.Angstrom).value
+    wave_max = (wave_max << u.um << u.Angstrom).value
     # Note: There appear to be some float shenanigans going on here, but
     # rounding produces an error in the spectrum evaluation. Not sure what's
     # going on, maybe it's fine as-is.
