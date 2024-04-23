@@ -144,8 +144,9 @@ class FieldOfView(FieldOfViewBase):
                         spec_refs.add(ref)
 
         waves = volume["waves"] * u.Unit(volume["wave_unit"])
-        spectra = {ref: fu.extract_range_from_spectrum(src.spectra[ref], waves)
-                   for ref in spec_refs}
+        spectra = {ref: fu.extract_range_from_spectrum(
+            src.spectra[int(ref)], waves)
+            for ref in spec_refs}
 
         self.fields = fields_in_fov
         self.spectra = spectra
