@@ -14,7 +14,7 @@ from .ter_curves_utils import combine_two_spectra, apply_throughput_to_cube
 from .ter_curves_utils import download_svo_filter, download_svo_filter_list
 from ..base_classes import SourceBase, FOVSetupBase
 from ..optics.surface import SpectralSurface
-from ..source.source import Source
+from ..source.source import Source, CubeSourceField
 from ..utils import (from_currsys, quantify, check_keys, find_file,
                      figure_factory, get_logger)
 
@@ -112,13 +112,13 @@ class TERCurve(Effect):
             thru = self.throughput
 
             # apply transmission to source spectra
-            for isp, spec in obj.spectra.items():
-                obj.spectra[isp] = combine_two_spectra(spec, thru, "multiply",
-                                                       wave_min, wave_max)
+            for fld in obj.fields:
+                for isp, spec in fld.spectra.items():
+                    fld.spectra[isp] = combine_two_spectra(
+                        spec, thru, "multiply", wave_min, wave_max)
 
-            # apply transmission to cube fields
-            for icube, cube in enumerate(obj.cube_fields):
-                obj.cube_fields[icube] = apply_throughput_to_cube(cube, thru)
+                if isinstance(fld, CubeSourceField):
+                    fld.field = apply_throughput_to_cube(fld.field, thru)
 
             # add the effect background to the source background field
             if self.background_source is not None:

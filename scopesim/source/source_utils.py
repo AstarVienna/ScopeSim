@@ -53,7 +53,6 @@ def validate_source_input(**kwargs) -> None:
                 "Image does not contain valid WCS. %s", wcs.WCS(image_hdu))
 
     if (tbl := kwargs.get("table")) is not None:
-        tbl = kwargs["table"]
         if not isinstance(tbl, Table):
             raise TypeError(
                 f"Table must be astropy.Table object: {type(tbl) = }")

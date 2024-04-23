@@ -136,20 +136,20 @@ class TestSourceInit:
         src = Source(table=table, spectra=input_spectra)
         assert isinstance(src, Source)
         assert isinstance(src.spectra[0], SourceSpectrum)
-        assert isinstance(src.fields[0], Table)
+        assert isinstance(src.fields[0].field, Table)
 
     def test_initialises_with_image_and_1_spectrum(self, input_hdulist,
                                                    input_spectra):
         src = Source(image_hdu=input_hdulist[0], spectra=input_spectra[0])
         assert isinstance(src, Source)
         assert isinstance(src.spectra[0], SourceSpectrum)
-        assert isinstance(src.fields[0], fits.ImageHDU)
+        assert isinstance(src.fields[0].field, fits.ImageHDU)
 
     def test_initialises_with_image_and_flux(self, input_hdulist):
         src = Source(image_hdu=input_hdulist[0], flux=20*u.ABmag)
         assert isinstance(src, Source)
         assert isinstance(src.spectra[0], SourceSpectrum)
-        assert isinstance(src.fields[0], fits.ImageHDU)
+        assert isinstance(src.fields[0].field, fits.ImageHDU)
 
     def test_initialises_with_only_image(self, input_hdulist):
         input_hdulist[0].header["BUNIT"] = "ph s-1 cm-2 AA-1"
@@ -168,7 +168,7 @@ class TestSourceInit:
 
         assert isinstance(src, Source)
         assert isinstance(src.spectra[0], SourceSpectrum)
-        assert isinstance(src.fields[0], fits.ImageHDU)
+        assert isinstance(src.fields[0].field, fits.ImageHDU)
 
     @pytest.mark.parametrize("ii, dtype",
                              [(0, fits.ImageHDU),
@@ -180,7 +180,7 @@ class TestSourceInit:
         src = Source(filename=fname, spectra=input_spectra[0])
         assert isinstance(src, Source)
         assert isinstance(src.spectra[0], SourceSpectrum)
-        assert isinstance(src.fields[0], dtype)
+        assert isinstance(src.fields[0].field, dtype)
 
     def test_initialised_with_old_style_arrays(self):
         x, y = [0, 1], [0, -1]
@@ -190,7 +190,7 @@ class TestSourceInit:
         src = Source(x=x, y=y, ref=ref, weight=weight, lam=lam, spectra=spectra)
         assert isinstance(src, Source)
         assert isinstance(src.spectra[0], SourceSpectrum)
-        assert isinstance(src.fields[0], Table)
+        assert isinstance(src.fields[0].field, Table)
 
 
 class TestSourceAddition:
@@ -237,8 +237,8 @@ class TestSourceAddition:
         assert img_fits_src.fields[0] is not img_src.fields[0]
 
     def test_meta_data_is_passed_on_when_added(self, table_source, image_source):
-        table_source.meta["hello"] = "world"
-        image_source.meta["servus"] = "oida"
+        table_source.fields[0].meta["hello"] = "world"
+        image_source.fields[0].meta["servus"] = "oida"
         new_source = table_source + image_source
 
         assert len(new_source.fields) == len(new_source._meta_dicts)
@@ -304,7 +304,7 @@ class TestSourcePhotonsInRange:
         assert np.allclose(ph.value, [2.])
 
     def test_correct_photons_are_returned_for_no_spectra(self, image_source):
-        image_source.spectra = {}
+        image_source.fields[0].spectra = {}
         ph = image_source.photons_in_range(1, 2)
         assert len(ph) == 0
 
@@ -313,8 +313,8 @@ class TestSourcePhotonsInRange:
         ph = image_source.photons_in_range(1, 2, area=area)
         assert ph[0].value == approx(expected)
 
-    def test_photons_returned_only_for_indexes(self, table_source):
-        ph = table_source.photons_in_range(1, 2, indexes=[0, 2])
+    def test_photons_returned_only_for_indices(self, table_source):
+        ph = table_source.photons_in_range(1, 2, indices=[0, 2])
         assert len(ph) == 2
         assert np.allclose(ph.value, [4, 2])
 
