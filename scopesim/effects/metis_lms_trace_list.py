@@ -139,12 +139,12 @@ class MetisLMSSpectralTraceList(SpectralTraceList):
                                               data=slicecube)
                 # slicefov.cube.writeto(f"slicefov_{sptid}.fits", overwrite=True)
                 slicefov.hdu = spt.map_spectra_to_focal_plane(slicefov)
-
-                sxmin = slicefov.hdu.header["XMIN"]
-                sxmax = slicefov.hdu.header["XMAX"]
-                symin = slicefov.hdu.header["YMIN"]
-                symax = slicefov.hdu.header["YMAX"]
-                fovimage[symin:symax, sxmin:sxmax] += slicefov.hdu.data
+                if slicefov.hdu is not None:
+                    sxmin = slicefov.hdu.header["XMIN"]
+                    sxmax = slicefov.hdu.header["XMAX"]
+                    symin = slicefov.hdu.header["YMIN"]
+                    symax = slicefov.hdu.header["YMAX"]
+                    fovimage[symin:symax, sxmin:sxmax] += slicefov.hdu.data
 
             obj.hdu = fits.ImageHDU(data=fovimage, header=obj.detector_header)
 
