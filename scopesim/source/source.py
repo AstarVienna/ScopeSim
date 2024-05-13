@@ -154,7 +154,7 @@ class Source(SourceBase):
         self._meta = {}
         self.fields: list[SourceField] = []
 
-        self._bandpass = None
+        self._bandpass: SpectralElement | None = None
 
         # The rest of these is not implemented in validate_source_input
         # validate_source_input(lam=lam, x=x, y=y, ref=ref, weight=weight,
@@ -723,6 +723,7 @@ class TableSourceField(SourceField):
 @dataclass
 class HDUSourceField(SourceField):
     field: fits.ImageHDU | None = None
+    wcs: WCS | None = dataclass_field(default=None, init=False)
 
     def __new__(cls, *args, **kwargs):
         """Override creation to create subclasses."""
