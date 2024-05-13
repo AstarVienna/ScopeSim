@@ -144,7 +144,7 @@ class FieldOfView(FieldOfViewBase):
                         spec_refs.add(ref)
 
         waves = volume["waves"] * u.Unit(volume["wave_unit"])
-        spectra = {ref: fu.extract_range_from_spectrum(src.spectra[ref], waves)
+        spectra = {ref: fu.extract_range_from_spectrum(src.spectra[int(ref)], waves)
                    for ref in spec_refs}
 
         self.fields = fields_in_fov
@@ -186,7 +186,7 @@ class FieldOfView(FieldOfViewBase):
             self.hdu.data = image
 
     def _evaluate_spectrum_with_weight(self, ref, waveset, weight):
-        return self.spectra[ref](waveset).value * weight
+        return self.spectra[int(ref)](waveset).value * weight
 
     def _calc_area_factor(self, field):
         bg_solid_angle = u.Unit(field.header["SOLIDANG"]).to(u.arcsec**-2)
@@ -334,7 +334,7 @@ class FieldOfView(FieldOfViewBase):
                 # TODO: could these be something more numpythonic grid-ish?
                 x = np.array(xpix).astype(int)
                 y = np.array(ypix).astype(int)     # quickest way to round
-                flux = np.array([fluxes[ref] for ref in field["ref"]])
+                flux = np.array([fluxes[int(ref)] for ref in field["ref"]])
                 yield flux, np.array(field["weight"]), x, y
 
     def _make_image_backfields(self, fluxes):
