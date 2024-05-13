@@ -63,6 +63,7 @@ from . import utils
 from .utils import bug_report
 from .optics.optical_train import OpticalTrain
 from .commands.user_commands import UserCommands
+from .commands.scopesimple import Simulation
 from .source.source import Source
 
 from .server.database import (list_packages, download_packages, download_package,
