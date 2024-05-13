@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from typing import Optional, Union
 from collections.abc import Iterable
+from pathlib import Path
 
 import numpy as np
 from astropy import wcs, units as u
@@ -8,7 +9,7 @@ from astropy.io import fits
 from astropy.table import Table
 from synphot import SourceSpectrum, Empirical1D, SpectralElement
 
-from ..utils import find_file, get_logger
+from ..utils import find_file, get_logger, convert_table_comments_to_dict
 
 
 logger = get_logger(__name__)
@@ -227,3 +228,32 @@ def make_img_wcs_header(
     imgwcs.wcs.cunit = [u.deg, u.deg]
 
     return imgwcs.to_header()
+
+
+def parse_sed_table(filename: Path | str) -> Table:
+    """
+    Parse SED table from example cubes.
+
+    Parameters
+    ----------
+    filename : Path | str
+        Input file path.
+
+    Returns
+    -------
+    astropy.table.Table
+        Parsed table.
+
+    """
+    tbl = Table.read(filename, format="ascii")
+    tbl.meta.update(convert_table_comments_to_dict(tbl))
+    tbl.meta.pop("comments")
+    new_names = {}
+    for col in tbl.columns:
+        cmt = tbl.meta[col.replace("col", "column ")].split("(", maxsplit=1)
+        tbl[col].unit = cmt[-1].strip(")")
+        new_names[col] = cmt[0].split(";", maxsplit=1)[0].strip()
+    # Cannot do a single loop because tbl.columns would get mutated...
+    for old_name, new_name in new_names.items():
+        tbl[old_name].name = new_name
+    return tbl

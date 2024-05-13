@@ -47,7 +47,7 @@ from astropy.table import Table, Column
 from astropy.io.registry import IORegistryError
 from astropy.io import fits
 from astropy import units as u
-from astropy.wcs import WCS
+from astropy.wcs import WCS, SingularMatrixError
 
 from synphot import SpectralElement, SourceSpectrum
 
@@ -321,10 +321,10 @@ class Source(SourceBase):
         assert not self.fields, "Constructor method must act on empty instance!"
 
         if isinstance(cube, fits.HDUList):
-            data = cube[ext].data
-            header = cube[ext].header
-            wcs = WCS(cube[ext], fobj=cube)
-        elif isinstance(cube, (fits.PrimaryHDU, fits.ImageHDU)):
+            self.fields = [CubeSourceField.from_hdulist(cube, ext, **kwargs)]
+            return
+
+        if isinstance(cube, (fits.PrimaryHDU, fits.ImageHDU)):
             data = cube.data
             header = cube.header
             wcs = WCS(cube)
@@ -563,6 +563,7 @@ class Source(SourceBase):
         axes.set_aspect("equal")
         axes.set_xlabel("x [arcsec]")
         axes.set_ylabel("y [arcsec]")
+        axes.legend()
         return axes
 
     def make_copy(self):
@@ -654,6 +655,10 @@ class SourceField:
         #      PendingDeprecationWarning, stacklevel=2)
         self.field.__setitem__(key, value)
 
+    @property
+    def name(self) -> str:
+        return self.meta.get("object", "<unknown>")
+
 
 @dataclass
 class TableSourceField(SourceField):
@@ -708,7 +713,7 @@ class TableSourceField(SourceField):
                      f"spectra {set(self.spectra)}")
 
     def plot(self, axes, color) -> None:
-        axes.plot(self.field["x"], self.field["y"], color+".")
+        axes.plot(self.field["x"], self.field["y"], color+".", label=self.name)
 
     def shift(self, dx, dy) -> None:
         x = quantity_from_table("x", self.field, u.arcsec)
@@ -754,9 +759,9 @@ class HDUSourceField(SourceField):
 
     @property
     def img_size(self) -> str:
-        if self.field.data is None:
+        if self.data is None:
             return "<empty>"
-        return str(self.field.data.shape)
+        return str(self.data.shape)
 
     def _write_stream(self, stream: TextIO) -> None:
         stream.write(f"ImageHDU with size {self.img_size}, referencing "
@@ -766,7 +771,7 @@ class HDUSourceField(SourceField):
         xypts = imp_utils.calc_footprint(self.header)
         convf = u.Unit(self.header["CUNIT1"]).to(u.arcsec)
         outline = np.array(list(close_loop(xypts))) * convf
-        axes.plot(outline[:, 0], outline[:, 1], color)
+        axes.plot(*outline.T, color, label=self.name)
 
     def shift(self, dx, dy) -> None:
         dx = quantify(dx, u.arcsec).to(self.header["CUNIT1"])
@@ -779,11 +784,62 @@ class HDUSourceField(SourceField):
 class ImageSourceField(HDUSourceField):
     def __post_init__(self):
         assert self.spectra, "Spectra must be non-empty for 2D image source."
+        try:
+            self.wcs = WCS(self.field)
+        except SingularMatrixError:
+            # This occurs for BG SRC
+            logger.warning("Couldn't create source field WCS.")
+            self.wcs = None
 
 
 @dataclass
 class CubeSourceField(HDUSourceField):
+    def __post_init__(self):
+        if self.wcs is None and not self.meta.get("from_hdul", False):
+            self.wcs = WCS(self.field)
+
+        try:
+            bunit = u.Unit(self.header["BUNIT"])
+        except KeyError:
+            bunit = u.erg / u.s / u.cm**2 / u.arcsec**2
+            logger.warning(
+                "Keyword \"BUNIT\" not found, setting to %s by default", bunit)
+        except ValueError as error:
+            logger.error("\"BUNIT\" keyword is malformed: %s", error)
+            raise
+        self.field.header["BUNIT"] = str(bunit)
+
+    @classmethod
+    def from_hdulist(cls, hdulist: fits.HDUList, ext: int = 0, **kwargs):
+        cube = fits.ImageHDU(header=hdulist[ext].header.copy(),
+                             data=deepcopy(hdulist[ext].data))
+        new_csf = cls(field=cube, meta=kwargs | {"from_hdul": True})
+        new_csf.wcs = WCS(hdulist[ext], fobj=hdulist)
+        return new_csf
+
     def shift(self, dx, dy) -> None:
         logger.warning(
             "Source shift for cubes assumes first two axes are celestial.")
         super().shift(dx, dy)
+
+    @property
+    def spectra(self):
+        """Override parent attribute."""
+        logger.warning(
+            "CubeSourceField.spectra will always be None. Spectral "
+            "information is stored in the wavelength axis of the cube.")
+        return None
+
+    @spectra.setter
+    def spectra(self, value):
+        logger.warning(
+            "CubeSourceField.spectra will always be None. Spectral "
+            "information is stored in the wavelength axis of the cube.")
+
+    @property
+    def wave(self):
+        """Construct wavelength axis for cube in um."""
+        swcs = self.wcs.spectral
+        with u.set_enabled_equivalencies(u.spectral()):
+            wave = swcs.pixel_to_world(np.arange(swcs.pixel_shape[0])) << u.um
+        return wave
