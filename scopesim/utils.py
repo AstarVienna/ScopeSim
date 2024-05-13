@@ -651,7 +651,7 @@ def pretty_print_dict(dic, indent=0):
 def return_latest_github_actions_jobs_status(
         owner_name="AstarVienna",
         repo_name="ScopeSim",
-        branch="dev_master",
+        branch="main",
         actions_yaml_name="tests.yml",
     ):
     """Get the status of the latest test run."""
