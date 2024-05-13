@@ -774,8 +774,8 @@ class HDUSourceField(SourceField):
         axes.plot(*outline.T, color, label=self.name)
 
     def shift(self, dx, dy) -> None:
-        dx = quantify(dx, u.arcsec).to(self.header["CUNIT1"])
-        dy = quantify(dy, u.arcsec).to(self.header["CUNIT2"])
+        dx = dx << u.arcsec << self.wcs.wcs.cunit[0]
+        dy = dy << u.arcsec << self.wcs.wcs.cunit[1]
         self.header["CRVAL1"] += dx.value
         self.header["CRVAL2"] += dy.value
 
