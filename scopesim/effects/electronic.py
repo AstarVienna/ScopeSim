@@ -465,10 +465,10 @@ class ShotNoise(Effect):
             data = det._hdu.data
 
             # Check if there are negative values in the data
-            negvals = np.sum(data < 0)
-            if negvals:
-                logger.warning(f"Effect ShotNoise: {negvals} negative pixels")
-                data[data < 0] = 0
+            negvals_mask = data < 0
+            if negvals_mask.any():
+                logger.warning(f"Effect ShotNoise: {negvals_mask.sum()} negative pixels")
+                data[negvals_mask] = 0
 
             below = data < 2**20
             above = np.invert(below)
@@ -720,6 +720,15 @@ class Quantization(Effect):
         if not np.issubdtype(new_dtype, np.integer):
             logger.warning("Setting quantized data to dtype %s, which is not "
                            "an integer subtype.", new_dtype)
+
+        # Remove values below 0, because for unsigned types these get wrapped
+        # around to MAXINT, which is even worse than negative values.
+        # TODO: Write a test for this.
+        if np.issubdtype(new_dtype, np.unsignedinteger):
+            negvals_mask = obj._hdu.data < 0
+            if negvals_mask.any():
+                logger.warning(f"Effect Quantization: {negvals_mask.sum()} negative pixels")
+                obj._hdu.data[negvals_mask] = 0
 
         # This used to create a new ImageHDU with the same header but the data
         # set to the modified data. It should be fine to simply re-assign the
