@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 """Simplified top-level UI."""
 
+from collections.abc import Sequence
+from pathlib import Path
 import numpy as np
 from astropy.io import fits
 
@@ -14,8 +16,40 @@ logger = get_logger(__name__)
 
 
 class Simulation:
+    """
+    
+
+    Parameters
+    ----------
+    instrument : str
+        Name of the instrument (IRDB package).
+    mode : str | Sequence[str] | None, optional
+        Mode or list of ombined modes for the instrument. Must match a mode
+        listed in the instrument's IRDB package. If omitted, the default mode
+        defined in the IRDB is used.
+    **kwargs :
+        Any further arguments accepted by ``scopesim.UserCommands``.
+
+    Attributes
+    ----------
+    last_readout
+    settings
+
+    Methods
+    -------
+    plot()
+        Plot the simulated image. This method can only be used once the
+        instance has been called with a source object.
+
+    """
+
     @top_level_catch
-    def __init__(self, instrument: str, mode: str, **kwargs) -> None:
+    def __init__(
+            self,
+            instrument: str,
+            mode: str | Sequence[str] | None = None,
+            **kwargs
+    ) -> None:
         self._instrument = instrument
         self._mode = mode
         self._init_kwargs = kwargs
@@ -27,9 +61,14 @@ class Simulation:
         self.optical_train = OpticalTrain(self._cmds)
 
     @top_level_catch
-    def __call__(self, source: Source, **kwargs) -> fits.HDUList:
+    def __call__(
+            self,
+            source: Source,
+            filename: Path | str | None = None,
+            **kwargs
+    ) -> fits.HDUList:
         self.optical_train.observe(source)
-        self._last_readout = self.optical_train.readout(**kwargs)
+        self._last_readout = self.optical_train.readout(filename, **kwargs)
         return self._last_readout[0]
 
     def __repr__(self) -> str:
@@ -37,7 +76,7 @@ class Simulation:
                 f"**{self._init_kwargs})")
 
     def __str__(self) -> str:
-        return f"ScopeSim Simulation for {self.instrument}"
+        return f"ScopeSim Simulation for {self.instrument} in {self.mode} mode"
 
     def _repr_pretty_(self, printer, cycle):
         """For nice ipython display."""
