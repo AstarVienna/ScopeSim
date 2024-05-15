@@ -70,14 +70,23 @@ class Simulation:
         return self._cmds
 
     def plot(self):
-        """Show simulated image."""
-        imgs = self.last_readout[1:]
+        """Show simulated image, return mpl figure and axes."""
+        imgs = self.last_readout[0][1:]
         if (n_imgs := np.sqrt(len(imgs))) % 1:
             logger.warning(
                 "Number of output image HDUs is not a square number, this will"
                 " create an uneven image plot.")
+        vmin = max(min(img.data.min() for img in imgs), 0)
+        vmax = max(max(img.data.max() for img in imgs), 0)
         fig, axs = figure_factory(nrows=int(n_imgs), ncols=int(n_imgs))
+        if isinstance(axs, np.ndarray):
+            axs = axs.flatten()
+        else:
+            axs = [axs]
         for ax, img in zip(axs, imgs):
-            ax.imshow(img.data, origin="lower", norm="log")
-        fig.set_title(f"{self.instrument} simulation")
-        return axs
+            ax.imshow(img.data, origin="lower",
+                      norm="log", vmin=vmin, vmax=vmax)
+            ax.set_aspect("equal")
+            ax.label_outer()
+        fig.suptitle(f"{self.instrument} simulation")
+        return fig, axs
