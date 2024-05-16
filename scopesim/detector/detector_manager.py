@@ -3,7 +3,7 @@
 
 from collections.abc import Sequence
 
-from astropy.io import fits
+from astropy.io.fits import HDUList, PrimaryHDU, TableHDU
 
 from .detector import Detector
 from ..effects import Effect
@@ -27,15 +27,14 @@ class DetectorManager(Sequence):
         # TODO: Typing could get more specific once z_order is replaced with
         #       Effect subclasses, which might also be used to create the two
         #       lists more efficiently...
-        self.array_effects: list[Effect] = []
-        self.dtcr_effects: list[Effect] = []
+        self._array_effects: list[Effect] = []
+        self._dtcr_effects: list[Effect] = []
         self._detectors: list[Detector] = []
 
-        # The (initially empty) HDUList produced by the readout
-        self.latest_exposure: fits.HDUList | None = None
+        self._latest_exposure: HDUList | None = None
 
     def readout(self, image_planes, array_effects=None, dtcr_effects=None,
-                **kwargs) -> fits.HDUList:
+                **kwargs) -> HDUList:
         """
         Read out the detector array into a FITS HDU List.
 
@@ -71,8 +70,8 @@ class DetectorManager(Sequence):
         # .. note:: Detector is what used to be called Chip
         #           DetectorManager is the old Detector
 
-        self.array_effects = array_effects or []
-        self.dtcr_effects = dtcr_effects or []
+        self._array_effects = array_effects or []
+        self._dtcr_effects = dtcr_effects or []
         self.meta.update(kwargs)
 
         # 1. Get the image plane that corresponds to this detector array
@@ -81,7 +80,7 @@ class DetectorManager(Sequence):
                            implane.id == self._detector_list.image_plane_id)
 
         # 2. Apply detector array effects (apply to the entire image plane)
-        for effect in self.array_effects:
+        for effect in self._array_effects:
             image_plane = effect.apply_to(image_plane, **self.meta)
 
         # 3. make a series of Detectors for each row in a DetectorList object
@@ -94,19 +93,25 @@ class DetectorManager(Sequence):
             detector.extract_from(image_plane)
 
             # 5. apply all effects (to all Detectors)
-            for effect in self.dtcr_effects:
+            for effect in self._dtcr_effects:
                 detector = effect.apply_to(detector)
 
             # 6. add necessary header keywords
             # .. todo: add keywords
 
         # FIXME: Why is this applied twice ???
-        for effect in self.array_effects:
+        for effect in self._array_effects:
             image_plane = effect.apply_to(image_plane, **self.meta)
 
-        self.latest_exposure = self._make_hdulist()
+        self._latest_exposure = self._make_hdulist()
 
-        return self.latest_exposure
+        return self._latest_exposure
+
+    def latest_exposure(self) -> HDUList:
+        """Return the (initially empty) HDUList produced by the readout."""
+        if self._latest_exposure is None:
+            logger.warning("Run readout before accessing .latest_exposure.")
+        return self._latest_exposure
 
     def __getitem__(self, index) -> Detector:
         """x.__getitem__(y) <==> x[y]."""
@@ -117,35 +122,37 @@ class DetectorManager(Sequence):
         return len(self._detectors)
 
     def __repr__(self):
+        """Return repr(self)."""
         msg = (f"{self.__class__.__name__}"
                f"({self._detector_list!r}, **{self.meta!r})")
         return msg
 
     def __str__(self):
+        """Return str(self)."""
         return f"{self.__class__.__name__} with {self._detector_list!s}"
 
-    def _repr_pretty_(self, p, cycle):
+    def _repr_pretty_(self, printer, cycle):
         """For ipython."""
         if cycle:
-            p.text(f"{self.__class__.__name__}(...)")
+            printer.text(f"{self.__class__.__name__}(...)")
         else:
-            p.text(str(self))
+            printer.text(str(self))
 
     def _make_primary_hdu(self):
         """Create the primary header from meta data."""
-        prihdu = fits.PrimaryHDU()
+        prihdu = PrimaryHDU()
         prihdu.header.update(stringify_dict(self.meta))
         return prihdu
 
     def _make_effects_hdu(self):
         # .. todo:: decide what goes into the effects table of meta data
-        # effects = self.array_effects + self.dtcr_effects
-        return fits.TableHDU()
+        # effects = self._array_effects + self._dtcr_effects
+        return TableHDU()
 
     def _make_hdulist(self):
         """Generate a HDUList with the ImageHDUs and any extras."""
         # TODO: effects_hdu unnecessary as long as make_effects_hdu does not do anything
-        hdu_list = fits.HDUList([
+        hdu_list = HDUList([
             self._make_primary_hdu(),
             *[dtcr.hdu for dtcr in self],
             # *self._make_effects_hdu(),
