@@ -17,7 +17,7 @@ from .optics_manager import OpticsManager
 from .fov_manager import FOVManager
 from .image_plane import ImagePlane
 from ..commands.user_commands import UserCommands
-from ..detector import DetectorArray
+from ..detector import DetectorManager
 from ..effects import ExtraFitsKeywords
 from ..utils import from_currsys, top_level_catch, get_logger
 from .. import rc, __version__
@@ -106,7 +106,7 @@ class OpticalTrain:
         self.optics_manager = None
         self.fov_manager = None
         self.image_planes = []
-        self.detector_arrays = []
+        self.detector_managers = []
         self.yaml_dicts = None
         self._last_source = None
 
@@ -164,7 +164,7 @@ class OpticalTrain:
                                       **kwargs)
         self.image_planes = [ImagePlane(hdr, self.cmds, **kwargs)
                              for hdr in opt_man.image_plane_headers]
-        self.detector_arrays = [DetectorArray(det_list, cmds=self.cmds, **kwargs)
+        self.detector_managers = [DetectorManager(det_list, cmds=self.cmds, **kwargs)
                                 for det_list in opt_man.detector_setup_effects]
 
     @top_level_catch
@@ -371,7 +371,7 @@ class OpticalTrain:
 
         """
         hduls = []
-        for i, detector_array in enumerate(self.detector_arrays):
+        for i, detector_array in enumerate(self.detector_managers):
             array_effects = self.optics_manager.detector_array_effects
             dtcr_effects = self.optics_manager.detector_effects
             hdul = detector_array.readout(self.image_planes, array_effects,
@@ -391,7 +391,7 @@ class OpticalTrain:
 
             if filename is not None and isinstance(filename, str):
                 fname = filename
-                if len(self.detector_arrays) > 1:
+                if len(self.detector_managers) > 1:
                     fname = f"{i}_{filename}"
                 hdul.writeto(fname, overwrite=True)
 
@@ -535,9 +535,9 @@ class OpticalTrain:
                     p.breakable()
                     p.pretty(item)
             p.breakable()
-            p.text("DetectorArrays:")
+            p.text("DetectorManagers:")
             with p.indent(2):
-                for item in self.detector_arrays:
+                for item in self.detector_managers:
                     p.breakable()
                     p.pretty(item)
             p.breakable()

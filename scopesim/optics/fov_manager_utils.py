@@ -184,17 +184,17 @@ def get_imaging_headers(effects, **kwargs):
                                                  efs.SlitWheel,
                                                  efs.ApertureList))
     if not aperture_effects:
-        detector_arrays = get_all_effects(effects, efs.DetectorList)
-        if not detector_arrays:
+        detector_managers = get_all_effects(effects, efs.DetectorList)
+        if not detector_managers:
             raise ValueError("No ApertureMask or DetectorList was provided. "
                              "At least one must be passed to make an "
                              f"ImagePlane: {effects}.")
         aperture_effects.extend(
             detarr.fov_grid(which="edges", pixel_scale=pixel_scale)
-            for detarr in detector_arrays)
+            for detarr in detector_managers)
 
     # FIXME: all of this is a bit inconsistent; fov_grid(which="edges" is
-    #        called afterwards, but when looking in detector_arrays, the same
+    #        called afterwards, but when looking in detector_managers, the same
     #        is called immediately; does that even work? is this all tested??
     # get aperture headers from fov_grid()
     # - for-loop catches mutliple headers from ApertureList.fov_grid()

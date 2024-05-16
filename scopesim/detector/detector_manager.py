@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Contains DetectorArray and aux functions."""
+"""Contains DetectorManager and aux functions."""
 
 from astropy.io import fits
 
@@ -10,7 +10,7 @@ from ..utils import stringify_dict, get_logger
 logger = get_logger(__name__)
 
 
-class DetectorArray:
+class DetectorManager:
     """Manages the individual Detectors, mostly used for readout."""
 
     # TODO: Should this class be called DetectorManager analogous to the
@@ -67,7 +67,7 @@ class DetectorArray:
 
         """
         # .. note:: Detector is what used to be called Chip
-        #           DetectorArray is the old Detector
+        #           DetectorManager is the old Detector
 
         self.array_effects = array_effects or []
         self.dtcr_effects = dtcr_effects or []
@@ -98,20 +98,10 @@ class DetectorArray:
             # 6. add necessary header keywords
             # .. todo: add keywords
 
-        # 7. Generate a HDUList with the ImageHDUs and any extras:
-        pri_hdu = make_primary_hdu(self.meta)
-
-        # ..todo: effects_hdu unnecessary as long as make_effects_hdu does not do anything
-        # effects_hdu = make_effects_hdu(self.array_effects + self.dtcr_effects)
-
-        hdu_list = fits.HDUList([pri_hdu]
-                                + [dtcr.hdu for dtcr in self.detectors])
-                                # + [effects_hdu])
-
         for effect in self.array_effects:
             image_plane = effect.apply_to(image_plane, **self.meta)
 
-        self.latest_exposure = hdu_list
+        self.latest_exposure = self._make_hdulist()
 
         return self.latest_exposure
 
@@ -130,14 +120,23 @@ class DetectorArray:
         else:
             p.text(str(self))
 
+    def _make_primary_hdu(self):
+        """Create the primary header from meta data."""
+        prihdu = fits.PrimaryHDU()
+        prihdu.header.update(stringify_dict(self.meta))
+        return prihdu
 
-def make_primary_hdu(meta):
-    """Create the primary header from meta data."""
-    prihdu = fits.PrimaryHDU()
-    prihdu.header.update(stringify_dict(meta))
-    return prihdu
+    def _make_effects_hdu(self):
+        # .. todo:: decide what goes into the effects table of meta data
+        # effects = self.array_effects + self.dtcr_effects
+        return fits.TableHDU()
 
-
-def make_effects_hdu(effects):
-    # .. todo:: decide what goes into the effects table of meta data
-    return fits.TableHDU()
+    def _make_hdulist(self):
+        """Generate a HDUList with the ImageHDUs and any extras."""
+        # TODO: effects_hdu unnecessary as long as make_effects_hdu does not do anything
+        hdu_list = fits.HDUList([
+            self._make_primary_hdu(),
+            *[dtcr.hdu for dtcr in self.detectors],
+            # *self._make_effects_hdu(),
+        ])
+        return hdu_list
