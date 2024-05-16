@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
 """Contains DetectorManager and aux functions."""
 
+from collections.abc import Sequence
+
 from astropy.io import fits
 
 from .detector import Detector
+from ..effects import Effect
 from ..utils import stringify_dict, get_logger
 
 
 logger = get_logger(__name__)
 
 
-class DetectorManager:
+class DetectorManager(Sequence):
     """Manages the individual Detectors, mostly used for readout."""
-
-    # TODO: Should this class be called DetectorManager analogous to the
-    #       FOVManager and OpticsManager classes?
-    # TODO: Either way this could inherit from some collections.abc
 
     def __init__(self, detector_list=None, cmds=None, **kwargs):
         self.meta = {}
@@ -25,12 +24,15 @@ class DetectorManager:
         # The effect from which the instance is constructed
         self._detector_list = detector_list
 
-        self.array_effects = []
-        self.dtcr_effects = []
-        self.detectors = []
+        # TODO: Typing could get more specific once z_order is replaced with
+        #       Effect subclasses, which might also be used to create the two
+        #       lists more efficiently...
+        self.array_effects: list[Effect] = []
+        self.dtcr_effects: list[Effect] = []
+        self._detectors: list[Detector] = []
 
         # The (initially empty) HDUList produced by the readout
-        self.latest_exposure = None
+        self.latest_exposure: fits.HDUList | None = None
 
     def readout(self, image_planes, array_effects=None, dtcr_effects=None,
                 **kwargs) -> fits.HDUList:
@@ -83,12 +85,12 @@ class DetectorManager:
             image_plane = effect.apply_to(image_plane, **self.meta)
 
         # 3. make a series of Detectors for each row in a DetectorList object
-        self.detectors = [Detector(hdr, cmds=self.cmds, **self.meta)
-                          for hdr in self._detector_list.detector_headers()]
+        self._detectors = [Detector(hdr, cmds=self.cmds, **self.meta)
+                           for hdr in self._detector_list.detector_headers()]
 
         # 4. iterate through all Detectors, extract image from image_plane
-        logger.info("Extracting from %d detectors...", len(self.detectors))
-        for detector in self.detectors:
+        logger.info("Extracting from %d detectors...", len(self))
+        for detector in self:
             detector.extract_from(image_plane)
 
             # 5. apply all effects (to all Detectors)
@@ -98,12 +100,21 @@ class DetectorManager:
             # 6. add necessary header keywords
             # .. todo: add keywords
 
+        # FIXME: Why is this applied twice ???
         for effect in self.array_effects:
             image_plane = effect.apply_to(image_plane, **self.meta)
 
         self.latest_exposure = self._make_hdulist()
 
         return self.latest_exposure
+
+    def __getitem__(self, index) -> Detector:
+        """x.__getitem__(y) <==> x[y]."""
+        return self._detectors[index]
+
+    def __len__(self) -> int:
+        """Return len(self)."""
+        return len(self._detectors)
 
     def __repr__(self):
         msg = (f"{self.__class__.__name__}"
@@ -136,7 +147,7 @@ class DetectorManager:
         # TODO: effects_hdu unnecessary as long as make_effects_hdu does not do anything
         hdu_list = fits.HDUList([
             self._make_primary_hdu(),
-            *[dtcr.hdu for dtcr in self.detectors],
+            *[dtcr.hdu for dtcr in self],
             # *self._make_effects_hdu(),
         ])
         return hdu_list
