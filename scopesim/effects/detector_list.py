@@ -1,4 +1,12 @@
-"""TBA."""
+"""
+Module contains the actual "Detector" effects.
+
+As opposed to the Detector class and the DetectorManager (ex DetectorArray),
+which are kept in the scopesim.detector subpackage. The effects here are used
+to define the detector geometry and help creating the other classes mentioned
+above. The effects here (or one of them) are what ScopeSim "actually needs" to
+have defined in order to run.
+"""
 
 import warnings
 
@@ -183,6 +191,8 @@ class DetectorList(Effect):
 
     @property
     def image_plane_header(self):
+        """Create and return the Image Plane Header."""
+        # FIXME: Heavy property.....
         tbl = self.active_table
         pixel_size = np.min(quantity_from_table("pixel_size", tbl, u.mm))
         x_unit = unit_from_table("x_size", tbl, u.mm)
@@ -215,6 +225,8 @@ class DetectorList(Effect):
 
     @property
     def active_table(self):
+        """Create and return the active table."""
+        # FIXME: Heavy property.....
         if self.meta["active_detectors"] == "all":
             tbl = self.table
         elif isinstance(self.meta["active_detectors"], (list, tuple)):
@@ -229,6 +241,7 @@ class DetectorList(Effect):
         return tbl
 
     def detector_headers(self, ids=None):
+        """Create detector headers from active detectors or given IDs."""
         if ids is not None and all(isinstance(ii, int) for ii in ids):
             self.meta["active_detectors"] = list(ids)
 
@@ -268,6 +281,7 @@ class DetectorList(Effect):
         return hdrs
 
     def plot(self, axes=None):
+        """Plot the detector layout."""
         if axes is None:
             _, axes = figure_factory()
 
