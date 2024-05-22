@@ -22,7 +22,7 @@ classifiers = [
 python = "^3.9"
 numpy = "^1.26.3"
 scipy = "^1.11.4"
-astropy = "^5.3.3"
+astropy = "^5.3.4"
 matplotlib = "^3.7.2"
 pooch = "^1.7.0"
 
