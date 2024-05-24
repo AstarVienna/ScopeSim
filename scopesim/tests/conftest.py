@@ -16,8 +16,14 @@ MOCK_DIR = Path(__file__).parent / "mocks"
 sim.rc.__currsys__["!SIM.file.error_on_missing_file"] = True
 
 
-@pytest.fixture(scope="package", autouse=True)
+@pytest.fixture(scope="function", autouse=True)
 def configure_logging():
+    """This disables the handlers so the logs reach pytests' caplog.
+
+    This fixture should be on the function level, because some functions
+    might call `update_logging()` and therefore undo this fixture for
+    subsequent tests. E.g. test_log_to_file() does this.
+    """
     base_logger = logging.getLogger("astar")
     handlers = base_logger.handlers
     # Disable handlers
