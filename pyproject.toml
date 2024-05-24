@@ -103,7 +103,6 @@ filterwarnings = [
     "ignore:The py23*:DeprecationWarning",
     "ignore:datetime.datetime.utcfromtimestamp()*:DeprecationWarning",
     # Pytest Notebook stuff
-    "ignore:The*:pytest.PytestRemovedIn8Warning",
     "ignore:Proactor*:RuntimeWarning",
 ]
 
