@@ -33,7 +33,7 @@
 """
 
 # import pickle
-from warnings import warn
+# from warnings import warn
 from copy import deepcopy
 from pathlib import Path
 from typing import TextIO, Any
@@ -47,7 +47,7 @@ from astropy.table import Table, Column
 from astropy.io.registry import IORegistryError
 from astropy.io import fits
 from astropy import units as u
-from astropy.wcs import WCS, SingularMatrixError
+from astropy.wcs import WCS, SingularMatrixError, FITSFixedWarning
 
 from synphot import SpectralElement, SourceSpectrum
 
@@ -391,7 +391,10 @@ class Source(SourceBase):
     def spectra(self):
         spectra = {}
         for fld in self.fields:
-            spectra.update(fld.spectra)
+            try:
+                spectra.update(fld.spectra)
+            except TypeError:
+                logger.error("Error adding fields spectra.")
         return spectra
 
     @spectra.setter
@@ -418,7 +421,7 @@ class Source(SourceBase):
 
     @_meta_dicts.setter
     def _meta_dicts(self, value):
-        logger.error("_meta_dicts setting is deprecated")
+        logger.debug("_meta_dicts setting is deprecated")
         pass
 
     @property
@@ -786,9 +789,9 @@ class ImageSourceField(HDUSourceField):
         assert self.spectra, "Spectra must be non-empty for 2D image source."
         try:
             self.wcs = WCS(self.field)
-        except SingularMatrixError:
+        except (SingularMatrixError, FITSFixedWarning):
             # This occurs for BG SRC
-            logger.warning("Couldn't create source field WCS.")
+            logger.debug("Couldn't create source field WCS.")
             self.wcs = None
 
 
