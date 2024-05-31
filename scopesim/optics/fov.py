@@ -121,7 +121,7 @@ class FieldOfView(FieldOfViewBase):
         if not isinstance(src, SourceBase):
             raise ValueError(f"source must be a Source object: {type(src)}")
 
-        fields_in_fov = [field for field in src.fields
+        fields_in_fov = [field.field for field in src.fields
                          if fu.is_field_in_fov(self.header, field)]
         if not fields_in_fov:
             logger.warning("No fields in FOV.")

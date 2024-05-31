@@ -277,7 +277,7 @@ class OpticalTrain:
         # Convert to PHOTLAM per arcsec2
         # ..todo: this is not sufficiently general
 
-        for ispec, spec in enumerate(source.spectra):
+        for ispec, spec in source.spectra.items():
             # Put on fov wavegrid
             wave_min = min(fov.meta["wave_min"] for fov in self.fov_manager.fovs)
             wave_max = max(fov.meta["wave_max"] for fov in self.fov_manager.fovs)
