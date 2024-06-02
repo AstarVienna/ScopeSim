@@ -1,3 +1,49 @@
+# Version 0.8.3
+**2024-06-02**
+
+Mostly a small hotfix to allow chaning of exptime in AutoExposure, plus some housekeeping.
+
+## What's Changed
+### Dependency Changes
+* Bump requests from 2.31.0 to 2.32.0 by @dependabot in https://github.com/AstarVienna/ScopeSim/pull/417
+* Update astropy version by @hugobuddel in https://github.com/AstarVienna/ScopeSim/pull/418
+### Other Changes
+* Install ScopeSim_Data in the poetry environment by @hugobuddel in https://github.com/AstarVienna/ScopeSim/pull/416
+* Do not ignore PytestRemovedIn8Warning. by @hugobuddel in https://github.com/AstarVienna/ScopeSim/pull/420
+* Fix configure_logging by using function scope. by @hugobuddel in https://github.com/AstarVienna/ScopeSim/pull/422
+* Fix exptime dit ndit bug by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/424
+
+**Full Changelog**: https://github.com/AstarVienna/ScopeSim/compare/v0.8.2...v0.8.3
+
+# Version 0.8.2
+**2024-05-14**
+
+## What's Changed
+### New Features or Improvements
+* Cap negative values below 0 before quantifying to an unsigned int. by @hugobuddel in https://github.com/AstarVienna/ScopeSim/pull/414
+
+**Full Changelog**: https://github.com/AstarVienna/ScopeSim/compare/v0.8.1...v0.8.2
+
+# Version 0.8.1
+**2024-05-13**
+
+Small changes required for the first METIS Simulated data release.
+
+## What's Changed
+### New Features or Improvements
+* Do something sensible when a trace falls outside the FoV. by @hugobuddel in https://github.com/AstarVienna/ScopeSim/pull/407
+* Fix specref not always an integer by @JenniferKarr in https://github.com/AstarVienna/ScopeSim/pull/411
+### Dependency Changes
+* Bump tqdm from 4.66.1 to 4.66.3 by @dependabot in https://github.com/AstarVienna/ScopeSim/pull/409
+* Bump jinja2 from 3.1.3 to 3.1.4 by @dependabot in https://github.com/AstarVienna/ScopeSim/pull/410
+### Documentation Improvements
+* Fix dev_master -> main in readme by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/406
+
+## New Contributors
+* @JenniferKarr made their first contribution in https://github.com/AstarVienna/ScopeSim/pull/411
+
+**Full Changelog**: https://github.com/AstarVienna/ScopeSim/compare/v0.8.0...v0.8.1
+
 # Version 0.8.0
 **2024-04-15**
 
