@@ -25,7 +25,6 @@ import numpy as np
 
 from astropy.io import fits
 
-from .. import rc
 from . import Effect
 from ..base_classes import DetectorBase, ImagePlaneBase
 from ..utils import (from_currsys, figure_factory, check_keys, real_colname,
@@ -237,7 +236,7 @@ class AutoExposure(Effect):
         )
 
         dit_nosat = fill_frac * full_well / image_plane_max
-        logger.debug("Required DIT without saturation: %.3f s", dit_nosat)
+        logger.info("Required DIT without saturation: %.3f s", dit_nosat)
 
         # np.ceil so that dit is at most what is required for fill_frac
         ndit = np.ceil(exptime / dit_nosat).astype(int)
@@ -257,17 +256,17 @@ class AutoExposure(Effect):
         if not isinstance(obj, (ImagePlaneBase, DetectorBase)):
             return obj
 
-        exptime = kwargs.get("exptime",
+        exptime = kwargs.pop("exptime",
                              from_currsys("!OBS.exptime", self.cmds))
         mindit = from_currsys(self.meta["mindit"], self.cmds)
 
         # TODO: Remove this silly try-except once currsys works properly...
         try:
-            dit = from_currsys("!OBS.dit", self.cmds)
+            dit = kwargs.pop("dit", from_currsys("!OBS.dit", self.cmds))
         except (KeyError, ValueError):
             dit = None
         try:
-            ndit = from_currsys("!OBS.ndit", self.cmds)
+            ndit = kwargs.pop("ndit", from_currsys("!OBS.ndit", self.cmds))
         except (KeyError, ValueError):
             ndit = None
 
