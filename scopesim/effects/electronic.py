@@ -739,6 +739,73 @@ class Quantization(Effect):
         return obj
 
 
+class FieldSensitivityMap(Effect):
+    """
+        Basic class originally for the METIS GeoSnap flat fields
+
+        Input is a FITS file containing a PrimaryHDU with a map of the
+        sensitivity of all pixels.
+        Values of 1 indicate pixels with nominal sensitivity.
+        Values other than 1 indicate pixels with an abnormal but still linear
+        sensitivity to incident flux.
+
+        .. note:
+            This could be refactored as the base class for a generic flat-field
+            or generic multiplication operation Effect
+
+
+        Parameters
+        ----------
+        filename : str
+            Path to FITS file with the same size as the (single) detector object
+
+
+        """
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.meta["z_order"] = [891]
+
+        check_keys(self.meta, self.required_keys, action="error")
+
+    def apply_to(self, obj, **kwargs):
+        if isinstance(obj, DetectorBase) and self.data is not None:
+            obj._hdu.data *= self.data
+
+        return obj
+
+
+class StaticPixelMap(Effect):
+    """
+    Basic class originally for the Dead/Hot pixels of the METIS GeoSnaps
+
+    Input is a FITS file containing a PrimaryHDU with a map of the pixels
+    whose values remained constant, regardless of incident flux level.
+    The value of any readout pixels is set to the value in this file.
+    Pixel value <=0 are ignored.
+
+    .. note:
+        This could be refactored as the base class for a generic
+        dead/hot pixel map, or generic addition operation Effect
+
+
+    Parameters
+    ----------
+    filename : str
+        Path to FITS file with the same size as the (single) detector object
+
+
+    """
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.meta["z_order"] = [892]
+
+    def apply_to(self, obj, **kwargs):
+        if isinstance(obj, DetectorBase) and self.data is not None:
+            obj._hdu.data[self.data > 0] = self.data[self.data > 0]
+
+        return obj
+
+
 def make_ron_frame(image_shape, noise_std, n_channels, channel_fraction,
                    line_fraction, pedestal_fraction, read_fraction):
     shape = image_shape
