@@ -66,6 +66,11 @@ class Simulation:
         self._check_packages(download_missing)
         if mode is not None:
             mode = ensure_list(mode)
+        if "properties" in kwargs:
+            kwargs["properties"].update({"!OBS.dit": None, "!OBS.ndit": None})
+        else:
+            kwargs["properties"] = {"!OBS.dit": None, "!OBS.ndit": None}
+
         self._cmds = UserCommands(use_instrument=instrument,
                                   set_modes=mode,
                                   **kwargs)
