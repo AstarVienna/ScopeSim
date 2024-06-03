@@ -150,7 +150,7 @@ class Simulation:
         """Return the current settings (UserCommands object)."""
         return self._cmds
 
-    def plot(self):
+    def plot(self, img_slice=None, **kwargs):
         """Show simulated image, return mpl figure and axes."""
         imgs = self.last_readout[0][1:]
         if (n_imgs := np.sqrt(len(imgs))) % 1:
@@ -165,8 +165,10 @@ class Simulation:
         else:
             axs = [axs]
         for ax, img in zip(axs, imgs):
-            ax.imshow(img.data, origin="lower",
-                      norm="log", vmin=vmin, vmax=vmax)
+            if img_slice is None:
+                img_slice = slice(None)
+            ax.imshow(img.data[img_slice], origin="lower",
+                      norm="log", vmin=vmin, vmax=vmax, **kwargs)
             ax.set_aspect("equal")
             ax.label_outer()
         fig.suptitle(f"{self.instrument} simulation")
