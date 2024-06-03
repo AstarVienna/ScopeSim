@@ -55,8 +55,10 @@ class Simulation:
         self._init_kwargs = kwargs
         self._last_readout = None
 
+        if mode is not None:
+            mode = ensure_list(mode)
         self._cmds = UserCommands(use_instrument=instrument,
-                                  set_modes=ensure_list(mode),
+                                  set_modes=mode,
                                   **kwargs)
         self.optical_train = OpticalTrain(self._cmds)
 
