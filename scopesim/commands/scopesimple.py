@@ -3,11 +3,15 @@
 
 from collections.abc import Sequence
 from pathlib import Path
+
+import yaml
 import numpy as np
 from astropy.io import fits
 
 from ..source.source import Source
 from ..utils import figure_factory, top_level_catch, get_logger, ensure_list
+from ..server import download_packages
+from ..rc import __config__
 from .. import OpticalTrain
 from . import UserCommands
 
@@ -27,6 +31,9 @@ class Simulation:
         Mode or list of ombined modes for the instrument. Must match a mode
         listed in the instrument's IRDB package. If omitted, the default mode
         defined in the IRDB is used.
+    download_missing : bool
+        If `instrument` isn't found, download it. Default is True, but can be
+        switched off (i.e. never auto-download) by setting to False.
     **kwargs :
         Any further arguments accepted by ``scopesim.UserCommands``.
 
@@ -48,6 +55,7 @@ class Simulation:
             self,
             instrument: str,
             mode: str | Sequence[str] | None = None,
+            download_missing: bool = True,
             **kwargs
     ) -> None:
         self._instrument = instrument
@@ -55,6 +63,7 @@ class Simulation:
         self._init_kwargs = kwargs
         self._last_readout = None
 
+        self._check_packages(download_missing)
         if mode is not None:
             mode = ensure_list(mode)
         self._cmds = UserCommands(use_instrument=instrument,
@@ -86,6 +95,32 @@ class Simulation:
             printer.text("Simulation(...)")
         else:
             printer.text(str(self))
+
+    def _download_missing_pkgs(self) -> None:
+        # First download package itself
+        zipfile = download_packages([self.instrument])[0]
+
+        # If package needs other packages, download them as well
+        defyam = zipfile.with_suffix("") / "default.yaml"
+        with defyam.open() as file:
+            pkgs = next(yaml.load_all(file, yaml.SafeLoader))["packages"]
+        pkgs.remove(self.instrument)
+
+        # Only actually download if necessary
+        if pkgs:
+            download_packages(pkgs)
+
+    def _check_packages(self, download_missing: bool) -> None:
+        pkgdir = Path(__config__["!SIM.file.local_packages_path"])
+        if not (pkgdir / self.instrument).exists():
+            logger.warning("IRDB package for %s not found.", self.instrument)
+            if download_missing:
+                self._download_missing_pkgs()
+            else:
+                raise ValueError(
+                    f"IRDB package for {self.instrument} not found, auto-"
+                    "download is disabled. Please set package directory or "
+                    "download package(s).")
 
     @property
     def last_readout(self) -> fits.HDUList:
