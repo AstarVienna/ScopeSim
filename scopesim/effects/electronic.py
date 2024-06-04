@@ -201,6 +201,11 @@ class AutoExposure(Effect):
             return False
         return True
 
+    @staticmethod
+    def _log_dit_ndit(dit: float, ndit: int) -> None:
+        logger.info("Exposure parameters: DIT = %.3f s, NDIT = %d", dit, ndit)
+        logger.info("Total exposure time: %.3f s", dit * ndit)
+
     def estimate_dit_ndit(
             self,
             exptime: float,
@@ -248,12 +253,21 @@ class AutoExposure(Effect):
             dit = from_currsys(self.meta["mindit"], self.cmds)
             # NDIT changed so that exptime is not exceeded (hence floor div)
             ndit = max(exptime // dit, 1)
-            logger.warning("The detector will likely be saturated!")
+
+            if ndit == 1:
+                # This case is distinct from the potential saturation case.
+                logger.warning("The requested exposure time is below MINDIT. "
+                               "Please select a longer exptime.")
+            else:
+                # This should be the case when a exptime > MINDIT was requested
+                # but couldn't be divided into enough DITs to avoid saturation.
+                logger.warning("The detector will likely be saturated!")
 
         return dit, ndit
 
     def apply_to(self, obj, **kwargs):
         if not isinstance(obj, (ImagePlaneBase, DetectorBase)):
+            # TODO: figure out why this needs to be applied to ImagePlaneBase?
             return obj
 
         exptime = kwargs.pop("exptime",
@@ -276,6 +290,7 @@ class AutoExposure(Effect):
             self.cmds["!OBS.autoexpset"] = False
             # Just log warning in case DIT < MINDIT, don't actually change DIT
             self._dit_above_mindit(dit)
+            self._log_dit_ndit(dit, ndit)
             return obj
 
         # No DIT or NDIT given, need to determine from exptime
@@ -294,9 +309,7 @@ class AutoExposure(Effect):
             logger.info("Requested exposure time: %.3f s", exptime)
 
         dit, ndit = self.estimate_dit_ndit(exptime, obj.data.max(), **kwargs)
-
-        logger.info("Exposure parameters: DIT = %.3f s, NDIT = %d", dit, ndit)
-        logger.info("Total exposure time: %.3f s", dit * ndit)
+        self._log_dit_ndit(dit, ndit)
 
         # TODO: Make sure this goes up far enough in the ChainMap...
         # FIXME: This causes the following bug(?): When another readout is run
