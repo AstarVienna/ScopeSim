@@ -299,6 +299,9 @@ class AutoExposure(Effect):
         logger.info("Total exposure time: %.3f s", dit * ndit)
 
         # TODO: Make sure this goes up far enough in the ChainMap...
+        # FIXME: This causes the following bug(?): When another readout is run
+        #        after a previous one, dit & ndit need to be explicitly passed
+        #        as None, otherwise the previously saved values will be used...
         self.cmds["!OBS.dit"] = dit
         self.cmds["!OBS.ndit"] = ndit
 
@@ -319,11 +322,21 @@ class SummedExposure(Effect):
         check_keys(self.meta, self.required_keys, action="error")
 
     def apply_to(self, obj, **kwargs):
-        if isinstance(obj, DetectorBase):
-            dit = from_currsys(self.meta["dit"], self.cmds)
-            ndit = from_currsys(self.meta["ndit"], self.cmds)
+        if not isinstance(obj, DetectorBase):
+            return obj
 
-            obj._hdu.data *= dit * ndit
+        dit = from_currsys(self.meta["dit"], self.cmds)
+        ndit = from_currsys(self.meta["ndit"], self.cmds)
+
+        if ((nodit := dit is None) | (nondit := ndit is None)):
+            raise ValueError(
+                f"{'DIT' * nodit}{' & ' * nodit * nondit}{'NDIT' * nondit} "
+                "not set. If AutoExposure is not used, please set "
+                f"{'!OBS.dit' * nodit}{' & ' * nodit * nondit}"
+                f"{'!OBS.ndit' * nondit} parameter."
+            )
+
+        obj._hdu.data *= dit * ndit
 
         return obj
 
