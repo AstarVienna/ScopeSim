@@ -47,6 +47,8 @@ class Simulation:
     plot()
         Plot the simulated image. This method can only be used once the
         instance has been called with a source object.
+    readout()
+        Re-readout the detector(s). Can be used to simulate different exptimes.
 
     """
 
@@ -83,9 +85,68 @@ class Simulation:
             filename: Path | str | None = None,
             **kwargs
     ) -> fits.HDUList:
+        """
+        Run the simulation (observe the `source` and read out the detector(s)).
+
+        Parameters
+        ----------
+        source : Source
+            The source object to be observed by the simulation.
+        filename : Path | str | None, optional
+            Name or path of the FITS output file. The default is None (don't
+            save anything to disk).
+        **kwargs :
+            Any keyword arguments passed to ``OpticalTrain.readout()``.
+            Commonly used keywords are `exptime`, `dit` and `ndit`.
+
+        Returns
+        -------
+        result : fits.HDUList
+            List of HDUs containing simulation results.
+
+        """
         self.optical_train.observe(source)
+        return self.readout(filename, **kwargs)
+
+    @top_level_catch
+    def readout(
+            self,
+            filename: Path | str | None = None,
+            **kwargs
+    ) -> fits.HDUList:
+        """
+        Readout the detector(s) and optionally save the resulting FITS file.
+
+        Only available after the simulation was run (i.e. called). This is
+        usually used to run the same simulation with different exposure times,
+        which can be achived by passing `exptime` as a keyword argument.
+
+        This method is also internally called whenever the simulation is run.
+
+        Parameters
+        ----------
+        filename : Path | str | None, optional
+            Name or path of the FITS output file. The default is None (don't
+            save anything to disk).
+        **kwargs :
+            Any keyword arguments passed to ``OpticalTrain.readout()``.
+            Commonly used keywords are `exptime`, `dit` and `ndit`.
+
+        Returns
+        -------
+        result : fits.HDUList
+            List of HDUs containing simulation results.
+
+        """
+        if ("auto_exposure" in self.optical_train and
+                {"dit", "ndit"}.isdisjoint(kwargs)):
+            # If we have AutoExposure in the optical train and no dit or ndit
+            # was passed, assume the user wants to re-estimate them from the
+            # given exptime.
+            kwargs["dit"] = None
+            kwargs["ndit"] = None
         self._last_readout = self.optical_train.readout(filename, **kwargs)
-        return self._last_readout[0]
+        return self.last_readout[0]
 
     def __repr__(self) -> str:
         return (f"{self.__class__}({self.instrument}, {self.mode}, "
@@ -148,7 +209,8 @@ class Simulation:
     @property
     def settings(self) -> UserCommands:
         """Return the current settings (UserCommands object)."""
-        return self._cmds
+        # return self._cmds
+        return self.optical_train.cmds
 
     def plot(self, img_slice=None, adjust_scale=False, **kwargs):
         """Show simulated image, return mpl figure and axes."""
