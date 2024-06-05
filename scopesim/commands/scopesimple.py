@@ -72,16 +72,41 @@ class Simulation:
 
     >>> simulation = Simulation("MICADO", ["SCAO", "IMG_4mas"])
 
+    To observe a target, call the simulation on the source. After the
+    simulation was run, the result can be plotted.
+
+    >>> from scopesim import Simulation
+    >>> from scopesim_templates import star
+    >>> simulation = Simulation("METIS")
+    >>> source = star("R", 16)
+    >>> output = simulation(source)
+    >>> simulation.plot()
+
+    The `output` of the simulation run is an ``astropy.io.fits.HDUList``
+    object, which can be further manipulated. Alternatively, passing a file
+    name or path as the second argument of the simulation call will save the
+    resulting FITS file to disk, to be used by external tools. The following
+    example also includes an `exptime` value to specify the exposure time:
+
+    >>> simulation(source, "myoutput.fits", exptime=600)
+
+    To simulate different exposure times on an otherwise identical simulation,
+    the ``readout`` method is provided, which can take either `dit` and `ndit`
+    as arguments or a single `exptime` value for instrument setups which use
+    the ``AutoExposure`` effect.
+
     """
 
     @top_level_catch
-    def __init__(
-            self,
-            instrument: str,
-            mode: str | Sequence[str] | None = None,
-            download_missing: bool = True,
-            **kwargs
-    ) -> None:
+    # TODO py310: Include these typing back in once we dropped 3.9
+    # def __init__(
+    #         self,
+    #         instrument: str,
+    #         mode: str | Sequence[str] | None = None,
+    #         download_missing: bool = True,
+    #         **kwargs
+    # ) -> None:
+    def __init__(self, instrument, mode=None, download_missing=True, **kwargs):
         self._init_kwargs = kwargs
         self._last_readout = None
 
@@ -98,12 +123,14 @@ class Simulation:
         self.optical_train = OpticalTrain(cmds)
 
     @top_level_catch
-    def __call__(
-            self,
-            source: Source,
-            filename: Path | str | None = None,
-            **kwargs
-    ) -> fits.HDUList:
+    # TODO py310: Include these typing back in once we dropped 3.9
+    # def __call__(
+    #         self,
+    #         source: Source,
+    #         filename: Path | str | None = None,
+    #         **kwargs
+    # ) -> fits.HDUList:
+    def __call__(self, source, filename=None, **kwargs):
         """
         Run the simulation (observe the `source` and read out the detector(s)).
 
@@ -128,11 +155,13 @@ class Simulation:
         return self.readout(filename, **kwargs)
 
     @top_level_catch
-    def readout(
-            self,
-            filename: Path | str | None = None,
-            **kwargs
-    ) -> fits.HDUList:
+    # TODO py310: Include these typing back in once we dropped 3.9
+    # def readout(
+    #         self,
+    #         filename: Path | str | None = None,
+    #         **kwargs
+    # ) -> fits.HDUList:
+    def readout(self, filename=None, **kwargs):
         """
         Readout the detector(s) and optionally save the resulting FITS file.
 
