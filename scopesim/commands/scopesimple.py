@@ -19,7 +19,16 @@ logger = get_logger(__name__)
 
 class Simulation:
     """
-    
+    Convenience wrapper class for UserCommands and OpticalTrain.
+
+    This high-level user interface is intended to simplify the workflow
+    required by ScopeSim. It combines the creation of the ``UserCommands``
+    and ``OpticalTrain`` objects, as well as the ``OpticalTrain.observe()`` and
+    ``OpticalTrain.readout()`` calls into a single callable class.
+
+    Additonally, it incorporates the downloading of the required IRDB packages,
+    if those are not found in the search path. This functionality can be
+    disabled, see below.
 
     Parameters
     ----------
@@ -48,6 +57,21 @@ class Simulation:
     readout()
         Re-readout the detector(s). Can be used to simulate different exptimes.
 
+    Examples
+    --------
+    Create a simple simulation setup for METIS, with the default IMG-LM mode:
+
+    >>> from scopesim import Simulation
+    >>> simulation = Simulation("METIS")
+
+    Create a simulation setup for METIS in LSS-L mode:
+
+    >>> simulation = Simulation("METIS", "lss_l")
+
+    Some instruments, such as MICADO, use independend parallel mode settings:
+
+    >>> simulation = Simulation("MICADO", ["SCAO", "IMG_4mas"])
+
     """
 
     @top_level_catch
@@ -65,10 +89,6 @@ class Simulation:
         if mode is not None:
             # Avoid [None], which confuses UserCommands
             mode = ensure_list(mode)
-        # if "properties" in kwargs:
-        #     kwargs["properties"].update({"!OBS.dit": None, "!OBS.ndit": None})
-        # else:
-        #     kwargs["properties"] = {"!OBS.dit": None, "!OBS.ndit": None}
 
         # Don't save cmds as an attribute, because OpticalTrain (currently)
         # creates a copy of that, so the actual "settings" are stored there
@@ -148,10 +168,12 @@ class Simulation:
         return self.last_readout[0]
 
     def __repr__(self) -> str:
+        """Return repr(self)."""
         return (f"{self.__class__}({self.instrument}, {self.mode}, "
                 f"**{self._init_kwargs})")
 
     def __str__(self) -> str:
+        """Return str(self)."""
         return f"ScopeSim Simulation for {self.instrument} in {self.mode} mode"
 
     def _repr_pretty_(self, printer, cycle):
