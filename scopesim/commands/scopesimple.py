@@ -58,23 +58,24 @@ class Simulation:
             download_missing: bool = True,
             **kwargs
     ) -> None:
-        self._instrument = instrument
-        self._mode = mode
         self._init_kwargs = kwargs
         self._last_readout = None
 
         check_packages(instrument, download_missing)
         if mode is not None:
+            # Avoid [None], which confuses UserCommands
             mode = ensure_list(mode)
-        if "properties" in kwargs:
-            kwargs["properties"].update({"!OBS.dit": None, "!OBS.ndit": None})
-        else:
-            kwargs["properties"] = {"!OBS.dit": None, "!OBS.ndit": None}
+        # if "properties" in kwargs:
+        #     kwargs["properties"].update({"!OBS.dit": None, "!OBS.ndit": None})
+        # else:
+        #     kwargs["properties"] = {"!OBS.dit": None, "!OBS.ndit": None}
 
-        self._cmds = UserCommands(use_instrument=instrument,
-                                  set_modes=mode,
-                                  **kwargs)
-        self.optical_train = OpticalTrain(self._cmds)
+        # Don't save cmds as an attribute, because OpticalTrain (currently)
+        # creates a copy of that, so the actual "settings" are stored there
+        # anyway. If that ever changes, consider adapting this here...
+        cmds = UserCommands(use_instrument=instrument,
+                            set_modes=mode, **kwargs)
+        self.optical_train = OpticalTrain(cmds)
 
     @top_level_catch
     def __call__(
@@ -170,19 +171,45 @@ class Simulation:
 
     @property
     def instrument(self) -> str:
-        """Return instrument name."""
-        return self._instrument
+        """Return instrument name.
+
+        Shortcut for `settings["!OBS.instrument"]`.
+        """
+        return self.settings["!OBS.instrument"]
 
     @property
     def mode(self) -> str:
-        """Return current instrument mode."""
-        return self._mode
+        """Return current instrument mode(s).
+
+        Shortcut for `settings["!OBS.modes"]`.
+
+        Note that some instruments use multiple "parallel" modes, in which case
+        the internal list of strings is converted to a single, comma-separated
+        string.
+        """
+        return ", ".join(self.settings["!OBS.modes"])
 
     @property
     def settings(self) -> UserCommands:
         """Return the current settings (UserCommands object)."""
-        # return self._cmds
         return self.optical_train.cmds
+
+    def _get_vminmax(self, adjust_scale: bool):
+        if not adjust_scale:
+            return {"vmin": None, "vmax": None}
+        imgs = self.last_readout[0][1:]
+        vmin = max(min(img.data.min() for img in imgs), 0)
+        vmax = max(max(img.data.max() for img in imgs), 0)
+        return {"vmin": vmin, "vmax": vmax}
+
+    @staticmethod
+    def _get_figax(n_imgs: int):
+        fig, axs = figure_factory(nrows=int(n_imgs), ncols=int(n_imgs))
+        if isinstance(axs, np.ndarray):
+            axs = list(axs.flatten())
+        else:
+            axs = [axs]
+        return fig, axs
 
     def plot(self, img_slice=None, adjust_scale=False, **kwargs):
         """Show simulated image, return mpl figure and axes."""
@@ -192,23 +219,16 @@ class Simulation:
                 "Number of output image HDUs is not a square number, this will"
                 " create an uneven image plot.")
 
-        if adjust_scale:
-            vmin = max(min(img.data.min() for img in imgs), 0)
-            vmax = max(max(img.data.max() for img in imgs), 0)
-        else:
-            vmin, vmax = None, None
+        vminmax = self._get_vminmax(adjust_scale)
+        pltkwargs = {"origin": "lower", "norm": "log"} | vminmax | kwargs
+        img_slice = img_slice or slice(None)
 
-        fig, axs = figure_factory(nrows=int(n_imgs), ncols=int(n_imgs))
-        if isinstance(axs, np.ndarray):
-            axs = axs.flatten()
-        else:
-            axs = [axs]
+        fig, axs = self._get_figax(n_imgs)
         for ax, img in zip(axs, imgs):
-            if img_slice is None:
-                img_slice = slice(None)
-            kwargs = {"norm": "log", "vmin": vmin, "vmax": vmax} | kwargs
-            ax.imshow(img.data[img_slice], origin="lower", **kwargs)
+            ax.imshow(img.data[img_slice], **pltkwargs)
             ax.set_aspect("equal")
             ax.label_outer()
-        fig.suptitle(f"{self.instrument} simulation")
+            ax.set_xlabel("pixel")
+            ax.set_ylabel("pixel")
+        fig.suptitle(f"{self.instrument} simulation in {self.mode} mode")
         return fig, axs
