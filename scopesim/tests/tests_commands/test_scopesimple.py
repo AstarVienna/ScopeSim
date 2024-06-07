@@ -21,14 +21,14 @@ class TestScopeSimple:
 
     def test_full_workflow_runs(self):
         simple = Simulation("basic_instrument")
-        src = st.star(flux=9)
-        out1 = simple(src, dit=10, ndit=1)
-        out2 = simple.readout(dit=100, ndit=1)
-        assert out2[1].data.sum() > out1[1].data.sum()
+        src = st.star(flux=15)
+        out1 = simple(src, dit=1, ndit=1)
+        out2 = simple.readout(dit=1e5, ndit=1)
+        assert out2[1].data.max() > out1[1].data.max()
 
     def test_plotting_runs(self):
         simple = Simulation("basic_instrument")
         src = st.star(flux=9)
         simple(src, dit=10, ndit=1)
-        fig, ax = simple.plot()
+        fig, ax = simple.plot(adjust_scale=True)
         assert ax is not None

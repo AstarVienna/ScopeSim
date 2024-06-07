@@ -340,13 +340,26 @@ class SummedExposure(Effect):
 
         dit = from_currsys(self.meta["dit"], self.cmds)
         ndit = from_currsys(self.meta["ndit"], self.cmds)
+        # TODO: Remove this silly try-except once currsys works properly...
+        # TODO: Check the following case: dit, ndit None in kwargs, but
+        #       exptime set and AutoExp sets dit, ndit in !OBS (but not kwargs)
+        # try:
+        #     dit = kwargs.pop("dit", from_currsys(self.meta["dit"], self.cmds))
+        # except (KeyError, ValueError):
+        #     dit = None
+        # try:
+        #     ndit = kwargs.pop("ndit", from_currsys(self.meta["ndit"], self.cmds))
+        # except (KeyError, ValueError):
+        #     ndit = None
 
         if ((nodit := dit is None) | (nondit := ndit is None)):
             raise ValueError(
                 f"{'DIT' * nodit}{' & ' * nodit * nondit}{'NDIT' * nondit} "
                 "not set. If AutoExposure is not used, please set "
                 f"{'!OBS.dit' * nodit}{' & ' * nodit * nondit}"
-                f"{'!OBS.ndit' * nondit} parameter."
+                f"{'!OBS.ndit' * nondit} parameter(s) or pass {'dit' * nodit}"
+                f"{' & ' * nodit * nondit}{'ndit' * nondit} as kwargs to the "
+                "readout call."
             )
 
         obj._hdu.data *= dit * ndit
