@@ -196,3 +196,25 @@ class TestFitsHeader:
         assert hdr["SIM EFF14 class"] == 'SourceDescriptionFitsKeywords'
         assert hdr["SIM CONFIG OBS filter_name"] == 'J'
         assert hdr["ESO ATM SEEING"] == opt.cmds["!OBS.psf_fwhm"]
+
+
+@pytest.mark.usefixtures("protect_currsys", "patch_all_mock_paths")
+class TestDitNdit:
+    def test_obs_dict(self):
+        src = st.star(flux=15)
+        cmd = sim.UserCommands(use_instrument="basic_instrument",
+                               ignore_effects=SWITCHOFF,
+                               properties={"!OBS.dit": 10, "!OBS.ndit": 1})
+        opt = sim.OpticalTrain(cmd)
+        opt.observe(src)
+        dit10_ndit1 = opt.readout()[0][1].data.sum().round()
+
+        opt.cmds["!OBS.dit"] = 20
+        dit20_ndit1 = opt.readout()[0][1].data.sum().round()
+
+        opt.cmds["!OBS.dit"] = 10
+        opt.cmds["!OBS.ndit"] = 3
+        dit10_ndit3 = opt.readout()[0][1].data.sum().round()
+
+        assert dit20_ndit1 == pytest.approx(2 * dit10_ndit1, abs=1)
+        assert dit10_ndit3 == pytest.approx(3 * dit10_ndit1, abs=1)
