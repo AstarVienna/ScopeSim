@@ -8,6 +8,7 @@ from astropy import units as u
 
 import scopesim as sim
 from scopesim.source import source_templates as st
+from scopesim.effects import AutoExposure
 
 
 PLOTS = False
@@ -198,23 +199,58 @@ class TestFitsHeader:
         assert hdr["ESO ATM SEEING"] == opt.cmds["!OBS.psf_fwhm"]
 
 
+@pytest.fixture(scope="function", name="obs")
+def basic_opt_observed():
+    src = st.star(flux=15)
+    cmd = sim.UserCommands(use_instrument="basic_instrument",
+                           ignore_effects=SWITCHOFF,
+                           properties={"!OBS.dit": 10, "!OBS.ndit": 1})
+    opt = sim.OpticalTrain(cmd)
+    opt.observe(src)
+    default = int(opt.readout()[0][1].data.sum())
+    return opt, default
+
+
 @pytest.mark.usefixtures("protect_currsys", "patch_all_mock_paths")
 class TestDitNdit:
-    def test_obs_dict(self):
-        src = st.star(flux=15)
-        cmd = sim.UserCommands(use_instrument="basic_instrument",
-                               ignore_effects=SWITCHOFF,
-                               properties={"!OBS.dit": 10, "!OBS.ndit": 1})
-        opt = sim.OpticalTrain(cmd)
-        opt.observe(src)
-        dit10_ndit1 = opt.readout()[0][1].data.sum().round()
+    @pytest.mark.parametrize(("dit", "ndit", "factor"),
+                             [(20, 1, 2), (10, 3, 3)])
+    def test_obs_dict(self, obs, dit, ndit, factor):
+        opt, default = obs
+        # This should work with patch.dict, but doesn't :(
+        o_dit, o_ndit = opt.cmds["!OBS.dit"], opt.cmds["!OBS.ndit"]
+        opt.cmds["!OBS.dit"] = dit
+        opt.cmds["!OBS.ndit"] = ndit
+        kwarged = int(opt.readout()[0][1].data.sum())
+        opt.cmds["!OBS.dit"] = o_dit
+        opt.cmds["!OBS.ndit"] = o_ndit
+        assert int(kwarged / default) == factor
 
-        opt.cmds["!OBS.dit"] = 20
-        dit20_ndit1 = opt.readout()[0][1].data.sum().round()
+    @pytest.mark.xfail
+    @pytest.mark.parametrize(("dit", "ndit", "factor"),
+                             [(20, 1, 2), (10, 3, 3)])
+    def test_kwargs_override_obs_dict(self, obs, dit, ndit, factor):
+        opt, default = obs
+        kwarged = int(opt.readout(dit=dit, ndit=ndit)[0][1].data.sum())
+        assert int(kwarged / default) == factor
 
-        opt.cmds["!OBS.dit"] = 10
-        opt.cmds["!OBS.ndit"] = 3
-        dit10_ndit3 = opt.readout()[0][1].data.sum().round()
+    @pytest.mark.parametrize(("exptime", "factor"),
+                             [(20, 2), (30, 3), (None, 6)])
+    def test_autoexp(self, obs, exptime, factor):
+        opt, default = obs
+        autoexp = AutoExposure(cmds=opt.cmds, mindit=1,
+                               full_well=100, fill_frac=0.8)
+        opt.optics_manager["basic_detector"].effects.insert(2, autoexp)
+        opt.cmds["!OBS.exptime"] = 60
 
-        assert dit20_ndit1 == pytest.approx(2 * dit10_ndit1, abs=1)
-        assert dit10_ndit3 == pytest.approx(3 * dit10_ndit1, abs=1)
+        o_dit, o_ndit = opt.cmds["!OBS.dit"], opt.cmds["!OBS.ndit"]
+        opt.cmds["!OBS.dit"] = None
+        opt.cmds["!OBS.ndit"] = None
+        if exptime is not None:
+            kwarged = int(opt.readout(exptime=exptime)[0][1].data.sum())
+        else:
+            kwarged = int(opt.readout()[0][1].data.sum())
+        opt.cmds["!OBS.dit"] = o_dit
+        opt.cmds["!OBS.ndit"] = o_ndit
+
+        assert int(kwarged / default) == factor
