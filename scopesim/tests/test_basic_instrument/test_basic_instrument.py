@@ -216,6 +216,7 @@ class TestDitNdit:
     @pytest.mark.parametrize(("dit", "ndit", "factor"),
                              [(20, 1, 2), (10, 3, 3)])
     def test_obs_dict(self, obs, dit, ndit, factor):
+        """This should just use dit, ndit from !OBS."""
         opt, default = obs
         # This should work with patch.dict, but doesn't :(
         o_dit, o_ndit = opt.cmds["!OBS.dit"], opt.cmds["!OBS.ndit"]
@@ -226,10 +227,12 @@ class TestDitNdit:
         opt.cmds["!OBS.ndit"] = o_ndit
         assert int(kwarged / default) == factor
 
-    @pytest.mark.xfail(reason="S.E. doesn't get kwargs without A.E..")
     @pytest.mark.parametrize(("dit", "ndit", "factor"),
-                             [(20, 1, 2), (10, 3, 3)])
+                             [pytest.param(20, 1, 2, marks=pytest.mark.xfail(reason="S.E. doesn't get kwargs without A.E..")),
+                              pytest.param(10, 3, 3, marks=pytest.mark.xfail(reason="S.E. doesn't get kwargs without A.E..")),
+                              (None, None, 1)])
     def test_kwargs_override_obs_dict(self, obs, dit, ndit, factor):
+        """This should prioritize kwargs and fallback to !OBS."""
         opt, default = obs
         kwarged = int(opt.readout(dit=dit, ndit=ndit)[0][1].data.sum())
         assert int(kwarged / default) == factor
@@ -238,6 +241,7 @@ class TestDitNdit:
                              [(20, 2), (30, 3),
                               pytest.param(None, 6, marks=pytest.mark.xfail(reason="A.E. doesn't understand None yet."))])
     def test_autoexp(self, obs, exptime, factor):
+        """This should prioritize kwargs and fallback to !OBS."""
         opt, default = obs
         autoexp = AutoExposure(cmds=opt.cmds, mindit=1,
                                full_well=100, fill_frac=0.8)
@@ -256,6 +260,7 @@ class TestDitNdit:
                              [pytest.param(30, 3, marks=pytest.mark.xfail(reason="dit, ndit in !OBS overrides kwargs exptime.")),
                               (None, 1)])
     def test_autoexp_overrides_obs_dict(self, obs, exptime, factor):
+        """This should prioritize kwargs and use dit, ndit when None."""
         opt, default = obs
         autoexp = AutoExposure(cmds=opt.cmds, mindit=1,
                                full_well=100, fill_frac=0.8)
@@ -263,3 +268,39 @@ class TestDitNdit:
         opt.cmds["!OBS.exptime"] = 60
         kwarged = int(opt.readout(exptime=exptime)[0][1].data.sum())
         assert int(kwarged / default) == factor
+
+    @pytest.mark.xfail(reason="Currently raises TypeError, but should be ValueError.")
+    def test_throws_for_no_anything(self, obs):
+        """No specification whatsoever, so throw error."""
+        opt, default = obs
+        opt.cmds["!OBS.exptime"] = None
+        # This should work with patch.dict, but doesn't :(
+        o_dit, o_ndit = opt.cmds["!OBS.dit"], opt.cmds["!OBS.ndit"]
+        opt.cmds["!OBS.dit"] = None
+        opt.cmds["!OBS.ndit"] = None
+        with pytest.raises(ValueError):
+            opt.readout()
+        opt.cmds["!OBS.dit"] = o_dit
+        opt.cmds["!OBS.ndit"] = o_ndit
+
+    @pytest.mark.xfail(reason="Currently doesn't raise anything, b/c dit, ndit from !OBS is prioitized.")
+    def test_throws_for_no_ditndit_no_autoexp_kwargs(self, obs):
+        """This should use exptime from kwargs, but fail w/o AutoExp."""
+        opt, default = obs
+        opt.cmds["!OBS.exptime"] = None
+        with pytest.raises(ValueError):
+            opt.readout(exptime=60)
+
+    @pytest.mark.xfail(reason="Currently raises TypeError, but should be ValueError.")
+    def test_throws_for_no_ditndit_no_autoexp_obs(self, obs):
+        """This should fallback to !OBS.exptime, but fail w/o AutoExp."""
+        opt, default = obs
+        opt.cmds["!OBS.exptime"] = 60
+        # This should work with patch.dict, but doesn't :(
+        o_dit, o_ndit = opt.cmds["!OBS.dit"], opt.cmds["!OBS.ndit"]
+        opt.cmds["!OBS.dit"] = None
+        opt.cmds["!OBS.ndit"] = None
+        with pytest.raises(ValueError):
+            opt.readout()
+        opt.cmds["!OBS.dit"] = o_dit
+        opt.cmds["!OBS.ndit"] = o_ndit
