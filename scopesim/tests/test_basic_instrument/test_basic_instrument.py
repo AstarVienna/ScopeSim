@@ -226,7 +226,7 @@ class TestDitNdit:
         opt.cmds["!OBS.ndit"] = o_ndit
         assert int(kwarged / default) == factor
 
-    @pytest.mark.xfail
+    @pytest.mark.xfail(reason="S.E. doesn't get kwargs without A.E..")
     @pytest.mark.parametrize(("dit", "ndit", "factor"),
                              [(20, 1, 2), (10, 3, 3)])
     def test_kwargs_override_obs_dict(self, obs, dit, ndit, factor):
@@ -235,22 +235,31 @@ class TestDitNdit:
         assert int(kwarged / default) == factor
 
     @pytest.mark.parametrize(("exptime", "factor"),
-                             [(20, 2), (30, 3), (None, 6)])
+                             [(20, 2), (30, 3),
+                              pytest.param(None, 6, marks=pytest.mark.xfail(reason="A.E. doesn't understand None yet."))])
     def test_autoexp(self, obs, exptime, factor):
         opt, default = obs
         autoexp = AutoExposure(cmds=opt.cmds, mindit=1,
                                full_well=100, fill_frac=0.8)
         opt.optics_manager["basic_detector"].effects.insert(2, autoexp)
         opt.cmds["!OBS.exptime"] = 60
-
+        # This should work with patch.dict, but doesn't :(
         o_dit, o_ndit = opt.cmds["!OBS.dit"], opt.cmds["!OBS.ndit"]
         opt.cmds["!OBS.dit"] = None
         opt.cmds["!OBS.ndit"] = None
-        if exptime is not None:
-            kwarged = int(opt.readout(exptime=exptime)[0][1].data.sum())
-        else:
-            kwarged = int(opt.readout()[0][1].data.sum())
+        kwarged = int(opt.readout(exptime=exptime)[0][1].data.sum())
         opt.cmds["!OBS.dit"] = o_dit
         opt.cmds["!OBS.ndit"] = o_ndit
+        assert int(kwarged / default) == factor
 
+    @pytest.mark.parametrize(("exptime", "factor"),
+                             [pytest.param(30, 3, marks=pytest.mark.xfail(reason="dit, ndit in !OBS overrides kwargs exptime.")),
+                              (None, 1)])
+    def test_autoexp_overrides_obs_dict(self, obs, exptime, factor):
+        opt, default = obs
+        autoexp = AutoExposure(cmds=opt.cmds, mindit=1,
+                               full_well=100, fill_frac=0.8)
+        opt.optics_manager["basic_detector"].effects.insert(2, autoexp)
+        opt.cmds["!OBS.exptime"] = 60
+        kwarged = int(opt.readout(exptime=exptime)[0][1].data.sum())
         assert int(kwarged / default) == factor
