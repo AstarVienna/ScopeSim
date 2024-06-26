@@ -14,6 +14,7 @@ yamls :
   - YAML_detector.yaml           # electronic and detector effects and properties
 
 properties :
+  instrument: "basic_instrument"
   psf_fwhm: 1.5             # [arcsec]
   modes : ["imaging"]       # default mode name
   dit: 60
