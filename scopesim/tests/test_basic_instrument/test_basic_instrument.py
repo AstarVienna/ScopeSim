@@ -208,7 +208,10 @@ def basic_opt_observed():
     opt = sim.OpticalTrain(cmd)
     opt.observe(src)
     default = int(opt.readout()[0][1].data.sum())
-    return opt, default
+
+    quanteff = Quantization(cmds=opt.cmds)
+    opt.optics_manager["basic_detector"].effects.append(quanteff)
+    return opt, default, quanteff
 
 
 @pytest.fixture(scope="function", name="obs_aeq")
@@ -232,29 +235,33 @@ def basic_opt_with_autoexp_and_quant_observed():
 
 @pytest.mark.usefixtures("protect_currsys", "patch_all_mock_paths")
 class TestDitNdit:
-    @pytest.mark.parametrize(("dit", "ndit", "factor"),
-                             [(20, 1, 2), (10, 3, 3)])
-    def test_obs_dict(self, obs, dit, ndit, factor):
+    @pytest.mark.parametrize(("dit", "ndit", "factor", "quant"),
+                             [(20, 1, 2, True), (10, 3, 3, False)])
+    def test_obs_dict(self, obs, dit, ndit, factor, quant):
         """This should just use dit, ndit from !OBS."""
-        opt, default = obs
+        opt, default, quanteff = obs
         # This should work with patch.dict, but doesn't :(
         o_dit, o_ndit = opt.cmds["!OBS.dit"], opt.cmds["!OBS.ndit"]
         opt.cmds["!OBS.dit"] = dit
         opt.cmds["!OBS.ndit"] = ndit
         kwarged = int(opt.readout()[0][1].data.sum())
+        assert quanteff._should_apply() == quant
         opt.cmds["!OBS.dit"] = o_dit
         opt.cmds["!OBS.ndit"] = o_ndit
-        assert int(kwarged / default) == factor
+        # Quantization results in ~4% loss, which is fine:
+        assert pytest.approx(kwarged / default, rel=.05) == factor
 
-    @pytest.mark.parametrize(("dit", "ndit", "factor"),
-                             [pytest.param(20, 1, 2, marks=pytest.mark.xfail(reason="S.E. doesn't get kwargs without A.E..")),
-                              pytest.param(10, 3, 3, marks=pytest.mark.xfail(reason="S.E. doesn't get kwargs without A.E..")),
-                              (None, None, 1)])
-    def test_kwargs_override_obs_dict(self, obs, dit, ndit, factor):
+    @pytest.mark.parametrize(("dit", "ndit", "factor", "quant"),
+                             [pytest.param(20, 1, 2, True, marks=pytest.mark.xfail(reason="S.E. doesn't get kwargs without A.E..")),
+                              pytest.param(10, 3, 3, False, marks=pytest.mark.xfail(reason="S.E. doesn't get kwargs without A.E..")),
+                              (None, None, 1, True)])
+    def test_kwargs_override_obs_dict(self, obs, dit, ndit, factor, quant):
         """This should prioritize kwargs and fallback to !OBS."""
-        opt, default = obs
+        opt, default, quanteff = obs
         kwarged = int(opt.readout(dit=dit, ndit=ndit)[0][1].data.sum())
-        assert int(kwarged / default) == factor
+        assert quanteff._should_apply() == quant
+        # Quantization results in ~4% loss, which is fine:
+        assert pytest.approx(kwarged / default, rel=.05) == factor
 
     @pytest.mark.parametrize(("dit", "ndit", "factor", "quant"),
                              [pytest.param(20, 1, 2, True, marks=pytest.mark.xfail(reason="S.E. doesn't get kwargs without A.E..")),
@@ -324,7 +331,7 @@ class TestDitNdit:
     @pytest.mark.xfail(reason="Currently raises TypeError, but should be ValueError.")
     def test_throws_for_no_anything(self, obs):
         """No specification whatsoever, so throw error."""
-        opt, default = obs
+        opt, default, quanteff = obs
         opt.cmds["!OBS.exptime"] = None
         # This should work with patch.dict, but doesn't :(
         o_dit, o_ndit = opt.cmds["!OBS.dit"], opt.cmds["!OBS.ndit"]
@@ -338,7 +345,7 @@ class TestDitNdit:
     @pytest.mark.xfail(reason="Currently doesn't raise anything, b/c dit, ndit from !OBS is prioitized.")
     def test_throws_for_no_ditndit_no_autoexp_kwargs(self, obs):
         """This should use exptime from kwargs, but fail w/o AutoExp."""
-        opt, default = obs
+        opt, default, quanteff = obs
         opt.cmds["!OBS.exptime"] = None
         with pytest.raises(ValueError):
             opt.readout(exptime=60)
@@ -346,7 +353,7 @@ class TestDitNdit:
     @pytest.mark.xfail(reason="Currently raises TypeError, but should be ValueError.")
     def test_throws_for_no_ditndit_no_autoexp_obs(self, obs):
         """This should fallback to !OBS.exptime, but fail w/o AutoExp."""
-        opt, default = obs
+        opt, default, quanteff = obs
         opt.cmds["!OBS.exptime"] = 60
         # This should work with patch.dict, but doesn't :(
         o_dit, o_ndit = opt.cmds["!OBS.dit"], opt.cmds["!OBS.ndit"]
