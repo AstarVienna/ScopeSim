@@ -65,5 +65,5 @@ class Detector(DetectorBase):
 
     @property
     def image(self):
-        """Return header from internal HDU."""
+        """Return data from internal HDU."""
         return self.data
