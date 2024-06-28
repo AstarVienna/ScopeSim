@@ -30,6 +30,13 @@ class DetectorManager(Sequence):
         self._array_effects: list[Effect] = []
         self._dtcr_effects: list[Effect] = []
         self._detectors: list[Detector] = []
+        if self._detector_list is not None:
+            self._detectors = [
+                Detector(hdr, cmds=self.cmds, **self.meta)
+                for hdr in self._detector_list.detector_headers()]
+        else:
+            logger.warning("No detector effect was passed, cannot fully "
+                           "initialize detector manager.")
 
         self._latest_exposure: HDUList | None = None
 
@@ -83,11 +90,7 @@ class DetectorManager(Sequence):
         for effect in self._array_effects:
             image_plane = effect.apply_to(image_plane, **self.meta)
 
-        # 3. make a series of Detectors for each row in a DetectorList object
-        self._detectors = [Detector(hdr, cmds=self.cmds, **self.meta)
-                           for hdr in self._detector_list.detector_headers()]
-
-        # 4. iterate through all Detectors, extract image from image_plane
+        # 3. iterate through all Detectors, extract image from image_plane
         logger.info("Extracting from %d detectors...", len(self))
         for detector in self:
             detector.extract_from(image_plane)
