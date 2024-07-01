@@ -322,8 +322,8 @@ class SummedExposure(Effect):
         if isinstance(obj, DetectorBase):
             dit = from_currsys(self.meta["dit"], self.cmds)
             ndit = from_currsys(self.meta["ndit"], self.cmds)
-
-            obj._hdu.data *= dit * ndit
+            # Can't do in-place because of Quantization data type conflicts.
+            obj._hdu.data = obj._hdu.data * dit * ndit
 
         return obj
 
@@ -344,7 +344,8 @@ class Bias(Effect):
     def apply_to(self, obj, **kwargs):
         if isinstance(obj, DetectorBase):
             biaslevel = from_currsys(self.meta["bias"], self.cmds)
-            obj._hdu.data += biaslevel
+            # Can't do in-place because of Quantization data type conflicts.
+            obj._hdu.data = obj._hdu.data + biaslevel
 
         return obj
 
@@ -388,8 +389,9 @@ class PoorMansHxRGReadoutNoise(Effect):
                 dy = np.random.randint(0, ron_frame.shape[0])
                 stacked_ron_frame += np.roll(ron_frame, (dy, dx), axis=(0, 1))
 
-            # .. todo: this .T is ugly. Work out where things are getting switched and remove it!
-            det._hdu.data += stacked_ron_frame.T
+            # TODO: this .T is ugly. Work out where things are getting switched and remove it!
+            # Can't do in-place because of Quantization data type conflicts.
+            det._hdu.data = det._hdu.data + stacked_ron_frame.T
 
         return det
 
@@ -426,8 +428,9 @@ class BasicReadoutNoise(Effect):
             random_seed = from_currsys(self.meta["random_seed"], self.cmds)
             if random_seed is not None:
                 np.random.seed(random_seed)
-            det._hdu.data += np.random.normal(loc=0, scale=noise_std,
-                                              size=det._hdu.data.shape)
+            # Can't do in-place because of Quantization data type conflicts.
+            det._hdu.data = det._hdu.data + np.random.normal(
+                loc=0, scale=noise_std, size=det._hdu.data.shape)
 
         return det
 
@@ -516,7 +519,8 @@ class DarkCurrent(Effect):
             dit = from_currsys(self.meta["dit"], self.cmds)
             ndit = from_currsys(self.meta["ndit"], self.cmds)
 
-            obj._hdu.data += dark * dit * ndit
+            # Can't do in-place because of Quantization data type conflicts.
+            obj._hdu.data = obj._hdu.data + dark * dit * ndit
 
         return obj
 
@@ -612,9 +616,7 @@ class ReferencePixelBorder(Effect):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.meta["z_order"] = [780]
-        val = 0
-        if "all" in kwargs:
-            val = int(kwargs["all"])
+        val = int(kwargs.get("all", 0))
         widths = {key: val for key in ["top", "bottom", "left", "right"]}
         self.meta.update(widths)
         self.meta.update(kwargs)
