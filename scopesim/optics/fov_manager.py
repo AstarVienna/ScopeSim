@@ -225,10 +225,17 @@ class FovVolumeList(FOVSetupBase, MutableSequence):
         self.volumes = [{
             "wave_min": 0.3,
             "wave_max": 30,
-            "x_min": -1800,
-            "x_max": 1800,
-            "y_min": -1800,
-            "y_max": 1800,
+            # 100 square degree should be enough for everyone!
+            # Survey telescopes can have a large Field of View though:
+            # - OmegaCAM / KiDS: 1 sq. degree
+            # - DES: 4 sq. degree
+            # - Pan-STARRS 7 sq. degree
+            # - DREAMS: 6 sq. degree
+            # TODO: Why not put the entire sky here?
+            "x_min": -1800 * 10,
+            "x_max": 1800 * 10,
+            "y_min": -1800 * 10,
+            "y_max": 1800 * 10,
             "meta": {
                 "area": 0 * u.um**2,
                 "aperture_id": 0,
