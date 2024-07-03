@@ -26,7 +26,7 @@ from pytest import approx
 import numpy as np
 from astropy.io import fits
 
-import scopesim.effects.psf_utils
+from scopesim.effects.psfs.psf_utils import get_strehl_cutout
 from scopesim.effects import FieldVaryingPSF
 from scopesim.tests.mocks.py_objects.fov_objects import _centre_fov
 from scopesim.tests.mocks.py_objects.psf_objects import _basic_circular_fvpsf
@@ -175,7 +175,7 @@ class TestFunctionGetStrehlCutout:
         centre_fov.header["CRVAL2"] -= 15/3600.
 
         fvpsf = FieldVaryingPSF(filename=str(mock_path / "test_FVPSF.fits"))
-        strehl_hdu = scopesim.effects.psf_utils.get_strehl_cutout(
+        strehl_hdu = get_strehl_cutout(
             centre_fov.header, fvpsf.strehl_imagehdu)
 
         if PLOTS:

@@ -1,15 +1,17 @@
-import numpy as np
+# -*- coding: utf-8 -*-
+"""."""
 
+import numpy as np
 from scipy import ndimage as spi
 from scipy.interpolate import RectBivariateSpline, griddata
 from scipy.ndimage import zoom
 from astropy import units as u
 from astropy.convolution import Gaussian2DKernel
 from astropy.io import fits
+from astropy.wcs import WCS
 
-from .. import utils
-from ..optics import image_plane_utils as imp_utils
-from ..utils import figure_factory, get_logger
+from ...optics import image_plane_utils as imp_utils
+from ...utils import figure_factory, get_logger, quantify, quantity_from_table
 
 
 logger = get_logger(__name__)
@@ -134,8 +136,6 @@ def rescale_kernel(image, scale_factor, spline_order):
 
 
 def cutout_kernel(image, fov_header, kernel_header=None):
-    from astropy.wcs import WCS
-
     wk = WCS(kernel_header)
     h, w = image.shape
     xcen, ycen = 0.5 * w, 0.5 * h
@@ -194,13 +194,13 @@ def get_psf_wave_exts(hdu_list, wave_key="WAVE0"):
 
     # ..todo:: implement a way of getting the units from WAVEUNIT
     # until then assume everything is in um
-    wave_set = utils.quantify(wave_set, u.um)
+    wave_set = quantify(wave_set, u.um)
 
     return wave_set, wave_ext
 
 
 def get_total_wfe_from_table(tbl):
-    wfes = utils.quantity_from_table("wfe_rms", tbl, "um")
+    wfes = quantity_from_table("wfe_rms", tbl, "um")
     n_surfs = tbl["n_surfaces"]
     total_wfe = np.sum(n_surfs * wfes**2)**0.5
 
@@ -219,8 +219,8 @@ def wfe2gauss(wfe, wave, width=None):
 
 
 def wfe2strehl(wfe, wave):
-    wave = utils.quantify(wave, u.um)
-    wfe = utils.quantify(wfe, u.um)
+    wave = quantify(wave, u.um)
+    wfe = quantify(wfe, u.um)
     x = 2 * 3.1415926526 * wfe / wave
     strehl = np.exp(-x**2)
     return strehl

@@ -3,11 +3,9 @@ import pytest
 from pytest import approx
 import numpy as np
 from matplotlib import pyplot as plt
-from matplotlib.colors import LogNorm
 
 from scopesim.effects import PSF
-from scopesim.effects.psf_utils import rotational_blur
-from scopesim.effects.psf_utils import get_bkg_level
+from scopesim.effects.psfs.psf_utils import get_bkg_level
 from scopesim.optics import ImagePlane
 from scopesim.tests.mocks.py_objects.header_objects import _implane_header
 

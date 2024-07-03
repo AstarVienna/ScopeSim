@@ -8,7 +8,7 @@ from matplotlib.colors import LogNorm
 from astropy import units as u
 
 from scopesim.effects.psfs import NonCommonPathAberration
-from scopesim.effects.psf_utils import strehl2sigma, sigma2gauss, wfe2gauss, wfe2strehl
+from scopesim.effects.psfs.psf_utils import strehl2sigma, sigma2gauss, wfe2gauss, wfe2strehl
 from scopesim.optics import FieldOfView, ImagePlane
 from scopesim.utils import from_currsys
 
