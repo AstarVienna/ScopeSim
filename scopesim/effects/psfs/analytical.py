@@ -14,6 +14,8 @@ from . import psf_utils as pu
 
 
 class AnalyticalPSF(PSF):
+    """Base class for analytical PSFs."""
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.meta["z_order"] = [41, 641]
@@ -35,14 +37,16 @@ class Vibration(AnalyticalPSF):
         self.kernel = None
 
     def get_kernel(self, obj):
-        if self.kernel is None:
-            from_currsys(self.meta, self.cmds)
-            fwhm_pix = self.meta["fwhm"] / self.meta["pixel_scale"]
-            sigma = fwhm_pix / 2.35
-            width = max(1, int(fwhm_pix * self.meta["width_n_fwhms"]))
-            self.kernel = Gaussian2DKernel(sigma, x_size=width, y_size=width,
-                                           mode="center").array
-            self.kernel /= np.sum(self.kernel)
+        if self.kernel is not None:
+            return self.kernel
+
+        from_currsys(self.meta, self.cmds)
+        fwhm_pix = self.meta["fwhm"] / self.meta["pixel_scale"]
+        sigma = fwhm_pix / 2.35
+        width = max(1, int(fwhm_pix * self.meta["width_n_fwhms"]))
+        self.kernel = Gaussian2DKernel(sigma, x_size=width, y_size=width,
+                                       mode="center").array
+        self.kernel /= np.sum(self.kernel)
 
         return self.kernel.astype(float)
 
@@ -76,19 +80,19 @@ class NonCommonPathAberration(AnalyticalPSF):
         """See parent docstring."""
         warnings.warn("The fov_grid method is deprecated and will be removed "
                       "in a future release.", DeprecationWarning, stacklevel=2)
-        if which == "waveset":
-            self.meta.update(kwargs)
-            self.meta = from_currsys(self.meta, self.cmds)
+        if which != "waveset":
+            return [] * u.um
 
-            min_sr = pu.wfe2strehl(self.total_wfe, self.meta["wave_min"])
-            max_sr = pu.wfe2strehl(self.total_wfe, self.meta["wave_max"])
+        self.meta.update(kwargs)
+        self.meta = from_currsys(self.meta, self.cmds)
 
-            srs = np.arange(min_sr, max_sr, self.meta["strehl_drift"])
-            waves = 6.2831853 * self.total_wfe * (-np.log(srs))**-0.5
-            waves = quantify(waves, u.um).value
-            waves = (list(waves) + [self.meta["wave_max"]]) * u.um
-        else:
-            waves = [] * u.um
+        min_sr = pu.wfe2strehl(self.total_wfe, self.meta["wave_min"])
+        max_sr = pu.wfe2strehl(self.total_wfe, self.meta["wave_max"])
+
+        srs = np.arange(min_sr, max_sr, self.meta["strehl_drift"])
+        waves = 6.2831853 * self.total_wfe * (-np.log(srs))**-0.5
+        waves = quantify(waves, u.um).value
+        waves = (list(waves) + [self.meta["wave_max"]]) * u.um
 
         return waves
 
@@ -111,11 +115,14 @@ class NonCommonPathAberration(AnalyticalPSF):
 
     @property
     def total_wfe(self):
-        if self._total_wfe is None:
-            if self.table is not None:
-                self._total_wfe = pu.get_total_wfe_from_table(self.table)
-            else:
-                self._total_wfe = 0
+        if self._total_wfe is not None:
+            return self._total_wfe
+
+        if self.table is not None:
+            self._total_wfe = pu.get_total_wfe_from_table(self.table)
+        else:
+            self._total_wfe = 0
+
         return self._total_wfe
 
     def plot(self):

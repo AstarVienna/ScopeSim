@@ -14,6 +14,8 @@ from . import psf_utils as pu
 
 
 class SemiAnalyticalPSF(PSF):
+    """Base class for semianalytical PSFs."""
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.meta["z_order"] = [42]
@@ -99,25 +101,27 @@ class AnisocadoConstPSF(SemiAnalyticalPSF):
     def get_kernel(self, fov):
         # called by .apply_to() from the base PSF class
 
-        if self._kernel is None:
-            if isinstance(fov, FieldOfViewBase):
-                pixel_scale = fov.header["CDELT1"] * u.deg.to(u.arcsec)
-            elif isinstance(fov, float):
-                pixel_scale = fov
+        if self._kernel is not None:
+            return self._kernel
 
-            n = self.meta["psf_side_length"]
-            wave = self.wavelength
-            self._psf_object = aniso.AnalyticalScaoPsf(pixelSize=pixel_scale,
-                                                       N=n, wavelength=wave,
-                                                       nmRms=self.nmRms)
-            if np.any(self.meta["offset"]):
-                self._psf_object.shift_off_axis(self.meta["offset"][0],
-                                                self.meta["offset"][1])
+        if isinstance(fov, FieldOfViewBase):
+            pixel_scale = fov.header["CDELT1"] * u.deg.to(u.arcsec)
+        elif isinstance(fov, float):
+            pixel_scale = fov
 
-            self._kernel = self._psf_object.psf_latest
-            self._kernel /= np.sum(self._kernel)
-            if self.meta["rounded_edges"]:
-                self._kernel = pu.round_kernel_edges(self._kernel)
+        n = self.meta["psf_side_length"]
+        wave = self.wavelength
+        self._psf_object = aniso.AnalyticalScaoPsf(pixelSize=pixel_scale,
+                                                   N=n, wavelength=wave,
+                                                   nmRms=self.nmRms)
+        if np.any(self.meta["offset"]):
+            self._psf_object.shift_off_axis(self.meta["offset"][0],
+                                            self.meta["offset"][1])
+
+        self._kernel = self._psf_object.psf_latest
+        self._kernel /= np.sum(self._kernel)
+        if self.meta["rounded_edges"]:
+            self._kernel = pu.round_kernel_edges(self._kernel)
 
         return self._kernel
 
