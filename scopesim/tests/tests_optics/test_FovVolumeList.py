@@ -102,12 +102,13 @@ class TestShrink:
 
     def test_shrink_along_two_axes(self):
         fvl = FovVolumeList()
+        y_min_org = fvl[0]["y_min"]
         fvl.shrink(["x", "y"], ([0.1, None], [None, 5]))
         print(fvl)
 
         assert fvl[0]["x_min"] == 0.1
         assert fvl[0]["y_max"] == 5
-        assert fvl[0]["y_min"] == -1800
+        assert fvl[0]["y_min"] == y_min_org
 
     def test_removes_volumes_no_longer_inside_volume_limits(self):
         fvl = FovVolumeList()
