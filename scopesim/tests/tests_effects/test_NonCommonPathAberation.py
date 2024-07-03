@@ -8,7 +8,7 @@ from matplotlib.colors import LogNorm
 from astropy import units as u
 
 from scopesim.effects.psfs import NonCommonPathAberration
-from scopesim.effects.psfs.psf_utils import strehl2sigma, sigma2gauss, wfe2gauss, wfe2strehl
+from scopesim.effects.psfs.analytical import _strehl2sigma, _sigma2gauss, wfe2gauss, wfe2strehl
 from scopesim.optics import FieldOfView, ImagePlane
 from scopesim.utils import from_currsys
 
@@ -126,8 +126,8 @@ class TestFunctionStrehl2Gauss:
 
         wave = np.arange(0.3, 4, 0.1)
         srs = wfe2strehl(0.076, wave)
-        sigs = strehl2sigma(srs)
-        kernels = np.array([sigma2gauss(sig) for sig in sigs])
+        sigs = _strehl2sigma(srs)
+        kernels = np.array([_sigma2gauss(sig) for sig in sigs])
         amplis = np.array([np.max(kernel) for kernel in kernels])
         ampli_srs = amplis / srs
 

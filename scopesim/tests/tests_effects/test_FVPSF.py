@@ -26,7 +26,7 @@ from pytest import approx
 import numpy as np
 from astropy.io import fits
 
-from scopesim.effects.psfs.psf_utils import get_strehl_cutout
+from scopesim.effects.psfs.discrete import get_strehl_cutout
 from scopesim.effects import FieldVaryingPSF
 from scopesim.tests.mocks.py_objects.fov_objects import _centre_fov
 from scopesim.tests.mocks.py_objects.psf_objects import _basic_circular_fvpsf

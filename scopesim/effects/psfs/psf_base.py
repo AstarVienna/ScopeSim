@@ -3,15 +3,12 @@
 
 import numpy as np
 from scipy.signal import convolve
+from scipy.ndimage import rotate
 from astropy import units as u
 
 from ..effects import Effect
 from ...base_classes import ImagePlaneBase, FieldOfViewBase, FOVSetupBase
-from ...utils import from_currsys, quantify, figure_factory, get_logger
-from . import psf_utils as pu
-
-
-logger = get_logger(__name__)
+from ...utils import from_currsys, quantify, figure_factory
 
 
 class PoorMansFOV:
@@ -71,7 +68,7 @@ class PSF(Effect):
                 rot_blur_angle = self.meta["rotational_blur_angle"]
                 if abs(rot_blur_angle) > 0:
                     # makes a copy of kernel
-                    kernel = pu.rotational_blur(kernel, rot_blur_angle)
+                    kernel = rotational_blur(kernel, rot_blur_angle)
 
                 # normalise psf kernel      KERNEL SHOULD BE normalised within get_kernel()
                 # if from_currsys(self.meta["normalise_kernel"], self.cmds):
@@ -81,7 +78,7 @@ class PSF(Effect):
                 image = obj.hdu.data.astype(float)
 
                 # subtract background level before convolving, re-add afterwards
-                bkg_level = pu.get_bkg_level(image, self.meta["bkg_width"])
+                bkg_level = get_bkg_level(image, self.meta["bkg_width"])
 
                 # do the convolution
                 mode = from_currsys(self.meta["convolve_mode"], self.cmds)
@@ -141,3 +138,66 @@ class PSF(Effect):
         axes.imshow(kernel, norm="log", origin="lower", **kwargs)
 
         return fig
+
+
+def rotational_blur(image, angle):
+    """
+    Rotate and coadd an image over a given angle to imitate a blur.
+
+    Parameters
+    ----------
+    image : array
+        Image to blur
+    angle : float
+        [deg] Angle over which the image should be rotationally blurred
+
+    Returns
+    -------
+    image_rot : array
+        Blurred image
+
+    """
+    image_rot = np.copy(image)
+
+    n_angles = 1
+    rad_to_deg = 57.29578
+    edge_pixel_unit_angle = np.arctan2(1, (image.shape[0] // 2)) * rad_to_deg
+    while abs(angle) > edge_pixel_unit_angle and n_angles < 25:
+        angle /= 2.
+        image_rot += rotate(image_rot, angle, reshape=False, order=1)
+        # each time kernel is rotated and added, the frame total doubles
+        n_angles *= 2
+
+    return image_rot / n_angles
+
+
+def get_bkg_level(obj, bg_w):
+    """
+    Determine the background level of image or cube slices.
+
+    Returns a scalar if obj is a 2d image or a vector if obj is a 3D cube (one
+    value for each plane).
+    The method for background determination is decided by
+    self.meta["bkg_width"]:
+    If 0, the background is returned as zero (implying no background
+    subtraction).
+    If -1, the background is estimated as the median of the entire image (or
+    cube plane).
+    If positive, the background is estimated as the median of a frame of width
+    `bkg_width` around the edges.
+    """
+    if obj.ndim not in (2, 3):
+        raise ValueError("Unsupported dimension:", obj.ndim)
+
+    if bg_w == 0:
+        if obj.ndim == 3:
+            return np.array([0] * obj.shape[0])
+        return 0.  # ndim == 2
+
+    mask = np.zeros_like(obj, dtype=bool)
+    mask[..., bg_w:-bg_w, bg_w:-bg_w] = True
+    bkg = np.ma.masked_array(obj, mask=mask)
+
+    if obj.ndim == 3:
+        return np.ma.median(bkg, axis=(2, 1)).data
+    return np.ma.median(bkg)  # ndim == 2

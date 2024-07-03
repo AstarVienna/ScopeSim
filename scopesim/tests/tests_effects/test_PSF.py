@@ -5,7 +5,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 
 from scopesim.effects import PSF
-from scopesim.effects.psfs.psf_utils import get_bkg_level
+from scopesim.effects.psfs.psf_base import get_bkg_level
 from scopesim.optics import ImagePlane
 from scopesim.tests.mocks.py_objects.header_objects import _implane_header
 

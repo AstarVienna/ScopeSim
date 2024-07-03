@@ -1,16 +1,17 @@
 # -*- coding: utf-8 -*-
-"""."""
+"""Currently only contains the AnisoCADO connection."""
 
 import numpy as np
+from scipy.interpolate import RectBivariateSpline
 from astropy import units as u
 
 import anisocado as aniso
 
 from .. import ter_curves_utils as tu
 from ...base_classes import FieldOfViewBase
-from ...utils import figure_grid_factory, from_currsys, quantify, check_keys
+from ...utils import (figure_factory, figure_grid_factory, from_currsys,
+                      quantify, check_keys)
 from . import PSF
-from . import psf_utils as pu
 
 
 class SemiAnalyticalPSF(PSF):
@@ -121,7 +122,7 @@ class AnisocadoConstPSF(SemiAnalyticalPSF):
         self._kernel = self._psf_object.psf_latest
         self._kernel /= np.sum(self._kernel)
         if self.meta["rounded_edges"]:
-            self._kernel = pu.round_kernel_edges(self._kernel)
+            self._round_kernel_edges()
 
         return self._kernel
 
@@ -137,6 +138,12 @@ class AnisocadoConstPSF(SemiAnalyticalPSF):
         """
         self._kernel = None
         return self.get_kernel(x)
+
+    def _round_kernel_edges(self):
+        y, x = np.array(self._kernel.shape).astype(int) // 2
+        threshold = np.min([self._kernel[y, 0], self._kernel[y, -1],
+                            self._kernel[0, x], self._kernel[-1, x]])
+        self._kernel[self._kernel < threshold] = 0.
 
     @property
     def wavelength(self):
@@ -161,7 +168,7 @@ class AnisocadoConstPSF(SemiAnalyticalPSF):
         strehl = from_currsys(self.meta["strehl"], self.cmds)
         wave = self.wavelength
         hdu = self._file[0]
-        nm_rms = pu.nmrms_from_strehl_and_wavelength(strehl, wave, hdu)
+        nm_rms = nmrms_from_strehl_and_wavelength(strehl, wave, hdu)
 
         return nm_rms
 
@@ -219,3 +226,61 @@ class AnisocadoConstPSF(SemiAnalyticalPSF):
         ax.legend()
         fig.align_labels()
         return fig
+
+
+def nmrms_from_strehl_and_wavelength(strehl: float, wavelength, strehl_hdu,
+                                     plot=False) -> float:
+    """
+    Return the wavefront error needed to make a PSF with desired strehl ratio.
+
+    Parameters
+    ----------
+    strehl : float
+        [0.001, 1] Desired strehl ratio. Values 1<sr<100 will be scale to <1
+    wavelength : float
+        [um]
+    strehl_hdu : np.ndarray
+        2D map of strehl ratio as a function of wavelength [um] and residual
+        wavefront error [nm RMS]
+    plot : bool
+
+    Returns
+    -------
+    nm : float
+        [nm] residual wavefront error for generating an on-axis AnisoCADO PSF
+        with the desired strehl ratio at a given wavelength
+
+    """
+    if 1. < strehl < 100.:
+        strehl *= 0.01
+
+    nm0 = strehl_hdu.header["CRVAL1"]
+    dnm = strehl_hdu.header["CDELT1"]
+    nm1 = strehl_hdu.header["NAXIS1"] * dnm + nm0
+    nms = np.arange(nm0, nm1, dnm)
+
+    w0 = strehl_hdu.header["CRVAL2"]
+    dw = strehl_hdu.header["CDELT2"]
+    w1 = strehl_hdu.header["NAXIS2"] * dw + w0
+    ws = np.arange(w0, w1, dw)
+
+    nms_spline = RectBivariateSpline(ws, nms, strehl_hdu.data, kx=1, ky=1)
+    strehls = nms_spline(wavelength, nms)[0]
+
+    if strehl > np.max(strehls):
+        raise ValueError(f"Strehl ratio ({strehl}) is impossible at this "
+                         f"wavelength ({wavelength}). Maximum Strehl possible "
+                         f"is {np.max(strehls)}.")
+
+    if strehls[0] < strehls[-1]:
+        nm = np.interp(strehl, strehls, nms)
+    else:
+        nm = np.interp(strehl, strehls[::-1], nms[::-1])
+
+    if plot:
+        fig, ax = figure_factory()
+        ax.plot(nms, strehls)
+        ax.plot(nm, strehl, "ro")
+        fig.show()
+
+    return nm

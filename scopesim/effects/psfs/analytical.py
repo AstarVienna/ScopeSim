@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""."""
+"""Contains simple Vibration, NCPA, Seeing and Diffraction PSFs."""
 
 import warnings
 
@@ -8,9 +8,9 @@ from astropy import units as u
 from astropy.convolution import Gaussian2DKernel
 
 from ...base_classes import ImagePlaneBase, FieldOfViewBase
-from ...utils import from_currsys, quantify, figure_factory, check_keys
+from ...utils import (from_currsys, quantify, quantity_from_table,
+                      figure_factory, check_keys)
 from . import PSF, PoorMansFOV
-from . import psf_utils as pu
 
 
 class AnalyticalPSF(PSF):
@@ -86,8 +86,8 @@ class NonCommonPathAberration(AnalyticalPSF):
         self.meta.update(kwargs)
         self.meta = from_currsys(self.meta, self.cmds)
 
-        min_sr = pu.wfe2strehl(self.total_wfe, self.meta["wave_min"])
-        max_sr = pu.wfe2strehl(self.total_wfe, self.meta["wave_max"])
+        min_sr = wfe2strehl(self.total_wfe, self.meta["wave_min"])
+        max_sr = wfe2strehl(self.total_wfe, self.meta["wave_max"])
 
         srs = np.arange(min_sr, max_sr, self.meta["strehl_drift"])
         waves = 6.2831853 * self.total_wfe * (-np.log(srs))**-0.5
@@ -102,16 +102,21 @@ class NonCommonPathAberration(AnalyticalPSF):
         old_waves = self.valid_waverange
         wave_mid_old = 0.5 * (old_waves[0] + old_waves[1])
         wave_mid_new = 0.5 * (waves[0] + waves[1])
-        strehl_old = pu.wfe2strehl(wfe=self.total_wfe, wave=wave_mid_old)
-        strehl_new = pu.wfe2strehl(wfe=self.total_wfe, wave=wave_mid_new)
+        strehl_old = wfe2strehl(wfe=self.total_wfe, wave=wave_mid_old)
+        strehl_new = wfe2strehl(wfe=self.total_wfe, wave=wave_mid_new)
 
         if np.abs(1 - strehl_old / strehl_new) > self.meta["strehl_drift"]:
             self.valid_waverange = waves
-            self.kernel = pu.wfe2gauss(wfe=self.total_wfe, wave=wave_mid_new,
-                                       width=self.meta["kernel_width"])
+            self.kernel = wfe2gauss(wfe=self.total_wfe, wave=wave_mid_new,
+                                    width=self.meta["kernel_width"])
             self.kernel /= np.sum(self.kernel)
 
         return self.kernel
+
+    def _get_total_wfe_from_table(self):
+        wfes = quantity_from_table("wfe_rms", self.table, "um")
+        n_surfs = self.table["n_surfaces"]
+        return np.sum(n_surfs * wfes**2)**0.5
 
     @property
     def total_wfe(self):
@@ -119,7 +124,7 @@ class NonCommonPathAberration(AnalyticalPSF):
             return self._total_wfe
 
         if self.table is not None:
-            self._total_wfe = pu.get_total_wfe_from_table(self.table)
+            self._total_wfe = self._get_total_wfe_from_table()
         else:
             self._total_wfe = 0
 
@@ -132,7 +137,7 @@ class NonCommonPathAberration(AnalyticalPSF):
                                            self.meta["wave_max"]], self.cmds)
         waves = np.linspace(wave_min, wave_max, 1001) * u.um
         wfe = self.total_wfe
-        strehl = pu.wfe2strehl(wfe=wfe, wave=waves)
+        strehl = wfe2strehl(wfe=wfe, wave=waves)
 
         axes.plot(waves, strehl)
         axes.set_xlabel(f"Wavelength [{waves.unit}]")
@@ -231,3 +236,41 @@ class GaussianDiffractionPSF(AnalyticalPSF):
         pixel_scale = from_currsys("!INST.pixel_scale", self.cmds)
         spec_dict = from_currsys("!SIM.spectral", self.cmds)
         return super().plot(PoorMansFOV(pixel_scale, spec_dict))
+
+
+def wfe2gauss(wfe, wave, width=None):
+    strehl = wfe2strehl(wfe, wave)
+    sigma = _strehl2sigma(strehl)
+    if width is None:
+        width = int(np.ceil(8 * sigma))
+        width += (width + 1) % 2
+    gauss = _sigma2gauss(sigma, x_size=width, y_size=width)
+
+    return gauss
+
+
+def wfe2strehl(wfe, wave):
+    wave = quantify(wave, u.um)
+    wfe = quantify(wfe, u.um)
+    x = 2 * 3.1415926526 * wfe / wave
+    strehl = np.exp(-x**2)
+    return strehl
+
+
+def _strehl2sigma(strehl):
+    amplitudes = [0.00465, 0.00480, 0.00506, 0.00553, 0.00637, 0.00793,
+                  0.01092, 0.01669, 0.02736, 0.04584, 0.07656, 0.12639,
+                  0.20474, 0.32156, 0.48097, 0.66895, 0.84376, 0.95514,
+                  0.99437, 0.99982, 0.99999]
+    sigmas = [19.9526, 15.3108, 11.7489, 9.01571, 6.91830, 5.30884, 4.07380,
+              3.12607, 2.39883, 1.84077, 1.41253, 1.08392, 0.83176, 0.63826,
+              0.48977, 0.37583, 0.28840, 0.22130, 0.16982, 0.13031, 0.1]
+    sigma = np.interp(strehl, amplitudes, sigmas)
+    return sigma
+
+
+def _sigma2gauss(sigma, x_size=15, y_size=15):
+    kernel = Gaussian2DKernel(sigma, x_size=x_size, y_size=y_size,
+                              mode="oversample").array
+    kernel /= np.sum(kernel)
+    return kernel

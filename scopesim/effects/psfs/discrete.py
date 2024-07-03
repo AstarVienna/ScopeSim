@@ -1,19 +1,20 @@
 # -*- coding: utf-8 -*-
-"""."""
+"""Contains field-constant and field-varying PSFs constructed from a file."""
 
 import numpy as np
 from scipy.signal import convolve
-from scipy.interpolate import RectBivariateSpline
+from scipy.ndimage import zoom
+from scipy.interpolate import RectBivariateSpline, griddata
 
 from astropy import units as u
 from astropy.io import fits
 from astropy.wcs import WCS
 
-
+from ...optics.image_plane_utils import (create_wcs_from_points,
+                                         add_imagehdu_to_imagehdu)
 from ...base_classes import FieldOfViewBase
-from ...utils import from_currsys, check_keys
-from . import PSF, PoorMansFOV
-from . import psf_utils as pu
+from ...utils import from_currsys, check_keys, quantify
+from . import PSF, PoorMansFOV, logger
 
 
 class DiscretePSF(PSF):
@@ -24,6 +25,40 @@ class DiscretePSF(PSF):
         self.meta["z_order"] = [43]
         self.convolution_classes = FieldOfViewBase
         # self.convolution_classes = ImagePlaneBase
+
+    def _get_psf_wave_exts(self):
+        """
+        Return a tuple of wave set and extension.
+
+        Raises
+        ------
+        ValueError
+            Raised for invalid self._file attribute.
+
+        Returns
+        -------
+        wave_set : TYPE
+            DESCRIPTION.
+        wave_ext : TYPE
+            DESCRIPTION.
+
+        """
+        if not isinstance(self._file, fits.HDUList):
+            raise ValueError("psf_effect must be a PSF object: "
+                             f"{type(self._file)}")
+
+        tmp = np.array([[ii, hdu.header[self.meta["wave_key"]]]
+                        for ii, hdu in enumerate(self._file)
+                        if self.meta["wave_key"] in hdu.header
+                        and hdu.data is not None])
+        wave_ext = tmp[:, 0].astype(int)
+        wave_set = tmp[:, 1]
+
+        # TODO: implement a way of getting the units from WAVEUNIT
+        #       until then assume everything is in um
+        wave_set = quantify(wave_set, u.um)
+
+        return wave_set, wave_ext
 
 
 class FieldConstantPSF(DiscretePSF):
@@ -42,8 +77,7 @@ class FieldConstantPSF(DiscretePSF):
         check_keys(self.meta, self.required_keys, action="error")
 
         self.meta["z_order"] = [262, 662]
-        self._waveset, self.kernel_indexes = pu.get_psf_wave_exts(
-            self._file, self.meta["wave_key"])
+        self._waveset, self.kernel_indices = self._get_psf_wave_exts()
         self.current_layer_id = None
         self.current_ext = None
         self.current_data = None
@@ -51,8 +85,8 @@ class FieldConstantPSF(DiscretePSF):
 
     def get_kernel(self, fov):
         """Find nearest wavelength and build PSF kernel from file"""
-        idx = pu.nearest_index(fov.wavelength, self._waveset)
-        ext = self.kernel_indexes[idx]
+        idx = _nearest_index(fov.wavelength, self._waveset)
+        ext = self.kernel_indices[idx]
         if ext == self.current_layer_id:
             return self.kernel
 
@@ -81,12 +115,11 @@ class FieldConstantPSF(DiscretePSF):
         if abs(pix_ratio - 1) > self.meta["flux_accuracy"]:
             spline_order = from_currsys(
                 "!SIM.computing.spline_order", cmds=self.cmds)
-            self.kernel = pu.rescale_kernel(
-                self.kernel, pix_ratio, spline_order)
+            self.kernel = _rescale_kernel(self.kernel, pix_ratio, spline_order)
 
         if ((fov.header["NAXIS1"] < hdr["NAXIS1"]) or
                 (fov.header["NAXIS2"] < hdr["NAXIS2"])):
-            self.kernel = pu.cutout_kernel(
+            self.kernel = _cutout_kernel(
                 self.kernel, fov.header, kernel_header=hdr)
 
         return self.kernel
@@ -182,8 +215,7 @@ class FieldVaryingPSF(DiscretePSF):
 
         self.meta["z_order"] = [261, 661]
 
-        ws, ki = pu.get_psf_wave_exts(self._file, self.meta["wave_key"])
-        self._waveset, self.kernel_indexes = ws, ki
+        self._waveset, self.kernel_indices = self._get_psf_wave_exts()
         self.current_ext = None
         self.current_data = None
         self._strehl_imagehdu = None
@@ -258,8 +290,8 @@ class FieldVaryingPSF(DiscretePSF):
 
         # find which file extension to use - keep pointer in self.current_data
         fov_wave = 0.5 * (fov.meta["wave_min"] + fov.meta["wave_max"])
-        jj = pu.nearest_index(fov_wave, self._waveset)
-        ext = self.kernel_indexes[jj]
+        jj = _nearest_index(fov_wave, self._waveset)
+        ext = self.kernel_indices[jj]
         if ext != self.current_ext:
             self.current_ext = ext
             self.current_data = self._file[ext].data
@@ -270,7 +302,7 @@ class FieldVaryingPSF(DiscretePSF):
 
         # get the spatial map of the kernel cube layers
         strl_hdu = self.strehl_imagehdu
-        strl_cutout = pu.get_strehl_cutout(fov.header, strl_hdu)
+        strl_cutout = get_strehl_cutout(fov.header, strl_hdu)
 
         # get the kernels and mask that fit inside the fov boundaries
         layer_ids = np.round(np.unique(strl_cutout.data)).astype(int)
@@ -290,7 +322,7 @@ class FieldVaryingPSF(DiscretePSF):
             spline_order = from_currsys(
                 "!SIM.computing.spline_order", cmds=self.cmds)
             for ii, kern in enumerate(self.kernel):
-                self.kernel[ii][0] = pu.rescale_kernel(
+                self.kernel[ii][0] = _rescale_kernel(
                     kern[0], pix_ratio, spline_order)
 
         for i, kern in enumerate(self.kernel):
@@ -311,7 +343,7 @@ class FieldVaryingPSF(DiscretePSF):
         # TODO: impliment this case
         elif isinstance(self._file[ecat], fits.BinTableHDU):
             cat = self._file[ecat]
-            self._strehl_imagehdu = pu.make_strehl_map_from_table(cat)
+            self._strehl_imagehdu = _make_strehl_map_from_table(cat)
 
         return self._strehl_imagehdu
 
@@ -319,3 +351,90 @@ class FieldVaryingPSF(DiscretePSF):
         pixel_scale = from_currsys("!INST.pixel_scale", self.cmds)
         spec_dict = from_currsys("!SIM.spectral", self.cmds)
         return super().plot(PoorMansFOV(pixel_scale, spec_dict))
+
+
+def _make_strehl_map_from_table(tbl, pixel_scale=1*u.arcsec):
+    # pixel_scale = utils.quantify(pixel_scale, u.um).to(u.deg)
+    # coords = np.array([tbl["x"], tbl["y"]]).T
+    #
+    # xmin, xmax = np.min(tbl["x"]), np.max(tbl["x"])
+    # ymin, ymax = np.min(tbl["y"]), np.max(tbl["y"])
+    # mesh = np.array(np.meshgrid(np.arange(xmin, xmax, pixel_scale),
+    #                             np.arange(np.min(tbl["y"]), np.max(tbl["y"]))))
+    # smap = griddata(coords, tbl["layer"], mesh, method="nearest")
+    #
+
+    smap = griddata(np.array([tbl.data["x"], tbl.data["y"]]).T,
+                    tbl.data["layer"],
+                    np.array(np.meshgrid(np.arange(-25, 26),
+                                         np.arange(-25, 26))).T,
+                    method="nearest")
+
+    new_wcs, _ = create_wcs_from_points(
+        np.array([[-25, -25],
+                  [25, 25]]) * u.arcsec,
+        pixel_scale=1*u.arcsec/u.pixel)
+
+    map_hdu = fits.ImageHDU(header=new_wcs.to_header(), data=smap)
+
+    return map_hdu
+
+
+def _rescale_kernel(image, scale_factor, spline_order):
+    sum_image = np.sum(image)
+    image = zoom(image, scale_factor, order=spline_order)
+    image = np.nan_to_num(image, copy=False)        # numpy version >=1.13
+
+    # Re-centre kernel
+    im_shape = image.shape
+    # TODO: this might be another off-by-something
+    dy, dx = np.divmod(np.argmax(image), im_shape[1]) - np.array(im_shape) // 2
+    if dy > 0:
+        image = image[2*dy:, :]
+    elif dy < 0:
+        image = image[:2*dy, :]
+    if dx > 0:
+        image = image[:, 2*dx:]
+    elif dx < 0:
+        image = image[:, :2*dx]
+
+    sum_new_image = np.sum(image)
+    image *= sum_image / sum_new_image
+
+    return image
+
+
+def _cutout_kernel(image, fov_header, kernel_header=None):
+    wk = WCS(kernel_header)
+    h, w = image.shape
+    xcen, ycen = 0.5 * w, 0.5 * h
+    xcen_w, ycen_w = wk.wcs_world2pix(np.array([[0., 0.]]), 0).squeeze().round(7)
+    if xcen != xcen_w or ycen != ycen_w:
+        logger.warning("PSF center off")
+
+    dx = 0.5 * fov_header["NAXIS1"]
+    dy = 0.5 * fov_header["NAXIS2"]
+
+    # TODO: this is WET with imp_utils, somehow, I think
+    x0, x1 = max(0, np.floor(xcen-dx).astype(int)), min(w, np.ceil(xcen+dx).astype(int))
+    y0, y1 = max(0, np.floor(ycen-dy).astype(int)), min(w, np.ceil(ycen+dy).astype(int))
+    image_cutout = image[y0:y1+1, x0:x1+1]
+
+    return image_cutout
+
+
+def get_strehl_cutout(fov_header, strehl_imagehdu):
+    image = np.zeros((fov_header["NAXIS2"], fov_header["NAXIS1"]))
+    canvas_hdu = fits.ImageHDU(header=fov_header, data=image)
+    canvas_hdu = add_imagehdu_to_imagehdu(
+        strehl_imagehdu, canvas_hdu, spline_order=0, conserve_flux=False)
+    canvas_hdu.data = canvas_hdu.data.astype(int)
+
+    return canvas_hdu
+
+
+def _nearest_index(x, x_array):
+    # TODO: Something like this is implemented multiple times.
+    #       Ultimately should just get this from astar utils
+    # return int(round(np.interp(x, x_array, np.arange(len(x_array)))))
+    return np.argmin(abs(x_array - x))
