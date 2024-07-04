@@ -2,7 +2,7 @@ import pytest
 from pytest import approx
 import numpy as np
 
-from scopesim.effects import PoorMansHxRGReadoutNoise, make_ron_frame
+from scopesim.effects.electronic.noise import PoorMansHxRGReadoutNoise, _make_ron_frame
 from scopesim.tests.mocks.py_objects.detector_objects import _basic_detector
 
 
@@ -39,12 +39,12 @@ class TestApplyTo:
 class TestMakeRonFrame:
     @pytest.mark.parametrize("n", (1, 4, 9, 25))
     def test_stdev_increase_with_square_of_n(self, n):
-        frames = np.array([make_ron_frame((256, 256), 10, 2, 0.1, 0.2, 0.3, 0.4)
+        frames = np.array([_make_ron_frame((256, 256), 10, 2, 0.1, 0.2, 0.3, 0.4)
                            for _ in range(n)])
         assert np.std(np.sum(frames, axis=0)) == approx(10*n**0.5, rel=0.3)
 
     @pytest.mark.parametrize("shape", [(3, 7), (7, 3)])
     def test_makes_frame_sizes_for_non_integer_n_channels(self, shape):
         n_channels = 2
-        frame = make_ron_frame(shape, 5, n_channels, 0.25, 0.25, 0.25, 0.25)
+        frame = _make_ron_frame(shape, 5, n_channels, 0.25, 0.25, 0.25, 0.25)
         assert frame.shape > (0, 0)
