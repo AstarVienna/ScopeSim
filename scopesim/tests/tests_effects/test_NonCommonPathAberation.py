@@ -108,18 +108,6 @@ class TestApplyTo:
             plt.show()
 
 
-class TestFovGrid:
-    def test_returns_currsys_edge_waves_for_no_input(self, ncpa_kwargs, fov_Ks):
-        ncpa = NonCommonPathAberration(**ncpa_kwargs)
-        waves = ncpa.fov_grid()
-        wave_min = from_currsys("!SIM.spectral.wave_min")
-        wave_max = from_currsys("!SIM.spectral.wave_max")
-        assert waves[0].to(u.um).value == approx(wave_min)
-        assert waves[-1].to(u.um).value == approx(wave_max)
-
-
-################################################################################
-
 class TestFunctionStrehl2Gauss:
     def test_relationship_between_sigma_strehl_amplitude(self):
         # test that the central pixel is equal to the strehl ratio needed

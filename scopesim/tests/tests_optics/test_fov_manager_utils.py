@@ -101,17 +101,20 @@ class TestGetImagingWaveset:
         wave_bin_edges = fm_utils.get_imaging_waveset([th_filt], **wave_kwargs)
         assert len(wave_bin_edges) == 2
 
+    @pytest.mark.skip(reason="PSF subclasses no longer have fov_grid.")
     def test_returns_waveset_of_psf(self, wave_kwargs):
         psf = eo._const_psf()
         wave_bin_edges = fm_utils.get_imaging_waveset([psf], **wave_kwargs)
         assert len(wave_bin_edges) == 4
 
+    @pytest.mark.skip(reason="PSF subclasses no longer have fov_grid.")
     def test_returns_waveset_of_psf_and_filter(self, wave_kwargs, th_filt):
         psf = eo._const_psf()
         wave_bin_edges = fm_utils.get_imaging_waveset([th_filt, psf],
                                                       **wave_kwargs)
         assert len(wave_bin_edges) == 4
 
+    @pytest.mark.skip(reason="PSF subclasses no longer have fov_grid.")
     def test_returns_waveset_of_ncpa_psf_inside_filter_edges(self, wave_kwargs,
                                                              th_filt):
         psf = eo._ncpa_psf()

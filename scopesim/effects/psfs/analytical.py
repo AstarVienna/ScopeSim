@@ -76,26 +76,6 @@ class NonCommonPathAberration(AnalyticalPSF):
         self.convolution_classes = FieldOfViewBase
         check_keys(self.meta, self.required_keys, action="error")
 
-    def fov_grid(self, which="waveset", **kwargs):
-        """See parent docstring."""
-        warnings.warn("The fov_grid method is deprecated and will be removed "
-                      "in a future release.", DeprecationWarning, stacklevel=2)
-        if which != "waveset":
-            return [] * u.um
-
-        self.meta.update(kwargs)
-        self.meta = from_currsys(self.meta, self.cmds)
-
-        min_sr = wfe2strehl(self.total_wfe, self.meta["wave_min"])
-        max_sr = wfe2strehl(self.total_wfe, self.meta["wave_max"])
-
-        srs = np.arange(min_sr, max_sr, self.meta["strehl_drift"])
-        waves = 6.2831853 * self.total_wfe * (-np.log(srs))**-0.5
-        waves = quantify(waves, u.um).value
-        waves = (list(waves) + [self.meta["wave_max"]]) * u.um
-
-        return waves
-
     def get_kernel(self, obj):
         waves = obj.meta["wave_min"], obj.meta["wave_max"]
 
@@ -189,26 +169,6 @@ class GaussianDiffractionPSF(AnalyticalPSF):
         super().__init__(**kwargs)
         self.meta["diameter"] = diameter
         self.meta["z_order"] = [242, 642]
-
-    def fov_grid(self, which="waveset", **kwargs):
-        """See parent docstring."""
-        warnings.warn("The fov_grid method is deprecated and will be removed "
-                      "in a future release.", DeprecationWarning, stacklevel=2)
-        wavelengths = []
-        if which == "waveset" and \
-                "waverange" in kwargs and \
-                "pixel_scale" in kwargs:
-            waverange = quantify(kwargs["waverange"], u.um)
-            diameter = quantify(self.meta["diameter"], u.m).to(u.um)
-            fwhm = 1.22 * (waverange / diameter).value  # in rad
-
-            pixel_scale = quantify(kwargs["pixel_scale"], u.deg)
-            pixel_scale = pixel_scale.to(u.rad).value
-            fwhm_range = np.arange(fwhm[0], fwhm[1], pixel_scale)
-            wavelengths = list(fwhm_range / 1.22 * diameter.to(u.m))
-
-        # TODO: check that this is actually correct
-        return wavelengths
 
     def update(self, **kwargs):
         if "diameter" in kwargs:
