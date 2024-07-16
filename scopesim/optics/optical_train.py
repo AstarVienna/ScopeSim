@@ -404,7 +404,14 @@ class OpticalTrain:
 
             hduls.append(hdul)
 
-        return hduls
+        # Create a copy of the readouts, because they are still referenced here.
+        # That is, self.detector_managers[0][0].hdu is hdul[1].
+        # Subsequent readouts would therefor overwrite earlier readouts
+        # without the copy.
+        # It is necessary to keep the detector readouts in memory, because
+        # this makes it possible to add support for up-the-ramp sampling,
+        # that is, subsequent readouts without reseting the detector inbetween.
+        return copy.deepcopy(hduls)
 
     def write_header(self, hdulist):
         """Write meaningful header to simulation product."""
