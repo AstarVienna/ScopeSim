@@ -374,10 +374,8 @@ class OpticalTrain:
         # Hack to make sure AutoExposure and Quantization work properly.
         # Should probably be removed once #428 is fixed properly.
         if kwargs.get('exptime', None) is not None:
-            if "!OBS.dit" in self.cmds:
-                self.cmds.pop("!OBS.dit")
-            if "!OBS.ndit" in self.cmds:
-                self.cmds.pop("!OBS.ndit")
+            self.cmds.pop("!OBS.dit", None)
+            self.cmds.pop("!OBS.ndit", None)
 
         hduls = []
         for i, detector_array in enumerate(self.detector_managers):
