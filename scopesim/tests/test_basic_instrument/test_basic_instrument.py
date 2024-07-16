@@ -295,7 +295,7 @@ class TestDitNdit:
         assert int(kwarged / default) == factor
 
     @pytest.mark.parametrize(("exptime", "factor", "quant"),
-                             [pytest.param(30, 3, False, marks=pytest.mark.xfail(reason="dit, ndit in !OBS overrides kwargs exptime.")),
+                             [(30, 3, False),
                               (None, 1, True)])
     def test_autoexp_overrides_obs_dict(self, obs_aeq, exptime, factor, quant):
         """This should prioritize kwargs and use dit, ndit when None."""
@@ -342,7 +342,6 @@ class TestDitNdit:
         opt.cmds["!OBS.dit"] = o_dit
         opt.cmds["!OBS.ndit"] = o_ndit
 
-    @pytest.mark.xfail(reason="Currently doesn't raise anything, b/c dit, ndit from !OBS is prioitized.")
     def test_throws_for_no_ditndit_no_autoexp_kwargs(self, obs):
         """This should use exptime from kwargs, but fail w/o AutoExp."""
         opt, default, quanteff = obs

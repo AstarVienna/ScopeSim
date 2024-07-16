@@ -370,6 +370,13 @@ class OpticalTrain:
         - Apply detector plane (0D, 2D) effects - z_order = 500..599
 
         """
+
+        # Hack to make sure AutoExposure and Quantization work properly.
+        # Should probably be removed once #428 is fixed properly.
+        if kwargs.get('exptime', None) is not None:
+            self.cmds.pop("!OBS.dit", None)
+            self.cmds.pop("!OBS.ndit", None)
+
         hduls = []
         for i, detector_array in enumerate(self.detector_managers):
             array_effects = self.optics_manager.detector_array_effects
