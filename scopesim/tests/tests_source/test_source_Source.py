@@ -127,6 +127,7 @@ class TestSourceInit:
     def test_initialises_with_nothing(self):
         src = Source()
         assert isinstance(src, Source)
+        src.shift(0.1, 0.2)
 
     @pytest.mark.parametrize("ii", [0, 1])
     def test_initialises_with_table_and_2_spectrum(self, ii,
@@ -137,6 +138,7 @@ class TestSourceInit:
         assert isinstance(src, Source)
         assert isinstance(src.spectra[0], SourceSpectrum)
         assert isinstance(src.fields[0], Table)
+        src.shift(0.1, 0.2)
 
     def test_initialises_with_image_and_1_spectrum(self, input_hdulist,
                                                    input_spectra):
@@ -144,24 +146,29 @@ class TestSourceInit:
         assert isinstance(src, Source)
         assert isinstance(src.spectra[0], SourceSpectrum)
         assert isinstance(src.fields[0], fits.ImageHDU)
+        src.shift(0.1, 0.2)
 
     def test_initialises_with_image_and_flux(self, input_hdulist):
         src = Source(image_hdu=input_hdulist[0], flux=20*u.ABmag)
         assert isinstance(src, Source)
         assert isinstance(src.spectra[0], SourceSpectrum)
         assert isinstance(src.fields[0], fits.ImageHDU)
+        src.shift(0.1, 0.2)
 
     def test_initialises_with_only_image(self, input_hdulist):
         input_hdulist[0].header["BUNIT"] = "ph s-1 cm-2 AA-1"
         src = Source(image_hdu=input_hdulist[0])
         assert len(src.spectra) == 1
         assert src.fields[0].header["SPEC_REF"] == 0
+        src.shift(0.1, 0.2)
 
     def test_initialises_with_only_imagehdu_and_arcsec2(self):
         hdu = fits.ImageHDU(data=np.ones([3, 3]))
         hdu.header["BUNIT"] = "Jy/arcsec2"
+        hdu.header["CRVAL1"] = 0.0
         hdu.header["CDELT1"] = 0.1
         hdu.header["CUNIT1"] = "arcsec"
+        hdu.header["CRVAL2"] = 0.0
         hdu.header["CDELT2"] = 0.1
         hdu.header["CUNIT2"] = "arcsec"
         src = Source(image_hdu=hdu)
@@ -169,6 +176,7 @@ class TestSourceInit:
         assert isinstance(src, Source)
         assert isinstance(src.spectra[0], SourceSpectrum)
         assert isinstance(src.fields[0], fits.ImageHDU)
+        src.shift(0.1, 0.2)
 
     @pytest.mark.parametrize("ii, dtype",
                              [(0, fits.ImageHDU),
@@ -181,6 +189,7 @@ class TestSourceInit:
         assert isinstance(src, Source)
         assert isinstance(src.spectra[0], SourceSpectrum)
         assert isinstance(src.fields[0], dtype)
+        src.shift(0.1, 0.2)
 
     def test_initialised_with_old_style_arrays(self):
         x, y = [0, 1], [0, -1]
@@ -191,6 +200,7 @@ class TestSourceInit:
         assert isinstance(src, Source)
         assert isinstance(src.spectra[0], SourceSpectrum)
         assert isinstance(src.fields[0], Table)
+        src.shift(0.1, 0.2)
 
 
 class TestSourceAddition:
@@ -202,6 +212,7 @@ class TestSourceAddition:
         assert np.all(tbl_refs.data + 1 == comb_refs.data)
         assert image_source.fields[0].header["SPEC_REF"] == 0
         assert len(image_source.fields) == len(image_source._meta_dicts)
+        image_source.shift(0.1, 0.2)
 
     def test_same_as_above_but_reversed(self, table_source, image_source):
         new_source = table_source + image_source
@@ -210,6 +221,7 @@ class TestSourceAddition:
         assert np.all(tbl_refs.data == comb_refs.data)
         assert new_source.fields[1].header["SPEC_REF"] == 3
         assert len(new_source.fields) == len(new_source._meta_dicts)
+        new_source.shift(0.1, 0.2)
 
     def test_imagehdu_with_empty_spec_ref_is_handled(self, table_source,
                                                      image_source):
