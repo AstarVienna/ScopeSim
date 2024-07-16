@@ -34,7 +34,9 @@ class Detector(DetectorBase):
 
     def reset(self):
         """Reset internal HDU data to all-zeros-array."""
-        self._hdu.data = np.zeros_like(self._hdu.data)
+        # The detector might have been converted to integers by the
+        # Quantization effect, so it is not possible to use zeros_like.
+        self._hdu.data = np.zeros(self._hdu.data.shape)
 
     @property
     def hdu(self):
