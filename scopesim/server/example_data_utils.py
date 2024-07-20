@@ -1,15 +1,14 @@
 # -*- coding: utf-8 -*-
 """Store the example data functions here instead of polluting database.py."""
 
-import shutil
+from warnings import warn
 from pathlib import Path
 from typing import Optional, Union
 from collections.abc import Iterable
 
 import httpx
 import bs4
-
-from astropy.utils.data import download_file
+import pooch
 
 from scopesim import rc
 
@@ -99,63 +98,52 @@ def list_example_data(url: Optional[str] = None,
     return None
 
 
-def download_example_data(file_path: Union[Iterable[str], str],
+def download_example_data(*files: str,
                           save_dir: Optional[Union[Path, str]] = None,
-                          url: Optional[str] = None,
-                          from_cache: Optional[bool] = None) -> list[Path]:
+                          url: Optional[str] = None) -> list[Path]:
     """
     Download example fits files to the local disk.
 
     Parameters
     ----------
-    file_path : str, list
-        Name(s) of FITS file(s) as given by ``list_example_data()``
+    files : str(s)
+        Name(s) of FITS file(s) as given by ``list_example_data()``.
 
     save_dir : str
         The place on the local disk where the downloaded files are to be saved.
-        If left as None, defaults to the current working directory.
+        If left as None, defaults to the "~.astar/scopesim".
 
     url : str
         The URL of the database HTTP server. If left as None, defaults to the
         value in scopesim.rc.__config__["!SIM.file.server_base_url"]
 
-    from_cache : bool
-        Use the cached versions of the files. If None, defaults to the RC
-        value: ``!SIM.file.use_cached_downloads``
-
     Returns
     -------
-    save_path : Path or list of Paths
+    save_path : list of Paths
         The absolute path(s) to the saved files
     """
-    if isinstance(file_path, Iterable) and not isinstance(file_path, str):
-        # Recursive
-        save_path = [download_example_data(thefile, save_dir, url)
-                     for thefile in file_path]
-        return save_path
+    svrconf = rc.__config__["!SIM.file"]
 
-    if not isinstance(file_path, str):
-        raise TypeError("file_path must be str or iterable of str, found "
-                        f"{type(file_path) = }")
-
-    if url is None:
-        url = rc.__config__["!SIM.file.server_base_url"]
-    if save_dir is None:
-        save_dir = Path.cwd()
+    url = url or (svrconf["server_base_url"] + svrconf["example_data_suburl"])
+    save_dir = save_dir or (Path.home() / ".astar/scopesim")
     save_dir = Path(save_dir)
-    save_dir.mkdir(parents=True, exist_ok=True)
-    file_path = Path(file_path)
 
-    try:
-        if from_cache is None:
-            from_cache = rc.__config__["!SIM.file.use_cached_downloads"]
-        cache_path = download_file(f"{url}example_data/{file_path}",
-                                   cache=from_cache)
-        save_path = save_dir / file_path.name
-        file_path = shutil.copy2(cache_path, str(save_path))
-    except httpx.HTTPError as error:
-        msg = f"Unable to find file: {url + 'example_data/' + file_path}"
-        raise ValueError(msg) from error
+    retriever = pooch.create(
+        path=save_dir,
+        base_url=url,
+        retry_if_failed=3)
+    registry_file = Path(__file__).parent / svrconf["example_data_hash_file"]
+    retriever.load_registry(registry_file)
 
-    save_path = save_path.absolute()
-    return save_path
+    if isinstance(files[0], list):  # to preserve combatibility with notebooks
+        warn("Passing a list to download_example_data is deprecated. "
+             "Simply pass filenames as *args, i.e. "
+             "download_example_data(\"foo.fits\", \"bar.fits\").",
+             DeprecationWarning, stacklevel=2)
+        files = files[0]
+
+    save_paths = []
+    for fname in files:
+        save_paths.append(Path(retriever.fetch(fname, progressbar=True)))
+
+    return save_paths
