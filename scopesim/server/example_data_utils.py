@@ -111,7 +111,7 @@ def download_example_data(*files: str,
 
     save_dir : str
         The place on the local disk where the downloaded files are to be saved.
-        If left as None, defaults to the "~.astar/scopesim".
+        If left as None, defaults to the "~/.astar/scopesim".
 
     url : str
         The URL of the database HTTP server. If left as None, defaults to the
