@@ -2324,13 +2324,13 @@ testing = ["pytest", "pytest-benchmark"]
 
 [[package]]
 name = "pooch"
-version = "1.7.0"
-description = "\"Pooch manages your Python library's sample data files: it automatically downloads and stores them in a local directory, with support for versioning and corruption checks.\""
+version = "1.8.2"
+description = "A friend to fetch your data files"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "pooch-1.7.0-py3-none-any.whl", hash = "sha256:74258224fc33d58f53113cf955e8d51bf01386b91492927d0d1b6b341a765ad7"},
-    {file = "pooch-1.7.0.tar.gz", hash = "sha256:f174a1041b6447f0eef8860f76d17f60ed2f857dc0efa387a7f08228af05d998"},
+    {file = "pooch-1.8.2-py3-none-any.whl", hash = "sha256:3529a57096f7198778a5ceefd5ac3ef0e4d06a6ddaf9fc2d609b806f25302c47"},
+    {file = "pooch-1.8.2.tar.gz", hash = "sha256:76561f0de68a01da4df6af38e9955c4c9d1a5c90da73f7e40276a5728ec83d10"},
 ]
 
 [package.dependencies]
@@ -3704,4 +3704,4 @@ test = ["big-O", "jaraco.functools", "jaraco.itertools", "jaraco.test", "more-it
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.9"
-content-hash = "a20169e8c35403f87c5025a1530840dc1a4137ad40e24397fde4861ca32c0c48"
+content-hash = "0161338124181ab9185f27d9b69b4a1e3df6ec100f71e1502842e6139aa95fb5"
