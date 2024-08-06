@@ -4,7 +4,6 @@
 from warnings import warn
 from pathlib import Path
 from typing import Optional, Union
-from collections.abc import Iterable
 
 import httpx
 import bs4
@@ -47,6 +46,25 @@ def get_server_elements(url: str, unique_str: str = "/") -> list[str]:
         select_paths += [tmp.string for tmp in paths
                          if tmp.string is not None and the_str in tmp.string]
     return select_paths
+
+
+def _create_retriever(save_dir: Optional[Union[Path, str]] = None,
+                      url: Optional[str] = None) -> pooch.Pooch:
+    """Create Pooch retriever and load example data registry."""
+    svrconf = rc.__config__["!SIM.file"]
+
+    url = url or (svrconf["server_base_url"] + svrconf["example_data_suburl"])
+    save_dir = save_dir or (Path.home() / ".astar/scopesim")
+    save_dir = Path(save_dir)
+
+    retriever = pooch.create(
+        path=save_dir,
+        base_url=url,
+        retry_if_failed=3)
+    registry_file = Path(__file__).parent / svrconf["example_data_hash_file"]
+    retriever.load_registry(registry_file)
+
+    return retriever
 
 
 def list_example_data(url: Optional[str] = None,
@@ -122,25 +140,14 @@ def download_example_data(*files: str,
     save_path : list of Paths
         The absolute path(s) to the saved files
     """
-    svrconf = rc.__config__["!SIM.file"]
-
-    url = url or (svrconf["server_base_url"] + svrconf["example_data_suburl"])
-    save_dir = save_dir or (Path.home() / ".astar/scopesim")
-    save_dir = Path(save_dir)
-
-    retriever = pooch.create(
-        path=save_dir,
-        base_url=url,
-        retry_if_failed=3)
-    registry_file = Path(__file__).parent / svrconf["example_data_hash_file"]
-    retriever.load_registry(registry_file)
-
     if isinstance(files[0], list):  # to preserve combatibility with notebooks
         warn("Passing a list to download_example_data is deprecated. "
              "Simply pass filenames as *args, i.e. "
              "download_example_data(\"foo.fits\", \"bar.fits\").",
              DeprecationWarning, stacklevel=2)
         files = files[0]
+
+    retriever = _create_retriever(save_dir, url)
 
     save_paths = []
     for fname in files:
