@@ -4,49 +4,29 @@
 from warnings import warn
 from pathlib import Path
 from typing import Optional, Union
-from collections.abc import Iterable
 
-import httpx
-import bs4
 import pooch
 
 from scopesim import rc
 
 
-def get_server_elements(url: str, unique_str: str = "/") -> list[str]:
-    """
-    Return a list of file and/or directory paths on the HTTP server ``url``.
+def _create_retriever(save_dir: Optional[Union[Path, str]] = None,
+                      url: Optional[str] = None) -> pooch.Pooch:
+    """Create Pooch retriever and load example data registry."""
+    svrconf = rc.__config__["!SIM.file"]
 
-    Parameters
-    ----------
-    url : str
-        The URL of the IRDB HTTP server.
+    url = url or (svrconf["server_base_url"] + svrconf["example_data_suburl"])
+    save_dir = save_dir or (Path.home() / ".astar/scopesim")
+    save_dir = Path(save_dir)
 
-    unique_str : str, list
-        A unique string to look for in the beautiful HTML soup:
-        "/" for directories this, ".zip" for packages
+    retriever = pooch.create(
+        path=save_dir,
+        base_url=url,
+        retry_if_failed=3)
+    registry_file = Path(__file__).parent / svrconf["example_data_hash_file"]
+    retriever.load_registry(registry_file)
 
-    Returns
-    -------
-    paths : list
-        List of paths containing in ``url`` which contain ``unique_str``
-
-    """
-    if isinstance(unique_str, str):
-        unique_str = [unique_str]
-
-    try:
-        result = httpx.get(url).content
-    except Exception as error:
-        raise ValueError(f"URL returned error: {url}") from error
-
-    soup = bs4.BeautifulSoup(result, features="lxml")
-    paths = soup.findAll("a", href=True)
-    select_paths = []
-    for the_str in unique_str:
-        select_paths += [tmp.string for tmp in paths
-                         if tmp.string is not None and the_str in tmp.string]
-    return select_paths
+    return retriever
 
 
 def list_example_data(url: Optional[str] = None,
@@ -73,27 +53,19 @@ def list_example_data(url: Optional[str] = None,
         A list of paths to the example files relative to ``url``.
         The full string should be passed to ``download_example_data``.
     """
+    retriever = _create_retriever(url=url)
+    server_files = retriever.registry_files
 
-    def print_file_list(the_files, loc=""):
-        print(f"\nFiles saved {loc}\n" + "=" * (len(loc) + 12))
-        for _file in the_files:
-            print(_file)
-
-    if url is None:
-        url = rc.__config__["!SIM.file.server_base_url"]
-
-    return_file_list = []
-    server_files = []
-    folders = get_server_elements(url, "example_data")
-    for folder in folders:
-        files = get_server_elements(url + folder, ("fits", "txt", "dat"))
-        server_files += files
     if not silent:
-        print_file_list(server_files, f"on the server: {url + 'example_data/'}")
-        return_file_list += server_files
+        linelen = max(len(max(server_files, key=len)),
+                      len(retriever.base_url) + 6, 36)
+        print(f"\n{f' Files available on the server: ':=^{linelen}}")
+        print(f"{f' {retriever.base_url} ':=^{linelen}}\n")
+        for file in server_files:
+            print(file)
 
     if return_files:
-        return return_file_list
+        return server_files
 
     return None
 
@@ -122,25 +94,14 @@ def download_example_data(*files: str,
     save_path : list of Paths
         The absolute path(s) to the saved files
     """
-    svrconf = rc.__config__["!SIM.file"]
-
-    url = url or (svrconf["server_base_url"] + svrconf["example_data_suburl"])
-    save_dir = save_dir or (Path.home() / ".astar/scopesim")
-    save_dir = Path(save_dir)
-
-    retriever = pooch.create(
-        path=save_dir,
-        base_url=url,
-        retry_if_failed=3)
-    registry_file = Path(__file__).parent / svrconf["example_data_hash_file"]
-    retriever.load_registry(registry_file)
-
     if isinstance(files[0], list):  # to preserve combatibility with notebooks
         warn("Passing a list to download_example_data is deprecated. "
              "Simply pass filenames as *args, i.e. "
              "download_example_data(\"foo.fits\", \"bar.fits\").",
              DeprecationWarning, stacklevel=2)
         files = files[0]
+
+    retriever = _create_retriever(save_dir, url)
 
     save_paths = []
     for fname in files:
