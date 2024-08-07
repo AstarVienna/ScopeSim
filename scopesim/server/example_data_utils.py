@@ -91,27 +91,19 @@ def list_example_data(url: Optional[str] = None,
         A list of paths to the example files relative to ``url``.
         The full string should be passed to ``download_example_data``.
     """
+    retriever = _create_retriever(url=url)
+    server_files = retriever.registry_files
 
-    def print_file_list(the_files, loc=""):
-        print(f"\nFiles saved {loc}\n" + "=" * (len(loc) + 12))
-        for _file in the_files:
-            print(_file)
-
-    if url is None:
-        url = rc.__config__["!SIM.file.server_base_url"]
-
-    return_file_list = []
-    server_files = []
-    folders = get_server_elements(url, "example_data")
-    for folder in folders:
-        files = get_server_elements(url + folder, ("fits", "txt", "dat"))
-        server_files += files
     if not silent:
-        print_file_list(server_files, f"on the server: {url + 'example_data/'}")
-        return_file_list += server_files
+        linelen = max(len(max(server_files, key=len)),
+                      len(retriever.base_url) + 6, 36)
+        print(f"\n{f' Files available on the server: ':=^{linelen}}")
+        print(f"{f' {retriever.base_url} ':=^{linelen}}\n")
+        for file in server_files:
+            print(file)
 
     if return_files:
-        return return_file_list
+        return server_files
 
     return None
 
