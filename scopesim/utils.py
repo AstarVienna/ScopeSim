@@ -13,7 +13,6 @@ from importlib import metadata
 import functools
 
 from docutils.core import publish_string
-import httpx
 import yaml
 import numpy as np
 from matplotlib import pyplot as plt
@@ -646,51 +645,6 @@ def pretty_print_dict(dic, indent=0):
             text += " " * indent + f"{str(key)}: {str(value)}\n"
 
     return text
-
-
-def return_latest_github_actions_jobs_status(
-        owner_name="AstarVienna",
-        repo_name="ScopeSim",
-        branch="main",
-        actions_yaml_name="tests.yml",
-    ):
-    """Get the status of the latest test run."""
-    # TODO: Do we actually need this? I feel bad just deleting such a complex
-    #       thing, but it seems redundant with some badges or something...
-    response = httpx.get(
-        f"https://api.github.com/repos/{owner_name}/{repo_name}/actions/"
-        f"workflows/{actions_yaml_name}/runs?branch={branch}&per_page=1"
-    )
-    dic = response.json()
-    run_id = dic["workflow_runs"][0]["id"]
-
-    response = httpx.get(
-        f"https://api.github.com/repos/{owner_name}/{repo_name}/actions/runs/"
-        f"{run_id}/jobs"
-    )
-    dic = response.json()
-    params_list = []
-    for job in dic["jobs"]:
-        params = {
-            "name": job["name"],
-            "status": job["status"],
-            "conclusion": job["conclusion"],
-            "started_at": job["started_at"],
-            "completed_at": job["completed_at"],
-            "url": job["html_url"],
-            "badge_url": None
-        }
-
-        # TODO: this could use the new badges from IRDB, once that's in
-        #       scopesim_core...
-        key = "Python_" + job["name"].split()[-1][:-1]
-        value = "passing" if job["conclusion"] == "success" else "failing"
-        colour = "brightgreen" if job["conclusion"] == "success" else "red"
-        badge_url = f"https://img.shields.io/badge/{key}-{value}-{colour}"
-        params["badge_url"] = badge_url
-        params_list.append(params)
-
-    return params_list
 
 
 def close_loop(iterable: Iterable) -> Generator:
