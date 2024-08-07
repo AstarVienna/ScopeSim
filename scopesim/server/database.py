@@ -11,8 +11,7 @@ from more_itertools import first, last, groupby_transform
 
 from scopesim import rc
 from .github_utils import download_github_folder
-from .example_data_utils import (download_example_data, list_example_data,
-                                 get_server_elements)
+from .example_data_utils import download_example_data, list_example_data
 from .download_utils import (get_server_folder_contents, handle_download,
                              handle_unzipping, create_client, ServerError)
 from ..utils import get_logger

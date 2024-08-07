@@ -87,25 +87,6 @@ class TestGetServerFolderContents:
 
 
 @pytest.mark.webtest
-class TestGetServerElements:
-    def test_throws_an_error_if_url_doesnt_exist(self):
-        with pytest.raises(ValueError):
-            dbex.get_server_elements(url="www.bogus.server")
-
-    def test_returns_folders_if_server_exists(self):
-        url = rc.__config__["!SIM.file.server_base_url"]
-        pkgs = dbex.get_server_elements(url)
-        assert all([loc in pkgs for loc in
-                    ["locations/", "telescopes/", "instruments/"]])
-
-    def test_returns_files_if_zips_exist(self):
-        url = rc.__config__["!SIM.file.server_base_url"]
-        dir = "instruments/"
-        pkgs = dbex.get_server_elements(url + dir, ".zip")
-        assert "test_package.zip" in pkgs
-
-
-@pytest.mark.webtest
 class TestListPackages:
     def test_lists_all_packages_without_qualifier(self):
         pkgs = db.list_packages()

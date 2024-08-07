@@ -5,47 +5,9 @@ from warnings import warn
 from pathlib import Path
 from typing import Optional, Union
 
-import httpx
-import bs4
 import pooch
 
 from scopesim import rc
-
-
-def get_server_elements(url: str, unique_str: str = "/") -> list[str]:
-    """
-    Return a list of file and/or directory paths on the HTTP server ``url``.
-
-    Parameters
-    ----------
-    url : str
-        The URL of the IRDB HTTP server.
-
-    unique_str : str, list
-        A unique string to look for in the beautiful HTML soup:
-        "/" for directories this, ".zip" for packages
-
-    Returns
-    -------
-    paths : list
-        List of paths containing in ``url`` which contain ``unique_str``
-
-    """
-    if isinstance(unique_str, str):
-        unique_str = [unique_str]
-
-    try:
-        result = httpx.get(url).content
-    except Exception as error:
-        raise ValueError(f"URL returned error: {url}") from error
-
-    soup = bs4.BeautifulSoup(result, features="lxml")
-    paths = soup.findAll("a", href=True)
-    select_paths = []
-    for the_str in unique_str:
-        select_paths += [tmp.string for tmp in paths
-                         if tmp.string is not None and the_str in tmp.string]
-    return select_paths
 
 
 def _create_retriever(save_dir: Optional[Union[Path, str]] = None,
