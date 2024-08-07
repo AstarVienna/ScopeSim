@@ -445,6 +445,7 @@ def is_fits(filename) -> bool:
 def get_fits_type(filename):
     with fits.open(filename) as hdulist:
         hdutype = "image"
+        # pylint: disable=no-member
         if hdulist[0].header["NAXIS"] == 0 and \
                 hdulist[1].header["XTENSION"] == "BINTABLE":
             hdutype = "bintable"
