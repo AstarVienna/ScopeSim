@@ -17,17 +17,21 @@ on:
 jobs:
   call-tests:
     name: Offline tests
-    uses: AstarVienna/DevOps/.github/workflows/tests.yml@poetry
+    uses: AstarVienna/DevOps/.github/workflows/tests.yml@main
+    with:
+      poetry: True
     secrets: inherit
 
   call-webtests:
     name: Network tests
-    uses: AstarVienna/DevOps/.github/workflows/webtests.yml@poetry
+    uses: AstarVienna/DevOps/.github/workflows/webtests.yml@main
+    with:
+      poetry: True
     secrets: inherit
 
   call-updated-tests:
     name: Tests with updated dependencies
-    uses: AstarVienna/DevOps/.github/workflows/updated_tests.yml@poetry
+    uses: AstarVienna/DevOps/.github/workflows/updated_tests.yml@main
     secrets: inherit
 
   call-notebooks-with-clone:
