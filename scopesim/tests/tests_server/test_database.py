@@ -1,3 +1,4 @@
+import csv
 import pytest
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -8,7 +9,6 @@ import numpy as np
 from scopesim.server import database as db
 from scopesim.server import example_data_utils as dbex
 from scopesim.server import github_utils as dbgh
-from scopesim import rc
 
 
 @pytest.fixture(scope="class")
@@ -214,3 +214,12 @@ def test_old_download_package_signature():
             version_dict = yaml.full_load(file)
 
         assert version_dict["release"] == "stable"
+
+
+def test_registry_files():
+    registry = (Path(__file__).parent.parent.parent /
+                "server/example_data_registry.txt")
+    filelist = dbex.list_example_data(return_files=True)
+    regfiles = dict(csv.reader(
+        registry.open(encoding="utf-8"), delimiter=" ")).keys()
+    assert regfiles == set(filelist)
