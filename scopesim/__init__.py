@@ -1,4 +1,5 @@
 """Generalised telescope observation simulator."""
+print("ScopeSIM with new PSF method")
 
 from importlib import metadata
 
