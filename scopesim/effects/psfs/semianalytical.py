@@ -147,6 +147,7 @@ class AnisocadoConstPSF(SemiAnalyticalPSF):
 
     @property
     def wavelength(self):
+        # FIXME: expensive property...
         wave = from_currsys(self.meta["wavelength"], self.cmds)
         if isinstance(wave, str) and wave in tu.FILTER_DEFAULTS:
             filter_name = from_currsys(wave, cmds=self.cmds)

@@ -414,6 +414,7 @@ class FilterCurve(TERCurve):
 
         min_thru = from_currsys(self.meta["minimum_throughput"], self.cmds)
         mask = self.table["transmission"] < min_thru
+        # TODO: maybe use actually masked table here?
         self.table["transmission"][mask] = 0
 
     def fov_grid(self, which="waveset", **kwargs):

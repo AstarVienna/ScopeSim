@@ -1,4 +1,5 @@
-"""TBA."""
+# -*- coding: utf-8 -*-
+"""Auxiliary functions for ter_curves.py."""
 
 from pathlib import Path
 
@@ -13,52 +14,55 @@ from synphot.units import PHOTLAM
 
 from scopesim.source.source_templates import vega_spectrum, st_spectrum, \
     ab_spectrum
-from ..utils import find_file, quantity_from_table, from_currsys, get_logger
+from ..utils import find_file, quantity_from_table, get_logger
 
 
 logger = get_logger(__name__)
 
 
-FILTER_DEFAULTS = {"U": "Generic/Bessell.U",
-                   "B": "Generic/Bessell.B",
-                   "V": "Generic/Bessell.V",
-                   "R": "Generic/Bessell.R",
-                   "I": "Generic/Bessell.I",
-                   "J": "2MASS/2MASS.J",
-                   "H": "2MASS/2MASS.H",
-                   "Ks": "2MASS/2MASS.Ks",
-                   "K": "Generic/Johnson_UBVRIJHKL.K",
-                   "L": "Gemini/NIRI.Lprime-G0207w",
-                   "M": "Gemini/NIRI.Mprime-G0208w",
-                   "N": "Generic/Johnson_UBVRIJHKL.N",
-                   "u": "SLOAN/SDSS.u",
-                   "g": "SLOAN/SDSS.g",
-                   "r": "SLOAN/SDSS.r",
-                   "i": "SLOAN/SDSS.i",
-                   "z": "SLOAN/SDSS.z",
-                   "u'": "SLOAN/SDSS.uprime_filter",
-                   "g'": "SLOAN/SDSS.gprime_filter",
-                   "r'": "SLOAN/SDSS.rprime_filter",
-                   "i'": "SLOAN/SDSS.iprime_filter",
-                   "z'": "SLOAN/SDSS.zprime_filter",
-                   "HAlpha": "Gemini/GMOS-N.Ha",
-                   "PaBeta": "Gemini/NIRI.PaBeta-G0221",
-                   "BrGamma": "Gemini/NIRI.BrG-G0218",
-                   }
+FILTER_DEFAULTS = {
+    "U": "Generic/Bessell.U",
+    "B": "Generic/Bessell.B",
+    "V": "Generic/Bessell.V",
+    "R": "Generic/Bessell.R",
+    "I": "Generic/Bessell.I",
+    "J": "2MASS/2MASS.J",
+    "H": "2MASS/2MASS.H",
+    "Ks": "2MASS/2MASS.Ks",
+    "K": "Generic/Johnson_UBVRIJHKL.K",
+    "L": "Gemini/NIRI.Lprime-G0207w",
+    "M": "Gemini/NIRI.Mprime-G0208w",
+    "N": "Generic/Johnson_UBVRIJHKL.N",
+    "u": "SLOAN/SDSS.u",
+    "g": "SLOAN/SDSS.g",
+    "r": "SLOAN/SDSS.r",
+    "i": "SLOAN/SDSS.i",
+    "z": "SLOAN/SDSS.z",
+    "u'": "SLOAN/SDSS.uprime_filter",
+    "g'": "SLOAN/SDSS.gprime_filter",
+    "r'": "SLOAN/SDSS.rprime_filter",
+    "i'": "SLOAN/SDSS.iprime_filter",
+    "z'": "SLOAN/SDSS.zprime_filter",
+    "HAlpha": "Gemini/GMOS-N.Ha",
+    "PaBeta": "Gemini/NIRI.PaBeta-G0221",
+    "BrGamma": "Gemini/NIRI.BrG-G0218",
+}
 
 PATH_HERE = Path(__file__).parent
 PATH_SVO_DATA = PATH_HERE.parent / "data" / "svo"
 
 
-def get_filter_effective_wavelength(filter_name, cmds=None):
-    if isinstance(filter_name, str):
-        assert FILTER_DEFAULTS.get(filter_name), f"{filter_name} not found in FILTER_DEFAULTS"
-        wave, trans = download_svo_filter(FILTER_DEFAULTS[filter_name],
-                                          return_style="quantity")
-        eff_wave = np.sum(wave * trans) / np.sum(trans)      # convert from Angstrom
-        eff_wave = eff_wave.to(u.um)
-    else:
-        eff_wave = filter_name
+def get_filter_effective_wavelength(filter_name):
+    # TODO: This is technically stored in the SVO XML file as WavelengthEff...
+    # (actually WavelengthMean, by definition of formula ...)
+    if not isinstance(filter_name, str):
+        return filter_name
+
+    assert FILTER_DEFAULTS.get(
+        filter_name), f"{filter_name} not found in FILTER_DEFAULTS"
+    wave, trans = download_svo_filter(
+        FILTER_DEFAULTS[filter_name], return_style="quantity")
+    eff_wave = (wave * trans).sum() / trans.sum() << u.um
 
     return eff_wave
 
@@ -67,21 +71,22 @@ def download_svo_filter(filter_name, return_style="synphot"):
     """
     Query the SVO service for the true transmittance for a given filter.
 
-    Copied 1 to 1 from tynt by Brett Morris
+    Adapted from tynt by Brett Morris.
 
     Parameters
     ----------
     filter_name : str
         Name of the filter as available on the spanish VO filter service
-        e.g: ``Paranal/HAWKI.Ks``
+        e.g: "Paranal/HAWKI.Ks"
 
     return_style : str, optional
         Defines the format the data is returned
-        - synphot: synphot.SpectralElement
-        - table: astropy.table.Table
-        - quantity: astropy.unit.Quantity [wave, trans]
-        - array: np.ndarray [wave, trans], where wave is in Angstrom
-        - vo_table : astropy.table.Table - original output from SVO service
+        - "synphot": ``synphot.SpectralElement``
+        - "table": ``astropy.table.Table``
+        - "quantity": ``astropy.unit.Quantity`` [wave, trans]
+        - "array": ``np.ndarray`` [wave, trans], where `wave` is in Angstrom
+        - "vo_table": ``astropy.io.votable.tree.Table`` - original output from
+        SVO service
 
     Returns
     -------
@@ -102,29 +107,29 @@ def download_svo_filter(filter_name, return_style="synphot"):
         path = download_file(url, cache=True)
 
     try:
-        tbl = Table.read(path, format='votable')
+        tbl = Table.read(path, format="votable")
     except ValueError:
         logger.error("Unable to load %s from %s.", filter_name, path)
         raise
 
-    wave = u.Quantity(tbl['Wavelength'].data.data, u.Angstrom, copy=False)
-    trans = tbl['Transmission'].data.data
+    if return_style == "vo_table":
+        return tbl
+
+    wave = u.Quantity(tbl["Wavelength"].data.data, u.Angstrom, copy=False)
+    trans = tbl["Transmission"].data.data
 
     if return_style == "synphot":
-        filt = SpectralElement(Empirical1D, points=wave, lookup_table=trans)
-    elif return_style == "table":
+        return SpectralElement(Empirical1D, points=wave, lookup_table=trans)
+    if return_style == "table":
+        # TODO: maybe use QTable here?
         filt = Table(data=[wave, trans], names=["wavelength", "transmission"])
         filt.meta["wavelength_unit"] = "Angstrom"
-    elif return_style == "quantity":
-        filt = [wave, trans]
-    elif return_style == "array":
-        filt = [wave.value, trans]
-    elif return_style == "vo_table":
-        filt = tbl
-    else:
-        raise ValueError("return_style %s unknown.", return_style)
-
-    return filt
+        return filt
+    if return_style == "quantity":
+        return wave, trans
+    if return_style == "array":
+        return wave.value, trans
+    raise ValueError(f"return_style {return_style} unknown.")
 
 
 def download_svo_filter_list(observatory, instrument, short_names=False,
@@ -136,18 +141,18 @@ def download_svo_filter_list(observatory, instrument, short_names=False,
     ----------
     observatory : str
         Name of the observatory as available on the spanish VO filter service
-        e.g: ``Paranal/HAWKI.Ks`` --> Paranal
+        e.g: "Paranal/HAWKI.Ks" --> Paranal
 
     instrument : str
-        Name of the instrument. Be careful of hyphens etc. E.g. "HAWK-I"
+        Name of the instrument. Be careful of hyphens etc. e.g. "HAWK-I".
 
     short_names : bool
         Default False. If True, the full SVO names (obs/inst.filt) are split to
-        only return the (filt) part of the name
+        only return the (filt) part of the name.
 
     include, exclude: str
         Each a string sequence for excluding or including specific filters
-        E.g. GTC/OSIRIS has curves for ``sdss_g`` and ``sdss_g_filter``.
+        E.g. GTC/OSIRIS has curves for "sdss_g" and "sdss_g_filter".
         We can force the inclusion of only the filter curves by setting
         ``include="_filter"``.
 
@@ -170,7 +175,7 @@ def download_svo_filter_list(observatory, instrument, short_names=False,
     if not path:
         path = download_file(url, cache=True)
 
-    tbl = Table.read(path, format='votable')
+    tbl = Table.read(path, format="votable")
     names = list(tbl["filterID"])
     if short_names:
         names = [name.split(".")[-1] for name in names]
@@ -204,17 +209,33 @@ def get_filter(filter_name):
     return filt
 
 
-def get_zero_mag_spectrum(system_name="AB"):
-    if system_name.lower() in ["vega"]:
-        spec = vega_spectrum()
-    elif system_name.lower() in ["ab"]:
-        spec = ab_spectrum()
-    elif system_name.lower() in ["st", "hst"]:
-        spec = st_spectrum()
-    else:
-        raise ValueError("system_name %s is unknown", system_name)
+def get_zero_mag_spectrum(system_name: str = "AB") -> SourceSpectrum:
+    """
+    Return a synphot spectrum of 0 mag in given photometric system.
 
-    return spec
+    Parameters
+    ----------
+    system_name : {"AB", "Vega", "ST", "HST"}
+        Name of the photometric system.
+
+    Raises
+    ------
+    ValueError
+        Raised if `system_name` is invalid.
+
+    Returns
+    -------
+    spec : synphot.SourceSpectrum
+        Output spectrum.
+
+    """
+    if system_name.lower() == "vega":
+        return vega_spectrum()
+    if system_name.lower() == "ab":
+        return ab_spectrum()
+    if system_name.lower() in ("st", "hst"):
+        return st_spectrum()
+    raise ValueError(f"system_name {system_name} is unknown")
 
 
 def zero_mag_flux(filter_name, photometric_system, return_filter=False):
@@ -225,15 +246,15 @@ def zero_mag_flux(filter_name, photometric_system, return_filter=False):
     ``scopesim.effects.ter_curves_utils.FILTER_DEFAULTS`` or a string with an
     appropriate name for a filter in the Spanish-VO filter-service. Such
     strings must use the naming convention: observatory/instrument.filter. E.g:
-    ``paranal/HAWKI.Ks``, or ``Gemini/GMOS-N.CaT``.
+    "paranal/HAWKI.Ks", or "Gemini/GMOS-N.CaT".
 
     Parameters
     ----------
     filter_name : str
-        Name of the filter - see above
+        Name of the filter - see above.
 
-    photometric_system : str
-        ["vega", "AB", "ST"] Name of the photometric system
+    photometric_system : {"vega", "AB", "ST"}
+        Name of the photometric system
 
     return_filter : bool, optional
         If True, also returns the filter curve object
@@ -243,7 +264,7 @@ def zero_mag_flux(filter_name, photometric_system, return_filter=False):
     flux : float
         [PHOTLAM]
     filt : ``synphot.SpectralElement``
-        If ``return_filter`` is True
+        If `return_filter` is True
 
     """
     filt = get_filter(filter_name)
@@ -254,8 +275,7 @@ def zero_mag_flux(filter_name, photometric_system, return_filter=False):
 
     if return_filter:
         return flux, filt
-    else:
-        return flux
+    return flux
 
 
 def scale_spectrum(spectrum, filter_name, amplitude):
@@ -270,22 +290,22 @@ def scale_spectrum(spectrum, filter_name, amplitude):
         Name of a filter from
         - a local instrument package (available in ``rc.__search_path__``)
         - a generic filter name (see ``ter_curves_utils.FILTER_DEFAULTS``)
-        - a spanish-vo filter service reference (e.g. ``"Paranal/HAWKI.Ks"``)
+        - a spanish-vo filter service reference (e.g. "Paranal/HAWKI.Ks")
 
-    amplitude : ``astropy.Quantity``, float
+    amplitude : astropy.Quantity, float
         The value that the spectrum should have in the given filter. Acceptable
         astropy quantities are:
         - u.mag : Vega magnitudes
         - u.ABmag : AB magnitudes
         - u.STmag : HST magnitudes
         - u.Jy : Jansky per filter bandpass
-        Additionally the ``FLAM`` and ``FNU`` units from ``synphot.units`` can
-        be used when passing the quantity for ``amplitude``:
+        Additionally the "FLAM" and "FNU" units from ``synphot.units`` can
+        be used when passing the quantity for `amplitude`.
 
     Returns
     -------
     spectrum : synphot.SourceSpectrum
-        Input spectrum scaled to the given amplitude in the given filter
+        Input spectrum scaled to the given amplitude in the given filter.
 
     Examples
     --------
@@ -337,7 +357,7 @@ def apply_throughput_to_cube(cube, thru):
     Parameters
     ----------
     cube : ImageHDU
-         three-dimensional image, dimension 0 (in python convention) is the
+         Three-dimensional image, dimension 0 (in python convention) is the
          spectral dimension. WCS is required.
     thru : synphot.SpectralElement, synphot.SourceSpectrum
 
@@ -364,8 +384,7 @@ def combine_two_spectra(spec_a, spec_b, action, wave_min, wave_max):
     ----------
     spec_a : synphot.SourceSpectrum
     spec_b : synphot.SpectralElement, synphot.SourceSpectrum
-    action: str
-        ["multiply", "add"]
+    action: {"multiply", "add"}
     wave_min, wave_max : quantity
         [Angstrom]
 
