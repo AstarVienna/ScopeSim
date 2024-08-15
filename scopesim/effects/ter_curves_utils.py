@@ -5,7 +5,7 @@ from pathlib import Path
 
 import numpy as np
 from astropy import units as u
-from astropy.table import Table
+from astropy.table import Table, QTable
 from astropy.utils.data import download_file
 from astropy.io import ascii as ioascii
 from astropy.wcs import WCS
@@ -121,8 +121,7 @@ def download_svo_filter(filter_name, return_style="synphot"):
     if return_style == "synphot":
         return SpectralElement(Empirical1D, points=wave, lookup_table=trans)
     if return_style == "table":
-        # TODO: maybe use QTable here?
-        filt = Table(data=[wave, trans], names=["wavelength", "transmission"])
+        filt = QTable(data=[wave, trans], names=["wavelength", "transmission"])
         filt.meta["wavelength_unit"] = "Angstrom"
         return filt
     if return_style == "quantity":
