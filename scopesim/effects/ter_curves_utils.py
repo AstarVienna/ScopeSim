@@ -99,7 +99,7 @@ def download_svo_filter(filter_name, return_style="synphot"):
     # noinspection HttpUrlsUsage
     url = f"http://svo2.cab.inta-csic.es/theory/fps3/fps.php?ID={filter_name}"
     path = find_file(
-        filter_name,
+        f"{filter_name}.xml",
         path=[PATH_SVO_DATA],
         silent=True,
     )
@@ -170,9 +170,8 @@ def download_svo_filter_list(observatory, instrument, short_names=False,
     # noinspection HttpUrlsUsage
     base_url = "http://svo2.cab.inta-csic.es/theory/fps3/fps.php?"
     url = base_url + f"Facility={observatory}&Instrument={instrument}"
-    fn = f"{observatory}/{instrument}"
     path = find_file(
-        fn,
+        f"{observatory}/{instrument}.xml",
         path=[PATH_SVO_DATA],
         silent=True,
     )
