@@ -6,6 +6,7 @@ from pathlib import Path
 import numpy as np
 from astropy import units as u
 from astropy.table import Table, QTable
+from astropy.io.votable import parse_single_table
 from astropy.utils.data import download_file
 from astropy.io import ascii as ioascii
 from astropy.wcs import WCS
@@ -107,22 +108,26 @@ def download_svo_filter(filter_name, return_style="synphot"):
         path = download_file(url, cache=True)
 
     try:
-        tbl = Table.read(path, format="votable")
+        # tbl = Table.read(path, format="votable")
+        votbl = parse_single_table(path)
     except ValueError:
         logger.error("Unable to load %s from %s.", filter_name, path)
         raise
 
     if return_style == "vo_table":
-        return tbl
+        return votbl
 
-    wave = u.Quantity(tbl["Wavelength"].data.data, u.Angstrom, copy=False)
-    trans = tbl["Transmission"].data.data
+    tbl_meta = _parse_votable_params(votbl)
+    wave = u.Quantity(votbl.array["Wavelength"].data,
+                      tbl_meta["WavelengthUnit"], copy=False)
+    trans = votbl.array["Transmission"].data
 
     if return_style == "synphot":
         return SpectralElement(Empirical1D, points=wave, lookup_table=trans)
     if return_style == "table":
         filt = QTable(data=[wave, trans], names=["wavelength", "transmission"])
-        filt.meta["wavelength_unit"] = "Angstrom"
+        filt.meta["wavelength_unit"] = str(wave.unit)
+        filt.meta["votable_meta"] = tbl_meta  # Don't pollute actual meta...
         return filt
     if return_style == "quantity":
         return wave, trans
@@ -432,3 +437,14 @@ def add_edge_zeros(tbl, wave_colname):
         tbl.insert_row(len(tbl), vals)
 
     return tbl
+
+
+def _parse_votable_params(votable):
+    """Convert VO Table XML PARAM fields to dict, use Quantity if possible."""
+    def _get_metadict(table):
+        for param in votable.params:
+            if param.datatype == "char" or param.unit is None:
+                yield param.name, param.value
+            else:
+                yield param.name, u.Quantity(param.value, str(param.unit))
+    return dict(_get_metadict(votable))
