@@ -1,5 +1,12 @@
 # -*- coding: utf-8 -*-
-"""Effects related to the conversion of photons into electrons."""
+"""Effects related to the conversion of photons into electrons.
+
+   - LinearityCurve: Detector linearity
+   - Quantization:   Conversion from electrons to ADU
+
+Related effects:
+   - QuantumEfficiencyCurve: can be found in ter_curves.py
+"""
 
 import numpy as np
 
