@@ -20,7 +20,7 @@ Classes:
 from ...utils import get_logger
 logger = get_logger(__name__)
 
-from .electrons import LinearityCurve, Quantization
+from .electrons import LinearityCurve, ADConversion
 from .noise import (Bias, PoorMansHxRGReadoutNoise, BasicReadoutNoise,
                     ShotNoise, DarkCurrent)
 from .exposure import AutoExposure, SummedExposure
