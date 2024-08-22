@@ -2,7 +2,7 @@
 """Effects related to the conversion of photons into electrons.
 
    - LinearityCurve: Detector linearity
-   - Quantization:   Conversion from electrons to ADU
+   - ADConversion:   Conversion from electrons to ADU
 
 Related effects:
    - QuantumEfficiencyCurve: can be found in ter_curves.py
@@ -89,8 +89,12 @@ class LinearityCurve(Effect):
         return fig
 
 
-class Quantization(Effect):
-    """Converts raw data to whole photons."""
+class ADConversion(Effect):
+    """Analogue-Digital Conversion effect.
+
+    The effect applies the gain to convert from electrons to ADU
+    and converts the output to the desired data type (e.g. uint16).
+    """
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -102,13 +106,15 @@ class Quantization(Effect):
         self.meta.update(kwargs)
 
     def _should_apply(self) -> bool:
+        """Check cases where the effect should not be applied"""
         if self.cmds is None:
-            logger.warning("Cannot access cmds for Quantization effect.")
+            logger.warning("Cannot access cmds for ADConversion effect.")
             return True
 
+        # ..todo: need to deal with this case more realistically
         if self.cmds.get("!OBS.autoexpset", False):
             logger.debug("DIT, NDIT determined by AutoExposure -> "
-                         "quantization is not applied.")
+                         "ADConversion is not applied.")
             return False
 
         if self.cmds["!OBS.ndit"] > 1:
@@ -128,6 +134,8 @@ class Quantization(Effect):
         if not np.issubdtype(new_dtype, np.integer):
             logger.warning("Setting quantized data to dtype %s, which is not "
                            "an integer subtype.", new_dtype)
+
+        # TODO: Apply the gain value (copy from DarkCurrent)
 
         # Remove values below 0, because for unsigned types these get wrapped
         # around to MAXINT, which is even worse than negative values.
