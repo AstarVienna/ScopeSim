@@ -118,7 +118,7 @@ class ADConversion(Effect):
             return False
 
         if self.cmds["!OBS.ndit"] > 1:
-            logger.debug("NDIT set to 1 -> quantization is not applied.")
+            logger.debug("NDIT set to 1 -> digitization is not applied.")
             return False
 
         return True
@@ -132,7 +132,7 @@ class ADConversion(Effect):
 
         new_dtype = self.meta["dtype"]
         if not np.issubdtype(new_dtype, np.integer):
-            logger.warning("Setting quantized data to dtype %s, which is not "
+            logger.warning("Setting digitized data to dtype %s, which is not "
                            "an integer subtype.", new_dtype)
 
         # TODO: Apply the gain value (copy from DarkCurrent)
@@ -143,13 +143,13 @@ class ADConversion(Effect):
         if np.issubdtype(new_dtype, np.unsignedinteger):
             negvals_mask = obj._hdu.data < 0
             if negvals_mask.any():
-                logger.warning(f"Effect Quantization: {negvals_mask.sum()} negative pixels")
+                logger.warning(f"Effect ADConversion: {negvals_mask.sum()} negative pixels")
                 obj._hdu.data[negvals_mask] = 0
 
         # This used to create a new ImageHDU with the same header but the data
         # set to the modified data. It should be fine to simply re-assign the
         # data attribute, but just in case it's not...
-        logger.debug("Applying quantization to dtype %s.", new_dtype)
+        logger.debug("Applying digitization to dtype %s.", new_dtype)
         obj._hdu.data = np.floor(obj._hdu.data).astype(new_dtype)
 
         return obj
