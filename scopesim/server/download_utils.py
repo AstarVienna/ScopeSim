@@ -38,8 +38,29 @@ def _make_tqdm_kwargs(desc: str = ""):
     return tqdm_kwargs
 
 
-def create_client(base_url, cached: bool = False, cache_name: str = ""):
-    """Create httpx Client instance, should support cache at some point."""
+def create_client(
+    base_url: str,
+    cached: bool = False,
+    cache_name: str = "",
+) -> httpx.Client:
+    """
+    Create httpx Client instance, should support cache at some point.
+
+    Parameters
+    ----------
+    base_url : str
+        Server base URL.
+    cached : bool, optional
+        Not yet implemented. The default is False.
+    cache_name : str, optional
+        Not yet implemented. The default is "".
+
+    Returns
+    -------
+    client : httpx.Client
+        Client instance.
+
+    """
     if cached:
         raise NotImplementedError("Caching not yet implemented with httpx.")
     transport = httpx.HTTPTransport(retries=5)
@@ -48,20 +69,22 @@ def create_client(base_url, cached: bool = False, cache_name: str = ""):
 
 
 def handle_download(
-    client, sub_url: str,
+    client: httpx.Client,
+    sub_url: str,
     save_path: Path,
     name: str = "",
     padlen: int = 0,
     chunk_size: int = 128,
     disable_bar: bool = False,
+    params: dict | None = None,
 ) -> None:
     """
     Perform a streamed download and write the content to disk.
 
     Parameters
     ----------
-    client : TYPE
-        DESCRIPTION.
+    client : : httpx.Client
+        Client instance.
     sub_url : str
         URL of file to be downloaded, relative to the `client`'s base URL.
     save_path : Path
@@ -76,6 +99,9 @@ def handle_download(
         Chunk size for download stream. The default is 128.
     disable_bar : bool, optional
         If True, no progress bar is printed. The default is False.
+    params : dict | None, optional
+        Any query parameters to include in the URL, will be forwarded to the
+        ``send_get()`` call. The default is None.
 
     Raises
     ------
@@ -90,7 +116,7 @@ def handle_download(
     tqdm_kwargs = _make_tqdm_kwargs(f"Downloading {name:<{padlen}}")
 
     try:
-        with send_get(client, sub_url, stream=True) as response:
+        with send_get(client, sub_url, True, params) as response:
             response.raise_for_status()
             total = int(response.headers.get("Content-Length", 0))
 
@@ -123,16 +149,44 @@ def handle_unzipping(save_path: Path, save_dir: Path,
             zip_ref.extract(file, save_dir)
 
 
-def send_get(client, sub_url, stream: bool = False):
-    """Send a GET request (streamed or not) using an existing client.
+def send_get(
+    client: httpx.Client,
+    sub_url: str,
+    stream: bool = False,
+    params: dict | None = None,
+) -> httpx.Response:
+    """
+    Send a GET request (streamed or not) using an existing client.
 
     The point of this function is mostly elaborate exception handling.
+
+    Parameters
+    ----------
+    client : httpx.Client
+        Client instance.
+    sub_url : str
+        Sub-URL to be appended to `client.base_url`.
+    stream : bool, optional
+        Whether to stream the response. The default is False.
+    params : dict | None, optional
+        Any query parameters to include in the URL. The default is None.
+
+    Raises
+    ------
+    ServerError
+        Raised if any error occurs during the process.
+
+    Returns
+    -------
+    response : httpx.Response
+        Server response.
+
     """
     try:
         if stream:
-            response = client.stream("GET", sub_url)
+            response = client.stream("GET", sub_url, params=params)
         else:
-            response = client.get(sub_url)
+            response = client.get(sub_url, params=params)
             response.raise_for_status()
     except httpx.RequestError as err:
         logger.exception("An error occurred while requesting %s.",
