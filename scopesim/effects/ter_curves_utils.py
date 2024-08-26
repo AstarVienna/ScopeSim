@@ -7,7 +7,6 @@ import numpy as np
 from astropy import units as u
 from astropy.table import Table, QTable
 from astropy.io.votable import parse_single_table
-from astropy.utils.data import download_file
 from astropy.io import ascii as ioascii
 from astropy.wcs import WCS
 from synphot import SpectralElement, SourceSpectrum, Empirical1D, Observation
@@ -16,6 +15,7 @@ from synphot.units import PHOTLAM
 from scopesim.source.source_templates import vega_spectrum, st_spectrum, \
     ab_spectrum
 from ..utils import find_file, quantity_from_table, get_logger
+from ..server.download_utils import create_client, handle_download
 
 
 logger = get_logger(__name__)
@@ -68,6 +68,24 @@ def get_filter_effective_wavelength(filter_name):
     return eff_wave
 
 
+def _handle_svo_download(filename: str, params: dict) -> Path:
+    # The SVO is only accessible over http, not over https.
+    # noinspection HttpUrlsUsage
+    base_url = "http://svo2.cab.inta-csic.es/theory/fps3/"
+    path = find_file(filename, path=[PATH_SVO_DATA], silent=True)
+
+    # TODO: Turn this into try-except once error_on_missing_file can be True
+    #       by default. Actually, check if there are any other places where
+    #       error_on_missing_file applies other than this module...
+    if not path:
+        logger.debug("File not found in %s, downloading...", PATH_SVO_DATA)
+        # TODO: Implement proper caching for non-standard filter files.
+        path = PATH_SVO_DATA / filename
+        client = create_client(base_url)
+        handle_download(client, "fps.php", path, params=params)
+
+    return path
+
 def download_svo_filter(filter_name, return_style="synphot"):
     """
     Query the SVO service for the true transmittance for a given filter.
@@ -95,17 +113,7 @@ def download_svo_filter(filter_name, return_style="synphot"):
         Astronomical filter object.
 
     """
-    # The SVO is only accessible over http, not over https.
-    # noinspection HttpUrlsUsage
-    url = f"http://svo2.cab.inta-csic.es/theory/fps3/fps.php?ID={filter_name}"
-    path = find_file(
-        f"{filter_name}.xml",
-        path=[PATH_SVO_DATA],
-        silent=True,
-    )
-    if not path:
-        logger.debug("File not found in %s, downloading...", PATH_SVO_DATA)
-        path = download_file(url, cache=True)
+    path = _handle_svo_download(f"{filter_name}.xml", {"ID": filter_name})
 
     try:
         # tbl = Table.read(path, format="votable")
@@ -166,17 +174,9 @@ def download_svo_filter_list(observatory, instrument, short_names=False,
         A list of filter names
 
     """
-    # The SVO is only accessible over http, not over https.
-    # noinspection HttpUrlsUsage
-    base_url = "http://svo2.cab.inta-csic.es/theory/fps3/fps.php?"
-    url = base_url + f"Facility={observatory}&Instrument={instrument}"
-    path = find_file(
+    path = _handle_svo_download(
         f"{observatory}/{instrument}.xml",
-        path=[PATH_SVO_DATA],
-        silent=True,
-    )
-    if not path:
-        path = download_file(url, cache=True)
+        {"Facility": observatory, "Instrument": instrument})
 
     tbl = Table.read(path, format="votable")
     names = list(tbl["filterID"])
