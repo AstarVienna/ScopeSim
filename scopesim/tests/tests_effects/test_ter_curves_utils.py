@@ -13,6 +13,7 @@ PLOTS = False
 
 
 # get_filter relies on None from find_file
+@pytest.mark.webtest
 @pytest.mark.usefixtures("no_file_error")
 class TestFunctionGetFilter:
     @pytest.mark.parametrize("filt_name", ["V", "Ks", "L", "z'"])
@@ -27,6 +28,7 @@ class TestFunctionGetFilter:
         assert np.max(ks(wave)) > 0.75
 
 
+@pytest.mark.webtest
 @pytest.mark.usefixtures("no_file_error")
 @pytest.mark.parametrize("filter_name, phot_system, flux",
                          [("V", "vega", 995),
@@ -41,6 +43,7 @@ def test_zero_mag_flux(filter_name, phot_system, flux):
     assert flux == approx(new_flux.value, rel=0.08)
 
 
+@pytest.mark.webtest
 @pytest.mark.usefixtures("no_file_error")
 def test_compare_br_gamma():
     filt = "Ks"
@@ -50,6 +53,7 @@ def test_compare_br_gamma():
     assert delta_mag == approx(1.85, rel=0.01)
 
 
+@pytest.mark.webtest
 @pytest.mark.usefixtures("no_file_error")
 class TestScaleSpectrum:
     def test_scales_vega_spectrum_to_vega_ab_or_jansky(self):
@@ -71,6 +75,8 @@ class TestScaleSpectrum:
             plt.show()
 
 
+@pytest.mark.webtest
+@pytest.mark.usefixtures("no_file_error")
 class TestGetFilterEffectiveWavelength:
     def test_Ks_is_around_2_2um(self):
         wave_eff = ter_utils.get_filter_effective_wavelength("Ks")
