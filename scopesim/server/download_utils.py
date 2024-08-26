@@ -114,13 +114,16 @@ def handle_download(
 
     """
     tqdm_kwargs = _make_tqdm_kwargs(f"Downloading {name:<{padlen}}")
+    save_path = Path(save_path)
+    save_path.parent.mkdir(parents=True, exist_ok=True)
+    stream = send_get(client, sub_url, True, params)
 
     try:
-        with send_get(client, sub_url, True, params) as response:
+        with stream as response:
             response.raise_for_status()
             total = int(response.headers.get("Content-Length", 0))
 
-            with (Path(save_path).open("wb") as file_outer,
+            with (save_path.open("wb") as file_outer,
                   tqdm.wrapattr(
                     file_outer, "write", miniters=1, total=total,
                     **tqdm_kwargs, disable=disable_bar) as file_inner):
@@ -134,6 +137,8 @@ def handle_download(
     except OSError as err:
         logger.error("Error %s attempting to access path %s.", err, save_path)
         raise ServerError("Cannot access save path.") from err
+    except ServerError:
+        raise
     except Exception as err:
         logger.exception("Unhandled exception while accessing server.")
         raise ServerError("Cannot perform download.") from err
