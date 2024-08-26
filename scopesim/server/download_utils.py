@@ -47,35 +47,70 @@ def create_client(base_url, cached: bool = False, cache_name: str = ""):
     return client
 
 
-def handle_download(client, pkg_url: str,
-                    save_path: Path, pkg_name: str,
-                    padlen: int, chunk_size: int = 128,
-                    disable_bar=False) -> None:
-    """Perform a streamed download and write the content to disk."""
-    tqdm_kwargs = _make_tqdm_kwargs(f"Downloading {pkg_name:<{padlen}}")
+def handle_download(
+    client, sub_url: str,
+    save_path: Path,
+    name: str = "",
+    padlen: int = 0,
+    chunk_size: int = 128,
+    disable_bar: bool = False,
+) -> None:
+    """
+    Perform a streamed download and write the content to disk.
 
-    stream = send_get(client, pkg_url, stream=True)
+    Parameters
+    ----------
+    client : TYPE
+        DESCRIPTION.
+    sub_url : str
+        URL of file to be downloaded, relative to the `client`'s base URL.
+    save_path : Path
+        Path including file name to save the downloaded file to.
+    name : str, optional
+        Optional display name for progress bar. Has no influence on saved
+        filename. The default is "".
+    padlen : int, optional
+        Optional padding for `name` in progress bar. Useful to get a nicer
+        output when doenloading multiple files. The default is 0.
+    chunk_size : int, optional
+        Chunk size for download stream. The default is 128.
+    disable_bar : bool, optional
+        If True, no progress bar is printed. The default is False.
+
+    Raises
+    ------
+    ServerError
+        Raised if any error occurs during the process.
+
+    Returns
+    -------
+    None
+
+    """
+    tqdm_kwargs = _make_tqdm_kwargs(f"Downloading {name:<{padlen}}")
 
     try:
-        with stream as response:
+        with send_get(client, sub_url, stream=True) as response:
             response.raise_for_status()
             total = int(response.headers.get("Content-Length", 0))
 
-            # Turn this into non-nested double with block in Python 3.9 or 10
-            with save_path.open("wb") as file_outer:
-                with tqdm.wrapattr(file_outer, "write", miniters=1,
-                                   total=total, **tqdm_kwargs,
-                                   disable=disable_bar) as file_inner:
-                    for chunk in response.iter_bytes(chunk_size=chunk_size):
-                        file_inner.write(chunk)
+            with (Path(save_path).open("wb") as file_outer,
+                  tqdm.wrapattr(
+                    file_outer, "write", miniters=1, total=total,
+                    **tqdm_kwargs, disable=disable_bar) as file_inner):
+                for chunk in response.iter_bytes(chunk_size=chunk_size):
+                    file_inner.write(chunk)
 
     except httpx.HTTPStatusError as err:
         logger.error("Error response %s while requesting %s.",
                      err.response.status_code, err.request.url)
         raise ServerError("Cannot connect to server.") from err
+    except OSError as err:
+        logger.error("Error %s attempting to access path %s.", err, save_path)
+        raise ServerError("Cannot access save path.") from err
     except Exception as err:
         logger.exception("Unhandled exception while accessing server.")
-        raise ServerError("Cannot connect to server.") from err
+        raise ServerError("Cannot perform download.") from err
 
 
 def handle_unzipping(save_path: Path, save_dir: Path,
