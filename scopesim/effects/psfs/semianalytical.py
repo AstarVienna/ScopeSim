@@ -121,8 +121,6 @@ class AnisocadoConstPSF(SemiAnalyticalPSF):
 
         self._kernel = self._psf_object.psf_latest
         self._kernel /= np.sum(self._kernel)
-        if self.meta["rounded_edges"]:
-            self._round_kernel_edges()
 
         return self._kernel
 
@@ -139,11 +137,6 @@ class AnisocadoConstPSF(SemiAnalyticalPSF):
         self._kernel = None
         return self.get_kernel(x)
 
-    def _round_kernel_edges(self):
-        y, x = np.array(self._kernel.shape).astype(int) // 2
-        threshold = np.min([self._kernel[y, 0], self._kernel[y, -1],
-                            self._kernel[0, x], self._kernel[-1, x]])
-        self._kernel[self._kernel < threshold] = 0.
 
     @property
     def wavelength(self):

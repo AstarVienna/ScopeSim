@@ -70,6 +70,10 @@ class PSF(Effect):
                     # makes a copy of kernel
                     kernel = rotational_blur(kernel, rot_blur_angle)
 
+                # Round the edges of kernels so that the stupid square stars don't appear anymore
+                if self.meta.get("rounded_edges", False):
+                    kernel = round_kernel_edges(kernel)
+
                 # normalise psf kernel      KERNEL SHOULD BE normalised within get_kernel()
                 # if from_currsys(self.meta["normalise_kernel"], self.cmds):
                 #    kernel /= np.sum(kernel)
@@ -185,3 +189,12 @@ def get_bkg_level(obj, bg_w):
     if obj.ndim == 3:
         return np.ma.median(bkg, axis=(2, 1)).data
     return np.ma.median(bkg)  # ndim == 2
+
+
+def round_kernel_edges(kernel):
+    y, x = np.array(kernel.shape).astype(int) // 2
+    threshold = np.min([kernel[y, 0], kernel[y, -1],
+                        kernel[0, x], kernel[-1, x]])
+    kernel[kernel < threshold] = 0.
+
+    return kernel
