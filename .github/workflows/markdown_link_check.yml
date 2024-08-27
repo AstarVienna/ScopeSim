@@ -17,4 +17,4 @@ on:
 
 jobs:
   markdown-link-check:
-    uses: AstarVienna/DevOps/.github/workflows/markdown_link_check.yml@master
+    uses: AstarVienna/DevOps/.github/workflows/markdown_link_check.yml@main
