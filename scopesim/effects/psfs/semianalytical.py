@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """Currently only contains the AnisoCADO connection."""
+from warnings import warn
 
 import numpy as np
 from scipy.interpolate import RectBivariateSpline
@@ -134,9 +135,13 @@ class AnisocadoConstPSF(SemiAnalyticalPSF):
             [um] if float
 
         """
+        warn("The 'remake_kernel' method was unused and thus deprecated and "
+             "will be removed in a future release. If you are using this "
+             "method, pleas let us know by creating an issue at: "
+             "https://github.com/AstarVienna/ScopeSim/issues",
+             DeprecationWarning, stacklevel=2)
         self._kernel = None
         return self.get_kernel(x)
-
 
     @property
     def wavelength(self):
