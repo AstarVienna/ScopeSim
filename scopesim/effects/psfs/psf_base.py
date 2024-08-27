@@ -40,6 +40,7 @@ class PSF(Effect):
             "bkg_width": -1,
             "wave_key": "WAVE0",
             "normalise_kernel": True,
+            "rounded_edges": True,
             "rotational_blur_angle": 0,
             "report_plot_include": True,
             "report_table_include": False,
@@ -71,7 +72,7 @@ class PSF(Effect):
                     kernel = rotational_blur(kernel, rot_blur_angle)
 
                 # Round the edges of kernels so that the stupid square stars don't appear anymore
-                if self.meta.get("rounded_edges", False):
+                if self.meta.get("rounded_edges", False) and kernel.ndim == 2:
                     kernel = round_kernel_edges(kernel)
 
                 # normalise psf kernel      KERNEL SHOULD BE normalised within get_kernel()
