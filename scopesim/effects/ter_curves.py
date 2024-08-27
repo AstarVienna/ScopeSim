@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Transmission, emissivity, reflection curves."""
 import warnings
 from collections.abc import Collection, Iterable
@@ -9,9 +10,9 @@ from astropy.io import fits
 from astropy.table import Table
 
 from .effects import Effect
-from .ter_curves_utils import add_edge_zeros
-from .ter_curves_utils import combine_two_spectra, apply_throughput_to_cube
-from .ter_curves_utils import download_svo_filter, download_svo_filter_list
+from .ter_curves_utils import (add_edge_zeros, combine_two_spectra,
+                               apply_throughput_to_cube, download_svo_filter,
+                               download_svo_filter_list)
 from ..base_classes import SourceBase, FOVSetupBase
 from ..optics.surface import SpectralSurface
 from ..source.source import Source
@@ -369,19 +370,19 @@ class FilterCurve(TERCurve):
     ----------
     position : int, optional
     filter_name : str, optional
-        ``Ks`` - corresponding to the filter name in the filename pattern
+        "Ks" - corresponding to the filter name in the filename pattern
     filename_format : str, optional
-        ``TC_filter_{}.dat``
+        "TC_filter_{}.dat"
 
     Can either be created using the standard 3 options:
-    - ``filename``: direct filename of the filter curve
-    - ``table``: an ``astropy.Table``
-    - ``array_dict``: a dictionary version of a table: ``{col_name1: values, }``
+    - `filename`: direct filename of the filter curve
+    - `table`: an ``astropy.Table``
+    - `array_dict`: a dictionary version of a table: ``{col_name1: values, }``
 
-    or by passing the combination of ``filter_name`` and ``filename_format`` as
-    kwargs. Here all filter file names follow a pattern (e.g. see above) and the
-    ``{}`` are replaced by ``filter_name`` at run time. ``filter_name`` can
-    also be a !bang string for a ``__currsys__`` entry: ``"!INST.filter_name"``
+    or by passing the combination of `filter_name` and `filename_format` as
+    kwargs. Here all filter file names follow a pattern (e.g. see above) and
+    the "{}" are replaced by `filter_name` at run time. `filter_name` can
+    also be a !-string for a ``__currsys__`` entry, e.g. "!INST.filter_name".
 
     """
 
@@ -414,6 +415,7 @@ class FilterCurve(TERCurve):
 
         min_thru = from_currsys(self.meta["minimum_throughput"], self.cmds)
         mask = self.table["transmission"] < min_thru
+        # TODO: maybe use actually masked table here?
         self.table["transmission"][mask] = 0
 
     def fov_grid(self, which="waveset", **kwargs):
