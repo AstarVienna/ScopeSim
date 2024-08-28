@@ -37,6 +37,16 @@ class TestInit:
         dat = DataContainer(data_files[1])
         assert isinstance(dat, DataContainer)
         assert dat.is_fits is False
+        assert dat.table.colnames == ['wavelength', 'transmission']
+        column = dat.table['wavelength']
+        assert column.unit == "um"
+
+    def test_raises_wrong_units(self, data_files):
+        with pytest.raises(ValueError):
+            _ = DataContainer(
+                data_files[1],
+                wavelength_unit="m",
+            )
 
     def test_initialised_with_arrays_dict_input(self):
         array_dict = {"wavelength": np.linspace(1, 2, 11)*u.um,
