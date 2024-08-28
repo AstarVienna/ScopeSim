@@ -7,6 +7,7 @@ from astropy.wcs import WCS
 from synphot import SourceSpectrum, Empirical1D
 
 from . import image_plane_utils as imp_utils
+from ..source.source_fields import SourceField
 from ..utils import from_currsys, quantify, quantity_from_table, get_logger
 
 
@@ -31,6 +32,9 @@ def is_field_in_fov(fov_header, field, wcs_suffix=""):
     is_inside_fov : bool
 
     """
+    if isinstance(field, SourceField):
+        field = field.field
+
     if isinstance(field, fits.ImageHDU) and \
             field.header.get("BG_SRC") is not None:
         is_inside_fov = True
