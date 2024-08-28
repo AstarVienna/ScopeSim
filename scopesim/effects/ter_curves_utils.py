@@ -133,7 +133,7 @@ def download_svo_filter(filter_name, return_style="synphot"):
     if return_style == "synphot":
         return SpectralElement(Empirical1D, points=wave, lookup_table=trans)
     if return_style == "table":
-        filt = QTable(data=[wave, trans], names=["wavelength", "transmission"])
+        filt = Table(data=[wave, trans], names=["wavelength", "transmission"])
         filt.meta["wavelength_unit"] = str(wave.unit)
         filt.meta["votable_meta"] = tbl_meta  # Don't pollute actual meta...
         return filt
