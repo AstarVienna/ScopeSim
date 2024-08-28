@@ -120,6 +120,38 @@ class DataContainer:
         if array_dict is not None:
             self._from_arrays(array_dict)
 
+        # Get units as they are given in the kworgs.
+        unit_dict_kwargs = {
+            k: v
+            for k, v in kwargs.items()
+            if k.endswith("_unit")
+        }
+
+        # Collect the units from the table. self.meta should contain both
+        # kwargs and headers from the file at this point.
+        unit_dict = {
+            k: v
+            for k, v in self.meta.items()
+            if k.endswith("_unit")
+        }
+
+        # Verify that any units given in the kwargs
+        # are the same as those given in the table.
+        for k, v_kwargs in unit_dict_kwargs.items():
+            v_table = unit_dict.get(k, v_kwargs)
+            if v_kwargs != v_table:
+                raise ValueError(f"Column {k} has unit {v_table} in table, but {v_kwargs} in kwargs")
+
+        # Add units from kwargs if they are given.
+        if self.table:
+            for column in self.table.columns.values():
+                key_unit = f"{column.name}_unit"
+                if key_unit not in unit_dict:
+                    continue
+                unit_kwargs = unit_dict[key_unit]
+                if column.unit is None:
+                    column.unit = unit_kwargs
+
     def _from_table(self, table):
         self.table = table
         self.headers += [table.meta]
