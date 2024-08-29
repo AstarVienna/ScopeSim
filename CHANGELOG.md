@@ -1,3 +1,42 @@
+# Version 0.8.4
+**2024-08-29**
+
+*Last version to support Python 3.9*
+
+This includes many small and not-so-small fixes and improvements, which are made available here to Python 3.9, while a few more major changes will be released soon as Version 0.9.0, but without support for Python 3.9.
+
+## What's Changed
+### Changes to or addition of Effects
+* Test all cases of DIT & NDIT vs. exptime and AutoExposure by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/428
+* Avoid in-place operations because of dtype conflicts by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/432
+* Split PSF and Electronic effects into subpackages by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/434
+* Improve SVO filter handling by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/454
+* Added function to round the edges of square PSF kernels by @astronomyk in https://github.com/AstarVienna/ScopeSim/pull/459
+### Dependency Changes
+* Bump tornado from 6.4 to 6.4.1 by @dependabot in https://github.com/AstarVienna/ScopeSim/pull/427
+* Bump urllib3 from 1.26.18 to 1.26.19 by @dependabot in https://github.com/AstarVienna/ScopeSim/pull/429
+* Bump certifi from 2023.11.17 to 2024.7.4 by @dependabot in https://github.com/AstarVienna/ScopeSim/pull/435
+* Bump zipp from 3.17.0 to 3.19.1 by @dependabot in https://github.com/AstarVienna/ScopeSim/pull/436
+* Bump setuptools from 69.0.2 to 70.0.0 by @dependabot in https://github.com/AstarVienna/ScopeSim/pull/437
+* Bump some dependencies to get rid of some indirect ones by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/445
+* Use `pooch` for `download_example_data` by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/446
+* Bump matplotlib, synphot, pyerfa by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/450
+### Other Changes
+* Formatting and Refactoring of `nghxrg.py` by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/431
+* Rename `DetectorArray` ➡️ `DetectorManager` plus Docstrings and Refactoring by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/423
+* Enlarge initial Field of View to suppord wide-field imagers by @hugobuddel in https://github.com/AstarVienna/ScopeSim/pull/433
+* Fix some exposure things by @hugobuddel in https://github.com/AstarVienna/ScopeSim/pull/440
+* Deepcopy readout, to prevent it being overwritten. Closes #439 by @hugobuddel in https://github.com/AstarVienna/ScopeSim/pull/441
+* Allow star to be shifted by @hugobuddel in https://github.com/AstarVienna/ScopeSim/pull/443
+* Attempt to catch crypto warning by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/444
+* Use new main branch for DevOps workflows by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/448
+* Refactor `example_data_utils` by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/447
+* Remove unused function `return_latest_github_actions_jobs_status()` by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/449
+* Remove remaining master references by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/460
+* Add units to DataContainer table directly. by @hugobuddel in https://github.com/AstarVienna/ScopeSim/pull/461
+
+**Full Changelog**: https://github.com/AstarVienna/ScopeSim/compare/v0.8.3...v0.8.4
+
 # Version 0.8.3
 **2024-06-02**
 
