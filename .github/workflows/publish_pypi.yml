@@ -1,0 +1,88 @@
+name: Release on PyPI
+on:
+  release:
+    types:
+      - published
+
+jobs:
+  build:
+    name: Build package using Poetry
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Set up Poetry
+        uses: abatilo/actions-poetry@v2
+        with:
+          poetry-version: "1.8.3"
+
+      - name: Create step summary
+        run: echo "## Building $(poetry version)" >> $GITHUB_STEP_SUMMARY
+
+      - name: Build package
+        run: poetry build >> $GITHUB_STEP_SUMMARY
+
+      - name: Store distribution files
+        uses: actions/upload-artifact@v3
+        with:
+          name: distribution
+          path: dist/
+
+      - name: Upload release attachment
+        uses: shogo82148/actions-upload-release-asset@v1
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: dist/*
+
+      - name: Add to step summary
+        if: ${{ success() }}
+        run: echo "### Successfully built package" >> $GITHUB_STEP_SUMMARY
+
+  publish:
+    name: Publish package to PyPI
+    runs-on: ubuntu-latest
+    needs: build
+    if: needs.build.result == 'success'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Set up Poetry
+        uses: abatilo/actions-poetry@v2
+        with:
+          poetry-version: "1.8.3"
+
+      - name: Create step summary
+        run: echo "## Publishing $(poetry version) to PyPI" >> $GITHUB_STEP_SUMMARY
+
+      - name: Retrieve distribution files
+        uses: actions/download-artifact@v3
+        with:
+          name: distribution
+          path: dist/
+
+      - name: Publish to PyPI
+        env:
+          POETRY_PYPI_TOKEN_PYPI: ${{ secrets.PYPI_TOKEN }}
+        run: poetry publish >> $GITHUB_STEP_SUMMARY
+
+  bump:
+    name: Bump to (next) dev version
+    needs: publish
+    if: ${{ needs.publish.result == 'success' }}
+    uses: ./.github/workflows/bump.yml
+    secrets: inherit
+    with:
+      rule: prerelease
+      branch: main
