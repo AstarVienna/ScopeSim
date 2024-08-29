@@ -570,6 +570,9 @@ class OpticalTrain:
     def __setitem__(self, key, value):
         self.optics_manager[key] = value
 
+    def __contains__(self, key):
+        return key in self.optics_manager
+
     def report(self):
         pass
         # user commands report
