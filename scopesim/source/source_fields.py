@@ -1,5 +1,56 @@
 # -*- coding: utf-8 -*-
-"""."""
+"""
+Contains ``SourceField`` and its subclasses.
+
+While the ``Source`` object serves as the high-level interface between target
+descriptions and the ScopeSim optical train, the actual information about the
+observed objects is stored in the ``SourceField`` classes, which constitut the
+members of ``Source.fields`` collection. Any target to be understood by
+ScopeSim can be characterized by either a ``Table`` of point sources, a
+two-dimensional image (``ImageHDU``) plus a separate (averaged) spectrum, or a
+three-dimensional datacube containing spectral information for each spatial
+pixel. This threefold abstraction is mirrored by the three final subclasses of
+``SourceField``: ``TableSourceField`` for point source tables with a spectrum
+reference for each individual point source, ``ImageSourceField`` for a 2D image
+with an average spectrum, and finally ``CubeSourceField`` with a full 3D data
+cube. The ``ImageSourceField`` and ``CubeSourceField`` also contain a ``WCS``
+coordinate information and the wavelength axis of the ``CubeSourceField`` is
+available via the ``CubeSourceField.wave`` attribute.
+
+In previous versions of ScopeSim (pre-0.9), the ``Source.fields`` collection
+simply held the individual ``Table`` and ``ImageHDU`` (2D or 3D) objects, which
+are now stored in the ``.field`` attribute of each source field. This new
+distinction of the different cases allows much clearer separation of the logic
+required to handle various operations on those objects, such as plotting and
+shifting the source, which previously had to incorporate a number of case
+differentiations that made the ``Source`` class rather oberloaded with logic.
+This now also allows for well-structured validation logic of the individual
+source field data upon creation of each ``SourceField`` subclass instance.
+
+Creation of the source field classes is usually handled by the ``Source`` class
+itself via its various constructions methods, so the user rarely interacts with
+these classes directly, except for debugging. They serve more as an internal
+abstraction layer to handle the different cases of target object descriptions,
+as described above.
+
+The following class diagramm illustrates the relationship between the
+``SourceField`` subclasses:
+
+```mmd
+classDiagram
+class SourceField{+field}
+class SpectrumSourceField{+spectra}
+class HDUSourceField{+wcs}
+
+SourceField <|-- SpectrumSourceField
+SourceField <|-- HDUSourceField
+SpectrumSourceField <|-- TableSourceField
+SpectrumSourceField <|-- ImageSourceField
+HDUSourceField <|-- ImageSourceField
+HDUSourceField <|-- CubeSourceField
+```
+
+"""
 
 from copy import deepcopy
 from pathlib import Path
@@ -26,6 +77,7 @@ from ..utils import (quantify, quantity_from_table, close_loop, get_logger,
 logger = get_logger(__name__)
 
 
+# TODO: consider making this a metaclass
 @dataclass
 class SourceField:
     """Base class for source fields, not meant to be instantiated."""
