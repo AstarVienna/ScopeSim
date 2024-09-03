@@ -12,7 +12,8 @@ import numpy as np
 
 from .. import Effect
 from ...base_classes import DetectorBase
-from ...utils import from_currsys, figure_factory, check_keys
+from ...utils import figure_factory, check_keys
+from ...utils import from_currsys, real_colname
 from . import logger
 
 
@@ -124,18 +125,33 @@ class ADConversion(Effect):
         return True
 
     def apply_to(self, obj, **kwargs):
+        print("Entering ADConversion.apply_to")
         if not isinstance(obj, DetectorBase):
             return obj
 
         if not self._should_apply():
             return obj
 
+        print("Applying ADConversion")
         new_dtype = self.meta["dtype"]
         if not np.issubdtype(new_dtype, np.integer):
             logger.warning("Setting digitized data to dtype %s, which is not "
                            "an integer subtype.", new_dtype)
 
         # TODO: Apply the gain value (copy from DarkCurrent)
+        print(from_currsys(self.meta['gain'], self.cmds))
+        if isinstance(from_currsys(self.meta["gain"], self.cmds), dict):
+            dtcr_id = obj.meta[real_colname("id", obj.meta)]
+            gain = from_currsys(self.meta["gain"][dtcr_id], self.cmds)
+        elif isinstance(from_currsys(self.meta["gain"], self.cmds), (float, int)):
+            gain = from_currsys(self.meta["gain"], self.cmds)
+        else:
+            raise ValueError("<ADConversion>.meta['gain'] must be either "
+                             f"dict or float, but is {self.meta['gain']}")
+
+
+        # Apply gain   TODO: option to turn this off
+        obj._hdu.data /= gain
 
         # Remove values below 0, because for unsigned types these get wrapped
         # around to MAXINT, which is even worse than negative values.
