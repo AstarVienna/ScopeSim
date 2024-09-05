@@ -137,7 +137,11 @@ class FieldOfView(FieldOfViewBase):
             elif isinstance(fld, fits.ImageHDU):
                 if fld.header["NAXIS"] in (2, 3):
                     extracted = fu.extract_area_from_imagehdu(fld, volume)
-                    fill_value = self.cmds["!SIM.computing.nan_fill_value"]
+                    try:
+                        fill_value = self.cmds["!SIM.computing.nan_fill_value"]
+                    except TypeError:
+                        # This occurs in testing, not sure why
+                        fill_value = 0.
                     if np.ma.fix_invalid(extracted.data, copy=False,
                                          fill_value=fill_value).mask.any():
                         logger.warning("Source contained NaN values, which "
