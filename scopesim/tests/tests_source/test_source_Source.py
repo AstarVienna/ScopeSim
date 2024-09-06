@@ -309,11 +309,11 @@ class TestSourceImageInRange:
 class TestSourcePhotonsInRange:
     def test_correct_photons_are_returned_for_table_source(self, table_source):
         ph = table_source.photons_in_range(1, 2)
-        assert np.all(np.isclose(ph.value, [4., 2., 2.]))
+        assert np.allclose(ph.value, [4., 2., 2.])
 
     def test_correct_photons_are_returned_for_image_source(self, image_source):
         ph = image_source.photons_in_range(1, 2)
-        assert np.all(np.isclose(ph.value, [2.]))
+        assert np.allclose(ph.value, [2.])
 
     def test_correct_photons_are_returned_for_no_spectra(self, image_source):
         image_source.spectra = []
@@ -328,7 +328,7 @@ class TestSourcePhotonsInRange:
     def test_photons_returned_only_for_indexes(self, table_source):
         ph = table_source.photons_in_range(1, 2, indexes=[0, 2])
         assert len(ph) == 2
-        assert np.all(np.isclose(ph.value, [4, 2]))
+        assert np.allclose(ph.value, [4, 2])
 
 
 class TestSourceShift:
