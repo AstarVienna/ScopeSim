@@ -1,13 +1,8 @@
-import pytest
-from pytest import approx
-
 import numpy as np
 from matplotlib import pyplot as plt
-from astropy import units as u
 
 from scopesim.effects import electronic as ee
 from scopesim.optics.image_plane import ImagePlane
-from scopesim.base_classes import ImagePlaneBase
 
 from scopesim.tests.mocks.py_objects.imagehdu_objects import _image_hdu_square
 

@@ -4,7 +4,6 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 import yaml
-import numpy as np
 
 from scopesim.server import database as db
 from scopesim.server import example_data_utils as dbex
