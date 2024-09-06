@@ -145,6 +145,16 @@ class TestExtractFrom:
             assert the_fov.fields[1].header["NAXIS"] == 3
             assert isinstance(the_fov.fields[2], Table)
 
+    def test_handles_nans(self):
+        src = so._image_source()
+        src.fields[0].data[20:30, 20:30] = np.nan
+        assert np.isnan(src.fields[0].data).any()
+
+        fov = _fov_190_210_um()
+        fov.extract_from(src)
+
+        assert not np.isnan(fov.fields[0].data).any()
+
 
 # @pytest.mark.xfail(reason="apply make_cube's fov.waveset available to the outside ")
 class TestMakeCube:
