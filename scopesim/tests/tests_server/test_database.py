@@ -95,7 +95,7 @@ class TestListPackages:
 
     def test_lists_only_packages_with_qualifier(self):
         pkgs = db.list_packages("Armazones")
-        assert np.all(["Armazones" in pkg for pkg in pkgs])
+        assert all("Armazones" in pkg for pkg in pkgs)
 
     def test_throws_for_nonexisting_pkgname(self):
         with pytest.raises(ValueError):

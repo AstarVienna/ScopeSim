@@ -145,7 +145,7 @@ class TestGetRelevantExtensions:
         exts = fh.get_relevant_extensions(dic, comb_hdul)
         answer = [0]
 
-        assert np.all([ans in exts for ans in answer])
+        assert all(ans in exts for ans in answer)
         assert len(exts) == len(answer)
 
     def test_works_for_ext_number(self, comb_hdul):
@@ -153,7 +153,7 @@ class TestGetRelevantExtensions:
         exts = fh.get_relevant_extensions(dic, comb_hdul)
         answer = [1, 2]
 
-        assert np.all([ans in exts for ans in answer])
+        assert all(ans in exts for ans in answer)
         assert len(exts) == len(answer)
 
     @pytest.mark.parametrize("ext_type, answer",
@@ -163,7 +163,7 @@ class TestGetRelevantExtensions:
         dic = {"ext_type": ext_type}
         exts = fh.get_relevant_extensions(dic, comb_hdul)
 
-        assert np.all([ans in exts for ans in answer])
+        assert all(ans in exts for ans in answer)
         assert len(exts) == len(answer)
 
 

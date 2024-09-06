@@ -129,8 +129,8 @@ class TestExtractFrom:
         # check the same spectrum object is referenced by both lists
         assert fov.fields[0].header["SPEC_REF"] == \
                src.fields[0].header["SPEC_REF"]
-        assert np.all([fov.fields[2][i]["ref"] == \
-                       src.fields[2][i]["ref"] for i in range(4)])
+        assert all(fov.fields[2][i]["ref"] == src.fields[2][i]["ref"]
+                   for i in range(4))
 
         def test_contains_all_fields_inside_fov(self, basic_fov_header,
                                                 cube_source,
