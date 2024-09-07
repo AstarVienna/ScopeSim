@@ -65,6 +65,7 @@ class TestObserveImagingMode:
         assert det_im[505:520, 505:520].sum() > 3e6
 
 
+@pytest.mark.filterwarnings("ignore:The fov_grid*:DeprecationWarning")
 @pytest.mark.usefixtures("protect_currsys", "patch_all_mock_paths")
 class TestObserveSpectroscopyMode:
     """
@@ -115,6 +116,7 @@ class TestObserveSpectroscopyMode:
             assert round(trace_flux / spot_flux) == n
 
 
+@pytest.mark.filterwarnings("ignore:The fov_grid*:DeprecationWarning")
 @pytest.mark.usefixtures("protect_currsys", "patch_all_mock_paths")
 class TestObserveIfuMode:
     def test_runs(self):

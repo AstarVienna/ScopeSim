@@ -35,6 +35,7 @@ def fixture_full_trace_list():
     return tlo.make_trace_hdulist()
 
 
+@pytest.mark.filterwarnings("ignore:The fov_grid*:DeprecationWarning")
 class TestInit:
     def test_initialises_with_nothing(self):
         assert isinstance(SpectralTraceList(), SpectralTraceList)
@@ -72,6 +73,8 @@ def fixture_spectral_trace_list():
     """Instantiate a SpectralTraceList"""
     return SpectralTraceList(hdulist=tlo.make_trace_hdulist())
 
+
+@pytest.mark.filterwarnings("ignore:The fov_grid*:DeprecationWarning")
 class TestRectification:
     def test_rectify_cube_not_implemented(self, spectral_trace_list):
         hdulist = fits.HDUList()

@@ -214,12 +214,14 @@ class TestLoadExampleOptTrain:
         assert isinstance(opt, OpticalTrain)
         assert not from_currsys(opt["slit_wheel"].include)
 
+    @pytest.mark.filterwarnings("ignore:The fov_grid*:DeprecationWarning")
     def test_loads_spectroscopy_optical_train_object(self):
         opt = load_example_optical_train(set_modes=["spectroscopy"])
 
         assert isinstance(opt, OpticalTrain)
         assert from_currsys(opt["slit_wheel"].include)
 
+    @pytest.mark.filterwarnings("ignore:The fov_grid*:DeprecationWarning")
     def test_loads_ifu_optical_train_object(self):
         opt = load_example_optical_train(set_modes=["ifu"])
 
