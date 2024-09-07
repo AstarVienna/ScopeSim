@@ -83,6 +83,7 @@ class TestApplyTo:
         assert new_crpix_d[1] == approx(old_crpix_d[1] - offset, rel=1e-3)
 
 
+@pytest.mark.skip(reason="fov_grid is deprecated")
 class TestCombinedWithAtmoDisp:
     @pytest.mark.parametrize("waves", [(0.7, 0.8), (1.4, 1.6), (2.4, 2.6)])
     @pytest.mark.parametrize("angle", [0, 15, 45, 85, 90])
