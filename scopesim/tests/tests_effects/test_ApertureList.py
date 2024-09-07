@@ -1,4 +1,5 @@
-
+# -*- coding: utf-8 -*-
+import pytest
 import numpy as np
 from astropy.io import fits
 
@@ -43,6 +44,7 @@ class TestApertures:
             plt.show()
 
 
+@pytest.mark.skip(reason="fov_grid is deprecated")
 class TestFovGrid:
     def test_returns_headers(self, mock_path):
         apl = ApertureList(filename=str(mock_path / "test_aperture_list.dat"),

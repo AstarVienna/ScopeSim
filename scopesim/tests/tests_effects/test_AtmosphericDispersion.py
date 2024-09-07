@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import pytest
 from pytest import approx
 
@@ -44,6 +45,7 @@ class TestInit:
             isinstance(AtmosphericDispersion(), AtmosphericDispersion)
 
 
+@pytest.mark.skip(reason="fov_grid is deprecated")
 class TestFovGrid:
     def test_returns_list_of_3_arrays_with_correct_which(self, atmo_yaml_dict):
         atmo_disp = AtmosphericDispersion(**atmo_yaml_dict["properties"])

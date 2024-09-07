@@ -1,4 +1,4 @@
-
+# -*- coding: utf-8 -*-
 import pytest
 from pytest import approx
 
@@ -75,11 +75,6 @@ class TestMask:
         if PLOTS:
             plt.imshow(apm.mask.T)
             plt.show()
-
-
-class TestFovGrid:
-    # not needed because all it does is return the header
-    pass
 
 
 class TestMakeAperturePolygon:

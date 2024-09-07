@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import pytest
 from unittest.mock import patch
 
@@ -155,6 +156,7 @@ class TestDetecotrHeaders:
             assert hdr["NAXIS2"] == 32
 
 
+@pytest.mark.skip(reason="fov_grid is deprecated")
 @pytest.mark.usefixtures("patch_mock_path_micado")
 class TestFovGrid:
     def test_returns_aperture_mask_object(self):
