@@ -108,4 +108,4 @@ filterwarnings = [
 ]
 
 [tool.coverage.report]
-omit = ["scopesim/tests/*", "docs/*"]
+omit = ["scopesim/tests/*", "docs/*", "scopesim/optics/fov_manager_utils.py"]

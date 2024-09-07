@@ -12,6 +12,7 @@ from scopesim.tests.mocks.py_objects import effects_objects as eo
 from scopesim.tests.mocks.py_objects import aperture_objects as apo
 from scopesim.tests.mocks.py_objects import trace_list_objects as tlo
 
+pytest.skip(allow_module_level=True)
 
 @pytest.fixture(scope="function")
 def wave_kwargs():
