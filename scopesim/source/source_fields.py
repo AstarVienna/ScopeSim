@@ -4,7 +4,7 @@ Contains ``SourceField`` and its subclasses.
 
 While the ``Source`` object serves as the high-level interface between target
 descriptions and the ScopeSim optical train, the actual information about the
-observed objects is stored in the ``SourceField`` classes, which constitut the
+observed objects is stored in the ``SourceField`` classes, which constitute the
 members of ``Source.fields`` collection. Any target to be understood by
 ScopeSim can be characterized by either a ``Table`` of point sources, a
 two-dimensional image (``ImageHDU``) plus a separate (averaged) spectrum, or a
@@ -23,7 +23,7 @@ are now stored in the ``.field`` attribute of each source field. This new
 distinction of the different cases allows much clearer separation of the logic
 required to handle various operations on those objects, such as plotting and
 shifting the source, which previously had to incorporate a number of case
-differentiations that made the ``Source`` class rather oberloaded with logic.
+differentiations that made the ``Source`` class rather overloaded with logic.
 This now also allows for well-structured validation logic of the individual
 source field data upon creation of each ``SourceField`` subclass instance.
 
@@ -33,7 +33,7 @@ these classes directly, except for debugging. They serve more as an internal
 abstraction layer to handle the different cases of target object descriptions,
 as described above.
 
-The following class diagramm illustrates the relationship between the
+The following class diagram illustrates the relationship between the
 ``SourceField`` subclasses:
 
 ```mmd
