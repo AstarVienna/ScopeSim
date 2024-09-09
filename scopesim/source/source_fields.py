@@ -203,7 +203,7 @@ class HDUSourceField(SourceField):
     def __new__(cls, *args, **kwargs):
         """Override creation to create subclasses."""
         if issubclass(cls, (CubeSourceField, ImageSourceField)):
-            # Allow for dirct subclass access
+            # Allow for direct subclass access
             return super().__new__(cls)
 
         field = kwargs.get("field", args[0])

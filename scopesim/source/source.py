@@ -368,17 +368,17 @@ class Source(SourceBase):
 
     @property
     def table_fields(self):
-        """Return list of fields that are defined through tables."""
+        """List of fields that are defined through tables."""
         return list(self._get_fields(TableSourceField))
 
     @property
     def image_fields(self):
-        """Return list of fields that are defined through 2D images."""
+        """List of fields that are defined through 2D images."""
         return list(self._get_fields(ImageSourceField))
 
     @property
     def cube_fields(self):
-        """Return list of fields that are defined through 3D datacubes."""
+        """List of fields that are defined through 3D datacubes."""
         return list(self._get_fields(CubeSourceField))
 
     @property
