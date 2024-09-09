@@ -533,10 +533,6 @@ class SourceDescriptionFitsKeywords(ExtraFitsKeywords):
             for i, field in enumerate(src.fields):
                 src_class = field.field.__class__.__name__
                 src_dic = deepcopy(src._meta_dicts[i])
-                print(src)
-                print(src.meta)
-                print(src_dic)
-                print(src.fields[0].meta)
                 if isinstance(field, HDUSourceField):
                     hdr = field.header
                     for key in hdr:
