@@ -92,7 +92,10 @@ def chop_nod_image(img, chop_offsets, nod_offsets=None):
     if nod_offsets is None:
         nod_offsets = tuple(-np.array(chop_offsets))
 
-    def _comb_img(_img, offsets):
-        return _img - np.roll(_img, offsets, (1, 0))
+    im_aa = np.copy(img)
+    im_ab = np.roll(im_aa, chop_offsets, (1, 0))
+    im_ba = np.roll(im_aa, nod_offsets, (1, 0))
+    im_bb = np.roll(im_ba, chop_offsets, (1, 0))
 
-    return _comb_img(_comb_img(img, chop_offsets), nod_offsets)
+    im_comb = (im_aa - im_ab) - (im_ba - im_bb)
+    return im_comb
