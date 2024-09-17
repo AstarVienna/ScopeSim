@@ -198,7 +198,7 @@ class HDUSourceField(SourceField):
     """Base class for source fields with HDU."""
 
     field: fits.ImageHDU
-    wcs: WCS = dataclass_field(default_factory=WCS, init=False)
+    wcs: WCS | None = dataclass_field(default=None, init=False)
 
     def __new__(cls, *args, **kwargs):
         """Override creation to create subclasses."""
