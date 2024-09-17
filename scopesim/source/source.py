@@ -412,15 +412,6 @@ class Source(SourceBase):
         self.fields[0].meta = value
 
     @property
-    def _meta_dicts(self):
-        return [fld.meta for fld in self.fields]
-
-    @_meta_dicts.setter
-    def _meta_dicts(self, value):
-        logger.debug("_meta_dicts setting is deprecated")
-        pass
-
-    @property
     def bandpass(self):
         return self._bandpass
 
@@ -568,7 +559,6 @@ class Source(SourceBase):
     def make_copy(self):
         new_source = Source()
         new_source.meta = deepcopy(self.meta)
-        # new_source._meta_dicts = deepcopy(self._meta_dicts)
         # new_source.spectra = deepcopy(self.spectra)
         for field in self.fields:
             new_source.fields.append(deepcopy(field))
@@ -586,13 +576,6 @@ class Source(SourceBase):
             raise ValueError(f"Cannot add {type(source_to_add)} object to Source object")
 
         new_source = source_to_add.make_copy()
-        # If there is no field yet, then self._meta_dicts contains a
-        # reference to self.meta, which is empty. This ensures that both are
-        # updated at the same time. However, it is important that the fields
-        # and _meta_dicts match when appending sources.
-        if len(self.fields) == 0:
-            assert self._meta_dicts == [{}] or self._meta_dicts == []
-            self._meta_dicts = []
 
         specrefoffset = max(self.spectra.keys()) + 1 if self.spectra else 0
         for field in new_source.fields:
@@ -608,7 +591,6 @@ class Source(SourceBase):
 
             field.spectra = {k + specrefoffset: v for k, v in
                              new_source.spectra.items()}
-            self._meta_dicts += source_to_add._meta_dicts
 
     def __add__(self, new_source):
         self_copy = self.make_copy()
