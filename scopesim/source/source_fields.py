@@ -274,9 +274,11 @@ class ImageSourceField(SpectrumSourceField, HDUSourceField):
 class CubeSourceField(HDUSourceField):
     """Source field with 3D data cube."""
 
+    from_hdul: bool = False
+
     def __post_init__(self):
         """Validate input."""
-        if self.wcs is None and not self.meta.get("from_hdul", False):
+        if self.wcs is None and not self.from_hdul:
             self.wcs = WCS(self.field)
 
         try:
@@ -295,7 +297,7 @@ class CubeSourceField(HDUSourceField):
         """Load source cube from HDUL."""
         cube = fits.ImageHDU(header=hdulist[ext].header.copy(),
                              data=deepcopy(hdulist[ext].data))
-        new_csf = cls(field=cube, meta=kwargs | {"from_hdul": True})
+        new_csf = cls(field=cube, meta=kwargs, from_hdul=True)
         new_csf.wcs = WCS(hdulist[ext], fobj=hdulist)
         return new_csf
 
