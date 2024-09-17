@@ -16,6 +16,7 @@ from synphot.units import PHOTLAM
 
 from scopesim.source import source_utils
 from scopesim.source.source import Source
+from scopesim.source.source_fields import CubeSourceField
 
 from scopesim.optics.image_plane import ImagePlane
 from scopesim.utils import convert_table_comments_to_dict
@@ -424,6 +425,26 @@ class TestSpectraListConverter:
                 [np.array([0, 1, 1, 0]), [0, 1, 1, 0]],
                 [np.array([1, 2, 3, 4]), [1, 2, 3, 4]])
 
+
+def test_cube_source_field():
+    size = 5
+    hdu = fits.ImageHDU(data=np.arange(size**3).reshape(3*(size,)))
+
+    hdu.header["CUNIT1"] = "arcsec"
+    hdu.header["CUNIT2"] = "arcsec"
+    hdu.header["CUNIT3"] = "um"
+    hdu.header["CTYPE3"] = "WAVE"
+    hdu.header["CRVAL1"] = 0
+    hdu.header["CRVAL2"] = 0
+    csf = CubeSourceField(hdu)
+
+    np.testing.assert_equal(csf.wave.value, np.arange(1, 6))
+    csf.shift(2, 3)
+    assert csf.header["CRVAL1"] == 2
+    assert csf.header["CRVAL2"] == 3
+
+    _, ax = plt.subplots()
+    csf.plot(ax, "red")
 
 #
 # class TestScaleImageHDU:
