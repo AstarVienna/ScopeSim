@@ -400,16 +400,13 @@ class Source(SourceBase):
 
     @property
     def meta(self):
-        if not self.fields:
-            return self._meta
-        return self.fields[0].meta
-
-    @meta.setter
-    def meta(self, value):
-        if not self.fields:
-            self._meta = value
-            return
-        self.fields[0].meta = value
+        if len(self.fields) == 1:
+            # Some code (mostly in ScopeSim_Templates) relies on single-field
+            # sources exposing their field meta as the Source's meta.
+            # If there's more than one field, the metas should always be
+            # accessed through the fields to avoid ambiguity.
+            return self.fields[0].meta
+        return self._meta
 
     @property
     def bandpass(self):
@@ -558,7 +555,7 @@ class Source(SourceBase):
 
     def make_copy(self):
         new_source = Source()
-        new_source.meta = deepcopy(self.meta)
+        new_source._meta = deepcopy(self.meta)
         # new_source.spectra = deepcopy(self.spectra)
         for field in self.fields:
             new_source.fields.append(deepcopy(field))
@@ -591,6 +588,8 @@ class Source(SourceBase):
 
             field.spectra = {k + specrefoffset: v for k, v in
                              new_source.spectra.items()}
+
+        self.meta.update(new_source.meta)
 
     def __add__(self, new_source):
         self_copy = self.make_copy()
