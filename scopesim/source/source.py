@@ -574,6 +574,11 @@ class Source(SourceBase):
 
         new_source = source_to_add.make_copy()
 
+        # FIXME: This offset should not be required, now that spectra for each
+        #        field are stored in that field. However, there is some code
+        #        that loops over the combined Source.spectra dict and that
+        #        fails if the keys in the field's spectra contain duplicates.
+        #        This need to be fixed ASAP!
         specrefoffset = max(self.spectra.keys()) + 1 if self.spectra else 0
         for field in new_source.fields:
             if isinstance(field, TableSourceField):
