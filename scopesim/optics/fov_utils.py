@@ -22,8 +22,9 @@ def is_field_in_fov(fov_header, field, wcs_suffix=""):
     ----------
     fov_header : fits.Header
         Header from a FieldOfView object
-    field : [astropy.Table, astropy.ImageHDU]
-        Field object from a Source object
+    field : [SourceField, astropy.Table, astropy.ImageHDU]
+        Field object from a Source object. Should now be SourceField, but bare
+        Table and ImageHDU still supported.
     wcs_suffix : str
         ["S", "D"] Coordinate system: Sky or Detector
 
@@ -34,6 +35,8 @@ def is_field_in_fov(fov_header, field, wcs_suffix=""):
     """
     if isinstance(field, SourceField):
         field = field.field
+    # TODO: Check if this can always get a SourceField, if yes then just do
+    #       that and remove this.
 
     if isinstance(field, fits.ImageHDU) and \
             field.header.get("BG_SRC") is not None:
