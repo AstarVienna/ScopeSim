@@ -16,7 +16,7 @@ from .ter_curves_utils import (add_edge_zeros, combine_two_spectra,
 from ..base_classes import SourceBase, FOVSetupBase
 from ..optics.surface import SpectralSurface
 from ..source.source import Source
-from ..source.source_fields import CubeSourceField
+from ..source.source_fields import CubeSourceField, SpectrumSourceField
 from ..utils import (from_currsys, quantify, check_keys, find_file,
                      figure_factory, get_logger)
 
@@ -116,13 +116,18 @@ class TERCurve(Effect):
             # apply transmission to source spectra
             for fld in obj.fields:
                 if isinstance(fld, CubeSourceField):
-                    fld.field = apply_throughput_to_cube(fld.field, thru,
-                                                         fld.wave)
-                    continue
-
-                for isp, spec in fld.spectra.items():
-                    fld.spectra[isp] = combine_two_spectra(
-                        spec, thru, "multiply", wave_min, wave_max)
+                    fld.field = apply_throughput_to_cube(
+                        fld.field, thru, fld.wave)
+                elif isinstance(fld, SpectrumSourceField):
+                    fld.spectra = {
+                        isp: combine_two_spectra(spec, thru, "multiply",
+                                                 wave_min, wave_max)
+                        for isp, spec in fld.spectra.items()
+                    }
+                else:
+                    # Rather log than raise here, can still move on
+                    logger.error("Source field is neither Cube nor has "
+                                 "spectra, this shouldn't occur...")
 
             # add the effect background to the source background field
             if self.background_source is not None:
