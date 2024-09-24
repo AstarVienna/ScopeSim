@@ -84,10 +84,11 @@ def convert_to_list_of_spectra(spectra, lam) -> list[SourceSpectrum]:
 
         if (isinstance(spectra, Iterable) and
                 not isinstance(spectra, np.ndarray)):
-            if all(isinstance(spec, SourceSpectrum) for spec in spectra):
-                yield from spectra
-            elif all(isinstance(spec, np.ndarray) for spec in spectra):
-                yield from _from_arrays(spectra)
+            _spectra = list(spectra)  # avoid eating iterators in all()
+            if all(isinstance(spec, SourceSpectrum) for spec in _spectra):
+                yield from _spectra
+            elif all(isinstance(spec, np.ndarray) for spec in _spectra):
+                yield from _from_arrays(_spectra)
             else:
                 raise ValueError(
                     "If given as an iterable, spectra must consist of all "
