@@ -7,6 +7,7 @@ from datetime import datetime
 import numpy as np
 from scipy.interpolate import interp1d
 from astropy import units as u
+from astropy.wcs import WCS
 
 from tqdm import tqdm
 
@@ -20,7 +21,7 @@ from ..commands.user_commands import UserCommands
 from ..detector import DetectorManager
 from ..effects import ExtraFitsKeywords
 from ..utils import from_currsys, top_level_catch, get_logger
-from .. import rc, __version__
+from .. import __version__
 
 
 logger = get_logger(__name__)
@@ -275,7 +276,8 @@ class OpticalTrain:
         ImageHDU.
         """
         # Convert to PHOTLAM per arcsec2
-        # ..todo: this is not sufficiently general
+        # TODO: this is not sufficiently general
+        # TODO: Maybe move this to source_fields??
 
         for ispec, spec in source.spectra.items():
             # Put on fov wavegrid
@@ -347,6 +349,8 @@ class OpticalTrain:
             cube.header["CRVAL3"] = wave_min.value
             cube.header["CDELT3"] = dwave
             cube.header["CUNIT3"] = wave_unit.name
+
+            cube.wcs = WCS(cube.field)
 
         return source
 

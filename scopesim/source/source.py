@@ -558,13 +558,15 @@ class Source(SourceBase):
         new_source._meta = deepcopy(self.meta)
         # new_source.spectra = deepcopy(self.spectra)
         for field in self.fields:
-            new_source.fields.append(deepcopy(field))
+            # new_source.fields.append(deepcopy(field))
             # TODO: The code below refers to DataContainer??
-            # if isinstance(field, (fits.ImageHDU, fits.PrimaryHDU)) \
-            #         and field._file is not None:  # and field._data_loaded is False:
-            #     new_source.fields.append(field)
-            # else:
-            #     new_source.fields.append(deepcopy(field))
+            # FIXME: Omitting this causes "TypeError: cannot pickle '_io.BufferedReader' object"
+            #        for fields loaded from FITS files. Should be properly fixed!!
+            if (isinstance(field.field, (fits.ImageHDU, fits.PrimaryHDU))
+                    and field.field._file is not None):  # and field._data_loaded is False:
+                new_source.fields.append(field)
+            else:
+                new_source.fields.append(deepcopy(field))
 
         return new_source
 

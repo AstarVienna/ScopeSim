@@ -253,6 +253,7 @@ class HDUSourceField(SourceField):
         dy = dy << u.arcsec << self.wcs.wcs.cunit[1]
         self.header["CRVAL1"] += dx.value
         self.header["CRVAL2"] += dy.value
+        # TODO: self.wcs should be updated here!
 
 
 @dataclass
