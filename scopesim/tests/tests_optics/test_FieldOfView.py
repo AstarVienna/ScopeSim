@@ -403,7 +403,7 @@ class TestMakeSpectrum:
         spec = fov.make_spectrum()
 
         in_sum = np.sum([n * spec(fov.waveset).value
-                        for n, spec in zip([3, 1, 1], src_table.spectra)])      # sum of weights [3,1,1]
+                        for n, spec in zip([3, 1, 1], src_table.spectra.values())])      # sum of weights [3,1,1]
         out_sum = np.sum(spec(fov.waveset).value)
 
         assert in_sum == approx(out_sum)
@@ -445,7 +445,7 @@ class TestMakeSpectrum:
         spec = fov.make_spectrum()
 
         table_sum = np.sum([n * spec(fov.waveset).value
-                            for n, spec in zip([3, 1, 1], src_table.spectra)])  # sum of weights [3,1,1]
+                            for n, spec in zip([3, 1, 1], src_table.spectra.values())])  # sum of weights [3,1,1]
         image_sum = np.sum(src_image.fields[0].data) * \
                     np.sum(src_image.spectra[0](fov.waveset).value)
         cube_sum = np.sum(src_cube.fields[0].data[70:81, :, :]) * 1e-8

@@ -106,10 +106,10 @@ class SpectralEfficiency(Effect):
             logger.warning("No grating efficiency for trace %s", trace_id)
             return obj
 
-        wcs = WCS(obj.hdu.header).spectral
-        wave_cube = wcs.all_pix2world(np.arange(obj.hdu.data.shape[0]), 0)[0]
-        wave_cube = (wave_cube * u.Unit(wcs.wcs.cunit[0])).to(u.AA)
-        obj.hdu = apply_throughput_to_cube(obj.hdu, effic.throughput)
+        swcs = WCS(obj.hdu.header).spectral
+        with u.set_enabled_equivalencies(u.spectral()):
+            wave = swcs.pixel_to_world(np.arange(swcs.pixel_shape[0])) << u.um
+        obj.hdu = apply_throughput_to_cube(obj.hdu, effic.throughput, wave)
         return obj
 
     def plot(self):

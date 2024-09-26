@@ -9,6 +9,7 @@ from astropy import units as u
 from astropy.table import Table
 
 from . import Effect
+from ..source.source_fields import HDUSourceField, TableSourceField
 from ..utils import from_currsys, find_file
 
 
@@ -530,19 +531,19 @@ class SourceDescriptionFitsKeywords(ExtraFitsKeywords):
         if (src := opt_train._last_source) is not None:
             prefix = self.meta["keyword_prefix"]
             for i, field in enumerate(src.fields):
-                src_class = field.__class__.__name__
-                src_dic = deepcopy(src._meta_dicts[i])
-                if isinstance(field, fits.ImageHDU):
+                src_class = field.field.__class__.__name__
+                src_dic = deepcopy(src.meta)
+                if isinstance(field, HDUSourceField):
                     hdr = field.header
                     for key in hdr:
                         src_dic = {key: [hdr[key], hdr.comments[key]]}
 
-                elif isinstance(field, Table):
+                elif isinstance(field, TableSourceField):
                     src_dic.update(field.meta)
                     src_dic["length"] = len(field)
-                    for j, name in enumerate(field.colnames):
+                    for j, name in enumerate(field.field.colnames):
                         src_dic[f"col{j}_name"] = name
-                        src_dic[f"col{j}_unit"] = str(field[name].unit)
+                        src_dic[f"col{j}_unit"] = str(field.field[name].unit)
 
                 self.dict_list = [{"ext_number": self.meta["ext_number"],
                                    "keywords": {
