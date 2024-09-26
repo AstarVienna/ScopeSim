@@ -136,32 +136,33 @@ class ShotNoise(Effect):
         self.meta.update(kwargs)
 
     def apply_to(self, det, **kwargs):
-        if isinstance(det, DetectorBase):
-            self.meta["random_seed"] = from_currsys(self.meta["random_seed"],
-                                                    self.cmds)
-            if self.meta["random_seed"] is not None:
-                np.random.seed(self.meta["random_seed"])
+        if not isinstance(det, DetectorBase):
+            return det
 
-            # ! poisson(x) === normal(mu=x, sigma=x**0.5)
-            # Windows has a problem with generating poisson values above 2**30
-            # Above ~100 counts the poisson and normal distribution are
-            # basically the same. For large arrays the normal distribution
-            # takes only 60% as long as the poisson distribution
-            data = det._hdu.data
+        self.meta["random_seed"] = from_currsys(self.meta["random_seed"],
+                                                self.cmds)
+        rng = np.random.default_rng(self.meta["random_seed"])
 
-            # Check if there are negative values in the data
-            negvals_mask = data < 0
-            if negvals_mask.any():
-                logger.warning(f"Effect ShotNoise: {negvals_mask.sum()} negative pixels")
-                data[negvals_mask] = 0
+        # ! poisson(x) === normal(mu=x, sigma=x**0.5)
+        # Windows has a problem with generating poisson values above 2**30
+        # Above ~100 counts the poisson and normal distribution are
+        # basically the same. For large arrays the normal distribution
+        # takes only 60% as long as the poisson distribution
 
-            below = data < 2**20
-            above = np.invert(below)
-            data[below] = np.random.poisson(data[below]).astype(float)
-            data[above] = np.random.normal(data[above], np.sqrt(data[above]))
-            new_imagehdu = fits.ImageHDU(data=data, header=det._hdu.header)
-            det._hdu = new_imagehdu
+        # Check if there are negative values in the data
+        data = np.ma.masked_less(det._hdu.data, 0)
+        if data.mask.any():
+            logger.warning(
+                "Effect ShotNoise: %d negative pixels", data.mask.sum())
+        data = data.filled(0)
 
+        # Weirdly, poisson doesn't understand masked arrays, but normal does...
+        data = np.ma.masked_greater(data, 2**20)
+        data[~data.mask] = rng.poisson(data[~data.mask].data)
+        data.mask = ~data.mask
+        new_imagehdu = fits.ImageHDU(data=rng.normal(data, np.sqrt(data)),
+                                     header=det._hdu.header)
+        det._hdu = new_imagehdu
         return det
 
     def plot(self, det):

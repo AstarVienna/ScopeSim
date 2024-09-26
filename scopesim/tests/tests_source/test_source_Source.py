@@ -327,14 +327,16 @@ class TestSourcePhotonsInRange:
         assert np.allclose(ph.value, [4, 2])
 
 
+@pytest.mark.xfail
 class TestSourceShift:
     def test_that_it_does_what_it_should(self):
-        pass
+        assert False
 
 
+@pytest.mark.xfail
 class TestSourceRotate:
     def test_that_it_does_what_it_should(self):
-        pass
+        assert False
 
 
 class TestPhotonsInRange:
