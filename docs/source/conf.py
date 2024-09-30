@@ -114,20 +114,20 @@ pygments_style = None
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-# html_theme = 'alabaster'
-if not os.environ.get("READTHEDOCS") == "True":
-    import sphinx_rtd_theme
-    html_theme = "sphinx_rtd_theme"
-    extensions += ["sphinx_rtd_theme"]
-    os.environ["PYTHONPATH"] += "F:\\Work\\ScopeSim;F:\\Work\\HowManyBloodyPhotons;F:\\Work\\ScopeSim_Templates;F:\\Work\\Pyckles;F:\\Work\\AnisoCADO;F:\\Work\\skycalc_ipy;F:\\Work\\speXtra;"
-
+html_theme = "sphinx_book_theme"
 nbsphinx_execute = "never"
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
 #
-# html_theme_options = {}
+html_theme_options = {
+    "repository_url": "https://github.com/AstarVienna/ScopeSim",
+    "use_repository_button": True,
+    "home_page_in_toc": True,
+}
+html_logo = "_static/logos/banner_wide_inverted_transparent.png"
+html_title = "ScopeSim"
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
