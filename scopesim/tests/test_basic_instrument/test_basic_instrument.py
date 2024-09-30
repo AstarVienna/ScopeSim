@@ -42,6 +42,7 @@ class TestLoadsOpticalTrain:
         assert opt["#slit_wheel.current_slit!"] == "narrow"
 
 
+@pytest.mark.slow
 @pytest.mark.usefixtures("protect_currsys", "patch_all_mock_paths")
 class TestObserveImagingMode:
     def test_runs(self):
@@ -65,6 +66,7 @@ class TestObserveImagingMode:
         assert det_im[505:520, 505:520].sum() > 3e6
 
 
+@pytest.mark.slow
 @pytest.mark.usefixtures("protect_currsys", "patch_all_mock_paths")
 class TestObserveSpectroscopyMode:
     """
@@ -115,6 +117,7 @@ class TestObserveSpectroscopyMode:
             assert round(trace_flux / spot_flux) == n
 
 
+@pytest.mark.slow
 @pytest.mark.usefixtures("protect_currsys", "patch_all_mock_paths")
 class TestObserveIfuMode:
     def test_runs(self):
