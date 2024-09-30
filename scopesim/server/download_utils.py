@@ -76,8 +76,7 @@ def handle_download(
     padlen: int = 0,
     chunk_size: int = 128,
     disable_bar: bool = False,
-    # params: dict | None = None,  # TODOpy310
-    params=None,
+    params: dict | None = None,
 ) -> None:
     """
     Perform a streamed download and write the content to disk.
@@ -159,8 +158,7 @@ def send_get(
     client: httpx.Client,
     sub_url: str,
     stream: bool = False,
-    # params: dict | None = None,  # TODOpy310
-    params=None,
+    params: dict | None = None,
 ) -> httpx.Response:
     """
     Send a GET request (streamed or not) using an existing client.
