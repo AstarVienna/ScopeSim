@@ -328,7 +328,6 @@ class TestDitNdit:
         assert int(kwarged / default) == factor
         assert quanteff._should_apply() == quant
 
-    @pytest.mark.xfail(reason="Currently raises TypeError, but should be ValueError.")
     def test_throws_for_no_anything(self, obs):
         """No specification whatsoever, so throw error."""
         opt, default, quanteff = obs
@@ -349,7 +348,6 @@ class TestDitNdit:
         with pytest.raises(ValueError):
             opt.readout(exptime=60)
 
-    @pytest.mark.xfail(reason="Currently raises TypeError, but should be ValueError.")
     def test_throws_for_no_ditndit_no_autoexp_obs(self, obs):
         """This should fallback to !OBS.exptime, but fail w/o AutoExp."""
         opt, default, quanteff = obs

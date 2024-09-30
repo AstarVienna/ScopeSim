@@ -63,6 +63,11 @@ class AutoExposure(Effect):
             return False
         return True
 
+    @staticmethod
+    def _log_dit_ndit(dit: float, ndit: int) -> None:
+        logger.info("Exposure parameters: DIT = %.3f s, NDIT = %d", dit, ndit)
+        logger.info("Total exposure time: %.3f s", dit * ndit)
+
     def estimate_dit_ndit(
             self,
             exptime: float,
@@ -110,12 +115,21 @@ class AutoExposure(Effect):
             dit = from_currsys(self.meta["mindit"], self.cmds)
             # NDIT changed so that exptime is not exceeded (hence floor div)
             ndit = max(exptime // dit, 1)
-            logger.warning("The detector will likely be saturated!")
+
+            if ndit == 1:
+                # This case is distinct from the potential saturation case.
+                logger.warning("The requested exposure time is below MINDIT. "
+                               "Please select a longer exptime.")
+            else:
+                # This should be the case when a exptime > MINDIT was requested
+                # but couldn't be divided into enough DITs to avoid saturation.
+                logger.warning("The detector will likely be saturated!")
 
         return dit, ndit
 
     def apply_to(self, obj, **kwargs):
         if not isinstance(obj, (ImagePlaneBase, DetectorBase)):
+            # TODO: figure out why this needs to be applied to ImagePlaneBase?
             return obj
 
         exptime = kwargs.pop("exptime",
@@ -138,6 +152,7 @@ class AutoExposure(Effect):
             self.cmds["!OBS.autoexpset"] = False
             # Just log warning in case DIT < MINDIT, don't actually change DIT
             self._dit_above_mindit(dit)
+            self._log_dit_ndit(dit, ndit)
             return obj
 
         # No DIT or NDIT given, need to determine from exptime
@@ -156,11 +171,12 @@ class AutoExposure(Effect):
             logger.info("Requested exposure time: %.3f s", exptime)
 
         dit, ndit = self.estimate_dit_ndit(exptime, obj.data.max(), **kwargs)
-
-        logger.info("Exposure parameters: DIT = %.3f s, NDIT = %d", dit, ndit)
-        logger.info("Total exposure time: %.3f s", dit * ndit)
+        self._log_dit_ndit(dit, ndit)
 
         # TODO: Make sure this goes up far enough in the ChainMap...
+        # FIXME: This causes the following bug(?): When another readout is run
+        #        after a previous one, dit & ndit need to be explicitly passed
+        #        as None, otherwise the previously saved values will be used...
         self.cmds["!OBS.dit"] = dit
         self.cmds["!OBS.ndit"] = ndit
 
@@ -181,10 +197,33 @@ class SummedExposure(Effect):
         check_keys(self.meta, self.required_keys, action="error")
 
     def apply_to(self, obj, **kwargs):
-        if isinstance(obj, DetectorBase):
-            dit = from_currsys(self.meta["dit"], self.cmds)
-            ndit = from_currsys(self.meta["ndit"], self.cmds)
-            # Can't do in-place because of Quantization data type conflicts.
-            obj._hdu.data = obj._hdu.data * dit * ndit
+        if not isinstance(obj, DetectorBase):
+            return obj
+
+        dit = from_currsys(self.meta["dit"], self.cmds)
+        ndit = from_currsys(self.meta["ndit"], self.cmds)
+        # TODO: Remove this silly try-except once currsys works properly...
+        # TODO: Check the following case: dit, ndit None in kwargs, but
+        #       exptime set and AutoExp sets dit, ndit in !OBS (but not kwargs)
+        # try:
+        #     dit = kwargs.pop("dit", from_currsys(self.meta["dit"], self.cmds))
+        # except (KeyError, ValueError):
+        #     dit = None
+        # try:
+        #     ndit = kwargs.pop("ndit", from_currsys(self.meta["ndit"], self.cmds))
+        # except (KeyError, ValueError):
+        #     ndit = None
+
+        if ((nodit := dit is None) | (nondit := ndit is None)):
+            raise ValueError(
+                f"{'DIT' * nodit}{' & ' * nodit * nondit}{'NDIT' * nondit} "
+                "not set. If AutoExposure is not used, please set "
+                f"{'!OBS.dit' * nodit}{' & ' * nodit * nondit}"
+                f"{'!OBS.ndit' * nondit} parameter(s) or pass {'dit' * nodit}"
+                f"{' & ' * nodit * nondit}{'ndit' * nondit} as kwargs to the "
+                "readout call."
+            )
+
+        obj._hdu.data *= dit * ndit
 
         return obj
