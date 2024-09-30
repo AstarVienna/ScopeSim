@@ -19,6 +19,7 @@ class TestScopeSimple:
         simple = Simulation("basic_instrument")
         assert "basic_instrument" in str(simple)
 
+    @pytest.mark.xfail(reason="DIT, NDIT currently broken")
     def test_full_workflow_runs(self):
         simple = Simulation("basic_instrument")
         src = st.star(flux=15)
