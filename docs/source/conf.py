@@ -66,7 +66,8 @@ extensions = [
     'matplotlib.sphinxext.plot_directive',
     'sphinxcontrib.apidoc',
     'sphinx.ext.autodoc',
-
+    'sphinx_copybutton',
+    'myst_nb',
     # 'jupyter_sphinx.execute',
     # 'sphinx.ext.coverage',
 ]
@@ -88,7 +89,13 @@ templates_path = ['_templates']
 # You can specify multiple suffix as a list of string:
 #
 # source_suffix = ['.rst', '.md']
-source_suffix = '.rst'
+source_suffix = {
+    ".rst": "restructuredtext",
+    ".ipynb": "myst-nb",
+    ".myst": "myst-nb",
+    ".md": "myst-nb",
+}
+source_encoding = 'utf-8'
 
 # The master toctree document.
 master_doc = 'index'
@@ -144,7 +151,13 @@ html_favicon = '_static/logos/S_favicon.png'
 # default: ``['localtoc.html', 'relations.html', 'sourcelink.html',
 # 'searchbox.html']``.
 #
-# html_sidebars = {}
+html_sidebars = {
+    "**": [
+        "navbar-logo.html",
+        "search-field.html",
+        "sbt-sidebar-nav.html",
+    ]
+}
 
 
 # -- Options for HTMLHelp output ---------------------------------------------
