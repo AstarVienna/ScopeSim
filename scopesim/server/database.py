@@ -16,6 +16,7 @@ from .example_data_utils import download_example_data, list_example_data
 from .download_utils import (get_server_folder_contents, handle_download,
                              handle_unzipping, create_client, ServerError)
 from ..utils import get_logger
+from ..commands.user_commands import patch_fake_symlinks
 
 
 logger = get_logger(__name__)
@@ -445,6 +446,7 @@ def download_missing_pkgs(instrument: str) -> None:
 def check_packages(instrument: str, download_missing: bool) -> None:
     """Check if required package is in CWD, download if needed."""
     pkgdir = Path(rc.__config__["!SIM.file.local_packages_path"])
+    pkgdir = patch_fake_symlinks(pkgdir)
     if not (pkgdir / instrument).exists():
         logger.warning("IRDB package for %s not found.", instrument)
         if download_missing:
