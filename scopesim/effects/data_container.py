@@ -15,18 +15,18 @@ from .. import utils
 
 class DataContainer:
     """
-    A class to hold data files needed by all Effects objects.
+    A class to hold data (file(s)) needed by some Effects objects.
 
     Parameters
     ----------
-    filename : str
+    filename : str, optional
         Path to file containing data.
         Accepted formats: ASCII table, FITS table, FITS image
 
-    table : astropy.Table
+    table : astropy.Table, optional
         An astropy Table containing data
 
-    array_dict : dict
+    array_dict : dict, optional
         A dictionary out of which an astropy.Table object can be constructed.
 
     kwargs :
@@ -35,7 +35,7 @@ class DataContainer:
 
     Notes
     -----
-    If a table is to be generated from an ``array_dict`` parameter, column
+    If a table is to be generated from an `array_dict` parameter, column
     units can be passed as keyword arguments (kwargs) using the following
     format::
 
@@ -57,11 +57,11 @@ class DataContainer:
 
     table : astropy.Table
         If the file has a table format (ASCII of FITS) it is read in
-        immediately and stored in ``.table``
+        immediately and stored in `.table`
 
     _file : HDUList pointer
         If the file is a FITS image or cube, the data is only read in when
-        needed in order to save on memory usage. ``._file`` contains a pointer
+        needed in order to save on memory usage. `._file` contains a pointer
         to the data open FITS file.
 
     """
