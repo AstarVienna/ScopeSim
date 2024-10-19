@@ -239,6 +239,7 @@ class OpticsManager:
         # Working out where to set wave_min, wave_max
         return self.get_z_order_effects(200)
 
+    # TODO: is this ever used anywhere??
     @property
     def surfaces_table(self):
         """Get combined surface table from effects with z_order = 100...199."""
