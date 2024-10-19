@@ -2,8 +2,11 @@
 """Contains base class for effects."""
 
 from pathlib import Path
+from collections.abc import Mapping, MutableMapping
+from dataclasses import dataclass, field, InitVar, fields
+from typing import NewType, dataclass_transform
 
-from ..effects.data_container import DataContainer
+from .data_container import DataContainer
 from .. import base_classes as bc
 from ..utils import from_currsys, write_report
 from ..reports.rst_utils import table_to_rst
@@ -12,7 +15,10 @@ from ..reports.rst_utils import table_to_rst
 # FIXME: This docstring is out-of-date for several reasons:
 #   - Effects can act on objects other than Source (eg FOV, IMP, DET)
 #   - fov_grid is outdated
-class Effect(DataContainer):
+
+
+# @dataclass(kw_only=True, eq=False)
+class Effect:
     """
     Base class for representing the effects (artifacts) in an optical system.
 
@@ -41,7 +47,11 @@ class Effect(DataContainer):
     required_keys = set()
 
     def __init__(self, filename=None, **kwargs):
-        super().__init__(filename=filename, **kwargs)
+        self.data_container = DataContainer(filename=filename, **kwargs)
+        self.meta = kwargs.get("meta", {})
+        self.cmds = kwargs.get("cmds")
+
+        self.meta.update(self.data_container.meta)
         self.meta["z_order"] = []
         self.meta["include"] = True
         self.meta.update(kwargs)
@@ -94,6 +104,35 @@ class Effect(DataContainer):
         """
         self.update(**kwargs)
         return []
+
+    # *******************************************************************
+    # ported from DataContainer, previous base class
+    # *******************************************************************
+
+    def get_data(self, *args, **kwargs):
+        return self.data_container.get_data(*args, **kwargs)
+
+    @property
+    def table(self):
+        return self.data_container.table
+
+    @table.setter
+    def table(self, value):
+        self.data_container.table = value
+
+    @property
+    def data(self):
+        return self.data_container.data
+
+    @property
+    def _file(self):
+        return self.data_container._file
+
+    @_file.setter
+    def _file(self, value):
+        self.data_container._file = value
+
+    # *******************************************************************
 
     def update(self, **kwargs):
         self.meta.update(kwargs)
