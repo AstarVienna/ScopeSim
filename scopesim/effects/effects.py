@@ -102,7 +102,7 @@ class Effect:
             [um, arcsec, arcsec]
 
         """
-        self.update(**kwargs)
+        # self.update(**kwargs)
         return []
 
     # *******************************************************************
@@ -130,9 +130,6 @@ class Effect:
         self.data_container._file = value
 
     # *******************************************************************
-
-    def update(self, **kwargs):
-        self.meta.update(kwargs)
 
     @property
     def include(self) -> bool:
