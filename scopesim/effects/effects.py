@@ -109,9 +109,6 @@ class Effect:
     # ported from DataContainer, previous base class
     # *******************************************************************
 
-    def get_data(self, *args, **kwargs):
-        return self.data_container.get_data(*args, **kwargs)
-
     @property
     def table(self):
         return self.data_container.table
