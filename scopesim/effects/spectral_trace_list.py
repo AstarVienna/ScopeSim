@@ -7,7 +7,7 @@ The Effect is called `SpectralTraceList`, it applies a list of
 
 from itertools import cycle
 
-from tqdm import tqdm
+from tqdm.auto import tqdm
 
 from astropy.io import fits
 from astropy.table import Table
