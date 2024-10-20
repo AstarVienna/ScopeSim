@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Contains base class for effects."""
 
 from pathlib import Path
@@ -8,6 +9,9 @@ from ..utils import from_currsys, write_report
 from ..reports.rst_utils import table_to_rst
 
 
+# FIXME: This docstring is out-of-date for several reasons:
+#   - Effects can act on objects other than Source (eg FOV, IMP, DET)
+#   - fov_grid is outdated
 class Effect(DataContainer):
     """
     Base class for representing the effects (artifacts) in an optical system.
@@ -93,24 +97,17 @@ class Effect(DataContainer):
 
     def update(self, **kwargs):
         self.meta.update(kwargs)
-        # self.update_bang_keywords()
-
-    # def update_bang_keywords(self):
-    #     for key in self.meta:
-    #         if isinstance(self.meta[key], str) and self.meta[key][0] == "!":
-    #             bang_key = self.meta[key]
-    #             self.meta[key] = rc.__currsys__[bang_key]
 
     @property
-    def include(self):
+    def include(self) -> bool:
         return from_currsys(self.meta["include"], self.cmds)
 
     @include.setter
-    def include(self, item):
-        self.meta["include"] = item
+    def include(self, value: bool):
+        self.meta["include"] = value
 
     @property
-    def display_name(self):
+    def display_name(self) -> str:
         name = self.meta.get("name", self.meta.get("filename", "<untitled>"))
         if not hasattr(self, "_current_str"):
             return name
@@ -118,7 +115,7 @@ class Effect(DataContainer):
         return f"{name} : [{current_str}]"
 
     @property
-    def meta_string(self):
+    def meta_string(self) -> str:
         padlen = 4 + len(max(self.meta, key=len))
         exclude = {"comments", "changes", "description", "history",
                    "report_table_caption", "report_plot_caption", "table"}
@@ -298,17 +295,17 @@ Meta-data
 
         return rst_str
 
-    def info(self):
+    def info(self) -> None:
         """Print basic information on the effect, notably the description."""
         if (desc := self.meta.get("description")) is not None:
             print(f"{self}\nDescription: {desc}")
         else:
             print(self)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"{self.__class__.__name__}(**{self.meta!r})"
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{self.__class__.__name__}: \"{self.display_name}\""
 
     def __getitem__(self, item):

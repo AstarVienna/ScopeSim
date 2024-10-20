@@ -31,12 +31,12 @@ class TestInit:
     def test_initialised_with_psf_input(self, data_files):
         dat = DataContainer(data_files[0])
         assert isinstance(dat, DataContainer)
-        assert dat.is_fits is True
+        assert dat._is_fits
 
     def test_initialised_with_ascii_input(self, data_files):
         dat = DataContainer(data_files[1])
         assert isinstance(dat, DataContainer)
-        assert dat.is_fits is False
+        assert not dat._is_fits
         assert dat.table.colnames == ['wavelength', 'transmission']
         column = dat.table['wavelength']
         assert column.unit == "um"
@@ -53,7 +53,7 @@ class TestInit:
                       "transmission": np.ones(11)}
         dat = DataContainer(array_dict=array_dict)
         assert isinstance(dat, DataContainer)
-        assert dat.is_fits is False
+        assert not dat._is_fits
 
 
 class TestGetData:
