@@ -51,8 +51,6 @@ ipykernel = "^6.24.0"
 pytest = "^7.4.3"
 pytest-cov = "^4.1.0"
 scopesim_templates = ">=0.5.1"
-# Just so that readthedocs doesn't include the tests module - yes it's hacky
-skycalc_cli = "*"
 ipykernel = "^6.24.0"
 
 [tool.poetry.group.docs]
