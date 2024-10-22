@@ -565,7 +565,7 @@ class MetisLMSEfficiency(TERCurve):
         # TODO: Refactor these _class_params?
         self.meta = copy.copy(self._class_params)
         assert "grat_spacing" in self.meta, "grat_spacing is missing from self.meta 1"
-        super().__init__(**kwargs)
+        super().__init__(**(kwargs | self.meta))
         assert "grat_spacing" in self.meta, "grat_spacing is missing from self.meta 2"
 
         filename = find_file(self.meta["filename"])
