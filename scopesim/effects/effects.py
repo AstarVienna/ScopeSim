@@ -4,7 +4,7 @@
 from pathlib import Path
 from collections.abc import Mapping, MutableMapping
 from dataclasses import dataclass, field, InitVar, fields
-from typing import NewType, dataclass_transform
+from typing import NewType
 
 from .data_container import DataContainer
 from .. import base_classes as bc
