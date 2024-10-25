@@ -10,7 +10,9 @@ from astropy.table import Table
 
 from . import Effect
 from ..utils import from_currsys, find_file
+from ..utils import get_logger
 
+logger = get_logger(__name__)
 
 class ExtraFitsKeywords(Effect):
     """
@@ -360,7 +362,11 @@ def flatten_dict(dic, base_key="", flat_dict=None, resolve=False,
                         raise ValueError("An OpticsManager object must be "
                                          "passed in order to resolve "
                                          "#-strings")
-                    value = optics_manager[value]
+                    try:
+                        value = optics_manager[value]
+                    except ValueError:
+                        logger.warning("%s not found", value)
+                        value = "Not applicable or not found"
 
             if isinstance(value, u.Quantity):
                 comment = f"[{str(value.unit)}] {comment}"
