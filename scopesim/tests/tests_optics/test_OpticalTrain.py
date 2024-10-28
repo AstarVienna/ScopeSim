@@ -115,10 +115,15 @@ class TestInit:
 @pytest.mark.usefixtures("patch_mock_path")
 class TestObserve:
     """
-    All tests here are for visual inspection.
+    Almost all tests here are for visual inspection.
     No asserts, this just to test that the puzzle gets put back together
     after it is chopped up by the FOVs.
     """
+    def test_observe_works_for_none(self, cmds):
+        opt = OpticalTrain(cmds)
+        opt.observe()
+        empty = sim.source.source_templates.empty_sky()
+        assert(opt._last_source.fields[0].field == empty.fields[0].field)
 
     def test_observe_works_for_table(self, cmds, tbl_src):
         opt = OpticalTrain(cmds)
