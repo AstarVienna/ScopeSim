@@ -21,6 +21,7 @@ from ..commands.user_commands import UserCommands
 from ..detector import DetectorManager
 from ..effects import ExtraFitsKeywords
 from ..utils import from_currsys, top_level_catch, get_logger
+from ..source.source_templates import empty_sky
 from .. import __version__
 
 
@@ -67,6 +68,11 @@ class OpticalTrain:
 
         >>> src = sim.source.source_templates.empty_sky()
         >>> opt.observe(src)
+        >>> hdus = opt.readout()
+
+    If no Source is specified, an empty field is observe, so that the
+    following is equivalent to the commands above::
+        >>> opt.observe()
         >>> hdus = opt.readout()
 
     List the effects modelled in an OpticalTrain::
@@ -169,7 +175,7 @@ class OpticalTrain:
                                 for det_list in opt_man.detector_setup_effects]
 
     @top_level_catch
-    def observe(self, orig_source, update=True, **kwargs):
+    def observe(self, orig_source=None, update=True, **kwargs):
         """
         Main controlling method for observing ``Source`` objects.
 
@@ -183,6 +189,9 @@ class OpticalTrain:
 
         Notes
         -----
+        When orig_source is None (e.g. when writing opt.observe()), an
+        empty field is observed (internally created with empty_sky()).
+
         How the list of Effects is split between the 5 main tasks:
 
         - Make a FOV list - z_order = 0..99
@@ -202,7 +211,11 @@ class OpticalTrain:
 
         # Make a copy of the Source and prepare for observation (convert to
         # internally used units, sample to internal wavelength grid)
-        source = orig_source.make_copy()
+        if orig_source is None:
+            source = empty_sky()
+            logger.info("Observing empty field")
+        else:
+            source = orig_source.make_copy()
         source = self.prepare_source(source)
 
         # [1D - transmission curves]
