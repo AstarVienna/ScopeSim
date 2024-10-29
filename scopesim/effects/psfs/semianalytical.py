@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Currently only contains the AnisoCADO connection."""
 from warnings import warn
+from typing import ClassVar
 
 import numpy as np
 from scipy.interpolate import RectBivariateSpline
@@ -18,9 +19,10 @@ from . import PSF
 class SemiAnalyticalPSF(PSF):
     """Base class for semianalytical PSFs."""
 
+    z_order: ClassVar[tuple[int, ...]] = (42,)
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.meta["z_order"] = [42]
         self.convolution_classes = FieldOfViewBase
         # self.convolution_classes = ImagePlaneBase
 
@@ -82,11 +84,11 @@ class AnisocadoConstPSF(SemiAnalyticalPSF):
     """
 
     required_keys = {"filename", "strehl", "wavelength"}
+    z_order: ClassVar[tuple[int, ...]] = (42, 652)
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         params = {
-            "z_order": [42, 652],
             "psf_side_length": 512,
             "offset": (0, 0),
             "rounded_edges": True,

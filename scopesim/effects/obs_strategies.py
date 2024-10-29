@@ -4,6 +4,9 @@ Effects describing observing strategies.
 
 - ChopNodCombiner: simulate chop-nod cycle
 """
+
+from typing import ClassVar
+
 import numpy as np
 
 from scopesim.base_classes import DetectorBase
@@ -52,6 +55,7 @@ class ChopNodCombiner(Effect):
     """
 
     required_keys = {"chop_offsets", "pixel_scale"}
+    z_order: ClassVar[tuple[int, ...]] = (863,)
 
     def __init__(self, **kwargs):
         check_keys(kwargs, self.required_keys)
@@ -62,7 +66,6 @@ class ChopNodCombiner(Effect):
             "nod_offsets": None,
             "pixel_scale": None,
             "include": True,
-            "z_order": [863],
         }
         self.meta.update(params)
         self.meta.update(kwargs)

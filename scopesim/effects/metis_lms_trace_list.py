@@ -1,4 +1,6 @@
+# -*- coding: utf-8 -*-
 """SpectralTraceList and SpectralTrace for the METIS LM spectrograph."""
+
 import copy
 import warnings
 

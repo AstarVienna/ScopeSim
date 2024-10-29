@@ -1,8 +1,11 @@
+# -*- coding: utf-8 -*-
 """TBA."""
-from collections import OrderedDict
-from copy import deepcopy
 
 import warnings
+from collections import OrderedDict
+from copy import deepcopy
+from typing import ClassVar
+
 import numpy as np
 from astropy import units as u
 
@@ -13,10 +16,11 @@ from ..utils import quantify, from_currsys, figure_factory
 
 
 class SurfaceList(TERCurve):
+    z_order: ClassVar[tuple[int, ...]] = (20, 120, 520)
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        params = {"z_order": [20, 120, 520],
-                  "minimum_throughput": "!SIM.spectral.minimum_throughput",
+        params = {"minimum_throughput": "!SIM.spectral.minimum_throughput",
                   "etendue": "!TEL.etendue",
                   "report_plot_include": True,
                   "report_table_include": True}

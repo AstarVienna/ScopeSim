@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Effect for mapping spectral cubes to the detector plane.
 
@@ -6,6 +7,7 @@ The Effect is called `SpectralTraceList`, it applies a list of
 """
 
 from itertools import cycle
+from typing import ClassVar
 
 from tqdm.auto import tqdm
 
@@ -98,6 +100,7 @@ class SpectralTraceList(Effect):
         "dwave": 0.002,  # [um] for finding best fit dispersion
         "invalid_value": None,  # for dodgy trace file values
     }
+    z_order: ClassVar[tuple[int, ...]] = (70, 270, 670)
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -106,7 +109,6 @@ class SpectralTraceList(Effect):
             self._file = kwargs["hdulist"]
 
         params = {
-            "z_order": [70, 270, 670],
             "pixel_scale": "!INST.pixel_scale",  # [arcsec / pix]}
             "plate_scale": "!INST.plate_scale",  # [arcsec / mm]
             "spectral_bin_width": "!SIM.spectral.spectral_bin_width", # [um]
@@ -469,6 +471,7 @@ class SpectralTraceListWheel(Effect):
         "filename_format",
         "current_trace_list",
     }
+    z_order: ClassVar[tuple[int, ...]] = (70, 270, 670)
     _current_str = "current_trace_list"
 
     def __init__(self, **kwargs):
@@ -476,7 +479,6 @@ class SpectralTraceListWheel(Effect):
         check_keys(kwargs, self.required_keys, action="error")
 
         params = {
-            "z_order": [70, 270, 670],
             "path": "",
             "report_plot_include": True,
             "report_table_include": True,

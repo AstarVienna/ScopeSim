@@ -1,8 +1,10 @@
+# -*- coding: utf-8 -*-
 """Effects related to field masks, including spectroscopic slits."""
 
 import warnings
-import yaml
+from typing import ClassVar
 
+import yaml
 import numpy as np
 from matplotlib.path import Path as MPLPath  # rename to avoid conflict with pathlib
 from astropy.io import fits
@@ -79,6 +81,7 @@ class ApertureMask(Effect):
     """
 
     required_keys = {"filename", "table", "array_dict"}
+    z_order: ClassVar[tuple[int, ...]] = (80, 280, 380)
 
     def __init__(self, **kwargs):
         if not np.any([key in kwargs for key in ["filename", "table",
@@ -102,7 +105,6 @@ class ApertureMask(Effect):
             "report_table_rounding": 4,
         }
 
-        self.meta["z_order"] = [80, 280, 380]
         self.meta.update(params)
         self.meta.update(kwargs)
 
@@ -272,6 +274,8 @@ class ApertureList(Effect):
 
     """
 
+    z_order: ClassVar[tuple[int, ...]] = (81, 281)
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         params = {
@@ -282,7 +286,6 @@ class ApertureList(Effect):
             "report_table_include": True,
             "report_table_rounding": 4,
         }
-        self.meta["z_order"] = [81, 281]
         self.meta.update(params)
         self.meta.update(kwargs)
 
@@ -424,6 +427,7 @@ class SlitWheel(Effect):
     """
 
     required_keys = {"slit_names", "filename_format", "current_slit"}
+    z_order: ClassVar[tuple[int, ...]] = (80, 280, 580)
     _current_str = "current_slit"
 
     def __init__(self, **kwargs):
@@ -431,7 +435,6 @@ class SlitWheel(Effect):
         check_keys(kwargs, self.required_keys, action="error")
 
         params = {
-            "z_order": [80, 280, 580],
             "path": "",
             "report_plot_include": False,
             "report_table_include": True,

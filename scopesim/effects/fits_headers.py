@@ -1,5 +1,9 @@
+# -*- coding: utf-8 -*-
+"""TBA."""
+
 from copy import deepcopy
 import datetime
+from typing import ClassVar
 
 import yaml
 import numpy as np
@@ -221,12 +225,13 @@ class ExtraFitsKeywords(Effect):
 
     """
 
+    z_order: ClassVar[tuple[int, ...]] = (999,)
+
     def __init__(self, cmds=None, **kwargs):
         # don't pass kwargs, as DataContainer can't handle yaml files
         super().__init__(cmds=cmds)
         params = {"name": "extra_fits_keywords",
                   "description": "Extra FITS headers",
-                  "z_order": [999],
                   "header_dict": None,
                   "filename": None,
                   "yaml_string": None,
@@ -427,11 +432,12 @@ class EffectsMetaKeywords(ExtraFitsKeywords):
 
     """
 
+    z_order: ClassVar[tuple[int, ...]] = (998,)
+
     def __init__(self, cmds=None, **kwargs):
         super(ExtraFitsKeywords, self).__init__(cmds=cmds, **kwargs)
         params = {"name": "effects_fits_keywords",
                   "description": "Effect Meta FITS headers",
-                  "z_order": [998],
                   "ext_number": [0],
                   "add_excluded_effects": False,
                   "keyword_prefix": "HIERARCH SIM"}
@@ -514,11 +520,12 @@ class SourceDescriptionFitsKeywords(ExtraFitsKeywords):
 
     """
 
+    z_order: ClassVar[tuple[int, ...]] = (997,)
+
     def __init__(self,  cmds=None, **kwargs):
         super(ExtraFitsKeywords, self).__init__(cmds=cmds, **kwargs)
         params = {"name": "source_fits_keywords",
                   "description": "Source description FITS headers",
-                  "z_order": [997],
                   "ext_number": [0],
                   "keyword_prefix": "HIERARCH SIM"}
         self.meta.update(params)
@@ -598,11 +605,12 @@ class SimulationConfigFitsKeywords(ExtraFitsKeywords):
 
     """
 
+    z_order: ClassVar[tuple[int, ...]] = (996,)
+
     def __init__(self, cmds=None, **kwargs):
         super(ExtraFitsKeywords, self).__init__(cmds=cmds, **kwargs)
         params = {"name": "simulation_fits_keywords",
                   "description": "Simulation Config FITS headers",
-                  "z_order": [996],
                   "ext_number": [0],
                   "resolve": True,
                   "keyword_prefix": "HIERARCH SIM"}

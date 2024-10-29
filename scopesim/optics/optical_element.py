@@ -138,10 +138,10 @@ class OpticalElement:
         z_range = range(z_min, z_max)
 
         for eff in self.effects:
-            if not eff.include or "z_order" not in eff.meta:
+            if not eff.include or not hasattr(eff, "z_order"):
                 continue
 
-            if z_order_in_range(eff.meta["z_order"], z_range):
+            if z_order_in_range(eff.z_order, z_range):
                 yield eff
 
     def _get_matching_effects(self, effect_classes):
@@ -162,7 +162,7 @@ class OpticalElement:
         names = [eff.display_name for eff in self.effects]
         classes = [eff.__class__.__name__ for eff in self.effects]
         included = [eff.meta["include"] for eff in self.effects]
-        z_orders = [eff.meta["z_order"] for eff in self.effects]
+        z_orders = [eff.z_order for eff in self.effects]
 
         colnames = ["element", "name", "class", "included", "z_orders"]
         data = [elements, names, classes, included, z_orders]
