@@ -163,17 +163,22 @@ class ShotNoise(Effect):
         # - numpy.nan are implicitly passed through the normal distribution;
         #   because the Poisson distribution cannot handle them.
 
+        data = det._hdu.data
+
         # Check if there are negative values in the data.
-        data = np.ma.masked_less(det._hdu.data, 0)
-        if data.mask.any():
+        values_negative = data < 0
+        if values_negative.any():
             logger.warning(
                 "Effect ShotNoise: %d negative pixels", data.mask.sum())
-        data = data.filled(0)
+        data[values_negative] = 0
 
-        # Weirdly, poisson doesn't understand masked arrays, but normal does...
-        data = np.ma.masked_less(data, 1e7)
-        data[data.mask] = rng.poisson(data[data.mask].data)
-        data = rng.normal(data, np.sqrt(data))
+        # Apply a Poisson distribution to the low values.
+        values_low = data < 1e7
+        data[values_low] = rng.poisson(data[values_low])
+
+        # Apply a Poisson distribution to the high values.
+        values_high = ~values_low
+        data[values_high] = rng.normal(data[values_high], np.sqrt(data[values_high]))
 
         new_imagehdu = fits.ImageHDU(
             data=data,
