@@ -8,6 +8,8 @@ Related effects:
    - QuantumEfficiencyCurve: can be found in ter_curves.py
 """
 
+from typing import ClassVar
+
 import numpy as np
 
 from .. import Effect
@@ -47,11 +49,11 @@ class LinearityCurve(Effect):
     """
 
     required_keys = {"ndit"}
+    z_order: ClassVar[tuple[int, ...]] = (840,)
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         params = {
-            "z_order": [840],
             "report_plot_include": True,
             "report_table_include": False,
         }
@@ -92,10 +94,11 @@ class LinearityCurve(Effect):
 class Quantization(Effect):
     """Converts raw data to whole photons."""
 
+    z_order: ClassVar[tuple[int, ...]] = (825,)
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         params = {
-            "z_order": [825],
             "dtype": "uint32",
         }
         self.meta.update(params)

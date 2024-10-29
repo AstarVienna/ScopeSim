@@ -112,7 +112,7 @@ def run():
     class PointSourceJitter(Effect):
         def __init__(self, **kwargs):
             super(PointSourceJitter, self).__init__(**kwargs)   # initialise the underlying Effect class object
-            self.meta["z_order"] = [500]                        # z_order number for knowing when and how to apply the Effect
+            self.z_order = [500]                        # z_order number for knowing when and how to apply the Effect
             self.meta["max_jitter"] = 0.001                     # [arcsec] - a parameter needed by the effect
             self.meta.update(kwargs)                            # add any extra parameters passed when initialising
 
@@ -138,7 +138,7 @@ def run():
     #
     #     def __init__(self, **kwargs):
     #         super(PointSourceJitter, self).__init__(**kwargs)   # initialise the underlying Effect class object
-    #         self.meta["z_order"] = [500]
+    #         self.z_order = [500]
     #
     # Here we make sure to activate the underlying Effect object.
     # The ``z_order`` keyword in the meta dictionary is used by ScopeSim to determine when and where this Effect should be applied during a simulations run.

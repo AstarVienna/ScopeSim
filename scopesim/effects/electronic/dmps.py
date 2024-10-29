@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 """Outdated and under consideration for removal."""
 
+from typing import ClassVar
+
 import numpy as np
 
 from .. import Effect
@@ -59,11 +61,10 @@ class DetectorModePropertiesSetter(Effect):
     """
 
     required_keys = {"mode_properties"}
+    z_order: ClassVar[tuple[int, ...]] = (299, 900)
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        params = {"z_order": [299, 900]}
-        self.meta.update(params)
         self.meta.update(kwargs)
 
         check_keys(self.meta, self.required_keys, action="error")

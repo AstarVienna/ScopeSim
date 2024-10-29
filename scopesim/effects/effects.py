@@ -4,7 +4,7 @@
 from pathlib import Path
 from collections.abc import Mapping, MutableMapping
 from dataclasses import dataclass, field, InitVar, fields
-from typing import NewType
+from typing import NewType, ClassVar
 
 from .data_container import DataContainer
 from .. import base_classes as bc
@@ -44,6 +44,7 @@ class Effect:
 
     """
 
+    z_order: ClassVar[tuple[int, ...]] = tuple()
     required_keys = set()
 
     def __init__(self, filename=None, **kwargs):
@@ -52,7 +53,6 @@ class Effect:
         self.cmds = kwargs.get("cmds")
 
         self.meta.update(self.data_container.meta)
-        self.meta["z_order"] = []
         self.meta["include"] = True
         self.meta.update(kwargs)
 

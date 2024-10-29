@@ -5,7 +5,7 @@ from pathlib import Path
 
 import numpy as np
 from astropy import units as u
-from astropy.table import Table, QTable
+from astropy.table import Table
 from astropy.io.votable import parse_single_table
 from astropy.io import ascii as ioascii
 from astropy.io import fits

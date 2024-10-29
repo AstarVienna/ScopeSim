@@ -179,7 +179,7 @@ class OpticsManager:
                 yield from opt_el.get_z_order_effects(z_level)
 
         def _sortkey(eff):
-            return next(z % 100 for z in eff.meta["z_order"] if z >= z_level)
+            return next(z % 100 for z in eff.z_order if z >= z_level)
 
         # return sorted(_gather_effects(), key=_sortkey)
         return list(_gather_effects())
@@ -305,7 +305,7 @@ class OpticsManager:
         names = [eff.display_name for eff in all_effs]
         classes = [eff.__class__.__name__ for eff in all_effs]
         included = [eff.meta["include"] for eff in all_effs]
-        z_orders = [eff.meta["z_order"] for eff in all_effs]
+        z_orders = [eff.z_order for eff in all_effs]
 
         colnames = ["element", "name", "class", "included"]     #, "z_orders"
         data = [elements, names, classes, included]             #, z_orders

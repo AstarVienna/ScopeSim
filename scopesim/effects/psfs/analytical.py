@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Contains simple Vibration, NCPA, Seeing and Diffraction PSFs."""
 
-import warnings
+from typing import ClassVar
 
 import numpy as np
 from astropy import units as u
@@ -16,9 +16,10 @@ from . import PSF, PoorMansFOV
 class AnalyticalPSF(PSF):
     """Base class for analytical PSFs."""
 
+    z_order: ClassVar[tuple[int, ...]] = (41, 641)
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.meta["z_order"] = [41, 641]
         self.convolution_classes = FieldOfViewBase
 
 
@@ -26,10 +27,10 @@ class Vibration(AnalyticalPSF):
     """Creates a wavelength independent kernel image."""
 
     required_keys = {"fwhm", "pixel_scale"}
+    z_order: ClassVar[tuple[int, ...]] = (244, 744)
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.meta["z_order"] = [244, 744]
         self.meta["width_n_fwhms"] = 4
         self.convolution_classes = ImagePlaneBase
 
@@ -60,10 +61,10 @@ class NonCommonPathAberration(AnalyticalPSF):
     """
 
     required_keys = {"pixel_scale"}
+    z_order: ClassVar[tuple[int, ...]] = (241, 641)
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.meta["z_order"] = [241, 641]
         self.meta["kernel_width"] = None
         self.meta["strehl_drift"] = 0.02
         self.meta["wave_min"] = "!SIM.spectral.wave_min"
@@ -137,11 +138,12 @@ class SeeingPSF(AnalyticalPSF):
 
     """
 
+    z_order: ClassVar[tuple[int, ...]] = (242, 642)
+
     def __init__(self, fwhm=1.5, **kwargs):
         super().__init__(**kwargs)
 
         self.meta["fwhm"] = fwhm
-        self.meta["z_order"] = [242, 642]
 
     def get_kernel(self, fov):
         # called by .apply_to() from the base PSF class
@@ -165,10 +167,11 @@ class SeeingPSF(AnalyticalPSF):
 
 
 class GaussianDiffractionPSF(AnalyticalPSF):
+    z_order: ClassVar[tuple[int, ...]] = (242, 642)
+
     def __init__(self, diameter, **kwargs):
         super().__init__(**kwargs)
         self.meta["diameter"] = diameter
-        self.meta["z_order"] = [242, 642]
 
     def update(self, **kwargs):
         if "diameter" in kwargs:
