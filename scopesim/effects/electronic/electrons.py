@@ -101,7 +101,7 @@ class ADConversion(Effect):
         super().__init__(**kwargs)
         params = {
             "z_order": [825],
-            "dtype": "uint32",
+            "dtype": "uint16",
         }
         self.meta.update(params)
         self.meta.update(kwargs)
@@ -114,12 +114,12 @@ class ADConversion(Effect):
 
         # ..todo: need to deal with this case more realistically
         if self.cmds.get("!OBS.autoexpset", False):
-            logger.debug("DIT, NDIT determined by AutoExposure -> "
-                         "ADConversion is not applied.")
+            logger.info("DIT, NDIT determined by AutoExposure -> "
+                        "Create float32 output.")
             return False
 
         if self.cmds["!OBS.ndit"] > 1:
-            logger.debug("NDIT set to 1 -> digitization is not applied.")
+            logger.info("NDIT larger than 1 -> Create float32 output.")
             return False
 
         return True
@@ -129,17 +129,17 @@ class ADConversion(Effect):
         if not isinstance(obj, DetectorBase):
             return obj
 
-        if not self._should_apply():
-            return obj
-
         print("Applying ADConversion")
-        new_dtype = self.meta["dtype"]
+        if not self._should_apply():
+            new_dtype = np.float32
+        else:
+            new_dtype = self.meta["dtype"]
         if not np.issubdtype(new_dtype, np.integer):
             logger.warning("Setting digitized data to dtype %s, which is not "
                            "an integer subtype.", new_dtype)
 
         # TODO: Apply the gain value (copy from DarkCurrent)
-        print(from_currsys(self.meta['gain'], self.cmds))
+        logger.info(f"Applying gain {from_currsys(self.meta['gain'], self.cmds)}")
         if isinstance(from_currsys(self.meta["gain"], self.cmds), dict):
             dtcr_id = obj.meta[real_colname("id", obj.meta)]
             gain = from_currsys(self.meta["gain"][dtcr_id], self.cmds)
@@ -148,7 +148,6 @@ class ADConversion(Effect):
         else:
             raise ValueError("<ADConversion>.meta['gain'] must be either "
                              f"dict or float, but is {self.meta['gain']}")
-
 
         # Apply gain   TODO: option to turn this off
         obj._hdu.data /= gain
@@ -165,7 +164,7 @@ class ADConversion(Effect):
         # This used to create a new ImageHDU with the same header but the data
         # set to the modified data. It should be fine to simply re-assign the
         # data attribute, but just in case it's not...
-        logger.debug("Applying digitization to dtype %s.", new_dtype)
+        logger.info("Applying digitization to dtype %s.", new_dtype)
         obj._hdu.data = np.floor(obj._hdu.data).astype(new_dtype)
 
         return obj
