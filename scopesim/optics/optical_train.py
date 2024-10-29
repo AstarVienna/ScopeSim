@@ -7,8 +7,9 @@ from datetime import datetime
 import numpy as np
 from scipy.interpolate import interp1d
 from astropy import units as u
+from astropy.wcs import WCS
 
-from tqdm import tqdm
+from tqdm.auto import tqdm
 
 from synphot import SourceSpectrum, Empirical1D
 from synphot.units import PHOTLAM
@@ -20,7 +21,8 @@ from ..commands.user_commands import UserCommands
 from ..detector import DetectorManager
 from ..effects import ExtraFitsKeywords
 from ..utils import from_currsys, top_level_catch, get_logger
-from .. import rc, __version__
+from ..source.source_templates import empty_sky
+from .. import __version__
 
 
 logger = get_logger(__name__)
@@ -66,6 +68,11 @@ class OpticalTrain:
 
         >>> src = sim.source.source_templates.empty_sky()
         >>> opt.observe(src)
+        >>> hdus = opt.readout()
+
+    If no Source is specified, an empty field is observe, so that the
+    following is equivalent to the commands above::
+        >>> opt.observe()
         >>> hdus = opt.readout()
 
     List the effects modelled in an OpticalTrain::
@@ -168,7 +175,7 @@ class OpticalTrain:
                                 for det_list in opt_man.detector_setup_effects]
 
     @top_level_catch
-    def observe(self, orig_source, update=True, **kwargs):
+    def observe(self, orig_source=None, update=True, **kwargs):
         """
         Main controlling method for observing ``Source`` objects.
 
@@ -182,6 +189,9 @@ class OpticalTrain:
 
         Notes
         -----
+        When orig_source is None (e.g. when writing opt.observe()), an
+        empty field is observed (internally created with empty_sky()).
+
         How the list of Effects is split between the 5 main tasks:
 
         - Make a FOV list - z_order = 0..99
@@ -201,7 +211,11 @@ class OpticalTrain:
 
         # Make a copy of the Source and prepare for observation (convert to
         # internally used units, sample to internal wavelength grid)
-        source = orig_source.make_copy()
+        if orig_source is None:
+            source = empty_sky()
+            logger.info("Observing empty field")
+        else:
+            source = orig_source.make_copy()
         source = self.prepare_source(source)
 
         # [1D - transmission curves]
@@ -233,7 +247,8 @@ class OpticalTrain:
         else:
 
             fovs = self.fov_manager.fovs
-            for fov in tqdm(fovs, desc=" FOVs", position=0):
+            nobar = len(fovs) <= 1
+            for fov in tqdm(fovs, desc=" FOVs", position=0, disable=nobar):
                 # print("FOV", fov_i+1, "of", n_fovs, flush=True)
                 # .. todo: possible bug with bg flux not using plate_scale
                 #          see fov_utils.combine_imagehdu_fields
@@ -241,8 +256,10 @@ class OpticalTrain:
 
                 hdu_type = "cube" if self.fov_manager.is_spectroscope else "image"
                 fov.view(hdu_type)
-                for effect in tqdm(self.optics_manager.fov_effects,
-                                   desc=" FOV effects", position=1, leave=False):
+                foveffs = self.optics_manager.fov_effects
+                nobar = len(foveffs) <= 1
+                for effect in tqdm(foveffs, disable=nobar,
+                                   desc=" FOV effects", position=1):#, leave=False):
                     fov = effect.apply_to(fov)
 
                 fov.flatten()
@@ -252,7 +269,9 @@ class OpticalTrain:
         # END OF MULTIPROCESSING
 
         # [2D - Vibration, flat fielding, chopping+nodding]
-        for effect in tqdm(self.optics_manager.image_plane_effects,
+        impeffs = self.optics_manager.image_plane_effects
+        nobar = len(impeffs) <= 1
+        for effect in tqdm(impeffs, disable=nobar,
                            desc=" Image Plane effects"):
             for ii, image_plane in enumerate(self.image_planes):
                 self.image_planes[ii] = effect.apply_to(image_plane)
@@ -275,9 +294,10 @@ class OpticalTrain:
         ImageHDU.
         """
         # Convert to PHOTLAM per arcsec2
-        # ..todo: this is not sufficiently general
+        # TODO: this is not sufficiently general
+        # TODO: Maybe move this to source_fields??
 
-        for ispec, spec in enumerate(source.spectra):
+        for ispec, spec in source.spectra.items():
             # Put on fov wavegrid
             wave_min = min(fov.meta["wave_min"] for fov in self.fov_manager.fovs)
             wave_max = max(fov.meta["wave_max"] for fov in self.fov_manager.fovs)
@@ -347,6 +367,8 @@ class OpticalTrain:
             cube.header["CRVAL3"] = wave_min.value
             cube.header["CDELT3"] = dwave
             cube.header["CUNIT3"] = wave_unit.name
+
+            cube.wcs = WCS(cube.field)
 
         return source
 
@@ -565,6 +587,9 @@ class OpticalTrain:
 
     def __setitem__(self, key, value):
         self.optics_manager[key] = value
+
+    def __contains__(self, key):
+        return key in self.optics_manager
 
     def report(self):
         pass

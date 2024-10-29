@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Optional, Union
 from collections.abc import Iterator, Iterable, Mapping
 
+import yaml
 from more_itertools import first, last, groupby_transform
 
 from scopesim import rc
@@ -15,6 +16,7 @@ from .example_data_utils import download_example_data, list_example_data
 from .download_utils import (get_server_folder_contents, handle_download,
                              handle_unzipping, create_client, ServerError)
 from ..utils import get_logger
+from ..commands.user_commands import patch_fake_symlinks
 
 
 logger = get_logger(__name__)
@@ -422,6 +424,38 @@ def download_packages(pkg_names: Union[Iterable[str], str],
             save_paths.append(pkg_path)
 
     return save_paths
+
+
+# TODO: Look into just using this in download_packages as well...
+def download_missing_pkgs(instrument: str) -> None:
+    """Download instrument package and required support packages."""
+    # First download package itself
+    zip_file = download_packages([instrument])[0]
+
+    # If package needs other packages, download them as well
+    defyam = zip_file.with_suffix("") / "default.yaml"
+    with defyam.open() as file:
+        pkgs = next(yaml.load_all(file, yaml.SafeLoader))["packages"]
+    pkgs.remove(instrument)
+
+    # Only actually download if necessary
+    if pkgs:
+        download_packages(pkgs)
+
+
+def check_packages(instrument: str, download_missing: bool) -> None:
+    """Check if required package is in CWD, download if needed."""
+    pkgdir = Path(rc.__config__["!SIM.file.local_packages_path"])
+    pkgdir = patch_fake_symlinks(pkgdir)
+    if not (pkgdir / instrument).exists():
+        logger.warning("IRDB package for %s not found.", instrument)
+        if download_missing:
+            download_missing_pkgs(instrument)
+        else:
+            raise ValueError(
+                f"IRDB package for {instrument} not found, auto-download is "
+                "disabled. Please set package directory or download package.")
+
 
 # ==============================================================================
 # Funtions below from from OLD_database.py

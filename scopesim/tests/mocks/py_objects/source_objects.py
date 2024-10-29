@@ -55,6 +55,28 @@ def _table_source_overlapping():
     return tbl_source
 
 
+def _basic_img_hdu(weight):
+    n = 51
+    im_wcs = wcs.WCS(naxis=2)
+    im_wcs.wcs.cunit = [u.arcsec, u.arcsec]
+    im_wcs.wcs.cdelt = [0.2, 0.2]
+    im_wcs.wcs.crval = [0, 0]
+    im_wcs.wcs.crpix = [(n + 1) / 2, (n + 1) / 2]
+    # im_wcs.wcs.ctype = ["RA---TAN", "DEC--TAN"]
+    im_wcs.wcs.ctype = ["LINEAR", "LINEAR"]
+
+    im = np.random.random(size=(n, n)) * 1e-9 * weight
+    im[n-1, 1] += 5 * weight
+    im[1, 1] += 5 * weight
+    im[n // 2, n // 2] += 10 * weight
+    im[n // 2, n-1] += 5 * weight
+
+    im_hdu = fits.ImageHDU(data=im, header=im_wcs.to_header())
+    im_hdu.header["SPEC_REF"] = 0
+
+    return im_hdu
+
+
 def _image_source(dx=0, dy=0, angle=0, weight=1):
     """
     Produce a source with 3 point sources on a random BG.
@@ -77,23 +99,7 @@ def _image_source(dx=0, dy=0, angle=0, weight=1):
     specs = [SourceSpectrum(Empirical1D, points=wave,
                             lookup_table=np.linspace(0, 4, n) * unit)]
 
-    n = 51
-    im_wcs = wcs.WCS(naxis=2)
-    im_wcs.wcs.cunit = [u.arcsec, u.arcsec]
-    im_wcs.wcs.cdelt = [0.2, 0.2]
-    im_wcs.wcs.crval = [0, 0]
-    im_wcs.wcs.crpix = [(n + 1) / 2, (n + 1) / 2]
-    # im_wcs.wcs.ctype = ["RA---TAN", "DEC--TAN"]
-    im_wcs.wcs.ctype = ["LINEAR", "LINEAR"]
-
-    im = np.random.random(size=(n, n)) * 1e-9 * weight
-    im[n-1, 1] += 5 * weight
-    im[1, 1] += 5 * weight
-    im[n // 2, n // 2] += 10 * weight
-    im[n // 2, n-1] += 5 * weight
-
-    im_hdu = fits.ImageHDU(data=im, header=im_wcs.to_header())
-    im_hdu.header["SPEC_REF"] = 0
+    im_hdu = _basic_img_hdu(weight)
     im_source = Source(image_hdu=im_hdu, spectra=specs)
 
     angle = angle * np.pi / 180
@@ -137,12 +143,33 @@ def _cube_source(**kwargs):
     source
     """
     n = 101
-    im_src = _image_source(**kwargs)
-    data = im_src.fields[0].data
+    im_hdu = _basic_img_hdu(kwargs.get("weight", 1))
+    # im_src = _image_source(**kwargs)
+    # data = im_src.fields[0].data
+    data = im_hdu.data
+
+    # taken from Source
+    for i in [1, 2]:
+        unit = u.Unit(im_hdu.header[f"CUNIT{i}"].lower())
+        val = float(im_hdu.header[f"CDELT{i}"])
+        im_hdu.header[f"CUNIT{i}"] = "deg"
+        im_hdu.header[f"CDELT{i}"] = val * unit.to(u.deg)
+
+    dx = kwargs.get("dx", 0)
+    dy = kwargs.get("dy", 0)
+    angle = kwargs.get("angle", 0)
+
+    angle = angle * np.pi / 180
+    im_hdu.header["CRVAL1"] += dx / 3600
+    im_hdu.header["CRVAL2"] += dy / 3600
+    im_hdu.header["PC1_1"] = np.cos(angle)
+    im_hdu.header["PC1_2"] = np.sin(angle)
+    im_hdu.header["PC2_1"] = -np.sin(angle)
+    im_hdu.header["PC2_2"] = np.cos(angle)
 
     # Broadcast the array onto a 3rd dimension and scale along the new axis
-    im_src.fields[0].data = data[None, :, :] * np.linspace(0, 4, n)[:, None, None]
-    im_src.spectra = []
+    im_hdu.data = data[None, :, :] * np.linspace(0, 4, n)[:, None, None]
+    # im_src.spectra = {}
 
     # FIXME: CRPIX might be wrong here, aka off-by-one!!
     # But all other code assumes it like this, so I'm keeping it for now.
@@ -151,7 +178,8 @@ def _cube_source(**kwargs):
                      "CRVAL3": 1.5, "CRPIX3": 50, "SPEC_REF": None,
                      "BUNIT": "ph s-1 m-2 um-1"}
 
-    im_src.fields[0].header.update(cube_hdr_dict)
+    im_hdu.header.update(cube_hdr_dict)
+    im_src = Source(cube=im_hdu)
 
     return im_src
 

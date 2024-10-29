@@ -344,10 +344,15 @@ class DetectorWindow(DetectorList):
                   "image_plane_id": 0}
         params.update(kwargs)
 
-        tbl = Table(data=[[0], [x], [y], [width], [height],
-                          [angle], [gain], [pixel_size]],
-                    names=["id", "x_cen", "y_cen", "x_size", "y_size",
-                           "angle", "gain", "pixel_size"])
-        tbl.meta.update(params)
+        array_dict = {
+            "id": [0],
+            "x_cen": [x],
+            "y_cen": [y],
+            "x_size": [width],
+            "y_size": [height],
+            "angle": [angle],
+            "gain": [gain],
+            "pixel_size": [pixel_size],
+        }
 
-        super().__init__(table=tbl, **params)
+        super().__init__(array_dict=array_dict, **params)

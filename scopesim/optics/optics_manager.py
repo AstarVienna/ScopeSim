@@ -378,6 +378,14 @@ Summary of Effects in Optical Elements:
         elif isinstance(obj, efs.Effect) and isinstance(value, dict):
             obj.meta.update(value)
 
+    def __contains__(self, key):
+        try:
+            self[key]
+            return True
+        except (KeyError, ValueError):
+            # FIXME: This should only need KeyError
+            return False
+
     def write_string(self, stream: TextIO) -> None:
         """Write formatted string representation to I/O stream"""
         stream.write(f"{self!s} contains {len(self.optical_elements)} "

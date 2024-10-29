@@ -7,6 +7,7 @@ from astropy.wcs import WCS
 from synphot import SourceSpectrum, Empirical1D
 
 from . import image_plane_utils as imp_utils
+from ..source.source_fields import SourceField
 from ..utils import from_currsys, quantify, quantity_from_table, get_logger
 
 
@@ -21,8 +22,9 @@ def is_field_in_fov(fov_header, field, wcs_suffix=""):
     ----------
     fov_header : fits.Header
         Header from a FieldOfView object
-    field : [astropy.Table, astropy.ImageHDU]
-        Field object from a Source object
+    field : [SourceField, astropy.Table, astropy.ImageHDU]
+        Field object from a Source object. Should now be SourceField, but bare
+        Table and ImageHDU still supported.
     wcs_suffix : str
         ["S", "D"] Coordinate system: Sky or Detector
 
@@ -31,6 +33,11 @@ def is_field_in_fov(fov_header, field, wcs_suffix=""):
     is_inside_fov : bool
 
     """
+    if isinstance(field, SourceField):
+        field = field.field
+    # TODO: Check if this can always get a SourceField, if yes then just do
+    #       that and remove this.
+
     if isinstance(field, fits.ImageHDU) and \
             field.header.get("BG_SRC") is not None:
         is_inside_fov = True

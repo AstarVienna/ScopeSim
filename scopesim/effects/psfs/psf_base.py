@@ -40,6 +40,7 @@ class PSF(Effect):
             "bkg_width": -1,
             "wave_key": "WAVE0",
             "normalise_kernel": True,
+            "rounded_edges": True,
             "rotational_blur_angle": 0,
             "report_plot_include": True,
             "report_table_include": False,
@@ -69,6 +70,11 @@ class PSF(Effect):
                 if abs(rot_blur_angle) > 0:
                     # makes a copy of kernel
                     kernel = rotational_blur(kernel, rot_blur_angle)
+
+                # Round the edges of kernels so that the silly square stars
+                # don't appear anymore
+                if self.meta.get("rounded_edges", False) and kernel.ndim == 2:
+                    kernel = self._round_kernel_edges(kernel)
 
                 # normalise psf kernel      KERNEL SHOULD BE normalised within get_kernel()
                 # if from_currsys(self.meta["normalise_kernel"], self.cmds):
@@ -114,6 +120,15 @@ class PSF(Effect):
         if self.kernel is None:
             self.kernel = np.ones((1, 1))
         return self.kernel
+
+    @staticmethod
+    def _round_kernel_edges(kernel: np.ndarray) -> np.ndarray:
+        x, y = np.array(kernel.shape) // 2
+        threshold = min(kernel[x, 0], kernel[x, -1],
+                        kernel[0, y], kernel[-1, y])
+        kernel[kernel < threshold] = 0.
+        # TODO: maybe masked array here?
+        return kernel
 
     def plot(self, obj=None, **kwargs):
         fig, axes = figure_factory()

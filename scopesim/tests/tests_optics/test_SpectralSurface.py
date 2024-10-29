@@ -153,7 +153,7 @@ class TestSpectralSurfaceComplimentArray:
         srf.meta[colname1] = col1
         srf.meta[colname2] = col2
         col3 = srf._compliment_array(colname1, colname2)
-        assert np.all(np.isclose(col3.data, expected.data))
+        assert np.allclose(col3.data, expected.data)
         assert col3.unit == expected.unit
 
     @pytest.mark.parametrize("colname1, colname2, col1, col2, expected",

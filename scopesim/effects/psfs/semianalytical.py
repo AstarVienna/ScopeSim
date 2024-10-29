@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """Currently only contains the AnisoCADO connection."""
+from warnings import warn
 
 import numpy as np
 from scipy.interpolate import RectBivariateSpline
@@ -121,8 +122,6 @@ class AnisocadoConstPSF(SemiAnalyticalPSF):
 
         self._kernel = self._psf_object.psf_latest
         self._kernel /= np.sum(self._kernel)
-        if self.meta["rounded_edges"]:
-            self._round_kernel_edges()
 
         return self._kernel
 
@@ -136,17 +135,17 @@ class AnisocadoConstPSF(SemiAnalyticalPSF):
             [um] if float
 
         """
+        warn("The 'remake_kernel' method was unused and thus deprecated and "
+             "will be removed in a future release. If you are using this "
+             "method, pleas let us know by creating an issue at: "
+             "https://github.com/AstarVienna/ScopeSim/issues",
+             DeprecationWarning, stacklevel=2)
         self._kernel = None
         return self.get_kernel(x)
 
-    def _round_kernel_edges(self):
-        y, x = np.array(self._kernel.shape).astype(int) // 2
-        threshold = np.min([self._kernel[y, 0], self._kernel[y, -1],
-                            self._kernel[0, x], self._kernel[-1, x]])
-        self._kernel[self._kernel < threshold] = 0.
-
     @property
     def wavelength(self):
+        # FIXME: expensive property...
         wave = from_currsys(self.meta["wavelength"], self.cmds)
         if isinstance(wave, str) and wave in tu.FILTER_DEFAULTS:
             filter_name = from_currsys(wave, cmds=self.cmds)

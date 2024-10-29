@@ -1,9 +1,7 @@
 import pytest
-from pytest import approx
 
 import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib.colors import LogNorm
 
 from scopesim.effects.obs_strategies import ChopNodCombiner
 from scopesim.detector import Detector
@@ -44,7 +42,9 @@ class TestChopNodCombinerApplyTo:
             plt.imshow(basic_detector.hdu.data)
             plt.show()
 
-        assert np.sum(basic_detector.hdu.data) == 0
+        outimg = basic_detector.hdu.data
+        assert outimg.sum() == 0
+        assert ((outimg == 0.).sum() / outimg.size) > .8  # most elements zero
 
     def test_creates_image_for_perpendicular_chop(self, basic_detector):
         cnc = ChopNodCombiner(pixel_scale=0.004, chop_offsets=(0.12, 0),
@@ -55,4 +55,6 @@ class TestChopNodCombinerApplyTo:
             plt.imshow(basic_detector.hdu.data)
             plt.show()
 
-        assert np.sum(basic_detector.hdu.data) == 0
+        outimg = basic_detector.hdu.data
+        assert outimg.sum() == 0
+        assert ((outimg == 0.).sum() / outimg.size) > .8  # most elements zero

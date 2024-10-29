@@ -60,9 +60,9 @@ class TestRotationBlur:
 
         # With blur
         implane = basic_image_plane()
-        implane.data[75,75] = 1
+        implane.data[75, 75] = 1
 
-        psf = PSF(rotational_blur_angle=angle)
+        psf = PSF(rotational_blur_angle=angle, rounded_edges=False)
         psf.kernel = basic_kernel()
         implane = psf.apply_to(implane)
 
@@ -157,7 +157,7 @@ class TestApplyTo:
             plt.subplot(231)
             plt.imshow(implane.data[1, :, :])
 
-        psf = PSF(rotational_blur_angle=15, bkg_width=5)
+        psf = PSF(rotational_blur_angle=15, bkg_width=5, rounded_edges=False)
         psf.kernel = basic_kernel(n=63)
         implane = psf.apply_to(implane)
 

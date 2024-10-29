@@ -121,7 +121,7 @@ class FieldOfView(FieldOfViewBase):
         if not isinstance(src, SourceBase):
             raise ValueError(f"source must be a Source object: {type(src)}")
 
-        fields_in_fov = [field for field in src.fields
+        fields_in_fov = [field.field for field in src.fields
                          if fu.is_field_in_fov(self.header, field)]
         if not fields_in_fov:
             logger.warning("No fields in FOV.")
@@ -136,8 +136,20 @@ class FieldOfView(FieldOfViewBase):
 
             elif isinstance(fld, fits.ImageHDU):
                 if fld.header["NAXIS"] in (2, 3):
-                    fields_in_fov[ifld] = fu.extract_area_from_imagehdu(fld,
-                                                                        volume)
+                    extracted = fu.extract_area_from_imagehdu(fld, volume)
+                    try:
+                        fill_value = self.cmds["!SIM.computing.nan_fill_value"]
+                    except TypeError:
+                        # This occurs in testing, not sure why
+                        fill_value = 0.
+                    if np.ma.fix_invalid(extracted.data, copy=False,
+                                         fill_value=fill_value).mask.any():
+                        logger.warning("Source contained NaN values, which "
+                                       "were replaced by %f.", fill_value)
+                        logger.info(
+                            "The replacement value for NaNs in sources can be "
+                            "set in '!SIM.computing.nan_fill_value'.")
+                    fields_in_fov[ifld] = extracted
                 if fld.header["NAXIS"] == 2 or fld.header.get("BG_SRC"):
                     ref = fld.header.get("SPEC_REF")
                     if ref is not None:

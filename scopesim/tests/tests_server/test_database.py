@@ -4,7 +4,6 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 import yaml
-import numpy as np
 
 from scopesim.server import database as db
 from scopesim.server import example_data_utils as dbex
@@ -95,7 +94,7 @@ class TestListPackages:
 
     def test_lists_only_packages_with_qualifier(self):
         pkgs = db.list_packages("Armazones")
-        assert np.all(["Armazones" in pkg for pkg in pkgs])
+        assert all("Armazones" in pkg for pkg in pkgs)
 
     def test_throws_for_nonexisting_pkgname(self):
         with pytest.raises(ValueError):

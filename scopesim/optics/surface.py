@@ -257,7 +257,10 @@ class SpectralSurface:
         if colname in self.meta:
             val = self.meta[colname]
         elif colname in self.table.colnames:
-            val = self.table[colname].data
+            val = self.table[colname]
+            # HACK: This is to allow both Table and QTable...
+            if not isinstance(val, u.Quantity):
+                val = val.data
         else:
             logger.debug("%s not found in either '.meta' or '.table': [%s]",
                          colname, self.meta.get("name", self.meta["filename"]))

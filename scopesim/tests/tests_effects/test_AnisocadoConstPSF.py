@@ -62,6 +62,8 @@ class TestGetKernel:
         assert np.shape(kernel) == (512, 512)
         assert psf_object.strehl_ratio == approx(0.5, rel=0.01)
 
+    @pytest.mark.webtest
+    @pytest.mark.usefixtures("no_file_error")
     def test_returns_kernel_for_filtername_wavelength(self, mock_path):
         psf = AnisocadoConstPSF(
             filename=str(mock_path / "test_AnisoCADO_rms_map.fits"),

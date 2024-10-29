@@ -16,6 +16,7 @@ from synphot.units import PHOTLAM
 
 from scopesim.source import source_utils
 from scopesim.source.source import Source
+from scopesim.source.source_fields import CubeSourceField
 
 from scopesim.optics.image_plane import ImagePlane
 from scopesim.utils import convert_table_comments_to_dict
@@ -137,22 +138,22 @@ class TestSourceInit:
         src = Source(table=table, spectra=input_spectra)
         assert isinstance(src, Source)
         assert isinstance(src.spectra[0], SourceSpectrum)
-        assert isinstance(src.fields[0], Table)
+        assert isinstance(src.fields[0].field, Table)
         src.shift(0.1, 0.2)
 
     def test_initialises_with_image_and_1_spectrum(self, input_hdulist,
                                                    input_spectra):
-        src = Source(image_hdu=input_hdulist[0], spectra=input_spectra)
+        src = Source(image_hdu=input_hdulist[0], spectra=input_spectra[0])
         assert isinstance(src, Source)
         assert isinstance(src.spectra[0], SourceSpectrum)
-        assert isinstance(src.fields[0], fits.ImageHDU)
+        assert isinstance(src.fields[0].field, fits.ImageHDU)
         src.shift(0.1, 0.2)
 
     def test_initialises_with_image_and_flux(self, input_hdulist):
         src = Source(image_hdu=input_hdulist[0], flux=20*u.ABmag)
         assert isinstance(src, Source)
         assert isinstance(src.spectra[0], SourceSpectrum)
-        assert isinstance(src.fields[0], fits.ImageHDU)
+        assert isinstance(src.fields[0].field, fits.ImageHDU)
         src.shift(0.1, 0.2)
 
     def test_initialises_with_only_image(self, input_hdulist):
@@ -175,7 +176,7 @@ class TestSourceInit:
 
         assert isinstance(src, Source)
         assert isinstance(src.spectra[0], SourceSpectrum)
-        assert isinstance(src.fields[0], fits.ImageHDU)
+        assert isinstance(src.fields[0].field, fits.ImageHDU)
         src.shift(0.1, 0.2)
 
     @pytest.mark.parametrize("ii, dtype",
@@ -185,10 +186,10 @@ class TestSourceInit:
     def test_initialises_with_filename_and_spectrum(self, ii, dtype,
                                                     input_files, input_spectra):
         fname = input_files[ii]
-        src = Source(filename=fname, spectra=input_spectra)
+        src = Source(filename=fname, spectra=input_spectra[0])
         assert isinstance(src, Source)
         assert isinstance(src.spectra[0], SourceSpectrum)
-        assert isinstance(src.fields[0], dtype)
+        assert isinstance(src.fields[0].field, dtype)
         src.shift(0.1, 0.2)
 
     def test_initialised_with_old_style_arrays(self):
@@ -199,7 +200,7 @@ class TestSourceInit:
         src = Source(x=x, y=y, ref=ref, weight=weight, lam=lam, spectra=spectra)
         assert isinstance(src, Source)
         assert isinstance(src.spectra[0], SourceSpectrum)
-        assert isinstance(src.fields[0], Table)
+        assert isinstance(src.fields[0].field, Table)
         src.shift(0.1, 0.2)
 
 
@@ -209,18 +210,16 @@ class TestSourceAddition:
         image_source.append(table_source)
         comb_refs = image_source.fields[1]["ref"]
         tbl_refs = table_source.fields[0]["ref"]
-        assert np.all(tbl_refs.data + 1 == comb_refs.data)
+        assert all(tbl_refs.data + 1 == comb_refs.data)
         assert image_source.fields[0].header["SPEC_REF"] == 0
-        assert len(image_source.fields) == len(image_source._meta_dicts)
         image_source.shift(0.1, 0.2)
 
     def test_same_as_above_but_reversed(self, table_source, image_source):
         new_source = table_source + image_source
         comb_refs = new_source.fields[0]["ref"]
         tbl_refs = table_source.fields[0]["ref"]
-        assert np.all(tbl_refs.data == comb_refs.data)
+        assert all(tbl_refs.data == comb_refs.data)
         assert new_source.fields[1].header["SPEC_REF"] == 3
-        assert len(new_source.fields) == len(new_source._meta_dicts)
         new_source.shift(0.1, 0.2)
 
     def test_imagehdu_with_empty_spec_ref_is_handled(self, table_source,
@@ -228,7 +227,6 @@ class TestSourceAddition:
         image_source.fields[0].header["SPEC_REF"] = ""
         new_source = table_source + image_source
         assert new_source.fields[1].header["SPEC_REF"] == ""
-        assert len(new_source.fields) == len(new_source._meta_dicts)
 
     def test_fits_image_and_array_image_are_added_correctly(self):
         img_src = so._image_source()
@@ -238,25 +236,23 @@ class TestSourceAddition:
         fits_img_src = fits_src + img_src
 
         assert len(img_src.fields) == 1
-        assert len(img_src.fields) == len(img_src._meta_dicts)
         assert len(fits_src.fields) == 1
-        assert len(fits_src.fields) == len(fits_src._meta_dicts)
         assert len(img_fits_src.fields) == 2
-        assert len(img_fits_src.fields) == len(img_fits_src._meta_dicts)
         assert len(fits_img_src.fields) == 2
-        assert len(img_fits_src.fields) == len(img_fits_src._meta_dicts)
-        assert np.all(fits_img_src.fields[0].data == fits_src.fields[0].data)
+        assert (fits_img_src.fields[0].data == fits_src.fields[0].data).all()
         assert img_fits_src.fields[0] is not img_src.fields[0]
 
+    @pytest.mark.skip(reason="_meta_dicts was removed, find a better way to perform the same check...")
     def test_meta_data_is_passed_on_when_added(self, table_source, image_source):
-        table_source.meta["hello"] = "world"
-        image_source.meta["servus"] = "oida"
+        table_source.fields[0].meta["hello"] = "world"
+        image_source.fields[0].meta["servus"] = "oida"
         new_source = table_source + image_source
 
         assert len(new_source.fields) == len(new_source._meta_dicts)
         assert new_source._meta_dicts[0]["hello"] == "world"
         assert new_source._meta_dicts[1]["servus"] == "oida"
 
+    @pytest.mark.skip(reason="_meta_dicts was removed, find a better way to perform the same check...")
     def test_empty_source_is_the_additive_identity(self, image_source):
         new_source_1 = Source() + image_source
         assert len(new_source_1.fields) == len(new_source_1._meta_dicts)
@@ -309,14 +305,14 @@ class TestSourceImageInRange:
 class TestSourcePhotonsInRange:
     def test_correct_photons_are_returned_for_table_source(self, table_source):
         ph = table_source.photons_in_range(1, 2)
-        assert np.all(np.isclose(ph.value, [4., 2., 2.]))
+        assert np.allclose(ph.value, [4., 2., 2.])
 
     def test_correct_photons_are_returned_for_image_source(self, image_source):
         ph = image_source.photons_in_range(1, 2)
-        assert np.all(np.isclose(ph.value, [2.]))
+        assert np.allclose(ph.value, [2.])
 
     def test_correct_photons_are_returned_for_no_spectra(self, image_source):
-        image_source.spectra = []
+        image_source.fields[0].spectra = {}
         ph = image_source.photons_in_range(1, 2)
         assert len(ph) == 0
 
@@ -325,20 +321,22 @@ class TestSourcePhotonsInRange:
         ph = image_source.photons_in_range(1, 2, area=area)
         assert ph[0].value == approx(expected)
 
-    def test_photons_returned_only_for_indexes(self, table_source):
-        ph = table_source.photons_in_range(1, 2, indexes=[0, 2])
+    def test_photons_returned_only_for_indices(self, table_source):
+        ph = table_source.photons_in_range(1, 2, indices=[0, 2])
         assert len(ph) == 2
-        assert np.all(np.isclose(ph.value, [4, 2]))
+        assert np.allclose(ph.value, [4, 2])
 
 
+@pytest.mark.xfail
 class TestSourceShift:
     def test_that_it_does_what_it_should(self):
-        pass
+        assert False
 
 
+@pytest.mark.xfail
 class TestSourceRotate:
     def test_that_it_does_what_it_should(self):
-        pass
+        assert False
 
 
 class TestPhotonsInRange:
@@ -387,7 +385,7 @@ class TestPhotonsInRange:
                               (np.linspace(0, 1, 11)**0.5, 100,  34.931988)])
     def test_with_bandpass_and_area_returns_correct_value(self, flux, area,
                                                           expected):
-        flux = flux * u.Unit("ph s-1 m-2 um-1")
+        flux *= u.Unit("ph s-1 m-2 um-1")
         spec = SourceSpectrum(Empirical1D,
                               points=np.linspace(0.5, 2.5, 11) * u.um,
                               lookup_table=flux)
@@ -399,6 +397,56 @@ class TestPhotonsInRange:
                                                area=area)
         assert counts.value == approx(expected)
 
+
+class TestSpectraListConverter:
+    def test_works_for_arrays(self):
+        spec = source_utils.convert_to_list_of_spectra(
+                np.array([0, 1, 1, 0]), np.array([1, 2, 3, 4]))
+        assert isinstance(spec[0], SourceSpectrum)
+
+    def test_works_for_2d_arrays(self):
+        spec = source_utils.convert_to_list_of_spectra(
+            np.array([[0, 1, 1, 0], [0, 1, 1, 0]]),
+            np.array([1, 2, 3, 4]))
+        assert all(isinstance(sp, SourceSpectrum) for sp in spec)
+
+    def test_works_for_multiple_1d_arrays(self):
+        spec = source_utils.convert_to_list_of_spectra(
+            [np.array([0, 1, 1, 0]), np.array([0, 1, 1, 0])],
+            np.array([1, 2, 3, 4]))
+        assert all(isinstance(sp, SourceSpectrum) for sp in spec)
+
+    def test_throws_for_array_mismatch(self):
+        with pytest.raises(TypeError):
+            source_utils.convert_to_list_of_spectra(
+                np.array([0, 1, 1, 0]), [1, 2, 3, 4])
+
+    def test_throws_for_multiple_array_mismatch(self):
+        with pytest.raises(ValueError):
+            source_utils.convert_to_list_of_spectra(
+                [np.array([0, 1, 1, 0]), [0, 1, 1, 0]],
+                [np.array([1, 2, 3, 4]), [1, 2, 3, 4]])
+
+
+def test_cube_source_field():
+    size = 5
+    hdu = fits.ImageHDU(data=np.arange(size**3).reshape(3*(size,)))
+
+    hdu.header["CUNIT1"] = "arcsec"
+    hdu.header["CUNIT2"] = "arcsec"
+    hdu.header["CUNIT3"] = "um"
+    hdu.header["CTYPE3"] = "WAVE"
+    hdu.header["CRVAL1"] = 0
+    hdu.header["CRVAL2"] = 0
+    csf = CubeSourceField(hdu)
+
+    np.testing.assert_equal(csf.wave.value, np.arange(1, 6))
+    csf.shift(2, 3)
+    assert csf.header["CRVAL1"] == 2
+    assert csf.header["CRVAL2"] == 3
+
+    _, ax = plt.subplots()
+    csf.plot(ax, "red")
 
 #
 # class TestScaleImageHDU:

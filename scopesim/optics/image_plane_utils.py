@@ -52,7 +52,7 @@ def get_canvas_header(hdu_or_table_list, pixel_scale=1 * u.arcsec):
             else:
                 raise TypeError(
                     "hdu_or_table_list may only contain fits.ImageHDU, Table "
-                    "or fits.Header, found {type(hdu_or_table)}.")
+                    f"or fits.Header, found {type(hdu_or_table)}.")
         if tables:
             yield _make_bounding_header_for_tables(*tables,
                                                    pixel_scale=pixel_scale)
