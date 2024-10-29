@@ -176,7 +176,7 @@ class ShotNoise(Effect):
         values_low = data < 1e7
         data[values_low] = rng.poisson(data[values_low])
 
-        # Apply a Poisson distribution to the high values.
+        # Apply a normal distribution to the high values.
         values_high = ~values_low
         data[values_high] = rng.normal(data[values_high], np.sqrt(data[values_high]))
 
