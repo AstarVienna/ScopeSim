@@ -2,14 +2,17 @@
 """Contains base class for effects."""
 
 from pathlib import Path
-from collections.abc import Mapping, MutableMapping
+from collections.abc import Mapping, MutableMapping, Iterable
 from dataclasses import dataclass, field, InitVar, fields
-from typing import NewType, ClassVar
+from typing import NewType, ClassVar, Any
 
 from .data_container import DataContainer
 from .. import base_classes as bc
-from ..utils import from_currsys, write_report
+from ..utils import from_currsys, write_report, get_logger
 from ..reports.rst_utils import table_to_rst
+
+
+logger = get_logger(__name__)
 
 
 # FIXME: This docstring is out-of-date for several reasons:
@@ -141,11 +144,7 @@ class Effect:
 
     @property
     def display_name(self) -> str:
-        name = self.meta.get("name", self.meta.get("filename", "<untitled>"))
-        if not hasattr(self, "_current_str"):
-            return name
-        current_str = from_currsys(self.meta[self._current_str], self.cmds)
-        return f"{name} : [{current_str}]"
+        return self.meta.get("name", self.meta.get("filename", "<untitled>"))
 
     @property
     def meta_string(self) -> str:
@@ -351,7 +350,13 @@ Meta-data
                     else:
                         value = from_currsys(self.meta, self.cmds)
                 else:
-                    value = self.meta[item.removeprefix("#")]
+                    try:
+                        value = self.meta[item.removeprefix("#")]
+                    except KeyError as err:
+                        try:
+                            value = getattr(self, item.removeprefix("#"))
+                        except AttributeError:
+                            raise err
             else:
                 value = self.meta
         else:
@@ -364,3 +369,82 @@ Meta-data
             return None
         return Path(self.meta["path"],
                     from_currsys(self.meta["filename_format"], self.cmds))
+
+
+# TODO: Maybe make this a MutableMapping instead and have items as the map?
+@dataclass(kw_only=True, eq=False)
+class WheelEffect:
+    """Base class for wheel-type effects."""
+
+    items: dict[str, Effect] = field(
+        default_factory=dict, init=False, repr=False
+    )
+    current_item_name: str | None = None
+    kwargs: InitVar[Any] = None  # HACK: remove this once proper dataclass effs
+
+    _item_cls: ClassVar[type] = Effect
+    _item_str: ClassVar[str] = "item"
+
+    def __post_init__(self, kwargs):
+        # TODO: remove this once Effect is a proper dataclass
+        if kwargs is None:
+            kwargs = {}
+        super().__init__(**kwargs)
+
+    @property
+    def display_name(self) -> str:
+        return f"{super().display_name} : [{self.current_item_name}]"
+
+    def apply_to(self, obj, **kwargs):
+        """Use apply_to of current item."""
+        return self.current_item.apply_to(obj, **kwargs)
+
+    def change_item(self, item_name) -> None:
+        """Change the current item."""
+        if item_name not in self.items:
+            # current=False is sometimes used to disable effect
+            # TODO: do we really want this?
+            if item_name is False:  # need explicit check here to avoid ""
+                self.include = False
+                return
+            raise ValueError(
+                f"Unknown {self._item_str} requested: {item_name}"
+            )
+        self.current_item_name = item_name
+
+    def add_item(self, new_item, item_name: str | None = None) -> None:
+        """
+        Add an item to the Wheel.
+
+        Parameters
+        ----------
+        new_item : Effect
+            Effect subclass item to be added.
+        item_name : str, optional
+            Name to be used for the new item. If `None`, the name is taken from
+            the item's name. The default is None.
+
+        """
+        if (name := item_name or new_item.display_name) in self.items:
+            logger.warning("%s already in wheel, overwriting", name)
+        self.items[name] = new_item
+
+    @property
+    def current_item(self):
+        """Return the currently selected item (`None` if not set)."""
+        # TODO: do we really want this?
+        if not self.include:
+            return False
+        return self.items.get(self.current_item_name, None)
+
+    @current_item.setter
+    def current_item(self):
+        raise AttributeError(
+            f"{self.__class__.__name__}.current_{self._item_str} cannot be "
+            f"set directly. Use {self.__class__.__name__}.change_"
+            f"{self._item_str}({self._item_str}_name) instead."
+        )
+
+    def __getattr__(self, key):
+        # TODO: reevaluate the need for this...
+        return getattr(self.current_item, key)
