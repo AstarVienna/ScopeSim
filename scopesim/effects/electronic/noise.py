@@ -169,7 +169,7 @@ class ShotNoise(Effect):
         values_negative = data < 0
         if values_negative.any():
             logger.warning(
-                "Effect ShotNoise: %d negative pixels", data.mask.sum())
+                "Effect ShotNoise: %d negative pixels", values_negative.sum())
         data[values_negative] = 0
 
         # Apply a Poisson distribution to the low values.

@@ -24,7 +24,7 @@ class TestApplyTo:
         dtcr._hdu.data[0][0] = value_normal
         dtcr._hdu.data[0][1] = -1
         dtcr._hdu.data[1][0] = value_too_high
-        dtcr._hdu.data[0][1] = np.nan
+        dtcr._hdu.data[1][1] = np.nan
 
         sn = ShotNoise()
         dtcr = sn.apply_to(dtcr)
@@ -36,4 +36,4 @@ class TestApplyTo:
         # Sensibility checks on the values.
         assert 1 < dtcr._hdu.data[0][0] < value_normal * 2
         assert np.isnan(dtcr._hdu.data[0][1]) or dtcr._hdu.data[0][1] == 0
-        assert np.isnan(dtcr._hdu.data[0][1])
+        assert np.isnan(dtcr._hdu.data[1][1])
