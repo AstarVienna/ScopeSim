@@ -78,6 +78,8 @@ class TERCurve(Effect):
     """
 
     z_order: ClassVar[tuple[int, ...]] = (10, 110, 510)
+    report_plot_include: ClassVar[bool] = True
+    report_table_include: ClassVar[bool] = False
 
     def __init__(self, filename=None, **kwargs):
         super().__init__(filename=filename, **kwargs)
@@ -88,8 +90,6 @@ class TERCurve(Effect):
             "wave_unit": "!SIM.spectral.wave_unit",
             "wave_bin": "!SIM.spectral.spectral_bin_width",
             "bg_cell_width": "!SIM.computing.bg_cell_width",
-            "report_plot_include": True,
-            "report_table_include": False,
         }
         self.meta.update(params)
         self.meta.update(kwargs)
@@ -593,18 +593,15 @@ class FilterWheelBase(Effect):
     """Base class for Filter Wheels."""
 
     z_order: ClassVar[tuple[int, ...]] = (124, 224, 524)
+    report_plot_include: ClassVar[bool] = True
+    report_table_include: ClassVar[bool] = True
+    report_table_rounding: ClassVar[int] = 4
     _current_str = "current_filter"
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         check_keys(kwargs, self.required_keys, action="error")
 
-        params = {
-            "report_plot_include": True,
-            "report_table_include": True,
-            "report_table_rounding": 4,
-        }
-        self.meta.update(params)
         self.meta.update(kwargs)
 
         self.filters = {}
@@ -919,16 +916,16 @@ class ADCWheel(Effect):
 
     required_keys = {"adc_names", "filename_format", "current_adc"}
     z_order: ClassVar[tuple[int, ...]] = (125, 225, 525)
+    report_plot_include: ClassVar[bool] = False
+    report_table_include: ClassVar[bool] = True
+    report_table_rounding: ClassVar[int] = 4
     _current_str = "current_adc"
 
     def __init__(self, cmds=None, **kwargs):
         super().__init__(cmds=cmds, **kwargs)
         check_keys(kwargs, self.required_keys, action="error")
 
-        params = {"path": "",
-                  "report_plot_include": False,
-                  "report_table_include": True,
-                  "report_table_rounding": 4}
+        params = {"path": ""}
         self.meta.update(params)
         self.meta.update(kwargs)
 

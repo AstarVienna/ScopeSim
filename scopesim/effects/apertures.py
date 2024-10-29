@@ -82,6 +82,9 @@ class ApertureMask(Effect):
 
     required_keys = {"filename", "table", "array_dict"}
     z_order: ClassVar[tuple[int, ...]] = (80, 280, 380)
+    report_plot_include: ClassVar[bool] = False
+    report_table_include: ClassVar[bool] = True
+    report_table_rounding: ClassVar[int] = 4
 
     def __init__(self, **kwargs):
         if not np.any([key in kwargs for key in ["filename", "table",
@@ -100,9 +103,6 @@ class ApertureMask(Effect):
             "shape": "rect",
             "conserve_image": True,
             "id": 0,
-            "report_plot_include": False,
-            "report_table_include": True,
-            "report_table_rounding": 4,
         }
 
         self.meta.update(params)
@@ -275,6 +275,9 @@ class ApertureList(Effect):
     """
 
     z_order: ClassVar[tuple[int, ...]] = (81, 281)
+    report_plot_include: ClassVar[bool] = True
+    report_table_include: ClassVar[bool] = True
+    report_table_rounding: ClassVar[int] = 4
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -282,9 +285,6 @@ class ApertureList(Effect):
             "pixel_scale": "!INST.pixel_scale",
             "n_round_corners": 32,        # number of corners use to estimate ellipse
             "no_mask": False,             # .. todo:: is this necessary when we have conserve_image?
-            "report_plot_include": True,
-            "report_table_include": True,
-            "report_table_rounding": 4,
         }
         self.meta.update(params)
         self.meta.update(kwargs)
@@ -428,6 +428,9 @@ class SlitWheel(Effect):
 
     required_keys = {"slit_names", "filename_format", "current_slit"}
     z_order: ClassVar[tuple[int, ...]] = (80, 280, 580)
+    report_plot_include: ClassVar[bool] = False
+    report_table_include: ClassVar[bool] = True
+    report_table_rounding: ClassVar[int] = 4
     _current_str = "current_slit"
 
     def __init__(self, **kwargs):
@@ -436,9 +439,6 @@ class SlitWheel(Effect):
 
         params = {
             "path": "",
-            "report_plot_include": False,
-            "report_table_include": True,
-            "report_table_rounding": 4,
         }
         self.meta.update(params)
         self.meta.update(kwargs)

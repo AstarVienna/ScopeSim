@@ -50,14 +50,11 @@ class LinearityCurve(Effect):
 
     required_keys = {"ndit"}
     z_order: ClassVar[tuple[int, ...]] = (840,)
+    report_plot_include: ClassVar[bool] = True
+    report_table_include: ClassVar[bool] = False
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        params = {
-            "report_plot_include": True,
-            "report_table_include": False,
-        }
-        self.meta.update(params)
         self.meta.update(kwargs)
 
         check_keys(self.meta, self.required_keys, action="error")

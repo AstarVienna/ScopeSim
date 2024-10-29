@@ -101,6 +101,8 @@ class SpectralTraceList(Effect):
         "invalid_value": None,  # for dodgy trace file values
     }
     z_order: ClassVar[tuple[int, ...]] = (70, 270, 670)
+    report_plot_include: ClassVar[bool] = True
+    report_table_include: ClassVar[bool] = False
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -122,8 +124,6 @@ class SpectralTraceList(Effect):
             "center_on_wave_mid": False,
             "dwave": 0.002,  # [um] for finding the best fit dispersion
             "invalid_value": None,  # for dodgy trace file values
-            "report_plot_include": True,
-            "report_table_include": False,
         }
         self.meta.update(params)
 
@@ -472,6 +472,9 @@ class SpectralTraceListWheel(Effect):
         "current_trace_list",
     }
     z_order: ClassVar[tuple[int, ...]] = (70, 270, 670)
+    report_plot_include: ClassVar[bool] = True
+    report_table_include: ClassVar[bool] = True
+    report_table_rounding: ClassVar[int] = 4
     _current_str = "current_trace_list"
 
     def __init__(self, **kwargs):
@@ -480,9 +483,6 @@ class SpectralTraceListWheel(Effect):
 
         params = {
             "path": "",
-            "report_plot_include": True,
-            "report_table_include": True,
-            "report_table_rounding": 4,
         }
         self.meta.update(params)
         self.meta.update(kwargs)
