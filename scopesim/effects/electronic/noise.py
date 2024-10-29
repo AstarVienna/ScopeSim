@@ -35,6 +35,8 @@ class Bias(Effect):
 class PoorMansHxRGReadoutNoise(Effect):
     required_keys = {"noise_std", "n_channels", "ndit"}
     z_order: ClassVar[tuple[int, ...]] = (811,)
+    report_plot_include: ClassVar[bool] = False
+    report_table_include: ClassVar[bool] = False
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -44,8 +46,6 @@ class PoorMansHxRGReadoutNoise(Effect):
             "line_fraction": 0.25,
             "channel_fraction": 0.05,
             "random_seed": "!SIM.random.seed",
-            "report_plot_include": False,
-            "report_table_include": False,
         }
         self.meta.update(params)
         self.meta.update(kwargs)

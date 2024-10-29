@@ -16,14 +16,11 @@ from ..base_classes import FieldOfViewBase
 
 class Shift3D(Effect):
     z_order: ClassVar[tuple[int, ...]] = (30, 230)
+    report_plot_include: ClassVar[bool] = True
+    report_table_include: ClassVar[bool] = False
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        params = {
-            "report_plot_include": True,
-            "report_table_include": False,
-        }
-        self.meta.update(params)
         self.meta.update(kwargs)
 
     def apply_to(self, obj, **kwargs):

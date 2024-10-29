@@ -122,13 +122,13 @@ class DetectorList(Effect):
     """
 
     z_order: ClassVar[tuple[int, ...]] = (90, 290, 390, 490)
+    report_plot_include: ClassVar[bool] = True
+    report_table_include: ClassVar[bool] = True
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         params = {"pixel_scale": "!INST.pixel_scale",      # arcsec
-                  "active_detectors": "all",
-                  "report_plot_include": True,
-                  "report_table_include": True}
+                  "active_detectors": "all",}
         self.meta.update(params)
         self.meta.update(kwargs)
 

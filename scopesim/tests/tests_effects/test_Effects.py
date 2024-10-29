@@ -29,9 +29,9 @@ class TestEffectInit:
 class TestEffectReport:
     def test_report_returns_full_rst_text(self):
         det_list = eo._detector_list()
+        det_list.report_plot_include = False
         det_list.meta.update(
-            {"report_plot_include": False,
-             "report_table_caption":
+            {"report_table_caption":
                  "The dimensions of the MICADO central detector"}
         )
         rst_str = det_list.report()
