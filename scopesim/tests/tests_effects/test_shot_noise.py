@@ -1,4 +1,3 @@
-import pytest
 import numpy as np
 
 from scopesim.detector import Detector
