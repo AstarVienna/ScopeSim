@@ -11,7 +11,7 @@ from astropy.io import fits
 from astropy import units as u
 from astropy.table import Table
 
-from .effects import Effect
+from .effects import Effect, WheelEffect
 from ..optics import image_plane_utils as imp_utils
 from ..base_classes import FOVSetupBase
 
@@ -384,7 +384,7 @@ class ApertureList(Effect):
     #     return self.get_apertures(item)[0]
 
 
-class SlitWheel(Effect):
+class SlitWheel(WheelEffect, Effect):
     """
     Selection of predefined spectroscopic slits and possibly other field masks.
 
@@ -426,35 +426,35 @@ class SlitWheel(Effect):
 
     """
 
-    required_keys = {"slit_names", "filename_format", "current_slit"}
     z_order: ClassVar[tuple[int, ...]] = (80, 280, 580)
     report_plot_include: ClassVar[bool] = False
     report_table_include: ClassVar[bool] = True
     report_table_rounding: ClassVar[int] = 4
-    _current_str = "current_slit"
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        check_keys(kwargs, self.required_keys, action="error")
+    _item_cls: ClassVar[type] = ApertureMask
+    _item_str: ClassVar[str] = "slit"
 
-        params = {
-            "path": "",
-        }
-        self.meta.update(params)
-        self.meta.update(kwargs)
+    def __init__(self, slit_names, filename_format, current_slit, **kwargs):
+        super().__init__(kwargs=kwargs)
+
+        self.meta["path"] = ""
+        self.meta["filename_format"] = filename_format
 
         path = self._get_path()
-        self.slits = {}
-        for name in from_currsys(self.meta["slit_names"], self.cmds):
-            kwargs["name"] = name
+        for name in from_currsys(slit_names, self.cmds):
             fname = str(path).format(name)
-            self.slits[name] = ApertureMask(filename=fname, **kwargs)
+            self.items[name] = self._item_cls(filename=fname, name=name)
 
+        self.current_item_name = from_currsys(current_slit, self.cmds)
         self.table = self.get_table()
 
-    def apply_to(self, obj, **kwargs):
-        """Use apply_to of current_slit."""
-        return self.current_slit.apply_to(obj, **kwargs)
+    @property
+    def slits(self):
+        return self.items
+
+    @slits.setter
+    def slits(self, value):
+        self.items = value
 
     def fov_grid(self, which="edges", **kwargs):
         """See parent docstring."""
@@ -464,37 +464,27 @@ class SlitWheel(Effect):
 
     def change_slit(self, slitname=None):
         """Change the current slit."""
-        if not slitname or slitname in self.slits.keys():
-            self.meta["current_slit"] = slitname
-            self.include = slitname
-        else:
-            raise ValueError("Unknown slit requested: " + slitname)
+        self.change_item(slitname)
 
     def add_slit(self, newslit, name=None):
         """
-        Add a slit to the SlitWheel.
+        Add a Slit to the SlitWheel.
 
         Parameters
         ----------
-        newslit : Slit
-        name : string
-           Name to be used for the new slit. If ``None``, a name from
-           the newslit object is used.
+        new_item : Slit
+            Slit instance to be added.
+        item_name : str, optional
+            Name to be used for the new Slit. If `None`, the name is taken from
+            the Slits's name. The default is None.
+
         """
-        if name is None:
-            name = newslit.display_name
-        self.slits[name] = newslit
+        self.add_item(newslit, name)
 
     @property
     def current_slit(self):
         """Return the currently used slit."""
-        currslit = from_currsys(self.meta["current_slit"], self.cmds)
-        if not currslit:
-            return False
-        return self.slits[currslit]
-
-    def __getattr__(self, item):
-        return getattr(self.current_slit, item)
+        return self.current_item
 
     def get_table(self):
         """
@@ -503,8 +493,8 @@ class SlitWheel(Effect):
         Width is defined as the extension in the y-direction, length in the
         x-direction. All values are in milliarcsec.
         """
-        names = list(self.slits.keys())
-        slits = self.slits.values()
+        names = list(self.items.keys())
+        slits = self.items.values()
         xmax = np.array([slit.data["x"].max() * u.Unit(slit.meta["x_unit"])
                          .to(u.mas) for slit in slits])
         xmin = np.array([slit.data["x"].min() * u.Unit(slit.meta["x_unit"])

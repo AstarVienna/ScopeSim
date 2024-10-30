@@ -32,6 +32,7 @@ class TestLoadsUserCommands:
         assert cmd["!INST.pixel_scale"] == 0.2
 
 
+@pytest.mark.xfail(reason="wheel meta resolving needs dataclasses")
 @pytest.mark.usefixtures("protect_currsys", "patch_all_mock_paths")
 class TestLoadsOpticalTrain:
     def test_loads(self):

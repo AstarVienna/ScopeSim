@@ -96,8 +96,8 @@ class TestSpectralTraceListWheel:
                   "trace_list_names": ["foo"]}
         stw = SpectralTraceListWheel(**kwargs)
         assert isinstance(stw, SpectralTraceListWheel)
-        assert stw.meta["current_trace_list"] == "bogus"
+        assert stw.current_item_name == "bogus"
         assert stw.meta["filename_format"] == "bogus_{}"
-        assert stw.meta["trace_list_names"] == ["foo"]
+        assert list(stw.items.keys()) == ["foo"]
         assert isinstance(stw.trace_lists["foo"], SpectralTraceList)
         assert stw.trace_lists["foo"].meta["filename"] == "bogus_foo"
