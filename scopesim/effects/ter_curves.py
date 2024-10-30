@@ -11,7 +11,7 @@ from astropy import units as u
 from astropy.io import fits
 from astropy.table import Table
 
-from .effects import Effect
+from .effects import Effect, WheelEffect
 from .ter_curves_utils import (add_edge_zeros, combine_two_spectra,
                                apply_throughput_to_cube, download_svo_filter,
                                download_svo_filter_list)
@@ -589,34 +589,32 @@ class SpanishVOFilterCurve(FilterCurve):
         super().__init__(table=tbl, **kwargs)
 
 
-class FilterWheelBase(Effect):
+class FilterWheelBase(WheelEffect, Effect):
     """Base class for Filter Wheels."""
 
     z_order: ClassVar[tuple[int, ...]] = (124, 224, 524)
     report_plot_include: ClassVar[bool] = True
     report_table_include: ClassVar[bool] = True
     report_table_rounding: ClassVar[int] = 4
-    _current_str = "current_filter"
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        check_keys(kwargs, self.required_keys, action="error")
+    _item_cls: ClassVar[type] = FilterCurve
+    _item_str: ClassVar[str] = "filter"
 
-        self.meta.update(kwargs)
+    @property
+    def filters(self):
+        return self.items
 
-        self.filters = {}
-
-    def apply_to(self, obj, **kwargs):
-        """Use apply_to of current filter."""
-        return self.current_filter.apply_to(obj, **kwargs)
+    @filters.setter
+    def filters(self, value):
+        self.items = value
 
     @property
     def surface(self):
-        return self.current_filter.surface
+        return self.current_item.surface
 
     @property
     def throughput(self):
-        return self.current_filter.throughput
+        return self.current_item.throughput
 
     def fov_grid(self, which="waveset", **kwargs):
         warnings.warn("The fov_grid method is deprecated and will be removed "
@@ -625,10 +623,7 @@ class FilterWheelBase(Effect):
 
     def change_filter(self, filtername=None):
         """Change the current filter."""
-        if filtername in self.filters.keys():
-            self.meta["current_filter"] = filtername
-        else:
-            raise ValueError(f"Unknown filter requested: {filtername}")
+        self.change_item(filtername)
 
     def add_filter(self, newfilter, name=None):
         """
@@ -641,20 +636,11 @@ class FilterWheelBase(Effect):
            Name to be used for the new filter. If `None` a name from
            the newfilter object is used.
         """
-        if name is None:
-            name = newfilter.display_name
-        self.filters[name] = newfilter
+        self.add_item(newfilter, name)
 
     @property
     def current_filter(self):
-        filter_eff = None
-        filt_name = from_currsys(self.meta["current_filter"], self.cmds)
-        if filt_name is not None:
-            filter_eff = self.filters[filt_name]
-        return filter_eff
-
-    def __getattr__(self, item):
-        return getattr(self.current_filter, item)
+        return self.current_item
 
     def plot(self, which="x", wavelength=None, *, axes=None, **kwargs):
         """Plot TER curves.
@@ -682,7 +668,7 @@ class FilterWheelBase(Effect):
             _guard_plot_axes(which, axes)
 
         for ter, ax in zip(which, axes):
-            for name, _filter in self.filters.items():
+            for name, _filter in self.items.items():
                 _filter.plot(which=ter, wavelength=wavelength, axes=ax,
                              plot_kwargs={"label": name}, **kwargs)
 
@@ -690,8 +676,8 @@ class FilterWheelBase(Effect):
         return fig
 
     def get_table(self):
-        names = list(self.filters.keys())
-        ters = self.filters.values()
+        names = list(self.items.keys())
+        ters = self.items.values()
         centres = u.Quantity([ter.centre for ter in ters])
         widths = u.Quantity([ter.fwhm for ter in ters])
         blue = centres - 0.5 * widths
@@ -720,21 +706,19 @@ class FilterWheel(FilterWheelBase):
 
     """
 
-    required_keys = {"filter_names", "filename_format", "current_filter"}
+    def __init__(self, filter_names, filename_format, current_filter, **kwargs):
+        super().__init__(kwargs=kwargs)
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-
-        params = {"path": ""}
-        self.meta.update(params)
-        self.meta.update(kwargs)
+        self.meta["path"] = ""
+        self.meta["filename_format"] = filename_format
 
         path = self._get_path()
-        for name in from_currsys(self.meta["filter_names"], self.cmds):
-            kwargs["name"] = name
-            self.filters[name] = FilterCurve(filename=str(path).format(name),
-                                             **kwargs)
+        for name in from_currsys(filter_names, self.cmds):
+            fname = str(path).format(name)
+            self.items[name] = self._item_cls(filename=fname, name=name,
+                                              cmds=kwargs.get("cmds", None))
 
+        self.current_item_name = from_currsys(current_filter, self.cmds)
         self.table = self.get_table()
 
 
@@ -778,26 +762,29 @@ class TopHatFilterWheel(FilterWheelBase):
 
     """
 
-    required_keys = {"filter_names", "transmissions", "wing_transmissions",
-                     "blue_cutoffs", "red_cutoffs"}
+    _item_cls: ClassVar[type] = TopHatFilterCurve
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, filter_names, transmissions, wing_transmissions,
+                 blue_cutoffs, red_cutoffs, current_filter=None, **kwargs):
+        super().__init__(kwargs=kwargs)
 
-        current_filter = kwargs.get("current_filter",
-                                    kwargs["filter_names"][0])
-        params = {"current_filter": current_filter}
-        self.meta.update(params)
-        self.meta.update(kwargs)
+        for name, trans, wtrans, bco, rco in zip(
+                filter_names,
+                transmissions,
+                wing_transmissions,
+                blue_cutoffs,
+                red_cutoffs,
+        ):
+            self.items[name] = self._item_cls(
+                name=name,
+                transmission=trans,
+                wing_transmission=wtrans,
+                blue_cutoff=bco,
+                red_cutoff=rco,
+            )
 
-        for i_filt, name in enumerate(self.meta["filter_names"]):
-            effect_kwargs = {
-                "name": name,
-                "transmission": self.meta["transmissions"][i_filt],
-                "wing_transmission": self.meta["wing_transmissions"][i_filt],
-                "blue_cutoff": self.meta["blue_cutoffs"][i_filt],
-                "red_cutoff": self.meta["red_cutoffs"][i_filt]}
-            self.filters[name] = TopHatFilterCurve(**effect_kwargs)
+        current_filter = current_filter or filter_names[0]
+        self.current_item_name = from_currsys(current_filter, self.cmds)
 
 
 class SpanishVOFilterWheel(FilterWheelBase):
@@ -843,32 +830,29 @@ class SpanishVOFilterWheel(FilterWheelBase):
 
     """
 
-    required_keys = {"observatory", "instrument", "current_filter"}
+    _item_cls: ClassVar[type] = SpanishVOFilterCurve
 
-    def __init__(self, **kwargs):        
-        super().__init__(**kwargs)
+    def __init__(self, observatory, instrument, current_filter,
+                 include_str=None, exclude_str=None, **kwargs):
+        super().__init__(kwargs=kwargs)
 
-        params = {"include_str": None,         # passed to
-                  "exclude_str": None,
-                  }
-        self.meta.update(params)
-        self.meta.update(kwargs)
-
-        obs, inst = self.meta["observatory"], self.meta["instrument"]
         filter_names = download_svo_filter_list(
-            obs, inst, short_names=True,
-            include=self.meta["include_str"], exclude=self.meta["exclude_str"])
+            observatory, instrument, short_names=True,
+            include=include_str, exclude=exclude_str)
 
-        self.meta["filter_names"] = filter_names
         for name in filter_names:
-            self.filters[name] = SpanishVOFilterCurve(observatory=obs,
-                                                      instrument=inst,
-                                                      filter_name=name)
+            self.items[name] = self._item_cls(
+                observatory=observatory,
+                instrument=instrument,
+                filter_name=name,
+            )
 
-        self.filters["open"] = FilterCurve(
+        self.items["open"] = FilterCurve(
             array_dict={"wavelength": [0.3, 3.0], "transmission": [1., 1.]},
-            wavelength_unit="um", name="unity transmission")
+            wavelength_unit="um", name="unity transmission",
+        )
 
+        self.current_item_name = from_currsys(current_filter, self.cmds)
         self.table = self.get_table()
 
 
@@ -898,7 +882,7 @@ class PupilTransmission(TERCurve):
         self.__init__(transmission, **kwargs)
 
 
-class ADCWheel(Effect):
+class ADCWheel(WheelEffect, Effect):
     """
     Wheel holding a selection of predefined atmospheric dispersion correctors.
 
@@ -914,58 +898,42 @@ class ADCWheel(Effect):
            current_adc: "const_90"
     """
 
-    required_keys = {"adc_names", "filename_format", "current_adc"}
     z_order: ClassVar[tuple[int, ...]] = (125, 225, 525)
     report_plot_include: ClassVar[bool] = False
     report_table_include: ClassVar[bool] = True
     report_table_rounding: ClassVar[int] = 4
-    _current_str = "current_adc"
 
-    def __init__(self, cmds=None, **kwargs):
-        super().__init__(cmds=cmds, **kwargs)
-        check_keys(kwargs, self.required_keys, action="error")
+    _item_cls: ClassVar[type] = TERCurve
+    _item_str: ClassVar[str] = "adc"
 
-        params = {"path": ""}
-        self.meta.update(params)
-        self.meta.update(kwargs)
+    def __init__(self, adc_names, filename_format, current_adc, **kwargs):
+        super().__init__(kwargs=kwargs)
+
+        self.meta["path"] = ""
+        self.meta["filename_format"] = filename_format
 
         path = self._get_path()
-        self.adcs = {}
-        for name in from_currsys(self.meta["adc_names"], cmds=self.cmds):
-            kwargs["name"] = name
-            self.adcs[name] = TERCurve(filename=str(path).format(name),
-                                       cmds=cmds,
-                                       **kwargs)
+        for name in from_currsys(adc_names, self.cmds):
+            fname = str(path).format(name)
+            self.items[name] = self._item_cls(filename=fname, name=name,
+                                              cmds=kwargs.get("cmds", None))
 
+        self.current_item_name = from_currsys(current_adc, self.cmds)
         self.table = self.get_table()
-
-    def apply_to(self, obj, **kwargs):
-        """Use ``apply_to`` of current ADC."""
-        return self.current_adc.apply_to(obj, **kwargs)
 
     def change_adc(self, adcname=None):
         """Change the current ADC."""
-        if not adcname or adcname in self.adcs.keys():
-            self.meta["current_adc"] = adcname
-            self.include = adcname
-        else:
-            raise ValueError(f"Unknown ADC requested: {adcname}")
+        self.change_item(adcname)
 
     @property
     def current_adc(self):
         """Return the currently used ADC."""
-        curradc = from_currsys(self.meta["current_adc"], cmds=self.cmds)
-        if not curradc:
-            return False
-        return self.adcs[curradc]
-
-    def __getattr__(self, item):
-        return getattr(self.current_adc, item)
+        return self.current_item
 
     def get_table(self):
         """Create a table of ADCs with maximum throughput."""
-        names = list(self.adcs.keys())
-        adcs = self.adcs.values()
+        names = list(self.items.keys())
+        adcs = self.items.values()
         tmax = np.array([adc.data["transmission"].max() for adc in adcs])
 
         tbl = Table(names=["name", "max_transmission"],

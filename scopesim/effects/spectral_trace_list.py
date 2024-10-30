@@ -14,7 +14,7 @@ from tqdm.auto import tqdm
 from astropy.io import fits
 from astropy.table import Table
 
-from .effects import Effect
+from .effects import Effect, WheelEffect
 from .ter_curves import FilterCurve
 from .spectral_trace_list_utils import SpectralTrace, make_image_interpolations
 from ..optics.image_plane_utils import header_from_list_of_xy
@@ -408,7 +408,7 @@ class SpectralTraceList(Effect):
         self.spectral_traces[key] = value
 
 
-class SpectralTraceListWheel(Effect):
+class SpectralTraceListWheel(WheelEffect, Effect):
     """
     A Wheel-Effect object for selecting between multiple gratings/grisms.
 
@@ -466,46 +466,38 @@ class SpectralTraceListWheel(Effect):
 
     """
 
-    required_keys = {
-        "trace_list_names",
-        "filename_format",
-        "current_trace_list",
-    }
     z_order: ClassVar[tuple[int, ...]] = (70, 270, 670)
     report_plot_include: ClassVar[bool] = True
     report_table_include: ClassVar[bool] = True
     report_table_rounding: ClassVar[int] = 4
-    _current_str = "current_trace_list"
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        check_keys(kwargs, self.required_keys, action="error")
+    _item_cls: ClassVar[type] = SpectralTraceList
+    _item_str: ClassVar[str] = "trace_list"
 
-        params = {
-            "path": "",
-        }
-        self.meta.update(params)
-        self.meta.update(kwargs)
+    def __init__(self, trace_list_names, filename_format, current_trace_list,
+                 **kwargs):
+        super().__init__(kwargs=kwargs)
+
+        self.meta["path"] = ""
+        self.meta["filename_format"] = filename_format
 
         path = self._get_path()
-        self.trace_lists = {}
-        if "name" in kwargs:
-            kwargs.pop("name")
-        for name in from_currsys(self.meta["trace_list_names"], self.cmds):
+        kwargs.pop("name", None)
+        for name in from_currsys(trace_list_names, self.cmds):
             fname = str(path).format(name)
-            self.trace_lists[name] = SpectralTraceList(filename=fname,
-                                                       name=name,
-                                                       **kwargs)
+            self.items[name] = self._item_cls(filename=fname, name=name,
+                                              **kwargs)
 
-    def apply_to(self, obj, **kwargs):
-        """Use apply_to of current trace list."""
-        return self.current_trace_list.apply_to(obj, **kwargs)
+        self.current_item_name = from_currsys(current_trace_list, self.cmds)
+
+    @property
+    def trace_lists(self):
+        return self.items
+
+    @trace_lists.setter
+    def trace_lists(self, value):
+        self.items = value
 
     @property
     def current_trace_list(self):
-        trace_list_eff = None
-        trace_list_name = from_currsys(self.meta["current_trace_list"],
-                                       self.cmds)
-        if trace_list_name is not None:
-            trace_list_eff = self.trace_lists[trace_list_name]
-        return trace_list_eff
+        return self.current_item
