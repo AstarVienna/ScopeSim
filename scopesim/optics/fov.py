@@ -476,10 +476,13 @@ class FieldOfView(FieldOfViewBase):
             canvas_image_hdu = fits.ImageHDU(
                 data=np.zeros((self.header["NAXIS2"], self.header["NAXIS1"])),
                 header=self.header)
-            # FIXME: Why here not "Pixel scale conversion" as above?
-            field.data /= self.pixel_area
+            # FIX: Do not scale source data - make a copy first.
+            # FIX: Use "Pixel scale conversion" as above.
+            field_data = field.data * self._pixarea(field.header).value / self.pixel_area
+            field_hdu = fits.ImageHDU(data=field_data, header=field.header)
+
             canvas_image_hdu = imp_utils.add_imagehdu_to_imagehdu(
-                field,
+                field_hdu,
                 canvas_image_hdu,
                 spline_order=spline_order)
             spec = specs[field.header["SPEC_REF"]]
