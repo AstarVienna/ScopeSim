@@ -143,25 +143,48 @@ class ShotNoise(Effect):
                                                 self.cmds)
         rng = np.random.default_rng(self.meta["random_seed"])
 
-        # ! poisson(x) === normal(mu=x, sigma=x**0.5)
-        # Windows has a problem with generating poisson values above 2**30
-        # Above ~100 counts the poisson and normal distribution are
-        # basically the same. For large arrays the normal distribution
-        # takes only 60% as long as the poisson distribution
+        # numpy has a problem with generating Poisson distributions above
+        # certain values. E.g. on linux, numpy.random.poisson(1e20) raises
+        #   ValueError: lam value too large
+        # The value might be smaller on other (operating) systems.
+        #
+        # The poisson and normal distribution are basically the same
+        # above ~100 counts:
+        #   poisson(x) ~= normal(mu=x, sigma=x**0.5)
+        #
+        # Therefore a limit of 1e7 is used, above which the Poisson
+        # distribution is approximated with a normal distribution.
+        #
+        # Also, the normal distribution takes only 60% as long as the
+        # poisson distribution for large arrays.
+        #
+        # Special values should be handled with care:
+        # - Negative values are mapped to 0; there cannot be negative flux.
+        # - numpy.nan are implicitly passed through the normal distribution;
+        #   because the Poisson distribution cannot handle them.
 
-        # Check if there are negative values in the data
-        data = np.ma.masked_less(det._hdu.data, 0)
-        if data.mask.any():
+        data = det._hdu.data
+
+        # Check if there are negative values in the data.
+        values_negative = data < 0
+        if values_negative.any():
             logger.warning(
-                "Effect ShotNoise: %d negative pixels", data.mask.sum())
-        data = data.filled(0)
+                "Effect ShotNoise: %d negative pixels", values_negative.sum())
+        data[values_negative] = 0
 
-        # Weirdly, poisson doesn't understand masked arrays, but normal does...
-        data = np.ma.masked_greater(data, 2**20)
-        data[~data.mask] = rng.poisson(data[~data.mask].data)
-        data.mask = ~data.mask
-        new_imagehdu = fits.ImageHDU(data=rng.normal(data, np.sqrt(data)),
-                                     header=det._hdu.header)
+        # Apply a Poisson distribution to the low values.
+        values_low = data < 1e7
+        data[values_low] = rng.poisson(data[values_low])
+
+        # Apply a normal distribution to the high values.
+        values_high = ~values_low
+        data[values_high] = rng.normal(data[values_high], np.sqrt(data[values_high]))
+
+        new_imagehdu = fits.ImageHDU(
+            data=data,
+            header=det._hdu.header,
+        )
+
         det._hdu = new_imagehdu
         return det
 
