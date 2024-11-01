@@ -42,7 +42,7 @@ class TestInit:
     def test_initialises_with_a_hdulist(self, full_trace_list):
         spt = SpectralTraceList(hdulist=full_trace_list)
         assert isinstance(spt, SpectralTraceList)
-        assert spt.get_data(2, fits.BinTableHDU)
+        assert isinstance(spt.data_container._file[2], fits.BinTableHDU)
         # next assert that dispersion axis determined correctly
         assert list(spt.spectral_traces.values())[2].dispersion_axis == 'y'
 

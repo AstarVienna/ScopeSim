@@ -89,8 +89,9 @@ class SpectralEfficiency(Effect):
             tbl = Table.read(hdu)
             wavelength = tbl['wavelength'].quantity
             efficiency = tbl['efficiency'].value
-            effic_curve = TERCurve(wavelength=wavelength,
-                                   transmission=efficiency,
+            params.pop("filename", None)  # don't pass filename to TERCurve!
+            effic_curve = TERCurve(array_dict={"wavelength":wavelength,
+                                   "transmission":efficiency},
                                    **params)
             efficiencies[name] = effic_curve
 

@@ -95,7 +95,7 @@ class TERCurve(Effect):
         self.surface.meta.update(self.meta)
         self._background_source = None
 
-        data = self.get_data()
+        data = self.data
         if self.meta["ignore_wings"]:
             data = add_edge_zeros(data, "wavelength")
         if data is not None:
