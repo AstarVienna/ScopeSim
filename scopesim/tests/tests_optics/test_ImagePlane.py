@@ -12,7 +12,7 @@ import scopesim.optics.image_plane as opt_imp
 import scopesim.optics.image_plane_utils as imp_utils
 
 from scopesim.tests.mocks.py_objects.imagehdu_objects import \
-    _image_hdu_square, _image_hdu_rect
+    _image_hdu_square, _image_hdu_rect, _image_hdu_three_wcs
 
 import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm
@@ -40,6 +40,9 @@ def image_hdu_square():
 def image_hdu_square_mm():
     return _image_hdu_square("D")
 
+@pytest.fixture(scope="function")
+def image_hdu_three_wcs():
+    return _image_hdu_three_wcs()
 
 @pytest.fixture(scope="function")
 def input_table():
@@ -674,6 +677,19 @@ class TestRescaleImageHDU:
         new_sum = np.sum(new_hdu.data)
 
         assert new_sum == approx(orig_sum)
+
+    @pytest.mark.parametrize("pixel_scale", [0.1])#, 0.2, 1, 2])
+    def test_wcs_cdelt_scaled_correctly(self, image_hdu_three_wcs, pixel_scale):
+        wcses = wcs.find_all_wcs(image_hdu_three_wcs.header)
+
+        scalefactor = pixel_scale / wcses[0].wcs.cdelt[0]
+
+        new_hdu = imp_utils.rescale_imagehdu(image_hdu_three_wcs, pixel_scale)
+        new_wcses = wcs.find_all_wcs(new_hdu.header)
+        assert(all(new_wcses[0].wcs.cdelt / scalefactor == wcses[0].wcs.cdelt))
+        assert(all(new_wcses[1].wcs.cdelt / scalefactor == wcses[1].wcs.cdelt))
+        assert(all(new_wcses[2].wcs.cdelt / scalefactor == wcses[2].wcs.cdelt))
+
 
 
 ###############################################################################

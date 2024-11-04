@@ -49,3 +49,29 @@ def _image_hdu_rect(wcs_suffix=""):
     hdu = fits.ImageHDU(data=image, header=the_wcs.to_header())
 
     return hdu
+
+
+def _image_hdu_three_wcs():
+    hdu = _image_hdu_square()
+
+    wcs_0 = wcs.WCS(hdu.header)
+    wcs_0.wcs.ctype = ["RA---TAN", "DEC--TAN"]
+
+    wcs_d = wcs.WCS(naxis=2, key="D")
+    wcs_g = wcs.WCS(naxis=2, key="G")
+
+    wcs_d.wcs.ctype = ["LINEAR", "LINEAR"]
+    wcs_g.wcs.ctype = ["LINEAR", "LINEAR"]
+
+    wcs_d.wcs.cunit = ["mm", "mm"]
+    wcs_d.wcs.crpix = wcs_0.wcs.crpix
+    wcs_d.wcs.cdelt = [1., 1.]
+
+    wcs_g.wcs.cunit = ["kpc", "kpc"]
+    wcs_g.wcs.crpix = wcs_0.wcs.crpix
+    wcs_g.wcs.cdelt = [1., 1.]
+    hdu.header.update(wcs_0.to_header())
+    hdu.header.update(wcs_d.to_header())
+    hdu.header.update(wcs_g.to_header())
+
+    return hdu
