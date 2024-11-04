@@ -111,7 +111,7 @@ class ADConversion(Effect):
         if self.cmds is None:
             logger.warning("Cannot access cmds for ADConversion effect.")
             return True
-
+        print(f"AUTOEXPSET: {self.cmds.get("!OBS.autoexpset", False)}")
         # ..todo: need to deal with this case more realistically
         if self.cmds.get("!OBS.autoexpset", False):
             logger.info("DIT, NDIT determined by AutoExposure -> "
@@ -129,7 +129,6 @@ class ADConversion(Effect):
         if not isinstance(obj, DetectorBase):
             return obj
 
-        print("Applying ADConversion")
         if not self._should_apply():
             new_dtype = np.float32
         else:
