@@ -534,8 +534,8 @@ def rescale_imagehdu(imagehdu: fits.ImageHDU, pixel_scale: float,
 
         # Keep CDELT3 if cube...
         new_cdelt = ww.wcs.cdelt[:]
-        new_cdelt[0] = pixel_scale
-        new_cdelt[1] = pixel_scale
+        # FIX: when multiple wcs processed, cannot set new cdelt in all to 'pixel scale'
+        new_cdelt /= zoom
         ww.wcs.cdelt = new_cdelt
 
         # TODO: is forcing deg here really the best way?
