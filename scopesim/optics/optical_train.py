@@ -451,8 +451,8 @@ class OpticalTrain:
         for i, detector_array in enumerate(self.detector_managers):
             array_effects = self.optics_manager.detector_array_effects
             dtcr_effects = self.optics_manager.detector_effects
-            hdul = detector_array.readout(self.image_planes, array_effects,
-                                         dtcr_effects, **kwargs)
+            hdul = detector_array.readout(
+                self.image_planes, array_effects, dtcr_effects)
 
             fits_effects = self.optics_manager.get_all(ExtraFitsKeywords)
             if len(fits_effects) > 0:
