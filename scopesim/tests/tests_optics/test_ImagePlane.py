@@ -12,7 +12,7 @@ import scopesim.optics.image_plane as opt_imp
 import scopesim.optics.image_plane_utils as imp_utils
 
 from scopesim.tests.mocks.py_objects.imagehdu_objects import \
-    _image_hdu_square, _image_hdu_rect
+    _image_hdu_square, _image_hdu_rect, _image_hdu_three_wcs
 
 import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm
@@ -40,6 +40,9 @@ def image_hdu_square():
 def image_hdu_square_mm():
     return _image_hdu_square("D")
 
+@pytest.fixture(scope="function")
+def image_hdu_three_wcs():
+    return _image_hdu_three_wcs()
 
 @pytest.fixture(scope="function")
 def input_table():
@@ -657,7 +660,7 @@ class TestReorientImageHDU:
 
 
 class TestRescaleImageHDU:
-    @pytest.mark.parametrize("pixel_scale", [0.1, 0.2, 1, 2])
+    @pytest.mark.parametrize("pixel_scale", [0.1, 0.237, 1, 2])
     def test_flux_remains_constant(self, image_hdu_rect, pixel_scale):
         orig_sum = np.sum(image_hdu_rect.data)
         new_hdu = imp_utils.rescale_imagehdu(image_hdu_rect,
@@ -666,7 +669,7 @@ class TestRescaleImageHDU:
 
         assert new_sum == approx(orig_sum)
 
-    @pytest.mark.parametrize("pixel_scale", [0.1, 0.2, 1, 2])
+    @pytest.mark.parametrize("pixel_scale", [0.1, 0.237, 1, 2])
     def test_mm_flux_remains_constant(self, image_hdu_rect_mm, pixel_scale):
         orig_sum = np.sum(image_hdu_rect_mm.data)
         new_hdu = imp_utils.rescale_imagehdu(image_hdu_rect_mm, pixel_scale,
@@ -674,6 +677,28 @@ class TestRescaleImageHDU:
         new_sum = np.sum(new_hdu.data)
 
         assert new_sum == approx(orig_sum)
+
+    @pytest.mark.parametrize("pixel_scale", [0.1, 0.237, 1, 2])
+    def test_wcs_cdelt_scaled_correctly(self, image_hdu_three_wcs, pixel_scale):
+        wcses = wcs.find_all_wcs(image_hdu_three_wcs.header)
+        # this relies on find_all_wcs() sorting suffixes alphabetically
+        fact = pixel_scale / wcses[0].wcs.cdelt[0]
+
+        new_hdu = imp_utils.rescale_imagehdu(image_hdu_three_wcs, pixel_scale)
+        new_wcses = wcs.find_all_wcs(new_hdu.header)
+        assert new_wcses[0].wcs.cdelt[0] == pixel_scale
+        assert new_wcses[0].wcs.cdelt[0] / fact == approx(wcses[0].wcs.cdelt[0])
+        assert new_wcses[0].wcs.cdelt[1] / fact == approx(wcses[0].wcs.cdelt[1])
+        assert new_wcses[1].wcs.cdelt[0] / fact == approx(wcses[1].wcs.cdelt[0])
+        assert new_wcses[1].wcs.cdelt[1] / fact == approx(wcses[1].wcs.cdelt[1])
+        assert new_wcses[2].wcs.cdelt[0] / fact == approx(wcses[2].wcs.cdelt[0])
+        assert new_wcses[2].wcs.cdelt[1] / fact == approx(wcses[2].wcs.cdelt[1])
+
+    def test_rescale_works_on_nondefault_wcs(self, image_hdu_three_wcs):
+        pixel_scale = 2 * u.cm
+        new_hdu = imp_utils.rescale_imagehdu(image_hdu_three_wcs,
+                                             pixel_scale, "D")
+        assert new_hdu.header['CDELT1D'] == 20
 
 
 ###############################################################################

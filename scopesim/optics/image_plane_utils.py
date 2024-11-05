@@ -5,7 +5,7 @@ from collections.abc import Iterable
 
 import numpy as np
 from astropy import units as u
-from astropy.wcs import WCS
+from astropy.wcs import WCS, find_all_wcs
 from astropy.io import fits
 from astropy.table import Table
 from astropy.utils.exceptions import AstropyWarning
@@ -453,7 +453,7 @@ def overlay_image(small_im, big_im, coords, mask=None, sub_pixel=False):
     return big_im
 
 
-def rescale_imagehdu(imagehdu: fits.ImageHDU, pixel_scale: float,
+def rescale_imagehdu(imagehdu: fits.ImageHDU, pixel_scale: float | u.Quantity,
                      wcs_suffix: str = "", conserve_flux: bool = True,
                      spline_order: int = 1) -> fits.ImageHDU:
     """
@@ -464,9 +464,12 @@ def rescale_imagehdu(imagehdu: fits.ImageHDU, pixel_scale: float,
     Parameters
     ----------
     imagehdu : fits.ImageHDU
-    pixel_scale : float
-        [deg] NOT to be passed as a Quantity
+    pixel_scale : float or Quantity
+        the desired pixel scale of the scaled ImageHDU, as applicable to the WCS
+        identified by `wcs_suffix` (by default " "). If float the units are assumed
+        to be the same as CUNITa; if a Quantity, the unit need to be convertible.
     wcs_suffix : str
+        identifier of the WCS to use for rescaling, By default, this is " ".
 
     conserve_flux : bool
 
@@ -479,12 +482,13 @@ def rescale_imagehdu(imagehdu: fits.ImageHDU, pixel_scale: float,
     imagehdu : fits.ImageHDU
 
     """
-    # WCS needs single space as key for default wcs
+    # Identify the wcs to which pixel_scale refers to and determine the zoom factor
     wcs_suffix = wcs_suffix or " "
     primary_wcs = WCS(imagehdu.header, key=wcs_suffix[0])
 
-    # making sure all are positive
-    zoom = np.abs(primary_wcs.wcs.cdelt / pixel_scale)
+    # make sure that units are correct and zoom factor is positive
+    pixel_scale = pixel_scale << u.Unit(primary_wcs.wcs.cunit[0])
+    zoom = np.abs(primary_wcs.wcs.cdelt / pixel_scale.value)
 
     if primary_wcs.naxis == 3:
         # zoom = np.append(zoom, [1])
@@ -502,7 +506,8 @@ def rescale_imagehdu(imagehdu: fits.ImageHDU, pixel_scale: float,
         return imagehdu
 
     sum_orig = np.sum(imagehdu.data)
-    # Not sure why the reverse order is necessary here
+
+    # Perform the rescaling. Axes need to be inverted because python.
     new_im = ndi.zoom(imagehdu.data, zoom[::-1], order=spline_order)
 
     if conserve_flux:
@@ -513,29 +518,27 @@ def rescale_imagehdu(imagehdu: fits.ImageHDU, pixel_scale: float,
 
     imagehdu.data = new_im
 
-    for key in wcs_suffix:
-        # TODO: can this be done with astropy wcs sub-wcs? or wcs.find_all_wcs?
-        ww = WCS(imagehdu.header, key=key)
-
+    # Rescale all WCSs in the header
+    wcses = find_all_wcs(imagehdu.header)
+    for ww in wcses:
         if ww.naxis != imagehdu.data.ndim:
             logger.warning("imagehdu.data.ndim is %d, but wcs.naxis with key "
                            "%s is %d, both should be equal.",
-                           imagehdu.data.ndim, key, ww.naxis)
+                           imagehdu.data.ndim, ww.wcs.alt, ww.naxis)
             # TODO: could this be ww = ww.sub(2) instead? or .celestial?
-            ww = WCS(imagehdu.header, key=key, naxis=imagehdu.data.ndim)
+            # ww = WCS(imagehdu.header, key=key, naxis=imagehdu.data.ndim)
 
         if any(ctype != "LINEAR" for ctype in ww.wcs.ctype):
             logger.warning("Non-linear WCS rescaled using linear procedure.")
 
         new_crpix = (zoom + 1) / 2 + (ww.wcs.crpix - 1) * zoom
-        new_crpix = np.round(new_crpix * 2) / 2  # round to nearest half-pixel
+        #ew_crpix = np.round(new_crpix * 2) / 2  # round to nearest half-pixel
         logger.debug("new crpix %s", new_crpix)
         ww.wcs.crpix = new_crpix
 
         # Keep CDELT3 if cube...
         new_cdelt = ww.wcs.cdelt[:]
-        new_cdelt[0] = pixel_scale
-        new_cdelt[1] = pixel_scale
+        new_cdelt /= zoom
         ww.wcs.cdelt = new_cdelt
 
         # TODO: is forcing deg here really the best way?

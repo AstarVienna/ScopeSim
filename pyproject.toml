@@ -92,6 +92,7 @@ filterwarnings = [
     "ignore:invalid value encountered in multiply:RuntimeWarning",
     "ignore:invalid value encountered in divide:RuntimeWarning",
     "ignore:Cannot merge meta key.*:astropy.utils.metadata.MergeConflictWarning",
+    "ignore::astropy.wcs.wcs.FITSFixedWarning",
     "default:The fov_grid*:DeprecationWarning",
     # Raised when saving fits files, not so important to fix:
     "ignore:.*a HIERARCH card will be created.*:astropy.io.fits.verify.VerifyWarning",
