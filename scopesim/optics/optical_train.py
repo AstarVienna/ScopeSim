@@ -418,9 +418,34 @@ class OpticalTrain:
 
         # Hack to make sure AutoExposure and Quantization work properly.
         # Should probably be removed once #428 is fixed properly.
-        if kwargs.get('exptime', None) is not None:
-            self.cmds.pop("!OBS.dit", None)
-            self.cmds.pop("!OBS.ndit", None)
+        # if kwargs.get('exptime', None) is not None:
+        #     # self.cmds.pop("!OBS.dit", None)
+        #     # self.cmds.pop("!OBS.ndit", None)
+        #     self.cmds["!OBS.dit"] = None
+        #     self.cmds["!OBS.ndit"] = None
+        # TODO: This is still hacky but seems to work for now...
+        params = {"exptime": None}
+        params.update(kwargs)
+        if params["exptime"] is not None and params.get("dit") is None:
+            params.update(
+                dit=None,
+                ndit=None,
+            )
+        else:
+            params.update(
+                exptime=params.get("exptime") or self.cmds.get("!OBS.exptime"),
+                dit=params.get("dit") or self.cmds.get("!OBS.dit"),
+                ndit=params.get("ndit") or self.cmds.get("!OBS.ndit"),
+            )
+
+        for key, value in params.items():
+            if is_bangkey(key):
+                # skip if already explicitly !ABC.xyz
+                logger.debug("%s: %s given in kwargs", key, value)
+                continue
+            # otherwise fallback to !OBS
+            logger.debug("%s: %s given in kwargs, put in !OBS", key, value)
+            self.cmds[f"!OBS.{key}"] = value
 
         hduls = []
         for i, detector_array in enumerate(self.detector_managers):
