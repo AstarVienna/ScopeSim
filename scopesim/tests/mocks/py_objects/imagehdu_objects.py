@@ -7,8 +7,7 @@ def _image_hdu_square(wcs_suffix=""):
     width = 100
     the_wcs = wcs.WCS(naxis=2, key=wcs_suffix)
     if wcs_suffix == "":
-        # the_wcs.wcs.ctype = ["RA---TAN", "DEC--TAN"]
-        the_wcs.wcs.ctype = ["LINEAR", "LINEAR"]
+        the_wcs.wcs.ctype = ["RA---TAN", "DEC--TAN"]
         the_wcs.wcs.cunit = ["arcsec", "arcsec"]
     elif wcs_suffix == "D":
         the_wcs.wcs.ctype = ["LINEAR", "LINEAR"]
@@ -55,8 +54,6 @@ def _image_hdu_three_wcs():
     hdu = _image_hdu_square()
 
     wcs_0 = wcs.WCS(hdu.header)
-    wcs_0.wcs.ctype = ["RA---TAN", "DEC--TAN"]
-
     wcs_d = wcs.WCS(naxis=2, key="D")
     wcs_g = wcs.WCS(naxis=2, key="G")
 
