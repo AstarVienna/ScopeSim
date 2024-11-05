@@ -228,29 +228,29 @@ class TestOverlayImage:
 
 
 class TestRescaleImageHDU:
-    @pytest.mark.parametrize("scale_factor", [0.3, 0.5, 1, 2, 3])
-    def test_rescales_a_2D_imagehdu(self, scale_factor):
+    @pytest.mark.parametrize("pixel_scale", [0.3, 0.5, 1, 2, 3])
+    def test_rescales_a_2D_imagehdu(self, pixel_scale):
         hdu0 = imo._image_hdu_rect()
-        hdu1 = imp_utils.rescale_imagehdu(deepcopy(hdu0), scale_factor)#/3600)
+        hdu1 = imp_utils.rescale_imagehdu(deepcopy(hdu0), pixel_scale)#/3600)
 
         hdr0 = hdu0.header
         hdr1 = hdu1.header
 
-        assert hdr1["NAXIS1"] == np.ceil(hdr0["NAXIS1"] / scale_factor)
-        assert hdr1["NAXIS2"] == np.ceil(hdr0["NAXIS2"] / scale_factor)
+        assert hdr1["NAXIS1"] == np.ceil(hdr0["NAXIS1"] / pixel_scale)
+        assert hdr1["NAXIS2"] == np.ceil(hdr0["NAXIS2"] / pixel_scale)
 
-    @pytest.mark.parametrize("scale_factor", [0.3, 0.5, 1, 2, 3])
-    def test_rescales_a_3D_imagehdu(self, scale_factor):
+    @pytest.mark.parametrize("pixel_scale", [0.3, 0.5, 1, 2, 3])
+    def test_rescales_a_3D_imagehdu(self, pixel_scale):
         hdu0 = imo._image_hdu_rect()
         hdu0.data = hdu0.data[None, :, :] * np.ones(5)[:, None, None]
-        hdu1 = imp_utils.rescale_imagehdu(deepcopy(hdu0), scale_factor)#/3600)
+        hdu1 = imp_utils.rescale_imagehdu(deepcopy(hdu0), pixel_scale)#/3600)
 
         hdr0 = hdu0.header
         hdr1 = hdu1.header
 
         assert np.sum(hdu0.data) == approx(np.sum(hdu1.data))
-        assert hdr1["NAXIS1"] == np.ceil(hdr0["NAXIS1"] / scale_factor)
-        assert hdr1["NAXIS2"] == np.ceil(hdr0["NAXIS2"] / scale_factor)
+        assert hdr1["NAXIS1"] == np.ceil(hdr0["NAXIS1"] / pixel_scale)
+        assert hdr1["NAXIS2"] == np.ceil(hdr0["NAXIS2"] / pixel_scale)
         assert hdr1["NAXIS3"] == hdr0["NAXIS3"]
 
 
