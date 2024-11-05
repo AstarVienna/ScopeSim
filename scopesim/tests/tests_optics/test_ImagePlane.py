@@ -660,7 +660,7 @@ class TestReorientImageHDU:
 
 
 class TestRescaleImageHDU:
-    @pytest.mark.parametrize("pixel_scale", [0.1, 0.2, 1, 2])
+    @pytest.mark.parametrize("pixel_scale", [0.1, 0.237, 1, 2])
     def test_flux_remains_constant(self, image_hdu_rect, pixel_scale):
         orig_sum = np.sum(image_hdu_rect.data)
         new_hdu = imp_utils.rescale_imagehdu(image_hdu_rect,
@@ -669,7 +669,7 @@ class TestRescaleImageHDU:
 
         assert new_sum == approx(orig_sum)
 
-    @pytest.mark.parametrize("pixel_scale", [0.1, 0.2, 1, 2])
+    @pytest.mark.parametrize("pixel_scale", [0.1, 0.237, 1, 2])
     def test_mm_flux_remains_constant(self, image_hdu_rect_mm, pixel_scale):
         orig_sum = np.sum(image_hdu_rect_mm.data)
         new_hdu = imp_utils.rescale_imagehdu(image_hdu_rect_mm, pixel_scale,
@@ -678,7 +678,7 @@ class TestRescaleImageHDU:
 
         assert new_sum == approx(orig_sum)
 
-    @pytest.mark.parametrize("pixel_scale", [0.1, 0.2, 1, 2])
+    @pytest.mark.parametrize("pixel_scale", [0.1, 0.237, 1, 2])
     def test_wcs_cdelt_scaled_correctly(self, image_hdu_three_wcs, pixel_scale):
         wcses = wcs.find_all_wcs(image_hdu_three_wcs.header)
         # this relies on find_all_wcs() sorting suffixes alphabetically
