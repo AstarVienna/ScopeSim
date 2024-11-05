@@ -14,6 +14,8 @@ from tqdm.auto import tqdm
 from synphot import SourceSpectrum, Empirical1D
 from synphot.units import PHOTLAM
 
+from astar_utils.nested_mapping import RecursiveNestedMapping, is_bangkey, recursive_update
+
 from .optics_manager import OpticsManager
 from .fov_manager import FOVManager
 from .image_plane import ImagePlane
@@ -137,7 +139,12 @@ class OpticalTrain:
             raise ValueError("user_commands must be a UserCommands or str object "
                              f"but is {type(user_commands)}")
 
+        # HACK: The clean solution of new_child doesn't work because all the
+        #       extras of UserCommands like yaml_dicts and so on are not
+        #       passed to the new instance. Ideally fix that at some point...
+        # self.cmds = user_commands.new_child(RecursiveNestedMapping(title="CurrObs"))
         self.cmds = user_commands
+        self.cmds.maps = [RecursiveNestedMapping(title="CurrObs"), *self.cmds.maps]
         # FIXME: Setting rc.__currsys__ to user_commands causes many problems:
         #        UserCommands used NestedMapping internally, but is itself not
         #        an instance or subclas thereof. So rc.__currsys__ actually
@@ -173,6 +180,20 @@ class OpticalTrain:
                              for hdr in opt_man.image_plane_headers]
         self.detector_managers = [DetectorManager(det_list, cmds=self.cmds, **kwargs)
                                 for det_list in opt_man.detector_setup_effects]
+
+        # Move everything from CurrObs to CurrSys, so CurrObs is clean for
+        # .observe and .readout. This is necessary because the setup and
+        # potentially update need to be able to modify CurrSys, but CurrObs
+        # needs to be already in place when creating e.g. effects, but then
+        # writing to cmds will always use CurrObs. The alternative is manually
+        # writing to cmds.maps[1] everywhere during the setup, but these two
+        # lines make sure everything does indeed go into CurrSys.
+        # self.cmds.maps[1].update(self.cmds.maps[0])
+        # self.cmds.maps[0].clear()
+        # HACK: recursive_update is needed to avoid overwriting emtpy !ABCs
+        # TODO: or is it??
+        self.cmds.maps[1].dic = recursive_update(self.cmds.maps[1].dic, self.cmds.maps[0].dic)
+        self.cmds.maps[0].dic.clear()
 
     @top_level_catch
     def observe(self, orig_source=None, update=True, **kwargs):
@@ -373,7 +394,7 @@ class OpticalTrain:
         return source
 
     @top_level_catch
-    def readout(self, filename=None, **kwargs):
+    def readout(self, filename=None, reset=True, **kwargs):
         """
         Produce detector readouts for the observed image.
 
@@ -392,6 +413,8 @@ class OpticalTrain:
         - Apply detector plane (0D, 2D) effects - z_order = 500..599
 
         """
+        if reset:
+            self.cmds.clear()
 
         # Hack to make sure AutoExposure and Quantization work properly.
         # Should probably be removed once #428 is fixed properly.
