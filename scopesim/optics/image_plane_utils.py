@@ -453,7 +453,7 @@ def overlay_image(small_im, big_im, coords, mask=None, sub_pixel=False):
     return big_im
 
 
-def rescale_imagehdu(imagehdu: fits.ImageHDU, pixel_scale: float,
+def rescale_imagehdu(imagehdu: fits.ImageHDU, pixel_scale: float | u.Quantity,
                      wcs_suffix: str = "", conserve_flux: bool = True,
                      spline_order: int = 1) -> fits.ImageHDU:
     """
