@@ -163,10 +163,11 @@ class OpticsManager:
         - Apply lambda-independent 2D image plane effects - z_order = 700..799
         - Apply detector effects - z_order = 800..899
         - Apply detector array effects - z_order = 900..999
+        - Apply FITS header effects - z_order = 1000...1100
 
         Parameters
         ----------
-        z_level : {0, 100, 200, 300, 400, 500, 600, 700, 800, 900}
+        z_level : {0, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000}
             100-range of z_orders.
 
         Returns
@@ -197,6 +198,11 @@ class OpticsManager:
             raise ValueError("No DetectorList objects found.")
 
         return [det_list.image_plane_header for det_list in detector_lists]
+
+    @property
+    def fits_header_effects(self):
+        """Get effects with z_order = 1000...1099."""
+        return self.get_z_order_effects(1000)
 
     @property
     def detector_array_effects(self):

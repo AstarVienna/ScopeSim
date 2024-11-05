@@ -225,7 +225,7 @@ class ExtraFitsKeywords(Effect):
 
     """
 
-    z_order: ClassVar[tuple[int, ...]] = (999,)
+    z_order: ClassVar[tuple[int, ...]] = (1050,)
 
     def __init__(self, cmds=None, **kwargs):
         # don't pass kwargs, as DataContainer can't handle yaml files
@@ -432,7 +432,7 @@ class EffectsMetaKeywords(ExtraFitsKeywords):
 
     """
 
-    z_order: ClassVar[tuple[int, ...]] = (998,)
+    z_order: ClassVar[tuple[int, ...]] = (1040,)
 
     def __init__(self, cmds=None, **kwargs):
         super(ExtraFitsKeywords, self).__init__(cmds=cmds, **kwargs)
@@ -520,7 +520,7 @@ class SourceDescriptionFitsKeywords(ExtraFitsKeywords):
 
     """
 
-    z_order: ClassVar[tuple[int, ...]] = (997,)
+    z_order: ClassVar[tuple[int, ...]] = (1030,)
 
     def __init__(self,  cmds=None, **kwargs):
         super(ExtraFitsKeywords, self).__init__(cmds=cmds, **kwargs)
@@ -605,7 +605,7 @@ class SimulationConfigFitsKeywords(ExtraFitsKeywords):
 
     """
 
-    z_order: ClassVar[tuple[int, ...]] = (996,)
+    z_order: ClassVar[tuple[int, ...]] = (1020,)
 
     def __init__(self, cmds=None, **kwargs):
         super(ExtraFitsKeywords, self).__init__(cmds=cmds, **kwargs)
