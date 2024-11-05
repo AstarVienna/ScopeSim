@@ -136,6 +136,9 @@ def deriv_polynomial2d(poly):
 
 def _get_required_packages():
     reqs = metadata.requires(__package__)
+    # metadata.requires can return None if the package metadata cannot be found
+    if reqs is None:
+        return []
     for req in reqs:
         # Only include non-extra packages
         if "extra" in req:
