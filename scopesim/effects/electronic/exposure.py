@@ -202,6 +202,7 @@ class SummedExposure(Effect):
 
         dit = from_currsys(self.meta["dit"], self.cmds)
         ndit = from_currsys(self.meta["ndit"], self.cmds)
+        logger.debug("S.E.: DIT = %s s, NDIT = %s", dit, ndit)
         # TODO: Remove this silly try-except once currsys works properly...
         # TODO: Check the following case: dit, ndit None in kwargs, but
         #       exptime set and AutoExp sets dit, ndit in !OBS (but not kwargs)
