@@ -8,6 +8,8 @@ from astropy.io import fits
 from astropy import units as u
 from astropy.table import Table
 
+from astar_utils.nested_mapping import recursive_update
+
 from . import Effect
 from ..source.source_fields import HDUSourceField, TableSourceField
 from ..utils import from_currsys, find_file
@@ -616,7 +618,7 @@ class SimulationConfigFitsKeywords(ExtraFitsKeywords):
             # TODO: Improve this at some point.....
             cmds = deepcopy(opt_train.cmds.maps[-1].dic)
             for m in opt_train.cmds.maps[-2::-1]:
-                cmds |= deepcopy(m.dic)
+                cmds = recursive_update(cmds, m.dic)
 
             sim_prefix = self.meta["keyword_prefix"]
             resolve_prefix = "unresolved_" if not self.meta["resolve"] else ""
