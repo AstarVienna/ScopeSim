@@ -678,18 +678,27 @@ class TestRescaleImageHDU:
 
         assert new_sum == approx(orig_sum)
 
-    @pytest.mark.parametrize("pixel_scale", [0.1])#, 0.2, 1, 2])
+    @pytest.mark.parametrize("pixel_scale", [0.1, 0.2, 1, 2])
     def test_wcs_cdelt_scaled_correctly(self, image_hdu_three_wcs, pixel_scale):
         wcses = wcs.find_all_wcs(image_hdu_three_wcs.header)
-
-        scalefactor = pixel_scale / wcses[0].wcs.cdelt[0]
+        # this relies on find_all_wcs() sorting suffixes alphabetically
+        fact = pixel_scale / wcses[0].wcs.cdelt[0]
 
         new_hdu = imp_utils.rescale_imagehdu(image_hdu_three_wcs, pixel_scale)
         new_wcses = wcs.find_all_wcs(new_hdu.header)
-        assert(all(new_wcses[0].wcs.cdelt / scalefactor == wcses[0].wcs.cdelt))
-        assert(all(new_wcses[1].wcs.cdelt / scalefactor == wcses[1].wcs.cdelt))
-        assert(all(new_wcses[2].wcs.cdelt / scalefactor == wcses[2].wcs.cdelt))
+        assert new_wcses[0].wcs.cdelt[0] == pixel_scale
+        assert new_wcses[0].wcs.cdelt[0] / fact == approx(wcses[0].wcs.cdelt[0])
+        assert new_wcses[0].wcs.cdelt[1] / fact == approx(wcses[0].wcs.cdelt[1])
+        assert new_wcses[1].wcs.cdelt[0] / fact == approx(wcses[1].wcs.cdelt[0])
+        assert new_wcses[1].wcs.cdelt[1] / fact == approx(wcses[1].wcs.cdelt[1])
+        assert new_wcses[2].wcs.cdelt[0] / fact == approx(wcses[2].wcs.cdelt[0])
+        assert new_wcses[2].wcs.cdelt[1] / fact == approx(wcses[2].wcs.cdelt[1])
 
+    def test_rescale_works_on_nondefault_wcs(self, image_hdu_three_wcs):
+        pixel_scale = 2 * u.cm
+        new_hdu = imp_utils.rescale_imagehdu(image_hdu_three_wcs,
+                                             pixel_scale, "D")
+        assert new_hdu.header['CDELT1D'] == 20
 
 
 ###############################################################################
