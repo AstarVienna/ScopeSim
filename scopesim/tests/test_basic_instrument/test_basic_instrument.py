@@ -114,6 +114,32 @@ class TestObserveSpectroscopyMode:
             trace_flux = det_im[:, sl].sum()     # sum along a trace
             assert round(trace_flux / spot_flux) == n
 
+@pytest.mark.usefixtures("protect_currsys", "patch_all_mock_paths")
+class TestSourceImageNotAffected:
+    """
+    Test that an ImageHDU source object is not altered during a (spectroscopic) observation
+    where the source is applied to multiple FOVs via FieldOfView._make_cube_imagefields()
+    """
+
+    def test_runs(self):
+        src = st.uniform_source()
+        src_int = np.mean(src.fields[0].field.data) # original source image intensity
+
+        cmd = sim.UserCommands(
+            use_instrument="basic_instrument",
+            set_modes=["spectroscopy"],
+            ignore_effects=SWITCHOFF,
+        )
+        opt = sim.OpticalTrain(cmd)
+
+        opt.observe(src)
+
+        # iterated through multiple FOVs?
+        assert len(opt.fov_manager.fovs) > 1
+        # source and fov.field objects not altered by observe()?
+        assert np.mean(src.fields[0].field.data) == src_int
+        assert np.mean(opt.fov_manager.fovs[0].fields[0].data) == src_int
+
 
 @pytest.mark.usefixtures("protect_currsys", "patch_all_mock_paths")
 class TestObserveIfuMode:
