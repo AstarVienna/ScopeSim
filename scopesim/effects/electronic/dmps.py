@@ -71,6 +71,7 @@ class DetectorModePropertiesSetter(Effect):
         self.mode_properties = kwargs["mode_properties"]
 
     def apply_to(self, obj, **kwargs):
+        print("Entering DetectorModePropertiesSetter.apply_to")
         mode_name = kwargs.get("detector_readout_mode",
                                from_currsys("!OBS.detector_readout_mode",
                                             self.cmds))
@@ -83,6 +84,7 @@ class DetectorModePropertiesSetter(Effect):
         self.cmds["!OBS.detector_readout_mode"] = mode_name
         for key, value in props_dict.items():
             self.cmds[key] = value
+            print(key, value)
 
         return obj
 
