@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "ScopeSim"
-version = "0.9.0b0"
+version = "0.9.0b1"
 description = "Generalised telescope observation simulator"
 license = "GPL-3.0-or-later"
 authors = ["Kieran Leschinski <kieran.leschinski@unive.ac.at>"]
@@ -79,6 +79,7 @@ build-backend = "poetry.core.masonry.api"
 addopts = "--strict-markers"
 markers = [
     "webtest: marks tests as requiring network (deselect with '-m \"not webtest\"')",
+    "slow: marks tests that take a while (deselect with '-m \"not slow\"')",
 ]
 filterwarnings = [
     "error",
