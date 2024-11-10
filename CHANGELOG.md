@@ -1,3 +1,48 @@
+# Version 0.9.0
+**2024-10-11**
+
+> [!IMPORTANT]
+> The minimum required Python version for this package is now **3.10** (see Dependency Changes).
+> Python 3.13 is currently not supported as it causes issues on some platforms that are not yet fully understood. We are currently working on fixing 3.13 support.
+
+
+## What's Changed
+### API Changes
+* ScopeSimple by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/426
+* Make `DataContainer` an attribute of `Effect` by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/482
+### New Features or Improvements
+* Replace NaNs in images, log warning by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/466
+* Make observe work with no source (empty field) by @oczoske in https://github.com/AstarVienna/ScopeSim/pull/483
+* Add a new top level to CMDS nested mapping to store current simulation run settings by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/493
+### Dependency Changes
+* Bump actions/download-artifact from 3 to 4.1.7 in /.github/workflows by @dependabot in https://github.com/AstarVienna/ScopeSim/pull/465
+* Drop support for Python 3.9 by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/471
+* Bump some dependency versions by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/472
+* Use sphinx-book-theme for RTD by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/473
+* Bump two dependencies, use tqdm.auto by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/477
+* Bump scipy from 1.11.4 to 1.14.1 and httpx from 0.23.0 to 0.26.0 by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/480
+* Remove skycalc_cli from dependencies by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/481
+* Bump notebook from 7.0.7 to 7.2.2 by @dependabot in https://github.com/AstarVienna/ScopeSim/pull/486
+* Limit supported Python version to 3.10 <= x < 3.13 by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/497
+### Documentation Improvements
+* Update source_from_images.ipynb by @hugobuddel in https://github.com/AstarVienna/ScopeSim/pull/469
+* Update example notebook to properly show the same observation by @hugobuddel in https://github.com/AstarVienna/ScopeSim/pull/476
+### Other Changes
+* Add `SourceField` and subclasses, rework `Source` by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/405
+* Some small improvement, mostly focused on numpy by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/467
+* Don't fail on symlinks for packages path by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/474
+* Cleanup `DataContainer` in preparation for Effect refactoring by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/478
+* Fix Poisson NaN bug and clarify by @hugobuddel in https://github.com/AstarVienna/ScopeSim/pull/484
+* Source object data scaling fix by @janusbrink in https://github.com/AstarVienna/ScopeSim/pull/485
+* Workaround for #491 metadata.requires can return None by @hugobuddel in https://github.com/AstarVienna/ScopeSim/pull/492
+* Fixed cdelt calculation when scaling an imageHDU by @janusbrink in https://github.com/AstarVienna/ScopeSim/pull/490
+
+## New Contributors
+* @janusbrink made their first contribution in https://github.com/AstarVienna/ScopeSim/pull/485
+
+**Full Changelog**: https://github.com/AstarVienna/ScopeSim/compare/v0.8.4...v0.9.0
+
+
 # Version 0.8.4
 **2024-08-29**
 
