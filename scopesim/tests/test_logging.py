@@ -25,8 +25,7 @@ def reload_scopesim():
 
 @pytest.mark.usefixtures("reload_scopesim")
 def test_loggers_are_configured():
-    log_dict = sim.rc.__config__["!SIM.logging"]
-    base_logger_dict = log_dict["loggers"]["astar"]
+    base_logger_dict = sim.rc.__logging_config__["loggers"]["astar"]
 
     base_logger = logging.getLogger("astar")
     sim_logger = base_logger.getChild("scopesim")
