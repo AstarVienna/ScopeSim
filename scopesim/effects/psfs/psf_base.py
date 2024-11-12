@@ -8,8 +8,9 @@ from astropy import units as u
 
 from ..effects import Effect
 from ...base_classes import ImagePlaneBase, FieldOfViewBase, FOVSetupBase
-from ...utils import from_currsys, quantify, figure_factory
+from ...utils import from_currsys, quantify, figure_factory, get_logger
 
+logger = get_logger(__name__)
 
 class PoorMansFOV:
     def __init__(self, pixel_scale, spec_dict, recursion_call=False):
@@ -54,6 +55,7 @@ class PSF(Effect):
         """Apply the PSF."""
         # 1. During setup of the FieldOfViews
         if isinstance(obj, FOVSetupBase) and self._waveset is not None:
+            logger.debug("Executing %s, FoV setup", self.meta['name'])
             waveset = self._waveset
             if len(waveset) != 0:
                 waveset_edges = 0.5 * (waveset[:-1] + waveset[1:])
@@ -61,6 +63,7 @@ class PSF(Effect):
 
         # 2. During observe: convolution
         elif isinstance(obj, self.convolution_classes):
+            logger.debug("Executing %s, convolution", self.meta['name'])
             if ((hasattr(obj, "fields") and len(obj.fields) > 0) or
                     (obj.hdu is not None)):
                 kernel = self.get_kernel(obj).astype(float)
