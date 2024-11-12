@@ -157,7 +157,11 @@ class UserCommands(NestedChainMap):
     def __init__(self, *maps, **kwargs):
         if not maps:
             maps = [rc.__config__]
-        super().__init__(RecursiveNestedMapping(title="CurrSys"), *maps)
+        if not any(getattr(_map, "title", "") == "CurrSys" for _map in maps):
+            # Don't add another layer when .new_child() is called.
+            maps = [RecursiveNestedMapping(title="CurrSys"), *maps]
+
+        super().__init__(*maps)
 
         self.yaml_dicts = []
         # HACK: the deepcopy is necessary because otherwise some subdicts

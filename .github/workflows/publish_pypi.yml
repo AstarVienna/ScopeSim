@@ -18,7 +18,7 @@ jobs:
           python-version: "3.11"
 
       - name: Set up Poetry
-        uses: abatilo/actions-poetry@v2
+        uses: abatilo/actions-poetry@v3
         with:
           poetry-version: "1.8.3"
 
@@ -29,7 +29,7 @@ jobs:
         run: poetry build >> $GITHUB_STEP_SUMMARY
 
       - name: Store distribution files
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: distribution
           path: dist/
@@ -59,7 +59,7 @@ jobs:
           python-version: "3.11"
 
       - name: Set up Poetry
-        uses: abatilo/actions-poetry@v2
+        uses: abatilo/actions-poetry@v3
         with:
           poetry-version: "1.8.3"
 
