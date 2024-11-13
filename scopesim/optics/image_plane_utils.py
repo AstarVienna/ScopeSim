@@ -531,6 +531,7 @@ def rescale_imagehdu(imagehdu: fits.ImageHDU, pixel_scale: float | u.Quantity,
         if any(ctype != "LINEAR" for ctype in ww.wcs.ctype):
             logger.warning("Non-linear WCS rescaled using linear procedure.")
 
+        logger.debug("old crpix %s", ww.wcs.crpix)
         new_crpix = (zoom + 1) / 2 + (ww.wcs.crpix - 1) * zoom
         #ew_crpix = np.round(new_crpix * 2) / 2  # round to nearest half-pixel
         logger.debug("new crpix %s", new_crpix)
