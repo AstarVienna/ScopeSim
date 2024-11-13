@@ -2090,13 +2090,13 @@ files = [
 
 [[package]]
 name = "more-itertools"
-version = "10.1.0"
+version = "10.2.0"
 description = "More routines for operating on iterables, beyond itertools"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "more-itertools-10.1.0.tar.gz", hash = "sha256:626c369fa0eb37bac0291bce8259b332fd59ac792fa5497b59837309cd5b114a"},
-    {file = "more_itertools-10.1.0-py3-none-any.whl", hash = "sha256:64e0735fcfdc6f3464ea133afe8ea4483b1c5fe3a3d69852e6503b43a0b222e6"},
+    {file = "more-itertools-10.2.0.tar.gz", hash = "sha256:8fccb480c43d3e99a00087634c06dd02b0d50fbf088b380de5a41a015ec239e1"},
+    {file = "more_itertools-10.2.0-py3-none-any.whl", hash = "sha256:686b06abe565edfab151cb8fd385a05651e1fdf8f0a14191e4439283421f8684"},
 ]
 
 [[package]]
@@ -2668,20 +2668,21 @@ tests = ["pytest"]
 
 [[package]]
 name = "pyckles"
-version = "0.2"
+version = "0.4.0"
 description = "Simple interface to the Pickles 1998 stellar spectra catalogue"
 optional = false
-python-versions = "*"
+python-versions = "<4.0,>=3.10"
 files = [
-    {file = "pyckles-0.2-py3-none-any.whl", hash = "sha256:24b46a171b3c92a4863c9d791b12c15b8eb4e8f03fb61f7c62c205a9e87477c0"},
-    {file = "pyckles-0.2.tar.gz", hash = "sha256:82faf9dfa1cd4d4f4e0b5edffe77bc425f23ca79aa2d84e31b94ece2f964311a"},
+    {file = "pyckles-0.4.0-py3-none-any.whl", hash = "sha256:29daa6c64ba77b787e152cf695759877cf89219f67e16809d40dad50ea53418e"},
+    {file = "pyckles-0.4.0.tar.gz", hash = "sha256:67362dabc7439d9337cb4cb0b49cc035ea3298382b0117569f2606e4716023cd"},
 ]
 
 [package.dependencies]
-astropy = "*"
-matplotlib = "*"
-numpy = ">=1.16"
-synphot = "*"
+astropy = ">=6.0.1,<7.0.0"
+pooch = ">=1.8.2,<2.0.0"
+
+[package.extras]
+syn = ["synphot (>=1.4.0,<2.0.0)"]
 
 [[package]]
 name = "pycparser"
@@ -3308,34 +3309,29 @@ test = ["Cython", "array-api-strict (>=2.0)", "asv", "gmpy2", "hypothesis (>=6.3
 
 [[package]]
 name = "scopesim-templates"
-version = "0.5.1"
+version = "0.6.0"
 description = "On-sky source templates for ScopeSim"
 optional = false
-python-versions = ">=3.9"
+python-versions = "<3.13,>=3.10"
 files = [
-    {file = "ScopeSim_Templates-0.5.1-py3-none-any.whl", hash = "sha256:f26c810d5d8dc91a22dc42da09acbe9da6a5dda5c4e770083bd8f9462181de70"},
-    {file = "ScopeSim_Templates-0.5.1.tar.gz", hash = "sha256:8c0d9f8ee914300e633adc7b4d8c93b4342a3ce4fdce6bc6379371400df4c503"},
+    {file = "scopesim_templates-0.6.0-py3-none-any.whl", hash = "sha256:378cdf9fcdf8976779907a0905ef9309884c52cf3e941cfaafd698c6dc44ee70"},
+    {file = "scopesim_templates-0.6.0.tar.gz", hash = "sha256:0c8695d0577585f2fd89f1e8ba20521b6074a3c0d079fe117665751abcdc82c2"},
 ]
 
 [package.dependencies]
-astar-utils = ">=0.2.1"
-astropy = ">=5.3.3"
-beautifulsoup4 = ">=4.12.1"
-docutils = ">=0.19"
-lxml = ">=4.9.3"
-matplotlib = ">=3.7.2"
-numpy = ">=1.26.3"
-pyckles = ">=0.2"
-pyyaml = ">=6.0.1"
-scipy = ">=1.11.4"
-scopesim = ">=0.7.0"
-spextra = ">=0.33"
-synphot = ">=1.2.1"
-
-[package.extras]
-dev = ["jupyter", "jupytext"]
-docs = ["jupyter-sphinx (==0.2.3)", "nbsphinx", "numpydoc", "sphinx (>=4.3.0)", "sphinx-rtd-theme (>=0.5.1)", "sphinxcontrib-apidoc"]
-test = ["pytest", "pytest-cov", "skycalc-cli"]
+astar-utils = ">=0.3.1"
+astropy = ">=6.0.1,<7.0.0"
+beautifulsoup4 = ">=4.12.1,<5.0.0"
+docutils = ">=0.19,<0.20"
+lxml = ">=5.2.2,<6.0.0"
+matplotlib = ">=3.8.2,<4.0.0"
+numpy = ">=1.26.3,<2.0.0"
+pyckles = ">=0.4.0"
+pyyaml = ">=6.0.1,<7.0.0"
+scipy = ">=1.14.1,<2.0.0"
+scopesim = ">=0.9.0"
+spextra = ">=0.41.3"
+synphot = ">=1.4.0,<2.0.0"
 
 [[package]]
 name = "send2trash"
@@ -3440,20 +3436,25 @@ files = [
 
 [[package]]
 name = "spextra"
-version = "0.33"
-description = "Tool to  manage and manipulate  astronomical spectra"
+version = "0.41.3"
+description = "Tool to manage and manipulate astronomical spectra."
 optional = false
-python-versions = "*"
+python-versions = "<4.0,>=3.10"
 files = [
-    {file = "speXtra-0.33-py3-none-any.whl", hash = "sha256:fc239099fa3b163db2329f52a6b9b81c526d831cf0aaae0fa945e4b419d7d95a"},
-    {file = "speXtra-0.33.tar.gz", hash = "sha256:3b23c82df58542bdb8e573982174c9dd5f87054e02d02f4df99e1c461d8154bb"},
+    {file = "spextra-0.41.3-py3-none-any.whl", hash = "sha256:16c66064cfb13c9df039977bc7d30f605e24f1cfead4a2c391d16082619bf7f9"},
+    {file = "spextra-0.41.3.tar.gz", hash = "sha256:03ea77ff2d64704a60917509bebee8111d70b953d5758b9b18cc6cb522244b88"},
 ]
 
 [package.dependencies]
-astropy = ">=3.1"
-numpy = "*"
-pyyaml = "*"
-synphot = ">=0.2.0"
+astar-utils = ">=0.3.0"
+astropy = ">=6.0.1,<7.0.0"
+more-itertools = ">=10.2.0,<11.0.0"
+numpy = ">=1.26.3,<2.0.0"
+pooch = ">=1.8.2,<2.0.0"
+pyyaml = ">=6.0.1,<7.0.0"
+scipy = ">=1.14.1,<2.0.0"
+synphot = ">=1.4.0,<2.0.0"
+tqdm = ">=4.66.1,<5.0.0"
 
 [[package]]
 name = "sphinx"
@@ -4034,4 +4035,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10, <3.13"
-content-hash = "00c7c90c2cc088358a689aa570b83cdbe645e65310b736966a27db43ef3d7b7c"
+content-hash = "a2773757ba2c221a065eacf884d785822a12ff2f6846f86ff7a8d4ae21e59a8d"
