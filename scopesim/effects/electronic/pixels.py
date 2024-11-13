@@ -1,15 +1,18 @@
 # -*- coding: utf-8 -*-
 """Any effects regarding pixels, like binning and border effects."""
 
+from typing import ClassVar
+
 from .. import Effect
 from ...base_classes import DetectorBase, ImagePlaneBase
 from ...utils import from_currsys, figure_factory, check_keys
 
 
 class ReferencePixelBorder(Effect):
+    z_order: ClassVar[tuple[int, ...]] = (780,)
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.meta["z_order"] = [780]
         val = int(kwargs.get("all", 0))
         widths = {key: val for key in ["top", "bottom", "left", "right"]}
         self.meta.update(widths)
@@ -38,11 +41,10 @@ class ReferencePixelBorder(Effect):
 
 class BinnedImage(Effect):
     required_keys = {"bin_size"}
+    z_order: ClassVar[tuple[int, ...]] = (870,)
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.meta["z_order"] = [870]
-
         check_keys(self.meta, self.required_keys, action="error")
 
     def apply_to(self, det, **kwargs):
@@ -58,11 +60,10 @@ class BinnedImage(Effect):
 
 class UnequalBinnedImage(Effect):
     required_keys = {"binx","biny"}
+    z_order: ClassVar[tuple[int, ...]] = (870,)
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.meta["z_order"] = [870]
-
         check_keys(self.meta, self.required_keys, action="error")
 
     def apply_to(self, det, **kwargs):

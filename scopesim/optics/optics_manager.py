@@ -163,10 +163,11 @@ class OpticsManager:
         - Apply lambda-independent 2D image plane effects - z_order = 700..799
         - Apply detector effects - z_order = 800..899
         - Apply detector array effects - z_order = 900..999
+        - Apply FITS header effects - z_order = 1000...1100
 
         Parameters
         ----------
-        z_level : {0, 100, 200, 300, 400, 500, 600, 700, 800, 900}
+        z_level : {0, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000}
             100-range of z_orders.
 
         Returns
@@ -179,7 +180,7 @@ class OpticsManager:
                 yield from opt_el.get_z_order_effects(z_level)
 
         def _sortkey(eff):
-            return next(z % 100 for z in eff.meta["z_order"] if z >= z_level)
+            return next(z % 100 for z in eff.z_order if z >= z_level)
 
         # return sorted(_gather_effects(), key=_sortkey)
         return list(_gather_effects())
@@ -197,6 +198,11 @@ class OpticsManager:
             raise ValueError("No DetectorList objects found.")
 
         return [det_list.image_plane_header for det_list in detector_lists]
+
+    @property
+    def fits_header_effects(self):
+        """Get effects with z_order = 1000...1099."""
+        return self.get_z_order_effects(1000)
 
     @property
     def detector_array_effects(self):
@@ -305,7 +311,7 @@ class OpticsManager:
         names = [eff.display_name for eff in all_effs]
         classes = [eff.__class__.__name__ for eff in all_effs]
         included = [eff.meta["include"] for eff in all_effs]
-        z_orders = [eff.meta["z_order"] for eff in all_effs]
+        z_orders = [eff.z_order for eff in all_effs]
 
         colnames = ["element", "name", "class", "included"]     #, "z_orders"
         data = [elements, names, classes, included]             #, z_orders

@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 """Transmission, emissivity, reflection curves."""
+
 import warnings
+from typing import ClassVar
 from collections.abc import Collection, Iterable
 
 import numpy as np
@@ -75,18 +77,19 @@ class TERCurve(Effect):
 
     """
 
+    z_order: ClassVar[tuple[int, ...]] = (10, 110, 510)
+    report_plot_include: ClassVar[bool] = True
+    report_table_include: ClassVar[bool] = False
+
     def __init__(self, filename=None, **kwargs):
         super().__init__(filename=filename, **kwargs)
         params = {
-            "z_order": [10, 110, 510],
             "ignore_wings": False,
             "wave_min": "!SIM.spectral.wave_min",
             "wave_max": "!SIM.spectral.wave_max",
             "wave_unit": "!SIM.spectral.wave_unit",
             "wave_bin": "!SIM.spectral.spectral_bin_width",
             "bg_cell_width": "!SIM.computing.bg_cell_width",
-            "report_plot_include": True,
-            "report_table_include": False,
         }
         self.meta.update(params)
         self.meta.update(kwargs)
@@ -240,9 +243,10 @@ class TERCurve(Effect):
 
 
 class AtmosphericTERCurve(TERCurve):
+    z_order: ClassVar[tuple[int, ...]] = (111, 511)
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.meta["z_order"] = [111, 511]
         self.meta["action"] = "transmission"
         self.meta["position"] = 0       # position in surface table
         self.meta.update(kwargs)
@@ -279,9 +283,10 @@ class SkycalcTERCurve(AtmosphericTERCurve):
 
     """
 
+    z_order: ClassVar[tuple[int, ...]] = (112, 512)
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.meta["z_order"] = [112, 512]
         self.meta["use_local_skycalc_file"] = False
         self.meta.update(kwargs)
 
@@ -363,10 +368,11 @@ class SkycalcTERCurve(AtmosphericTERCurve):
 
 
 class QuantumEfficiencyCurve(TERCurve):
+    z_order: ClassVar[tuple[int, ...]] = (113, 513)
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.meta["action"] = "transmission"
-        self.meta["z_order"] = [113, 513]
         self.meta["position"] = -1          # position in surface table
 
 
@@ -394,6 +400,8 @@ class FilterCurve(TERCurve):
 
     """
 
+    z_order: ClassVar[tuple[int, ...]] = (114, 214, 514)
+
     def __init__(self, cmds=None, **kwargs):
         # super().__init__(**kwargs)
         if not np.any([key in kwargs for key in ["filename", "table",
@@ -418,7 +426,6 @@ class FilterCurve(TERCurve):
                   "wing_flux_level": None,
                   "name": "untitled filter"}
         self.meta.update(params)
-        self.meta["z_order"] = [114, 214, 514]
         self.meta.update(kwargs)
 
         min_thru = from_currsys(self.meta["minimum_throughput"], self.cmds)
@@ -585,19 +592,16 @@ class SpanishVOFilterCurve(FilterCurve):
 class FilterWheelBase(Effect):
     """Base class for Filter Wheels."""
 
+    z_order: ClassVar[tuple[int, ...]] = (124, 224, 524)
+    report_plot_include: ClassVar[bool] = True
+    report_table_include: ClassVar[bool] = True
+    report_table_rounding: ClassVar[int] = 4
     _current_str = "current_filter"
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         check_keys(kwargs, self.required_keys, action="error")
 
-        params = {
-            "z_order": [124, 224, 524],
-            "report_plot_include": True,
-            "report_table_include": True,
-            "report_table_rounding": 4,
-        }
-        self.meta.update(params)
         self.meta.update(kwargs)
 
         self.filters = {}
@@ -911,17 +915,17 @@ class ADCWheel(Effect):
     """
 
     required_keys = {"adc_names", "filename_format", "current_adc"}
+    z_order: ClassVar[tuple[int, ...]] = (125, 225, 525)
+    report_plot_include: ClassVar[bool] = False
+    report_table_include: ClassVar[bool] = True
+    report_table_rounding: ClassVar[int] = 4
     _current_str = "current_adc"
 
     def __init__(self, cmds=None, **kwargs):
         super().__init__(cmds=cmds, **kwargs)
         check_keys(kwargs, self.required_keys, action="error")
 
-        params = {"z_order": [125, 225, 525],
-                  "path": "",
-                  "report_plot_include": False,
-                  "report_table_include": True,
-                  "report_table_rounding": 4}
+        params = {"path": ""}
         self.meta.update(params)
         self.meta.update(kwargs)
 

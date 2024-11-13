@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 """Any kinds of electronic or photonic noise."""
 
+from typing import ClassVar
+
 import numpy as np
 from astropy.io import fits
 
@@ -14,13 +16,11 @@ class Bias(Effect):
     """Adds a constant bias level to readout."""
 
     required_keys = {"bias"}
+    z_order: ClassVar[tuple[int, ...]] = (855,)
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        params = {"z_order": [855]}
-        self.meta.update(params)
         self.meta.update(kwargs)
-
         check_keys(self.meta, self.required_keys, action="error")
 
     def apply_to(self, obj, **kwargs):
@@ -34,18 +34,18 @@ class Bias(Effect):
 
 class PoorMansHxRGReadoutNoise(Effect):
     required_keys = {"noise_std", "n_channels", "ndit"}
+    z_order: ClassVar[tuple[int, ...]] = (811,)
+    report_plot_include: ClassVar[bool] = False
+    report_table_include: ClassVar[bool] = False
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         params = {
-            "z_order": [811],
             "pedestal_fraction": 0.3,
             "read_fraction": 0.4,
             "line_fraction": 0.25,
             "channel_fraction": 0.05,
             "random_seed": "!SIM.random.seed",
-            "report_plot_include": False,
-            "report_table_include": False,
         }
         self.meta.update(params)
         self.meta.update(kwargs)
@@ -93,10 +93,10 @@ class BasicReadoutNoise(Effect):
     """Readout noise computed as: ron * sqrt(NDIT)."""
 
     required_keys = {"noise_std", "ndit"}
+    z_order: ClassVar[tuple[int, ...]] = (811,)
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.meta["z_order"] = [811]
         self.meta["random_seed"] = "!SIM.random.seed"
         self.meta.update(kwargs)
 
@@ -129,9 +129,10 @@ class BasicReadoutNoise(Effect):
 
 
 class ShotNoise(Effect):
+    z_order: ClassVar[tuple[int, ...]] = (820,)
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.meta["z_order"] = [820]
         self.meta["random_seed"] = "!SIM.random.seed"
         self.meta.update(kwargs)
 
@@ -205,11 +206,10 @@ class DarkCurrent(Effect):
     """
 
     required_keys = {"value", "dit", "ndit"}
+    z_order: ClassVar[tuple[int, ...]] = (830,)
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.meta["z_order"] = [830]
-
         check_keys(self.meta, self.required_keys, action="error")
 
     def apply_to(self, obj, **kwargs):

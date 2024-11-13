@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Module contains the actual "Detector" effects.
 
@@ -9,6 +10,7 @@ have defined in order to run.
 """
 
 import warnings
+from typing import ClassVar
 
 import numpy as np
 from astropy import units as u
@@ -119,13 +121,14 @@ class DetectorList(Effect):
 
     """
 
+    z_order: ClassVar[tuple[int, ...]] = (90, 290, 390, 490)
+    report_plot_include: ClassVar[bool] = True
+    report_table_include: ClassVar[bool] = True
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        params = {"z_order": [90, 290, 390, 490],
-                  "pixel_scale": "!INST.pixel_scale",      # arcsec
-                  "active_detectors": "all",
-                  "report_plot_include": True,
-                  "report_table_include": True}
+        params = {"pixel_scale": "!INST.pixel_scale",      # arcsec
+                  "active_detectors": "all",}
         self.meta.update(params)
         self.meta.update(kwargs)
 
