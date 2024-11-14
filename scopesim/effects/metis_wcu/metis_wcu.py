@@ -47,25 +47,41 @@ class BlackBodySource(TERCurve):
             new temperatures for the BB source and the ambient WCU, respectively.
             If float, the unit is assumed to be Kelvin.
         """
-        if isinstance(bb_temp, float):
+        if isinstance(bb_temp, (int, float)):
             bb_temp = bb_temp << u.K
-            self.meta["bb_temp"] = bb_temp
+            if bb_temp >= 0:
+                self.meta["bb_temp"] = bb_temp
+            else:
+                logger.warning("bb_temp below absolute zero, not changed")
+                return None
         elif isinstance(bb_temp, u.Quantity):
             try:
                 bb_temp = bb_temp.to(u.K, equivalencies=u.temperature())
-                self.meta["bb_temp"] = bb_temp
+                if bb_temp >= 0:
+                    self.meta["bb_temp"] = bb_temp
+                else:
+                    logger.warning("bb_temp below absolute zero, not changed")
+                    return None
             except u.UnitConversionError:
                 logger.warning(
                     "UnitConversionError: Parameter bb_temp cannot be converted to Kelvin")
                 return None
 
-        if isinstance(wcu_temp, float):
+        if isinstance(wcu_temp, (int, float)):
             wcu_temp = wcu_temp << u.K
-            self.meta["wcu_temp"] = wcu_temp
+            if wcu_temp >= 0:
+                self.meta["wcu_temp"] = wcu_temp
+            else:
+                logger.warning("wcu_temp below absolute zero, not changed")
+                return None
         elif isinstance(wcu_temp, u.Quantity):
             try:
                 wcu_temp = wcu_temp.to(u.K, equivalencies=u.temperature())
-                self.meta["wcu_temp"] = wcu_temp
+                if wcu_temp >= 0:
+                    self.meta["wcu_temp"] = wcu_temp
+                else:
+                    logger.warning("wcu_temp below absolute zero, not changed")
+                    return None
             except u.UnitConversionError:
                 logger.warning(
                     "UnitConversionError: Parameter wcu_temp cannot be converted to Kelvin")

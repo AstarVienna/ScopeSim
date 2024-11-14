@@ -39,3 +39,8 @@ class TestBlackBodySource:
         new_temp = old_temp + 12 * u.K
         bbsource.set_temperature(wcu_temp=new_temp)
         assert bbsource.meta['wcu_temp'] == new_temp
+
+    def test_ignore_negative_bb_temperature(self, bbsource):
+        old_temp = bbsource.meta['bb_temp']
+        bbsource.set_temperature(bb_temp=-1000 * u.K)
+        assert bbsource.meta['bb_temp'] == old_temp
