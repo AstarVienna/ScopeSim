@@ -482,14 +482,19 @@ def rescale_imagehdu(imagehdu: fits.ImageHDU, pixel_scale: float | u.Quantity,
     imagehdu : fits.ImageHDU
 
     """
+
+    logger.debug("Writing test_imagehdu.fits")
+    imagehdu.writeto("test_imagehdu.fits", overwrite=True)
+
     # Identify the wcs to which pixel_scale refers to and determine the zoom factor
     wcs_suffix = wcs_suffix or " "
     primary_wcs = WCS(imagehdu.header, key=wcs_suffix[0])
-
+    logger.debug("primary wcs: %s", primary_wcs)
     # make sure that units are correct and zoom factor is positive
     pixel_scale = pixel_scale << u.Unit(primary_wcs.wcs.cunit[0])
     zoom = np.abs(primary_wcs.wcs.cdelt / pixel_scale.value)
 
+    logger.debug("naxis = %s", primary_wcs.naxis)
     if primary_wcs.naxis == 3:
         # zoom = np.append(zoom, [1])
         zoom[2] = 1.
@@ -532,15 +537,14 @@ def rescale_imagehdu(imagehdu: fits.ImageHDU, pixel_scale: float | u.Quantity,
             logger.warning("Non-linear WCS rescaled using linear procedure.")
 
         logger.debug("old crpix %s", ww.wcs.crpix)
-        new_crpix = (zoom + 1) / 2 + (ww.wcs.crpix - 1) * zoom
+        ww.wcs.crpix[:2] = (zoom[:2] + 1) / 2 + (ww.wcs.crpix[:2] - 1) * zoom[:2]
         #ew_crpix = np.round(new_crpix * 2) / 2  # round to nearest half-pixel
-        logger.debug("new crpix %s", new_crpix)
-        ww.wcs.crpix = new_crpix
+        logger.debug("new crpix %s", ww.wcs.crpix)
 
         # Keep CDELT3 if cube...
-        new_cdelt = ww.wcs.cdelt[:]
-        new_cdelt /= zoom
-        ww.wcs.cdelt = new_cdelt
+        #new_cdelt = ww.wcs.cdelt[:]
+        #new_cdelt /= zoom
+        ww.wcs.cdelt[:2] /= zoom[:2]  #new_cdelt
 
         # TODO: is forcing deg here really the best way?
         # FIXME: NO THIS WILL MESS UP IF new_cdelt IS IN ARCSEC!!!!!
