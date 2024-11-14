@@ -27,3 +27,15 @@ class TestBlackBodySource:
     def test_bbsource_has_correct_emission_units(self, bbsource):
         assert (bbsource.surface.table['emission'].unit ==
                 u.ph / (u.s * u.sr * u.um * u.m**2))
+
+    def test_can_set_bb_temperature(self, bbsource):
+        old_temp = bbsource.meta['bb_temp']
+        new_temp = 1.5 * old_temp
+        bbsource.set_temperature(new_temp)
+        assert bbsource.meta['bb_temp'] == new_temp
+
+    def test_can_set_wcu_temperature(self, bbsource):
+        old_temp = bbsource.meta['wcu_temp']
+        new_temp = old_temp + 12 * u.K
+        bbsource.set_temperature(wcu_temp=new_temp)
+        assert bbsource.meta['wcu_temp'] == new_temp
