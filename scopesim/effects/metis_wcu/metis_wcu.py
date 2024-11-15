@@ -47,49 +47,28 @@ class BlackBodySource(TERCurve):
             new temperatures for the BB source and the ambient WCU, respectively.
             If float, the unit is assumed to be Kelvin.
         """
-        if isinstance(bb_temp, (int, float)):
-            bb_temp = bb_temp << u.K
+        if bb_temp is not None:
+            if isinstance(bb_temp, (int, float)):
+                bb_temp = bb_temp << u.K
+
+            bb_temp = bb_temp.to(u.K, equivalencies=u.temperature())
             if bb_temp >= 0:
                 self.meta["bb_temp"] = bb_temp
             else:
-                logger.warning("bb_temp below absolute zero, not changed")
-                return None
-        elif isinstance(bb_temp, u.Quantity):
-            try:
-                bb_temp = bb_temp.to(u.K, equivalencies=u.temperature())
-                if bb_temp >= 0:
-                    self.meta["bb_temp"] = bb_temp
-                else:
-                    logger.warning("bb_temp below absolute zero, not changed")
-                    return None
-            except u.UnitConversionError:
-                logger.warning(
-                    "UnitConversionError: Parameter bb_temp cannot be converted to Kelvin")
-                return None
+                raise ValueError("bb_temp below absolute zero, not changed")
 
-        if isinstance(wcu_temp, (int, float)):
-            wcu_temp = wcu_temp << u.K
+        if wcu_temp is not None:
+            if isinstance(wcu_temp, (int, float)):
+                wcu_temp = wcu_temp << u.K
+
+            wcu_temp = wcu_temp.to(u.K, equivalencies=u.temperature())
             if wcu_temp >= 0:
                 self.meta["wcu_temp"] = wcu_temp
             else:
-                logger.warning("wcu_temp below absolute zero, not changed")
-                return None
-        elif isinstance(wcu_temp, u.Quantity):
-            try:
-                wcu_temp = wcu_temp.to(u.K, equivalencies=u.temperature())
-                if wcu_temp >= 0:
-                    self.meta["wcu_temp"] = wcu_temp
-                else:
-                    logger.warning("wcu_temp below absolute zero, not changed")
-                    return None
-            except u.UnitConversionError:
-                logger.warning(
-                    "UnitConversionError: Parameter wcu_temp cannot be converted to Kelvin")
-                return None
+                raise ValueError("wcu_temp below absolute zero, not changed")
 
         self.compute_emission()
 
-        return None
 
     def compute_emission(self):
         """Compute the emission at the exit of the integrating sphere"""

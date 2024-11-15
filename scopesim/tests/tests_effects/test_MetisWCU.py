@@ -41,12 +41,44 @@ class TestBlackBodySource:
         bbsource.set_temperature(wcu_temp=new_temp)
         assert bbsource.meta['wcu_temp'] == new_temp
 
-    def test_ignore_negative_bb_temperature(self, bbsource):
+    def test_can_set_temperature_in_celsius(self, bbsource):
+        bbsource.set_temperature(bb_temp=30*u.deg_C)
+        assert bbsource.meta['bb_temp'] == 303.15 * u.K
+
+    def test_ignore_incompatible_units_bb(self, bbsource):
         old_temp = bbsource.meta['bb_temp']
-        bbsource.set_temperature(bb_temp=-1000 * u.K)
+        with pytest.raises(u.UnitConversionError):
+            bbsource.set_temperature(bb_temp=2*u.Jy)
         assert bbsource.meta['bb_temp'] == old_temp
 
+    def test_ignore_incompatible_units_wcu(self, bbsource):
+        old_temp = bbsource.meta['wcu_temp']
+        with pytest.raises(u.UnitConversionError):
+            bbsource.set_temperature(wcu_temp=2*u.Tesla)
+        assert bbsource.meta['wcu_temp'] == old_temp
+
+
+    def test_ignore_negative_bb_temperature(self, bbsource):
+        old_temp = bbsource.meta['bb_temp']
+        with pytest.raises(ValueError):
+            bbsource.set_temperature(bb_temp=-1000 * u.K)
+        assert bbsource.meta['bb_temp'] == old_temp
+
+    def test_ignore_negative_wcu_temperature(self, bbsource):
+        old_temp = bbsource.meta['wcu_temp']
+        with pytest.raises(ValueError):
+            bbsource.set_temperature(wcu_temp=-1000 * u.K)
+        assert bbsource.meta['wcu_temp'] == old_temp
+
+
     def test_emission_increases_with_temperature(self, bbsource):
+        """
+        Test that increasing the temperature leads to increasing emission.
+
+        This is not a rigorous quantitative test, but should stay correct
+        when all the wavelength-dependent corrections are made to the
+        original black-body emission.
+        """
         old_temp = bbsource.meta['bb_temp']
         new_temp = 1.2 * old_temp
         old_emission = bbsource.surface.emission
