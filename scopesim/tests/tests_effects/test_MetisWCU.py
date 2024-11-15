@@ -4,6 +4,7 @@ import pytest
 from astropy import units as u
 
 from scopesim.effects.metis_wcu import BlackBodySource
+from scopesim.utils import seq
 
 @pytest.fixture(name="bbsource", scope="function")
 def fixture_bbsource():
@@ -44,3 +45,12 @@ class TestBlackBodySource:
         old_temp = bbsource.meta['bb_temp']
         bbsource.set_temperature(bb_temp=-1000 * u.K)
         assert bbsource.meta['bb_temp'] == old_temp
+
+    def test_emission_increases_with_temperature(self, bbsource):
+        old_temp = bbsource.meta['bb_temp']
+        new_temp = 1.2 * old_temp
+        old_emission = bbsource.surface.emission
+        bbsource.set_temperature(bb_temp=new_temp)
+        new_emission = bbsource.surface.emission
+        lam_ref = seq(2.2, 15, 0.1) * u.um
+        assert all(new_emission(lam_ref) > old_emission(lam_ref))
