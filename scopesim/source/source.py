@@ -324,10 +324,15 @@ class Source(SourceBase):
             wcs = WCS(cube)
         else:
             with fits.open(cube) as hdul:
-                data = hdul[ext].data
-                header = hdul[ext].header
-                header["FILENAME"] = Path(cube).name
-                wcs = WCS(cube)
+                try:
+                    data = hdul[ext].data
+                    header = hdul[ext].header
+                    header["FILENAME"] = Path(cube).name
+                    wcs = WCS(header)
+                except ValueError:  # e.g. TAB WCS
+                    self._from_cube(hdul, ext)
+                    self.fields[0].header["FILENAME"] = Path(cube).name
+                    return
 
         try:
             bunit = header["BUNIT"]
