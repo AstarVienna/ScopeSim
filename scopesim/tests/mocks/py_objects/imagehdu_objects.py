@@ -73,3 +73,30 @@ def _image_hdu_three_wcs():
     hdu.header.update(wcs_g.to_header())
 
     return hdu
+
+def _image_hdu_3d_data():
+    nx, ny = 100, 100
+    nz = 3
+
+    # a 3D WCS
+    the_wcs0 = wcs.WCS(naxis=3, key="")
+    the_wcs0.wcs.ctype = ["LINEAR", "LINEAR", "WAVE"]
+    the_wcs0.wcs.cunit = ["arcsec", "arcsec", "um"]
+    the_wcs0.wcs.cdelt = [1, 1, 0.1]
+    the_wcs0.wcs.crval = [0, 0, 2.2]
+    the_wcs0.wcs.crpix = [(nx + 1) / 2, (ny + 1) / 2, 1]
+
+    # a 2D WCS for spatial dimensions
+    the_wcsd = wcs.WCS(naxis=2, key="D")
+    the_wcsd.wcs.ctype = ["LINEAR", "LINEAR"]
+    the_wcsd.wcs.cunit = ["mm", "mm"]
+    the_wcsd.wcs.cdelt = [1, 1]
+    the_wcsd.wcs.crval = [0, 0]
+    the_wcsd.wcs.crpix = [(nx + 1) / 2, (ny + 1) / 2]
+
+    image = np.ones((nz, ny, nx))
+    hdr = the_wcs0.to_header()
+    hdr.extend(the_wcsd.to_header())
+    hdu = fits.ImageHDU(data=image, header=hdr)
+
+    return hdu
