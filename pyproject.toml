@@ -107,6 +107,8 @@ filterwarnings = [
     "ignore:datetime.datetime.utcfromtimestamp()*:DeprecationWarning",
     # Pytest Notebook stuff
     "ignore:Proactor*:RuntimeWarning",
+    # lxml warning introduced by beautifulsoup
+    "ignore:The 'strip_cdata' option of HTMLParser*:DeprecationWarning",
 ]
 
 [tool.coverage.report]
