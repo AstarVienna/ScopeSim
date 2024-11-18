@@ -209,6 +209,8 @@ class DetectorList(Effect):
         scale_unit = 1        # either unitless to retain
         if "pix" in x_unit.name:
             scale_unit = u.mm / u.pix
+            xcen *= pixel_size.value
+            ycen *= pixel_size.value
             dx *= pixel_size.value
             dy *= pixel_size.value
 
