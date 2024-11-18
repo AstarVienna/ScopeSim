@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "ScopeSim"
-version = "0.9.1a0"
+version = "0.9.1a3"
 description = "Generalised telescope observation simulator"
 license = "GPL-3.0-or-later"
 authors = ["Kieran Leschinski <kieran.leschinski@unive.ac.at>"]
@@ -31,7 +31,7 @@ httpx = ">=0.26.0"
 beautifulsoup4 = "^4.12.1"
 lxml = "^5.2.2"
 pyyaml = "^6.0.1"
-more-itertools = "^10.1.0"
+more-itertools = "^10.2.0"
 tqdm = "^4.66.5"
 
 synphot = "^1.4.0"
@@ -50,7 +50,7 @@ ipykernel = "^6.24.0"
 [tool.poetry.group.test.dependencies]
 pytest = "^7.4.3"
 pytest-cov = "^4.1.0"
-scopesim_templates = ">=0.5.1"
+scopesim_templates = ">=0.6.0"
 ipykernel = "^6.24.0"
 
 [tool.poetry.group.docs]
@@ -65,7 +65,7 @@ myst-nb = "^1.0.0"
 sphinxcontrib-apidoc = "^0.4.0"
 nbsphinx = "^0.9.3"
 numpydoc = "^1.6.0"
-scopesim_templates = ">=0.5.1"
+scopesim_templates = ">=0.6.0"
 ipykernel = "^6.24.0"
 
 [tool.poetry.urls]
@@ -107,6 +107,8 @@ filterwarnings = [
     "ignore:datetime.datetime.utcfromtimestamp()*:DeprecationWarning",
     # Pytest Notebook stuff
     "ignore:Proactor*:RuntimeWarning",
+    # lxml warning introduced by beautifulsoup
+    "ignore:The 'strip_cdata' option of HTMLParser*:DeprecationWarning",
 ]
 
 [tool.coverage.report]

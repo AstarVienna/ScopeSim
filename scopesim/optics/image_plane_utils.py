@@ -491,20 +491,22 @@ def rescale_imagehdu(imagehdu: fits.ImageHDU, pixel_scale: float | u.Quantity,
     primary_wcs = WCS(imagehdu.header, key=wcs_suffix[0])
     logger.debug("primary wcs: %s", primary_wcs)
     # make sure that units are correct and zoom factor is positive
+    # The length of the zoom factor will be determined by imagehdu.data,
+    # which might differ from the dimension of primary_wcs. Here, pick
+    # the spatial dimensions only.
     pixel_scale = pixel_scale << u.Unit(primary_wcs.wcs.cunit[0])
-    zoom = np.abs(primary_wcs.wcs.cdelt / pixel_scale.value)
+    zoom = np.abs(primary_wcs.wcs.cdelt[:2] / pixel_scale.value)
 
-    logger.debug("naxis = %s", primary_wcs.naxis)
-    if primary_wcs.naxis == 3:
-        # zoom = np.append(zoom, [1])
-        zoom[2] = 1.
+    if len(imagehdu.data.shape) == 3:
+        zoom = np.append(zoom, [1.])  # wavelength dimension unscaled if present
+
+    logger.debug("zoom factor: %s", zoom)
+
     if primary_wcs.naxis != imagehdu.data.ndim:
+        # FIXME: this happens often - shouldn't WCSs be trimmed down before? (OC)
         logger.warning("imagehdu.data.ndim is %d, but primary_wcs.naxis with "
-                        "key %s is %d, both should be equal.",
-                        imagehdu.data.ndim, wcs_suffix, primary_wcs.naxis)
-        zoom = zoom[:2]
-
-    logger.debug("zoom %s", zoom)
+                       "key %s is %d, both should be equal.",
+                       imagehdu.data.ndim, wcs_suffix, primary_wcs.naxis)
 
     if all(zoom == 1.):
         # Nothing to do
@@ -530,28 +532,30 @@ def rescale_imagehdu(imagehdu: fits.ImageHDU, pixel_scale: float | u.Quantity,
             logger.warning("imagehdu.data.ndim is %d, but wcs.naxis with key "
                            "%s is %d, both should be equal.",
                            imagehdu.data.ndim, ww.wcs.alt, ww.naxis)
-            # TODO: could this be ww = ww.sub(2) instead? or .celestial?
-            # ww = WCS(imagehdu.header, key=key, naxis=imagehdu.data.ndim)
 
         if any(ctype != "LINEAR" for ctype in ww.wcs.ctype):
             logger.warning("Non-linear WCS rescaled using linear procedure.")
 
-        logger.debug("old crpix %s", ww.wcs.crpix)
-        ww.wcs.crpix[:2] = (zoom[:2] + 1) / 2 + (ww.wcs.crpix[:2] - 1) * zoom[:2]
-        #ew_crpix = np.round(new_crpix * 2) / 2  # round to nearest half-pixel
+        # Assuming linearity, a given world coordinate is determined by
+        #   VAL = CRVAL  + (PIX  - CRPIX ) * CDELT   (old system)
+        #       = CRVAL' + (PIX' - CRPIX') * CDELT'  (new system)
+        # CDELT is simply transformed by the zoom factor:
+        #   CDELT' = CDELT / ZOOM
+        # The transformation keeps CRVAL' = CRVAL, hence
+        #   CRPIX' = PIX' - (PIX - CRPIX) * ZOOM
+        # The relation between PIX' and PIX is linear
+        #   PIX' = CONST + ZOOM * PIX
+        # The fix point is PIX = PIX' = 1/2, which is the lower/left edge of
+        # the field,
+        # thus  PIX' = (1 - ZOOM)/2 + ZOOM * PIX
+        # This leads to
+        #   CRPIX' = 1/2 + (CRPIX - 1/2) * ZOOM
+        #
+        # The transformation only applies to spatial coordinates, which we
+        # assume to be the first two in the WCS.
+        ww.wcs.cdelt[:2] /= zoom[:2]
+        ww.wcs.crpix[:2] = 0.5 + (ww.wcs.crpix[:2] - 0.5) * zoom[:2]
         logger.debug("new crpix %s", ww.wcs.crpix)
-
-        # Keep CDELT3 if cube...
-        #new_cdelt = ww.wcs.cdelt[:]
-        #new_cdelt /= zoom
-        ww.wcs.cdelt[:2] /= zoom[:2]  #new_cdelt
-
-        # TODO: is forcing deg here really the best way?
-        # FIXME: NO THIS WILL MESS UP IF new_cdelt IS IN ARCSEC!!!!!
-        # new_cunit = [str(cunit) for cunit in ww.wcs.cunit]
-        # new_cunit[0] = "mm" if key == "D" else "deg"
-        # new_cunit[1] = "mm" if key == "D" else "deg"
-        # ww.wcs.cunit = new_cunit
 
         imagehdu.header.update(ww.to_header())
 

@@ -1,8 +1,10 @@
+# -*- coding: utf-8 -*-
 """Effects related to field masks, including spectroscopic slits."""
 
 import warnings
-import yaml
+from typing import ClassVar
 
+import yaml
 import numpy as np
 from matplotlib.path import Path as MPLPath  # rename to avoid conflict with pathlib
 from astropy.io import fits
@@ -79,6 +81,10 @@ class ApertureMask(Effect):
     """
 
     required_keys = {"filename", "table", "array_dict"}
+    z_order: ClassVar[tuple[int, ...]] = (80, 280, 380)
+    report_plot_include: ClassVar[bool] = False
+    report_table_include: ClassVar[bool] = True
+    report_table_rounding: ClassVar[int] = 4
 
     def __init__(self, **kwargs):
         if not np.any([key in kwargs for key in ["filename", "table",
@@ -97,12 +103,8 @@ class ApertureMask(Effect):
             "shape": "rect",
             "conserve_image": True,
             "id": 0,
-            "report_plot_include": False,
-            "report_table_include": True,
-            "report_table_rounding": 4,
         }
 
-        self.meta["z_order"] = [80, 280, 380]
         self.meta.update(params)
         self.meta.update(kwargs)
 
@@ -273,17 +275,18 @@ class ApertureList(Effect):
 
     """
 
+    z_order: ClassVar[tuple[int, ...]] = (81, 281)
+    report_plot_include: ClassVar[bool] = True
+    report_table_include: ClassVar[bool] = True
+    report_table_rounding: ClassVar[int] = 4
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         params = {
             "pixel_scale": "!INST.pixel_scale",
             "n_round_corners": 32,        # number of corners use to estimate ellipse
             "no_mask": False,             # .. todo:: is this necessary when we have conserve_image?
-            "report_plot_include": True,
-            "report_table_include": True,
-            "report_table_rounding": 4,
         }
-        self.meta["z_order"] = [81, 281]
         self.meta.update(params)
         self.meta.update(kwargs)
 
@@ -426,6 +429,10 @@ class SlitWheel(Effect):
     """
 
     required_keys = {"slit_names", "filename_format", "current_slit"}
+    z_order: ClassVar[tuple[int, ...]] = (80, 280, 580)
+    report_plot_include: ClassVar[bool] = False
+    report_table_include: ClassVar[bool] = True
+    report_table_rounding: ClassVar[int] = 4
     _current_str = "current_slit"
 
     def __init__(self, **kwargs):
@@ -433,11 +440,7 @@ class SlitWheel(Effect):
         check_keys(kwargs, self.required_keys, action="error")
 
         params = {
-            "z_order": [80, 280, 580],
             "path": "",
-            "report_plot_include": False,
-            "report_table_include": True,
-            "report_table_rounding": 4,
         }
         self.meta.update(params)
         self.meta.update(kwargs)

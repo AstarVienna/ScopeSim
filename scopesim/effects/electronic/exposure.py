@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 """Exposure actions."""
 
+from typing import ClassVar
+
 import numpy as np
 
 from .. import Effect
@@ -39,6 +41,7 @@ class AutoExposure(Effect):
     """
 
     required_keys = {"fill_frac", "full_well", "mindit"}
+    z_order: ClassVar[tuple[int, ...]] = (902,)
 
     def __init__(self, **kwargs):
         """
@@ -46,8 +49,6 @@ class AutoExposure(Effect):
         on the `ImagePlane`, mapped to the detector array.
         """
         super().__init__(**kwargs)
-        params = {"z_order": [902]}
-        self.meta.update(params)
         self.meta.update(kwargs)
         if self.cmds is None:
             logger.error("No cmds present, using default.")
@@ -187,11 +188,10 @@ class SummedExposure(Effect):
     """Simulates a summed stack of ``ndit`` exposures."""
 
     required_keys = {"dit", "ndit"}
+    z_order: ClassVar[tuple[int, ...]] = (860,)
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        params = {"z_order": [860]}
-        self.meta.update(params)
         self.meta.update(kwargs)
 
         check_keys(self.meta, self.required_keys, action="error")

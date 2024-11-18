@@ -1,0 +1,54 @@
+### LOGGING CONFIGURATION FOR SCOPESIM
+# The corresponding schema can be found at:
+# https://docs.python.org/3/library/logging.config.html#configuration-dictionary-schema
+
+version: 1  # required
+disable_existing_loggers: False  # Not sure what's best here??
+
+root:  # To allow e.g. warnings -> logging
+  level: INFO
+  handlers: [console]  # [console, file] or just [console]
+
+loggers:
+  astar:
+    level: WARNING
+    handlers: [console]  # [console, file] or just [console]
+    propagate: False     # Any logging from astar stops here.
+    # Or don't add handlers here, but let it propagate to root?
+  astar.scopesim:
+    level: DEBUG     # Generally allow debug logging from ScopeSim.
+    propagate: True  # Goes through to astar logger by default.
+  # The following loggers produce lots of log spam on DEBUG level, so switch
+  # them to INFO by default. They can be re-enabled individually if needed.
+  astar.scopesim.optics.image_plane:
+    level: INFO
+  astar.scopesim.optics.image_plane_utils:
+    level: INFO
+  astar.scopesim.optics.surface:
+    level: INFO
+  astar.scopesim.commands.user_commands:
+    level: INFO
+
+handlers:
+  console:
+    class: logging.StreamHandler
+    level: INFO
+    formatter: color
+    stream: ext://sys.stdout
+  file:
+    class : logging.handlers.RotatingFileHandler
+    level: DEBUG
+    formatter: verbose
+    filename: ".scopesim.log"
+    mode: "w"   # w - overwrite, a - append
+    encoding: "utf-8"
+    delay: True
+    maxBytes: 32768
+    backupCount: 3
+
+formatters:
+  verbose:
+    format: '%(asctime)s - %(levelname)-8s - %(name)s - %(funcName)s - %(message)s'
+  color:
+    '()': astar_utils.loggers.ColoredFormatter
+    show_name: True

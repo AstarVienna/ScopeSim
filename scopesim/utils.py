@@ -700,19 +700,10 @@ def top_level_catch(func):
 
 
 def update_logging(capture_warnings=True):
-    """Reload logging configuration from ``rc.__config__``."""
+    """Reload logging configuration from ``rc.__logging_config__``."""
     # Need to access NestedMapping's internal dict here...
-    # HACK: remove this try-except after updating the minimum astar-utils version...
-    try:
-        dictConfig(rc.__config__["!SIM.logging"].dic)
-    except AttributeError:
-        dictConfig(rc.__config__["!SIM.logging"])
+    dictConfig(rc.__logging_config__)
     logging.captureWarnings(capture_warnings)
-
-    # This cannot be in the dict config (yet) because NestedMapping doesn't like
-    #   "." in keys (yet) ...
-    # Set the "astar.scopesim" logger
-    get_logger(__package__).setLevel(logging.DEBUG)
 
 
 def log_to_file(enable=True):
@@ -722,7 +713,7 @@ def log_to_file(enable=True):
     else:
         handlers = ["console"]
 
-    rc.__config__["!SIM.logging.loggers.astar.handlers"] = handlers
+    rc.__logging_config__["loggers"]["astar"]["handlers"] = handlers
     update_logging()
 
 
@@ -732,7 +723,7 @@ def set_console_log_level(level="INFO"):
     This controls what is actually printed to the console by ScopeSim.
     Accepted values are: DEBUG, INFO (default), WARNING, ERROR and CRITICAL.
     """
-    rc.__config__["!SIM.logging.handlers.console.level"] = level
+    rc.__logging_config__["handlers"]["console"]["level"] = level
     update_logging()
 
 

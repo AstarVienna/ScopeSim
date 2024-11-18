@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
-"""."""
+"""Contains the base class for all PSF effects."""
+
+from typing import ClassVar
 
 import numpy as np
 from scipy.signal import convolve
@@ -27,6 +29,10 @@ class PoorMansFOV:
 
 
 class PSF(Effect):
+    z_order: ClassVar[tuple[int, ...]] = (40, 640)
+    report_plot_include: ClassVar[bool] = True
+    report_table_include: ClassVar[bool] = False
+
     def __init__(self, **kwargs):
         self.kernel = None
         self.valid_waverange = None
@@ -36,15 +42,12 @@ class PSF(Effect):
         params = {
             "flux_accuracy": "!SIM.computing.flux_accuracy",
             "sub_pixel_flag": "!SIM.sub_pixel.flag",
-            "z_order": [40, 640],
             "convolve_mode": "same",      # "full", "same"
             "bkg_width": -1,
             "wave_key": "WAVE0",
             "normalise_kernel": True,
             "rounded_edges": True,
             "rotational_blur_angle": 0,
-            "report_plot_include": True,
-            "report_table_include": False,
         }
         self.meta.update(params)
         self.meta.update(kwargs)
