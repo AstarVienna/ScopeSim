@@ -532,11 +532,26 @@ def rescale_imagehdu(imagehdu: fits.ImageHDU, pixel_scale: float | u.Quantity,
         if any(ctype != "LINEAR" for ctype in ww.wcs.ctype):
             logger.warning("Non-linear WCS rescaled using linear procedure.")
 
-        ww.wcs.crpix[:2] = (zoom[:2] + 1) / 2 + (ww.wcs.crpix[:2] - 1) * zoom[:2]
-        logger.debug("new crpix %s", ww.wcs.crpix)
-
-        # Keep CDELT3 if cube...
+        # Assuming linearity, a given world coordinate is determined by
+        #   VAL = CRVAL  + (PIX  - CRPIX ) * CDELT   (old system)
+        #       = CRVAL' + (PIX' - CRPIX') * CDELT'  (new system)
+        # CDELT is simply transformed by the zoom factor:
+        #   CDELT' = CDELT / ZOOM
+        # The transformation keeps CRVAL' = CRVAL, hence
+        #   CRPIX' = PIX' - (PIX - CRPIX) * ZOOM
+        # The relation between PIX' and PIX is linear
+        #   PIX' = CONST + ZOOM * PIX
+        # The fix point is PIX = PIX' = 1/2, which is the lower/left edge of the field,
+        # thus  PIX' = (1 - ZOOM)/2 + ZOOM * PIX
+        # This leads to
+        #   CRPIX' = 1/2 + (CRPIX - 1/2) * ZOOM
+        #
+        # The transformation only applies to spatial coordinates, which we assume to be
+        # the first two in the WCS.
         ww.wcs.cdelt[:2] /= zoom[:2]
+        ww.wcs.crpix[:2] = 0.5 + (ww.wcs.crpix[:2] - 0.5) * zoom[:2]
+        #ww.wcs.crpix[:2] = (zoom[:2] + 1) / 2 + (ww.wcs.crpix[:2] - 1) * zoom[:2]
+        logger.debug("new crpix %s", ww.wcs.crpix)
 
         imagehdu.header.update(ww.to_header())
 
