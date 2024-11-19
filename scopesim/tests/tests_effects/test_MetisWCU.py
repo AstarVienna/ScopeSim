@@ -1,5 +1,8 @@
 """Tests for METIS WCU classes"""
 
+# pylint: disable=missing-class-docstring
+# pylint: disable=missing-function-docstring
+
 import pytest
 from astropy import units as u
 
@@ -8,7 +11,16 @@ from scopesim.utils import seq
 
 @pytest.fixture(name="bbsource", scope="function")
 def fixture_bbsource():
-    return BlackBodySource(bb_temp=1000*u.K, wcu_temp=300*u.K)
+    return BlackBodySource(bb_temp=1000*u.K,
+                           is_temp=300*u.K,
+                           wcu_temp=300*u.K,
+                           bb_to_is=None,
+                           rho_tube=0.95,
+                           rho_is=0.95,
+                           diam_is=250,
+                           diam_is_in=25.4,
+                           diam_is_out=100.,
+                           emiss_bb=0.98)
 
 class TestBlackBodySource:
     def test_initialises_correctly(self, bbsource):

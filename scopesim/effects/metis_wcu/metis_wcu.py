@@ -4,8 +4,12 @@ import numpy as np
 from astropy.table import Table
 from astropy.modeling.models import BlackBody
 from astropy import units as u
+from astropy.io import fits
+from astropy.io import ascii as ioascii
+from scipy.interpolate import interp1d
 from ..ter_curves import TERCurve
-from ...utils import get_logger, seq
+from ...utils import get_logger, seq, find_file,\
+    convert_table_comments_to_dict
 
 logger = get_logger(__name__)
 
@@ -31,14 +35,20 @@ class BlackBodySource(TERCurve):
         self.meta.update(kwargs)
         self._background_source = None
 
+        # Load components for the source
+        self.bb_to_is = self.bb_to_is_throughput()
+        self.rho_tube = get_reflectivity(self.meta['rho_tube'])
+        self.rho_is = get_reflectivity(self.meta['rho_is'])
         self.compute_emission()
 
     @property
     def emission(self):
         return self.surface.emission
 
+
     def set_temperature(self, bb_temp: [float | u.Quantity]=None,
-                        wcu_temp: [float | u.Quantity]=None):
+                        wcu_temp: [float | u.Quantity]=None,
+                        is_temp: [float | u.Quantity]=None):
         """Change the black-body temperature
 
         Parameters
@@ -67,29 +77,117 @@ class BlackBodySource(TERCurve):
             else:
                 raise ValueError("wcu_temp below absolute zero, not changed")
 
+        if is_temp is not None:
+            if isinstance(is_temp, (int, float)):
+                is_temp = is_temp << u.K
+
+            is_temp = is_temp.to(u.K, equivalencies=u.temperature())
+            if is_temp >= 0:
+                self.meta["is_temp"] = is_temp
+            else:
+                raise ValueError("is_temp below absolute zero, not changed")
+
         self.compute_emission()
+
+
+    def bb_to_is_throughput(self):
+        """Load throughput and return interpolation function
+
+        This loads a lookup table for the transmission from the black-body
+        source to the entrance port of the integrating sphere. It returns
+        an interpolation function that can be evaluated on a reflectivity for the tube.
+
+        The model used is the general model, currently with no gaps.
+        """
+
+        path = find_file(self.meta['bb_to_is'])
+        if path is None:
+            return lambda x: 1
+        hdul = fits.open(path)
+        rho_tube = hdul[1].data['rho_tube']
+        throughput = hdul[1].data['t_gen_no_gap']    # TODO: update
+        return interp1d(rho_tube, throughput)
 
 
     def compute_emission(self):
         """Compute the emission at the exit of the integrating sphere"""
-        bb_temp = self.meta["bb_temp"] << u.K
-        wcu_temp = self.meta["wcu_temp"] << u.K
+        self.d_is = self.meta["diam_is"] << u.mm
+        self.d_is_in = self.meta["diam_is_in"] << u.mm
+        self.d_is_out = self.meta["diam_is_out"] << u.mm
+        self.bb_temp = self.meta["bb_temp"] << u.K
+        self.is_temp = self.meta["is_temp"] << u.K
+        self.wcu_temp = self.meta["wcu_temp"] << u.K
+        self.emiss_bb = self.meta["emiss_bb"]
+
         tbl = Table()
         lam = seq(2.2, 15, 0.01) * u.um
+
+        mult_is = self.is_multiplication(lam)
+
+        # continuum black-body source
         bb_scale = 1 * u.ph / (u.s * u.m**2 * u.sr * u.um)
-        bb_lam = (BlackBody(bb_temp, scale=bb_scale) +
-                  BlackBody(wcu_temp, scale=bb_scale))
-        flux = bb_lam(lam)
+        is_bb = BlackBody(self.bb_temp, scale=bb_scale)
+        flux_bb = is_bb(lam) * np.pi * self.d_is_in**2 / 4 * np.pi * self.emiss_bb
+        flux_bb *= self.bb_to_is(self.rho_tube(lam))
+        intens_bb = flux_bb / (np.pi * self.d_is**2) * mult_is / np.pi
+
+        is_bg = BlackBody(self.is_temp, scale=bb_scale)
+        flux_bg = is_bg(lam) * np.pi * self.d_is**2 * np.pi
+        intens_bg = flux_bg / (np.pi * self.d_is**2) * mult_is / np.pi
+
+        intensity = intens_bb + intens_bg
         tbl.add_column(lam, name="wavelength")
         tbl.add_column(np.ones_like(lam).value, name="transmission")
-        tbl.add_column(flux, name="emission")
+        tbl.add_column(intensity, name="emission")
         tbl.meta["wavelength_unit"] = tbl["wavelength"].unit
         tbl.meta["emission_unit"] = tbl["emission"].unit
 
         self.surface.table = tbl
         self.surface.meta.update(tbl.meta)
 
+
+    def is_multiplication(self, wavelength, nport=2):
+        """Intensity multiplication factor for the integrating sphere
+
+        Parameters
+        ----------
+        wavelength : nd.array, float
+            Wavelengths [mm] on which to compute the factor.
+        nport: int
+            Number of ports that contribute to "missing" reflective area
+            on the inside of the integrating sphere. Typical values for
+            the METIS WCU are 2 or 4, depending on whether the extra ports
+            are counted. Value 0 can be used for testing purposes.
+        """
+        rho = self.rho_is(wavelength)
+        area_in = (self.d_is_in**2
+                   * ( 1 - np.cos(np.arcsin(self.d_is_in / self.d_is))))
+        area_out = (self.d_is_out**2
+                    * (1 - np.cos(np.arcsin(self.d_is_out / self.d_is))))
+        area_is = np.pi * self.d_is**2
+        if nport == 0:
+            frac = (area_in + (nport - 1) * area_out) / area_is
+        else:
+            frac = 0
+        return rho / (1 - rho * (1 - frac))
+
     def __str__(self) -> str:
         return f"""{self.__class__.__name__}: "{self.display_name}"
-        BlackBody temperature: {self.meta['bb_temp']}
-        WCU temperature:       {self.meta['wcu_temp']}"""
+        BlackBody temperature:   {self.meta['bb_temp']}
+        Integrating sphere temp: {self.meta['is_temp']}
+        WCU temperature:         {self.meta['wcu_temp']}"""
+
+
+# TODO: put into metis_wcu_utils.py
+def get_reflectivity(file_or_number):
+    """
+    Get a reflectivity from either a file or a number
+
+    This returns a function of wavelength.
+    Does not work with Quantity, assumes wavelength in um.
+    """
+    if isinstance(file_or_number, str):
+        tbl = ioascii.read(find_file(file_or_number))
+        return interp1d(tbl['wavelength'], tbl['reflection'])
+
+    return lambda x: file_or_number
