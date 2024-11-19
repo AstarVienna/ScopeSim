@@ -234,10 +234,10 @@ class FieldVaryingPSF(DiscretePSF):
         if not fov.fields:
             return fov
 
-        if fov.image is None:
-            fov.image = fov.make_image_hdu().data
+        if fov.hdu is None or fov.hdu.data is None:
+            fov.hdu = fov.make_image_hdu()
 
-        old_shape = fov.image.shape
+        old_shape = fov.hdu.data.shape
 
         # Get kernels that cover this fov, and their respective masks.
         # Kernels and masks returned by .get_kernel as list of tuples.
@@ -252,7 +252,7 @@ class FieldVaryingPSF(DiscretePSF):
                 kernel /= sum_kernel
 
             # image convolution
-            image = fov.image.astype(float)
+            image = fov.hdu.data.astype(float)
             kernel = kernel.astype(float)
             new_image = convolve(image, kernel, mode="same")
             if canvas is None:
@@ -267,7 +267,7 @@ class FieldVaryingPSF(DiscretePSF):
 
         # reset WCS header info
         new_shape = canvas.shape
-        fov.image = canvas
+        fov.hdu.data = canvas
 
         # TODO: careful with which dimensions mean what
         if "CRPIX1" in fov.header:

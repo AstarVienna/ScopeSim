@@ -113,7 +113,8 @@ class TestApplyTo:
         nax1, nax2 = centre_fov.header["NAXIS1"], centre_fov.header["NAXIS2"]
         centre_fov.hdu.data = np.zeros((nax2, nax1))
         centre_fov.hdu.data[::3, ::3] = 1
-        sum_orig = np.sum(centre_fov.hdu.data)
+        orig = centre_fov.hdu.data.copy()
+        sum_orig = np.sum(orig)
 
         fvpsf = FieldVaryingPSF(filename=str(mock_path / "test_FVPSF.fits"))
         fov_back = fvpsf.apply_to(centre_fov)
@@ -130,11 +131,17 @@ class TestApplyTo:
         centre_fov.hdu.data = np.zeros((nax2, nax1))
         centre_fov.hdu.data[1::5, 1::5] = 1
         centre_fov.fields = [1]
-        sum_orig = np.sum(centre_fov.hdu.data)
+        orig = centre_fov.hdu.data.copy()
+        sum_orig = np.sum(orig)
 
         fvpsf = FieldVaryingPSF(filename=str(mock_path / "test_FVPSF.fits"))
         fov_back = fvpsf.apply_to(centre_fov)
 
+        # The FieldVaryingPSF was broken from early 2022 till late 2024
+        # because the pixels were not modified at all. This assert verifies
+        # that the data is not identical after applying the PSF, thereby
+        # preventing regressions.
+        assert not (orig == fov_back.hdu.data).all()
         assert np.sum(fov_back.hdu.data) == approx(sum_orig, rel=1E-2)
 
         if PLOTS:
@@ -151,7 +158,8 @@ class TestApplyTo:
         centre_fov.hdu.data[x, y] = 1
         # centre_fov.hdu.data[6:nax1-6:10, 6:nax1-6:10] = 1
         centre_fov.fields = [1]
-        sum_orig = np.sum(centre_fov.hdu.data)
+        orig = centre_fov.hdu.data.copy()
+        sum_orig = np.sum(orig)
 
         fvpsf = FieldVaryingPSF(
             filename=str(mock_path / "test_circular_fvpsf.fits"))
@@ -162,6 +170,7 @@ class TestApplyTo:
             plt.show()
 
         # print(np.sum(fov_back.hdu.data), sum_orig)
+        assert not (orig == fov_back.hdu.data).all()
         assert np.sum(fov_back.hdu.data) == approx(sum_orig, rel=1E-2)
 
 

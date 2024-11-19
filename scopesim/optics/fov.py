@@ -87,9 +87,10 @@ class FieldOfView(FieldOfViewBase):
         self.fields = []
         self.spectra = {}
 
+        # These are apparently not supposed to be used?
         self.cube = None        # 3D array for IFU, long-lit, Slicer-MOS
-        self.image = None       # 2D array for Imagers
-        self.spectrum = None    # SourceSpectrum for Fibre-fed MOS
+        # self.image = None       # 2D array for Imagers
+        # self.spectrum = None    # SourceSpectrum for Fibre-fed MOS
 
         self._waverange = None
         self._wavelength = None
