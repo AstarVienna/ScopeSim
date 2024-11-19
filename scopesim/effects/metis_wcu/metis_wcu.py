@@ -126,19 +126,24 @@ class BlackBodySource(TERCurve):
 
         # continuum black-body source
         bb_scale = 1 * u.ph / (u.s * u.m**2 * u.sr * u.um)
-        is_bb = BlackBody(self.bb_temp, scale=bb_scale)
-        flux_bb = is_bb(lam) * np.pi * self.d_is_in**2 / 4 * np.pi * self.emiss_bb
-        flux_bb *= self.bb_to_is(self.rho_tube(lam))
-        intens_bb = flux_bb / (np.pi * self.d_is**2) * mult_is / np.pi
+        self.is_bb = BlackBody(self.bb_temp, scale=bb_scale)
+        self.flux_bb = (self.emiss_bb * self.is_bb(lam)
+                        * (np.pi * self.d_is_in**2 / 4) * (np.pi * u.sr))
+        self.flux_bb *= self.bb_to_is(self.rho_tube(lam))
+        self.intens_bb = self.flux_bb / (np.pi * self.d_is**2) * mult_is / (np.pi * u.sr)
 
-        is_bg = BlackBody(self.is_temp, scale=bb_scale)
-        flux_bg = is_bg(lam) * np.pi * self.d_is**2 * np.pi
-        intens_bg = flux_bg / (np.pi * self.d_is**2) * mult_is / np.pi
+        # background emission from integrating sphere
+        self.is_bg = BlackBody(self.is_temp, scale=bb_scale)
+        #self.flux_bg = ((1 - self.rho_is(lam)) * self.is_bg(lam)
+        #                * (np.pi * self.d_is**2) * (np.pi * u.sr))
+        #self.intens_bg = self.flux_bg / (np.pi * self.d_is**2) * mult_is / (np.pi * u.sr)
+        self.intens_bg  = self.rho_is(lam) * self.is_bg(lam)
 
-        intensity = intens_bb + intens_bg
+        self.intensity = self.intens_bb + self.intens_bg
+        self.wavelength = lam
         tbl.add_column(lam, name="wavelength")
         tbl.add_column(np.ones_like(lam).value, name="transmission")
-        tbl.add_column(intensity, name="emission")
+        tbl.add_column(self.intensity, name="emission")
         tbl.meta["wavelength_unit"] = tbl["wavelength"].unit
         tbl.meta["emission_unit"] = tbl["emission"].unit
 
@@ -166,9 +171,10 @@ class BlackBodySource(TERCurve):
                     * (1 - np.cos(np.arcsin(self.d_is_out / self.d_is))))
         area_is = np.pi * self.d_is**2
         if nport == 0:
-            frac = (area_in + (nport - 1) * area_out) / area_is
+            frac = ((area_in + (nport - 1) * area_out) / area_is).decompose().value
         else:
             frac = 0
+
         return rho / (1 - rho * (1 - frac))
 
     def __str__(self) -> str:
@@ -190,4 +196,4 @@ def get_reflectivity(file_or_number):
         tbl = ioascii.read(find_file(file_or_number))
         return interp1d(tbl['wavelength'], tbl['reflection'])
 
-    return lambda x: file_or_number
+    return lambda x: file_or_number * np.ones_like(x.value)
