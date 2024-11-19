@@ -22,7 +22,8 @@ from astropy.utils.exceptions import AstropyWarning
 
 warnings.simplefilter('ignore', UserWarning)
 warnings.simplefilter('ignore', FutureWarning)
-warnings.simplefilter('ignore', RuntimeWarning)    # warnings for the developer
+warnings.simplefilter('ignore', RuntimeWarning)  # warnings for the developer
+warnings.simplefilter('default', DeprecationWarning)  # allow in general
 warnings.simplefilter('ignore', category=AstropyWarning)
 yaml.warnings({'YAMLLoadWarning': False})
 
