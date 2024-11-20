@@ -381,7 +381,8 @@ class UserCommands(NestedChainMap):
                     # or rather warning?
                     logger.info(
                         "Mode '%s' is still in experimental stage, results "
-                        "may not be representative of physical instrument."
+                        "may not be representative of physical instrument.",
+                        mode
                     )
 
                 if self.modes_dict[mode].get("status") == "concept":
