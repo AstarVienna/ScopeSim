@@ -242,7 +242,7 @@ class UserCommands(NestedChainMap):
             self.update(packages=[kwargs["use_instrument"]],
                         yamls=["default.yaml"])
 
-            check_for_updates(self.package_name)
+            # check_for_updates(self.package_name)
 
         if "packages" in kwargs:
             add_packages_to_rc_search(self["!SIM.file.local_packages_path"],
