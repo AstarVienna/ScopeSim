@@ -446,6 +446,8 @@ def download_missing_pkgs(instrument: str) -> None:
 def check_packages(instrument: str, download_missing: bool) -> None:
     """Check if required package is in CWD, download if needed."""
     pkgdir = Path(rc.__config__["!SIM.file.local_packages_path"])
+    if not pkgdir.exists():
+        pkgdir.mkdir()
     pkgdir = patch_fake_symlinks(pkgdir)
     if not (pkgdir / instrument).exists():
         logger.warning("IRDB package for %s not found.", instrument)
