@@ -10,6 +10,7 @@ from scipy.interpolate import interp1d
 from ..ter_curves import TERCurve
 from ...utils import get_logger, seq, find_file,\
     convert_table_comments_to_dict
+from ...source.source import Source
 
 logger = get_logger(__name__)
 
@@ -44,6 +45,36 @@ class BlackBodySource(TERCurve):
     @property
     def emission(self):
         return self.surface.emission
+
+    @property
+    def background_source(self):
+        """Define a source field for the FP mask"""
+        if self._background_source is None:
+            flux = self.emission
+            bg_hdu = fits.ImageHDU()
+
+            bg_hdu.header.update({"BG_SRC": True,
+                                  "BG_SURF": self.display_name,
+                                  "CTYPE1": "LINEAR",
+                                  "CTYPE2": "LINEAR",
+                                  "CRPIX1": 1024.5,
+                                  "CRPIX2": 1024.5,
+                                  "CRVAL1": 0.,
+                                  "CRVAL2": 0.,
+                                  "CUNIT1": "ARCSEC",
+                                  "CUNIT2": "ARCSEC",
+                                  "CDELT1": 0.00547,
+                                  "CDELT2": 0.00547,
+                                  #"BUNIT": "PHOTLAM arcsec-2",
+                                  "SOLIDANG": "arcsec-2"})
+            bg_hdu.data = np.zeros((2048, 2048))
+            bg_hdu.data[1024, 1024] = 1
+            bg_hdu.data[512, 512] = 1
+            self._background_source = Source(image_hdu=bg_hdu, spectra=flux)
+            #bg_hdu.data = 1 - bg_hdu.data
+            #self._background_source.append([Source(image_hdu=bg_hdu, spectra=0.3 * flux)])
+
+        return self._background_source
 
 
     def set_temperature(self, bb_temp: [float | u.Quantity]=None,
