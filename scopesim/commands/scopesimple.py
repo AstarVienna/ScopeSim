@@ -251,8 +251,9 @@ class Simulation:
         return {"vmin": vmin, "vmax": vmax}
 
     @staticmethod
-    def _get_figax(n_imgs: int):
-        fig, axs = figure_factory(nrows=int(n_imgs), ncols=int(n_imgs))
+    def _get_figax(n_imgs: int, fig_kwargs):
+        fig, axs = figure_factory(nrows=int(n_imgs), ncols=int(n_imgs),
+                                  **fig_kwargs)
         if isinstance(axs, np.ndarray):
             axs = list(axs.flatten())
         else:
@@ -268,10 +269,11 @@ class Simulation:
                 " create an uneven image plot.")
 
         vminmax = self._get_vminmax(adjust_scale)
+        fig_kwargs = kwargs.pop("fig_kwargs", {})
         pltkwargs = {"origin": "lower", "norm": "log"} | vminmax | kwargs
         img_slice = img_slice or slice(None)
 
-        fig, axs = self._get_figax(n_imgs)
+        fig, axs = self._get_figax(n_imgs, fig_kwargs)
         for ax, img in zip(axs, imgs):
             ax.imshow(img.data[img_slice], **pltkwargs)
             ax.set_aspect("equal")
