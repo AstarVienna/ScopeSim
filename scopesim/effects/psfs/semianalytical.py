@@ -232,47 +232,77 @@ class AnisocadoConstPSF(SemiAnalyticalPSF):
 class AnisocadoFieldVaryingPSF(AnisocadoConstPSF):
 
     required_keys = {"filename", "strehl", "wavelength", "r_max"}
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
         params = {"psf_side_length": 256,
+                  "n_psf_points_per_side": 3,
                   "grid_type": "radial",
                   "r_max": 30,
-                  "anisocado_kwargs"}
+                  "anisocado_kwargs": {}}
         self.meta.update(params)
         self.meta.update(kwargs)
 
         check_keys(self.meta, self.required_keys, action="error")
 
-        pixel_scale = from_currsys("!INST.pixel_scale", self.cmds)
-        self.psf_object = aniso.AnalyticalScaoPsf(pixelSize=pixel_scale,
-                                                  N=self.meta["psf_side_length"],
-                                                  wavelength=self.meta["wavelength"],
-                                                  nmRms=self.nmRms,
-                                                  **self.meta["anisocado_kwargs"])
-
-        xs, ys = make_xys(r_max=self.meta["r_max"],
-                          n=self.meta["psf_side_length"],
-                          grid_type=self.meta["grid_type"])
-        dec_idx_map = make_decimal_index_map(xs, ys, n=self.meta["psf_side_length"])
-        self.psf_cube = generate_anisocado_psf_cube(xs, ys,
-                                                    wave=self.meta["wavelength"],
-                                                    pixel_scale=pixel_scale,
-                                                    nmRms=self.nmRms,
-                                                    psf_object=self.psf_object)
-
-
-    def apply_to(self, obj, **kwargs):
-        pass
+        self.psf_object = None
+        self.dec_idx_map = None
+        self.kernel_cube = None
 
     def get_kernel(self, fov):
 
+        if isinstance(fov, FieldOfViewBase):
+            pixel_scale = fov.header["CDELT1"] * u.deg.to(u.arcsec)
+        elif isinstance(fov, float):
+            pixel_scale = fov
 
+        if self.psf_object is None:
+            self.psf_object = aniso.AnalyticalScaoPsf(
+                                    pixelSize=pixel_scale,
+                                    N=self.meta["psf_side_length"],
+                                    wavelength=self.meta["wavelength"],
+                                    nmRms=self.nmRms,
+                                    **self.meta["anisocado_kwargs"])
 
+        if self.dec_idx_map is None:
+            xs, ys = make_xys(r_max=self.meta["r_max"],
+                                    n=self.meta["n_psf_points_per_side"],
+                                    grid_type=self.meta["grid_type"])
+            self.dec_idx_map = make_decimal_index_map(
+                                    xs, ys, n=self.meta["psf_side_length"])
+        if self.kernel_cube is None:
+            self.kernel_cube = generate_anisocado_psf_cube(
+                                    xs, ys,
+                                    wave=self.meta["wavelength"],
+                                    pixel_scale=pixel_scale,
+                                    nmRms=self.nmRms,
+                                    psf_object=self._psf_object)
 
+        return self.kernel_cube
 
+    def apply_to(self, obj, **kwargs):
 
+        if isinstance(obj, FieldOfViewBase):
+            # cut area out
+            dec_idx = None
+            get_psf_from_decimal_index(self.kernel_cube, dec_idx)
 
+        return obj
+
+    def plot(self, fig=None):
+        if self.kernel_cube is None:
+            return
+
+        import matplotlib.pyplot as plt
+        n_r = self.meta["n_psf_points_per_side"]
+
+        plt.figure(figsize=(15, 15)) if fig is None else plt.scf(fig)
+        for i in range(self.kernel_cube.shape[0]):
+            j = n_r ** 2 - n_r * (i // n_r) - n_r + i % n_r
+            plt.subplot(n_r, n_r, j+1)
+            plt.imshow(self.kernel_cube[i].T, norm="log", origin="lower")
+            # plt.title(f"x={xs[i]}, y={ys[i]}")
 
 
 def nmrms_from_strehl_and_wavelength(strehl: float,

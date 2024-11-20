@@ -11,6 +11,8 @@ from scopesim.tests.mocks.py_objects import source_objects as srcobj
 import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm
 
+from pathlib import Path
+MOCK_DIR = Path(__file__).parent.parent / "mocks"
 
 PLOTS = False
 
@@ -22,6 +24,42 @@ def mock_psf_cube(n=64):
                                               pixel_scale=0.01,
                                               wave=3.4)
     return psf_cube
+
+
+class TestAnisocadoFieldVaryingPsf:
+    def test_throws_error_if_missing_kwargs(self):
+        with pytest.raises(ValueError):
+            sa.AnisocadoFieldVaryingPSF()
+
+    def test_intialises_with_expected_kwargs(self):
+        psf = sa.AnisocadoFieldVaryingPSF(
+            filename=str(MOCK_DIR / "files" / "test_AnisoCADO_rms_map.fits"),
+            strehl=0.5, wavelength=2.15, r_max=30)
+
+        assert isinstance(psf, sa.AnisocadoFieldVaryingPSF)
+
+
+class TestAFVPSF_GetKernel:
+    @classmethod
+    def setup_class(cls):
+        cls.psf = sa.AnisocadoFieldVaryingPSF(
+            filename=str(MOCK_DIR / "files" / "test_AnisoCADO_rms_map.fits"),
+            strehl=0.5, wavelength=2.15, r_max=30, grid_type="radial")
+        cls.psf.get_kernel(0.01)
+
+    def test_returns_expected_kernel_size(self):
+        if not PLOTS:
+            self.psf.plot()
+            plt.show()
+
+        assert (self.psf.kernel_cube.shape <=
+                    (self.psf.meta["n_psf_points_per_side"]**2,
+                     self.psf.meta["psf_side_length"],
+                     self.psf.meta["psf_side_length"]))
+
+    def test_dec_index_map_max_value_is_not_greater_than_number_of_layers(self):
+        assert self.psf.dec_idx_map.data.max() < self.psf.kernel_cube.shape[0]
+
 
 
 class TestMakeXys:
