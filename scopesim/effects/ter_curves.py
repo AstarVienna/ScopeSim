@@ -134,7 +134,8 @@ class TERCurve(Effect):
 
             # add the effect background to the source background field
             if self.background_source is not None:
-                obj.append(self.background_source)
+                for bgs in self.background_source:
+                    obj.append(bgs)
 
         if isinstance(obj, FOVSetupBase):
             from ..optics.fov_manager import FovVolumeList
@@ -174,7 +175,7 @@ class TERCurve(Effect):
                                   "SOLIDANG": "arcsec-2"})
             self._background_source = Source(image_hdu=bg_hdu, spectra=flux)
 
-        return self._background_source
+        return [self._background_source]
 
     def plot(self, which="x", wavelength=None, *, axes=None, **kwargs):
         """Plot TER curves.
@@ -845,7 +846,7 @@ class SpanishVOFilterWheel(FilterWheelBase):
 
     required_keys = {"observatory", "instrument", "current_filter"}
 
-    def __init__(self, **kwargs):        
+    def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
         params = {"include_str": None,         # passed to
