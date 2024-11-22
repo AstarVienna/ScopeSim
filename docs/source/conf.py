@@ -37,8 +37,8 @@ os.environ['PYTHONPATH'] = ';'.join((package_path,
 # -- Project information -----------------------------------------------------
 
 project = 'ScopeSim'
-copyright = '2019, A*Vienna'
-author = 'Kieran Leschinski, Oliver Czoske'
+copyright = '2024, A*Vienna'
+author = 'Kieran Leschinski, Oliver Czoske, Fabian Haberhauer'
 
 # The short X.Y version
 version = ''
@@ -57,7 +57,6 @@ release = ''
 # ones.
 extensions = [
     'scopesim_sphinx_ext',
-    'nbsphinx',
     'sphinx.ext.intersphinx',
     'sphinx.ext.todo',
     'sphinx.ext.mathjax',
@@ -68,8 +67,6 @@ extensions = [
     'sphinx.ext.autodoc',
     'sphinx_copybutton',
     'myst_nb',
-    # 'jupyter_sphinx.execute',
-    # 'sphinx.ext.coverage',
 ]
 
 # apidoc settings
@@ -122,7 +119,11 @@ pygments_style = None
 # a list of builtin themes.
 #
 html_theme = "sphinx_book_theme"
-nbsphinx_execute = "never"
+nb_execution_mode = "auto"
+nb_execution_timeout = 300  # seconds
+nb_merge_streams = True
+nb_execution_raise_on_error = True
+# nb_execution_excludepatterns = ["examples/*.ipynb"]
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the

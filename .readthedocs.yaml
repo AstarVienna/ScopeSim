@@ -9,6 +9,11 @@ build:
   tools:
     python: "3.11"
   jobs:
+    post_checkout:
+      - git clone -n --depth=1 --filter=tree:0 https://github.com/AstarVienna/irdb ./docs/source/examples/inst_pkgs
+      - git -C ./docs/source/examples/inst_pkgs sparse-checkout set --no-cone Armazones ELT METIS MICADO MORFEO LFOA !docs
+      - git -C ./docs/source/examples/inst_pkgs checkout
+      - find . -name \*.ipynb -type f -print
     post_create_environment:
       # Install poetry
       # https://python-poetry.org/docs/#installing-manually

@@ -70,4 +70,4 @@ from .source.source import Source
 from .server.database import (list_packages, download_packages, download_package,
                               list_example_data, download_example_data)
 
-from .tests.mocks.load_basic_instrument import load_example_optical_train
+from .tests.mocks.load_basic_instrument import load_example_optical_train, example_simulation

@@ -1,7 +1,7 @@
 from unittest.mock import patch
 
 from pathlib import Path
-from scopesim import UserCommands, OpticalTrain
+from scopesim import UserCommands, OpticalTrain, Simulation
 
 
 def load_example_optical_train(**kwargs):
@@ -39,3 +39,12 @@ def load_example_optical_train(**kwargs):
         opt = OpticalTrain(cmd)
 
     return opt
+
+
+def example_simulation(*args, **kwargs):
+    """Return basic example ``Simulation`` object with IMG and SPEC modes."""
+    patched = {"!SIM.file.local_packages_path": str(Path(__file__).parent)}
+    with patch.dict("scopesim.rc.__config__", patched):
+        sim = Simulation("basic_instrument", *args, **kwargs)
+
+    return sim
