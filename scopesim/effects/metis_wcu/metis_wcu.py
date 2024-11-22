@@ -7,6 +7,8 @@ from astropy import units as u
 from astropy.io import fits
 from astropy.io import ascii as ioascii
 from scipy.interpolate import interp1d
+import yaml
+
 from ..ter_curves import TERCurve
 from ...utils import get_logger, seq, find_file,\
     convert_table_comments_to_dict
@@ -34,6 +36,16 @@ class BlackBodySource(TERCurve):
         }
         self.meta.update(params)
         self.meta.update(kwargs)
+        if 'config_file' in self.meta:
+            with open(find_file(self.meta['config_file'])) as fd:
+                config = yaml.safe_load(fd)
+                self.meta.update(config)
+
+        # Check on the presence of one vital parameter
+        if "rho_tube" not in self.meta:
+            raise ValueError("Parameters not present: please provide config file or parameter values"
+                             "for BlackBodySource")
+
         self._background_source = None
 
         # Load components for the source
@@ -53,26 +65,32 @@ class BlackBodySource(TERCurve):
             flux = self.emission
             bg_hdu = fits.ImageHDU()
 
-            bg_hdu.header.update({"BG_SRC": True,
-                                  "BG_SURF": self.display_name,
-                                  "CTYPE1": "LINEAR",
-                                  "CTYPE2": "LINEAR",
-                                  "CRPIX1": 1024.5,
-                                  "CRPIX2": 1024.5,
-                                  "CRVAL1": 0.,
-                                  "CRVAL2": 0.,
-                                  "CUNIT1": "ARCSEC",
-                                  "CUNIT2": "ARCSEC",
-                                  "CDELT1": 0.00547,
-                                  "CDELT2": 0.00547,
-                                  #"BUNIT": "PHOTLAM arcsec-2",
-                                  "SOLIDANG": "arcsec-2"})
+            hdr = {"BG_SRC": True,
+                   "BG_SURF": self.display_name,
+                   "CTYPE1": "LINEAR",
+                   "CTYPE2": "LINEAR",
+                   "CRPIX1": 1024.5,
+                   "CRPIX2": 1024.5,
+                   "CRVAL1": 0.,
+                   "CRVAL2": 0.,
+                   "CUNIT1": "ARCSEC",
+                   "CUNIT2": "ARCSEC",
+                   "CDELT1": 0.00547,
+                   "CDELT2": 0.00547,
+                   #"BUNIT": "PHOTLAM arcsec-2",
+                   "SOLIDANG": "arcsec-2"}
+            bg_hdu.header.update(hdr)
             bg_hdu.data = np.zeros((2048, 2048))
             bg_hdu.data[1024, 1024] = 1
             bg_hdu.data[512, 512] = 1
-            self._background_source = Source(image_hdu=bg_hdu, spectra=flux)
-            #bg_hdu.data = 1 - bg_hdu.data
-            #self._background_source.append([Source(image_hdu=bg_hdu, spectra=0.3 * flux)])
+            self._background_source = [Source(image_hdu=bg_hdu, spectra=flux)]
+
+            bg2_hdu = fits.ImageHDU()
+            bg2_hdu.header.update(hdr)
+            bg2_hdu.data = np.ones((2048, 2048))
+            bg2_hdu.data[1024, 1024] = 0
+            bg2_hdu.data[512, 512] = 0
+            self._background_source.append(Source(image_hdu=bg2_hdu, spectra=0.02 * flux))
 
         return self._background_source
 

@@ -69,7 +69,6 @@ class TestBlackBodySource:
             bbsource.set_temperature(wcu_temp=2*u.Tesla)
         assert bbsource.meta['wcu_temp'] == old_temp
 
-
     def test_ignore_negative_bb_temperature(self, bbsource):
         old_temp = bbsource.meta['bb_temp']
         with pytest.raises(ValueError):
@@ -81,7 +80,6 @@ class TestBlackBodySource:
         with pytest.raises(ValueError):
             bbsource.set_temperature(wcu_temp=-1000 * u.K)
         assert bbsource.meta['wcu_temp'] == old_temp
-
 
     def test_emission_increases_with_temperature(self, bbsource):
         """
@@ -98,3 +96,8 @@ class TestBlackBodySource:
         new_emission = bbsource.surface.emission
         lam_ref = seq(2.2, 15, 0.1) * u.um
         assert all(new_emission(lam_ref) > old_emission(lam_ref))
+
+
+    def test_black_body_source_fails_without_parameters(self):
+        with pytest.raises(ValueError):
+            bbsource = BlackBodySource()
