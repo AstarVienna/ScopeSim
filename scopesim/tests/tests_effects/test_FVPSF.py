@@ -154,7 +154,8 @@ class TestApplyTo:
         nax1, nax2 = centre_fov.header["NAXIS1"], centre_fov.header["NAXIS2"]
         centre_fov.hdu.data = np.zeros((nax2, nax1))
 
-        x, y = np.random.randint(6, nax1-6, (2, 150))
+        rng = np.random.RandomState(42)
+        x, y = rng.randint(6, nax1-6, (2, 150))
         centre_fov.hdu.data[x, y] = 1
         # centre_fov.hdu.data[6:nax1-6:10, 6:nax1-6:10] = 1
         centre_fov.fields = [1]
