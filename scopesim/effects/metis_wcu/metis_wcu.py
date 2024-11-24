@@ -104,15 +104,21 @@ class BlackBodySource(TERCurve):
             bg_hdu.data = np.zeros((2048, 2048))
             bg_hdu.data[1024, 1024] = 1
             bg_hdu.data[512, 512] = 1
+            # When spectrum is intensity (../arcsec2), the image must contain the pixel
+            # area (arcsec2). For a true backgroud field, this is taken care of by
+            # fov._calc_area_factor, but this is not applied to image data, so we
+            # have to do it here.
+            pixarea = (hdr['CDELT1'] * u.Unit(hdr['CUNIT1'])
+                       * hdr['CDELT2'] * u.Unit(hdr['CUNIT2']))
+            bg_hdu.data = bg_hdu.data #* pixarea  # Should actually be the size of the hole
             self._background_source.append(Source(image_hdu=bg_hdu, spectra=bb_flux))
 
-            pixarea = hdr['CDELT1'] * u.Unit(hdr['CUNIT1']) * hdr['CDELT2'] * u.Unit(hdr['CUNIT2'])
             bg2_hdu = fits.ImageHDU()
             bg2_hdu.header.update(hdr)
-            bg2_hdu.data = np.ones((2048, 2048)) * pixarea
+            bg2_hdu.data = np.ones((2048, 2048))
             bg2_hdu.data[1024, 1024] = 0
             bg2_hdu.data[512, 512] = 0
-
+            bg2_hdu.data = bg2_hdu.data * pixarea
             self._background_source.append(Source(image_hdu=bg2_hdu, spectra=mask_flux))
             #self._background_source = [Source(image_hdu=bg2_hdu, spectra=bb_flux)]  # TEST!!!
 
