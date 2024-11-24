@@ -101,3 +101,4 @@ class TestBlackBodySource:
     def test_black_body_source_fails_without_parameters(self):
         with pytest.raises(ValueError):
             bbsource = BlackBodySource()
+            assert isinstance(bbsource, BlackBodySource)

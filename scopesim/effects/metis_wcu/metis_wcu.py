@@ -13,6 +13,8 @@ from ..ter_curves import TERCurve
 from ...utils import get_logger, seq, find_file,\
     convert_table_comments_to_dict
 from ...source.source import Source
+from ...optics.surface import SpectralSurface
+from ...optics.surface_utils import make_emission_from_array
 
 logger = get_logger(__name__)
 
@@ -48,49 +50,71 @@ class BlackBodySource(TERCurve):
 
         self._background_source = None
 
+        # Define surfaces (the IS surface is currently taken from parent class)
+        # we add another one here (TODO: make this nicer)
+        self.mask_surf = SpectralSurface(cmds = self.cmds)
+        self.mask_surf.meta.update(self.meta)
+
         # Load components for the source
+        self.wavelength = seq(2.2, 15, 0.01) * u.um   # TODO cleverer
+        self.bb_scale = 1 * u.ph / (u.s * u.m**2 * u.arcsec**2 * u.um)
         self.bb_to_is = self.bb_to_is_throughput()
         self.rho_tube = get_reflectivity(self.meta['rho_tube'])
         self.rho_is = get_reflectivity(self.meta['rho_is'])
-        self.compute_emission()
+        self.rho_mask = get_reflectivity(self.meta['rho_mask'])
+        self.compute_bb_emission()
+        self.compute_fp_emission()
 
     @property
     def emission(self):
         return self.surface.emission
 
     @property
+    def mask_emission(self):
+        return self.mask_surf.emission
+
+    @property
     def background_source(self):
         """Define a source field for the FP mask"""
-        if self._background_source is None:
-            flux = self.emission
-            bg_hdu = fits.ImageHDU()
 
-            hdr = {"BG_SRC": True,
-                   "BG_SURF": self.display_name,
-                   "CTYPE1": "LINEAR",
-                   "CTYPE2": "LINEAR",
-                   "CRPIX1": 1024.5,
-                   "CRPIX2": 1024.5,
-                   "CRVAL1": 0.,
-                   "CRVAL2": 0.,
-                   "CUNIT1": "ARCSEC",
-                   "CUNIT2": "ARCSEC",
-                   "CDELT1": 0.00547,
-                   "CDELT2": 0.00547,
-                   #"BUNIT": "PHOTLAM arcsec-2",
-                   "SOLIDANG": "arcsec-2"}
+        bb_flux = self.emission
+        mask_flux = self.mask_emission
+        self._background_source = []
+        hdr = {"BG_SRC": True,
+               "BG_SURF": self.display_name,
+               "CTYPE1": "LINEAR",
+               "CTYPE2": "LINEAR",
+               "CRPIX1": 1024.5,
+               "CRPIX2": 1024.5,
+               "CRVAL1": 0.,
+               "CRVAL2": 0.,
+               "CUNIT1": "arcsec",
+               "CUNIT2": "arcsec",
+               "CDELT1": 0.00547,
+               "CDELT2": 0.00547,
+               "BUNIT": "PHOTLAM arcsec-2",
+               "SOLIDANG": "arcsec-2"}
+        if self.meta['fpmask'] == 'open':
+            bg_hdu = fits.ImageHDU()
+            bg_hdu.header.update(hdr)
+            self._background_source.append(Source(image_hdu=bg_hdu, spectra=bb_flux))
+        else:   # TODO: properly define masks
+            bg_hdu = fits.ImageHDU()
             bg_hdu.header.update(hdr)
             bg_hdu.data = np.zeros((2048, 2048))
             bg_hdu.data[1024, 1024] = 1
             bg_hdu.data[512, 512] = 1
-            self._background_source = [Source(image_hdu=bg_hdu, spectra=flux)]
+            self._background_source.append(Source(image_hdu=bg_hdu, spectra=bb_flux))
 
+            pixarea = hdr['CDELT1'] * u.Unit(hdr['CUNIT1']) * hdr['CDELT2'] * u.Unit(hdr['CUNIT2'])
             bg2_hdu = fits.ImageHDU()
             bg2_hdu.header.update(hdr)
-            bg2_hdu.data = np.ones((2048, 2048))
+            bg2_hdu.data = np.ones((2048, 2048)) * pixarea
             bg2_hdu.data[1024, 1024] = 0
             bg2_hdu.data[512, 512] = 0
-            self._background_source.append(Source(image_hdu=bg2_hdu, spectra=0.02 * flux))
+
+            self._background_source.append(Source(image_hdu=bg2_hdu, spectra=mask_flux))
+            #self._background_source = [Source(image_hdu=bg2_hdu, spectra=bb_flux)]  # TEST!!!
 
         return self._background_source
 
@@ -136,7 +160,20 @@ class BlackBodySource(TERCurve):
             else:
                 raise ValueError("is_temp below absolute zero, not changed")
 
-        self.compute_emission()
+        self.compute_bb_emission()
+        self.compute_fp_emission()
+
+
+    def set_mask(self, fpmask: str):
+        """Change the focal-plane mask
+        """
+        masklist = ["open", "pinhole", "grid"]
+        if fpmask not in masklist:
+            raise ValueError(f"fpmask must be one of {masklist}")
+        self.meta["fpmask"] = fpmask
+
+        self.compute_bb_emission()
+        self.compute_fp_emission()
 
 
     def bb_to_is_throughput(self):
@@ -158,7 +195,7 @@ class BlackBodySource(TERCurve):
         return interp1d(rho_tube, throughput)
 
 
-    def compute_emission(self):
+    def compute_bb_emission(self):
         """Compute the emission at the exit of the integrating sphere"""
         self.d_is = self.meta["diam_is"] << u.mm
         self.d_is_in = self.meta["diam_is_in"] << u.mm
@@ -166,30 +203,29 @@ class BlackBodySource(TERCurve):
         self.bb_temp = self.meta["bb_temp"] << u.K
         self.is_temp = self.meta["is_temp"] << u.K
         self.wcu_temp = self.meta["wcu_temp"] << u.K
-        self.emiss_bb = self.meta["emiss_bb"]
+        self.emiss_bb = self.meta["emiss_bb"]      # <<<<<< that needs to be a function
 
-        tbl = Table()
-        lam = seq(2.2, 15, 0.01) * u.um
+        lam = self.wavelength
 
         mult_is = self.is_multiplication(lam)
 
         # continuum black-body source
-        bb_scale = 1 * u.ph / (u.s * u.m**2 * u.sr * u.um)
-        self.is_bb = BlackBody(self.bb_temp, scale=bb_scale)
+        self.is_bb = BlackBody(self.bb_temp, scale=self.bb_scale)
         self.flux_bb = (self.emiss_bb * self.is_bb(lam)
                         * (np.pi * self.d_is_in**2 / 4) * (np.pi * u.sr))
         self.flux_bb *= self.bb_to_is(self.rho_tube(lam))
         self.intens_bb = self.flux_bb / (np.pi * self.d_is**2) * mult_is / (np.pi * u.sr)
 
         # background emission from integrating sphere
-        self.is_bg = BlackBody(self.is_temp, scale=bb_scale)
+        self.is_bg = BlackBody(self.is_temp, scale=self.bb_scale)
         #self.flux_bg = ((1 - self.rho_is(lam)) * self.is_bg(lam)
         #                * (np.pi * self.d_is**2) * (np.pi * u.sr))
         #self.intens_bg = self.flux_bg / (np.pi * self.d_is**2) * mult_is / (np.pi * u.sr)
         self.intens_bg  = self.rho_is(lam) * self.is_bg(lam)
 
         self.intensity = self.intens_bb + self.intens_bg
-        self.wavelength = lam
+
+        tbl = Table()
         tbl.add_column(lam, name="wavelength")
         tbl.add_column(np.ones_like(lam).value, name="transmission")
         tbl.add_column(self.intensity, name="emission")
@@ -198,6 +234,28 @@ class BlackBodySource(TERCurve):
 
         self.surface.table = tbl
         self.surface.meta.update(tbl.meta)
+
+    def compute_fp_emission(self):
+        """Compute the emission from the opaque part of the focal-plane mask"""
+        self.wcu_temp = self.meta["wcu_temp"] << u.K
+        self.emiss_mask = 1 - self.meta["rho_mask"]       # <<<<<< that needs to be a function
+
+        lam = self.wavelength
+
+        # continuum black-body source
+        #self.bb_scale = 1 * u.ph / (u.s * u.m**2 * u.arcsec**2 * u.um)
+        self.mask_em = BlackBody(self.wcu_temp, scale=self.bb_scale)
+        self.intens_fp = self.emiss_mask * self.mask_em(lam)
+
+        tbl = Table()
+        tbl.add_column(lam, name="wavelength")
+        tbl.add_column(np.ones_like(lam).value, name="transmission")
+        tbl.add_column(self.intens_fp, name="emission")
+        tbl.meta["wavelength_unit"] = tbl["wavelength"].unit
+        tbl.meta["emission_unit"] = tbl["emission"].unit
+
+        self.mask_surf.table = tbl
+        self.mask_surf.meta.update(tbl.meta)
 
 
     def is_multiplication(self, wavelength, nport=2):
@@ -230,7 +288,8 @@ class BlackBodySource(TERCurve):
         return f"""{self.__class__.__name__}: "{self.display_name}"
         BlackBody temperature:   {self.meta['bb_temp']}
         Integrating sphere temp: {self.meta['is_temp']}
-        WCU temperature:         {self.meta['wcu_temp']}"""
+        WCU temperature:         {self.meta['wcu_temp']}
+        Focal-plane mask:        {self.meta['fpmask']}"""
 
 
 # TODO: put into metis_wcu_utils.py

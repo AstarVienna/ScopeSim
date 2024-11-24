@@ -21,11 +21,11 @@ loggers:
   # The following loggers produce lots of log spam on DEBUG level, so switch
   # them to INFO by default. They can be re-enabled individually if needed.
   astar.scopesim.optics.image_plane:
-    level: INFO
+    level: DEBUG
   astar.scopesim.optics.image_plane_utils:
-    level: INFO
+    level: DEBUG
   astar.scopesim.optics.surface:
-    level: INFO
+    level: DEBUG
   astar.scopesim.commands.user_commands:
     level: INFO
 
