@@ -1,4 +1,4 @@
-
+# -*- coding: utf-8 -*-
 import pytest
 
 import numpy as np
@@ -116,6 +116,7 @@ class TestObserveSpectroscopyMode:
             trace_flux = det_im[:, sl].sum()     # sum along a trace
             assert round(trace_flux / spot_flux) == n
 
+
 @pytest.mark.usefixtures("protect_currsys", "patch_all_mock_paths")
 class TestSourceImageNotAffected:
     """
@@ -226,6 +227,57 @@ class TestFitsHeader:
         assert hdr["SIM EFF14 class"] == 'SourceDescriptionFitsKeywords'
         assert hdr["SIM CONFIG OBS filter_name"] == 'J'
         assert hdr["ESO ATM SEEING"] == opt.cmds["!OBS.psf_fwhm"]
+
+
+@pytest.mark.usefixtures("protect_currsys", "patch_all_mock_paths")
+class TestModeStatus:
+    def test_concept_mode_init(self):
+        with pytest.raises(NotImplementedError):
+            _ = sim.UserCommands(use_instrument="basic_instrument",
+                                 set_modes=["mock_concept_mode"])
+
+    def test_concept_mode_change(self):
+        cmd = sim.UserCommands(use_instrument="basic_instrument")
+        with pytest.raises(NotImplementedError):
+            cmd.set_modes("mock_concept_mode")
+
+    def test_experimental_mode_init(self, caplog):
+        _ = sim.UserCommands(use_instrument="basic_instrument",
+                             set_modes=["mock_experimental_mode"])
+        assert ("Mode 'mock_experimental_mode' is still in experimental stage"
+                in caplog.text)
+
+    def test_experimental_mode_change(self, caplog):
+        cmd = sim.UserCommands(use_instrument="basic_instrument")
+        cmd.set_modes("mock_experimental_mode")
+        assert ("Mode 'mock_experimental_mode' is still in experimental stage"
+                in caplog.text)
+
+    def test_deprecated_mode_init(self):
+        with pytest.raises(
+                DeprecationWarning,
+                match="Instrument mode 'mock_deprecated_mode' is deprecated."):
+            _ = sim.UserCommands(use_instrument="basic_instrument",
+                                 set_modes=["mock_deprecated_mode"])
+
+    def test_deprecated_mode_change(self):
+        cmd = sim.UserCommands(use_instrument="basic_instrument")
+        with pytest.raises(
+                DeprecationWarning,
+                match="Instrument mode 'mock_deprecated_mode' is deprecated."):
+            cmd.set_modes("mock_deprecated_mode")
+
+    def test_deprecated_msg_mode_init(self):
+        with pytest.raises(
+                DeprecationWarning, match="This mode is deprecated."):
+            _ = sim.UserCommands(use_instrument="basic_instrument",
+                                 set_modes=["mock_deprecated_mode_msg"])
+
+    def test_deprecated_msg_mode_change(self, caplog):
+        cmd = sim.UserCommands(use_instrument="basic_instrument")
+        with pytest.raises(
+                DeprecationWarning, match="This mode is deprecated."):
+            cmd.set_modes("mock_deprecated_mode_msg")
 
 
 @pytest.fixture(scope="function", name="obs")
