@@ -11,7 +11,7 @@ import yaml
 
 from ..ter_curves import TERCurve
 from ...utils import get_logger, seq, find_file,\
-    convert_table_comments_to_dict
+    convert_table_comments_to_dict, from_currsys
 from ...source.source import Source
 from ...optics.surface import SpectralSurface
 from ...optics.surface_utils import make_emission_from_array
@@ -27,6 +27,26 @@ class BlackBodySource(TERCurve):
     - coupling into the integrating sphere
     - integrating sphere magnification factor
     - thermal emission from the integrating sphere
+
+    Configuration file
+    ------------------
+    The default configuration file for the METIS WCU is provided in the irdb.
+    To modify the configuration, copy the file <irdb>/METIS/metis_wcu_config.yaml
+    to the working directory and edit it there. To use the file do e.g.
+    >>> cmds = sim.UserCommands(use_instrument="METIS", set_modes=["wcu_img_lm"]
+    >>> cmds["!WCU.config_file"] = "my_wcu_config.yaml"
+    >>> metis = sim.OpticalTrain(cmds)
+
+    Changing important parameters
+    -----------------------------
+    The temperatures of the black-body source, the integrating sphere as well as the
+    ambient temperature of the WCU (which is the temperature of the focal-plane mask)
+    can be set by calling
+    >>> metis['bb_source'].set_temperature(bb_temp=1200*u.K, is_temp=320*u.K,
+                                           wcu_temp=295*u.K)
+
+    The focal-plane mask can be changed by calling
+    >>> metis['bb_source'].set_mask("pinhole")
     """
 
     def __init__(self, **kwargs):
@@ -39,7 +59,8 @@ class BlackBodySource(TERCurve):
         self.meta.update(params)
         self.meta.update(kwargs)
         if 'config_file' in self.meta:
-            with open(find_file(self.meta['config_file'])) as fd:
+            config_file = from_currsys(self.meta['config_file'], self.cmds)
+            with open(find_file(config_file)) as fd:
                 config = yaml.safe_load(fd)
                 self.meta.update(config)
 
@@ -99,6 +120,9 @@ class BlackBodySource(TERCurve):
             bg_hdu.header.update(hdr)
             self._background_source.append(Source(image_hdu=bg_hdu, spectra=bb_flux))
         else:   # TODO: properly define masks
+            holearea = 4.45610478e-05 * u.arcsec**2 # LM:  25 um
+            # holearea = 0.00031057 * u.arcsec**2   # N:  66 um
+
             bg_hdu = fits.ImageHDU()
             bg_hdu.header.update(hdr)
             bg_hdu.data = np.zeros((2048, 2048))
@@ -108,10 +132,11 @@ class BlackBodySource(TERCurve):
             # area (arcsec2). For a true backgroud field, this is taken care of by
             # fov._calc_area_factor, but this is not applied to image data, so we
             # have to do it here.
+            bg_hdu.data = bg_hdu.data * holearea  # Should actually be the size of the hole
+            self._background_source.append(Source(image_hdu=bg_hdu, spectra=bb_flux))
+
             pixarea = (hdr['CDELT1'] * u.Unit(hdr['CUNIT1'])
                        * hdr['CDELT2'] * u.Unit(hdr['CUNIT2']))
-            bg_hdu.data = bg_hdu.data #* pixarea  # Should actually be the size of the hole
-            self._background_source.append(Source(image_hdu=bg_hdu, spectra=bb_flux))
 
             bg2_hdu = fits.ImageHDU()
             bg2_hdu.header.update(hdr)
