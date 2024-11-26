@@ -181,15 +181,6 @@ class Simulation:
             List of HDUs containing simulation results.
 
         """
-        # If we have AutoExposure in the optical train and no dit or ndit was
-        # passed, assume the user wants to re-estimate them from given exptime.
-        if "auto_exposure" in self.optical_train:
-            kwargs["dit"] = kwargs.get("dit")
-            kwargs["ndit"] = kwargs.get("ndit")
-        else:
-            # Without AutoExposure, we need to get dit, ndit into !OBS
-            self.settings["!OBS.dit"] = kwargs.get("dit")
-            self.settings["!OBS.ndit"] = kwargs.get("ndit")
         self._last_readout = self.optical_train.readout(filename, **kwargs)
         return self.last_readout[0]
 
