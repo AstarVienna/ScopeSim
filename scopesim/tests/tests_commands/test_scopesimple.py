@@ -19,6 +19,14 @@ class TestScopeSimple:
         simple = Simulation("basic_instrument")
         assert "basic_instrument" in str(simple)
 
+    def test_default_mode_works(self):
+        simple = Simulation("basic_instrument")
+        assert simple.mode == "imaging"
+
+    def test_init_mode_works(self):
+        simple = Simulation("basic_instrument", "spectroscopy")
+        assert simple.mode == "spectroscopy"
+
     @pytest.mark.xfail(reason="DIT, NDIT currently broken")
     def test_full_workflow_runs(self):
         simple = Simulation("basic_instrument")
