@@ -459,7 +459,7 @@ class EffectsMetaKeywords(ExtraFitsKeywords):
                     eff_name = eff_name.split()[0]
 
                 # get a resolved meta dict from the effect
-                eff_meta = deepcopy(opt_train[f"#{eff_name}.!"])
+                eff_meta = deepcopy(opt_train[eff_name].meta)
 
                 if self.meta["add_excluded_effects"] and not eff_meta["include"]:
                     continue

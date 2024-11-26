@@ -291,7 +291,7 @@ class UserCommands(NestedChainMap):
                     mode_yaml = self.modes_dict[mode_name]
                     self._load_yaml_dict(mode_yaml)
 
-        if modes := kwargs.get("set_modes"):
+        if modes := list(kwargs.get("set_modes", [])):
             self.set_modes(*modes)
 
         # Calling underlying NestedMapping's update method to avoid recursion
