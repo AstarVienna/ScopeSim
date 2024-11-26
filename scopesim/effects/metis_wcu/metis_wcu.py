@@ -2,24 +2,26 @@
 
 import numpy as np
 from astropy.table import Table
-from astropy.modeling.models import BlackBody
+from astropy.modeling.models import BlackBody, Gaussian1D
 from astropy import units as u
+from astropy import constants as c
 from astropy.io import fits
 from astropy.io import ascii as ioascii
 from scipy.interpolate import interp1d
 import yaml
 
-from ..ter_curves import TERCurve
+from ..ter_curves import TERCurve, FilterCurve
 from ...utils import get_logger, seq, find_file,\
     convert_table_comments_to_dict, from_currsys
 from ...source.source import Source
 from ...optics.surface import SpectralSurface
 from ...optics.surface_utils import make_emission_from_array
 
+
 logger = get_logger(__name__)
 
-class BlackBodySource(TERCurve):
-    """Black Body Source
+class WCUSource(TERCurve):
+    """Warm Calibration Unit Source
 
     This class returns a TERCurve that describes the output emission
     from the integrating sphere of the METIS WCU. The calculations include
@@ -67,7 +69,7 @@ class BlackBodySource(TERCurve):
         # Check on the presence of one vital parameter
         if "rho_tube" not in self.meta:
             raise ValueError("Parameters not present: please provide config file or parameter values"
-                             "for BlackBodySource")
+                             "for WCUSource")
 
         self._background_source = None
 
@@ -77,13 +79,14 @@ class BlackBodySource(TERCurve):
         self.mask_surf.meta.update(self.meta)
 
         # Load components for the source
-        self.wavelength = seq(2.2, 15, 0.01) * u.um   # TODO cleverer
+        #self.wavelength = seq(2.2, 15, 0.01) * u.um   # TODO cleverer
+        self.get_wavelength()
         self.bb_scale = 1 * u.ph / (u.s * u.m**2 * u.arcsec**2 * u.um)
         self.bb_to_is = self.bb_to_is_throughput()
         self.rho_tube = get_reflectivity(self.meta['rho_tube'])
         self.rho_is = get_reflectivity(self.meta['rho_is'])
         self.rho_mask = get_reflectivity(self.meta['rho_mask'])
-        self.compute_bb_emission()
+        self.compute_lamp_emission()
         self.compute_fp_emission()
 
     @property
@@ -115,7 +118,7 @@ class BlackBodySource(TERCurve):
                "CDELT2": 0.00547,
                "BUNIT": "PHOTLAM arcsec-2",
                "SOLIDANG": "arcsec-2"}
-        if self.meta['fpmask'] == 'open':
+        if self.meta['current_mask'] == 'open':
             bg_hdu = fits.ImageHDU()
             bg_hdu.header.update(hdr)
             self._background_source.append(Source(image_hdu=bg_hdu, spectra=bb_flux))
@@ -149,6 +152,49 @@ class BlackBodySource(TERCurve):
 
         return self._background_source
 
+    def set_lamp(self, lamp='bb'):
+        """Change the WCU lamp
+
+        The list of available lamps can be obtained with
+        >>> metis['wcu_source'].lamps
+        The lamp currently in use is
+        >>> metis['wcu_source'].current_lamp
+        It is changed with, e.g.,
+        >>> metis['wcu_source'].set_lamp('laser')
+        """
+        if lamp not in self.lamps:
+            raise ValueError(f"'lamp' needs to be one of {self.lamps}")
+
+        self.meta['current_lamp'] = lamp
+        #self.get_wavelength()   # does not depend on the lamp
+        self.compute_lamp_emission()
+        self.compute_fp_emission()
+
+
+    def get_wavelength(self):
+        """Try to set the appropriate wavelength vector for the mode and filter"""
+        if 'wcu_lms' in self.cmds['!OBS.modes']:     ## Need to provide for wcu_lms_extended
+            lamc = self.cmds['!OBS.wavelen']
+            dlam = self.cmds['!SIM.spectral.spectral_bin_width']
+            lam = seq(lamc - 3000 * dlam, lamc + 3000 * dlam, dlam) * u.um
+        else:
+            filter_name = self.cmds['!OBS.filter_name']
+            filename_format = self.cmds['!INST.filter_file_format']
+            tempfilter = FilterCurve(filter_name=filter_name,
+                                     filename_format=filename_format)
+            lammin, lammax = tempfilter.throughput.waverange << u.um
+            dlam = self.cmds['!SIM.spectral.spectral_bin_width']
+            lam = seq(lammin.value, lammax.value, dlam) * u.um
+        self.wavelength = lam
+
+
+    @property
+    def lamps(self):
+        return self.meta['lamps']
+
+    @property
+    def current_lamp(self):
+        return self.meta['current_lamp']
 
     def set_temperature(self, bb_temp: [float | u.Quantity]=None,
                         wcu_temp: [float | u.Quantity]=None,
@@ -191,20 +237,24 @@ class BlackBodySource(TERCurve):
             else:
                 raise ValueError("is_temp below absolute zero, not changed")
 
-        self.compute_bb_emission()
+        self.compute_lamp_emission()
         self.compute_fp_emission()
 
 
     def set_mask(self, fpmask: str):
         """Change the focal-plane mask
         """
-        masklist = ["open", "pinhole", "grid"]
+        masklist = self.meta['fpmasks']
         if fpmask not in masklist:
             raise ValueError(f"fpmask must be one of {masklist}")
-        self.meta["fpmask"] = fpmask
+        self.meta["current_mask"] = fpmask
 
-        self.compute_bb_emission()
+        self.compute_lamp_emission()
         self.compute_fp_emission()
+
+    @property
+    def current_mask(self):
+        return self.meta['current_mask']
 
 
     def bb_to_is_throughput(self):
@@ -226,7 +276,7 @@ class BlackBodySource(TERCurve):
         return interp1d(rho_tube, throughput)
 
 
-    def compute_bb_emission(self):
+    def compute_lamp_emission(self):
         """Compute the emission at the exit of the integrating sphere"""
         self.d_is = self.meta["diam_is"] << u.mm
         self.d_is_in = self.meta["diam_is_in"] << u.mm
@@ -237,15 +287,23 @@ class BlackBodySource(TERCurve):
         self.emiss_bb = self.meta["emiss_bb"]      # <<<<<< that needs to be a function
 
         lam = self.wavelength
+        print("compute_lamp_emission: len(lam) = ", len(lam))
 
         mult_is = self.is_multiplication(lam)
 
         # continuum black-body source
-        self.is_bb = BlackBody(self.bb_temp, scale=self.bb_scale)
-        self.flux_bb = (self.emiss_bb * self.is_bb(lam)
-                        * (np.pi * self.d_is_in**2 / 4) * (np.pi * u.sr))
-        self.flux_bb *= self.bb_to_is(self.rho_tube(lam))
-        self.intens_bb = self.flux_bb / (np.pi * self.d_is**2) * mult_is / (np.pi * u.sr)
+        if self.current_lamp == "bb":
+            self.is_lamp = BlackBody(self.bb_temp, scale=self.bb_scale)
+            self.flux_lamp = (self.emiss_bb * self.is_lamp(lam)
+                            * (np.pi * self.d_is_in**2 / 4) * (np.pi * u.sr))
+            self.flux_lamp *= self.bb_to_is(self.rho_tube(lam))
+            self.intens_lamp = self.flux_lamp / (np.pi * self.d_is**2) * mult_is / (np.pi * u.sr)
+        elif self.current_lamp == "laser":
+            self.intens_lamp = self._laser_intensity()
+        elif self.current_lamp == "none":
+            self.intens_lamp = np.zeros(len(lam)) * self.bb_scale
+        else:
+            raise ValueError(f"Unknown lamp: {self.current_lamp}")
 
         # background emission from integrating sphere
         self.is_bg = BlackBody(self.is_temp, scale=self.bb_scale)
@@ -254,7 +312,9 @@ class BlackBodySource(TERCurve):
         #self.intens_bg = self.flux_bg / (np.pi * self.d_is**2) * mult_is / (np.pi * u.sr)
         self.intens_bg  = self.rho_is(lam) * self.is_bg(lam)
 
-        self.intensity = self.intens_bb + self.intens_bg
+        print("intens_lamp:", len(self.intens_lamp))
+        print("intens_bg:", len(self.intens_bg))
+        self.intensity = self.intens_lamp + self.intens_bg
 
         tbl = Table()
         tbl.add_column(lam, name="wavelength")
@@ -266,12 +326,26 @@ class BlackBodySource(TERCurve):
         self.surface.table = tbl
         self.surface.meta.update(tbl.meta)
 
+    def _laser_intensity(self):
+        lam = self.wavelength
+        dlam = lam[1] - lam[0]
+
+        power = 5e-3 * u.W / (c.c * c.h / lam) * u.ph
+        lamc = 3.39 * u.um
+        sigma = 2 * dlam #* u.um
+        amp = 1/(sigma * np.sqrt(2 * np.pi))
+        line = Gaussian1D(amplitude=amp, mean=lamc, stddev=sigma)
+        flux = power * line(lam) / (np.pi * self.d_is_in**2 / 4)
+        intens = flux / (np.pi * u.sr)
+        return intens.to(self.bb_scale)
+
     def compute_fp_emission(self):
         """Compute the emission from the opaque part of the focal-plane mask"""
         self.wcu_temp = self.meta["wcu_temp"] << u.K
         self.emiss_mask = 1 - self.meta["rho_mask"]       # <<<<<< that needs to be a function
 
         lam = self.wavelength
+        print("compute_fp_emission len(lam) = ", len(lam))
 
         # continuum black-body source
         #self.bb_scale = 1 * u.ph / (u.s * u.m**2 * u.arcsec**2 * u.um)
@@ -317,10 +391,11 @@ class BlackBodySource(TERCurve):
 
     def __str__(self) -> str:
         return f"""{self.__class__.__name__}: "{self.display_name}"
+        Current lamp:            {self.current_lamp}     {self.lamps}
         BlackBody temperature:   {self.meta['bb_temp']}
         Integrating sphere temp: {self.meta['is_temp']}
         WCU temperature:         {self.meta['wcu_temp']}
-        Focal-plane mask:        {self.meta['fpmask']}"""
+        Focal-plane mask:        {self.meta['current_mask']}  {self.meta['fpmasks']}"""
 
 
 # TODO: put into metis_wcu_utils.py

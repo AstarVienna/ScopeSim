@@ -11,4 +11,4 @@ from ...utils import get_logger
 
 logger = get_logger(__name__)
 
-from .metis_wcu import BlackBodySource
+from .metis_wcu import WCUSource
