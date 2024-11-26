@@ -1,5 +1,34 @@
+# Version 0.9.1
+**2024-11-26**
+
+Many small but important fixes and improvements that were missing in v0.9.0.
+
+## What's Changed
+### Changes to or addition of Effects
+* Improve z_order by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/500
+* Fix FieldVaryingPSF by @hugobuddel in https://github.com/AstarVienna/ScopeSim/pull/506
+### New Features or Improvements
+* Enable DeprecationWarnings by default by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/508
+* Minor fixes for ScopeSimple by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/510
+* Add support for package and mode status keywords by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/509
+### Dependency Changes
+* Require Templates 0.6.0 and sync from there by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/501
+* Bump tornado from 6.4.1 to 6.4.2 by @dependabot in https://github.com/AstarVienna/ScopeSim/pull/511
+### Documentation Improvements
+* Cleanup example notebooks by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/496
+### Other Changes
+* Added source scaling test by @janusbrink in https://github.com/AstarVienna/ScopeSim/pull/495
+* Move logging config to separate yaml, configure individual loggers by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/502
+* Ignore strip_cdata warning by lxml, introduced by bs4 by @hugobuddel in https://github.com/AstarVienna/ScopeSim/pull/504
+* Fix #490: make rescale_imagehdu more robust against dimension mismatches by @oczoske in https://github.com/AstarVienna/ScopeSim/pull/503
+* Make random test deterministic by @hugobuddel in https://github.com/AstarVienna/ScopeSim/pull/512
+* Fix two more issues with ScopeSimple by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/514
+
+**Full Changelog**: https://github.com/AstarVienna/ScopeSim/compare/v0.9.0...v0.9.1
+
+
 # Version 0.9.0
-**2024-10-11**
+**2024-11-10**
 
 > [!IMPORTANT]
 > The minimum required Python version for this package is now **3.10** (see Dependency Changes).
