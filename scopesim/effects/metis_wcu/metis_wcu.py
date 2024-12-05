@@ -12,10 +12,9 @@ import yaml
 
 from ..ter_curves import TERCurve, FilterCurve
 from ...utils import get_logger, seq, find_file,\
-    convert_table_comments_to_dict, from_currsys
+    from_currsys
 from ...source.source import Source
 from ...optics.surface import SpectralSurface
-from ...optics.surface_utils import make_emission_from_array
 
 
 logger = get_logger(__name__)
@@ -173,7 +172,10 @@ class WCUSource(TERCurve):
 
     def get_wavelength(self):
         """Try to set the appropriate wavelength vector for the mode and filter"""
-        if 'wcu_lms' in self.cmds['!OBS.modes']:     ## Need to provide for wcu_lms_extended
+        if self.cmds is None and "_lam1" in self.meta and "_lam2" in self.meta and "_dlam" in self.meta:
+            # This is for testing only
+            lam = seq(self.meta["_lam1"], self.meta["_lam2"], self.meta["_dlam"])
+        elif 'wcu_lms' in self.cmds['!OBS.modes']:     ## Need to provide for wcu_lms_extended
             lamc = self.cmds['!OBS.wavelen']
             dlam = self.cmds['!SIM.spectral.spectral_bin_width']
             lam = seq(lamc - 3000 * dlam, lamc + 3000 * dlam, dlam) * u.um
@@ -190,10 +192,12 @@ class WCUSource(TERCurve):
 
     @property
     def lamps(self):
+        """List of available lamps"""
         return self.meta['lamps']
 
     @property
     def current_lamp(self):
+        """Name of the lamp currently in use"""
         return self.meta['current_lamp']
 
     def set_temperature(self, bb_temp: [float | u.Quantity]=None,
@@ -242,8 +246,7 @@ class WCUSource(TERCurve):
 
 
     def set_mask(self, fpmask: str):
-        """Change the focal-plane mask
-        """
+        """Change the focal-plane mask"""
         masklist = self.meta['fpmasks']
         if fpmask not in masklist:
             raise ValueError(f"fpmask must be one of {masklist}")
@@ -254,6 +257,7 @@ class WCUSource(TERCurve):
 
     @property
     def current_mask(self):
+        """Name of the mask currently in use"""
         return self.meta['current_mask']
 
 

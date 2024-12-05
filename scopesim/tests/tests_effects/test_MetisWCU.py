@@ -4,27 +4,38 @@
 # pylint: disable=missing-function-docstring
 
 import pytest
+import numpy as np
 from astropy import units as u
 
-from scopesim.effects.metis_wcu import BlackBodySource
+from scopesim import UserCommands
+from scopesim.effects.metis_wcu import WCUSource
 from scopesim.utils import seq
+
+def _patched_cmds(mode="wcu_lms", wavelen=3.9, bin_width=0.003):
+    """Minimal UserCommands object to stand in for missing OpticalTrain"""
+    return UserCommands(properties={"!OBS.modes": mode,
+                                    "!OBS.wavelen": wavelen,
+                                    "!SIM.spectral.spectral_bin_width": bin_width})
 
 @pytest.fixture(name="bbsource", scope="function")
 def fixture_bbsource():
-    return BlackBodySource(bb_temp=1000*u.K,
-                           is_temp=300*u.K,
-                           wcu_temp=300*u.K,
-                           bb_to_is=None,
-                           rho_tube=0.95,
-                           rho_is=0.95,
-                           diam_is=250,
-                           diam_is_in=25.4,
-                           diam_is_out=100.,
-                           emiss_bb=0.98)
+    return WCUSource(current_lamp="bb",
+                     bb_temp=1000*u.K,
+                     is_temp=300*u.K,
+                     wcu_temp=300*u.K,
+                     bb_to_is=None,
+                     rho_tube=0.95,
+                     rho_is=0.95,
+                     rho_mask=0.95,
+                     diam_is=250,
+                     diam_is_in=25.4,
+                     diam_is_out=100.,
+                     emiss_bb=0.98,
+                     _lam1=3.2*u.um, _lam2=4.2*u.um, _dlam=0.01*u.um)
 
-class TestBlackBodySource:
+class TestWCUSource:
     def test_initialises_correctly(self, bbsource):
-        assert isinstance(bbsource, BlackBodySource)
+        assert isinstance(bbsource, WCUSource)
 
     def test_bbsource_has_temperatures(self, bbsource):
         assert bbsource.meta['bb_temp'] == 1000 * u.K
@@ -39,7 +50,7 @@ class TestBlackBodySource:
 
     def test_bbsource_has_correct_emission_units(self, bbsource):
         assert (bbsource.surface.table['emission'].unit ==
-                u.ph / (u.s * u.sr * u.um * u.m**2))
+                u.ph / (u.s * u.arcsec**2 * u.um * u.m**2))
 
     def test_can_set_bb_temperature(self, bbsource):
         old_temp = bbsource.meta['bb_temp']
@@ -100,5 +111,17 @@ class TestBlackBodySource:
 
     def test_black_body_source_fails_without_parameters(self):
         with pytest.raises(ValueError):
-            bbsource = BlackBodySource()
-            assert isinstance(bbsource, BlackBodySource)
+            bbsource = WCUSource()
+            assert isinstance(bbsource, WCUSource)
+
+
+    def test_get_wavelength_for_lms(self, bbsource):
+        print(bbsource.wavelength)
+        binw=0.0001
+        lamc=3.9
+        bbsource.cmds = _patched_cmds(mode="wcu_lms",  wavelen=lamc, bin_width=binw)
+        bbsource.get_wavelength()
+        print(bbsource.wavelength)
+        lam = 3.6 + (np.arange(6001) * binw)
+        assert len(bbsource.wavelength) == len(lam)
+        assert np.all(bbsource.wavelength.value == lam)
