@@ -20,4 +20,6 @@ from .fits_headers import *
 
 from .rotation import *
 
+from .metis_wcu import *
+
 # from . import effects_utils
