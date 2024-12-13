@@ -11,7 +11,7 @@ from scopesim import UserCommands
 from scopesim.effects.metis_wcu import WCUSource
 from scopesim.utils import seq
 
-def _patched_cmds(mode="wcu_lms", wavelen=3.9, bin_width=0.003):
+def _patched_cmds(mode="wcu_lms", wavelen=3.9, bin_width=0.0003):
     """Minimal UserCommands object to stand in for missing OpticalTrain"""
     return UserCommands(properties={"!OBS.modes": mode,
                                     "!OBS.wavelen": wavelen,
@@ -31,7 +31,7 @@ def fixture_bbsource():
                      diam_is_in=25.4,
                      diam_is_out=100.,
                      emiss_bb=0.98,
-                     _lam1=3.2*u.um, _lam2=4.2*u.um, _dlam=0.01*u.um)
+                     cmds=_patched_cmds())
 
 class TestWCUSource:
     def test_initialises_correctly(self, bbsource):
@@ -116,12 +116,10 @@ class TestWCUSource:
 
 
     def test_get_wavelength_for_lms(self, bbsource):
-        print(bbsource.wavelength)
         binw=0.0001
         lamc=3.9
         bbsource.cmds = _patched_cmds(mode="wcu_lms",  wavelen=lamc, bin_width=binw)
         bbsource.get_wavelength()
-        print(bbsource.wavelength)
         lam = 3.6 + (np.arange(6001) * binw)
         assert len(bbsource.wavelength) == len(lam)
         assert np.all(bbsource.wavelength.value == lam)

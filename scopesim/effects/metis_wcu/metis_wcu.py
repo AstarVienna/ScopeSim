@@ -172,10 +172,7 @@ class WCUSource(TERCurve):
 
     def get_wavelength(self):
         """Try to set the appropriate wavelength vector for the mode and filter"""
-        if self.cmds is None and "_lam1" in self.meta and "_lam2" in self.meta and "_dlam" in self.meta:
-            # This is for testing only
-            lam = seq(self.meta["_lam1"], self.meta["_lam2"], self.meta["_dlam"])
-        elif 'wcu_lms' in self.cmds['!OBS.modes']:     ## Need to provide for wcu_lms_extended
+        if 'wcu_lms' in self.cmds['!OBS.modes']:     ## Need to provide for wcu_lms_extended
             lamc = self.cmds['!OBS.wavelen']
             dlam = self.cmds['!SIM.spectral.spectral_bin_width']
             lam = seq(lamc - 3000 * dlam, lamc + 3000 * dlam, dlam) * u.um
