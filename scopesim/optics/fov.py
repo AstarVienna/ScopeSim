@@ -381,18 +381,19 @@ class FieldOfView(FieldOfViewBase):
 
         """
         spline_order = from_currsys("!SIM.computing.spline_order", self.cmds)
-
         # Make waveset and canvas image
         fov_waveset = self.waveset
         bin_widths = np.diff(fov_waveset)       # u.um
         bin_widths = 0.5 * (np.r_[0, bin_widths] + np.r_[bin_widths, 0])
-        area = from_currsys(self.meta["area"], self.cmds)    # u.m2
+        area = from_currsys(self.meta["area"], self.cmds) << u.m**2   # u.m2
 
         # PHOTLAM * u.um * u.m2 --> ph / s
         specs = {ref: spec(fov_waveset) if use_photlam
                  else (spec(fov_waveset) * bin_widths * area).to(u.ph / u.s)
                  for ref, spec in self.spectra.items()}
+
         fluxes = {ref: np.sum(spec.value) for ref, spec in specs.items()}
+
         canvas_image_hdu = fits.ImageHDU(
             data=np.zeros((self.header["NAXIS2"], self.header["NAXIS1"])),
             header=self.header)
