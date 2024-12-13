@@ -4,6 +4,8 @@
 # pylint: disable=missing-function-docstring
 
 import pytest
+from unittest.mock import patch
+
 import numpy as np
 from astropy import units as u
 
@@ -15,6 +17,19 @@ def _patched_cmds(mode="wcu_lms", wavelen=3.9, bin_width=0.0003):
     """Minimal UserCommands object to stand in for missing OpticalTrain"""
     return UserCommands(properties={"!OBS.modes": mode,
                                     "!OBS.wavelen": wavelen,
+                                    "!SIM.spectral.spectral_bin_width": bin_width})
+
+@pytest.fixture(scope="class")
+def patch_mock_path_basic_instrument(mock_dir):
+    basic_instrument_dir = mock_dir / "basic_instrument"
+    with patch("scopesim.rc.__search_path__", [basic_instrument_dir]):
+        yield
+
+def _patched_cmds_lss(mode="wcu_lss", filtername="J", bin_width=0.002):
+    """Minimal UserCommands object for wcu_lss mode"""
+    return UserCommands(properties={"!OBS.modes": mode,
+                                    "!OBS.filter_name": filtername,
+                                    "!INST.filter_file_format": "filters/TC_filter_{}.dat",
                                     "!SIM.spectral.spectral_bin_width": bin_width})
 
 @pytest.fixture(name="bbsource", scope="function")
@@ -33,6 +48,7 @@ def fixture_bbsource():
                      emiss_bb=0.98,
                      cmds=_patched_cmds())
 
+@pytest.mark.usefixtures("patch_mock_path_basic_instrument")
 class TestWCUSource:
     def test_initialises_correctly(self, bbsource):
         assert isinstance(bbsource, WCUSource)
@@ -122,4 +138,14 @@ class TestWCUSource:
         bbsource.get_wavelength()
         lam = 3.6 + (np.arange(6001) * binw)
         assert len(bbsource.wavelength) == len(lam)
+        assert np.all(bbsource.wavelength.value == lam)
+
+    def test_get_wavelength_for_lss(self, bbsource):
+        bbsource.cmds.update(properties={"!OBS.modes": "wcu_lss",
+                                         "!SIM.spectral.spectral_bin_width": 0.002,
+                                         "!OBS.filter_name": "J",
+                                         "!INST.filter_file_format": "filters/TC_filter_{}.dat"})
+        print(bbsource.cmds["!OBS.modes"])
+        bbsource.get_wavelength()
+        lam = seq(1.15, 1.37, 0.002)
         assert np.all(bbsource.wavelength.value == lam)
