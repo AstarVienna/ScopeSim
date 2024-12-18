@@ -30,7 +30,6 @@ class TestInit:
         with pytest.raises(TypeError):
             MonochromeTraceCurve()
 
-    @pytest.mark.usefixtures("basic_mtc")
     def test_initialises_with_all_coords(self, basic_mtc):
         assert isinstance(basic_mtc, MonochromeTraceCurve)
 
@@ -41,14 +40,12 @@ class TestInit:
 
 
 class TestGetHeader:
-    @pytest.mark.usefixtures("basic_mtc")
     def test_returns_astropy_header_object_with_basic_input(self, basic_mtc):
         basic_mtc.meta["pixel_size"] = 1    # mm/pix
         print(dict(basic_mtc.header))
         # assert isinstance(basic_mtc.header, fits.Header)
         assert isinstance(basic_mtc.header, PoorMansHeader)
 
-    @pytest.mark.usefixtures("basic_mtc")
     def test_header_reprojects_properly(self):
 
         if PLOTS:

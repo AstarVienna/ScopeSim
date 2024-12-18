@@ -3,6 +3,7 @@ from pytest import approx
 from copy import deepcopy
 import numpy as np
 from astropy.io import fits
+from astropy.wcs import WCS
 import matplotlib.pyplot as plt
 
 from scopesim.optics import image_plane_utils as imp_utils
@@ -32,9 +33,6 @@ class TestSplitHeader:
         area_sum = np.sum([hdr["NAXIS1"] * hdr["NAXIS2"] for hdr in hdrs])
         assert area_sum == hdr["NAXIS1"] * hdr["NAXIS2"]
 
-        # print([hdr["NAXIS1"] for hdr in hdrs], hdr["NAXIS1"])
-        # print([hdr["NAXIS2"] for hdr in hdrs], hdr["NAXIS2"])
-
 
 class TestAddImageHDUtoImageHDU:
     def big_small_hdus(self, big_wh=(20, 10), big_offsets=(0, 0),
@@ -58,7 +56,7 @@ class TestAddImageHDUtoImageHDU:
     def test_smaller_hdu_is_fully_in_larger_hdu(self):
         """yellow box in box"""
         big, small = self.big_small_hdus()
-        big_sum, small_sum =  np.sum(big.data), np.sum(small.data)
+        big_sum, small_sum = np.sum(big.data), np.sum(small.data)
 
         new = imp_utils.add_imagehdu_to_imagehdu(small, big, wcs_suffix="X")
 
@@ -74,7 +72,7 @@ class TestAddImageHDUtoImageHDU:
         big.data = big.data[None, :, :] * np.ones(3)[:, None, None]
         small.data = small.data[None, :, :] * np.ones(3)[:, None, None]
 
-        big_sum, small_sum =  np.sum(big.data), np.sum(small.data)
+        big_sum, small_sum = np.sum(big.data), np.sum(small.data)
 
         new = imp_utils.add_imagehdu_to_imagehdu(small, big, wcs_suffix="X")
 
@@ -87,7 +85,7 @@ class TestAddImageHDUtoImageHDU:
     def test_larger_hdu_encompases_smaller_hdu(self):
         """monochrome box"""
         big, small = self.big_small_hdus()
-        big_sum, small_sum =  np.sum(big.data), np.sum(small.data)
+        big_sum, small_sum = np.sum(big.data), np.sum(small.data)
 
         new = imp_utils.add_imagehdu_to_imagehdu(big, small, wcs_suffix="X")
 
@@ -100,7 +98,7 @@ class TestAddImageHDUtoImageHDU:
     def test_smaller_hdu_is_partially_in_larger_hdu(self):
         """yellow quarter top-right"""
         big, small = self.big_small_hdus(small_wh=(20, 10), small_offsets=(10, 5))
-        big_sum, small_sum =  np.sum(big.data), np.sum(small.data)
+        big_sum, small_sum = np.sum(big.data), np.sum(small.data)
 
         new = imp_utils.add_imagehdu_to_imagehdu(small, big, wcs_suffix="X")
 
@@ -113,7 +111,7 @@ class TestAddImageHDUtoImageHDU:
     def test_larger_hdu_is_partially_in_smaller_hdu(self):
         """yellow quarter bottom-left"""
         big, small = self.big_small_hdus(small_wh=(20, 10), small_offsets=(10, 5))
-        big_sum, small_sum =  np.sum(big.data), np.sum(small.data)
+        big_sum, small_sum = np.sum(big.data), np.sum(small.data)
 
         new = imp_utils.add_imagehdu_to_imagehdu(big, small, wcs_suffix="X")
 
@@ -130,7 +128,7 @@ class TestAddImageHDUtoImageHDU:
         big.data = big.data[None, :, :] * np.ones(3)[:, None, None]
         small.data = small.data[None, :, :] * np.ones(3)[:, None, None]
 
-        big_sum, small_sum =  np.sum(big.data), np.sum(small.data)
+        big_sum, small_sum = np.sum(big.data), np.sum(small.data)
         new = imp_utils.add_imagehdu_to_imagehdu(big, small, wcs_suffix="X")
 
         if PLOTS:
@@ -160,7 +158,7 @@ class TestAddImageHDUtoImageHDU:
         # FITS uses bottom left as CRPIXn = [1, 1]
         # matplotlib just needs origin='lower' to display these correctly
 
-        from scipy.misc import face
+        from scipy.datasets import face
         im = face()[::-1, :, 1]
         print(np.shape(face()))
 
@@ -169,8 +167,8 @@ class TestAddImageHDUtoImageHDU:
         hdu.header["CDELT2"] = -1
         hdu.header["CRVAL1"] = 0
         hdu.header["CRVAL2"] = 0
-        hdu.header["CUNIT1"] = "DEG"
-        hdu.header["CUNIT2"] = "DEG"
+        hdu.header["CUNIT1"] = "deg"
+        hdu.header["CUNIT2"] = "deg"
         hdu.header["CTYPE1"] = "LINEAR"
         hdu.header["CTYPE2"] = "LINEAR"
         hdu.header["CRPIX1"] = im.shape[1]/2
@@ -230,29 +228,29 @@ class TestOverlayImage:
 
 
 class TestRescaleImageHDU:
-    @pytest.mark.parametrize("scale_factor", [0.3, 0.5, 1, 2, 3])
-    def test_rescales_a_2D_imagehdu(self, scale_factor):
+    @pytest.mark.parametrize("pixel_scale", [0.3, 0.5, 1, 2, 3])
+    def test_rescales_a_2D_imagehdu(self, pixel_scale):
         hdu0 = imo._image_hdu_rect()
-        hdu1 = imp_utils.rescale_imagehdu(deepcopy(hdu0), scale_factor/3600)
+        hdu1 = imp_utils.rescale_imagehdu(deepcopy(hdu0), pixel_scale)#/3600)
 
         hdr0 = hdu0.header
         hdr1 = hdu1.header
 
-        assert hdr1["NAXIS1"] == np.ceil(hdr0["NAXIS1"] / scale_factor)
-        assert hdr1["NAXIS2"] == np.ceil(hdr0["NAXIS2"] / scale_factor)
+        assert hdr1["NAXIS1"] == np.ceil(hdr0["NAXIS1"] / pixel_scale)
+        assert hdr1["NAXIS2"] == np.ceil(hdr0["NAXIS2"] / pixel_scale)
 
-    @pytest.mark.parametrize("scale_factor", [0.3, 0.5, 1, 2, 3])
-    def test_rescales_a_3D_imagehdu(self, scale_factor):
+    @pytest.mark.parametrize("pixel_scale", [0.3, 0.5, 1, 2, 3])
+    def test_rescales_a_3D_imagehdu(self, pixel_scale):
         hdu0 = imo._image_hdu_rect()
         hdu0.data = hdu0.data[None, :, :] * np.ones(5)[:, None, None]
-        hdu1 = imp_utils.rescale_imagehdu(deepcopy(hdu0), scale_factor/3600)
+        hdu1 = imp_utils.rescale_imagehdu(deepcopy(hdu0), pixel_scale)#/3600)
 
         hdr0 = hdu0.header
         hdr1 = hdu1.header
 
         assert np.sum(hdu0.data) == approx(np.sum(hdu1.data))
-        assert hdr1["NAXIS1"] == np.ceil(hdr0["NAXIS1"] / scale_factor)
-        assert hdr1["NAXIS2"] == np.ceil(hdr0["NAXIS2"] / scale_factor)
+        assert hdr1["NAXIS1"] == np.ceil(hdr0["NAXIS1"] / pixel_scale)
+        assert hdr1["NAXIS2"] == np.ceil(hdr0["NAXIS2"] / pixel_scale)
         assert hdr1["NAXIS3"] == hdr0["NAXIS3"]
 
 
@@ -333,3 +331,19 @@ class TestSubPixelFractions:
     #     x, y = np.array([1.1, 2.9]), np.array([0.0, 0.5])
     #     xs, ys, fracs = imp_utils.sub_pixel_fractions(x, y)
     #     print(xs)
+
+
+class TestSkyDetWCS:
+    def test_wcs_roundtrip(self):
+        # FIXME: This should be a fixture, but everywhere in this module...
+        hdu = imo._image_hdu_rect()
+        sky_wcs = WCS(hdu.header)
+
+        # Scale 1.0 from _image_hdu_rect cdelt, 20 arbitrary plate scale
+        det_wcs, nax = imp_utils.det_wcs_from_sky_wcs(sky_wcs, 1.0, 20)
+        new_wcs, nax = imp_utils.sky_wcs_from_det_wcs(det_wcs, 1.0, 20,
+                                                      naxis=nax)
+
+        # Compare header representations because of missing NAXIS info in new
+        assert new_wcs.to_header() == sky_wcs.to_header()
+        assert all(nax == (hdu.header["NAXIS1"], hdu.header["NAXIS2"]))

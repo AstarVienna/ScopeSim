@@ -1,25 +1,11 @@
-import os
-
 import numpy as np
 import pytest
+from unittest.mock import patch
 from astropy.table import Table
 
-from scopesim import rc
 from scopesim.effects import Effect, SurfaceList
 
 from scopesim.tests.mocks.py_objects import effects_objects as eo
-
-
-MOCK_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),
-                                         "../mocks/MICADO_SCAO_WIDE/"))
-if MOCK_PATH not in rc.__search_path__:
-    rc.__search_path__ += [MOCK_PATH]
-
-
-@pytest.fixture()
-def surf_list_file():
-    fname = os.path.join(MOCK_PATH, "LIST_mirrors_MICADO_Wide.tbl")
-    return fname
 
 
 class TestEffectInit:
@@ -27,7 +13,8 @@ class TestEffectInit:
         assert isinstance(Effect(), Effect)
 
     def test_initalising_with_arrays_creates_table(self):
-        eff = Effect(array_dict={"x": [-1, 0, 1], "y": [1, 0, 1],
+        eff = Effect(array_dict={"x": [-1, 0, 1],
+                                 "y": [1, 0, 1],
                                  "flux": [1, 2, 3]})
         assert isinstance(eff, Effect)
         assert np.sum(eff.table["flux"]) == 6
@@ -42,9 +29,11 @@ class TestEffectInit:
 class TestEffectReport:
     def test_report_returns_full_rst_text(self):
         det_list = eo._detector_list()
+        det_list.report_plot_include = False
         det_list.meta.update(
-            {"report_plot_include": False,
-             "report_table_caption": "The dimensions of the MICADO central detector"})
+            {"report_table_caption":
+                 "The dimensions of the MICADO central detector"}
+        )
         rst_str = det_list.report()
         assert "MICADO H4RG-15 FPA" in rst_str
         assert "E-MCD-FPA-572089EB.uda" in rst_str
@@ -62,14 +51,13 @@ class TestGet:
             det_list["image_plane_id"] == 0
 
 
-@pytest.mark.usefixtures("surf_list_file")
 class TestSurfaceListInit:
     def test_initialises_with_nothing(self):
         assert isinstance(SurfaceList(), SurfaceList)
 
-    def test_initialises_with_valid_filename(self, surf_list_file):
-        surf_list = SurfaceList(filename=surf_list_file)
+    def test_initialises_with_valid_filename(self, mock_path_micado):
+        fname = str(mock_path_micado / "LIST_mirrors_MICADO_Wide.tbl")
+        with patch("scopesim.rc.__search_path__", [mock_path_micado]):
+            surf_list = SurfaceList(filename=fname)
         assert isinstance(surf_list, SurfaceList)
         assert isinstance(surf_list.data, Table)
-
-

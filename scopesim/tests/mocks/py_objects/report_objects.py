@@ -1,11 +1,18 @@
 comment_plot_snippet = """
-..    
+..
     action: plot
     format: [pdf, png]
     name: my_fug
     ---
     plt.plot([0,1], [0,1])"""
 
+comment_plot_snippet_with_escapable_name = """
+..
+    action: plot
+    format: [pdf, png]
+    name: ty_fug
+    ---
+    plt.plot([0,1], [0,1])"""
 
 literal_plot_snippet = """
 .. code::
@@ -36,7 +43,7 @@ This parrot goes vrooom
 .. figure:: my_fug_A.png
     :name: fig:my_fug_A
 
-    This is an included figure caption  
+    This is an included figure caption
 
 ..
     action: [reset, clear-figure, plot]
@@ -53,13 +60,13 @@ This parrot goes vrooom
 .. code::
     :name: my_fug_C
     :class: reset, clear-figure, plot, format-png
-    
+
     import matplotlib.pyplot as plt
     plt.plot([0,1], [1,1])
 
 .. figure:: my_fug_C.png
     :name: fig:my_fug_C
-    
+
     Caption to fug3
 
 """

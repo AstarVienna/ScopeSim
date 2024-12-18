@@ -1,35 +1,52 @@
+# -*- coding: utf-8 -*-
 """TBA."""
+
+import warnings
+from collections import OrderedDict
+from copy import deepcopy
+from typing import ClassVar
 
 import numpy as np
 from astropy import units as u
 
-from .ter_curves import TERCurve
+from .ter_curves import TERCurve, FilterWheelBase
 from ..optics import radiometry_utils as rad_utils
-from ..optics.surface import PoorMansSurface
+from ..optics.surface import PoorMansSurface, SpectralSurface
 from ..utils import quantify, from_currsys, figure_factory
 
 
 class SurfaceList(TERCurve):
+    z_order: ClassVar[tuple[int, ...]] = (20, 120, 520)
+    report_plot_include: ClassVar[bool] = True
+    report_table_include: ClassVar[bool] = True
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        params = {"z_order": [20, 120, 520],
-                  "minimum_throughput": "!SIM.spectral.minimum_throughput",
-                  "etendue": "!TEL.etendue",
-                  "report_plot_include": True,
-                  "report_table_include": True}
+        params = {"minimum_throughput": "!SIM.spectral.minimum_throughput",
+                  "etendue": "!TEL.etendue"}
         self.meta.update(params)
         self.meta.update(kwargs)
 
-        self.surfaces = rad_utils.make_surface_dict_from_table(self.table)
         self._surface = None
         self._throughput = None
         self._emission = None
+        self.surfaces = OrderedDict({})
+
+        if self.table is not None:
+            for row in self.table:
+                surf_kwargs = deepcopy(self.table.meta)
+                surf_kwargs.update(dict(row))
+                surf_kwargs["cmds"] = self.cmds
+                surf_kwargs["filename"] = from_currsys(surf_kwargs["filename"], self.cmds)
+                self.surfaces[surf_kwargs["name"]] = SpectralSurface(**surf_kwargs)
 
     def fov_grid(self, which="waveset", **kwargs):
+        warnings.warn("The fov_grid method is deprecated and will be removed "
+                      "in a future release.", DeprecationWarning, stacklevel=2)
         wave_edges = []
         if which == "waveset":
             self.meta.update(kwargs)
-            self.meta = from_currsys(self.meta)
+            self.meta = from_currsys(self.meta, self.cmds)
             wave_min = quantify(self.meta["wave_min"], u.um)
             wave_max = quantify(self.meta["wave_max"], u.um)
             # ..todo:: add 1001 to default.yaml somewhere
@@ -58,7 +75,8 @@ class SurfaceList(TERCurve):
     def emission(self):
         if "etendue" not in self.meta:
             raise ValueError("self.meta['etendue'] must be set")
-        etendue = quantify(from_currsys(self.meta["etendue"]), "m2 arcsec2")
+        etendue = quantify(from_currsys(self.meta["etendue"], self.cmds),
+                           "m2 arcsec2")
         if self._emission is None:
             self._emission = self.get_emission(etendue)
 
@@ -119,7 +137,7 @@ class SurfaceList(TERCurve):
     def add_surface(self, surface, name=None, position=-1, add_to_table=True):
         if name is None:
             name = surface.meta.get("name", "<unknown surface>")
-        if isinstance(surface, TERCurve):
+        if isinstance(surface, (TERCurve, FilterWheelBase)):
             ter_meta = surface.meta
             surface = surface.surface
             surface.meta.update(ter_meta)
@@ -132,8 +150,8 @@ class SurfaceList(TERCurve):
     def add_surface_list(self, surface_list, prepend=False):
         if isinstance(surface_list, SurfaceList):
             self.surfaces.update(surface_list.surfaces)
-            self.table = rad_utils.combine_tables(surface_list.table,
-                                                  self.table, prepend)
+            # new_tbl = from_currsys(surface_list.table, self.cmds),
+            self.table = rad_utils.combine_tables(surface_list.table, self.table, prepend)
 
     def plot(self, which="x", wavelength=None, *, axes=None, **kwargs):
         """Plot TER curves.

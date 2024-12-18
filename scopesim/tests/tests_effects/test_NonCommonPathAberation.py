@@ -1,4 +1,3 @@
-import os
 
 import pytest
 from pytest import approx
@@ -9,19 +8,14 @@ from matplotlib.colors import LogNorm
 from astropy import units as u
 
 from scopesim.effects.psfs import NonCommonPathAberration
-from scopesim.effects.psf_utils import strehl2sigma, sigma2gauss, wfe2gauss, wfe2strehl
+from scopesim.effects.psfs.analytical import _strehl2sigma, _sigma2gauss, wfe2gauss, wfe2strehl
 from scopesim.optics import FieldOfView, ImagePlane
-from scopesim import rc
+from scopesim.utils import from_currsys
 
 from scopesim.tests.mocks.py_objects.source_objects import _single_table_source
 from scopesim.tests.mocks.py_objects.header_objects import \
     _fov_header, _implane_header
 
-
-FILES_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__),
-                                                         "../mocks/files"))
-if rc.__search_path__[0] != FILES_DIR:
-    rc.__search_path__.insert(0, FILES_DIR)
 
 PLOTS = False
 
@@ -46,7 +40,6 @@ def ncpa_kwargs():
     return kwargs
 
 
-@pytest.mark.usefixtures("ncpa_kwargs")
 class TestInit:
     def test_initialises_with_nothing_but_pixel_scale(self):
         ncpa = NonCommonPathAberration(pixel_scale=0.004)
@@ -56,13 +49,13 @@ class TestInit:
         ncpa = NonCommonPathAberration(**ncpa_kwargs)
         assert ncpa.table["wfe_rms"][0] == 20
 
-    def test_initialises_with_file(self):
-        kwargs = {"filename": "test_NCPAs_table.dat", "pixel_scale": 0.004}
+    def test_initialises_with_file(self, mock_path):
+        kwargs = {"filename": str(mock_path / "test_NCPAs_table.dat"),
+                  "pixel_scale": 0.004}
         ncpa = NonCommonPathAberration(**kwargs)
         assert ncpa.table["wfe_rms"][0] == 20
 
 
-@pytest.mark.usefixtures("ncpa_kwargs", "fov_Ks")
 class TestGetKernel:
     def test_returns_total_wfe_in_units_of_table(self, ncpa_kwargs, fov_Ks):
         ncpa = NonCommonPathAberration(**ncpa_kwargs)
@@ -89,7 +82,6 @@ class TestGetKernel:
             plt.show()
 
 
-@pytest.mark.usefixtures("ncpa_kwargs", "fov_Ks")
 class TestApplyTo:
     def test_convolves_kernel_with_fov_image(self, ncpa_kwargs, fov_Ks):
         ncpa = NonCommonPathAberration(**ncpa_kwargs)
@@ -112,22 +104,9 @@ class TestApplyTo:
         assert np.all(new_implane.data == implane.data)
 
         if PLOTS:
-            plt.imshow(new_implane.image[:5,:5])
+            plt.imshow(new_implane.image[:5, :5])
             plt.show()
 
-
-@pytest.mark.usefixtures("ncpa_kwargs", "fov_Ks")
-class TestFovGrid:
-    def test_returns_currsys_edge_waves_for_no_input(self, ncpa_kwargs, fov_Ks):
-        ncpa = NonCommonPathAberration(**ncpa_kwargs)
-        waves = ncpa.fov_grid()
-        wave_min = rc.__currsys__["!SIM.spectral.wave_min"]
-        wave_max = rc.__currsys__["!SIM.spectral.wave_max"]
-        assert waves[0].to(u.um).value == approx(wave_min)
-        assert waves[-1].to(u.um).value == approx(wave_max)
-
-
-################################################################################
 
 class TestFunctionStrehl2Gauss:
     def test_relationship_between_sigma_strehl_amplitude(self):
@@ -135,8 +114,8 @@ class TestFunctionStrehl2Gauss:
 
         wave = np.arange(0.3, 4, 0.1)
         srs = wfe2strehl(0.076, wave)
-        sigs = strehl2sigma(srs)
-        kernels = np.array([sigma2gauss(sig) for sig in sigs])
+        sigs = _strehl2sigma(srs)
+        kernels = np.array([_sigma2gauss(sig) for sig in sigs])
         amplis = np.array([np.max(kernel) for kernel in kernels])
         ampli_srs = amplis / srs
 

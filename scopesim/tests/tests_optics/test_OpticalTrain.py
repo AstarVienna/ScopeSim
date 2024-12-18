@@ -1,21 +1,21 @@
-import os
+
 from copy import deepcopy
 import pytest
 from pytest import approx
+from unittest.mock import patch
 
 import numpy as np
 from astropy import units as u
 from astropy.table import Table
 
 import scopesim as sim
-from scopesim import rc
 from scopesim.optics.fov_manager import FOVManager
 from scopesim.optics.image_plane import ImagePlane
 from scopesim.optics.optical_train import OpticalTrain
 from scopesim.optics.optics_manager import OpticsManager
 from scopesim.optics.optical_element import OpticalElement
 from scopesim.commands.user_commands import UserCommands
-from scopesim.effects import Effect, DetectorList, DarkCurrent
+from scopesim.effects import Effect, DetectorList
 from scopesim.utils import find_file
 
 from scopesim.tests.mocks.py_objects import source_objects as src_objs
@@ -23,34 +23,36 @@ from scopesim.tests.mocks.py_objects import source_objects as src_objs
 import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm
 
+
 PLOTS = False
 
-FILES_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),
-                                          "../mocks/files/"))
-YAMLS_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),
-                                          "../mocks/yamls/"))
 
-for NEW_PATH in [YAMLS_PATH, FILES_PATH]:
-    if NEW_PATH not in rc.__search_path__:
-        rc.__search_path__.insert(0, NEW_PATH)
+@pytest.fixture(scope="module", autouse=True)
+def patch_globals():
+    """Prevent modification of globals from within this module."""
+    with patch("scopesim.rc.__currsys__"):
+        yield
 
 
-def _basic_cmds():
-    return UserCommands(yamls=[find_file("CMD_mvs_cmds.yaml")])
+# TODO: check if class scope breaks anything (used to be function scope)
+@pytest.fixture(scope="class")
+def cmds(mock_path, mock_path_yamls):
+    with patch("scopesim.rc.__search_path__", [mock_path, mock_path_yamls]):
+        return UserCommands(yamls=[find_file("CMD_mvs_cmds.yaml")])
+
+@pytest.fixture(scope="class")
+def cmds_with_ignore(mock_path, mock_path_yamls):
+    with patch("scopesim.rc.__search_path__", [mock_path, mock_path_yamls]):
+        cmds = UserCommands(yamls=[find_file("CMD_mvs_cmds.yaml")])
+        cmds.ignore_effects += ["detector QE curve"]
+        return cmds
 
 
-def _unity_cmds():
-    return UserCommands(yamls=[find_file("CMD_unity_cmds.yaml")])
-
-
-@pytest.fixture(scope="function")
-def cmds():
-    return _basic_cmds()
-
-
-@pytest.fixture(scope="function")
-def unity_cmds():
-    return _unity_cmds()
+# TODO: check if class scope breaks anything (used to be function scope)
+@pytest.fixture(scope="class")
+def unity_cmds(mock_path, mock_path_yamls):
+    with patch("scopesim.rc.__search_path__", [mock_path, mock_path_yamls]):
+        return UserCommands(yamls=[find_file("CMD_unity_cmds.yaml")])
 
 
 @pytest.fixture(scope="function")
@@ -69,18 +71,13 @@ def unity_src():
 
 
 @pytest.fixture(scope="class")
-def simplecado_opt():
-    simplecado_yaml = os.path.join(YAMLS_PATH, "SimpleCADO.yaml")
+def simplecado_opt(mock_path_yamls):
+    simplecado_yaml = str(mock_path_yamls / "SimpleCADO.yaml")
     cmd = sim.UserCommands(yamls=[simplecado_yaml])
     return sim.OpticalTrain(cmd)
 
-#@pytest.fixture(scope="class")
-#def micado_opt():
-#    micado_yaml = os.path.join(YAMLS_PATH, "test_scope.yaml")
-#    cmd = sim.UserCommands(yamls=[micado_yaml])
-#    return sim.OpticalTrain(cmd)
 
-@pytest.mark.usefixtures("cmds")
+@pytest.mark.usefixtures("patch_mock_path")
 class TestInit:
     def test_initialises_with_nothing(self):
         assert isinstance(OpticalTrain(), OpticalTrain)
@@ -110,21 +107,31 @@ class TestInit:
         opt = OpticalTrain(cmds=cmds)
         assert isinstance(opt.yaml_dicts, list) and len(opt.yaml_dicts) > 0
 
+    def test_ignore_effects_works(self, cmds_with_ignore):
+        opt = OpticalTrain(cmds=cmds_with_ignore)
+        assert opt["detector QE curve"].include is False
 
-@pytest.mark.usefixtures("cmds", "im_src", "tbl_src")
+
+@pytest.mark.usefixtures("patch_mock_path")
 class TestObserve:
     """
-    All tests here are for visual inspection.
+    Almost all tests here are for visual inspection.
     No asserts, this just to test that the puzzle gets put back together
     after it is chopped up by the FOVs.
     """
+    def test_observe_works_for_none(self, cmds):
+        opt = OpticalTrain(cmds)
+        opt.observe()
+        empty = sim.source.source_templates.empty_sky()
+        assert(opt._last_source.fields[0].field == empty.fields[0].field)
 
     def test_observe_works_for_table(self, cmds, tbl_src):
         opt = OpticalTrain(cmds)
         opt.observe(tbl_src)
 
         if PLOTS:
-            plt.imshow(opt.image_planes[0].image.T, origin="lower", norm=LogNorm())
+            plt.imshow(opt.image_planes[0].image.T, origin="lower",
+                       norm=LogNorm())
             plt.show()
 
     def test_observe_works_for_image(self, cmds, im_src):
@@ -132,7 +139,8 @@ class TestObserve:
         opt.observe(im_src)
 
         if PLOTS:
-            plt.imshow(opt.image_planes[0].image.T, origin="lower", norm=LogNorm())
+            plt.imshow(opt.image_planes[0].image.T, origin="lower",
+                       norm=LogNorm())
             plt.show()
 
     def test_observe_works_for_source_distributed_over_several_fovs(self, cmds,
@@ -213,7 +221,7 @@ class TestObserve:
         assert np.sum(opt.image_planes[0].data) > 0
 
 
-@pytest.mark.usefixtures("unity_cmds", "unity_src")
+@pytest.mark.usefixtures("patch_mock_path")
 class TestReadout:
     def test_readout_works_when_source_observed(self, unity_cmds, unity_src):
 
@@ -236,11 +244,10 @@ class TestReadout:
             plt.colorbar()
             plt.show()
 
-        src_average = np.average(unity_src.fields[0].data)
+        _ = np.average(unity_src.fields[0].data)
         assert np.median(hdu[1].data) == approx(np.pi / 4., rel=1e-2)
 
 
-@pytest.mark.usefixtures("simplecado_opt")
 class TestGetItems:
     def test_optical_element_returned_for_unique_name(self, simplecado_opt):
         print(type(simplecado_opt["test_detector"]))
@@ -259,7 +266,6 @@ class TestGetItems:
         assert len(effects) == 1
 
 
-@pytest.mark.usefixtures("simplecado_opt")
 class TestSetItems:
     def test_effect_kwarg_can_be_changed_using(self, simplecado_opt):
         simplecado_opt["dark_current"] = {"value": 0.2}
@@ -272,7 +278,6 @@ class TestSetItems:
         assert simplecado_opt["dark_current"].meta["include"] is False
 
 
-@pytest.mark.usefixtures("simplecado_opt")
 class TestListEffects:
     def test_effects_listed_in_table(self, simplecado_opt):
         assert isinstance(simplecado_opt.effects, Table)
@@ -284,21 +289,22 @@ class TestListEffects:
         print("\n", simplecado_opt.effects)
 
 
-@pytest.mark.usefixtures("simplecado_opt")
 class TestShutdown:
     """Test that fits files are closed on shutdown of OpticalTrain"""
 
-    def test_files_closed_on_shutdown(self, simplecado_opt):
+    def test_files_closed_on_shutdown(self, simplecado_opt, mock_path):
         """Test for closed files in two ways:
         - `closed` flag is set to True
         - data access fails
         """
         # Add an effect with a psf
-        psf = sim.effects.FieldConstantPSF(filename="test_ConstPSF.fits",
-                                           name="testpsf")
+        with patch("scopesim.rc.__search_path__", [mock_path]):
+            psf = sim.effects.FieldConstantPSF(filename="test_ConstPSF.fits",
+                                               name="testpsf",
+                                               cmds=simplecado_opt.cmds)
         simplecado_opt.optics_manager.add_effect(psf)
         # This is just to make sure that we have an open file
-        assert(simplecado_opt['testpsf']._file._file.closed is False)
+        assert not simplecado_opt['testpsf']._file._file.closed
 
         simplecado_opt.shutdown()
 

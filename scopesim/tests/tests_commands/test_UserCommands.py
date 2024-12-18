@@ -1,26 +1,11 @@
 import os
 from pathlib import Path
 import pytest
-from tempfile import TemporaryDirectory
 
-from scopesim import rc
 from scopesim.commands.user_commands import UserCommands, patch_fake_symlinks
 
-tmpdir = TemporaryDirectory()
 
-FILES_PATH = str(Path(__file__).parent.parent / "mocks")
-
-
-def setup_module():
-    rc.__config__["local_packages_path_OLD"] = rc.__config__["!SIM.file.local_packages_path"]
-    rc.__config__["!SIM.file.local_packages_path"] = FILES_PATH
-
-
-def teardown_module():
-    rc.__config__["!SIM.file.local_packages_path"] = rc.__config__["local_packages_path_OLD"]
-    # TODO: something like rc.__config__.pop("local_packages_path_OLD")
-
-
+@pytest.mark.usefixtures("patch_all_mock_paths")
 class TestInit:
     def test_initialise_with_nothing(self):
         assert isinstance(UserCommands(), UserCommands)
@@ -91,11 +76,10 @@ class TestInit:
         """Check whether we can recreate a UserCommand by evaluating its __repr__."""
         cmd1 = UserCommands(use_instrument="test_package")
         cmd2 = eval(repr(cmd1))
-        # TODO: Create a proper __eq__ so we can assert cmd1 == cmd2
-        assert str(cmd1) == str(cmd2)
-        assert cmd1.cmds == cmd2.cmds
+        assert cmd1 == cmd2
 
 
+@pytest.mark.usefixtures("patch_all_mock_paths")
 class TestMiscFeatures:
     def test_updates_with_yaml_dict(self):
         yaml_input = {"alias": "TEL",
@@ -115,6 +99,7 @@ class TestMiscFeatures:
         assert "├─" in str(cmd)
 
 
+@pytest.mark.usefixtures("patch_all_mock_paths")
 class TestListLocalPackages:
     def test_all_packages_listed(self):
         from scopesim.commands import user_commands as uc2
@@ -122,9 +107,10 @@ class TestListLocalPackages:
         assert len(real_pkgs) > 0
 
 
+@pytest.mark.usefixtures("patch_all_mock_paths")
 class TestTrackIpAddress:
     def test_see_if_theres_an_entry_on_the_server_log_file(self):
-        cmds = UserCommands(use_instrument="test_package")
+        _ = UserCommands(use_instrument="test_package")
 
 
 def test_patch_fake_symlinks(tmp_path):

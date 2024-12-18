@@ -1,8 +1,8 @@
 """Unit tests for module scopesim.utils"""
 
-import os
-import logging
 import pytest
+from unittest.mock import patch
+
 import numpy as np
 from astropy import wcs
 from astropy.io import ascii as ioascii, fits
@@ -24,25 +24,24 @@ class TestFindFile:
             utils.find_file(1.2, rc.__search_path__)
 
     def test_passes_if_file_exists(self):
-        filename = 'utils.py'
+        filename = "utils.py"
         assert utils.find_file(filename, rc.__search_path__)
 
     @pytest.mark.parametrize("throw_error", [True, False])
     def test_throws_error_if_file_doesnt_exist(self, throw_error):
-        rc.__currsys__["!SIM.file.error_on_missing_file"] = throw_error
-        filename = 'utils987654.pz'
-
-        if throw_error:
-            with pytest.raises(ValueError):
-                utils.find_file(filename, rc.__search_path__)
-        else:
-            assert utils.find_file(filename, rc.__search_path__) is None
-
-        rc.__currsys__["!SIM.file.error_on_missing_file"] = False
+        patched = {"!SIM.file.error_on_missing_file": throw_error}
+        with patch.dict("scopesim.rc.__currsys__", patched):
+            filename = "utils987654.pz"
+            if throw_error:
+                with pytest.raises(ValueError):
+                    utils.find_file(filename, rc.__search_path__)
+            else:
+                assert utils.find_file(filename, rc.__search_path__) is None
 
     def test_ignores_none_objects_in_search_path_list(self):
-        filename = 'utils.py'
-        new_filename = utils.find_file(filename, [None] + rc.__search_path__)
+        filename = "utils.py"
+        new_filename = utils.find_file(
+            filename, [None, *list(rc.__search_path__)])
         assert filename in new_filename
 
 
@@ -186,55 +185,50 @@ class TestFromCurrSys:
     def test_converts_dict(self):
         assert utils.from_currsys({"seed": "!SIM.random.seed"})["seed"] is None
 
+    def test_converts_layered_bang_strings(self):
+        patched = {"!SIM.sub_pixel.flag": "!SIM.sub_pixel.fraction"}
+        with patch.dict("scopesim.rc.__currsys__", patched):
+            result = utils.from_currsys("!SIM.sub_pixel.flag")
+            assert not isinstance(result, str)
+            assert result == 1
+
     def test_converts_astropy_table(self):
         tbl = Table(data=[["!SIM.random.seed"]*2, ["!SIM.random.seed"]*2],
                     names=["seeds", "seeds2"])
         assert utils.from_currsys(tbl["seeds2"][1]) is None
 
-
-class TestSetupLoggers:
-    def test_no_loggers_present_in_initial_scopesim_load(self):
-        hdlrs = logging.getLogger().handlers
-
-        assert not any([hdlr.name == "scopesim_file_logger" for hdlr in hdlrs])
-
-    def test_setup_loggers_has_no_loggers(self):
-        utils.setup_loggers(log_to_file=False, log_to_console=False)
-        hdlrs = logging.getLogger().handlers
-
-        assert not any([hdlr.name == "scopesim_file_logger" for hdlr in hdlrs])
-
-    def test_log_file_exist_when_file_logging_turned_on(self):
-        utils.setup_loggers(log_to_file=True)
-        filepath = rc.__config__["!SIM.logging.file_path"]
-        level = rc.__config__["!SIM.logging.file_level"]
-        f_handler = logging.getLogger().handlers[-1]
-
-        assert os.path.exists(filepath)
-        assert f_handler.level == logging._checkLevel(level)
-
-        logging.shutdown()
-        os.remove(filepath)
-
-    def test_console_logger_has_output(self, capsys):
-        utils.setup_loggers(log_to_console=True)
-        utils.set_logger_level("console", "INFO")
-        logging.info("Hello World!")
-        captured = capsys.readouterr()
-        assert "Hello World!" in captured.out
-
-        logging.shutdown()
+    def test_converts_string_numericals_to_floats(self):
+        patched = {"!SIM.sub_pixel.fraction": "1e0"}
+        with patch.dict("scopesim.rc.__currsys__", patched):
+            result = utils.from_currsys("!SIM.sub_pixel.fraction")
+            assert isinstance(result, float)
+            assert result == 1
 
 
+# load_example_optical_train modifies __currsys__!
+@pytest.mark.usefixtures("protect_currsys")
 class TestLoadExampleOptTrain:
     def test_loads_imager_optical_train_object(self):
         opt = load_example_optical_train()
 
         assert isinstance(opt, OpticalTrain)
-        assert from_currsys(opt["slit_wheel"].include) == False
+        assert not from_currsys(opt["slit_wheel"].include)
 
     def test_loads_spectroscopy_optical_train_object(self):
         opt = load_example_optical_train(set_modes=["spectroscopy"])
 
         assert isinstance(opt, OpticalTrain)
-        assert from_currsys(opt["slit_wheel"].include) == True
+        assert from_currsys(opt["slit_wheel"].include)
+
+    def test_loads_ifu_optical_train_object(self):
+        opt = load_example_optical_train(set_modes=["ifu"])
+
+        assert isinstance(opt, OpticalTrain)
+        assert from_currsys(opt["ifu_spectral_traces"].include)
+
+    # @pytest.mark.xfail
+    # def test_loads_mos_optical_train_object(self):
+    #     opt = load_example_optical_train(set_modes=["mos"])
+    #
+    #     assert isinstance(opt, OpticalTrain)
+    #     assert from_currsys(opt["slit_wheel"].include)

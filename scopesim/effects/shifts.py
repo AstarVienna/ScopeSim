@@ -1,3 +1,9 @@
+# -*- coding: utf-8 -*-
+"""TBA."""
+
+import warnings
+from typing import ClassVar
+
 import numpy as np
 from astropy import units as u
 from astropy.table import Table
@@ -9,13 +15,12 @@ from ..base_classes import FieldOfViewBase
 
 
 class Shift3D(Effect):
+    z_order: ClassVar[tuple[int, ...]] = (30, 230)
+    report_plot_include: ClassVar[bool] = True
+    report_table_include: ClassVar[bool] = False
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        params = {"z_order": [30, 230],
-                  "report_plot_include": True,
-                  "report_table_include": False,
-                  }
-        self.meta.update(params)
         self.meta.update(kwargs)
 
     def apply_to(self, obj, **kwargs):
@@ -24,6 +29,8 @@ class Shift3D(Effect):
 
     def fov_grid(self, which="shifts", **kwargs):
         """See parent docstring."""
+        warnings.warn("The fov_grid method is deprecated and will be removed "
+                      "in a future release.", DeprecationWarning, stacklevel=2)
         if which == "shifts":
             col_names = ["wavelength", "dx", "dy"]
             waves, dx, dy = [self.get_table(**kwargs)[col]
@@ -35,7 +42,8 @@ class Shift3D(Effect):
         if self.table is None:
             names = ["wavelength", "dx", "dy"]
             waves = from_currsys(["!SIM.spectral.wave_" + key
-                                  for key in ("min", "mid", "max")])
+                                  for key in ("min", "mid", "max")],
+                                 self.cmds)
             tbl = Table(names=names, data=[waves, [0] * 3, [0] * 3])
         else:
             tbl = self.table
@@ -97,20 +105,31 @@ class AtmosphericDispersion(Shift3D):
 
     """
 
+    required_keys = {
+        "airmass",
+        "temperature",
+        "humidity",
+        "pressure",
+        "latitude",
+        "altitude",
+        "pupil_angle",
+        "pixel_scale",
+    }
+    z_order: ClassVar[tuple[int, ...]] = (231,)
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        params = {"z_order": [231],
-                  "wave_min": "!SIM.spectral.wave_min",
-                  "wave_mid": "!SIM.spectral.wave_mid",
-                  "wave_max": "!SIM.spectral.wave_max",
-                  "sub_pixel_fraction": "!SIM.sub_pixel.fraction",
-                  "num_steps": 1000,}
+        params = {
+            "wave_min": "!SIM.spectral.wave_min",
+            "wave_mid": "!SIM.spectral.wave_mid",
+            "wave_max": "!SIM.spectral.wave_max",
+            "sub_pixel_fraction": "!SIM.sub_pixel.fraction",
+            "num_steps": 1000,
+        }
         self.meta.update(params)
         self.meta.update(kwargs)
 
-        required_keys = ["airmass", "temperature", "humidity", "pressure",
-                         "latitude", "altitude", "pupil_angle", "pixel_scale"]
-        check_keys(self.meta, required_keys, action="error")
+        check_keys(self.meta, self.required_keys, action="error")
 
     def get_table(self, **kwargs):
         """
@@ -131,7 +150,7 @@ class AtmosphericDispersion(Shift3D):
         if len(kwargs) > 0:
             self.meta.update(kwargs)
 
-        airmass = from_currsys(self.meta["airmass"])
+        airmass = from_currsys(self.meta["airmass"], self.cmds)
         atmo_params = {"z0": airmass2zendist(airmass),
                        "temp": self.meta["temperature"],  # in degC
                        "rel_hum": self.meta["humidity"] * 100,  # in %
@@ -139,7 +158,7 @@ class AtmosphericDispersion(Shift3D):
                        "lat": self.meta["latitude"],  # in deg
                        "h": self.meta["altitude"]}  # in m
         self.meta.update(atmo_params)
-        params = from_currsys(self.meta)
+        params = from_currsys(self.meta, self.cmds)
 
         waves, shifts = get_pixel_border_waves_from_atmo_disp(**params)
         dx = shifts * np.sin(np.deg2rad(params["pupil_angle"]))
@@ -165,19 +184,28 @@ class AtmosphericDispersionCorrection(Shift3D):
     kwargs
     """
 
+    required_keys = {
+        "airmass",
+        "temperature",
+        "humidity",
+        "pressure",
+        "latitude",
+        "altitude",
+        "pupil_angle",
+        "pixel_scale",
+        "wave_mid",
+    }
+    z_order: ClassVar[tuple[int, ...]] = (632,)
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.meta["z_order"] = [632]
         if "quick_adc" in self.meta and self.meta["quick_adc"] is True:
-            self.meta["z_order"] += [232]
+            self.z_order = (*self.z_order, 232)
         if "efficiency" not in self.meta:
             self.meta["efficiency"] = 1
         self.apply_to_classes = FieldOfViewBase
 
-        required_keys = ["airmass", "temperature", "humidity", "pressure",
-                         "latitude", "altitude", "pupil_angle", "pixel_scale",
-                         "wave_mid"]
-        check_keys(self.meta, required_keys, action="error")
+        check_keys(self.meta, self.required_keys, action="error")
 
         if self.table is None:
             self.table = self.get_table()
@@ -193,7 +221,7 @@ class AtmosphericDispersionCorrection(Shift3D):
         # correct fovs CRPIXnD keys
 
         if isinstance(fov, self.apply_to_classes):
-            self.meta = from_currsys(self.meta)
+            self.meta = from_currsys(self.meta, self.cmds)
             atmo_params = {"z0": airmass2zendist(self.meta["airmass"]),
                            "temp": self.meta["temperature"],  # in degC
                            "rel_hum": self.meta["humidity"] * 100,  # in %
@@ -222,6 +250,8 @@ class AtmosphericDispersionCorrection(Shift3D):
 
     def fov_grid(self, which="shifts", **kwargs):
         """See parent docstring."""
+        warnings.warn("The fov_grid method is deprecated and will be removed "
+                      "in a future release.", DeprecationWarning, stacklevel=2)
         kwargs.update(self.meta)
         if "quick_adc" in self.meta:
             ad = AtmosphericDispersion(**self.meta)

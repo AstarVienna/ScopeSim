@@ -1,4 +1,3 @@
-import logging
 from pathlib import Path
 from dataclasses import dataclass
 from typing import Any
@@ -13,15 +12,18 @@ from synphot import SpectralElement
 from synphot.models import Empirical1D
 
 from ..effects import ter_curves_utils as ter_utils
-from ..utils import get_meta_quantity, quantify, extract_type_from_unit
-from ..utils import from_currsys, convert_table_comments_to_dict, find_file
-from .surface_utils import make_emission_from_emissivity,\
-    make_emission_from_array
+from .surface_utils import (make_emission_from_emissivity,
+                            make_emission_from_array, extract_type_from_unit)
+from ..utils import (get_meta_quantity, quantify, from_currsys,
+                     convert_table_comments_to_dict, find_file, get_logger)
+
+logger = get_logger(__name__)
 
 
 @dataclass
 class PoorMansSurface:
     """Solely used by SurfaceList."""
+
     # FIXME: Use correct types instead of Any
     emission: Any
     throughput: Any
@@ -30,7 +32,8 @@ class PoorMansSurface:
 
 class SpectralSurface:
     """
-    Initialised by a file containing one or more of the following columns:
+    Initialised by a file containing one or more of the following columns.
+
     transmission, emissivity, reflection. The column wavelength must be given.
     Alternatively kwargs for the above mentioned quantities can be passed as
     arrays. If they are not Quantities, then a unit should also be passed with
@@ -40,13 +43,14 @@ class SpectralSurface:
 
     """
 
-    def __init__(self, filename=None, **kwargs):
+    def __init__(self, filename=None, cmds=None, **kwargs):
         filename = find_file(filename)
         self.meta = {"filename": filename,
                      "temperature": -270 * u.deg_C,  # deg C
                      "emission_unit": "",
                      "wavelength_unit": u.um}
 
+        self.cmds = cmds
         self.table = Table()
         if filename is not None and Path(filename).exists():
             self.table = ioascii.read(filename)
@@ -59,10 +63,10 @@ class SpectralSurface:
     @property
     def area(self):
         if "area" in self.meta:
-            the_area = self.from_meta("area", u.m**2)
+            the_area = self.from_meta("area", u.m ** 2)
         elif "outer" in self.meta:
             outer_diameter = self.from_meta("outer", u.m)
-            the_area = np.pi * (0.5 * outer_diameter)**2
+            the_area = np.pi * (0.5 * outer_diameter) ** 2
             if "inner" in self.meta:
                 inner_diameter = self.from_meta("inner", u.m)
                 the_area -= np.pi * (0.5 * inner_diameter) ** 2
@@ -103,7 +107,7 @@ class SpectralSurface:
     def emission(self):
         """
         Look for an emission array in self.meta.
-        
+
         If it doesn't find this, it defaults to creating a blackbody and
         multiplies this by the emissivity. Assumption is that
         ``self.meta["temperature"]`` is in ``deg_C``, unless it is a
@@ -111,30 +115,31 @@ class SpectralSurface:
         ``PHOTLAM arcsec^-2``, even though ``arcsec^-2`` is not given.
         """
         flux = self._get_array("emission")
+        if flux is None and "temperature" not in self.meta:
+            return None
+
         if flux is not None:
             wave = self._get_array("wavelength")
             flux = make_emission_from_array(flux, wave, meta=self.meta)
         elif "temperature" in self.meta:
-            emiss = self.emissivity                     # SpectralElement [0..1]
-            temp = from_currsys(self.meta["temperature"])
+            emiss = self.emissivity  # SpectralElement [0..1]
+            temp = from_currsys(self.meta["temperature"], self.cmds)
             if not isinstance(temp, u.Quantity):
                 temp = quantify(temp, u.deg_C)
             temp = temp.to(u.Kelvin, equivalencies=u.temperature())
             flux = make_emission_from_emissivity(temp, emiss)
-            flux.meta["temperature"] = temp
-        else:
-            flux = None
 
         has_solid_angle = extract_type_from_unit(flux.meta["solid_angle"],
                                                  "solid angle")[1] != u.Unit("")
         if flux is not None and has_solid_angle:
             conversion_factor = flux.meta["solid_angle"].to(u.arcsec ** -2)
             flux = flux * conversion_factor
-            flux.meta["solid_angle"] = u.arcsec**-2
-            flux.meta["history"].append(f"Converted to arcsec-2: {conversion_factor}")
+            flux.meta["solid_angle"] = u.arcsec ** -2
+            flux.meta["history"].append(
+                f"Converted to arcsec-2: {conversion_factor}")
 
         if flux is not None and "rescale_emission" in self.meta:
-            dic = from_currsys(self.meta["rescale_emission"])
+            dic = from_currsys(self.meta["rescale_emission"], self.cmds)
             amplitude = dic["value"] * u.Unit(dic["unit"])
             filter_name = dic["filter_name"]
             if "filename_format" in dic:
@@ -196,7 +201,7 @@ class SpectralSurface:
             response_curve = value_arr
         else:
             response_curve = None
-            logging.warning("Both wavelength and %s must be set", ter_property)
+            logger.warning("Both wavelength and %s must be set", ter_property)
 
         return response_curve
 
@@ -223,11 +228,11 @@ class SpectralSurface:
         compliment_b = self._get_array(colname_b)
 
         if compliment_a is not None and compliment_b is not None:
-            actual = 1*compliment_a.unit - (compliment_a + compliment_b)
+            actual = 1 * compliment_a.unit - (compliment_a + compliment_b)
         elif compliment_a is not None and compliment_b is None:
-            actual = 1*compliment_a.unit - compliment_a
+            actual = 1 * compliment_a.unit - compliment_a
         elif compliment_b is not None and compliment_a is None:
-            actual = 1*compliment_b.unit - compliment_b
+            actual = 1 * compliment_b.unit - compliment_b
         elif compliment_b is None and compliment_a is None:
             actual = None
 
@@ -252,13 +257,16 @@ class SpectralSurface:
         if colname in self.meta:
             val = self.meta[colname]
         elif colname in self.table.colnames:
-            val = self.table[colname].data
+            val = self.table[colname]
+            # HACK: This is to allow both Table and QTable...
+            if not isinstance(val, u.Quantity):
+                val = val.data
         else:
-            logging.debug("%s not found in either '.meta' or '.table': [%s]",
-                          colname, self.meta.get("name", self.meta["filename"]))
+            logger.debug("%s not found in either '.meta' or '.table': [%s]",
+                         colname, self.meta.get("name", self.meta["filename"]))
             return None
 
-        col_units = colname+"_unit"
+        col_units = colname + "_unit"
         if isinstance(val, u.Quantity):
             units = val.unit
         elif col_units in self.meta:
@@ -274,7 +282,7 @@ class SpectralSurface:
             val_out = None
         else:
             raise ValueError(f"{colname} must be of type: Quantity, array, "
-                             f"list, tuple, but is {type(colname)}")
+                             f"list, tuple, but is {type(val)}")
 
         return val_out
 

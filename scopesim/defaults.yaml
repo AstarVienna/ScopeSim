@@ -31,10 +31,13 @@ properties :
     flux_accuracy : !!float 1E-3
     preload_field_of_views : False
     bg_cell_width: 60         # arcsec
+    nan_fill_value: 0.
 
   file :
     local_packages_path : "./inst_pkgs/"
     server_base_url : "https://scopesim.univie.ac.at/InstPkgSvr/"
+    example_data_suburl : "example_data"
+    example_data_hash_file : "example_data_registry.txt"
     use_cached_downloads : "update"
     search_path : ["./inst_pkgs/", "./"]
     error_on_missing_file : False
@@ -50,14 +53,6 @@ properties :
     image_path: "./reports/images/"
     image_format: "png"
     preamble_file: None
-
-  logging :
-    log_to_file: False
-    log_to_console: True
-    file_path: ".scopesim.log"
-    file_open_mode: "w"   # w - overwrite, a - append
-    file_level:    "DEBUG"      # DEBUG INFO WARNING ERROR CRITICAL
-    console_level: "WARNING"    # DEBUG INFO WARNING ERROR CRITICAL
 
   tests :
     # overridden in tests/__init__.py

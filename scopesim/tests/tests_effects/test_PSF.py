@@ -3,11 +3,9 @@ import pytest
 from pytest import approx
 import numpy as np
 from matplotlib import pyplot as plt
-from matplotlib.colors import LogNorm
 
 from scopesim.effects import PSF
-from scopesim.effects.psf_utils import rotational_blur
-from scopesim.effects.psf_utils import get_bkg_level
+from scopesim.effects.psfs.psf_base import get_bkg_level
 from scopesim.optics import ImagePlane
 from scopesim.tests.mocks.py_objects.header_objects import _implane_header
 
@@ -62,9 +60,9 @@ class TestRotationBlur:
 
         # With blur
         implane = basic_image_plane()
-        implane.data[75,75] = 1
+        implane.data[75, 75] = 1
 
-        psf = PSF(rotational_blur_angle=angle)
+        psf = PSF(rotational_blur_angle=angle, rounded_edges=False)
         psf.kernel = basic_kernel()
         implane = psf.apply_to(implane)
 
@@ -159,7 +157,7 @@ class TestApplyTo:
             plt.subplot(231)
             plt.imshow(implane.data[1, :, :])
 
-        psf = PSF(rotational_blur_angle=15, bkg_width=5)
+        psf = PSF(rotational_blur_angle=15, bkg_width=5, rounded_edges=False)
         psf.kernel = basic_kernel(n=63)
         implane = psf.apply_to(implane)
 

@@ -1,8 +1,9 @@
+# -*- coding: utf-8 -*-
 """Spectral grating efficiencies."""
 
-import logging
-import numpy as np
+from typing import ClassVar
 
+import numpy as np
 from astropy.io import fits
 from astropy import units as u
 from astropy.wcs import WCS
@@ -11,7 +12,10 @@ from astropy.table import Table
 from .effects import Effect
 from .ter_curves import TERCurve
 from .ter_curves_utils import apply_throughput_to_cube
-from ..utils import figure_factory
+from ..utils import figure_factory, get_logger
+
+
+logger = get_logger(__name__)
 
 
 class SpectralEfficiency(Effect):
@@ -59,14 +63,13 @@ class SpectralEfficiency(Effect):
 
     """
 
+    z_order: ClassVar[tuple[int, ...]] = (630,)
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
         if "hdulist" in kwargs and isinstance(kwargs["hdulist"], fits.HDUList):
             self._file = kwargs["hdulist"]
-
-        params = {"z_order": [630]}
-        self.meta.update(params)
 
         self.efficiencies = self.get_efficiencies()
 
@@ -87,8 +90,9 @@ class SpectralEfficiency(Effect):
             tbl = Table.read(hdu)
             wavelength = tbl['wavelength'].quantity
             efficiency = tbl['efficiency'].value
-            effic_curve = TERCurve(wavelength=wavelength,
-                                   transmission=efficiency,
+            params.pop("filename", None)  # don't pass filename to TERCurve!
+            effic_curve = TERCurve(array_dict={"wavelength":wavelength,
+                                   "transmission":efficiency},
                                    **params)
             efficiencies[name] = effic_curve
 
@@ -101,13 +105,13 @@ class SpectralEfficiency(Effect):
         try:
             effic = self.efficiencies[trace_id]
         except KeyError:
-            logging.warning("No grating efficiency for trace %s", trace_id)
+            logger.warning("No grating efficiency for trace %s", trace_id)
             return obj
 
-        wcs = WCS(obj.hdu.header).spectral
-        wave_cube = wcs.all_pix2world(np.arange(obj.hdu.data.shape[0]), 0)[0]
-        wave_cube = (wave_cube * u.Unit(wcs.wcs.cunit[0])).to(u.AA)
-        obj.hdu = apply_throughput_to_cube(obj.hdu, effic.throughput)
+        swcs = WCS(obj.hdu.header).spectral
+        with u.set_enabled_equivalencies(u.spectral()):
+            wave = swcs.pixel_to_world(np.arange(swcs.pixel_shape[0])) << u.um
+        obj.hdu = apply_throughput_to_cube(obj.hdu, effic.throughput, wave)
         return obj
 
     def plot(self):

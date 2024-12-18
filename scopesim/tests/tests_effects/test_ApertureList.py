@@ -1,20 +1,13 @@
-import os
-import pytest
-from pytest import approx
 
 import numpy as np
 from astropy.io import fits
 
-from scopesim import rc
 from scopesim.effects import ApertureList, ApertureMask
 
 import matplotlib.pyplot as plt
-PLOTS = False
 
-FILES_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),
-                                          "../mocks/files/"))
-if FILES_PATH not in rc.__search_path__:
-    rc.__search_path__ += [FILES_PATH]
+
+PLOTS = False
 
 
 class TestInit:
@@ -31,14 +24,14 @@ class TestInit:
         apl = ApertureList(**params)
         assert isinstance(apl, ApertureList)
 
-    def test_initialises_with_filename(self):
-        apl = ApertureList(filename="test_aperture_list.dat")
+    def test_initialises_with_filename(self, mock_path):
+        apl = ApertureList(filename=str(mock_path / "test_aperture_list.dat"))
         assert isinstance(apl, ApertureList)
 
 
 class TestApertures:
-    def test_returns_list_of_aperture_masks(self):
-        apl = ApertureList(filename="test_aperture_list.dat",
+    def test_returns_list_of_aperture_masks(self, mock_path):
+        apl = ApertureList(filename=str(mock_path / "test_aperture_list.dat"),
                            no_mask=False, pixel_scale=0.01)
         apertures = apl.apertures
         assert all([isinstance(am, ApertureMask) for am in apertures])
@@ -51,8 +44,8 @@ class TestApertures:
 
 
 class TestFovGrid:
-    def test_returns_headers(self):
-        apl = ApertureList(filename="test_aperture_list.dat",
+    def test_returns_headers(self, mock_path):
+        apl = ApertureList(filename=str(mock_path / "test_aperture_list.dat"),
                            no_mask=False, pixel_scale=0.01)
         hdrs = apl.fov_grid()
         assert all([isinstance(hdr, fits.Header) for hdr in hdrs])
@@ -75,5 +68,3 @@ class TestFovGrid:
 
             plt.imshow(implane.data, origin="lower")
             plt.show()
-
-

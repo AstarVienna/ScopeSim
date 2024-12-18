@@ -1,4 +1,3 @@
-import logging
 from copy import deepcopy
 from itertools import product
 from more_itertools import pairwise
@@ -10,9 +9,12 @@ from . import image_plane_utils as imp_utils
 from .fov import FieldOfView
 from .. import effects as efs
 from ..effects.effects_utils import get_all_effects
-from ..utils import check_keys
+from ..utils import check_keys, get_logger
 
 # TODO: Where are all these functions used??
+
+
+logger = get_logger(__name__)
 
 
 def get_3d_shifts(effects, **kwargs):
@@ -36,8 +38,13 @@ def get_3d_shifts(effects, **kwargs):
     - x_shift, y_shift: [deg]
 
     """
-    required_keys = ["wave_min", "wave_mid", "wave_max",
-                     "sub_pixel_fraction", "pixel_scale"]
+    required_keys = {
+        "wave_min",
+        "wave_mid",
+        "wave_max",
+        "sub_pixel_fraction",
+        "pixel_scale",
+    }
     check_keys(kwargs, required_keys, action="warning")
 
     effects = get_all_effects(effects, efs.Shift3D)
@@ -98,7 +105,7 @@ def get_imaging_waveset(effects_list, **kwargs):
         [um] list of wavelengths
 
     """
-    required_keys = ["wave_min", "wave_max"]
+    required_keys = {"wave_min", "wave_max"}
     check_keys(kwargs, required_keys, action="error")
 
     # get the filter wavelengths first to set (wave_min, wave_max)
@@ -161,8 +168,12 @@ def get_imaging_headers(effects, **kwargs):
     #   if larger than max_chunk_size, split into smaller headers
     # add image plane WCS information for a direct projection
 
-    required_keys = ["pixel_scale", "plate_scale",
-                     "chunk_size", "max_segment_size"]
+    required_keys = {
+        "pixel_scale",
+        "plate_scale",
+        "chunk_size",
+        "max_segment_size",
+    }
     check_keys(kwargs, required_keys, action="error")
 
     plate_scale = kwargs["plate_scale"]     # ["/mm]
@@ -173,17 +184,17 @@ def get_imaging_headers(effects, **kwargs):
                                                  efs.SlitWheel,
                                                  efs.ApertureList))
     if not aperture_effects:
-        detector_arrays = get_all_effects(effects, efs.DetectorList)
-        if not detector_arrays:
+        detector_managers = get_all_effects(effects, efs.DetectorList)
+        if not detector_managers:
             raise ValueError("No ApertureMask or DetectorList was provided. "
                              "At least one must be passed to make an "
                              f"ImagePlane: {effects}.")
         aperture_effects.extend(
             detarr.fov_grid(which="edges", pixel_scale=pixel_scale)
-            for detarr in detector_arrays)
+            for detarr in detector_managers)
 
     # FIXME: all of this is a bit inconsistent; fov_grid(which="edges" is
-    #        called afterwards, but when looking in detector_arrays, the same
+    #        called afterwards, but when looking in detector_managers, the same
     #        is called immediately; does that even work? is this all tested??
     # get aperture headers from fov_grid()
     # - for-loop catches mutliple headers from ApertureList.fov_grid()
@@ -217,11 +228,11 @@ def get_imaging_headers(effects, **kwargs):
     pixel_size = pixel_scale / plate_scale
     plate_scale_deg = plate_scale / 3600.   # ["/mm] / 3600 = [deg/mm]
     for skyhdr in sky_hdrs:
-        x_sky, y_sky = imp_utils.calc_footprint(skyhdr)
-        x_det = x_sky / plate_scale_deg
-        y_det = y_sky / plate_scale_deg
+        xy_sky = imp_utils.calc_footprint(skyhdr)
+        xy_det = xy_sky / plate_scale_deg
 
-        dethdr = imp_utils.header_from_list_of_xy(x_det, y_det, pixel_size, "D")
+        dethdr = imp_utils.header_from_list_of_xy(xy_det[:, 0], xy_det[:, 1],
+                                                  pixel_size, "D")
         skyhdr.update(dethdr)
         yield skyhdr
 
@@ -260,7 +271,7 @@ def get_imaging_fovs(headers, waveset, shifts, **kwargs):
     # Actually evaluating the generators here is only necessary for the log msg
     waveset = list(waveset)
     headers = list(headers)
-    logging.info("Preparing %d FieldOfViews", (len(waveset) - 1) * len(headers))
+    logger.info("Preparing %d FieldOfViews", (len(waveset) - 1) * len(headers))
 
     combos = product(pairwise(waveset), headers)
     for fov_id, ((wave_min, wave_max), hdr) in enumerate(combos):
@@ -282,8 +293,12 @@ def get_imaging_fovs(headers, waveset, shifts, **kwargs):
 
 def get_spectroscopy_headers(effects, **kwargs):
     """Return generator of Header objects."""
-    required_keys = ["pixel_scale", "plate_scale",
-                     "wave_min", "wave_max"]
+    required_keys = {
+        "pixel_scale",
+        "plate_scale",
+        "wave_min",
+        "wave_max",
+    }
     check_keys(kwargs, required_keys, action="error")
 
     surface_list_effects = get_all_effects(effects, (efs.SurfaceList,
@@ -347,7 +362,7 @@ def get_spectroscopy_fovs(headers, shifts, effects=None, **kwargs):
     shift_dx = shifts["x_shifts"]           # in [deg]
     shift_dy = shifts["y_shifts"]
 
-    logging.info("Preparing %d FieldOfViews", len(headers))
+    logger.info("Preparing %d FieldOfViews", len(headers))
 
     apertures = get_all_effects(effects, (efs.ApertureList, efs.ApertureMask))
     masks = [ap.fov_grid(which="masks") for ap in apertures]

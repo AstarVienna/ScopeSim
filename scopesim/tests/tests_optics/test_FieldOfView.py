@@ -3,6 +3,7 @@ from pytest import approx
 import numpy as np
 from astropy import units as u
 from astropy.io import fits
+from astropy.table import Table
 from matplotlib import pyplot as plt
 from matplotlib.colors import LogNorm
 
@@ -46,6 +47,9 @@ class TestInit:
 
 
 class TestExtractFrom:
+    # @pytest.mark.xfail(reason=("is_field_in_fov drops table if anything is "
+    #                            "outside fov volume, therefore no point source "
+    #                            "is extracted..."))
     def test_extract_point_sources_from_table(self):
         src = so._table_source()
         src.fields[0]["x"] = [-15,-5,0,0] * u.arcsec
@@ -62,7 +66,7 @@ class TestExtractFrom:
         fov = _fov_190_210_um()
         fov.extract_from(src)
 
-        assert fov.fields[0].data.shape == (51, 26)
+        assert fov.fields[0].data.shape == (51, 25)
         assert len(fov.spectra[0].waveset) == 11
         assert fov.spectra[0].waveset[0].value == approx(19000)
 
@@ -82,8 +86,11 @@ class TestExtractFrom:
         fov = _fov_197_202_um()
         fov.extract_from(src)
 
-        assert fov.fields[0].shape == (3, 51, 26)
+        assert fov.fields[0].shape == (3, 51, 25)
 
+    # @pytest.mark.xfail(reason=("is_field_in_fov drops table if anything is "
+    #                            "outside fov volume, therefore no point source "
+    #                            "is extracted..."))
     def test_extract_one_of_each_type_from_source_object(self):
         src_table = so._table_source()              # 4 sources, put two outside of FOV
         src_table.fields[0]["x"] = [-15,-5,0,0] * u.arcsec
@@ -96,7 +103,7 @@ class TestExtractFrom:
         fov.extract_from(src)
 
         assert fov.fields[0].shape == (3, 51, 51)
-        assert fov.fields[1].shape == (51, 26)
+        assert fov.fields[1].shape == (51, 25)
         assert len(fov.fields[2]) == 2
 
         assert len(fov.spectra) == 3
@@ -123,21 +130,29 @@ class TestExtractFrom:
         # check the same spectrum object is referenced by both lists
         assert fov.fields[0].header["SPEC_REF"] == \
                src.fields[0].header["SPEC_REF"]
-        assert np.all([fov.fields[2][i]["ref"] == \
-                       src.fields[2][i]["ref"] for i in range(4)])
+        assert all(fov.fields[2][i]["ref"] == src.fields[2][i]["ref"]
+                   for i in range(4))
 
-        def test_contains_all_fields_inside_fov(self, basic_fov_header,
-                                                cube_source,
-                                                image_source, table_source):
-            src = image_source + cube_source + table_source
-            the_fov = FieldOfView(basic_fov_header, (1, 2) * u.um,
-                                  area=1 * u.m ** 2)
-            the_fov.extract_from(src)
-            assert len(the_fov.fields) == 3
-            assert isinstance(the_fov.fields[0], fits.ImageHDU)
-            assert isinstance(the_fov.fields[1], fits.ImageHDU)
-            assert the_fov.fields[1].header["NAXIS"] == 3
-            assert isinstance(the_fov.fields[2], Table)
+    def test_contains_all_fields_inside_fov(self):
+        src = so._image_source() + so._cube_source() + so._table_source()
+        the_fov = FieldOfView(ho._basic_fov_header(), (1, 2) * u.um,
+                              area=1 * u.m ** 2)
+        the_fov.extract_from(src)
+        assert len(the_fov.fields) == 3
+        assert isinstance(the_fov.fields[0], fits.ImageHDU)
+        assert isinstance(the_fov.fields[1], fits.ImageHDU)
+        assert the_fov.fields[1].header["NAXIS"] == 3
+        assert isinstance(the_fov.fields[2], Table)
+
+    def test_handles_nans(self):
+        src = so._image_source()
+        src.fields[0].data[20:30, 20:30] = np.nan
+        assert np.isnan(src.fields[0].data).any()
+
+        fov = _fov_190_210_um()
+        fov.extract_from(src)
+
+        assert not np.isnan(fov.fields[0].data).any()
 
 
 # @pytest.mark.xfail(reason="apply make_cube's fov.waveset available to the outside ")
@@ -164,7 +179,7 @@ class TestMakeCube:
             plt.imshow(cube.data[0, :, :], origin="lower")
             plt.show()
 
-    @pytest.mark.xfail(reason="apply make_cube's fov.waveset available to the outside ")
+    # @pytest.mark.xfail(reason="apply make_cube's fov.waveset available to the outside ")
     def test_makes_cube_from_imagehdu(self):
         src_image = so._image_source()            # 10x10" @ 0.2"/pix, [0.5, 2.5]m @ 0.02µm
         fov = _fov_190_210_um()
@@ -283,14 +298,14 @@ class TestMakeImage:
         fov = _fov_190_210_um()
         fov.extract_from(src_table)
 
-        img = fov.make_image_hdu()
-
         in_sum = 0
         waveset = fov.spectra[0].waveset
         for x, y, ref, weight in src_table.fields[0]:
             flux = src_table.spectra[ref](waveset).to(u.ph/u.s/u.m**2/u.um)
             flux *= 1 * u.m**2 * 0.02 * u.um * 0.9      # 0.9 is to catch the half bins at either end
             in_sum += np.sum(flux).value * weight
+
+        img = fov.make_image_hdu()
         out_sum = np.sum(img.data)
 
         if PLOTS:
@@ -387,7 +402,7 @@ class TestMakeSpectrum:
         spec = fov.make_spectrum()
 
         in_sum = np.sum([n * spec(fov.waveset).value
-                        for n, spec in zip([3, 1, 1], src_table.spectra)])      # sum of weights [3,1,1]
+                        for n, spec in zip([3, 1, 1], src_table.spectra.values())])      # sum of weights [3,1,1]
         out_sum = np.sum(spec(fov.waveset).value)
 
         assert in_sum == approx(out_sum)
@@ -429,7 +444,7 @@ class TestMakeSpectrum:
         spec = fov.make_spectrum()
 
         table_sum = np.sum([n * spec(fov.waveset).value
-                            for n, spec in zip([3, 1, 1], src_table.spectra)])  # sum of weights [3,1,1]
+                            for n, spec in zip([3, 1, 1], src_table.spectra.values())])  # sum of weights [3,1,1]
         image_sum = np.sum(src_image.fields[0].data) * \
                     np.sum(src_image.spectra[0](fov.waveset).value)
         cube_sum = np.sum(src_cube.fields[0].data[70:81, :, :]) * 1e-8

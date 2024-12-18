@@ -1,20 +1,23 @@
-import logging
 
 import numpy as np
 from astropy import units as u
 from synphot import SourceSpectrum, BlackBody1D, Empirical1D
 
-from ..utils import quantify, extract_type_from_unit, extract_base_from_unit
+from ..utils import quantify, get_logger
 
 
-def make_emission_from_emissivity(temp, emiss_src_spec):
+logger = get_logger(__name__)
+
+
+def make_emission_from_emissivity(temp: u.Quantity[u.K],
+                                  emiss_src_spec) -> SourceSpectrum:
     """
     Create an emission SourceSpectrum using blackbody and emissivity curves.
 
     Parameters
     ----------
-    temp : float, Quantity
-        [Kelvin] If float, then must be in Kelvin
+    temp : Quantity[Kelvin]
+        Blackbody temperature.
     emiss_src_spec : synphot.SpectralElement
         An emissivity response curve in the range [0..1]
 
@@ -23,23 +26,29 @@ def make_emission_from_emissivity(temp, emiss_src_spec):
     flux : synphot.SourceSpectrum
 
     """
-    if isinstance(temp, u.Quantity):
-        temp = temp.to(u.Kelvin, equivalencies=u.temperature()).value
-
     if emiss_src_spec is None:
-        logging.warning("Either emission or emissivity must be set")
-        flux = None
-    else:
-        flux = SourceSpectrum(BlackBody1D, temperature=temp)
-        flux.meta["solid_angle"] = u.sr**-1
-        flux = flux * emiss_src_spec
-        flux.meta["history"] = ["Created from Blackbody curve. Units are to be"
-                                " understood as per steradian"]
+        logger.warning("Either emission or emissivity must be set")
+        return None
+
+    # This line is redundant for all the places we actually call this function.
+    # But the tests want this to work, so I'll include it. Ultimately, this is
+    # an internal utils function, so it should be fine to just to static type
+    # checking to ensure temp is always in K.
+    with u.set_enabled_equivalencies(u.temperature()):
+        temp <<= u.K
+
+    flux = SourceSpectrum(BlackBody1D, temperature=temp.value)
+    flux *= emiss_src_spec
+    flux.meta["temperature"] = temp
+    flux.meta["solid_angle"] = u.sr**-1
+    flux.meta["history"] = [
+        "Created from Blackbody curve. Units are per steradian",
+    ]
 
     return flux
 
 
-def make_emission_from_array(flux, wave, meta):
+def make_emission_from_array(flux, wave, meta) -> SourceSpectrum:
     """
     Create an emission SourceSpectrum using an array.
 
@@ -60,35 +69,35 @@ def make_emission_from_array(flux, wave, meta):
 
     """
     if not isinstance(flux, u.Quantity):
-        if "emission_unit" in meta:
+        try:
             flux = quantify(flux, meta["emission_unit"])
-        else:
-            logging.warning("emission_unit must be set in self.meta, "
-                            "or emission must be an astropy.Quantity")
-            flux = None
+        except KeyError:
+            logger.warning("emission_unit must be set in self.meta, "
+                           "or emission must be an astropy.Quantity object")
+            return None
 
-    if isinstance(wave, u.Quantity) and isinstance(flux, u.Quantity):
-        flux_unit, angle = extract_type_from_unit(flux.unit, "solid angle")
-        flux = flux / angle
+    if not isinstance(wave, u.Quantity):
+        logger.warning("wavelength and emission must be "
+                       "astropy.Quantity objects")
+        return None
 
-        if is_flux_binned(flux.unit):
-            flux = normalise_binned_flux(flux, wave)
+    flux_unit, angle = extract_type_from_unit(flux.unit, "solid angle")
+    flux /= angle
 
-        orig_unit = flux.unit
-        flux = SourceSpectrum(Empirical1D, points=wave,
-                              lookup_table=flux)
-        flux.meta["solid_angle"] = angle
-        flux.meta["history"] = [("Created from emission array with units "
-                                 f"{orig_unit}")]
-    else:
-        logging.warning("wavelength and emission must be "
-                        "astropy.Quantity py_objects")
-        flux = None
+    flux = normalise_flux_if_binned(flux, wave)
+
+    orig_unit = flux.unit
+    flux = SourceSpectrum(Empirical1D, points=wave,
+                          lookup_table=flux)
+    flux.meta["solid_angle"] = angle
+    flux.meta["history"] = [
+        f"Created from emission array with units {orig_unit}",
+    ]
 
     return flux
 
 
-def normalise_binned_flux(flux, wave):
+def normalise_flux_if_binned(flux, wave):
     """
     Convert a binned flux Quantity array back into flux density.
 
@@ -106,32 +115,74 @@ def normalise_binned_flux(flux, wave):
     flux : array-like Quantity
 
     """
-    bins = np.zeros(len(wave)) * wave.unit
+    if (u.bin not in flux.unit.bases and
+            "flux density" in str(flux.unit.physical_type)):
+        # not binned, return as-is
+        return flux
+
+    bins = np.zeros_like(wave)
+    # edge bins only have half the flux of other bins
     bins[:-1] = 0.5 * np.diff(wave)
     bins[1:] += 0.5 * np.diff(wave)
-    # bins[0] *= 2.   # edge bins only have half the flux of other bins
-    # bins[-1] *= 2.
 
     bin_unit = extract_base_from_unit(flux.unit, u.bin)[1]
-    flux = flux / bins / bin_unit
+    # TODO: Why not just do flux /= (bins / u.bin)
+    flux /= (bins * bin_unit)
 
     return flux
 
 
-def is_flux_binned(unit):
+# moved these two here from utils, because they weren't used anywhere else
+def extract_type_from_unit(unit, unit_type):
     """
-    Check if the (flux) unit is a binned unit.
+    Extract ``astropy`` physical type from a compound unit.
 
     Parameters
     ----------
-    unit : Unit
+    unit : astropy.Unit
+    unit_type : str
+        The physical type of the unit as given by ``astropy``
 
     Returns
     -------
-    flag : bool
+    new_unit : Unit
+        The input unit minus any base units corresponding to `unit_type`.
+    extracted_units : Unit
+        Any base units corresponding to `unit_type`.
 
     """
-    unit = unit**1
-    # unit.physical_type is a string in astropy<=4.2 and a PhysicalType
-    # class in astropy==4.3 and thus has to be cast to a string first.
-    return (u.bin in unit._bases or "flux density" not in str(unit.physical_type))
+    extracted_units = u.Unit("")
+    for base, power in zip(unit.bases, unit.powers):
+        if unit_type == (base ** abs(power)).physical_type:
+            extracted_units *= base ** power
+
+    new_unit = unit / extracted_units
+
+    return new_unit, extracted_units
+
+
+def extract_base_from_unit(unit, base_unit):
+    """
+    Extract ``astropy`` base unit from a compound unit.
+
+    Parameters
+    ----------
+    unit : astropy.Unit
+    base_unit : Unit, str
+
+    Returns
+    -------
+    new_unit : Unit
+        The input unit minus any base units corresponding to `base_unit`.
+    extracted_units : Unit
+        Any base units corresponding to `base_unit`.
+
+    """
+    extracted_units = u.Unit("")
+    for base, power in zip(unit.bases, unit.powers):
+        if base == base_unit:
+            extracted_units *= base ** power
+
+    new_unit = unit * extracted_units ** -1
+
+    return new_unit, extracted_units

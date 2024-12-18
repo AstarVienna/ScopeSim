@@ -1,11 +1,11 @@
-# datacontainer must read in the data if it is an ASCII file, or open a file
-# handle to it if it is a FITS file
-# the header(s) must be accessible as dictionaries
-# if the data is in table format, the table command accesses this
-# if the data is in image format, the image command accesses this
+"""
+datacontainer must read in the data if it is an ASCII file, or open a file
+handle to it if it is a FITS file
+the header(s) must be accessible as dictionaries
+if the data is in table format, the table command accesses this
+if the data is in image format, the image command accesses this
+"""
 
-import os
-import inspect
 import pytest
 
 import numpy as np
@@ -15,25 +15,14 @@ from astropy import units as u
 from scopesim.effects.data_container import DataContainer
 
 
-def mock_dir():
-    cur_dirname = os.path.dirname(inspect.getfile(inspect.currentframe()))
-    rel_dirname = "../mocks/MICADO_SCAO_WIDE/"
-
-    return os.path.abspath(os.path.join(cur_dirname, rel_dirname))
-
-
-MOCK_DIR = mock_dir()
-
-
 @pytest.fixture(scope="module")
-def data_files():
+def data_files(mock_path_micado):
     filenames = ["PSF_basic.fits", "TC_filter_Ks.dat"]
-    abs_paths = [os.path.join(MOCK_DIR, fname) for fname in filenames]
+    abs_paths = [str(mock_path_micado / fname) for fname in filenames]
 
     return abs_paths
 
 
-@pytest.mark.usefixtures("data_files")
 class TestInit:
     def test_initialised_with_no_input(self):
         dat = DataContainer()
@@ -42,22 +31,31 @@ class TestInit:
     def test_initialised_with_psf_input(self, data_files):
         dat = DataContainer(data_files[0])
         assert isinstance(dat, DataContainer)
-        assert dat.is_fits is True
+        assert dat._is_fits
 
     def test_initialised_with_ascii_input(self, data_files):
         dat = DataContainer(data_files[1])
         assert isinstance(dat, DataContainer)
-        assert dat.is_fits is False
+        assert not dat._is_fits
+        assert dat.table.colnames == ['wavelength', 'transmission']
+        column = dat.table['wavelength']
+        assert column.unit == "um"
+
+    def test_raises_wrong_units(self, data_files):
+        with pytest.raises(ValueError):
+            _ = DataContainer(
+                data_files[1],
+                wavelength_unit="m",
+            )
 
     def test_initialised_with_arrays_dict_input(self):
-        array_dict = {"wavelength" : np.linspace(1, 2, 11)*u.um,
-                      "transmission" : np.ones(11)}
+        array_dict = {"wavelength": np.linspace(1, 2, 11)*u.um,
+                      "transmission": np.ones(11)}
         dat = DataContainer(array_dict=array_dict)
         assert isinstance(dat, DataContainer)
-        assert dat.is_fits is False
+        assert not dat._is_fits
 
 
-@pytest.mark.usefixtures("data_files")
 class TestGetData:
     def test_no_file_returns_no_input(self):
         dat = DataContainer()
@@ -82,9 +80,8 @@ class TestGetData:
         assert isinstance(data, Table)
 
     def test_array_input_returns_table(self):
-        array_dict = {"wavelength" : np.linspace(1, 2, 11)*u.um,
-                      "transmission" : np.ones(11)}
+        array_dict = {"wavelength": np.linspace(1, 2, 11)*u.um,
+                      "transmission": np.ones(11)}
         datc = DataContainer(array_dict=array_dict)
         data = datc.get_data()
         assert isinstance(data, Table)
-

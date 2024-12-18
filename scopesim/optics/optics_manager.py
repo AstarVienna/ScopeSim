@@ -1,4 +1,4 @@
-import logging
+
 from inspect import isclass
 from typing import TextIO
 from io import StringIO
@@ -13,9 +13,12 @@ from .optical_element import OpticalElement
 from .. import effects as efs
 from ..effects.effects_utils import is_spectroscope
 from ..effects.effects_utils import combine_surface_effects
-from ..utils import write_report, from_currsys
+from ..utils import write_report, from_currsys, get_logger
 from ..reports.rst_utils import table_to_rst
 from .. import rc
+
+
+logger = get_logger(__name__)
 
 
 class OpticsManager:
@@ -33,12 +36,17 @@ class OpticsManager:
 
     """
 
-    def __init__(self, yaml_dicts=None, **kwargs):
+    def __init__(self, yaml_dicts=None, cmds=None, **kwargs):
         self.optical_elements = []
         self.meta = {}
         self.meta.update(kwargs)
         self._surfaces_table = None
         self._surface_like_effects = None
+
+        self.cmds = cmds
+        if self.cmds is None:
+            logger.warning("No UserCommands object was passed when initialising OpticsManager")
+            self.cmds = rc.__currsys__
 
         if yaml_dicts is not None:
             self.load_effects(yaml_dicts, **self.meta)
@@ -47,15 +55,15 @@ class OpticsManager:
 
     def set_derived_parameters(self):
 
-        if "!INST.pixel_scale" not in rc.__currsys__:
+        if "!INST.pixel_scale" not in self.cmds:
             raise ValueError("'!INST.pixel_scale' is missing from the current"
                              "system. Please add this to the instrument (INST)"
                              "properties dict for the system.")
-        pixel_scale = rc.__currsys__["!INST.pixel_scale"] * u.arcsec
+        pixel_scale = self.cmds["!INST.pixel_scale"] * u.arcsec
         area = self.area
         etendue = area * pixel_scale**2
-        rc.__currsys__["!TEL.etendue"] = etendue
-        rc.__currsys__["!TEL.area"] = area
+        self.cmds["!TEL.etendue"] = etendue
+        self.cmds["!TEL.area"] = area
 
         params = {"area": area, "pixel_scale": pixel_scale, "etendue": etendue}
         self.meta.update(params)
@@ -86,7 +94,7 @@ class OpticsManager:
         """
         if not isinstance(yaml_dicts, Sequence):
             yaml_dicts = [yaml_dicts]
-        self.optical_elements.extend(OpticalElement(dic, **kwargs)
+        self.optical_elements.extend(OpticalElement(dic, cmds=self.cmds, **kwargs)
                                      for dic in yaml_dicts if "effects" in dic)
 
     def add_effect(self, effect, ext=0):
@@ -139,7 +147,7 @@ class OpticsManager:
 
         return effects
 
-    def get_z_order_effects(self, z_level):
+    def get_z_order_effects(self, z_level: int):
         """
         Return a list of all effects with a z_order keywords within `z_level`.
 
@@ -150,91 +158,124 @@ class OpticsManager:
         - Apply Source altering effects - z_order = 200..299
         - Apply FOV specific (3D) effects - z_order = 300..399
         - Apply FOV-independent (2D) effects - z_order = 400..499
+        - Apply XXX effects - z_order = 500..599
+        - Apply XXX effects - z_order = 600..699
+        - Apply lambda-independent 2D image plane effects - z_order = 700..799
+        - Apply detector effects - z_order = 800..899
+        - Apply detector array effects - z_order = 900..999
+        - Apply FITS header effects - z_order = 1000...1100
 
         Parameters
         ----------
-        z_level : int, tuple
-            [0, 100, 200, 300, 400, 500]
+        z_level : {0, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000}
+            100-range of z_orders.
 
         Returns
         -------
         effects : list of Effect objects
 
         """
-        effects = []
-        for opt_el in self.optical_elements:
-            effects += opt_el.get_z_order_effects(z_level)
+        def _gather_effects():
+            for opt_el in self.optical_elements:
+                yield from opt_el.get_z_order_effects(z_level)
 
-        return effects
+        def _sortkey(eff):
+            return next(z % 100 for z in eff.z_order if z >= z_level)
+
+        # return sorted(_gather_effects(), key=_sortkey)
+        return list(_gather_effects())
 
     @property
     def is_spectroscope(self):
+        """Return True if any of the effects is a spectroscope."""
         return is_spectroscope(self.all_effects)
 
     @property
     def image_plane_headers(self):
+        """Get headers from detector setup effects."""
         detector_lists = self.detector_setup_effects
-        headers = [det_list.image_plane_header for det_list in detector_lists]
-
         if not detector_lists:
-            raise ValueError(f"No DetectorList objects found. {detector_lists}")
+            raise ValueError("No DetectorList objects found.")
 
-        return headers
+        return [det_list.image_plane_header for det_list in detector_lists]
+
+    @property
+    def fits_header_effects(self):
+        """Get effects with z_order = 1000...1099."""
+        return self.get_z_order_effects(1000)
 
     @property
     def detector_array_effects(self):
+        """Get effects with z_order = 900...999."""
         return self.get_z_order_effects(900)
 
     @property
     def detector_effects(self):
+        """Get effects with z_order = 800...899."""
         return self.get_z_order_effects(800)
 
     @property
     def image_plane_effects(self):
-        effects = self.get_z_order_effects(700)
-        return effects
+        """Get effects with z_order = 700...799."""
+        return self.get_z_order_effects(700)
 
     @property
     def fov_effects(self):
-        effects = self.get_z_order_effects(600)
-        return effects
+        """Get effects with z_order = 600...699."""
+        return self.get_z_order_effects(600)
 
     @property
     def source_effects(self):
+        """Get effects with z_order = 500...599."""
         return self.get_z_order_effects(500)   # Transmission
 
     @property
     def detector_setup_effects(self):
-        # !!! Only DetectorLists go in here !!!
+        """Get effects with z_order = 400...499 (DetectorLists only!)."""
         return self.get_z_order_effects(400)
 
     @property
     def image_plane_setup_effects(self):
+        """Get effects with z_order = 300...399."""
         return self.get_z_order_effects(300)
 
     @property
     def fov_setup_effects(self):
+        """Get effects with z_order = 200...299."""
         # Working out where to set wave_min, wave_max
         return self.get_z_order_effects(200)
 
+    # TODO: is this ever used anywhere??
     @property
     def surfaces_table(self):
-        if self._surfaces_table is None:
-            surface_like_effects = self.get_z_order_effects(100)
-            self._surfaces_table = combine_surface_effects(surface_like_effects)
-        return self._surfaces_table
+        """Get combined surface table from effects with z_order = 100...199."""
+        from copy import deepcopy
+        sle_list = self.get_z_order_effects(100)
+        sle_list_copy = []
+        for eff in sle_list:
+            if isinstance(eff, efs.SurfaceList):
+                eff_copy = deepcopy(eff)
+                eff_copy.table = from_currsys(eff.table, self.cmds)
+            else:
+                # Avoid infinite recursion in Wheel effects (filter, adc)
+                eff_copy = eff
+            sle_list_copy.append(eff_copy)
+
+        comb_table = combine_surface_effects(sle_list_copy)
+        return comb_table
 
     @property
     def all_effects(self):
+        """Get all effects in all optical elements."""
         return [eff for opt_eff in self.optical_elements for eff in opt_eff]
 
     @property
     def system_transmission(self):
 
-        wave_unit = u.Unit(rc.__currsys__["!SIM.spectral.wave_unit"])
-        dwave = rc.__currsys__["!SIM.spectral.spectral_bin_width"]
-        wave_min = rc.__currsys__["!SIM.spectral.wave_min"]
-        wave_max = rc.__currsys__["!SIM.spectral.wave_max"]
+        wave_unit = u.Unit(from_currsys("!SIM.spectral.wave_unit", self.cmds))
+        dwave = from_currsys("!SIM.spectral.spectral_bin_width", self.cmds)
+        wave_min = from_currsys("!SIM.spectral.wave_min", self.cmds)
+        wave_max = from_currsys("!SIM.spectral.wave_max", self.cmds)
         wave = np.arange(wave_min, wave_max, dwave)
         trans = np.ones_like(wave)
         sys_trans = SpectralElement(Empirical1D, points=wave*u.Unit(wave_unit),
@@ -270,11 +311,11 @@ class OpticsManager:
         names = [eff.display_name for eff in all_effs]
         classes = [eff.__class__.__name__ for eff in all_effs]
         included = [eff.meta["include"] for eff in all_effs]
-        z_orders = [eff.meta["z_order"] for eff in all_effs]
+        z_orders = [eff.z_order for eff in all_effs]
 
         colnames = ["element", "name", "class", "included"]     #, "z_orders"
         data = [elements, names, classes, included]             #, z_orders
-        data = from_currsys(data)
+        data = from_currsys(data, self.cmds)
         tbl = Table(names=colnames, data=data, copy=False)
 
         return tbl
@@ -340,9 +381,17 @@ Summary of Effects in Optical Elements:
     def __setitem__(self, key, value):
         obj = self.__getitem__(key)
         if isinstance(obj, list) and len(obj) > 1:
-            logging.warning("%s does not return a singular object:\n %s", key, obj)
+            logger.warning("%s does not return a singular object:\n %s", key, obj)
         elif isinstance(obj, efs.Effect) and isinstance(value, dict):
             obj.meta.update(value)
+
+    def __contains__(self, key):
+        try:
+            self[key]
+            return True
+        except (KeyError, ValueError):
+            # FIXME: This should only need KeyError
+            return False
 
     def write_string(self, stream: TextIO) -> None:
         """Write formatted string representation to I/O stream"""

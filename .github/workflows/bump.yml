@@ -1,0 +1,94 @@
+name: Bump package version
+on:
+  workflow_dispatch:
+    inputs:
+      dry-run:
+        type: boolean
+        description: Only output new version number, no actual change.
+        required: false
+      rule:
+        type: choice
+        description: Version bump level
+        required: true
+        options:
+        - major
+        - minor
+        - patch
+        - premajor
+        - preminor
+        - prepatch
+        - prerelease
+        - "prerelease --next-phase"
+
+  workflow_call:
+    inputs:
+      dry-run:
+        type: boolean
+        description: Only output new version number, no actual change.
+        required: false
+      rule:
+        type: string
+        description: Version bump level
+        required: true
+      branch:
+        type: string
+        description: Branch (ref) to checkout and push changes to
+        required: false
+        default: ${{ github.ref_name }}
+    outputs:
+      bumpmsg:
+        description: Message created by the version bump.
+        value: ${{ jobs.bump.outputs.bumpmsg }}
+
+jobs:
+  bump:
+    name: Bump version number
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      bumpmsg: ${{ steps.bumping.outputs.BUMP_MSG }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Set up Poetry
+        uses: abatilo/actions-poetry@v2
+        with:
+          poetry-version: "1.8.3"
+
+      - name: Bump package Version using Poetry
+        id: bumping
+        env:
+          RULE: ${{ inputs.rule }}
+          DRY: ${{ inputs.dry-run && '--dry-run' || '' }}
+        run: echo "BUMP_MSG=$(poetry version $DRY $RULE)" >> $GITHUB_OUTPUT
+
+      - name: Output debug msg
+        if: inputs.dry-run
+        env:
+          BUMP_MSG: ${{ steps.bumping.outputs.BUMP_MSG }}
+        run: |
+          echo "## $BUMP_MSG" >> $GITHUB_STEP_SUMMARY
+          echo "Dry run only, no actual modification made." >> $GITHUB_STEP_SUMMARY
+
+      - name: Commit changes
+        # could also use https://github.com/stefanzweifel/git-auto-commit-action instead
+        if: ${{ ! inputs.dry-run }}
+        env:
+          BUMP_MSG: ${{ steps.bumping.outputs.BUMP_MSG }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -am "$BUMP_MSG"
+          git push
+          echo "## $BUMP_MSG" >> $GITHUB_STEP_SUMMARY
+          echo "Successfully committed and pushed version bump." >> $GITHUB_STEP_SUMMARY

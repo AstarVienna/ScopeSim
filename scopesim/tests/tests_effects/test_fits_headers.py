@@ -1,8 +1,8 @@
-import os
 import pytest
+from unittest.mock import patch
+
+from pathlib import Path
 from tempfile import TemporaryDirectory
-from pytest import raises
-from copy import deepcopy
 from astropy.io import fits
 from astropy import units as u
 import numpy as np
@@ -11,14 +11,13 @@ from scopesim.effects import fits_headers as fh
 from scopesim.source.source_templates import star
 import scopesim as sim
 
-YAMLS_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),
-                                          "../mocks/yamls/"))
 
 @pytest.fixture(scope="function")
-def simplecado_opt():
-    simplecado_yaml = os.path.join(YAMLS_PATH, "SimpleCADO.yaml")
-    cmd = sim.UserCommands(yamls=[simplecado_yaml])
-    return sim.OpticalTrain(cmd)
+def simplecado_opt(mock_path_yamls):
+    with patch("scopesim.rc.__currsys__"):
+        simplecado_yaml = str(mock_path_yamls / "SimpleCADO.yaml")
+        cmd = sim.UserCommands(yamls=[simplecado_yaml])
+        yield sim.OpticalTrain(cmd)
 
 
 @pytest.fixture(scope="function")
@@ -67,7 +66,7 @@ def yaml_string():
         grias_di: woed
         zdrasviute: mir
         salud: el mundo
-    EXTNAME: "DET++.DATA"    
+    EXTNAME: "DET++.DATA"
 """
 
 
@@ -75,19 +74,17 @@ class TestExtraFitsKeywordsInit:
     def test_initialises_with_nothing(self):
         assert isinstance(fh.ExtraFitsKeywords(), fh.ExtraFitsKeywords)
 
-    @pytest.mark.usefixtures("yaml_string")
     def test_initialies_with_yaml_string(self, yaml_string):
         eff = fh.ExtraFitsKeywords(yaml_string=yaml_string)
         assert isinstance(eff, fh.ExtraFitsKeywords)
 
 
-@pytest.mark.usefixtures("comb_hdul")
 class TestExtraFitsKeywordsApplyTo:
     def test_works_if_no_resolve_or_opticaltrain(self, comb_hdul):
         header_dict = {"ext_type": "PrimaryHDU",
                        "unresolved_keywords":
                            {"SIM":
-                                {"dark_current": "#dark_current.value"}
+                            {"dark_current": "#dark_current.value"}
                             }
                        }
         eff = fh.ExtraFitsKeywords(header_dict=header_dict)
@@ -100,21 +97,20 @@ class TestExtraFitsKeywordsApplyTo:
         header_dict = {"ext_type": "PrimaryHDU",
                        "keywords":
                            {"SIM":
-                                {"dark_current": "#dark_current.value"}
+                            {"dark_current": "#dark_current.value"}
                             }
                        }
         eff = fh.ExtraFitsKeywords(header_dict=header_dict)
         with pytest.raises(ValueError):
-            hdul = eff.apply_to(comb_hdul)
+            _ = eff.apply_to(comb_hdul)
 
-    @pytest.mark.usefixtures("simplecado_opt")
     def test_resolves_hash_strings_with_opticaltrain(self, simplecado_opt,
-                                                      comb_hdul):
+                                                     comb_hdul):
         header_dict = {"ext_name": "PriHDU",
                        "keywords":
                            {"SIM":
-                                {"dark_current": "#dark_current.value",
-                                 "telescope_area": "!TEL.area"}
+                            {"dark_current": "#dark_current.value",
+                             "telescope_area": "!TEL.area"}
                             }
                        }
         eff = fh.ExtraFitsKeywords(header_dict=header_dict)
@@ -124,8 +120,6 @@ class TestExtraFitsKeywordsApplyTo:
         assert hdul[0].header["HIERARCH SIM dark_current"] == 0.1
         assert hdul[0].header["HIERARCH SIM telescope_area"] == 0.
 
-    @pytest.mark.usefixtures("yaml_string")
-    @pytest.mark.usefixtures("simplecado_opt")
     def test_full_yaml_string(self, yaml_string, simplecado_opt, comb_hdul):
         eff = fh.ExtraFitsKeywords(yaml_string=yaml_string)
         hdul = eff.apply_to(comb_hdul, optical_train=simplecado_opt)
@@ -145,14 +139,13 @@ class TestExtraFitsKeywordsApplyTo:
         assert hdul[1].header["EXTNAME"] == "DET1.DATA"
 
 
-@pytest.mark.usefixtures("comb_hdul")
 class TestGetRelevantExtensions:
     def test_works_for_ext_name(self, comb_hdul):
         dic = {"ext_name": "PriHDU"}
         exts = fh.get_relevant_extensions(dic, comb_hdul)
         answer = [0]
 
-        assert np.all([ans in exts for ans in answer])
+        assert all(ans in exts for ans in answer)
         assert len(exts) == len(answer)
 
     def test_works_for_ext_number(self, comb_hdul):
@@ -160,7 +153,7 @@ class TestGetRelevantExtensions:
         exts = fh.get_relevant_extensions(dic, comb_hdul)
         answer = [1, 2]
 
-        assert np.all([ans in exts for ans in answer])
+        assert all(ans in exts for ans in answer)
         assert len(exts) == len(answer)
 
     @pytest.mark.parametrize("ext_type, answer",
@@ -170,7 +163,7 @@ class TestGetRelevantExtensions:
         dic = {"ext_type": ext_type}
         exts = fh.get_relevant_extensions(dic, comb_hdul)
 
-        assert np.all([ans in exts for ans in answer])
+        assert all(ans in exts for ans in answer)
         assert len(exts) == len(answer)
 
 
@@ -191,7 +184,7 @@ class TestFlattenDict:
                     "area": ("!TEL.area", "area"),
                     "SRC0": {"scaling_unit": u.mag},
                 },
-           },
+            },
         }
         flat_dict = fh.flatten_dict(dic)
         assert flat_dict["HIERARCH ESO ATM PWV"] == 1.0
@@ -202,23 +195,21 @@ class TestFlattenDict:
         assert flat_dict["HIERARCH SIM SRC0 scaling_unit"] == "mag"
 
     def test_resolves_bang_strings(self):
+        # TODO: Use fixtures, because success depends on order of tests.
         dic = {"SIM": {"random_seed": "!SIM.random.seed"}}
         flat_dict = fh.flatten_dict(dic, resolve=True)
-        assert flat_dict["SIM random_seed"] == None
+        assert flat_dict["SIM random_seed"] is None
 
-    @pytest.mark.usefixtures("simplecado_opt")
     def test_resolves_hash_strings(self, simplecado_opt):
         dic = {"SIM": {"dark_current": "#dark_current.value"}}
-        flat_dict = fh.flatten_dict(dic, resolve=True,
-                                    optics_manager=simplecado_opt.optics_manager)
+        flat_dict = fh.flatten_dict(
+            dic, resolve=True, optics_manager=simplecado_opt.optics_manager)
         assert flat_dict["SIM dark_current"] == 0.1
 
 
-@pytest.mark.usefixtures("comb_hdul")
-@pytest.mark.usefixtures("yaml_string")
-@pytest.mark.usefixtures("simplecado_opt")
 class TestEffectsMetaKeywordsApplyTo:
-    def test_effect_meta_in_header(self, yaml_string, simplecado_opt, comb_hdul):
+    def test_effect_meta_in_header(self, yaml_string, simplecado_opt,
+                                   comb_hdul):
         eff = fh.EffectsMetaKeywords()
         hdul = eff.apply_to(comb_hdul, optical_train=simplecado_opt)
         pri_hdr = hdul[0].header
@@ -228,7 +219,8 @@ class TestEffectsMetaKeywordsApplyTo:
 
     def test_effect_meta_in_secondary_header(self, yaml_string, simplecado_opt,
                                              comb_hdul):
-        eff = fh.EffectsMetaKeywords(ext_number=1, keyword_prefix="HIERARCH GOKU")
+        eff = fh.EffectsMetaKeywords(ext_number=1,
+                                     keyword_prefix="HIERARCH GOKU")
         hdul = eff.apply_to(comb_hdul, optical_train=simplecado_opt)
         pri_hdr = hdul[0].header
         sec_hdr = hdul[1].header
@@ -238,8 +230,6 @@ class TestEffectsMetaKeywordsApplyTo:
         assert sec_hdr["GOKU EFF0 array_dict pixsize"] == "list:[0.015]"
 
 
-@pytest.mark.usefixtures("simplecado_opt")
-@pytest.mark.usefixtures("comb_hdul")
 class TestSourceDescriptionFitsKeywordsApplyTo:
     def test_source_meta_keywords_in_header(self, simplecado_opt, comb_hdul):
         star1, star2 = star(flux=1*u.ABmag), star()
@@ -254,7 +244,8 @@ class TestSourceDescriptionFitsKeywordsApplyTo:
         assert pri_hdr["SIM SRC0 hello"] == "world"
         assert pri_hdr["SIM SRC1 servus"] == "oida"
 
-    def test_value_is_longer_than_80_characters(self, simplecado_opt, comb_hdul):
+    def test_value_is_longer_than_80_characters(self, simplecado_opt,
+                                                comb_hdul):
         star1, star2 = star(flux=1*u.ABmag), star()
         star1.meta["function_call"] *= 5
 
@@ -266,25 +257,24 @@ class TestSourceDescriptionFitsKeywordsApplyTo:
 
         assert len(pri_hdr["FNSRC0"]) == 120
 
-        # save to disk, what happens to cards that are longer than 80 characters
+        # save to disk, what happens to cards longer than 80 characters
         with TemporaryDirectory() as tmpdir:
-            fname = os.path.join(tmpdir, "test.fits")
+            fname = Path(tmpdir, "test.fits")
             hdul.writeto(fname)
             tmp_hdr = fits.getheader(fname)
 
         assert len(tmp_hdr["FNSRC0"]) == 120
 
 
-@pytest.mark.usefixtures("simplecado_opt")
-@pytest.mark.usefixtures("comb_hdul")
 class TestSimulationConfigFitsKeywordsApplyTo:
-    def test_sys_dict_dicts_are_added_to_header(self, simplecado_opt, comb_hdul):
+    def test_sys_dict_dicts_are_added_to_header(self, simplecado_opt,
+                                                comb_hdul):
         eff = fh.SimulationConfigFitsKeywords()
         hdul = eff.apply_to(comb_hdul, optical_train=simplecado_opt)
         pri_hdr = hdul[0].header
 
         assert pri_hdr["SIM CONFIG DET ndit"] == 1
-        assert pri_hdr["SIM CONFIG SIM random seed"] == None
+        assert pri_hdr["SIM CONFIG SIM random seed"] is None
 
     def test_bang_string_untouched_for_resolve_false(self, simplecado_opt,
                                                      comb_hdul):
@@ -295,7 +285,6 @@ class TestSimulationConfigFitsKeywordsApplyTo:
         assert pri_hdr["SIM CONFIG DET ndit"] == "!OBS.ndit"
 
 
-@pytest.mark.usefixtures("simplecado_opt")
 class TestAllFitsKeywordEffects:
     def test_works(self, simplecado_opt):
         hdr_dic = {"ext_type": "PrimaryHDU",
@@ -307,15 +296,16 @@ class TestAllFitsKeywordEffects:
                                    "dark_current": "#dark_current.value"
                                }
                            },
-                            "SIM":
-                                {"hello": "world"}
+                           "SIM":
+                               {"hello": "world"}
                        }
                    }
                    }
-        extra_keys = fh.ExtraFitsKeywords(header_dict=hdr_dic)
-        opt_keys = fh.EffectsMetaKeywords()
-        src_keys = fh.SourceDescriptionFitsKeywords()
-        config_keys = fh.SimulationConfigFitsKeywords()
+        cmds = simplecado_opt.cmds
+        extra_keys = fh.ExtraFitsKeywords(header_dict=hdr_dic, cmds=cmds)
+        opt_keys = fh.EffectsMetaKeywords(cmds=cmds)
+        src_keys = fh.SourceDescriptionFitsKeywords(cmds=cmds)
+        config_keys = fh.SimulationConfigFitsKeywords(cmds=cmds)
 
         for eff in [src_keys, opt_keys, config_keys, extra_keys]:
             simplecado_opt.optics_manager.add_effect(eff)
@@ -324,13 +314,10 @@ class TestAllFitsKeywordEffects:
         simplecado_opt.observe(star1)
         hdul = simplecado_opt.readout()[0]
 
-        # for key in hdul[0].header:
-        #     print(key, ":", hdul[0].header[key])
-
         hdr = hdul[0].header
         assert hdr["ESO INS dark_current"] == 0.1
         assert hdr["ESO INS pixel_scale"] == 0.004
         assert hdr["SIM EFF0 class"] == "DetectorList"
         assert hdr["SIM SRC0 class"] == "Table"
         assert hdr["SIM SRC0 photometric_system"] == "ab"
-        assert hdr["SIM CONFIG SIM random seed"] == None
+        assert hdr["SIM CONFIG SIM random seed"] is None

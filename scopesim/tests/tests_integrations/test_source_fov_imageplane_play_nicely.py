@@ -35,13 +35,13 @@ def implane_hdr():
     return hdrs._implane_header()
 
 
-@pytest.mark.usefixtures("comb_src", "fov_hdr", "implane_hdr")
 class TestInteractionBetweenSourceFOVImagePlane:
     """
     Test:
     - fov extracts correctly from source object and converts to image
     - fov image is correctly added to the image plane
     """
+
     def test_can_extract_the_source_in_a_fov(self, fov_hdr, comb_src,
                                              implane_hdr):
 

@@ -1,14 +1,24 @@
+# -*- coding: utf-8 -*-
 """Contains base class for effects."""
 
 from pathlib import Path
+from collections.abc import Mapping, MutableMapping
+from dataclasses import dataclass, field, InitVar, fields
+from typing import NewType, ClassVar
 
-from ..effects.data_container import DataContainer
+from .data_container import DataContainer
 from .. import base_classes as bc
 from ..utils import from_currsys, write_report
 from ..reports.rst_utils import table_to_rst
 
 
-class Effect(DataContainer):
+# FIXME: This docstring is out-of-date for several reasons:
+#   - Effects can act on objects other than Source (eg FOV, IMP, DET)
+#   - fov_grid is outdated
+
+
+# @dataclass(kw_only=True, eq=False)
+class Effect:
     """
     Base class for representing the effects (artifacts) in an optical system.
 
@@ -22,7 +32,7 @@ class Effect(DataContainer):
     Essentially, a sub-classed Effects object must only contain the following
     attributes:
 
-    * ``self.meta`` - a dictionary to contain meta data.
+    * ``self.meta`` - a dictionary to contain metadata.
     * ``self.apply_to(obj, **kwargs)`` - a method which accepts a
       Source-derivative and returns an instance of the same class as ``obj``
     * ``self.fov_grid(which="", **kwargs)``
@@ -34,9 +44,15 @@ class Effect(DataContainer):
 
     """
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.meta["z_order"] = []
+    z_order: ClassVar[tuple[int, ...]] = tuple()
+    required_keys = set()
+
+    def __init__(self, filename=None, **kwargs):
+        self.data_container = DataContainer(filename=filename, **kwargs)
+        self.meta = kwargs.get("meta", {})
+        self.cmds = kwargs.get("cmds")
+
+        self.meta.update(self.data_container.meta)
         self.meta["include"] = True
         self.meta.update(kwargs)
 
@@ -86,36 +102,53 @@ class Effect(DataContainer):
             [um, arcsec, arcsec]
 
         """
-        self.update(**kwargs)
+        # self.update(**kwargs)
         return []
 
-    def update(self, **kwargs):
-        self.meta.update(kwargs)
-        # self.update_bang_keywords()
-
-    # def update_bang_keywords(self):
-    #     for key in self.meta:
-    #         if isinstance(self.meta[key], str) and self.meta[key][0] == "!":
-    #             bang_key = self.meta[key]
-    #             self.meta[key] = rc.__currsys__[bang_key]
+    # *******************************************************************
+    # ported from DataContainer, previous base class
+    # *******************************************************************
 
     @property
-    def include(self):
-        return from_currsys(self.meta["include"])
+    def table(self):
+        return self.data_container.table
+
+    @table.setter
+    def table(self, value):
+        self.data_container.table = value
+
+    @property
+    def data(self):
+        return self.data_container.data
+
+    @property
+    def _file(self):
+        return self.data_container._file
+
+    @_file.setter
+    def _file(self, value):
+        self.data_container._file = value
+
+    # *******************************************************************
+
+    @property
+    def include(self) -> bool:
+        return from_currsys(self.meta["include"], self.cmds)
 
     @include.setter
-    def include(self, item):
-        self.meta["include"] = item
+    def include(self, value: bool):
+        self.meta["include"] = value
 
     @property
-    def display_name(self):
+    def display_name(self) -> str:
         name = self.meta.get("name", self.meta.get("filename", "<untitled>"))
         if not hasattr(self, "_current_str"):
             return name
-        return f"{name} : [{from_currsys(self.meta[self._current_str])}]"
+        current_str = from_currsys(self.meta[self._current_str], self.cmds)
+        return f"{name} : [{current_str}]"
 
     @property
-    def meta_string(self):
+    def meta_string(self) -> str:
         padlen = 4 + len(max(self.meta, key=len))
         exclude = {"comments", "changes", "description", "history",
                    "report_table_caption", "report_plot_caption", "table"}
@@ -202,23 +235,25 @@ class Effect(DataContainer):
         cls_doc = self.__doc__ if self.__doc__ is not None else "<no docstring>"
         cls_descr = cls_doc.lstrip().splitlines()[0]
 
-        params = {"report_plot_filename": None,
-                  "report_plot_file_formats": ["png"],
-                  "report_plot_caption": "",
-                  "report_plot_include": False,
-                  "report_table_include": False,
-                  "report_table_caption": "",
-                  "report_table_rounding": None,
-                  "report_image_path": "!SIM.reports.image_path",
-                  "report_rst_path": "!SIM.reports.rst_path",
-                  "report_latex_path": "!SIM.reports.latex_path",
-                  "file_description": self.meta.get("description",
-                                                    "<no description>"),
-                  "class_description": cls_descr,
-                  "changes_str": changes_str}
+        params = {
+            "report_plot_filename": None,
+            "report_plot_file_formats": ["png"],
+            "report_plot_caption": "",
+            "report_plot_include": getattr(self, "report_plot_include", False),
+            "report_table_include": getattr(self, "report_table_include", False),
+            "report_table_caption": "",
+            "report_table_rounding": getattr(self, "report_table_rounding", None),
+            "report_image_path": "!SIM.reports.image_path",
+            "report_rst_path": "!SIM.reports.rst_path",
+            "report_latex_path": "!SIM.reports.latex_path",
+            "file_description": self.meta.get("description",
+                                              "<no description>"),
+            "class_description": cls_descr,
+            "changes_str": changes_str,
+        }
         params.update(self.meta)
         params.update(kwargs)
-        params = from_currsys(params)
+        params = from_currsys(params, self.cmds)
 
         rst_str = f"""
 {str(self)}
@@ -293,30 +328,30 @@ Meta-data
 
         return rst_str
 
-    def info(self):
+    def info(self) -> None:
         """Print basic information on the effect, notably the description."""
         if (desc := self.meta.get("description")) is not None:
             print(f"{self}\nDescription: {desc}")
         else:
             print(self)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"{self.__class__.__name__}(**{self.meta!r})"
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{self.__class__.__name__}: \"{self.display_name}\""
 
     def __getitem__(self, item):
         if isinstance(item, str) and item.startswith("#"):
             if len(item) > 1:
                 if item.endswith("!"):
-                    key = item[1:-1]
+                    key = item.removeprefix("#").removesuffix("!")
                     if len(key) > 0:
-                        value = from_currsys(self.meta[key])
+                        value = from_currsys(self.meta[key], self.cmds)
                     else:
-                        value = from_currsys(self.meta)
+                        value = from_currsys(self.meta, self.cmds)
                 else:
-                    value = self.meta[item[1:]]
+                    value = self.meta[item.removeprefix("#")]
             else:
                 value = self.meta
         else:
@@ -328,4 +363,4 @@ Meta-data
         if any(key not in self.meta for key in ("path", "filename_format")):
             return None
         return Path(self.meta["path"],
-                    from_currsys(self.meta["filename_format"]))
+                    from_currsys(self.meta["filename_format"], self.cmds))

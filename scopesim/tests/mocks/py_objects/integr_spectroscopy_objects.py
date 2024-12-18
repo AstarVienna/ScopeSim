@@ -221,7 +221,7 @@ def mock_point_source_object():
 
 
 def mock_extended_source_object():
-    from scipy.misc import face
+    from scipy.datasets import face
     im = face()[::-1, :, 0]
     im = im / np.max(im)
     hdr = {"CDELT1": 0.1, "CDELT2": 0.1,
