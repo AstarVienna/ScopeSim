@@ -288,7 +288,6 @@ class WCUSource(TERCurve):
         self.emiss_bb = self.meta["emiss_bb"]      # <<<<<< that needs to be a function
 
         lam = self.wavelength
-        print("compute_lamp_emission: len(lam) = ", len(lam))
 
         mult_is = self.is_multiplication(lam)
 
@@ -313,8 +312,6 @@ class WCUSource(TERCurve):
         #self.intens_bg = self.flux_bg / (np.pi * self.d_is**2) * mult_is / (np.pi * u.sr)
         self.intens_bg  = self.rho_is(lam) * self.is_bg(lam)
 
-        print("intens_lamp:", len(self.intens_lamp))
-        print("intens_bg:", len(self.intens_bg))
         self.intensity = self.intens_lamp + self.intens_bg
 
         tbl = Table()
@@ -346,7 +343,6 @@ class WCUSource(TERCurve):
         self.emiss_mask = 1 - self.meta["rho_mask"]       # <<<<<< that needs to be a function
 
         lam = self.wavelength
-        print("compute_fp_emission len(lam) = ", len(lam))
 
         # continuum black-body source
         #self.bb_scale = 1 * u.ph / (u.s * u.m**2 * u.arcsec**2 * u.um)
