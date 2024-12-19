@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "ScopeSim"
-version = "0.9.1a3"
+version = "0.9.2a0"
 description = "Generalised telescope observation simulator"
 license = "GPL-3.0-or-later"
 authors = ["Kieran Leschinski <kieran.leschinski@unive.ac.at>"]
@@ -46,6 +46,7 @@ optional = true
 jupyter = "^1.0"
 jupytext = "^1.10.0"
 ipykernel = "^6.24.0"
+ipympl = "^0.9.4"
 
 [tool.poetry.group.test.dependencies]
 pytest = "^7.4.3"
@@ -67,6 +68,7 @@ nbsphinx = "^0.9.3"
 numpydoc = "^1.6.0"
 scopesim_templates = ">=0.6.0"
 ipykernel = "^6.24.0"
+ipympl = "^0.9.4"
 
 [tool.poetry.urls]
 "Bug Tracker" = "https://github.com/AstarVienna/ScopeSim/issues"

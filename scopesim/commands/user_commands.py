@@ -169,6 +169,7 @@ class UserCommands(NestedChainMap):
         self._kwargs = deepcopy(kwargs)
         self.ignore_effects = []
         self.package_name = ""
+        self.package_status = ""
         self.default_yamls = []
         self.modes_dict = {}
 
@@ -201,6 +202,25 @@ class UserCommands(NestedChainMap):
         if "mode_yamls" in yaml_dict:
             logger.debug("        found mode_yamls")
             self.update(mode_yamls=yaml_dict["mode_yamls"])
+
+        if yaml_dict.get("object", "") == "configuration":
+            # we're in default.yaml
+            self.package_status = yaml_dict.get("status", "unknown")
+            if self.package_status == "deprecated":
+                warn("The selected instrument package is deprecated!",
+                     DeprecationWarning, stacklevel=7)
+            if self.package_status == "concept":
+                raise NotImplementedError(
+                    "The selected instrument package is not yet supported."
+                )
+            if self.package_status == "experimental":
+                # or rather warning?
+                logger.info(
+                    "The selected instrument package is still in experimental "
+                    "stage, results may not be representative of physical "
+                    "instrument, use with care."
+                )
+
         logger.debug("      dict yaml done")
 
     def _load_yamls(self, yamls: Collection) -> None:
@@ -242,7 +262,7 @@ class UserCommands(NestedChainMap):
             self.update(packages=[kwargs["use_instrument"]],
                         yamls=["default.yaml"])
 
-            check_for_updates(self.package_name)
+            # check_for_updates(self.package_name)
 
         if "packages" in kwargs:
             add_packages_to_rc_search(self["!SIM.file.local_packages_path"],
@@ -271,7 +291,7 @@ class UserCommands(NestedChainMap):
                     mode_yaml = self.modes_dict[mode_name]
                     self._load_yaml_dict(mode_yaml)
 
-        if modes := kwargs.get("set_modes"):
+        if modes := list(kwargs.get("set_modes", [])):
             self.set_modes(*modes)
 
         # Calling underlying NestedMapping's update method to avoid recursion
@@ -351,8 +371,24 @@ class UserCommands(NestedChainMap):
                     raise ValueError(f"mode '{mode}' was not recognised")
 
                 defyam["properties"]["modes"].append(mode)
-                if depmsg := self.modes_dict[mode].get("deprecate"):
-                    warn(depmsg, DeprecationWarning, stacklevel=2)
+                if ((msg := self.modes_dict[mode].get("deprecate", "")) or
+                        self.modes_dict[mode].get("status") == "deprecated"):
+                    # Fallback if status: deprecated but not deprecate key
+                    msg = msg or f"Instrument mode '{mode}' is deprecated."
+                    warn(msg, DeprecationWarning, stacklevel=2)
+
+                if self.modes_dict[mode].get("status") == "experimental":
+                    # or rather warning?
+                    logger.info(
+                        "Mode '%s' is still in experimental stage, results "
+                        "may not be representative of physical instrument.",
+                        mode
+                    )
+
+                if self.modes_dict[mode].get("status") == "concept":
+                    raise NotImplementedError(
+                        f"Instrument mode '{mode}' is not yet supported."
+                    )
 
         # Note: This used to completely reset the instance via the line below.
         #       Calling init like this is bad design, so I replaced is with a
@@ -371,8 +407,15 @@ class UserCommands(NestedChainMap):
         cases, it now returns a generator of tuples of strings.
         """
         for mode, subdict in self.modes_dict.items():
-            desc = (subdict.get("description", "<None>") +
-                    ":DEPRECATED" * ("deprecate" in subdict))
+            # TODO: maybe find a prettier way to print the status...
+            # TODO: maybe also print mode type (e.g. MICADO SCAO)
+            desc = (
+                subdict.get("description", "<None>") +
+                f":status={subdict.get('status')}" * ("status" in subdict) +
+                ":DEPRECATED" * (
+                    "deprecate" in subdict and "status" not in subdict
+                )
+            )
             yield mode, *(s.strip() for s in desc.split(":"))
 
     @property
