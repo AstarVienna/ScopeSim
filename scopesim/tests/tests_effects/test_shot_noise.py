@@ -27,6 +27,9 @@ class TestApplyTo:
         dtcr._hdu.data[1][1] = np.nan
 
         sn = ShotNoise()
+        # To prevent that data[0][0] does not change by chance.
+        # For example, the test fails with seed 39.
+        sn.meta['random_seed'] = 9001
         dtcr = sn.apply_to(dtcr)
 
         # Ensure that the values have changed.
