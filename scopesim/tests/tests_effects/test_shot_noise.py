@@ -28,7 +28,7 @@ class TestApplyTo:
 
         sn = ShotNoise()
         # To prevent that data[0][0] does not change by chance.
-        # For example, the test fails witht seed 39.
+        # For example, the test fails with seed 39.
         sn.meta['random_seed'] = 9001
         dtcr = sn.apply_to(dtcr)
 
