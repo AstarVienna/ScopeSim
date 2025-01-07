@@ -271,9 +271,9 @@ class WCUSource(TERCurve):
         path = find_file(self.meta['bb_to_is'])
         if path is None:
             return lambda x: 1
-        hdul = fits.open(path)
-        rho_tube = hdul[1].data['rho_tube']
-        throughput = hdul[1].data['t_gen_no_gap']    # TODO: update
+        with fits.open(path) as hdul:
+            rho_tube = hdul[1].data['rho_tube']
+            throughput = hdul[1].data['t_gen_no_gap']    # TODO: update
         return interp1d(rho_tube, throughput)
 
 
@@ -325,15 +325,28 @@ class WCUSource(TERCurve):
         self.surface.meta.update(tbl.meta)
 
     def _laser_intensity(self):
+        """Compute the intensity for the single-line lasers
+
+        The function computes both lasers at once. This is possible because the
+        lines are so far apart that there is no band that sees them both.
+        """
         lam = self.wavelength
         dlam = lam[1] - lam[0]
+        print(lam[0], lam[-1], dlam)
 
-        power = 5e-3 * u.W / (c.c * c.h / lam) * u.ph
-        lamc = 3.39 * u.um
-        sigma = 2 * dlam #* u.um
+        # Laser 1 (L band)     ## TODO move to yaml
+        power_l = 5e-3 * u.W / (c.c * c.h / lam) * u.ph
+        lamc_l = 3.39 * u.um
+        # Laser 2 (M band)
+        power_m = 20e-3 * u.W / (c.c * c.h / lam) * u.ph
+        lamc_m = 5.26 * u.um
+
+        sigma = 2 * dlam
         amp = 1/(sigma * np.sqrt(2 * np.pi))
-        line = Gaussian1D(amplitude=amp, mean=lamc, stddev=sigma)
-        flux = power * line(lam) / (np.pi * self.d_is_in**2 / 4)
+
+        line_l = Gaussian1D(amplitude=amp, mean=lamc_l, stddev=sigma)
+        line_m = Gaussian1D(amplitude=amp, mean=lamc_m, stddev=sigma)
+        flux = (power_l * line_l(lam) + power_m * line_m(lam)) / (np.pi * self.d_is_in**2 / 4)
         intens = flux / (np.pi * u.sr)
         return intens.to(self.bb_scale)
 
