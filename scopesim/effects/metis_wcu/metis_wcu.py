@@ -332,21 +332,27 @@ class WCUSource(TERCurve):
         """
         lam = self.wavelength
         dlam = lam[1] - lam[0]
-        print(lam[0], lam[-1], dlam)
 
         # Laser 1 (L band)     ## TODO move to yaml
-        power_l = 5e-3 * u.W / (c.c * c.h / lam) * u.ph
         lamc_l = 3.39 * u.um
-        # Laser 2 (M band)
-        power_m = 20e-3 * u.W / (c.c * c.h / lam) * u.ph
+        power_l = 5e-3 * u.W / (c.c * c.h / lamc_l) * u.ph
+        # Laser 2 (tunable), power divided among multiple lines
+        lam_t = seq(4.68, 4.78, 0.01) * u.um
+        nline = len(lam_t)
+        power_t = 70e-3 * u.W / (c.c * c.h / lam) * u.ph / nline
+        # Laser 3 (M band)
         lamc_m = 5.26 * u.um
+        power_m = 20e-3 * u.W / (c.c * c.h / lamc_m) * u.ph
 
         sigma = 2 * dlam
         amp = 1/(sigma * np.sqrt(2 * np.pi))
 
         line_l = Gaussian1D(amplitude=amp, mean=lamc_l, stddev=sigma)
         line_m = Gaussian1D(amplitude=amp, mean=lamc_m, stddev=sigma)
-        flux = (power_l * line_l(lam) + power_m * line_m(lam)) / (np.pi * self.d_is_in**2 / 4)
+        list_t = [Gaussian1D(amplitude=amp, mean=ll, stddev=sigma) for ll in lam_t]
+        line_t = sum(list_t[1:], start=list_t[0])
+        flux = (power_l * line_l(lam) + power_m * line_m(lam) + power_t * line_t(lam)) \
+            / (np.pi * self.d_is_in**2 / 4)
         intens = flux / (np.pi * u.sr)
         return intens.to(self.bb_scale)
 
