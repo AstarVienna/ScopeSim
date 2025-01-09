@@ -4,7 +4,7 @@
 from warnings import warn
 from copy import deepcopy
 from pathlib import Path
-from collections.abc import Iterable, Collection, Mapping, MutableMapping
+from collections.abc import Iterable, Collection, Mapping, MutableMapping, Sequence
 from typing import Any
 
 import yaml
@@ -174,6 +174,8 @@ class UserCommands(NestedChainMap):
         self.modes_dict = {}
 
         self.update(**kwargs)
+        if "set_modes" not in kwargs:
+            self._set_init_modes()
 
     def _load_yaml_dict(self, yaml_dict):
         logger.debug("    called load dict yaml")
@@ -188,22 +190,19 @@ class UserCommands(NestedChainMap):
                 "and mocking.", yaml_dict)
 
         self.update_alias(self.maps[0], yaml_dict)
+        print("appending", yaml_dict.get("name"))
         self.yaml_dicts.append(yaml_dict)
 
         if "packages" in yaml_dict:
             logger.debug("        found packages")
-            self.update(packages=yaml_dict["packages"])
+            self._add_packages(yaml_dict["packages"])
 
         # recursive
         sub_yamls = yaml_dict.get("yamls", [])
         logger.debug("      found %d sub-yamls", len(sub_yamls))
         self._load_yamls(sub_yamls)
 
-        if "mode_yamls" in yaml_dict:
-            logger.debug("        found mode_yamls")
-            self.update(mode_yamls=yaml_dict["mode_yamls"])
-
-        if yaml_dict.get("object", "") == "configuration":
+        if yaml_dict.get("alias", "") == "PKG":
             # we're in default.yaml
             self.package_status = yaml_dict.get("status", "unknown")
             if self.package_status == "deprecated":
@@ -221,6 +220,10 @@ class UserCommands(NestedChainMap):
                     "instrument, use with care."
                 )
 
+            if "mode_yamls" in yaml_dict:
+                logger.debug("        found mode_yamls")
+                self._load_mode_yamls(yaml_dict["mode_yamls"])
+
         logger.debug("      dict yaml done")
 
     def _load_yamls(self, yamls: Collection) -> None:
@@ -234,6 +237,7 @@ class UserCommands(NestedChainMap):
 
                 yaml_dicts = load_yaml_dicts(yaml_file)
                 logger.debug("  loaded %d yamls from %s", len(yaml_dicts), yaml_input)
+
                 # recursive
                 for yaml_dict in yaml_dicts:
                     self._load_yaml_dict(yaml_dict)
@@ -248,6 +252,41 @@ class UserCommands(NestedChainMap):
                 raise ValueError("yaml_dicts must be a filename or a "
                                  f"mapping (dict): {yaml_input}")
 
+    def _set_init_modes(self):
+        if "modes" not in self["!OBS"]:
+            logger.debug("  no initial modes found")
+            return
+
+        logger.debug("  setting initial modes")
+        # This shouldn't be necessary, i.e. we might want to see that
+        # error if it occurs...
+        # if not isinstance(self["!OBS.modes"], list):
+        #     self["!OBS.modes"] = [self["!OBS.modes"]]
+        # self.set_modes(*self["!OBS.modes"])
+        for mode_name in self["!OBS.modes"]:
+            mode_yaml = self.modes_dict[mode_name]
+            self._load_yaml_dict(mode_yaml)
+
+    def _load_mode_yamls(self, mode_yamls: Sequence[Mapping[str, Any]]):
+        logger.debug("    found %d mode yamls", len(mode_yamls))
+        # Convert the yaml list of modes to a dict object
+        # TODO: Why isn't this a dict with name as key to begin with???
+        #       But that's an IRDB thing...
+        #       Also, is the "name" needed in the dict later? If yes, put
+        #       this back to where it was:
+        # Update on this: so the original was needed because during the
+        #       set_modes call, this gets called again, and now thows an
+        #       error because the name key is no longer there.....
+        self.modes_dict = {mode["name"]: mode for mode in mode_yamls}
+        # self.modes_dict = {mode.pop("name"): mode for mode in mode_yamls}
+
+    def _add_packages(self, packages: Sequence[str]) -> None:
+        logger.debug("    found %d package names", len(packages))
+        add_packages_to_rc_search(
+            self["!SIM.file.local_packages_path"],
+            packages,
+        )
+
     def update(self, other=None, /, **kwargs):
         """
         Update the current parameters with a yaml dictionary.
@@ -259,39 +298,21 @@ class UserCommands(NestedChainMap):
 
         if "use_instrument" in kwargs:
             self.package_name = kwargs["use_instrument"]
-            self.update(packages=[kwargs["use_instrument"]],
-                        yamls=["default.yaml"])
+            self._add_packages([kwargs["use_instrument"]])
+            self._load_yamls(["default.yaml"])
 
             # check_for_updates(self.package_name)
 
         if "packages" in kwargs:
-            add_packages_to_rc_search(self["!SIM.file.local_packages_path"],
-                                      kwargs["packages"])
+            self._add_packages(kwargs["packages"])
 
         self._load_yamls(kwargs.get("yamls", []))
 
         if mode_yamls := kwargs.get("mode_yamls"):
-            # Convert the yaml list of modes to a dict object
-            # TODO: Why isn't this a dict with name as key to begin with???
-            #       But that's an IRDB thing...
-            #       Also, is the "name" needed in the dict later? If yes, put
-            #       this back to where it was:
-            # Update on this: so the original was needed because during the
-            #       set_modes call, this gets called again, and now thows an
-            #       error because the name key is no longer there.....
-            self.modes_dict = {mode["name"]: mode for mode in mode_yamls}
-            # self.modes_dict = {mode.pop("name"): mode for mode in mode_yamls}
-
-            if "modes" in self["!OBS"]:
-                # This shouldn't be necessary, i.e. we might want to see that
-                # error if it occurs...
-                # if not isinstance(self["!OBS.modes"], list):
-                #     self["!OBS.modes"] = [self["!OBS.modes"]]
-                for mode_name in self["!OBS.modes"]:
-                    mode_yaml = self.modes_dict[mode_name]
-                    self._load_yaml_dict(mode_yaml)
+            self._load_mode_yamls(mode_yamls)
 
         if modes := list(kwargs.get("set_modes", [])):
+            logger.debug("  set_modes given as %s", modes)
             self.set_modes(*modes)
 
         # Calling underlying NestedMapping's update method to avoid recursion
@@ -319,6 +340,10 @@ class UserCommands(NestedChainMap):
             new_dict = new_dict.dic  # Avoid updating with another one
 
         if alias := new_dict.get("alias"):
+            if alias == "PKG":
+                # we're in the meta section of default.yaml
+                return
+
             logger.debug("updating alias %s", alias)
             propdict = new_dict.get("properties", {})
             if alias in mapping:
