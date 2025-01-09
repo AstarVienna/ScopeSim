@@ -10,7 +10,7 @@ import numpy as np
 from astropy import units as u
 
 from scopesim import UserCommands
-from scopesim.effects.metis_wcu import WCUSource
+from scopesim.effects.metis_wcu import WCUSource, FPMask
 from scopesim.utils import seq
 
 def _patched_cmds(mode="wcu_lms", wavelen=3.9, bin_width=0.0003):
@@ -149,3 +149,15 @@ class TestWCUSource:
         bbsource.get_wavelength()
         lam = seq(1.15, 1.37, 0.002)
         assert np.all(bbsource.wavelength.value == lam)
+
+
+@pytest.fixture(name="fpmask", scope="function")
+def fixture_fpmask(mock_path):
+    return FPMask(filename=str(mock_path / "fp_mask_pinhole.dat"))
+
+class TestFPMask:
+    def test_initialises_correctly(self, fpmask):
+        assert isinstance(fpmask, FPMask)
+
+    def test_has_table(self, fpmask):
+        assert fpmask.data_container.table is not None

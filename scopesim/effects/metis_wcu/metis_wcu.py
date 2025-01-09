@@ -10,6 +10,7 @@ from astropy.io import ascii as ioascii
 from scipy.interpolate import interp1d
 import yaml
 
+from .fpmask import FPMask
 from ..ter_curves import TERCurve, FilterCurve
 from ...utils import get_logger, seq, find_file,\
     from_currsys
@@ -67,8 +68,9 @@ class WCUSource(TERCurve):
 
         # Check on the presence of one vital parameter
         if "rho_tube" not in self.meta:
-            raise ValueError("Parameters not present: please provide config file or parameter values"
-                             "for WCUSource")
+            raise ValueError(
+                "Parameters not present: please provide config file or parameter values"
+                "for WCUSource")
 
         self._background_source = None
 
@@ -78,13 +80,14 @@ class WCUSource(TERCurve):
         self.mask_surf.meta.update(self.meta)
 
         # Load components for the source
-        #self.wavelength = seq(2.2, 15, 0.01) * u.um   # TODO cleverer
         self.get_wavelength()
         self.bb_scale = 1 * u.ph / (u.s * u.m**2 * u.arcsec**2 * u.um)
         self.bb_to_is = self.bb_to_is_throughput()
         self.rho_tube = get_reflectivity(self.meta['rho_tube'])
         self.rho_is = get_reflectivity(self.meta['rho_is'])
         self.rho_mask = get_reflectivity(self.meta['rho_mask'])
+
+        # Compute the emission components
         self.compute_lamp_emission()
         self.compute_fp_emission()
 
@@ -103,24 +106,12 @@ class WCUSource(TERCurve):
         bb_flux = self.emission
         mask_flux = self.mask_emission
         self._background_source = []
-        hdr = {"BG_SRC": True,
-               "BG_SURF": self.display_name,
-               "CTYPE1": "LINEAR",
-               "CTYPE2": "LINEAR",
-               "CRPIX1": 1024.5,
-               "CRPIX2": 1024.5,
-               "CRVAL1": 0.,
-               "CRVAL2": 0.,
-               "CUNIT1": "arcsec",
-               "CUNIT2": "arcsec",
-               "CDELT1": 0.00547,
-               "CDELT2": 0.00547,
-               "BUNIT": "PHOTLAM arcsec-2",
-               "SOLIDANG": "arcsec-2"}
+
         if self.meta['current_mask'] == 'open':
             bg_hdu = fits.ImageHDU()
             bg_hdu.header.update(hdr)
             self._background_source.append(Source(image_hdu=bg_hdu, spectra=bb_flux))
+
         else:   # TODO: properly define masks
             holearea = 4.45610478e-05 * u.arcsec**2 # LM:  25 um
             # holearea = 0.00031057 * u.arcsec**2   # N:  66 um
@@ -244,10 +235,14 @@ class WCUSource(TERCurve):
 
     def set_mask(self, fpmask: str):
         """Change the focal-plane mask"""
+        # TODO: use name of current_mask to find file
+        ## Shall we construct a masklist from all the files that we have?
         masklist = self.meta['fpmasks']
         if fpmask not in masklist:
             raise ValueError(f"fpmask must be one of {masklist}")
         self.meta["current_mask"] = fpmask
+
+        # Read file: x, y, rad (arcsec)
 
         self.compute_lamp_emission()
         self.compute_fp_emission()
@@ -255,6 +250,7 @@ class WCUSource(TERCurve):
     @property
     def current_mask(self):
         """Name of the mask currently in use"""
+        # TODO: list hole positions as well?
         return self.meta['current_mask']
 
 
@@ -364,7 +360,6 @@ class WCUSource(TERCurve):
         lam = self.wavelength
 
         # continuum black-body source
-        #self.bb_scale = 1 * u.ph / (u.s * u.m**2 * u.arcsec**2 * u.um)
         self.mask_em = BlackBody(self.wcu_temp, scale=self.bb_scale)
         self.intens_fp = self.emiss_mask * self.mask_em(lam)
 
@@ -412,6 +407,8 @@ class WCUSource(TERCurve):
         Integrating sphere temp: {self.meta['is_temp']}
         WCU temperature:         {self.meta['wcu_temp']}
         Focal-plane mask:        {self.meta['current_mask']}  {self.meta['fpmasks']}"""
+
+
 
 
 # TODO: put into metis_wcu_utils.py
