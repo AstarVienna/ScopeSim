@@ -161,3 +161,20 @@ class TestFPMask:
 
     def test_has_table(self, fpmask):
         assert fpmask.data_container.table is not None
+
+    def test_has_holehdu(self, fpmask):
+        assert fpmask.holehdu is not None
+
+    def test_has_opaquehdu(self, fpmask):
+        assert fpmask.opaquehdu is not None
+
+    def test_pixarea_correct(self, fpmask):
+        hdr = fpmask.holehdu.header
+        pixarea = hdr['CDELT1'] * hdr['CDELT2'] * u.arcsec**2
+        assert fpmask.pixarea == pixarea
+
+    def test_data_correct(self, fpmask):
+        assert fpmask.holehdu.data[241, 1943] == 0
+        assert fpmask.holehdu.data[1023, 1023] == np.pi * (0.007532**2) / 4
+        assert fpmask.opaquehdu.data[1023, 1023] == 0
+        assert fpmask.opaquehdu.data[748, 1308] == fpmask.pixarea.value

@@ -107,37 +107,16 @@ class WCUSource(TERCurve):
         mask_flux = self.mask_emission
         self._background_source = []
 
-        if self.meta['current_mask'] == 'open':
+        if self.meta['current_mask'] == 'open':  # TODO: how to treat the open mask?
             bg_hdu = fits.ImageHDU()
             bg_hdu.header.update(hdr)
             self._background_source.append(Source(image_hdu=bg_hdu, spectra=bb_flux))
 
         else:   # TODO: properly define masks
-            holearea = 4.45610478e-05 * u.arcsec**2 # LM:  25 um
-            # holearea = 0.00031057 * u.arcsec**2   # N:  66 um
+            fpmask = FPMask(self.meta['current_mask'])   # Need a path
 
-            bg_hdu = fits.ImageHDU()
-            bg_hdu.header.update(hdr)
-            bg_hdu.data = np.zeros((2048, 2048))
-            bg_hdu.data[1024, 1024] = 1
-            bg_hdu.data[512, 512] = 1
-            # When spectrum is intensity (../arcsec2), the image must contain the pixel
-            # area (arcsec2). For a true backgroud field, this is taken care of by
-            # fov._calc_area_factor, but this is not applied to image data, so we
-            # have to do it here.
-            bg_hdu.data = bg_hdu.data * holearea  # Should actually be the size of the hole
-            self._background_source.append(Source(image_hdu=bg_hdu, spectra=bb_flux))
-
-            pixarea = (hdr['CDELT1'] * u.Unit(hdr['CUNIT1'])
-                       * hdr['CDELT2'] * u.Unit(hdr['CUNIT2']))
-
-            bg2_hdu = fits.ImageHDU()
-            bg2_hdu.header.update(hdr)
-            bg2_hdu.data = np.ones((2048, 2048))
-            bg2_hdu.data[1024, 1024] = 0
-            bg2_hdu.data[512, 512] = 0
-            bg2_hdu.data = bg2_hdu.data * pixarea
-            self._background_source.append(Source(image_hdu=bg2_hdu, spectra=mask_flux))
+            self._background_source.append(Source(image_hdu=fpmask.holehdu, spectra=bb_flux))
+            self._background_source.append(Source(image_hdu=fpmask.opaquehdu, spectra=mask_flux))
             #self._background_source = [Source(image_hdu=bg2_hdu, spectra=bb_flux)]  # TEST!!!
 
         return self._background_source
