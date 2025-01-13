@@ -113,7 +113,8 @@ class WCUSource(TERCurve):
             self._background_source.append(Source(image_hdu=bg_hdu, spectra=bb_flux))
 
         else:   # TODO: properly define masks
-            fpmask = FPMask(self.meta['current_mask'])   # Need a path
+            fpmask = FPMask(maskname=self.meta['current_mask'],
+                            fpmask_filename_format=self.meta['fpmask_filename_format'])
 
             self._background_source.append(Source(image_hdu=fpmask.holehdu, spectra=bb_flux))
             self._background_source.append(Source(image_hdu=fpmask.opaquehdu, spectra=mask_flux))

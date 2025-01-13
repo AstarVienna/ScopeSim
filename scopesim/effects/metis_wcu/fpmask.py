@@ -5,6 +5,9 @@ import numpy as np
 from astropy.io import fits
 from astropy import units as u
 from ..data_container import DataContainer
+from ...utils import find_file, from_currsys, get_logger
+
+logger = get_logger(__name__)
 
 class FPMask:
     """Focal-plane mask for the METIS WCU
@@ -16,11 +19,19 @@ class FPMask:
     """
 
     def __init__(self,
-                 filename: Path | str | None = None,
+                 maskname: Path | str | None = None,
+                 fpmask_filename_format: str | None = None,
                  **kwargs
                  ):
-        self.filename = filename
-        self.data_container = DataContainer(filename=filename, **kwargs)
+        logger.debug("Initialising FPMask with ", maskname)
+        # Try to find the file as a path
+        if find_file(maskname, silent=True) is None:
+            file_format = from_currsys(fpmask_filename_format)
+            self.filename = file_format.format(maskname)
+        else:
+            self.filename = maskname
+
+        self.data_container = DataContainer(filename=self.filename, **kwargs)
         hdr = {"BG_SRC": True,
                "BG_SURF": "WCU focal plane mask",   # TODO more specific?
                "CTYPE1": "LINEAR",
