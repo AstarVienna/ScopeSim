@@ -50,6 +50,7 @@ class FPMask:
         self.pixarea = (hdr['CDELT1'] * u.Unit(hdr['CUNIT1'])
                         * hdr['CDELT2'] * u.Unit(hdr['CUNIT2']))
 
+        # TODO combine into one function to reduce redundancy
         self.holehdu = self.make_holehdu(header=hdr)
         self.opaquehdu = self.make_opaquehdu(header=hdr)
 
@@ -65,10 +66,17 @@ class FPMask:
         hdu.header.update(header)
         hdu.data = np.zeros((2047, 2047))  # TODO test - do we need to go back to 2048?
         tab = self.data_container.table
-        xpix = (tab['x'] - header['CRVAL1']) / header['CDELT1'] + header['CRPIX1'] - 1
-        ypix = (tab['y'] - header['CRVAL2']) / header['CDELT2'] + header['CRPIX2'] - 1
-        holearea = (tab['diam']/2)**2 * np.pi
-        hdu.data[ypix.astype(int), xpix.astype(int)] = holearea
+        xhole = tab['x'].data
+        yhole = tab['y'].data
+        diam = tab['diam'].data
+        xpix = (xhole - header['CRVAL1']) / header['CDELT1'] + header['CRPIX1'] - 1
+        ypix = (yhole - header['CRVAL2']) / header['CDELT2'] + header['CRPIX2'] - 1
+        in_field = (xpix > 0) * (xpix < 2047) * (ypix > 0) * (ypix < 2047)
+        xpix = xpix[in_field].astype(int)
+        ypix = ypix[in_field].astype(int)
+        diam = diam[in_field]
+        holearea = (diam/2)**2 * np.pi
+        hdu.data[ypix, xpix] = holearea
         return hdu
 
     def make_opaquehdu(self, header) -> fits.ImageHDU:
@@ -86,7 +94,12 @@ class FPMask:
         hdu.header.update(header)
         hdu.data = np.ones((2047, 2047)) * self.pixarea.value # TODO test - do we need to go back to 2048?
         tab = self.data_container.table
-        xpix = (tab['x'] - header['CRVAL1']) / header['CDELT1'] + header['CRPIX1'] - 1
-        ypix = (tab['y'] - header['CRVAL2']) / header['CDELT2'] + header['CRPIX2'] - 1
-        hdu.data[ypix.astype(int), xpix.astype(int)] = 0
+        xhole = tab['x'].data
+        yhole = tab['y'].data
+        xpix = (xhole - header['CRVAL1']) / header['CDELT1'] + header['CRPIX1'] - 1
+        ypix = (yhole - header['CRVAL2']) / header['CDELT2'] + header['CRPIX2'] - 1
+        in_field = (xpix > 0) * (xpix < 2047) * (ypix > 0) * (ypix < 2047)
+        xpix = xpix[in_field].astype(int)
+        ypix = ypix[in_field].astype(int)
+        hdu.data[ypix, xpix] = 0
         return hdu
