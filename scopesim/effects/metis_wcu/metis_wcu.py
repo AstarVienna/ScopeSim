@@ -44,11 +44,20 @@ class WCUSource(TERCurve):
     The temperatures of the black-body source, the integrating sphere as well as the
     ambient temperature of the WCU (which is the temperature of the focal-plane mask)
     can be set by calling
-    >>> metis['bb_source'].set_temperature(bb_temp=1200*u.K, is_temp=320*u.K,
-                                           wcu_temp=295*u.K)
+    >>> metis['wcu_source'].set_temperature(bb_temp=1200*u.K, is_temp=320*u.K,
+                                            wcu_temp=295*u.K)
+
+    The flux-controlling masks are currently implemented as a float (in [0, 1]) that
+    gives the fraction of flux transmitted. It can be change with
+    >>> metis['wcu_source'].set_bb_aperture(0.8)
 
     The focal-plane mask can be changed by calling
-    >>> metis['bb_source'].set_mask("pinhole")
+    >>> metis['wcu_source'].set_fpmask("pinhole")
+
+    To use the lasers instead of the black-body source, do
+    >>> metis['wcu_source'].set_lamp("laser")
+    Which laser is seen depends on the wavelength of the observation. Note that the
+    tunable laser currently cannot be tuned.
     """
 
     def __init__(self, **kwargs):
@@ -72,7 +81,11 @@ class WCUSource(TERCurve):
                 "Parameters not present: please provide config file or parameter values"
                 "for WCUSource")
 
+        self.fpmask = FPMask(maskname=self.meta['current_fpmask'],
+                             fpmask_filename_format=self.meta['fpmask_filename_format'])
         self._background_source = None
+
+        self.bb_aperture = self.meta['bb_aperture']
 
         # Define surfaces (the IS surface is currently taken from parent class)
         # we add another one here (TODO: make this nicer)
@@ -103,23 +116,18 @@ class WCUSource(TERCurve):
     def background_source(self):
         """Define a source field for the FP mask"""
 
-        bb_flux = self.emission
+        bb_flux = self.emission * self.bb_aperture
         mask_flux = self.mask_emission
         self._background_source = []
 
-        if self.meta['current_mask'] == 'open':  # TODO: how to treat the open mask?
-            bg_hdu = fits.ImageHDU()
-            bg_hdu.header.update(hdr)
-            self._background_source.append(Source(image_hdu=bg_hdu, spectra=bb_flux))
+        fpmask = FPMask(maskname=self.meta['current_fpmask'],
+                        fpmask_filename_format=self.meta['fpmask_filename_format'])
 
-        else:   # TODO: properly define masks
-            fpmask = FPMask(maskname=self.meta['current_mask'],
-                            fpmask_filename_format=self.meta['fpmask_filename_format'])
-
-            self._background_source.append(Source(image_hdu=fpmask.holehdu, spectra=bb_flux))
-            self._background_source.append(Source(image_hdu=fpmask.opaquehdu, spectra=mask_flux))
-            #self._background_source = [Source(image_hdu=bg2_hdu, spectra=bb_flux)]  # TEST!!!
-
+        self._background_source.append(Source(image_hdu=fpmask.holehdu, spectra=bb_flux))
+        if fpmask.opaquehdu is not None:   # not the open mask
+            self._background_source.append(Source(image_hdu=fpmask.opaquehdu,
+                                                  spectra=mask_flux))
+        self.fpmask = fpmask
         return self._background_source
 
     def set_lamp(self, lamp='bb'):
@@ -212,26 +220,29 @@ class WCUSource(TERCurve):
         self.compute_lamp_emission()
         self.compute_fp_emission()
 
+    def set_bb_aperture(self, value: float):
+        """Change the flux-controlling aperture for the black-body source
 
-    def set_mask(self, fpmask: str):
+        Currently, this accepts a float value between 0 and 1 that gives the
+        fraction of black-body emission that exits the integrating sphere
+        compared to the fully open case.
+        """
+        if value > 1 or value < 0:
+            value = max(0, min(value, 1))
+            logger.warning("bb_aperture value out of range [0, 1], clipping to {}"
+                           .format(value))
+        self.bb_aperture = value
+
+
+    def set_fpmask(self, fpmask: str):
         """Change the focal-plane mask"""
-        # TODO: use name of current_mask to find file
-        ## Shall we construct a masklist from all the files that we have?
-        #masklist = self.meta['fpmasks']
-        #if fpmask not in masklist:
-        #    raise ValueError(f"fpmask must be one of {masklist}")
-        self.meta["current_mask"] = fpmask
+        self.meta["current_fpmask"] = fpmask
 
-        # Read file: x, y, rad (arcsec)
-
-        self.compute_lamp_emission()
-        self.compute_fp_emission()
 
     @property
-    def current_mask(self):
+    def current_fpmask(self):
         """Name of the mask currently in use"""
-        # TODO: list hole positions as well?
-        return self.meta['current_mask']
+        return self.meta['current_fpmask']
 
 
     def bb_to_is_throughput(self):
@@ -251,7 +262,6 @@ class WCUSource(TERCurve):
             rho_tube = hdul[1].data['rho_tube']
             throughput = hdul[1].data['t_gen_no_gap']    # TODO: update
         return interp1d(rho_tube, throughput)
-
 
     def compute_lamp_emission(self):
         """Compute the emission at the exit of the integrating sphere"""
@@ -283,9 +293,6 @@ class WCUSource(TERCurve):
 
         # background emission from integrating sphere
         self.is_bg = BlackBody(self.is_temp, scale=self.bb_scale)
-        #self.flux_bg = ((1 - self.rho_is(lam)) * self.is_bg(lam)
-        #                * (np.pi * self.d_is**2) * (np.pi * u.sr))
-        #self.intens_bg = self.flux_bg / (np.pi * self.d_is**2) * mult_is / (np.pi * u.sr)
         self.intens_bg  = self.rho_is(lam) * self.is_bg(lam)
 
         self.intensity = self.intens_lamp + self.intens_bg
@@ -333,7 +340,7 @@ class WCUSource(TERCurve):
         return intens.to(self.bb_scale)
 
     def compute_fp_emission(self):
-        """Compute the emission from the opaque part of the focal-plane mask"""
+        """Compute the emission spectrum from the opaque part of the focal-plane mask"""
         self.wcu_temp = self.meta["wcu_temp"] << u.K
         self.emiss_mask = 1 - self.meta["rho_mask"]       # <<<<<< that needs to be a function
 
@@ -382,11 +389,12 @@ class WCUSource(TERCurve):
 
     def __str__(self) -> str:
         return f"""{self.__class__.__name__}: "{self.display_name}"
-        Current lamp:            {self.current_lamp}     {self.lamps}
-        BlackBody temperature:   {self.meta['bb_temp']}
-        Integrating sphere temp: {self.meta['is_temp']}
-        WCU temperature:         {self.meta['wcu_temp']}
-        Focal-plane mask:        {self.meta['current_mask']}  {self.meta['fpmasks']}"""
+    Current lamp:            {self.current_lamp}     {self.lamps}
+    BlackBody temperature:   {self.meta['bb_temp'] << u.K}
+    Integrating sphere temp: {self.meta['is_temp'] << u.K}
+    WCU temperature:         {self.meta['wcu_temp'] << u.K}
+    BlackBody aperture:      {self.bb_aperture}
+    Focal-plane mask:        {self.meta['current_fpmask']}  {self.meta['fpmasks']}"""
 
 
 

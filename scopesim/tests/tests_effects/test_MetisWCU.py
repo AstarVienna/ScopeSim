@@ -38,6 +38,7 @@ def fixture_bbsource():
                      bb_temp=1000*u.K,
                      is_temp=300*u.K,
                      wcu_temp=300*u.K,
+                     bb_aperture=1.,
                      bb_to_is=None,
                      rho_tube=0.95,
                      rho_is=0.95,
@@ -46,11 +47,13 @@ def fixture_bbsource():
                      diam_is_in=25.4,
                      diam_is_out=100.,
                      emiss_bb=0.98,
+                     current_fpmask="open",
+                     fpmask_filename_format="fp_mask_{}.dat",
                      cmds=_patched_cmds())
 
 @pytest.mark.usefixtures("patch_mock_path_basic_instrument")
 class TestWCUSource:
-    def test_initialises_correctly(self, bbsource):
+    def test_wcu_initialises_correctly(self, bbsource):
         assert isinstance(bbsource, WCUSource)
 
     def test_bbsource_has_temperatures(self, bbsource):
@@ -150,13 +153,27 @@ class TestWCUSource:
         lam = seq(1.15, 1.37, 0.002)
         assert np.all(bbsource.wavelength.value == lam)
 
+    def test_bb_aperture_initialises_correctly(self, bbsource):
+        assert bbsource.bb_aperture == 1.
+
+    def test_bb_aperture_set_good_value(self, bbsource):
+        bbsource.set_bb_aperture(0.3)
+        assert bbsource.bb_aperture == 0.3
+
+    def test_bb_aperture_set_clip_negative_value(self, bbsource):
+        bbsource.set_bb_aperture(-3)
+        assert bbsource.bb_aperture == 0
+
+    def test_bb_aperture_set_clip_large_value(self, bbsource):
+        bbsource.set_bb_aperture(13)
+        assert bbsource.bb_aperture == 1
 
 @pytest.fixture(name="fpmask", scope="function")
 def fixture_fpmask(mock_path):
-    return FPMask(filename=str(mock_path / "fp_mask_pinhole.dat"))
+    return FPMask(maskname=str(mock_path / "fp_mask_pinhole.dat"))
 
 class TestFPMask:
-    def test_initialises_correctly(self, fpmask):
+    def test_fpmask_initialises_correctly(self, fpmask):
         assert isinstance(fpmask, FPMask)
 
     def test_has_table(self, fpmask):
