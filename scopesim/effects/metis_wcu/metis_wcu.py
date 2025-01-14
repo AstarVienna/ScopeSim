@@ -217,9 +217,9 @@ class WCUSource(TERCurve):
         """Change the focal-plane mask"""
         # TODO: use name of current_mask to find file
         ## Shall we construct a masklist from all the files that we have?
-        masklist = self.meta['fpmasks']
-        if fpmask not in masklist:
-            raise ValueError(f"fpmask must be one of {masklist}")
+        #masklist = self.meta['fpmasks']
+        #if fpmask not in masklist:
+        #    raise ValueError(f"fpmask must be one of {masklist}")
         self.meta["current_mask"] = fpmask
 
         # Read file: x, y, rad (arcsec)
