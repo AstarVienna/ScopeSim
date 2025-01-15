@@ -116,7 +116,7 @@ class WCUSource(TERCurve):
     def background_source(self):
         """Define a source field for the FP mask"""
 
-        bb_flux = self.emission * self.bb_aperture
+        bb_flux = self.emission
         mask_flux = self.mask_emission
         self._background_source = []
 
@@ -177,14 +177,15 @@ class WCUSource(TERCurve):
         return self.meta['current_lamp']
 
     def set_temperature(self, bb_temp: [float | u.Quantity]=None,
-                        wcu_temp: [float | u.Quantity]=None,
-                        is_temp: [float | u.Quantity]=None):
+                        is_temp: [float | u.Quantity]=None,
+                        wcu_temp: [float | u.Quantity]=None):
         """Change the black-body temperature
 
         Parameters
         ----------
-        bb_temp, wcu_temp : float, Quantity
-            new temperatures for the BB source and the ambient WCU, respectively.
+        bb_temp, wcu_temp, is_temp : float, Quantity
+            new temperatures for the BB source, the integrating sphere and the
+            ambient WCU, arespectively.
             If float, the unit is assumed to be Kelvin.
         """
         if bb_temp is not None:
@@ -232,7 +233,7 @@ class WCUSource(TERCurve):
             logger.warning("bb_aperture value out of range [0, 1], clipping to {}"
                            .format(value))
         self.bb_aperture = value
-
+        self.compute_lamp_emission()
 
     def set_fpmask(self, fpmask: str):
         """Change the focal-plane mask"""
@@ -280,7 +281,7 @@ class WCUSource(TERCurve):
         # continuum black-body source
         if self.current_lamp == "bb":
             self.is_lamp = BlackBody(self.bb_temp, scale=self.bb_scale)
-            self.flux_lamp = (self.emiss_bb * self.is_lamp(lam)
+            self.flux_lamp = (self.emiss_bb * self.is_lamp(lam) * self.bb_aperture
                             * (np.pi * self.d_is_in**2 / 4) * (np.pi * u.sr))
             self.flux_lamp *= self.bb_to_is(self.rho_tube(lam))
             self.intens_lamp = self.flux_lamp / (np.pi * self.d_is**2) * mult_is / (np.pi * u.sr)
