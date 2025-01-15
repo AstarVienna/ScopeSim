@@ -168,6 +168,22 @@ class TestWCUSource:
         bbsource.set_bb_aperture(13)
         assert bbsource.bb_aperture == 1
 
+    @pytest.mark.parametrize("newvalue", [1., 0.6, 0.])
+    def test_bb_aperture_changes_lamp_emission(self, bbsource, newvalue):
+        bbsource.set_bb_aperture(1.)
+        ref_lamp = bbsource.intens_lamp
+        bbsource.set_bb_aperture(newvalue)
+        assert np.allclose(bbsource.intens_lamp, newvalue * ref_lamp)
+
+    @pytest.mark.parametrize("newvalue", [1., 0.6, 0.])
+    def test_bb_aperture_does_not_change_background_emission(self, bbsource,
+                                                             newvalue):
+        bbsource.set_bb_aperture(1.)
+        ref_bg = bbsource.intens_bg
+        bbsource.set_bb_aperture(newvalue)
+        assert np.all(bbsource.intens_bg == ref_bg)
+
+
 @pytest.fixture(name="fpmask", scope="function")
 def fixture_fpmask(mock_path):
     return FPMask(maskname=str(mock_path / "fp_mask_pinhole.dat"))
