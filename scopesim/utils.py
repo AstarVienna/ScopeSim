@@ -272,11 +272,8 @@ def find_file(filename, path=None, silent=False):
         logger.error(msg)
 
     # TODO: Not sure what to do here
-    # [OC]: I don't think it's useful to raise an error - let user decide what
-    #       to do if no file is found (i.e. None is returned). (also: why not
-    #       FileNotFoundError?)
-    # if from_currsys("!SIM.file.error_on_missing_file"):
-    #    raise ValueError(msg)
+    if from_currsys("!SIM.file.error_on_missing_file"):
+       raise ValueError(msg)
 
     return None
 

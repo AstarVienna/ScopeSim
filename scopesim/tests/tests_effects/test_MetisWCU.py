@@ -205,6 +205,7 @@ class TestFPMask:
         assert openmask.holehdu.data is None
         assert openmask.opaquehdu is None
 
+    @pytest.mark.usefixtures("no_file_error")
     def test_fpmask_uses_file_format(self, fpmask, pinholemask):
         assert fpmask.data_container.meta['filename'] == \
             pinholemask.data_container.meta['filename']
