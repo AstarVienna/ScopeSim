@@ -121,7 +121,7 @@ class TestExtraFitsKeywordsApplyTo:
                             optical_train=simplecado_opt)
 
         assert hdul[0].header["HIERARCH SIM dark_current"] == 0.1
-        assert hdul[0].header["HIERARCH SIM telescope_area"] == 0.
+        assert hdul[0].header["HIERARCH SIM telescope_area"] == 1.
 
     def test_full_yaml_string(self, yaml_string, simplecado_opt, comb_hdul):
         eff = fh.ExtraFitsKeywords(yaml_string=yaml_string)
@@ -129,7 +129,7 @@ class TestExtraFitsKeywordsApplyTo:
         pri_hdr = hdul[0].header
 
         # resolved keywords
-        assert pri_hdr["HIERARCH ESO TEL area"] == 0             # !-str
+        assert pri_hdr["HIERARCH ESO TEL area"] == 1             # !-str
         assert pri_hdr["HIERARCH ESO TEL pixel_scale"] == 0.004  # !-str
         assert pri_hdr["HIERARCH ESO DAR VALUE"] == 0.1          # #-str
         assert pri_hdr["HIERARCH ESO TEL its_over"] == 9000      # normal
