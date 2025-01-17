@@ -1,3 +1,6 @@
+# pylint: disable=missing-class-docstring
+# pylint: disable=missing-function-docstring
+
 import pytest
 from unittest.mock import patch
 
@@ -12,16 +15,16 @@ from scopesim.source.source_templates import star
 import scopesim as sim
 
 
-@pytest.fixture(scope="function")
-def simplecado_opt(mock_path_yamls):
+@pytest.fixture(name="simplecado_opt", scope="function")
+def fixture_simplecado_opt(mock_path_yamls):
     with patch("scopesim.rc.__currsys__"):
         simplecado_yaml = str(mock_path_yamls / "SimpleCADO.yaml")
         cmd = sim.UserCommands(yamls=[simplecado_yaml])
         yield sim.OpticalTrain(cmd)
 
 
-@pytest.fixture(scope="function")
-def comb_hdul():
+@pytest.fixture(name="comb_hdul", scope="function")
+def fixture_comb_hdul():
     pri = fits.PrimaryHDU(header=fits.Header({"EXTNAME": "PriHDU"}))
     im = fits.ImageHDU(header=fits.Header({"EXTNAME": "ImHDU"}))
     tbl = fits.BinTableHDU(header=fits.Header({"EXTNAME": "BinTblHDU"}))
@@ -31,8 +34,8 @@ def comb_hdul():
 
 
 # taken from the example yaml in docstring of ExtraFitsKeywords
-@pytest.fixture(scope="function")
-def yaml_string():
+@pytest.fixture(name="yaml_string", scope="function")
+def fixture_yaml_string():
     return """
 - ext_type: PrimaryHDU
   keywords:
