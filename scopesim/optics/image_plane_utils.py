@@ -483,13 +483,10 @@ def rescale_imagehdu(imagehdu: fits.ImageHDU, pixel_scale: float | u.Quantity,
 
     """
 
-    logger.debug("Writing test_imagehdu.fits")
-    imagehdu.writeto("test_imagehdu.fits", overwrite=True)
-
     # Identify the wcs to which pixel_scale refers to and determine the zoom factor
     wcs_suffix = wcs_suffix or " "
     primary_wcs = WCS(imagehdu.header, key=wcs_suffix[0])
-    logger.debug("primary wcs: %s", primary_wcs)
+
     # make sure that units are correct and zoom factor is positive
     # The length of the zoom factor will be determined by imagehdu.data,
     # which might differ from the dimension of primary_wcs. Here, pick
