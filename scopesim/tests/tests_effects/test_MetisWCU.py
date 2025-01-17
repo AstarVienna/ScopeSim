@@ -188,9 +188,28 @@ class TestWCUSource:
 def fixture_fpmask(mock_path):
     return FPMask(maskname=str(mock_path / "fp_mask_pinhole.dat"))
 
+@pytest.fixture(name="openmask", scope="function")
+def fixture_openmask():
+    return FPMask(maskname="open")
+
+@pytest.fixture(name="pinholemask", scope="function")
+def fixture_pinholemask(mock_path):
+    return FPMask(maskname="pinhole",
+                  fpmask_filename_format=str(mock_path / "fp_mask_{}.dat"))
+
 class TestFPMask:
     def test_fpmask_initialises_correctly(self, fpmask):
         assert isinstance(fpmask, FPMask)
+
+    def test_fpmask_open_has_correct_hdus(self, openmask):
+        assert openmask.holehdu.data is None
+        assert openmask.opaquehdu is None
+
+    def test_fpmask_uses_file_format(self, fpmask, pinholemask):
+        assert fpmask.data_container.meta['filename'] == \
+            pinholemask.data_container.meta['filename']
+        assert np.all(fpmask.holehdu.data == pinholemask.holehdu.data)
+        assert np.all(fpmask.opaquehdu.data == pinholemask.opaquehdu.data)
 
     def test_has_table(self, fpmask):
         assert fpmask.data_container.table is not None
