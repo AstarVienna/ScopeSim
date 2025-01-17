@@ -51,8 +51,8 @@ class WCUSource(TERCurve):
     gives the fraction of flux transmitted. It can be change with
     >>> metis['wcu_source'].set_bb_aperture(0.8)
 
-    The focal-plane mask can be changed by calling
-    >>> metis['wcu_source'].set_fpmask("pinhole")
+    The focal-plane mask and/or its orientation and position can be changed by calling
+    >>> metis['wcu_source'].set_fpmask("pinhole", angle=10, shift=(0.1, 0))
 
     To use the lasers instead of the black-body source, do
     >>> metis['wcu_source'].set_lamp("laser")
@@ -81,8 +81,9 @@ class WCUSource(TERCurve):
                 "Parameters not present: please provide config file or parameter values"
                 "for WCUSource")
 
-        self.fpmask = FPMask(maskname=self.meta['current_fpmask'],
-                             fpmask_filename_format=self.meta['fpmask_filename_format'])
+        self.set_fpmask(maskname=self.meta['current_fpmask'],
+                        angle=self.meta["fpmask_angle"],
+                        shift=self.meta["fpmask_shift"])
         self._background_source = None
 
         self.bb_aperture = self.meta['bb_aperture']
@@ -120,14 +121,11 @@ class WCUSource(TERCurve):
         mask_flux = self.mask_emission
         self._background_source = []
 
-        fpmask = FPMask(maskname=self.meta['current_fpmask'],
-                        fpmask_filename_format=self.meta['fpmask_filename_format'])
-
-        self._background_source.append(Source(image_hdu=fpmask.holehdu, spectra=bb_flux))
-        if fpmask.opaquehdu is not None:   # not the open mask
-            self._background_source.append(Source(image_hdu=fpmask.opaquehdu,
+        self._background_source.append(Source(image_hdu=self.fpmask.holehdu,
+                                              spectra=bb_flux))
+        if self.fpmask.opaquehdu is not None:   # not the open mask
+            self._background_source.append(Source(image_hdu=self.fpmask.opaquehdu,
                                                   spectra=mask_flux))
-        self.fpmask = fpmask
         return self._background_source
 
     def set_lamp(self, lamp='bb'):
@@ -144,7 +142,7 @@ class WCUSource(TERCurve):
             raise ValueError(f"'lamp' needs to be one of {self.lamps}")
 
         self.meta['current_lamp'] = lamp
-        #self.get_wavelength()   # does not depend on the lamp
+
         self.compute_lamp_emission()
         self.compute_fp_emission()
 
@@ -235,9 +233,38 @@ class WCUSource(TERCurve):
         self.bb_aperture = value
         self.compute_lamp_emission()
 
-    def set_fpmask(self, fpmask: str):
-        """Change the focal-plane mask"""
-        self.meta["current_fpmask"] = fpmask
+    def set_fpmask(self, maskname: str = None, angle: float = None, shift: tuple = None):
+        """Change the focal-plane mask
+
+        If `maskname` is not given, the currently inserted mask is rotated to `angle`
+        and shifted to `shift`. If `maskname` is given, angle and shift are reset to
+        zero, unless explicitely specified.
+
+        See also :class:`FPMask`.
+
+        Parameters
+        ----------
+        maskname: str, Path
+            Name of the mask, as a filepath or to be resolved in irdb
+        angle: float [deg]
+            Angle by which mask is rotated
+        shift: tuple (float, float) [arcsec]
+            Shift of mask in x and y direction
+        """
+        if maskname is not None:
+            # Mask is changed: Reset angle and shift
+            self.meta["current_fpmask"] = maskname
+            self.meta["fpmask_angle"] = 0
+            self.meta["fpmask_shift"] = (0, 0)
+        if angle is not None:
+            self.meta["fpmask_angle"] = angle
+        if shift is not None:
+            self.meta["fpmask_shift"] = shift
+
+        self.fpmask = FPMask(maskname=self.meta["current_fpmask"],
+                             fpmask_filename_format=self.meta['fpmask_filename_format'],
+                             angle=self.meta["fpmask_angle"],
+                             shift=self.meta["fpmask_shift"])
 
 
     @property

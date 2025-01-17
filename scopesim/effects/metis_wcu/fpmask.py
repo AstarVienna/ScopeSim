@@ -2,6 +2,7 @@
 
 from pathlib import Path
 import numpy as np
+from matplotlib import pyplot as plt
 from astropy.io import fits
 from astropy import units as u
 from ..data_container import DataContainer
@@ -35,10 +36,16 @@ class FPMask:
     def __init__(self,
                  maskname: Path | str | None = None,
                  fpmask_filename_format: str | None = None,
+                 angle: float = 0,
+                 shift: tuple = (0, 0),
                  **kwargs
                  ):
         logger.debug("Initialising FPMask with {}".format(maskname))
         self.name = maskname
+        self.angle = angle
+        self.shift = shift
+        self.xpix = []
+        self.ypix = []
         if maskname == "open":
             self.holehdu = fits.ImageHDU()
             self.holehdu.header.update(self.hdr)
@@ -76,6 +83,17 @@ class FPMask:
         xhole = tab['x'].data
         yhole = tab['y'].data
         diam = tab['diam'].data
+
+        if self.angle != 0:
+            rangle = np.deg2rad(self.angle)
+            xtmp = xhole * np.cos(rangle) - yhole * np.sin(rangle)
+            ytmp = xhole * np.sin(rangle) + yhole * np.cos(rangle)
+            xhole = xtmp
+            yhole = ytmp
+
+        xhole += self.shift[0]
+        yhole += self.shift[1]
+
         xpix = (xhole - header['CRVAL1']) / header['CDELT1'] + header['CRPIX1'] - 1
         ypix = (yhole - header['CRVAL2']) / header['CDELT2'] + header['CRPIX2'] - 1
         in_field = (xpix > 0) * (xpix < 2047) * (ypix > 0) * (ypix < 2047)
@@ -86,11 +104,21 @@ class FPMask:
 
         holehdu.data[ypix, xpix] = holearea
         opaquehdu.data[ypix, xpix] = 0
-
+        self.xpix = xpix
+        self.ypix = ypix
         self.holehdu = holehdu
         self.opaquehdu = opaquehdu
 
 
     def plot(self):
         """Plot the location of the holes"""
-        logger.warning("Plotting of the focal-plane mask is not implemented yet.")
+        plt.plot(self.xpix, self.ypix, 'o')
+        plt.xlim(0, 2048)
+        plt.ylim(0, 2048)
+        plt.gca().set_aspect('equal')
+        plt.show()
+
+    def __str__(self) -> str:
+        return f"""{self.__class__.__name__}: "{self.name}"
+    Angle:        {self.angle} deg
+    Shift:        {self.shift} arcsec"""

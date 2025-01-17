@@ -48,6 +48,8 @@ def fixture_bbsource():
                      diam_is_out=100.,
                      emiss_bb=0.98,
                      current_fpmask="open",
+                     fpmask_angle=0,
+                     fpmask_shift=(0, 0),
                      fpmask_filename_format="fp_mask_{}.dat",
                      cmds=_patched_cmds())
 
