@@ -7,6 +7,7 @@ from astropy.io import fits
 from astropy import units as u
 from ..data_container import DataContainer
 from ...utils import find_file, from_currsys, get_logger
+from ...optics.image_plane_utils import sub_pixel_fractions
 
 logger = get_logger(__name__)
 
@@ -97,13 +98,13 @@ class FPMask:
         xpix = (xhole - header['CRVAL1']) / header['CDELT1'] + header['CRPIX1'] - 1
         ypix = (yhole - header['CRVAL2']) / header['CDELT2'] + header['CRPIX2'] - 1
         in_field = (xpix > 0) * (xpix < 2047) * (ypix > 0) * (ypix < 2047)
-        xpix = xpix[in_field].astype(int)
-        ypix = ypix[in_field].astype(int)
-        diam = diam[in_field]
-        holearea = (diam/2)**2 * np.pi
 
-        holehdu.data[ypix, xpix] = holearea
-        opaquehdu.data[ypix, xpix] = 0
+
+        for x, y, d in zip(xpix[in_field], ypix[in_field], diam[in_field]):
+            holearea = (d/2)**2 * np.pi
+            xint, yint, fracs = sub_pixel_fractions(x, y)
+            holehdu.data[yint, xint] = np.array(fracs) * holearea
+            opaquehdu.data[yint, xint] = 0
         self.xpix = xpix
         self.ypix = ypix
         self.holehdu = holehdu
