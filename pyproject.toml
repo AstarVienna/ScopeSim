@@ -58,7 +58,7 @@ ipykernel = "^6.24.0"
 optional = true
 
 [tool.poetry.group.docs.dependencies]
-sphinx = "^5.3.0"
+sphinx = ">=5.3,<8.0"
 sphinx-book-theme = "^1.1.0"
 jupyter-sphinx = "^0.2.3"
 sphinx-copybutton = "^0.5.2"
