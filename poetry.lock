@@ -3294,13 +3294,13 @@ test = ["Cython", "array-api-strict (>=2.0)", "asv", "gmpy2", "hypothesis (>=6.3
 
 [[package]]
 name = "scopesim-templates"
-version = "0.6.0"
+version = "0.6.1"
 description = "On-sky source templates for ScopeSim"
 optional = false
 python-versions = "<3.13,>=3.10"
 files = [
-    {file = "scopesim_templates-0.6.0-py3-none-any.whl", hash = "sha256:378cdf9fcdf8976779907a0905ef9309884c52cf3e941cfaafd698c6dc44ee70"},
-    {file = "scopesim_templates-0.6.0.tar.gz", hash = "sha256:0c8695d0577585f2fd89f1e8ba20521b6074a3c0d079fe117665751abcdc82c2"},
+    {file = "scopesim_templates-0.6.1-py3-none-any.whl", hash = "sha256:0f2e5f7b0640774975f1760842d7520da4fff7ec1ce3ff9e42a62fa59d9fdcb0"},
+    {file = "scopesim_templates-0.6.1.tar.gz", hash = "sha256:5ae422f1a0c001a7a9c1f9e775dcac88c97fa524b0c53291d30ce68ba37b4cb1"},
 ]
 
 [package.dependencies]
@@ -3314,7 +3314,7 @@ numpy = ">=1.26.3,<2.0.0"
 pyckles = ">=0.4.0"
 pyyaml = ">=6.0.1,<7.0.0"
 scipy = ">=1.14.1,<2.0.0"
-scopesim = ">=0.9.0"
+scopesim = ">=0.9.1"
 spextra = ">=0.41.3"
 synphot = ">=1.4.0,<2.0.0"
 
