@@ -23,6 +23,14 @@ def _fov_190_210_um():
     return fov
 
 
+def _fov_190_210_um_subpx():
+    """ A FOV compatible with 11 slices of so._cube_source()"""
+    hdr = ho._fov_header()  # 20x20" @ 0.2" --> [-10, 10]"
+    wav = [1.9, 2.1] * u.um
+    fov = FieldOfView(hdr, wav, area=1 * u.m ** 2, sub_pixel=True)
+    return fov
+
+
 def _fov_197_202_um():
     """ A FOV compatible with 3 slices of so._cube_source()"""
     hdr = ho._fov_header()  # 20x20" @ 0.2" --> [-10, 10]"
@@ -303,6 +311,31 @@ class TestMakeImage:
         for x, y, ref, weight in src_table.fields[0]:
             flux = src_table.spectra[ref](waveset).to(u.ph/u.s/u.m**2/u.um)
             flux *= 1 * u.m**2 * 0.02 * u.um * 0.9      # 0.9 is to catch the half bins at either end
+            in_sum += np.sum(flux).value * weight
+
+        img = fov.make_image_hdu()
+        out_sum = np.sum(img.data)
+
+        if PLOTS:
+            plt.imshow(img.data, origin="lower")
+            plt.show()
+
+        assert out_sum == approx(in_sum, rel=0.02)
+
+    def test_makes_image_from_table_subpx(self):
+        src_table = so._table_source()            # 10x10" @ 0.2"/pix, [0.5, 2.5]m @ 0.02µm
+        # Shift one source very close to edge to provoke index error in canvas
+        src_table.fields[0].field["y"][-1] = 9.9999
+        fov = _fov_190_210_um_subpx()
+        fov.extract_from(src_table)
+
+        in_sum = 0
+        waveset = fov.spectra[0].waveset
+        for x, y, ref, weight in src_table.fields[0]:
+            flux = src_table.spectra[ref](waveset).to(u.ph/u.s/u.m**2/u.um)
+            flux *= 1 * u.m**2 * 0.02 * u.um * 0.9      # 0.9 is to catch the half bins at either end
+            if y >= 9.9:  # edge source ends up with half the flux
+                weight /= 2
             in_sum += np.sum(flux).value * weight
 
         img = fov.make_image_hdu()
