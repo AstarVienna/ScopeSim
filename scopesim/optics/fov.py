@@ -411,7 +411,10 @@ class FieldOfView(FieldOfViewBase):
                 # enabled, it is therefore not necessary to deploy the fix
                 # below in the else-branch.
                 assert not isinstance(x, Iterable), "x must be an integer"
-                canvas_image_hdu.data[y, x] += flux * weight
+                try:
+                    canvas_image_hdu.data[y, x] += flux * weight
+                except IndexError:
+                    continue
             else:
                 # Mask out any stars that were pushed out of the fov by rounding
                 mask = ((x < canvas_image_hdu.data.shape[1]) *
