@@ -6,6 +6,9 @@ changelog:
     - title: API Changes
       labels:
         - API
+    - title: Bugs fixed
+      labels:
+        - bugfix
     - title: Changes to or addition of Effects
       labels:
         - effects
