@@ -501,12 +501,11 @@ def has_needed_keywords(header, suffix=""):
 
 def stringify_dict(dic, ignore_types=(str, int, float)):
     """Turn a dict entries into strings for addition to FITS headers."""
-    dic_new = deepcopy(dic)
-    for key in dic_new:
-        if not isinstance(dic_new[key], ignore_types):
-            dic_new[key] = str(dic_new[key])
-
-    return dic_new
+    for key, value in dic.items():
+        if isinstance(value, ignore_types):
+            yield key, value
+        else:
+            yield key, str(value)
 
 
 def from_currsys(item, cmds=None):
