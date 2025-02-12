@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Defines FieldOfView class."""
 
 from copy import deepcopy
@@ -302,7 +303,7 @@ class FieldOfView(FieldOfViewBase):
             # cube_fields come in with units of photlam/arcsec2,
             # need to convert to ph/s
             # We need to the voxel volume (spectral and solid angle) for that.
-            # ..todo: implement branch for use_photlam is True
+            # TODO: implement branch for use_photlam is True
             spectral_bin_width = (field.header["CDELT3"] *
                                   u.Unit(field.header["CUNIT3"])
                                   ).to(u.Angstrom)
@@ -452,7 +453,7 @@ class FieldOfView(FieldOfViewBase):
             field_waveset = fu.get_cube_waveset(field.header,
                                                 return_quantity=True)
 
-            # ..todo: Deal with this bounds_error in a more elegant way
+            # TODO: Deal with this bounds_error in a more elegant way
             field_interp = interp1d(field_waveset.to(u.um).value,
                                     field.data, axis=0, kind="linear",
                                     bounds_error=False, fill_value=0)
@@ -477,12 +478,12 @@ class FieldOfView(FieldOfViewBase):
             # Cube should be in PHOTLAM arcsec-2 for SpectralTrace mapping
             # Assumption is that ImageHDUs have units of PHOTLAM arcsec-2
             # ImageHDUs have photons/second/pixel.
-            # ..todo: Add a catch to get ImageHDU with BUNITs
+            # TODO: Add a catch to get ImageHDU with BUNITs
             canvas_image_hdu = fits.ImageHDU(
                 data=zeros_from_header(self.header),
                 header=self.header)
-            # FIX: Do not scale source data - make a copy first.
-            # FIX: Use "Pixel scale conversion" as above.
+            # FIXME: Do not scale source data - make a copy first.
+            # FIXME: Use "Pixel scale conversion" as above.
             field_data = field.data * self._pixarea(field.header).value / self.pixel_area
             field_hdu = fits.ImageHDU(data=field_data, header=field.header)
 
@@ -648,7 +649,7 @@ class FieldOfView(FieldOfViewBase):
                                        "CRPIX3": 1,
                                        "CUNIT3": "um",
                                        "CTYPE3": "WAVE"})
-        # ..todo: Add the log wavelength keyword here, if log scale is needed
+        # TODO: Add the log wavelength keyword here, if log scale is needed
         return canvas_cube_hdu      # [ph s-1 AA-1 (arcsec-2)]
 
     def volume(self, wcs_prefix=""):

@@ -318,7 +318,7 @@ class MetisLMSSpectralTrace(SpectralTrace):
         det_lims["yd_max"] = max(layout["y_cen"] + yhw)
         wave_min, wave_max = self.get_waverange(det_lims)
 
-        # ..todo: just a hack - xi and x are the same except xi is a quantity
+        # TODO: just a hack - xi and x are the same except xi is a quantity
         xi_min = quantify(x_min, u.arcsec)
         xi_max = quantify(x_max, u.arcsec)
 

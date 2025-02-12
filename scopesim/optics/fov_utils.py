@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 
 import numpy as np
 from astropy import units as u
@@ -45,9 +46,9 @@ def is_field_in_fov(fov_header, field, wcs_suffix=""):
     else:
         if isinstance(field, Table):
             x = list(quantity_from_table("x", field,
-                                               u.arcsec).to(u.deg).value)
+                                         u.arcsec).to(u.deg).value)
             y = list(quantity_from_table("y", field,
-                                               u.arcsec).to(u.deg).value)
+                                         u.arcsec).to(u.deg).value)
             s = wcs_suffix
             # cdelt = quantify(fov_header["CDELT1" + s], u.deg).value
             cdelt = fov_header[f"CDELT1{s}"] * u.Unit(fov_header[f"CUNIT1{s}"]).to(u.deg)
@@ -474,7 +475,7 @@ def make_cube_from_table(table, spectra, waveset, fov_header, sub_pixel=False):
     """
     cube = np.zeros((fov_header["NAXIS2"], fov_header["NAXIS1"], len(waveset)))
     dwave = 0.5 * (np.r_[np.diff(waveset), 0] + np.r_[0, np.diff(waveset)])
-    # ..todo: dwave is questionable here. What should the FOV cube units be?
+    # TODO: dwave is questionable here. What should the FOV cube units be?
 
     spec_dict = {i: spec(waveset) * dwave for i, spec in spectra.items()}
 
@@ -495,10 +496,12 @@ def make_cube_from_table(table, spectra, waveset, fov_header, sub_pixel=False):
     cdelt3 = np.diff(waveset[:2]).to(u.um)[0]
     hdu = fits.ImageHDU(data=cube)
     hdu.header.update(fov_header)
-    hdu.header.update({"CRVAL3": waveset[0].value,
-                       "CRPIX3": 0,
-                       "CDELT3": cdelt3.value,
-                       "CUNIT3": str(cdelt3.unit),
-                       "CTYPE3": "WAVE"})
+    hdu.header.update({
+        "CRVAL3": waveset[0].value,
+        "CRPIX3": 0,
+        "CDELT3": cdelt3.value,
+        "CUNIT3": str(cdelt3.unit),
+        "CTYPE3": "WAVE",
+    })
 
     return hdu

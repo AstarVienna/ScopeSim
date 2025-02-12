@@ -285,7 +285,7 @@ class OpticalTrain:
 
                 fov.flatten()
                 self.image_planes[fov.image_plane_id].add(fov.hdu, wcs_suffix="D")
-                # ..todo: finish off the multiple image plane stuff
+                # TODO: finish off the multiple image plane stuff
 
         # END OF MULTIPROCESSING
 
@@ -348,14 +348,15 @@ class OpticalTrain:
                            equivalencies=u.spectral_density(wave[:, None, None]))
 
             if factor == 1:    # Normalise to 1 arcsec2 if not a spatial density
-                # ..todo: lower needed because "DEG" is not understood, this is ugly
+                # TODO: lower needed because "DEG" is not understood, this is ugly
                 pixarea = (header["CDELT1"] * u.Unit(header["CUNIT1"].lower()) *
                            header["CDELT2"] * u.Unit(header["CUNIT2"].lower())).to(u.arcsec**2)
                 data = data / pixarea.value    # cube is per arcsec2
 
             data = (data * factor).value
 
-            cube.header["BUNIT"] = "PHOTLAM/arcsec2"    # ..todo: make this more explicit?
+            # TODO: make this more explicit?
+            cube.header["BUNIT"] = "PHOTLAM/arcsec2"
 
             # The imageplane_utils like to have the spatial WCS in units of "deg". Ensure
             # that the cube is passed on accordingly
@@ -448,10 +449,12 @@ class OpticalTrain:
             self.cmds[f"!OBS.{key}"] = value
 
         hduls = []
-        for i, detector_array in enumerate(self.detector_managers):
+        for i, detector_manager in enumerate(self.detector_managers):
+            # TODO: Why are the array and detector effects only populated here
+            #       and not upon creation of the DetectorManager?
             array_effects = self.optics_manager.detector_array_effects
             dtcr_effects = self.optics_manager.detector_effects
-            hdul = detector_array.readout(
+            hdul = detector_manager.readout(
                 self.image_planes, array_effects, dtcr_effects)
 
             fits_effects = self.optics_manager.get_all(ExtraFitsKeywords)
@@ -495,7 +498,7 @@ class OpticalTrain:
         pheader["LOCATION"] = from_currsys("!ATMO.location", self.cmds)
 
         # Source information taken from first only.
-        # ..todo: What if source is a composite?
+        # TODO: What if source is a composite?
         srcfield = self._last_source.fields[0]
         if type(srcfield).__name__ == "Table":
             pheader["SOURCE"] = "Table"
@@ -509,8 +512,8 @@ class OpticalTrain:
                     pheader["SOURCE"] = "ImageHDU"
 
         # Image hdul
-        # ..todo: currently only one, update for detector arrays
-        # ..todo: normalise filenames - some need from_currsys, some need Path(...).name
+        # TODO: currently only one, update for detector arrays
+        # TODO: normalise filenames - some need from_currsys, some need Path(...).name
         #         this should go into a function so as to reduce clutter here.
         iheader = hdulist[1].header
         iheader["EXPTIME"] = from_currsys("!OBS.exptime", self.cmds), "[s]"
@@ -530,7 +533,7 @@ class OpticalTrain:
 
             if (efftype == "DetectorModePropertiesSetter" and
                 eff.include):
-                # ..todo: can we write this into currsys?
+                # TODO: can we write this into currsys?
                 iheader["DET_MODE"] = (eff.meta["detector_readout_mode"],
                                        "detector readout mode")
                 iheader["MINDIT"] = from_currsys("!DET.mindit", self.cmds), "[s]"

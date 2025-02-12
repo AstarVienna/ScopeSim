@@ -14,7 +14,10 @@ logger = get_logger(__name__)
 
 
 class DetectorManager(Sequence):
-    """Manages the individual Detectors, mostly used for readout."""
+    """Manages the individual Detectors, mostly used for readout.
+
+    Instance is created by OpticalTrain from the DetectorList effect.
+    """
 
     def __init__(self, detector_list=None, cmds=None, **kwargs):
         self.meta = {}
@@ -74,8 +77,8 @@ class DetectorManager(Sequence):
             Output FITS HDU List.
 
         """
-        # .. note:: Detector is what used to be called Chip
-        #           DetectorManager is the old Detector
+        # Note: Detector is what used to be called Chip
+        #       DetectorManager is the old Detector
 
         self._array_effects = array_effects or []
         self._dtcr_effects = dtcr_effects or []
@@ -100,7 +103,7 @@ class DetectorManager(Sequence):
                 detector = effect.apply_to(detector)
 
             # 6. add necessary header keywords
-            # .. todo: add keywords
+            # TODO: add keywords
 
         # FIXME: Why is this applied twice ???
         for effect in self._array_effects:
@@ -148,7 +151,7 @@ class DetectorManager(Sequence):
         return prihdu
 
     def _make_effects_hdu(self):
-        # .. todo:: decide what goes into the effects table of meta data
+        # TODO: decide what goes into the effects table of meta data
         # effects = self._array_effects + self._dtcr_effects
         return TableHDU()
 

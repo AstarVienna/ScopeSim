@@ -34,19 +34,29 @@ class ImagePlane(ImagePlaneBase):
         from astropy.table import Table
         from scopesim.optics import image_plane as imp
 
-        my_point_source_table = Table(names=["x", "y", "flux"],
-                                      data=[(0,  1,  2)*u.mm,
-                                            (0, -5, 10)*u.mm,
-                                            (100,50,25)*u.ph/u.s])
+        my_point_source_table = Table(
+            names=["x", "y", "flux"],
+            data=[
+                (0,  1,  2)*u.mm,
+                (0, -5, 10)*u.mm,
+                (100,50,25)*u.ph/u.s,
+            ],
+        )
 
-        hdr = imp.make_image_plane_header([my_point_source_table],
-                                           pixel_size=0.015*u.mm)
+        hdr = imp.make_image_plane_header(
+            [my_point_source_table],
+            pixel_size=0.015*u.mm,
+        )
         img_plane = imp.ImagePlane(hdr)
         img_plane.add(my_point_source_table)
 
         print(img_plane.image)
 
     """
+
+    # FIXME: The function make_image_plane_header mentionen in the docstring
+    #        doesn't seem to exist anymore. Find out if there's any equivalent
+    #        to it and correct the docstring!
 
     def __init__(self, header, cmds=None, **kwargs):
         self.cmds = cmds
@@ -127,10 +137,12 @@ class ImagePlane(ImagePlaneBase):
 
     @property
     def header(self):
+        """Return header from internal HDU."""
         return self.hdu.header
 
     @property
     def data(self):
+        """Return data from internal HDU."""
         return self.hdu.data
 
     @data.setter
@@ -139,10 +151,13 @@ class ImagePlane(ImagePlaneBase):
 
     @property
     def image(self):
+        """Return data from internal HDU."""
         return self.data
 
     def view(self, sub_pixel):
+        """Return data from internal HDU."""
         # for consistency with FieldOfView
+        # TODO: refactor this, because unused argument etc.
         return self.data
 
     @staticmethod

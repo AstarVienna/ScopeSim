@@ -150,7 +150,7 @@ class FOVManager:
         for effect in self.effects:
             self.volumes_list = effect.apply_to(self.volumes_list, **params)
 
-        # ..todo: add catch to split volumes larger than chunk_size
+        # TODO: add catch to split volumes larger than chunk_size
         pixel_scale = from_currsys(self.meta["pixel_scale"], self.cmds)
         plate_scale = from_currsys(self.meta["plate_scale"], self.cmds)
 
@@ -173,7 +173,7 @@ class FOVManager:
 
             # useful for spectroscopy mode where slit dimensions is not the same
             # as detector dimensions
-            # ..todo: Make sure this changes for multiple image planes
+            # TODO: Make sure this changes for multiple image planes
             if from_currsys(self.meta["decouple_sky_det_hdrs"], self.cmds):
                 det_eff = eu.get_all_effects(self.effects, DetectorList)[0]
                 dethdr = det_eff.image_plane_header

@@ -16,6 +16,8 @@ logger = get_logger(__name__)
 
 
 class Detector(DetectorBase):
+    """Canvas HDU used to extract image data from image plane."""
+
     def __init__(self, header, cmds=None, **kwargs):
         self._hdu = ImageHDU(header=header, data=zeros_from_header(header))
         self.meta = {} | dict(header) | kwargs
