@@ -340,6 +340,36 @@ def zenith_dist_to_airmass(zenith_dist):
     return 1. / np.cos(np.deg2rad(zenith_dist))
 
 
+def zeros_from_header(
+    header: fits.Header,
+    dtype: type | np.dtype = float,
+    ndims: int | None = None,
+) -> np.ndarray:
+    """
+    Create all-zero array of the shape given by NAXISn keywords in `header`.
+
+    Parameters
+    ----------
+    header : fits.Header
+        FITS header containing relevant keywords.
+    dtype : type | np.dtype, optional
+        Valid type or numpy dtype for output array. The default is float.
+    ndims : int | None, optional
+        Override number of dimensions. If None (the default), the number of
+        dimensions is taken from the "NAXIS" header keyword. This argument is
+        useful for e.g. creating a 2D image array from a 3D header.
+
+    Returns
+    -------
+    arr : np.ndarray
+        All-zero array of desired shape and dtype.
+
+    """
+    ndims = ndims or header["NAXIS"]
+    shape = tuple(header[f"NAXIS{i+1}"] for i in reversed(range(ndims)))
+    return np.zeros(shape, dtype=dtype)
+
+
 def convert_table_comments_to_dict(tbl):
 
     comments_dict = {}
