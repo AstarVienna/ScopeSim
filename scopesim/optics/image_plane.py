@@ -12,7 +12,6 @@ from astropy.wcs import WCS
 from .image_plane_utils import add_table_to_imagehdu, add_imagehdu_to_imagehdu
 
 from ..utils import from_currsys, has_needed_keywords, get_logger
-from .. import rc
 
 logger = get_logger(__name__)
 
@@ -52,8 +51,7 @@ class ImagePlane:
     def __init__(self, header, cmds=None, **kwargs):
 
         self.cmds = cmds
-        max_seg_size = rc.__config__["!SIM.computing.max_segment_size"]
-        self.meta = {"SIM_MAX_SEGMENT_SIZE": max_seg_size}
+        self.meta = {}
         self.meta.update(kwargs)
         self.id = header["IMGPLANE"] if "IMGPLANE" in header else 0
 
