@@ -19,6 +19,7 @@ class TestInit:
 
 @pytest.mark.usefixtures("patch_mock_path")
 class TestGenerateFovList:
+    @pytest.mark.slow
     def test_returns_default_single_entry_fov_list_for_no_effects(self):
         fov_man = FOVManager(pixel_scale=1, plate_scale=1)
         assert len(fov_man.volumes_list) == 1, "volumes_list should have only 1 element initially."

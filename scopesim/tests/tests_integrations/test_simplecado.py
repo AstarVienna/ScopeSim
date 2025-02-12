@@ -67,6 +67,7 @@ def obs_dict():
             }
 
 
+@pytest.mark.slow
 @pytest.mark.usefixtures("protect_currsys")
 def test_simplecado(obs_dict, det_yaml):
 

@@ -124,6 +124,7 @@ class TestSourceImageNotAffected:
     where the source is applied to multiple FOVs via FieldOfView._make_cube_imagefields()
     """
 
+    @pytest.mark.slow
     def test_runs(self):
         src = st.uniform_source()
         src_int = np.mean(src.fields[0].field.data) # original source image intensity
