@@ -1,3 +1,8 @@
+# -*- coding: utf-8 -*-
+"""TBA."""
+
+from collections.abc import Iterable
+
 import numpy as np
 
 from astropy.io import fits
@@ -47,9 +52,8 @@ class ImagePlane(ImagePlaneBase):
     def __init__(self, header, cmds=None, **kwargs):
 
         self.cmds = cmds
-        self.meta = {}
-        self.meta.update(kwargs)
-        self.id = header["IMGPLANE"] if "IMGPLANE" in header else 0
+        self.meta = {} | kwargs
+        self.id = header.get("IMGPLANE", 0)
 
         if not any(has_needed_keywords(header, s)
                    for s in ["", "D", "S"]):
@@ -112,7 +116,7 @@ class ImagePlane(ImagePlaneBase):
         if spline_order is None:
             spline_order = from_currsys("!SIM.computing.spline_order", self.cmds)
 
-        if isinstance(hdus_or_tables, (list, tuple)):
+        if isinstance(hdus_or_tables, Iterable):
             for hdu_or_table in hdus_or_tables:
                 self.add(hdu_or_table, sub_pixel, spline_order, wcs_suffix)
         else:

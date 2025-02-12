@@ -1,3 +1,6 @@
+# -*- coding: utf-8 -*-
+"""TBA."""
+
 import numpy as np
 
 from astropy.io.fits import ImageHDU
@@ -16,9 +19,7 @@ class Detector(DetectorBase):
     def __init__(self, header, cmds=None, **kwargs):
         image = np.zeros((header["NAXIS2"], header["NAXIS1"]))
         self._hdu = ImageHDU(header=header, data=image)
-        self.meta = {}
-        self.meta.update(header)
-        self.meta.update(kwargs)
+        self.meta = {} | dict(header) | kwargs
         self.cmds = cmds
 
     def extract_from(self, image_plane, spline_order=1, reset=True):
