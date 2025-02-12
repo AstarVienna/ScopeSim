@@ -3,8 +3,6 @@
 
 from collections.abc import Iterable
 
-import numpy as np
-
 from astropy.io import fits
 from astropy.table import Table
 from astropy.wcs import WCS
@@ -12,7 +10,8 @@ from astropy.wcs import WCS
 from .image_plane_utils import add_table_to_imagehdu, add_imagehdu_to_imagehdu
 
 from ..base_classes import ImagePlaneBase
-from ..utils import from_currsys, has_needed_keywords, get_logger
+from ..utils import (from_currsys, has_needed_keywords, get_logger,
+                     zeros_from_header)
 
 logger = get_logger(__name__)
 
@@ -50,7 +49,6 @@ class ImagePlane(ImagePlaneBase):
     """
 
     def __init__(self, header, cmds=None, **kwargs):
-
         self.cmds = cmds
         self.meta = {} | kwargs
         self.id = header.get("IMGPLANE", 0)
@@ -60,9 +58,7 @@ class ImagePlane(ImagePlaneBase):
             raise ValueError(f"header must have a valid image-plane WCS: "
                              f"{dict(header)}")
 
-        # image = np.zeros((header["NAXIS2"]+1, header["NAXIS1"]+1))
-        image = np.zeros((header["NAXIS2"], header["NAXIS1"]))
-        self.hdu = fits.ImageHDU(data=image, header=header)
+        self.hdu = fits.ImageHDU(header=header, data=zeros_from_header(header))
 
         self._det_wcs = self._get_wcs(header, "D")
         logger.debug("det %s", self._det_wcs)

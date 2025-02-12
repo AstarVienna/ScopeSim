@@ -8,7 +8,8 @@ from synphot import SourceSpectrum, Empirical1D
 
 from . import image_plane_utils as imp_utils
 from ..source.source_fields import SourceField
-from ..utils import from_currsys, quantify, quantity_from_table, get_logger
+from ..utils import (from_currsys, quantify, quantity_from_table, get_logger,
+                     zeros_from_header)
 
 
 logger = get_logger(__name__)
@@ -166,7 +167,7 @@ def combine_imagehdu_fields(fov_header, src, fields_indexes, wave_min, wave_max,
     canvas_hdu : fits.ImageHDU
 
     """
-    image = np.zeros((fov_header["NAXIS2"], fov_header["NAXIS1"]))
+    image = zeros_from_header(fov_header)
     canvas_hdu = fits.ImageHDU(header=fov_header, data=image)
     spline_order = from_currsys("!SIM.computing.spline_order", cmds)
     pixel_area = (fov_header["CDELT1"] * fov_header["CDELT2"] *
@@ -178,7 +179,7 @@ def combine_imagehdu_fields(fov_header, src, fields_indexes, wave_min, wave_max,
             ref = field.header["SPEC_REF"]
             flux = src.photons_in_range(wave_min, wave_max, area,
                                         indexes=[ref])
-            image = np.zeros((fov_header["NAXIS2"], fov_header["NAXIS1"]))
+            image = zeros_from_header(fov_header)
             temp_hdu = fits.ImageHDU(header=fov_header, data=image)
 
             if field.header.get("BG_SRC", False) and \

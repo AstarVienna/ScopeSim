@@ -15,7 +15,7 @@ from astropy.wcs import WCS
 from ...optics.image_plane_utils import (create_wcs_from_points,
                                          add_imagehdu_to_imagehdu)
 from ...base_classes import FieldOfViewBase
-from ...utils import from_currsys, check_keys, quantify
+from ...utils import from_currsys, check_keys, quantify, zeros_from_header
 from . import PSF, PoorMansFOV, logger
 
 
@@ -426,7 +426,7 @@ def _cutout_kernel(image, fov_header, kernel_header=None):
 
 
 def get_strehl_cutout(fov_header, strehl_imagehdu):
-    image = np.zeros((fov_header["NAXIS2"], fov_header["NAXIS1"]))
+    image = zeros_from_header(fov_header)
     canvas_hdu = fits.ImageHDU(header=fov_header, data=image)
     canvas_hdu = add_imagehdu_to_imagehdu(
         strehl_imagehdu, canvas_hdu, spline_order=0, conserve_flux=False)

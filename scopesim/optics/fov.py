@@ -17,7 +17,8 @@ from . import fov_utils as fu
 from . import image_plane_utils as imp_utils
 
 from ..base_classes import SourceBase, FieldOfViewBase
-from ..utils import from_currsys, quantify, has_needed_keywords, get_logger
+from ..utils import (from_currsys, quantify, has_needed_keywords, get_logger,
+                     zeros_from_header)
 
 
 logger = get_logger(__name__)
@@ -394,7 +395,7 @@ class FieldOfView(FieldOfViewBase):
                  for ref, spec in self.spectra.items()}
         fluxes = {ref: np.sum(spec.value) for ref, spec in specs.items()}
         canvas_image_hdu = fits.ImageHDU(
-            data=np.zeros((self.header["NAXIS2"], self.header["NAXIS1"])),
+            data=zeros_from_header(self.header),
             header=self.header)
 
         for tmp_hdu in chain(self._make_image_cubefields(area),
@@ -478,7 +479,7 @@ class FieldOfView(FieldOfViewBase):
             # ImageHDUs have photons/second/pixel.
             # ..todo: Add a catch to get ImageHDU with BUNITs
             canvas_image_hdu = fits.ImageHDU(
-                data=np.zeros((self.header["NAXIS2"], self.header["NAXIS1"])),
+                data=zeros_from_header(self.header),
                 header=self.header)
             # FIX: Do not scale source data - make a copy first.
             # FIX: Use "Pixel scale conversion" as above.

@@ -13,11 +13,11 @@ from astropy.table import Table
 from astropy.wcs import WCS
 from astropy import units as u
 
-from ..utils import from_currsys, find_file, quantify, get_logger
+from ..utils import (from_currsys, find_file, quantify, get_logger,
+                     zeros_from_header)
 from .spectral_trace_list import SpectralTraceList
-from .spectral_trace_list_utils import SpectralTrace
-from .spectral_trace_list_utils import Transform2D
-from .spectral_trace_list_utils import make_image_interpolations
+from .spectral_trace_list_utils import (SpectralTrace, Transform2D,
+                                        make_image_interpolations)
 from .apertures import ApertureMask
 from .ter_curves import TERCurve
 from ..base_classes import FieldOfViewBase, FOVSetupBase
@@ -100,9 +100,7 @@ class MetisLMSSpectralTraceList(SpectralTraceList):
             xslice, yslice = np.meshgrid(np.arange(n_x),
                                          np.arange(ny_slice))
 
-            fovimage = np.zeros((obj.detector_header["NAXIS2"],
-                                 obj.detector_header["NAXIS1"]),
-                                dtype=np.float32)
+            fovimage = zeros_from_header(obj.detector_header, dtype=np.float32)
 
             for sptid, spt in self.spectral_traces.items():
                 ymin = spt.meta["fov"]["y_min"]
