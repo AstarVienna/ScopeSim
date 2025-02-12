@@ -499,7 +499,7 @@ def has_needed_keywords(header, suffix=""):
     return all(key in header.keys() for key in keys)
 
 
-def stringify_dict(dic, ignore_types=(str, int, float)):
+def stringify_dict(dic, ignore_types=(str, int, float, bool)):
     """Turn a dict entries into strings for addition to FITS headers."""
     for key, value in dic.items():
         if isinstance(value, ignore_types):
