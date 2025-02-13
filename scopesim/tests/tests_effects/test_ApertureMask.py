@@ -15,6 +15,7 @@ PLOTS = False
 
 
 class TestInit:
+    @pytest.mark.filterwarnings("ignore::UserWarning")
     def test_initialises_with_nothing(self):
         assert isinstance(ApertureMask(), ApertureMask)
 

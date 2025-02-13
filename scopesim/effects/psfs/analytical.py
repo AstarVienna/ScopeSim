@@ -7,9 +7,11 @@ import numpy as np
 from astropy import units as u
 from astropy.convolution import Gaussian2DKernel
 
+from astar_utils import check_keys
+
 from ...base_classes import ImagePlaneBase, FieldOfViewBase
 from ...utils import (from_currsys, quantify, quantity_from_table,
-                      figure_factory, check_keys)
+                      figure_factory)
 from . import PSF, PoorMansFOV
 
 

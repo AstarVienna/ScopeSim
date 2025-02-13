@@ -11,12 +11,12 @@ from astropy.io import fits
 from astropy import units as u
 from astropy.table import Table
 
+from astar_utils import check_keys, get_logger
+
 from .effects import Effect
 from ..optics import image_plane_utils as imp_utils
 from ..base_classes import FOVSetupBase
-
-from ..utils import (quantify, quantity_from_table, from_currsys, check_keys,
-                     figure_factory, get_logger)
+from ..utils import quantify, quantity_from_table, from_currsys, figure_factory
 
 
 logger = get_logger(__name__)

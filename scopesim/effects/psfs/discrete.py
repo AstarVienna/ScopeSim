@@ -12,10 +12,12 @@ from astropy import units as u
 from astropy.io import fits
 from astropy.wcs import WCS
 
+from astar_utils import check_keys
+
 from ...optics.image_plane_utils import (create_wcs_from_points,
                                          add_imagehdu_to_imagehdu)
 from ...base_classes import FieldOfViewBase
-from ...utils import from_currsys, check_keys, quantify, zeros_from_header
+from ...utils import from_currsys, quantify, zeros_from_header
 from . import PSF, PoorMansFOV, logger
 
 

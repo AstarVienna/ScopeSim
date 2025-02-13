@@ -12,9 +12,11 @@ from typing import ClassVar
 
 import numpy as np
 
+from astar_utils import check_keys
+
 from .. import Effect
 from ...base_classes import DetectorBase
-from ...utils import from_currsys, figure_factory, check_keys
+from ...utils import from_currsys, figure_factory
 from . import logger
 
 

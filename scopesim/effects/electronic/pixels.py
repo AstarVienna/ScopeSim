@@ -3,9 +3,11 @@
 
 from typing import ClassVar
 
+from astar_utils import check_keys
+
 from .. import Effect
 from ...base_classes import DetectorBase, ImagePlaneBase
-from ...utils import from_currsys, figure_factory, check_keys
+from ...utils import from_currsys, figure_factory
 
 
 class ReferencePixelBorder(Effect):

@@ -5,9 +5,10 @@ from collections.abc import Sequence
 
 from astropy.io.fits import HDUList, PrimaryHDU, TableHDU
 
+from astar_utils import stringify_dict, get_logger
+
 from .detector import Detector
 from ..effects import Effect
-from ..utils import stringify_dict, get_logger
 
 
 logger = get_logger(__name__)

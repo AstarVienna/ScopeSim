@@ -6,10 +6,12 @@ import numpy as np
 from astropy.io.fits import ImageHDU
 from astropy.wcs import WCS
 
+from astar_utils import stringify_dict, get_logger
+
 from ..base_classes import ImagePlaneBase, DetectorBase
 from ..optics.image_plane_utils import (add_imagehdu_to_imagehdu,
                                         sky_wcs_from_det_wcs)
-from ..utils import get_logger, from_currsys, stringify_dict, zeros_from_header
+from ..utils import from_currsys, zeros_from_header
 
 
 logger = get_logger(__name__)

@@ -9,9 +9,11 @@ from typing import ClassVar
 
 import numpy as np
 
+from astar_utils import check_keys
+
 from scopesim.base_classes import DetectorBase
 from scopesim.effects import Effect
-from scopesim.utils import from_currsys, check_keys
+from scopesim.utils import from_currsys
 
 
 class ChopNodCombiner(Effect):

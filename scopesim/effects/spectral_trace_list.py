@@ -14,12 +14,14 @@ from tqdm.auto import tqdm
 from astropy.io import fits
 from astropy.table import Table
 
+from astar_utils import check_keys, get_logger
+
 from .effects import Effect
 from .ter_curves import FilterCurve
 from .spectral_trace_list_utils import SpectralTrace, make_image_interpolations
 from ..optics.image_plane_utils import header_from_list_of_xy
 from ..base_classes import FieldOfViewBase, FOVSetupBase
-from ..utils import from_currsys, check_keys, figure_factory, get_logger
+from ..utils import from_currsys, figure_factory
 
 
 logger = get_logger(__name__)

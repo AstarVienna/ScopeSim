@@ -24,8 +24,9 @@ from astropy import units as u
 from astropy.wcs import WCS
 from astropy.modeling.models import Polynomial2D
 
-from ..utils import (power_vector, quantify, from_currsys, close_loop,
-                     figure_factory, get_logger)
+from astar_utils import close_loop, get_logger
+
+from ..utils import power_vector, quantify, from_currsys, figure_factory
 
 
 logger = get_logger(__name__)

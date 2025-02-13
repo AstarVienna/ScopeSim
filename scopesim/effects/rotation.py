@@ -10,8 +10,10 @@ from typing import ClassVar
 
 import numpy as np
 
+from astar_utils import check_keys
+
 from . import Effect
-from ..utils import from_currsys, check_keys
+from ..utils import from_currsys
 from ..base_classes import DetectorBase
 
 

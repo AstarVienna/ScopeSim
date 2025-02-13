@@ -5,11 +5,12 @@ from more_itertools import pairwise
 import numpy as np
 from astropy import units as u
 
+from astar_utils import check_keys, get_logger
+
 from . import image_plane_utils as imp_utils
 from .fov import FieldOfView
 from .. import effects as efs
 from ..effects.effects_utils import get_all_effects
-from ..utils import check_keys, get_logger
 
 # TODO: Where are all these functions used??
 

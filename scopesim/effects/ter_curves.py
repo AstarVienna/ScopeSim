@@ -11,6 +11,8 @@ from astropy import units as u
 from astropy.io import fits
 from astropy.table import Table
 
+from astar_utils import check_keys, get_logger
+
 from .effects import Effect
 from .ter_curves_utils import (add_edge_zeros, combine_two_spectra,
                                apply_throughput_to_cube, download_svo_filter,
@@ -19,8 +21,7 @@ from ..base_classes import SourceBase, FOVSetupBase
 from ..optics.surface import SpectralSurface
 from ..source.source import Source
 from ..source.source_fields import CubeSourceField, SpectrumSourceField
-from ..utils import (from_currsys, quantify, check_keys, find_file,
-                     figure_factory, get_logger)
+from ..utils import from_currsys, quantify, find_file, figure_factory
 
 
 logger = get_logger(__name__)
@@ -845,7 +846,7 @@ class SpanishVOFilterWheel(FilterWheelBase):
 
     required_keys = {"observatory", "instrument", "current_filter"}
 
-    def __init__(self, **kwargs):        
+    def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
         params = {"include_str": None,         # passed to

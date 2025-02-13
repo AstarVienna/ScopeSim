@@ -16,12 +16,14 @@ import numpy as np
 from astropy import units as u
 from astropy.table import Table
 
+from astar_utils import close_loop, get_logger
+
 from ..base_classes import FOVSetupBase
 from .effects import Effect
 from .apertures import ApertureMask
 from ..optics.image_plane_utils import header_from_list_of_xy, calc_footprint
-from ..utils import (from_currsys, close_loop, figure_factory,
-                     quantity_from_table, unit_from_table, get_logger)
+from ..utils import (from_currsys, quantity_from_table, unit_from_table,
+                     figure_factory)
 
 logger = get_logger(__name__)
 

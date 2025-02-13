@@ -5,9 +5,11 @@ from typing import ClassVar
 
 import numpy as np
 
+from astar_utils import check_keys
+
 from .. import Effect
 from ...base_classes import DetectorBase, ImagePlaneBase
-from ...utils import from_currsys, check_keys
+from ...utils import from_currsys
 from . import logger
 
 

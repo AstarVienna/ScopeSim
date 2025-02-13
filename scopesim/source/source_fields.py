@@ -68,9 +68,10 @@ from astropy.wcs import WCS, SingularMatrixError, FITSFixedWarning
 
 from synphot import SourceSpectrum
 
+from astar_utils import close_loop, get_logger
 
 from ..optics import image_plane_utils as imp_utils
-from ..utils import (quantify, quantity_from_table, close_loop, get_logger,
+from ..utils import (quantify, quantity_from_table,
                      convert_table_comments_to_dict)
 
 

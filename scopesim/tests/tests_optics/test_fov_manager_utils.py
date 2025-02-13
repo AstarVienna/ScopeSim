@@ -41,6 +41,7 @@ def spec_hdrs(full_trace_list):
 PLOTS = False
 
 
+@pytest.mark.filterwarnings("ignore::UserWarning")
 class TestGet3DShifts:
     def test_returns_zeros_when_no_shift3d_effects_passed(self):
         shifts = fm_utils.get_3d_shifts([], wave_min=0.7, wave_max=3,

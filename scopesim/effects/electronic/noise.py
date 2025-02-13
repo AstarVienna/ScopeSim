@@ -6,9 +6,11 @@ from typing import ClassVar
 import numpy as np
 from astropy.io import fits
 
+from astar_utils import check_keys
+
 from .. import Effect
 from ...base_classes import DetectorBase
-from ...utils import from_currsys, figure_factory, check_keys, real_colname
+from ...utils import from_currsys, figure_factory, real_colname
 from . import logger
 
 

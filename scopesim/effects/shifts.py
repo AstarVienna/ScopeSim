@@ -8,9 +8,10 @@ import numpy as np
 from astropy import units as u
 from astropy.table import Table
 
+from astar_utils import check_keys
+
 from .effects import Effect
-from ..utils import airmass2zendist, from_currsys, check_keys, quantify, \
-    figure_factory
+from ..utils import airmass2zendist, from_currsys, quantify, figure_factory
 from ..base_classes import FieldOfViewBase
 
 

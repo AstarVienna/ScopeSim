@@ -7,12 +7,13 @@ import numpy as np
 from scipy.interpolate import RectBivariateSpline
 from astropy import units as u
 
+from astar_utils import check_keys
 import anisocado as aniso
 
 from .. import ter_curves_utils as tu
 from ...base_classes import FieldOfViewBase
 from ...utils import (figure_factory, figure_grid_factory, from_currsys,
-                      quantify, check_keys)
+                      quantify)
 from . import PSF
 
 
