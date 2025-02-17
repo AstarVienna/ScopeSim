@@ -141,7 +141,7 @@ class TestFilterWheelInit:
 
 class TestSpanishVOFilterWheelInit:
     def test_throws_exception_on_empty_input(self):
-        with pytest.raises(ValueError):
+        with pytest.raises(TypeError):
             tc.SpanishVOFilterWheel()
 
     @pytest.mark.webtest
@@ -184,9 +184,9 @@ class TestSpanishVOFilterWheelInit:
         assert all("_filter" not in name for name in filt_wheel.filters)
 
 
-class TestTopHatFilterList:
+class TestTopHatFilterWheel:
     def test_throws_exception_on_empty_input(self):
-        with pytest.raises(ValueError):
+        with pytest.raises(TypeError):
             tc.TopHatFilterWheel()
 
     def test_initialises_with_correct_input(self):
@@ -201,4 +201,5 @@ class TestTopHatFilterList:
         assert isinstance(filt_wheel, tc.TopHatFilterWheel)
         assert filt_wheel.filters["J"].throughput(1.15*u.um) == 0.9
         assert filt_wheel.filters["J"].throughput(1.13*u.um) == 0.
-        assert filt_wheel.meta["current_filter"] == "K"
+        assert filt_wheel.current_item_name == "K"
+        assert filt_wheel.current_filter.meta["name"] == "K"
