@@ -4,6 +4,7 @@
 from typing import ClassVar
 
 import numpy as np
+from numpy.typing import ArrayLike
 from scipy.signal import convolve
 from scipy.ndimage import rotate
 from astropy import units as u
@@ -92,19 +93,7 @@ class PSF(Effect):
                 # do the convolution
                 mode = from_currsys(self.meta["convolve_mode"], self.cmds)
 
-                if image.ndim == 2 and kernel.ndim == 2:
-                    new_image = convolve(image - bkg_level, kernel, mode=mode)
-                elif image.ndim == 3 and kernel.ndim == 2:
-                    kernel = kernel[None, :, :]
-                    bkg_level = bkg_level[:, None, None]
-                    new_image = convolve(image - bkg_level, kernel, mode=mode)
-                elif image.ndim == 3 and kernel.ndim == 3:
-                    bkg_level = bkg_level[:, None, None]
-                    new_image = np.zeros(image.shape)  # assumes mode="same"
-                    for iplane in range(image.shape[0]):
-                        new_image[iplane,] = convolve(
-                            image[iplane,] - bkg_level[iplane,],
-                            kernel[iplane,], mode=mode)
+                new_image = self.raw_apply_to(image, kernel, bkg_level, mode)
 
                 obj.hdu.data = new_image + bkg_level
 
@@ -117,6 +106,29 @@ class PSF(Effect):
                         obj.hdu.header["CRPIX2" + wcsid] += d_y / 2
 
         return obj
+
+    def raw_apply_to(
+        self,
+        image: ArrayLike,
+        kernel: ArrayLike,
+        bkg_level: float,
+        mode: str = 'same'
+    ) -> ArrayLike:
+        if image.ndim == 2 and kernel.ndim == 2:
+            new_image = convolve(image - bkg_level, kernel, mode=mode)
+        elif image.ndim == 3 and kernel.ndim == 2:
+            kernel = kernel[None, :, :]
+            bkg_level = bkg_level[:, None, None]
+            new_image = convolve(image - bkg_level, kernel, mode=mode)
+        elif image.ndim == 3 and kernel.ndim == 3:
+            bkg_level = bkg_level[:, None, None]
+            new_image = np.zeros(image.shape)  # assumes mode="same"
+            for iplane in range(image.shape[0]):
+                new_image[iplane,] = convolve(
+                    image[iplane,] - bkg_level[iplane,],
+                    kernel[iplane,], mode=mode)
+
+        return new_image
 
     def get_kernel(self, obj):
         self.valid_waverange = None
