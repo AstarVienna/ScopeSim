@@ -278,10 +278,29 @@ class OpticalTrain:
                 # print("FOV", fov_i+1, "of", n_fovs, flush=True)
                 # .. todo: possible bug with bg flux not using plate_scale
                 #          see fov_utils.combine_imagehdu_fields
-                fov.extract_from(source)
 
-                hdu_type = "cube" if self.fov_manager.is_spectroscope else "image"
-                fov.view(hdu_type)
+                # ******************* main *******************
+                # fov.extract_from(source)
+
+                # hdu_type = "cube" if self.fov_manager.is_spectroscope else "image"
+                # fov.view(hdu_type)
+                # ******************* JUBIK *******************
+                field = source.fields[0].field
+                fov.hdu = field
+                fov.hdu.header.update(fov.header)
+
+                area = from_currsys(fov.meta["area"], fov.cmds)    # u.m2
+                spectral_bin_width = (field.header["CDELT3"] *
+                                      u.Unit(field.header["CUNIT3"])
+                                      ).to(u.Angstrom)
+                # First collapse to image, then convert units
+                image = np.sum(field.data, axis=0) * PHOTLAM/u.arcsec**2
+                image = (image * fov._pixarea(field.header) * area *
+                         spectral_bin_width).to(u.ph/u.s)
+
+                fov.hdu.data = image.value
+                # ******************* JUBIK *******************
+
                 foveffs = self.optics_manager.fov_effects
                 logger.debug("%d FOV effects", len(foveffs))
                 nobar = len(foveffs) <= 1
