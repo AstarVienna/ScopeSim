@@ -95,7 +95,7 @@ class PSF(Effect):
 
                 new_image = self.raw_apply_to(image, kernel, bkg_level, mode)
 
-                obj.hdu.data = new_image + bkg_level
+                obj.hdu.data = new_image
 
                 # TODO: careful with which dimensions mean what
                 d_x = new_image.shape[-1] - image.shape[-1]
@@ -107,28 +107,29 @@ class PSF(Effect):
 
         return obj
 
+    @staticmethod
     def raw_apply_to(
-        self,
         image: ArrayLike,
         kernel: ArrayLike,
-        bkg_level: float,
+        bkg_level: float | ArrayLike = 0.,
         mode: str = 'same'
     ) -> ArrayLike:
         if image.ndim == 2 and kernel.ndim == 2:
-            new_image = convolve(image - bkg_level, kernel, mode=mode)
-        elif image.ndim == 3 and kernel.ndim == 2:
+            return convolve(image - bkg_level, kernel, mode=mode) + bkg_level
+        if image.ndim == 3 and kernel.ndim == 2:
             kernel = kernel[None, :, :]
-            bkg_level = bkg_level[:, None, None]
-            new_image = convolve(image - bkg_level, kernel, mode=mode)
-        elif image.ndim == 3 and kernel.ndim == 3:
+            bkg_level = bkg_level[:, None, None]  # TODO: broadcasting?
+            return convolve(image - bkg_level, kernel, mode=mode) + bkg_level
+        if image.ndim == 3 and kernel.ndim == 3:
             bkg_level = bkg_level[:, None, None]
             new_image = np.zeros(image.shape)  # assumes mode="same"
             for iplane in range(image.shape[0]):
                 new_image[iplane,] = convolve(
                     image[iplane,] - bkg_level[iplane,],
                     kernel[iplane,], mode=mode)
+            return new_image + bkg_level
 
-        return new_image
+        raise ValueError("Image or Kernel have invalid dimensions.")
 
     def get_kernel(self, obj):
         self.valid_waverange = None
