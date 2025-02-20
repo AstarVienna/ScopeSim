@@ -496,6 +496,7 @@ def rescale_imagehdu(imagehdu: fits.ImageHDU, pixel_scale: float | u.Quantity,
     if len(imagehdu.data.shape) == 3:
         zoom = np.append(zoom, [1.])  # wavelength dimension unscaled if present
 
+    zoom = zoom.round(5)
     logger.debug("zoom factor: %s", zoom)
 
     if primary_wcs.naxis != imagehdu.data.ndim:
@@ -766,6 +767,7 @@ def add_imagehdu_to_imagehdu(image_hdu: fits.ImageHDU,
         sky_center = _fix_360(sky_center)
     # logger.debug("canvas %s", canvas_wcs)
     # logger.debug("new %s", new_wcs)
+    sky_center = sky_center.round(7)
     logger.debug("sky %s", sky_center)
     sky_center *= conv_fac
     pix_center = canvas_wcs.wcs_world2pix(sky_center, 0)
