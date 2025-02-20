@@ -112,8 +112,13 @@ class PSF(Effect):
         image: ArrayLike,
         kernel: ArrayLike,
         bkg_level: float | ArrayLike = 0.,
-        mode: str = 'same'
+        mode: str = 'same',
+        jax_apply: bool = False,
     ) -> ArrayLike:
+        if jax_apply:
+            from jax.scipy.signal import fftconvolve
+            convolve = fftconvolve
+
         if image.ndim == 2 and kernel.ndim == 2:
             return convolve(image - bkg_level, kernel, mode=mode) + bkg_level
         if image.ndim == 3 and kernel.ndim == 2:

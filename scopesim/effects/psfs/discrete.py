@@ -95,7 +95,7 @@ class FieldConstantPSF(DiscretePSF):
         if ext == self.current_layer_id:
             return self.kernel
 
-        if fov.hdu.header["NAXIS"] == 3:
+        if fov.hdu is not None and fov.hdu.header["NAXIS"] == 3:
             self.current_layer_id = ext
             self.make_psf_cube(fov)
             return self.kernel
