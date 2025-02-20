@@ -401,6 +401,7 @@ class FieldOfView(FieldOfViewBase):
 
         for tmp_hdu in chain(self._make_image_cubefields(area),
                              self._make_image_imagefields(fluxes)):
+            logger.debug("cube or image field")
             canvas_image_hdu = imp_utils.add_imagehdu_to_imagehdu(
                 tmp_hdu,
                 canvas_image_hdu,
@@ -408,6 +409,7 @@ class FieldOfView(FieldOfViewBase):
                 spline_order=spline_order)
 
         for flux, weight, x, y in self._make_image_tablefields(fluxes):
+            logger.debug("table field")
             if from_currsys(self.meta["sub_pixel"], self.cmds):
                 # These x and y should not be arrays when sub_pixel is
                 # enabled, it is therefore not necessary to deploy the fix
@@ -433,7 +435,6 @@ class FieldOfView(FieldOfViewBase):
                 for yi, xi, fluxi, weighti in zip(
                         y[mask], x[mask], flux[mask], weight[mask]):
                     canvas_image_hdu.data[yi, xi] += fluxi * weighti
-
 
         canvas_image_hdu.data = sum(self._make_image_backfields(fluxes),
                                     start=canvas_image_hdu.data)

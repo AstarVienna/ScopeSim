@@ -240,12 +240,16 @@ class OpticalTrain:
         source = self.prepare_source(source)
 
         # [1D - transmission curves]
+        logger.debug("%d Source effects",
+                     len(self.optics_manager.source_effects))
         for effect in self.optics_manager.source_effects:
+            logger.debug("Effect: %s", effect)
             source = effect.apply_to(source)
 
         # [3D - Atmospheric shifts, PSF, NCPAs, Grating shift/distortion]
 
         # START OF MULTIPROCESSING
+        logger.debug("MP %s", USE_MULTIPROCESSING)
         if USE_MULTIPROCESSING:
 
             fovs = self.fov_manager.fovs
@@ -268,6 +272,7 @@ class OpticalTrain:
         else:
 
             fovs = self.fov_manager.fovs
+            logger.debug("%d FOVs", len(fovs))
             nobar = len(fovs) <= 1
             for fov in tqdm(fovs, desc=" FOVs", position=0, disable=nobar):
                 # print("FOV", fov_i+1, "of", n_fovs, flush=True)
@@ -278,9 +283,11 @@ class OpticalTrain:
                 hdu_type = "cube" if self.fov_manager.is_spectroscope else "image"
                 fov.view(hdu_type)
                 foveffs = self.optics_manager.fov_effects
+                logger.debug("%d FOV effects", len(foveffs))
                 nobar = len(foveffs) <= 1
                 for effect in tqdm(foveffs, disable=nobar,
                                    desc=" FOV effects", position=1):#, leave=False):
+                    logger.debug("Effect: %s", effect)
                     fov = effect.apply_to(fov)
 
                 fov.flatten()
@@ -291,10 +298,13 @@ class OpticalTrain:
 
         # [2D - Vibration, flat fielding, chopping+nodding]
         impeffs = self.optics_manager.image_plane_effects
+        logger.debug("%d ImagePlane effects", len(impeffs))
         nobar = len(impeffs) <= 1
         for effect in tqdm(impeffs, disable=nobar,
                            desc=" Image Plane effects"):
+            logger.debug("%d ImagePlanes", len(self.image_planes))
             for ii, image_plane in enumerate(self.image_planes):
+                logger.debug("Effect: %s", effect)
                 self.image_planes[ii] = effect.apply_to(image_plane)
 
         self._last_fovs = fovs
@@ -336,17 +346,20 @@ class OpticalTrain:
 
             # Need to check whether BUNIT is per arcsec2 or per pixel
             inunit = u.Unit(header["BUNIT"])
+            logger.debug("cube BUNIT: %s", inunit)
             data = data.astype(np.float32) * inunit
             factor = 1
             for base, power in zip(inunit.bases, inunit.powers):
                 if (base**power).is_equivalent(u.arcsec**(-2)):
                     conversion = (base**power).to(u.arcsec**(-2)) / base**power
+                    logger.debug("cube conversion: %s", conversion)
                     data *= conversion
                     factor = u.arcsec**(-2)
 
             data = data.to(PHOTLAM,
                            equivalencies=u.spectral_density(wave[:, None, None]))
 
+            logger.debug("cube factor: %s", factor)
             if factor == 1:    # Normalise to 1 arcsec2 if not a spatial density
                 # TODO: lower needed because "DEG" is not understood, this is ugly
                 pixarea = (header["CDELT1"] * u.Unit(header["CUNIT1"].lower()) *
