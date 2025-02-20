@@ -117,19 +117,21 @@ class PSF(Effect):
     ) -> ArrayLike:
         if jax_apply:
             from jax.scipy.signal import fftconvolve
-            convolve = fftconvolve
+            confun = fftconvolve
+        else:
+            confun = convolve
 
         if image.ndim == 2 and kernel.ndim == 2:
-            return convolve(image - bkg_level, kernel, mode=mode) + bkg_level
+            return confun(image - bkg_level, kernel, mode=mode) + bkg_level
         if image.ndim == 3 and kernel.ndim == 2:
             kernel = kernel[None, :, :]
             bkg_level = bkg_level[:, None, None]  # TODO: broadcasting?
-            return convolve(image - bkg_level, kernel, mode=mode) + bkg_level
+            return confun(image - bkg_level, kernel, mode=mode) + bkg_level
         if image.ndim == 3 and kernel.ndim == 3:
             bkg_level = bkg_level[:, None, None]
             new_image = np.zeros(image.shape)  # assumes mode="same"
             for iplane in range(image.shape[0]):
-                new_image[iplane,] = convolve(
+                new_image[iplane,] = confun(
                     image[iplane,] - bkg_level[iplane,],
                     kernel[iplane,], mode=mode)
             return new_image + bkg_level
