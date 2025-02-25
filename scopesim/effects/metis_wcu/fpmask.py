@@ -41,7 +41,7 @@ class FPMask:
                  shift: tuple = (0, 0),
                  **kwargs
                  ):
-        logger.debug("Initialising FPMask with {}".format(maskname))
+        logger.debug("Initialising FPMask with %s", maskname)
         self.name = maskname
         self.angle = angle
         self.shift = shift
