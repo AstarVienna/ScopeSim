@@ -966,8 +966,7 @@ class PupilMaskWheel(Effect):
 
     def get_table(self, maskdict):
         """Create a table of pupil masks with throughput."""
-        tbl = Table(maskdict)
-        return tbl
+        return Table(maskdict)
 
 
 class ADCWheel(Effect):
