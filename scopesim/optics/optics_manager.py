@@ -59,12 +59,15 @@ class OpticsManager:
             raise ValueError("'!INST.pixel_scale' is missing from the current"
                              "system. Please add this to the instrument (INST)"
                              "properties dict for the system.")
-        pixel_scale = self.cmds["!INST.pixel_scale"] * u.arcsec
-        area = self.area
+        pixel_scale = self.cmds["!INST.pixel_scale"] << u.arcsec
+        if "!TEL.area" in self.cmds and self.cmds["!TEL.area"] != 0:
+            area = self.cmds["!TEL.area"] << u.m**2
+        else:
+            area = self.area
+            self.cmds["!TEL.area"] = area
         etendue = area * pixel_scale**2
         self.cmds["!TEL.etendue"] = etendue
         self.cmds["!TEL.area"] = area
-
         params = {"area": area, "pixel_scale": pixel_scale, "etendue": etendue}
         self.meta.update(params)
 
