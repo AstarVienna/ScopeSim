@@ -84,7 +84,7 @@ class FieldOfView(FieldOfViewBase):
         self.hdu = None
 
         self.image_plane_id = 0
-        self.fields = []
+        self.fields: list[SourceField] = []
         self.spectra = {}
 
         # These are apparently not supposed to be used?
@@ -119,8 +119,7 @@ class FieldOfView(FieldOfViewBase):
             They are in original units. ph/s/pix comes in the make_**** methods
 
         """
-        if not isinstance(src, SourceBase):
-            raise ValueError(f"source must be a Source object: {type(src)}")
+        assert isinstance(src, SourceBase), f"expected Source: {type(src)}"
 
         fields_in_fov = [field.field for field in src.fields
                          if fu.is_field_in_fov(self.header, field)]

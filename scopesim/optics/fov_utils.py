@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 
 import numpy as np
 from astropy import units as u
@@ -14,7 +15,11 @@ from ..utils import from_currsys, quantify, quantity_from_table, get_logger
 logger = get_logger(__name__)
 
 
-def is_field_in_fov(fov_header, field, wcs_suffix=""):
+def is_field_in_fov(
+    fov_header: fits.Header,
+    field: SourceField,
+    wcs_suffix: str = "",
+) -> bool:
     """
     Return True if Source.field footprint is inside the FieldOfView footprint.
 
@@ -426,14 +431,14 @@ def get_cube_waveset(hdr, return_quantity=False):
 
 
 def extract_range_from_spectrum(spectrum, waverange):
-    if not isinstance(spectrum, SourceSpectrum):
-        raise ValueError(f"spectrum must be of type synphot.SourceSpectrum: "
-                         f"{type(spectrum)}")
+    assert isinstance(spectrum, SourceSpectrum), (
+        f"spectrum must be of type synphot.SourceSpectrum: {type(spectrum)}")
 
     wave_min, wave_max = quantify(waverange, u.um).to(u.AA).value
     spec_waveset = spectrum.waveset.to(u.AA).value
     mask = (spec_waveset > wave_min) * (spec_waveset < wave_max)
 
+    # FIXME: Why did I comment this out in 2023? Seems useful to have...
     # if sum(mask) == 0:
     #     logger.info(
     #         "Waverange does not overlap with Spectrum waveset: %s <> %s for "
