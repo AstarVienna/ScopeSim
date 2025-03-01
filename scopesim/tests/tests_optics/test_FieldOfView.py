@@ -94,7 +94,7 @@ class TestExtractFrom:
         fov = _fov_197_202_um()
         fov.extract_from(src)
 
-        assert fov.fields[0].shape == (3, 51, 25)
+        assert fov.fields[0].field.shape == (3, 51, 25)
 
     # @pytest.mark.xfail(reason=("is_field_in_fov drops table if anything is "
     #                            "outside fov volume, therefore no point source "
@@ -110,9 +110,9 @@ class TestExtractFrom:
         fov = _fov_197_202_um()
         fov.extract_from(src)
 
-        assert fov.fields[0].shape == (3, 51, 51)
-        assert fov.fields[1].shape == (51, 25)
-        assert len(fov.fields[2]) == 2
+        assert fov.fields[0].field.shape == (3, 51, 51)
+        assert fov.fields[1].field.shape == (51, 25)
+        assert len(fov.fields[2].field) == 2
 
         assert len(fov.spectra) == 3
         assert fov.fields[1].header["SPEC_REF"] == 0
@@ -147,10 +147,10 @@ class TestExtractFrom:
                               area=1 * u.m ** 2)
         the_fov.extract_from(src)
         assert len(the_fov.fields) == 3
-        assert isinstance(the_fov.fields[0], fits.ImageHDU)
-        assert isinstance(the_fov.fields[1], fits.ImageHDU)
+        assert isinstance(the_fov.fields[0].field, fits.ImageHDU)
+        assert isinstance(the_fov.fields[1].field, fits.ImageHDU)
         assert the_fov.fields[1].header["NAXIS"] == 3
-        assert isinstance(the_fov.fields[2], Table)
+        assert isinstance(the_fov.fields[2].field, Table)
 
     def test_handles_nans(self):
         src = so._image_source()

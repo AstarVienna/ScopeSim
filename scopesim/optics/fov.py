@@ -9,12 +9,18 @@ from scipy.interpolate import interp1d
 
 from astropy import units as u
 from astropy.io import fits
-from astropy.table import Table
 from synphot import Empirical1D, SourceSpectrum
 from synphot.units import PHOTLAM
 
 from . import fov_utils as fu
 from . import image_plane_utils as imp_utils
+from ..source.source_fields import (
+    SourceField,
+    HDUSourceField,
+    ImageSourceField,
+    CubeSourceField,
+    TableSourceField,
+)
 
 from ..base_classes import SourceBase, FieldOfViewBase
 from ..utils import from_currsys, quantify, has_needed_keywords, get_logger
@@ -96,7 +102,8 @@ class FieldOfView(FieldOfViewBase):
         self._wavelength = None
         self._volume = None
 
-    def _pixarea(self, hdr):
+    @staticmethod
+    def _pixarea(hdr):
         return (hdr["CDELT1"] * u.Unit(hdr["CUNIT1"]) *
                 hdr["CDELT2"] * u.Unit(hdr["CUNIT2"])).to(u.arcsec ** 2)
 
@@ -107,58 +114,112 @@ class FieldOfView(FieldOfViewBase):
 
     @property
     def pixel_area(self):
+        """Return the area in arcsec**2 covered by one pixel."""
         if self.meta["pixel_area"] is None:
             # [arcsec] (really?)
             self.meta["pixel_area"] = self._pixarea(self.header).value
         return self.meta["pixel_area"]
 
-    def extract_from(self, src):
-        """..assumption: Bandpass has been applied.
+    def extract_from(self, src) -> None:
+        """
+        Extract relevent fields from source object.
 
-        .. note:: Spectra are cut and copied from the original Source object.
-            They are in original units. ph/s/pix comes in the make_**** methods
+        Parameters
+        ----------
+        src : Source
+            Input Source object to be "observed".
+
+        Returns
+        -------
+        None
+
+        Notes
+        -----
+        Spectra are cut and copied from the original Source object.
+        They are in original units. ph/s/pix comes in the make_**** methods.
+
+        This method assumes that Bandpass has been applied.
 
         """
         assert isinstance(src, SourceBase), f"expected Source: {type(src)}"
 
-        fields_in_fov = [field.field for field in src.fields
+        fields_in_fov = [field for field in src.fields
                          if fu.is_field_in_fov(self.header, field)]
         if not fields_in_fov:
             logger.warning("No fields in FOV.")
+        else:
+            logger.debug("%d fields in FOV", len(fields_in_fov))
 
-        spec_refs = set()
         volume = self.volume()
-        for ifld, fld in enumerate(fields_in_fov):
-            if isinstance(fld, Table):
-                extracted_field = fu.extract_area_from_table(fld, volume)
-                spec_refs.update(extracted_field["ref"])
-                fields_in_fov[ifld] = extracted_field
-
-            elif isinstance(fld, fits.ImageHDU):
-                if fld.header["NAXIS"] in (2, 3):
-                    extracted = fu.extract_area_from_imagehdu(fld, volume)
-                    replace_nans(extracted, self.cmds)
-                    fields_in_fov[ifld] = extracted
-                if ((fld.header["NAXIS"] == 2 or fld.header.get("BG_SRC")) and
-                        (ref := fld.header.get("SPEC_REF")) is not None):
-                    spec_refs.add(ref)
-
         waves = volume["waves"] * u.Unit(volume["wave_unit"])
-        spectra = {ref: fu.extract_range_from_spectrum(src.spectra[int(ref)], waves)
-                   for ref in spec_refs}
 
-        self.fields = fields_in_fov
-        self.spectra = spectra
+        # TODO: Not sure why it's necessary to recreate the fields here, but
+        #       perhasps for multi-fov instruments?
+        # TODO: Perhaps already split into cube, image and table fields here,
+        #       i.e. don't even bother with the total fields list and thus also
+        #       eleminate the need for the properties later on? It doesn't
+        #       seem like either the .fields attribute nor the various
+        #       fields properties are actually used outside the class itself...
+        # TODO: Perhaps remove .spectra and just keep spectra as source field
+        #       attributes, removing the need for SPEC_REF?
+        for field in fields_in_fov:
+            if isinstance(field, TableSourceField):
+                extracted = fu.extract_area_from_table(field.field, volume)
+                new_fld = TableSourceField(
+                    field=extracted,
+                    spectra={
+                        ref: spec for ref, spec in field.spectra.items()
+                        if ref in extracted["ref"]
+                    },
+                )
+                self.fields.append(new_fld)
+                for ref, spec in new_fld.spectra.items():
+                    extracted = fu.extract_range_from_spectrum(spec, waves)
+                    self.spectra[ref] = extracted
 
-    def view(self, hdu_type="image", sub_pixel=None, use_photlam=None):
+            # HACK: Remove the NAXIS check once BackgroundSourceField exists!
+            #       Or maybe not, depending on the WCU background stuff...
+            elif isinstance(field, ImageSourceField) and field.header["NAXIS"] == 2:
+                extracted = fu.extract_area_from_imagehdu(field.field, volume)
+                replace_nans(extracted, self.cmds)
+                new_fld = ImageSourceField(
+                    field=extracted,
+                    spectra=field.spectra,
+                )
+                self.fields.append(new_fld)
+                # ImageField has only one spectrum
+                (ref, spec), = new_fld.spectra.items()
+                self.spectra[ref] = fu.extract_range_from_spectrum(spec, waves)
+
+            elif isinstance(field, CubeSourceField) and field.header["NAXIS"] == 3:
+                extracted = fu.extract_area_from_imagehdu(field.field, volume)
+                replace_nans(extracted, self.cmds)
+                new_fld = CubeSourceField(field=extracted)
+                self.fields.append(new_fld)
+
+            else:  # basically BackgroundSourceFields
+                self.fields.append(field)
+                for ref, spec in field.spectra.items():
+                    extracted = fu.extract_range_from_spectrum(spec, waves)
+                    self.spectra[ref] = extracted
+
+    def view(
+        self,
+        hdu_type: str = "image",
+        sub_pixel: bool | None = None,
+        use_photlam: bool | None = None,
+    ):
         """
         Force the self.fields to be viewed as a single object.
 
         Parameters
         ----------
-        sub_pixel : bool
-        hdu_type : str
-            ["cube", "image", "spectrum"]
+        hdu_type : {"image", "cube", "spectrum"}
+            DESCRIPTION.
+        sub_pixel : bool | None, optional
+            If None (the default), use value from meta.
+        use_photlam : bool | None, optional
+            If None (the default), assume False. Only used in imaging (why?).
 
         Returns
         -------
@@ -204,6 +265,9 @@ class FieldOfView(FieldOfViewBase):
         * yield scaled flux to be added to canvas flux
         """
         for field in self.cube_fields:
+            # TODO: if SourceFields were kept in the _fields lists, the wave
+            #       attribute of CubeSourceField might be used directly (but
+            #       check if extraction limits the waves accordingly!!).
             hdu_waveset = fu.get_cube_waveset(field.header,
                                               return_quantity=True)
             fluxes = field.data.sum(axis=2).sum(axis=1)
@@ -718,30 +782,28 @@ class FieldOfView(FieldOfViewBase):
     @property
     def cube_fields(self):
         """Return list of non-BG_SRC ImageHDU fields with NAXIS=3."""
-        return [field for field in self.fields
-                if isinstance(field, fits.ImageHDU)
-                and field.header["NAXIS"] == 3
+        return [field.field for field in self.fields
+                if isinstance(field, CubeSourceField)
                 and not field.header.get("BG_SRC", False)]
 
     @property
     def image_fields(self):
         """Return list of non-BG_SRC ImageHDU fields with NAXIS=2."""
-        return [field for field in self.fields
-                if isinstance(field, fits.ImageHDU)
-                and field.header["NAXIS"] == 2
+        return [field.field for field in self.fields
+                if isinstance(field, ImageSourceField)
                 and not field.header.get("BG_SRC", False)]
 
     @property
     def table_fields(self):
         """Return list of Table fields."""
-        return [field for field in self.fields
-                if isinstance(field, Table)]
+        return [field.field for field in self.fields
+                if isinstance(field, TableSourceField)]
 
     @property
     def background_fields(self):
         """Return list of BG_SRC ImageHDU fields."""
-        return [field for field in self.fields
-                if isinstance(field, fits.ImageHDU)
+        return [field.field for field in self.fields
+                if isinstance(field, HDUSourceField)
                 and field.header.get("BG_SRC", False)]
 
     def _ensure_deg_header(self):
@@ -754,13 +816,15 @@ class FieldOfView(FieldOfViewBase):
         self.header["CUNIT1"] = "deg"
         self.header["CUNIT2"] = "deg"
 
-    def __repr__(self):
+    def __repr__(self) -> str:
+        """Return repr(self)."""
         msg = (f"{self.__class__.__name__}({self.header!r}, "
                f"{self.waverange!r}, {self.detector_header!r}, "
                f"**{self.meta!r})")
         return msg
 
-    def __str__(self):
+    def __str__(self) -> str:
+        """Return str(self)."""
         msg = (f"FOV id: {self.meta['id']}, with dimensions "
                f"({self.header['NAXIS1']}, {self.header['NAXIS2']})\n"
                f"Sky centre: ({self.header['CRVAL1']}, "
