@@ -38,36 +38,34 @@ def is_field_in_fov(fov_header, field, wcs_suffix=""):
     # TODO: Check if this can always get a SourceField, if yes then just do
     #       that and remove this.
 
-    if isinstance(field, fits.ImageHDU) and \
-            field.header.get("BG_SRC") is not None:
-        is_inside_fov = True
+    if isinstance(field, fits.ImageHDU) and field.header.get("BG_SRC", False):
+        return True
+
+    if isinstance(field, Table):
+        x = list(quantity_from_table("x", field, u.arcsec).to(u.deg).value)
+        y = list(quantity_from_table("y", field, u.arcsec).to(u.deg).value)
+        s = wcs_suffix
+        # cdelt = quantify(fov_header["CDELT1" + s], u.deg).value
+        cdelt = fov_header[f"CDELT1{s}"] * u.Unit(fov_header[f"CUNIT1{s}"]).to(u.deg)
+        field_header = imp_utils.header_from_list_of_xy(x, y, cdelt, s)
+    elif isinstance(field, (fits.ImageHDU, fits.PrimaryHDU)):
+        field_header = field.header
     else:
-        if isinstance(field, Table):
-            x = list(quantity_from_table("x", field,
-                                               u.arcsec).to(u.deg).value)
-            y = list(quantity_from_table("y", field,
-                                               u.arcsec).to(u.deg).value)
-            s = wcs_suffix
-            # cdelt = quantify(fov_header["CDELT1" + s], u.deg).value
-            cdelt = fov_header[f"CDELT1{s}"] * u.Unit(fov_header[f"CUNIT1{s}"]).to(u.deg)
-            field_header = imp_utils.header_from_list_of_xy(x, y, cdelt, s)
-        elif isinstance(field, (fits.ImageHDU, fits.PrimaryHDU)):
-            field_header = field.header
-        else:
-            logger.warning("Input was neither Table nor ImageHDU: %s", field)
-            return False
+        logger.warning("Input was neither Table nor ImageHDU: %s", field)
+        return False
 
-        xy = imp_utils.calc_footprint(field_header, wcs_suffix)
-        ext_xsky, ext_ysky = xy[:, 0], xy[:, 1]
-        xy = imp_utils.calc_footprint(fov_header, wcs_suffix)
-        fov_xsky, fov_ysky = xy[:, 0], xy[:, 1]
-        fov_xsky *= u.Unit(fov_header["CUNIT1"].lower()).to(u.deg)
-        fov_ysky *= u.Unit(fov_header["CUNIT2"].lower()).to(u.deg)
+    xy = imp_utils.calc_footprint(field_header, wcs_suffix)
+    ext_xsky, ext_ysky = xy[:, 0], xy[:, 1]
 
-        is_inside_fov = (min(ext_xsky) < max(fov_xsky) and
-                         max(ext_xsky) > min(fov_xsky) and
-                         min(ext_ysky) < max(fov_ysky) and
-                         max(ext_ysky) > min(fov_ysky))
+    xy = imp_utils.calc_footprint(fov_header, wcs_suffix)
+    fov_xsky, fov_ysky = xy[:, 0], xy[:, 1]
+    fov_xsky *= u.Unit(fov_header["CUNIT1"].lower()).to(u.deg)
+    fov_ysky *= u.Unit(fov_header["CUNIT2"].lower()).to(u.deg)
+
+    is_inside_fov = (min(ext_xsky) < max(fov_xsky) and
+                     max(ext_xsky) > min(fov_xsky) and
+                     min(ext_ysky) < max(fov_ysky) and
+                     max(ext_ysky) > min(fov_ysky))
 
     return is_inside_fov
 
