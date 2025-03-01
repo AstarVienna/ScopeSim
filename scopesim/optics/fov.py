@@ -137,23 +137,11 @@ class FieldOfView(FieldOfViewBase):
             elif isinstance(fld, fits.ImageHDU):
                 if fld.header["NAXIS"] in (2, 3):
                     extracted = fu.extract_area_from_imagehdu(fld, volume)
-                    try:
-                        fill_value = self.cmds["!SIM.computing.nan_fill_value"]
-                    except TypeError:
-                        # This occurs in testing, not sure why
-                        fill_value = 0.
-                    if np.ma.fix_invalid(extracted.data, copy=False,
-                                         fill_value=fill_value).mask.any():
-                        logger.warning("Source contained NaN values, which "
-                                       "were replaced by %f.", fill_value)
-                        logger.info(
-                            "The replacement value for NaNs in sources can be "
-                            "set in '!SIM.computing.nan_fill_value'.")
+                    replace_nans(extracted, self.cmds)
                     fields_in_fov[ifld] = extracted
-                if fld.header["NAXIS"] == 2 or fld.header.get("BG_SRC"):
-                    ref = fld.header.get("SPEC_REF")
-                    if ref is not None:
-                        spec_refs.add(ref)
+                if ((fld.header["NAXIS"] == 2 or fld.header.get("BG_SRC")) and
+                        (ref := fld.header.get("SPEC_REF")) is not None):
+                    spec_refs.add(ref)
 
         waves = volume["waves"] * u.Unit(volume["wave_unit"])
         spectra = {ref: fu.extract_range_from_spectrum(src.spectra[int(ref)], waves)
@@ -700,7 +688,7 @@ class FieldOfView(FieldOfViewBase):
     def wavelength(self):
         """Return central wavelength in um."""
         if self._wavelength is None:
-            self._wavelength = np.average(self.waverange)
+            self._wavelength = np.mean(self.waverange)
         return quantify(self._wavelength, u.um)
 
     @property
@@ -767,9 +755,9 @@ class FieldOfView(FieldOfViewBase):
         self.header["CUNIT2"] = "deg"
 
     def __repr__(self):
-        waverange = [self.meta["wave_min"].value, self.meta["wave_max"].value]
-        msg = (f"{self.__class__.__name__}({self.header!r}, {waverange!r}, "
-               f"{self.detector_header!r}, **{self.meta!r})")
+        msg = (f"{self.__class__.__name__}({self.header!r}, "
+               f"{self.waverange!r}, {self.detector_header!r}, "
+               f"**{self.meta!r})")
         return msg
 
     def __str__(self):
@@ -779,6 +767,21 @@ class FieldOfView(FieldOfViewBase):
                f"{self.header['CRVAL2']})\n"
                f"Image centre: ({self.header['CRVAL1D']}, "
                f"{self.header['CRVAL2D']})\n"
-               f"Wavelength range: ({self.meta['wave_min']}, "
-               f"{self.meta['wave_max']})um\n")
+               f"Wavelength range: {self.waverange} um\n")
         return msg
+
+
+def replace_nans(field, cmds) -> None:
+    """Replace NaN values in image field."""
+    try:
+        fill_value = cmds["!SIM.computing.nan_fill_value"]
+    except TypeError:
+        # This occurs in testing, not sure why
+        fill_value = 0.
+    if np.ma.fix_invalid(field.data, copy=False,
+                         fill_value=fill_value).mask.any():
+        logger.warning("Source contained NaN values, which "
+                       "were replaced by %f.", fill_value)
+        logger.info(
+            "The replacement value for NaNs in sources can be "
+            "set in '!SIM.computing.nan_fill_value'.")
