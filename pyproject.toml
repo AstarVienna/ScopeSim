@@ -49,7 +49,7 @@ ipykernel = "^6.24.0"
 ipympl = "^0.9.4"
 
 [tool.poetry.group.test.dependencies]
-pytest = "^7.4.3"
+pytest = ">=7.4.3,<9.0.0"
 pytest-cov = "^4.1.0"
 scopesim_templates = ">=0.6.0"
 ipykernel = "^6.24.0"
