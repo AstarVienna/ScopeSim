@@ -75,6 +75,7 @@ def is_field_in_fov(
     return is_inside_fov
 
 
+# TODO: Unused function. Remove?
 def make_flux_table(source_tbl, src, wave_min, wave_max, area):
     fluxes = np.zeros(len(src.spectra))
     ref_set = list(set(source_tbl["ref"]))
@@ -93,6 +94,7 @@ def make_flux_table(source_tbl, src, wave_min, wave_max, area):
     return tbl
 
 
+# TODO: Unused function. Remove?
 def combine_table_fields(fov_header, src, field_indexes):
     """
     Combine list of Table objects into a single one bounded by the Header WCS.
@@ -141,6 +143,7 @@ def combine_table_fields(fov_header, src, field_indexes):
     return tbl
 
 
+# TODO: Unused functionv (except in a comment somewhere). Remove?
 def combine_imagehdu_fields(fov_header, src, fields_indexes, wave_min, wave_max,
                             area, wcs_suffix="", cmds=None):
     """
@@ -199,6 +202,7 @@ def combine_imagehdu_fields(fov_header, src, fields_indexes, wave_min, wave_max,
     return canvas_hdu
 
 
+# TODO: Unused function. Remove?
 def sky2fp(header, xsky, ysky):
     """
     Convert sky coordinates to image plane coordinated.
@@ -221,6 +225,7 @@ def sky2fp(header, xsky, ysky):
     return xdet, ydet
 
 
+# TODO: Unused function. Remove?
 def extract_common_field(field, fov_volume):
     """
     Extract the overlapping parts of a field within a FOV volume.
@@ -249,6 +254,7 @@ def extract_common_field(field, fov_volume):
     return field_new
 
 
+# TODO: update docstring
 def extract_area_from_table(table, fov_volume):
     """
     Extract the entries of a ``Table`` that fits inside the `fov_volume`.
@@ -280,6 +286,7 @@ def extract_area_from_table(table, fov_volume):
     return table_new
 
 
+# TODO: update docstring
 def extract_area_from_imagehdu(imagehdu, fov_volume):
     """
     Extract the part of a ``ImageHDU`` that fits inside the `fov_volume`.
@@ -457,6 +464,7 @@ def extract_range_from_spectrum(spectrum, waverange):
     return new_spectrum
 
 
+# TODO: Unused function. Remove?
 def make_cube_from_table(table, spectra, waveset, fov_header, sub_pixel=False):
     """
 
