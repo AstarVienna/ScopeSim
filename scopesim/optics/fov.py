@@ -156,8 +156,8 @@ class FieldOfView(FieldOfViewBase):
         else:
             logger.debug("%d fields in FOV", len(fields_in_fov))
 
-        volume = self.volume()
-        waves = volume["waves"] * u.Unit(volume["wave_unit"])
+        volume = self.get_volume()
+        waves = volume["waves"]
 
         # TODO: Not sure why it's necessary to recreate the fields here, but
         #       perhasps for multi-fov instruments?
@@ -708,17 +708,18 @@ class FieldOfView(FieldOfViewBase):
         # ..todo: Add the log wavelength keyword here, if log scale is needed
         return canvas_cube_hdu      # [ph s-1 AA-1 (arcsec-2)]
 
-    def volume(self, wcs_prefix=""):
+    def get_volume(self, wcs_prefix=""):
         xy = imp_utils.calc_footprint(self.header, wcs_suffix=wcs_prefix)
-        unit = self.header[f"CUNIT1{wcs_prefix}"].lower()
-        # FIXME: This is unused!!
-        # wave_corners = self.waverange
-        minmax = np.array((xy.min(axis=0), xy.max(axis=0)))
-        self._volume = {"xs": minmax[:, 0],
-                        "ys": minmax[:, 1],
-                        "waves": self.waverange,
-                        "xy_unit": unit,
-                        "wave_unit": "um"}
+        # TODO: Add check for equal units across axis (there's a function for
+        #       this somewhere already...)
+        unit = u.Unit(self.header[f"CUNIT1{wcs_prefix}"].lower())
+        minmax = array_minmax(xy) * unit
+        # FIXME: Setting a private attribute and then returning is is smelly.
+        self._volume = {
+            "xs": minmax[:, 0],
+            "ys": minmax[:, 1],
+            "waves": self.waverange,
+        }
         return self._volume
 
     @property
@@ -749,17 +750,17 @@ class FieldOfView(FieldOfViewBase):
     def waverange(self):
         """Return wavelength range in um [wave_min, wave_max]."""
         if self._waverange is None:
-            wave_min = quantify(self.meta["wave_min"], u.um).value
-            wave_max = quantify(self.meta["wave_max"], u.um).value
-            self._waverange = [wave_min, wave_max]
+            wave_min = self.meta["wave_min"]
+            wave_max = self.meta["wave_max"]
+            self._waverange = [wave_min, wave_max] << u.um
         return self._waverange
 
     @property
     def wavelength(self):
         """Return central wavelength in um."""
         if self._wavelength is None:
-            self._wavelength = np.mean(self.waverange)
-        return quantify(self._wavelength, u.um)
+            self._wavelength = self.waverange.mean() << u.um
+        return self._wavelength
 
     @property
     def waveset(self):
@@ -773,7 +774,7 @@ class FieldOfView(FieldOfViewBase):
             wavesets = [spec.waveset for spec in self.spectra.values()]
             _waveset = np.concatenate(wavesets)
         else:
-            _waveset = self.waverange * u.um
+            _waveset = self.waverange << u.um
 
         # TODO: tie the round to a global precision setting (this is defined
         #       better in another TODO somewhere...)
@@ -837,7 +838,7 @@ class FieldOfView(FieldOfViewBase):
                f"{self.header['CRVAL2']})\n"
                f"Image centre: ({self.header['CRVAL1D']}, "
                f"{self.header['CRVAL2D']})\n"
-               f"Wavelength range: {self.waverange} um\n")
+               f"Wavelength range: {self.waverange!s}\n")
         return msg
 
 

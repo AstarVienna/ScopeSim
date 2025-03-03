@@ -273,9 +273,8 @@ def extract_area_from_table(table, fov_volume):
     new_imagehdu : fits.ImageHDU
 
     """
-    fov_unit = u.Unit(fov_volume["xy_unit"])
-    fov_xs = (fov_volume["xs"] * fov_unit).to(table["x"].unit)
-    fov_ys = (fov_volume["ys"] * fov_unit).to(table["y"].unit)
+    fov_xs = (fov_volume["xs"]).to(table["x"].unit)
+    fov_ys = (fov_volume["ys"]).to(table["y"].unit)
 
     mask = ((table["x"].data >= fov_xs[0].value) *
             (table["x"].data < fov_xs[1].value) *
@@ -320,7 +319,7 @@ def extract_area_from_imagehdu(imagehdu, fov_volume):
 
     xy_fov = np.array([fov_volume["xs"], fov_volume["ys"]]).T
 
-    if fov_volume["xy_unit"] == "arcsec":
+    if fov_volume["xs"].unit == "arcsec":
         xy_fov *= u.arcsec.to(u.deg)
 
     logger.debug("XY FOV:\n%s", xy_fov)
