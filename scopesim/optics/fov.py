@@ -23,7 +23,13 @@ from ..source.source_fields import (
 )
 
 from ..base_classes import SourceBase, FieldOfViewBase
-from ..utils import from_currsys, quantify, has_needed_keywords, get_logger
+from ..utils import (
+    from_currsys,
+    quantify,
+    has_needed_keywords,
+    get_logger,
+    array_minmax,
+)
 
 
 logger = get_logger(__name__)
