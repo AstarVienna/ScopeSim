@@ -6,7 +6,7 @@ from matplotlib import pyplot as plt
 from astropy.io import fits
 from astropy import units as u
 from ..data_container import DataContainer
-from ...utils import find_file, from_currsys, get_logger
+from ...utils import find_file, from_currsys, get_logger, figure_factory
 from ...optics.image_plane_utils import sub_pixel_fractions
 
 logger = get_logger(__name__)
@@ -113,11 +113,13 @@ class FPMask:
 
     def plot(self):
         """Plot the location of the holes"""
-        plt.plot(self.xpix, self.ypix, 'o')
-        plt.xlim(0, 2048)
-        plt.ylim(0, 2048)
-        plt.gca().set_aspect('equal')
-        plt.show()
+        _, axes = figure_factory()
+        axes.plot(self.xpix, self.ypix, 'o')
+        axes.set_xlim(0, 2048)
+        axes.set_ylim(0, 2048)
+        axes.set_aspect('equal')
+
+        return axes
 
     def __str__(self) -> str:
         return f"""{self.__class__.__name__}: "{self.name}"
