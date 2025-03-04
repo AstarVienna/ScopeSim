@@ -231,8 +231,8 @@ class WCUSource(TERCurve):
         """
         if value > 1 or value < 0:
             value = max(0, min(value, 1))
-            logger.warning("bb_aperture value out of range [0, 1], clipping to {}"
-                           .format(value))
+            logger.warning("bb_aperture value out of range [0, 1], clipping to %f",
+                           value)
         self.bb_aperture = value
         self.compute_lamp_emission()
 
