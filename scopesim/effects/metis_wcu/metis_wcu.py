@@ -1,5 +1,7 @@
 """Classes for the METIS Warm Calibration Unit"""
 
+from typing import ClassVar
+
 import numpy as np
 from astropy.table import Table
 from astropy.modeling.models import BlackBody, Gaussian1D
@@ -60,10 +62,11 @@ class WCUSource(TERCurve):
     tunable laser currently cannot be tuned.
     """
 
+    z_order: ClassVar[tuple[int, ...]] = (113, 513)
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         params = {
-            "z_order": [113, 513],
             "action": "emissivity",
             "position": 0,  # position in surface table
         }
@@ -71,7 +74,7 @@ class WCUSource(TERCurve):
         self.meta.update(kwargs)
         if 'config_file' in self.meta:
             config_file = from_currsys(self.meta['config_file'], self.cmds)
-            with open(find_file(config_file)) as fd:
+            with open(find_file(config_file), encoding="utf-8") as fd:
                 config = yaml.safe_load(fd)
                 self.meta.update(config)
 

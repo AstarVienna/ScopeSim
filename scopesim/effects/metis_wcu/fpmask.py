@@ -2,7 +2,6 @@
 
 from pathlib import Path
 import numpy as np
-from matplotlib import pyplot as plt
 from astropy.io import fits
 from astropy import units as u
 from ..data_container import DataContainer
