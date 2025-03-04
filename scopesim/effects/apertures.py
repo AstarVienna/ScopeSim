@@ -117,6 +117,7 @@ class ApertureMask(Effect):
     def apply_to(self, obj, **kwargs):
         """See parent docstring."""
         if isinstance(obj, FOVSetupBase):
+            logger.debug("Executing %s, FoV setup", self.meta['name'])
             x = quantity_from_table("x", self.table,
                                     u.arcsec).to(u.arcsec).value
             y = quantity_from_table("y", self.table,
@@ -298,6 +299,7 @@ class ApertureList(Effect):
     def apply_to(self, obj, **kwargs):
         """See parent docstring."""
         if isinstance(obj, FOVSetupBase):
+            logger.debug("Executing %s, FoV setup", self.meta['name'])
             new_vols = []
             for row in self.table:
                 vols = obj.extract(["x", "y"], ([row["left"], row["right"]],
