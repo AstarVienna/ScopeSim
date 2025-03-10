@@ -134,7 +134,8 @@ class TERCurve(Effect):
 
             # add the effect background to the source background field
             if self.background_source is not None:
-                obj.append(self.background_source)
+                for bgs in self.background_source:
+                    obj.append(bgs)
 
         if isinstance(obj, FOVSetupBase):
             from ..optics.fov_manager import FovVolumeList
@@ -174,7 +175,7 @@ class TERCurve(Effect):
                                   "SOLIDANG": "arcsec-2"})
             self._background_source = Source(image_hdu=bg_hdu, spectra=flux)
 
-        return self._background_source
+        return [self._background_source]
 
     def plot(self, which="x", wavelength=None, *, axes=None, **kwargs):
         """Plot TER curves.
@@ -845,7 +846,7 @@ class SpanishVOFilterWheel(FilterWheelBase):
 
     required_keys = {"observatory", "instrument", "current_filter"}
 
-    def __init__(self, **kwargs):        
+    def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
         params = {"include_str": None,         # passed to
@@ -895,7 +896,77 @@ class PupilTransmission(TERCurve):
                          emissivity=[0., 0.], **self.params)
 
     def update_transmission(self, transmission, **kwargs):
+        """Set a new transmission value"""
         self.__init__(transmission, **kwargs)
+
+
+class PupilMaskWheel(Effect):
+    """
+    Wheel holding a selection of predefined pupil masks
+
+    Currently, changing the PupilMask only changes the relative transmission.
+    Eventually, the change should also affect the total PSF of the OpticalTrain.
+
+    Example
+    -------
+    ::
+
+       name : pupil_masks
+       class : PupilMaskWheel
+       kwargs:
+           pupil_masks: [("name1", transmission1),
+                         ("name2", transmission2)]
+           current_mask: "open"
+    """
+    required_keys = {"pupil_masks", "current_mask"}
+    z_order: ClassVar[tuple[int, ...]] = (126, 226, 526)
+    report_plot_include: ClassVar[bool] = False
+    report_table_include: ClassVar[bool] = True
+    report_table_rounding: ClassVar[int] = 4
+    _current_str = "current_mask"
+
+    def __init__(self, cmds=None, **kwargs):
+        super().__init__(cmds=cmds, **kwargs)
+        check_keys(kwargs, self.required_keys, action="error")
+
+        self.meta.update(kwargs)
+        mask_dict = from_currsys(self.meta["pupil_masks"], cmds=self.cmds)
+        names = mask_dict['names']
+        transmissions = mask_dict['transmissions']
+        self.masks = {}
+        for name, trans in zip(names, transmissions):
+            kwargs["name"] = name
+            self.masks[name] = PupilTransmission(transmission=trans,
+                                                 cmds=cmds,
+                                                 **kwargs)
+        self.table = self.get_table(mask_dict)
+
+    def apply_to(self, obj, **kwargs):
+        """Use ``apply_to`` of current pupil mask."""
+        return self.current_mask.apply_to(obj, **kwargs)
+
+    def change_mask(self, maskname=None):
+        """Change the current pupil mask."""
+        if not maskname or maskname in self.masks:
+            self.meta["current_mask"] = maskname
+            self.include = maskname
+        else:
+            raise ValueError(f"Unknown pupil mask requested: {maskname}")
+
+    @property
+    def current_mask(self):
+        """Return the currently used pupil mask."""
+        currmask = from_currsys(self.meta['current_mask'], cmds=self.cmds)
+        if not currmask:
+            return False
+        return self.masks[currmask]
+
+    def __getattr__(self, item):
+        return getattr(self.current_mask, item)
+
+    def get_table(self, maskdict):
+        """Create a table of pupil masks with throughput."""
+        return Table(maskdict)
 
 
 class ADCWheel(Effect):
