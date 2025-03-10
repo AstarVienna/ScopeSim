@@ -935,10 +935,6 @@ class FieldOfView(FieldOfViewBase):
     @property
     def corners(self):
         """Return sky footprint, image plane footprint."""
-        # Couldn't find where this is ever used, put warning here just in case
-        logger.warning("calc_footprint has been updated, any code that "
-                       "relies on this .corners property must likely be "
-                       "adapted as well.")
         sky_corners = imp_utils.calc_footprint(self.header)
         imp_corners = imp_utils.calc_footprint(self.header, "D")
         return sky_corners, imp_corners
