@@ -190,30 +190,24 @@ class WCUSource(TERCurve):
             If float, the unit is assumed to be Kelvin.
         """
         if bb_temp is not None:
-            if isinstance(bb_temp, (int, float)):
-                bb_temp = bb_temp << u.K
-
-            bb_temp = bb_temp.to(u.K, equivalencies=u.temperature())
+            with u.set_enabled_equivalencies(u.temperature()):
+                bb_temp <<= u.K
             if bb_temp >= 0:
                 self.meta["bb_temp"] = bb_temp
             else:
                 raise ValueError("bb_temp below absolute zero, not changed")
 
         if wcu_temp is not None:
-            if isinstance(wcu_temp, (int, float)):
-                wcu_temp = wcu_temp << u.K
-
-            wcu_temp = wcu_temp.to(u.K, equivalencies=u.temperature())
+            with u.set_enabled_equivalencies(u.temperature()):
+                wcu_temp <<= u.K
             if wcu_temp >= 0:
                 self.meta["wcu_temp"] = wcu_temp
             else:
                 raise ValueError("wcu_temp below absolute zero, not changed")
 
         if is_temp is not None:
-            if isinstance(is_temp, (int, float)):
-                is_temp = is_temp << u.K
-
-            is_temp = is_temp.to(u.K, equivalencies=u.temperature())
+            with u.set_enabled_equivalencies(u.temperature()):
+                is_temp <<= u.K
             if is_temp >= 0:
                 self.meta["is_temp"] = is_temp
             else:
