@@ -202,58 +202,6 @@ def combine_imagehdu_fields(fov_header, src, fields_indexes, wave_min, wave_max,
     return canvas_hdu
 
 
-# TODO: Unused function. Remove?
-def sky2fp(header, xsky, ysky):
-    """
-    Convert sky coordinates to image plane coordinated.
-
-    Parameters
-    ----------
-    header : Header
-        Header of a FieldOfView object which contains two sets of WCS keywords
-    xsky, ysky : float, array
-        [deg] The on-sky coordinated
-
-    Returns
-    -------
-    xdet, ydet : float, array
-        [mm] The coordinated on the image plane
-
-    """
-    xpix, ypix = imp_utils.val2pix(header, xsky, ysky)
-    xdet, ydet = imp_utils.pix2val(header, xpix, ypix, "D")
-    return xdet, ydet
-
-
-# TODO: Unused function. Remove?
-def extract_common_field(field, fov_volume):
-    """
-    Extract the overlapping parts of a field within a FOV volume.
-
-    Parameters
-    ----------
-    field : Table or ImageHDU
-    fov_volume : dict
-        Contains {"xs": [xmin, xmax], "ys": [ymin, ymax],
-                  "waves": [wave_min, wave_max],
-                  "xy_unit": "deg" or "mm", "wave_unit": "um"}
-
-    Returns
-    -------
-    field_new : Table or ImageHDU
-
-    """
-    if isinstance(field, Table):
-        field_new = extract_area_from_table(field, fov_volume)
-    elif isinstance(field, fits.ImageHDU):
-        field_new = extract_area_from_imagehdu(field, fov_volume)
-    else:
-        raise ValueError("field must be either Table or ImageHDU, but is "
-                         f"{type(field)}")
-
-    return field_new
-
-
 # TODO: update docstring
 def extract_area_from_table(table, fov_volume):
     """
