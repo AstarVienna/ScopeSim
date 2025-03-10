@@ -102,7 +102,7 @@ class WCUSource(TERCurve):
         self.bb_to_is = self.bb_to_is_throughput()
         self.rho_tube = get_reflectivity(self.meta['rho_tube'])
         self.rho_is = get_reflectivity(self.meta['rho_is'])
-        self.rho_mask = get_reflectivity(self.meta['rho_mask'])
+        self.emiss_mask = self.meta['emiss_mask']
 
         # Compute the emission components
         self.compute_lamp_emission()
@@ -367,13 +367,13 @@ class WCUSource(TERCurve):
     def compute_fp_emission(self):
         """Compute the emission spectrum from the opaque part of the focal-plane mask"""
         self.wcu_temp = self.meta["wcu_temp"] << u.K
-        self.emiss_mask = 1 - self.meta["rho_mask"]       # <<<<<< that needs to be a function
 
         lam = self.wavelength
 
-        # continuum black-body source
+        # We assume that T_mask = T_WCU, so that we use RvB's eq.(17) rather than (18)
+        # This is independent of the mask emissivity and gives maximum mask emission.
         self.mask_em = BlackBody(self.wcu_temp, scale=self.bb_scale)
-        self.intens_fp = self.emiss_mask * self.mask_em(lam)
+        self.intens_fp = self.mask_em(lam)
 
         tbl = Table()
         tbl.add_column(lam, name="wavelength")
@@ -423,8 +423,6 @@ class WCUSource(TERCurve):
 
 
 
-
-# TODO: put into metis_wcu_utils.py
 def get_reflectivity(file_or_number):
     """
     Get a reflectivity from either a file or a number
