@@ -9,8 +9,7 @@ from matplotlib.colors import LogNorm
 
 from scopesim.tests.mocks.py_objects import header_objects as ho
 from scopesim.tests.mocks.py_objects import source_objects as so
-from scopesim.optics.fov import FieldOfView
-from scopesim.optics.fov_utils import get_cube_waveset
+from scopesim.optics.fov import FieldOfView, get_cube_waveset
 
 PLOTS = False
 
@@ -60,8 +59,8 @@ class TestExtractFrom:
     #                            "is extracted..."))
     def test_extract_point_sources_from_table(self):
         src = so._table_source()
-        src.fields[0]["x"] = [-15,-5,0,0] * u.arcsec
-        src.fields[0]["y"] = [0,0,5,15] * u.arcsec
+        src.fields[0]["x"] = [-15, -5, 0, 0] * u.arcsec
+        src.fields[0]["y"] = [0, 0, 5, 15] * u.arcsec
         fov = _fov_190_210_um()
         fov.extract_from(src)
 
@@ -101,8 +100,8 @@ class TestExtractFrom:
     #                            "is extracted..."))
     def test_extract_one_of_each_type_from_source_object(self):
         src_table = so._table_source()              # 4 sources, put two outside of FOV
-        src_table.fields[0]["x"] = [-15,-5,0,0] * u.arcsec
-        src_table.fields[0]["y"] = [0,0,5,15] * u.arcsec
+        src_table.fields[0]["x"] = [-15, -5, 0, 0] * u.arcsec
+        src_table.fields[0]["y"] = [0, 0, 5, 15] * u.arcsec
         src_image = so._image_source(dx=10)         # 10x10" @ 0.2"/pix
         src_cube = so._cube_source()                # 10x10" @ 0.2"/pix, [0.5, 2.5]m @ 0.02µm
         src = src_cube + src_image + src_table

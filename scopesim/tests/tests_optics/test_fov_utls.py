@@ -8,7 +8,8 @@ from synphot.units import PHOTLAM
 from astropy import units as u
 from astropy.io import fits
 
-from scopesim.optics import FieldOfView, fov_utils
+from scopesim.optics.fov import FieldOfView, extract_range_from_spectrum
+from scopesim.optics.fov_utils import make_cube_from_table
 from scopesim.optics import image_plane_utils as imp_utils
 
 from scopesim.tests.mocks.py_objects import header_objects as ho
@@ -32,7 +33,7 @@ class TestExtractAreaFromImageHDU:
                                              basic_fov_header):
         fov = FieldOfView(basic_fov_header, [0.5, 2.5])
         field = cube_source.fields[0]
-        new_field = fov_utils.extract_area_from_imagehdu(field, fov.get_volume())
+        new_field = fov.extract_area_from_imagehdu(field, fov.get_volume())
 
         if PLOTS:
             xy = imp_utils.calc_footprint(basic_fov_header)
@@ -55,7 +56,7 @@ class TestExtractAreaFromImageHDU:
                                                       basic_fov_header):
         fov = FieldOfView(basic_fov_header, [1.3, 1.7])
         field = cube_source.fields[0]
-        new_field = fov_utils.extract_area_from_imagehdu(field, fov.get_volume())
+        new_field = fov.extract_area_from_imagehdu(field, fov.get_volume())
 
         if PLOTS:
             xy = imp_utils.calc_footprint(basic_fov_header)
@@ -81,7 +82,7 @@ class TestExtractAreaFromImageHDU:
         hdr["CRVAL2"] += 75 * hdr["CDELT2"]
         fov = FieldOfView(hdr, [1.5, 2.5])
         field = cube_source.fields[0]
-        new_field = fov_utils.extract_area_from_imagehdu(field, fov.get_volume())
+        new_field = fov.extract_area_from_imagehdu(field, fov.get_volume())
 
         if PLOTS:
             xy = imp_utils.calc_footprint(basic_fov_header)
@@ -108,38 +109,32 @@ class TestExtractRangeFromSpectrum:
         spec = SourceSpectrum(Empirical1D, points=wave, lookup_table=flux)
 
         waverange = [1.98, 2.12] * u.um
-        new_spec = fov_utils.extract_range_from_spectrum(spec, waverange)
+        new_spec = extract_range_from_spectrum(spec, waverange)
 
         assert len(new_spec.waverange) == 2
         assert new_spec.waverange[0] == 1.98 * u.um
         assert new_spec(1.98 * u.um).value == approx(12.8)
 
-    @pytest.mark.skip(reason="Kicking the can down the road")
-    def test_throws_error_if_no_overlap_between_waverange_and_waveset(self):
-        wave = np.arange(0.7, 1.5, 0.1) * u.um
+    @pytest.mark.parametrize(("endpoint", "msg"),
+                             [pytest.param(1.5, "Waverange does not overlap", marks=pytest.mark.xfail(reason="Check was disabled in function, dunno why.")),
+                              (2.05, "Waverange only partially overlaps")])
+    def test_logs_msg_for_waverang_overlap_mismatch(
+            self, endpoint, msg, caplog):
+        wave = np.arange(0.7, endpoint, 0.1) * u.um
         flux = np.arange(len(wave)) * PHOTLAM
         spec = SourceSpectrum(Empirical1D, points=wave, lookup_table=flux)
 
-        with pytest.raises(ValueError):
-            waverange = [1.98, 2.12] * u.um
-            new_spec = fov_utils.extract_range_from_spectrum(spec, waverange)
+        waverange = [1.98, 2.12] * u.um
+        extract_range_from_spectrum(spec, waverange)
 
-    @pytest.mark.skip(reason="Kicking the can down the road")
-    def test_throws_error_if_only_partial_overlap_exists(self):
-        wave = np.arange(0.7, 2.05, 0.1) * u.um
-        flux = np.arange(len(wave)) * PHOTLAM
-        spec = SourceSpectrum(Empirical1D, points=wave, lookup_table=flux)
-
-        with pytest.raises(ValueError):
-            waverange = [1.98, 2.12] * u.um
-            new_spec = fov_utils.extract_range_from_spectrum(spec, waverange)
+        assert msg in caplog.text
 
 
 class TestMakeCubeFromTable():
     def test_returns_an_imagehdu(self):
         src_table = so._table_source()
-        src_table.fields[0]["x"] = [-15,-5,0,0] * u.arcsec
-        src_table.fields[0]["y"] = [0,0,5,15] * u.arcsec
+        src_table.fields[0]["x"] = [-15, -5, 0, 0] * u.arcsec
+        src_table.fields[0]["y"] = [0, 0, 5, 15] * u.arcsec
 
         hdr = ho._fov_header()  # 20x20" @ 0.2" --> [-10, 10]"
         wav = [1.9, 2.1] * u.um
@@ -148,7 +143,7 @@ class TestMakeCubeFromTable():
         fov.extract_from(src_table)
 
         waveset = np.linspace(wav[0], wav[1], 51)
-        hdu = fov_utils.make_cube_from_table(fov.fields[0], fov.spectra,
-                                             waveset, fov.header)
+        hdu = make_cube_from_table(fov.fields[0], fov.spectra,
+                                   waveset, fov.header)
 
         assert isinstance(hdu, fits.ImageHDU)
