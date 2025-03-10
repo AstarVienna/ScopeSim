@@ -42,7 +42,7 @@ def fixture_bbsource():
                      bb_to_is=None,
                      rho_tube=0.95,
                      rho_is=0.95,
-                     rho_mask=0.95,
+                     emiss_mask=1.,
                      diam_is=250,
                      diam_is_in=25.4,
                      diam_is_out=100.,
