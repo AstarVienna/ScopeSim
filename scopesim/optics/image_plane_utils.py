@@ -204,7 +204,7 @@ def create_wcs_from_points(points: np.ndarray,
 
     if (naxis == 0).all():
         # Ensure at least one pixel.
-        logger.warning("NAXISn == 0, using minimum of 1.")
+        logger.debug("NAXISn == 0, using minimum of 1.")
         naxis = np.ones_like(naxis)
 
     crpix = (naxis + 1) / 2
