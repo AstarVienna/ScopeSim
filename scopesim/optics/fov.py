@@ -2,7 +2,7 @@
 
 from copy import deepcopy
 from itertools import chain
-from collections.abc import Iterable
+from collections.abc import Iterable, Generator
 
 import numpy as np
 from scipy.interpolate import interp1d
@@ -150,14 +150,16 @@ class FieldOfView(FieldOfViewBase):
         """
         assert isinstance(src, SourceBase), f"expected Source: {type(src)}"
 
-        fields_in_fov = [field for field in src.fields
-                         if self.is_field_in_fov(field)]
+        fields_in_fov = list(self.get_fields_in_fov(src.fields))
+
         if not fields_in_fov:
             logger.warning("No fields in FOV.")
         else:
             logger.debug("%d fields in FOV", len(fields_in_fov))
 
         volume = self.get_volume()
+        corners, _ = self.get_corners("arcsec")
+        minmax = array_minmax(corners) * u.arcsec
         waves = volume["waves"]
 
         # TODO: Not sure why it's necessary to recreate the fields here, but
@@ -171,7 +173,9 @@ class FieldOfView(FieldOfViewBase):
         #       attributes, removing the need for SPEC_REF?
         for field in fields_in_fov:
             if isinstance(field, TableSourceField):
-                extracted = self.extract_area_from_table(field.field, volume)
+                extracted = self.extract_area_from_table(field.field, minmax)
+                # TODO: Rework extract_area_from_table to also affect spectra
+                #       and just return new copy of field.
                 new_fld = TableSourceField(
                     field=extracted,
                     spectra={
@@ -253,67 +257,42 @@ class FieldOfView(FieldOfViewBase):
             image = np.sum(self.hdu.data, axis=0)
             self.hdu.data = image
 
-    def is_field_in_fov(self, field: SourceField) -> bool:
+    def get_fields_in_fov(self, fields: Iterable[SourceField]) -> Generator:
         """Return True if Source.field footprint is inside FOV footprint."""
-        if isinstance(field, HDUSourceField) and field.header.get("BG_SRC", False):
-            return True
+        fov_corners, _ = self.get_corners("arcsec")
 
-        if isinstance(field, TableSourceField):
-            x = list(quantity_from_table("x", field.field, u.arcsec).to(u.deg).value)
-            y = list(quantity_from_table("y", field.field, u.arcsec).to(u.deg).value)
-            # cdelt = quantify(fov_header["CDELT1" + s], u.deg).value
-            cdelt = self.header["CDELT1"] * u.Unit(self.header["CUNIT1"]).to(u.deg)
-            field_header = imp_utils.header_from_list_of_xy(x, y, cdelt)
-        elif isinstance(field, HDUSourceField):
-            field_header = field.header
-        else:
-            logger.warning("Input was neither Table nor ImageHDU: %s", field)
-            return False
+        for field in fields:
+            field_corners = field.get_corners("arcsec")
+            is_inside_fov = (
+                (field_corners.max(axis=0) > fov_corners.min(axis=0)).all() and
+                (field_corners.min(axis=0) < fov_corners.max(axis=0)).all()
+            )
+            if is_inside_fov:
+                yield field
 
-        xy = imp_utils.calc_footprint(field_header)
-        ext_xsky, ext_ysky = xy[:, 0], xy[:, 1]
-
-        xy, _ = self.corners
-        fov_xsky = xy[:, 0] * u.Unit(self.header["CUNIT1"].lower()).to(u.deg)
-        fov_ysky = xy[:, 1] * u.Unit(self.header["CUNIT2"].lower()).to(u.deg)
-
-        # TODO: array-ize this!
-        is_inside_fov = (min(ext_xsky) < max(fov_xsky) and
-                         max(ext_xsky) > min(fov_xsky) and
-                         min(ext_ysky) < max(fov_ysky) and
-                         max(ext_ysky) > min(fov_ysky))
-
-        return is_inside_fov
-
-    # TODO: update docstring
-    def extract_area_from_table(self, table, fov_volume):
+    @staticmethod
+    def extract_area_from_table(table, minmax):
         """
-        Extract the entries of a ``Table`` that fits inside the `fov_volume`.
+        Extract the entries of a ``Table`` that fit inside the FOV volume.
 
         Parameters
         ----------
-        table : fits.ImageHDU
-            The field ImageHDU, either an image of a wavelength [um] cube
-        fov_volume : dict
-            Contains {"xs": [xmin, xmax], "ys": [ymin, ymax],
-                      "waves": [wave_min, wave_max],
-                      "xy_unit": "deg" or "mm", "wave_unit": "um"}
+        table : table.Table
+            The field table.
+        minmax : quantity
+            From FOV corners in the form of [[xmin, ymin], [xmax, ymax]].
 
         Returns
         -------
-        new_imagehdu : fits.ImageHDU
+        cut_table : table.Table
+            Table reduced to sources inside the FOV.
 
         """
-        fov_xs = (fov_volume["xs"]).to(table["x"].unit)
-        fov_ys = (fov_volume["ys"]).to(table["y"].unit)
-
-        mask = ((table["x"].data >= fov_xs[0].value) *
-                (table["x"].data < fov_xs[1].value) *
-                (table["y"].data >= fov_ys[0].value) *
-                (table["y"].data < fov_ys[1].value))
-        table_new = table[mask]
-
-        return table_new
+        mask = ((table["x"].quantity >= minmax[0, 0]) *
+                (table["x"].quantity < minmax[1, 0]) *
+                (table["y"].quantity >= minmax[0, 1]) *
+                (table["y"].quantity < minmax[1, 1]))
+        return table[mask]
 
     # TODO: update docstring
     def extract_area_from_imagehdu(self, imagehdu, fov_volume):
@@ -352,8 +331,9 @@ class FieldOfView(FieldOfViewBase):
         #       If it doesn't, remove the check and just use corners.
         #       Find out if the arcsec check below is actually needed or if we
         #       can maybe include units in the corners...
-        assert (xy_fov.min(axis=0) == self.corners[0].min(axis=0)).all(), "Gotcha"
-        assert (xy_fov.max(axis=0) == self.corners[0].max(axis=0)).all(), "Gotcha"
+        corners, _ = self.get_corners("deg")
+        assert (xy_fov.min(axis=0) == corners.min(axis=0)).all(), "Gotcha"
+        assert (xy_fov.max(axis=0) == corners.max(axis=0)).all(), "Gotcha"
 
         if fov_volume["xs"].unit == "arcsec":
             xy_fov *= u.arcsec.to(u.deg)
@@ -932,10 +912,9 @@ class FieldOfView(FieldOfViewBase):
             return self.spectrum
         return None
 
-    @property
-    def corners(self):
+    def get_corners(self, new_unit: str = None):
         """Return sky footprint, image plane footprint."""
-        sky_corners = imp_utils.calc_footprint(self.header)
+        sky_corners = imp_utils.calc_footprint(self.header, new_unit=new_unit)
         imp_corners = imp_utils.calc_footprint(self.header, "D")
         return sky_corners, imp_corners
 
