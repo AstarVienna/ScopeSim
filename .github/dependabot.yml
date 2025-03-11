@@ -17,11 +17,22 @@ updates:
   - package-ecosystem: "pip"
     directory: "/"
     schedule:
-      interval: "daily"
+      interval: "monthly"
     labels:
       - "dependencies"
     groups:
-      production-dependencies:
+      internal-dependencies:
+        applies-to: version-updates
+        patterns:
+          - "astar*"
+          - "scopesim*"
+          - "spextra"
+          - "skycalc-ipy"
+          - "anisocado*"
+      main-dependencies:
+        # Applies to all dependencies defined in the main section of pyproject.toml
+        applies-to: version-updates
         dependency-type: "production"
-      development-dependencies:
-        dependency-type: "development"
+        update-types:
+          - "major"
+          - "minor"
