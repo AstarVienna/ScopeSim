@@ -262,6 +262,11 @@ class FieldOfView(FieldOfViewBase):
         fov_corners, _ = self.get_corners("arcsec")
 
         for field in fields:
+            if hasattr(field, "header") and field.header.get("BG_SRC", False):
+                # HACK: While BackgroundSourceField isn't ready...
+                yield field
+                continue
+
             field_corners = field.get_corners("arcsec")
             is_inside_fov = (
                 (field_corners.max(axis=0) > fov_corners.min(axis=0)).all() and

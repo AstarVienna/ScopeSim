@@ -341,6 +341,8 @@ class CubeSourceField(HDUSourceField):
 class BackgroundSourceField(SpectrumSourceField):
     """Source field with spectrum only, for TER curve emissions."""
 
+    header: fits.Header
+
     def get_corners(self, unit: u.Unit | str = "arcsec") -> np.ndarray:
         """Return imaginary corner from + to - infinity."""
         return np.array([-np.inf, np.inf])
