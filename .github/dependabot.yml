@@ -17,16 +17,11 @@ updates:
   - package-ecosystem: "pip"
     directory: "/"
     schedule:
-      interval: "weekly"
+      interval: "daily"
     labels:
       - "dependencies"
     groups:
-      minor-versions:
-        # The "version-update" only targets non-security related updates
-        applies-to: version-updates
-        patterns:
-          - "*"
-        # Group minor and patch level update, keep separate PRs for major versions
-        update-types:
-          - "minor"
-          - "patch"
+      production-dependencies:
+        dependency-type: "production"
+      development-dependencies:
+        dependency-type: "development"
