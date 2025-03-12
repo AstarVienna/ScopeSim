@@ -20,6 +20,10 @@ updates:
       interval: "monthly"
     labels:
       - "dependencies"
+    ignore:
+      # For all packages, ignore all patch updates, the "version-update" only targets non-security related updates
+      - dependency-name: "*"
+        update-types: ["version-update:semver-patch"]
     groups:
       internal-dependencies:
         applies-to: version-updates
