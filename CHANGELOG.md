@@ -1,3 +1,46 @@
+# Version 0.9.2
+**2025-03-13**
+
+Mainly the inclusion of METIS WCU effects in https://github.com/AstarVienna/ScopeSim/pull/494 plus a few bugfixes and quality-of-life improvements.
+
+## What's Changed
+### Bugs fixed
+* Fix detectorwindow by @hugobuddel in https://github.com/AstarVienna/ScopeSim/pull/507
+* Don't fail subpixels for edge sources by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/549
+* Ensure at least one pixel in header by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/586
+### Changes to or addition of Effects
+* METIS WCU effects by @oczoske in https://github.com/AstarVienna/ScopeSim/pull/494
+### Dependency Changes
+* Bump abatilo/actions-poetry from 2 to 4 by @dependabot in https://github.com/AstarVienna/ScopeSim/pull/520
+* Bump actions/download-artifact from 4.1.7 to 4.1.8 by @dependabot in https://github.com/AstarVienna/ScopeSim/pull/521
+* Bump jinja2 from 3.1.4 to 3.1.5 by @hugobuddel in https://github.com/AstarVienna/ScopeSim/pull/519
+* Bump sphinx from 5.3.0 to 7.3.7 by @dependabot in https://github.com/AstarVienna/ScopeSim/pull/525
+* Bump jupyter-sphinx from 0.2.3 to 0.5.3 by @dependabot in https://github.com/AstarVienna/ScopeSim/pull/528
+* Bump sphinxcontrib-apidoc from 0.4.0 to 0.5.0 by @dependabot in https://github.com/AstarVienna/ScopeSim/pull/522
+* Bump nbsphinx from 0.9.3 to 0.9.6 by @dependabot in https://github.com/AstarVienna/ScopeSim/pull/526
+* Bump skycalc-ipy from 0.5.1 to 0.5.2 by @dependabot in https://github.com/AstarVienna/ScopeSim/pull/523
+* Bump jupyter from 1.0.0 to 1.1.1 by @dependabot in https://github.com/AstarVienna/ScopeSim/pull/530
+* Bump ipympl from 0.9.4 to 0.9.6 by @dependabot in https://github.com/AstarVienna/ScopeSim/pull/538
+* Bump jupytext from 1.16.0 to 1.16.6 by @dependabot in https://github.com/AstarVienna/ScopeSim/pull/541
+* Bump myst-nb from 1.1.2 to 1.2.0 by @dependabot in https://github.com/AstarVienna/ScopeSim/pull/558
+* Bump matplotlib from 3.8.2 to 3.10.1 by @dependabot in https://github.com/AstarVienna/ScopeSim/pull/577
+* Bump actions/download-artifact from 4.1.8 to 4.1.9 by @dependabot in https://github.com/AstarVienna/ScopeSim/pull/576
+* Bump jinja2 from 3.1.5 to 3.1.6 by @dependabot in https://github.com/AstarVienna/ScopeSim/pull/582
+### Documentation Improvements
+* Add bugfix label to auto release notes by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/562
+### Other Changes
+* make test_applies_dark_current_with_level_of_dit deterministic by @hugobuddel in https://github.com/AstarVienna/ScopeSim/pull/517
+* Add dependabot configuration by @hugobuddel in https://github.com/AstarVienna/ScopeSim/pull/518
+* Fix runnotebooks.sh by sorting the notebooks by @hugobuddel in https://github.com/AstarVienna/ScopeSim/pull/535
+* Add a few more `@pytest.mark.slow` markers by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/560
+* Generatorify `stringify_dict` function by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/563
+* Update dependabot.yml by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/578
+* fix fp mask emission by @oczoske in https://github.com/AstarVienna/ScopeSim/pull/583
+* Fine-tune dependabot config by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/591
+
+**Full Changelog**: https://github.com/AstarVienna/ScopeSim/compare/v0.9.1...v0.9.2
+
+
 # Version 0.9.1
 **2024-11-26**
 
