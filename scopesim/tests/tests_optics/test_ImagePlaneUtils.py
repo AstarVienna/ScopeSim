@@ -347,3 +347,26 @@ class TestSkyDetWCS:
         # Compare header representations because of missing NAXIS info in new
         assert new_wcs.to_header() == sky_wcs.to_header()
         assert all(nax == (hdu.header["NAXIS1"], hdu.header["NAXIS2"]))
+
+
+class TestWCSFromMinimalPoints:
+    def test_all_zero_points(self):
+        pnts = np.array([[0, 0]])
+        wcs, naxis = imp_utils.create_wcs_from_points(pnts, 5)
+        np.testing.assert_array_equal(naxis, [1, 1])
+        np.testing.assert_array_equal(wcs.wcs.crpix, [1, 1])
+        np.testing.assert_array_equal(wcs.wcs.crval, [0, 0])
+
+    def test_all_within_one_pixel(self):
+        pnts = np.array([[-1, -1], [-1, 1], [1, -1], [1, 1]])
+        wcs, naxis = imp_utils.create_wcs_from_points(pnts, 5)
+        np.testing.assert_array_equal(naxis, [1, 1])
+        np.testing.assert_array_equal(wcs.wcs.crpix, [1, 1])
+        np.testing.assert_array_equal(wcs.wcs.crval, [0, 0])
+
+    def test_all_within_one_pixel_along_one_axis(self):
+        pnts = np.array([[-3, 0], [-2, 0], [0, 0], [2, 0]])
+        wcs, naxis = imp_utils.create_wcs_from_points(pnts, 1)
+        np.testing.assert_array_equal(naxis, [5, 1])
+        np.testing.assert_array_equal(wcs.wcs.crpix, [3, 1])
+        np.testing.assert_array_equal(wcs.wcs.crval, [-0.5, 0])
