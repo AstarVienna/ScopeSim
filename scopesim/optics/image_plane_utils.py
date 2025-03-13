@@ -202,10 +202,10 @@ def create_wcs_from_points(points: np.ndarray,
                                         f"pix, got '{naxis.unit}' instead.")
         naxis = naxis.value
 
-    if (naxis == 0).all():
-        # Ensure at least one pixel.
+    if (naxis == 0).any():
+        # Ensure at least one pixel in each axis.
         logger.debug("NAXISn == 0, using minimum of 1.")
-        naxis = np.ones_like(naxis)
+        naxis[naxis == 0] = 1
 
     crpix = (naxis + 1) / 2
     crval = (points.min(axis=0) + points.max(axis=0)) / 2
