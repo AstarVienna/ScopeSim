@@ -157,10 +157,9 @@ class FieldOfView(FieldOfViewBase):
         else:
             logger.debug("%d fields in FOV", len(fields_in_fov))
 
-        volume = self.get_volume()
-        corners, _ = self.get_corners("arcsec")
-        minmax = array_minmax(corners) * u.arcsec
-        waves = volume["waves"]
+        corners_arcsec, _ = self.get_corners("arcsec")
+        corners_deg, _ = self.get_corners("deg")
+        minmax = array_minmax(corners_arcsec) * u.arcsec
 
         # TODO: Not sure why it's necessary to recreate the fields here, but
         #       perhasps for multi-fov instruments?
@@ -185,13 +184,12 @@ class FieldOfView(FieldOfViewBase):
                 )
                 self.fields.append(new_fld)
                 for ref, spec in new_fld.spectra.items():
-                    extracted = extract_range_from_spectrum(spec, waves)
+                    extracted = extract_range_from_spectrum(spec, self.waverange)
                     self.spectra[ref] = extracted
 
             # HACK: Remove the NAXIS check once BackgroundSourceField exists!
-            #       Or maybe not, depending on the WCU background stuff...
             elif isinstance(field, ImageSourceField) and field.header["NAXIS"] == 2:
-                extracted = self.extract_area_from_imagehdu(field.field, volume)
+                extracted = self.extract_area_from_imagehdu(field.field, corners_deg)
                 replace_nans(extracted, self.cmds)
                 new_fld = ImageSourceField(
                     field=extracted,
@@ -200,10 +198,10 @@ class FieldOfView(FieldOfViewBase):
                 self.fields.append(new_fld)
                 # ImageField has only one spectrum
                 (ref, spec), = new_fld.spectra.items()
-                self.spectra[ref] = extract_range_from_spectrum(spec, waves)
+                self.spectra[ref] = extract_range_from_spectrum(spec, self.waverange)
 
             elif isinstance(field, CubeSourceField) and field.header["NAXIS"] == 3:
-                extracted = self.extract_area_from_imagehdu(field.field, volume)
+                extracted = self.extract_area_from_imagehdu(field.field, corners_deg)
                 replace_nans(extracted, self.cmds)
                 new_fld = CubeSourceField(field=extracted)
                 self.fields.append(new_fld)
@@ -211,7 +209,7 @@ class FieldOfView(FieldOfViewBase):
             else:  # basically BackgroundSourceFields
                 self.fields.append(field)
                 for ref, spec in field.spectra.items():
-                    extracted = extract_range_from_spectrum(spec, waves)
+                    extracted = extract_range_from_spectrum(spec, self.waverange)
                     self.spectra[ref] = extracted
 
     def view(
@@ -299,19 +297,16 @@ class FieldOfView(FieldOfViewBase):
                 (table["y"].quantity < minmax[1, 1]))
         return table[mask]
 
-    # TODO: update docstring
-    def extract_area_from_imagehdu(self, imagehdu, fov_volume):
+    def extract_area_from_imagehdu(self, imagehdu, corners):
         """
-        Extract the part of a ``ImageHDU`` that fits inside the `fov_volume`.
+        Extract the part of a ``ImageHDU`` that fits inside the FOV volume.
 
         Parameters
         ----------
         imagehdu : fits.ImageHDU
-            The field ImageHDU, either an image or a cube with wavelength [um]
-        fov_volume : dict
-            Contains {"xs": [xmin, xmax], "ys": [ymin, ymax],
-                      "waves": [wave_min, wave_max],
-                      "xy_unit": "deg" or "mm", "wave_unit": "um"}
+            The field ImageHDU, either an image or a cube with wavelength [um].
+        corners : quantity
+            From FOV corners in deg.
 
         Returns
         -------
@@ -329,24 +324,12 @@ class FieldOfView(FieldOfViewBase):
         elif image_wcs.wcs.cunit[0] == "arcsec":
             logger.debug("Found 'arcsec' in image WCS, converting to deg.")
             xy_hdu *= u.arcsec.to(u.deg)
+
         logger.debug("XY HDU:\n%s", xy_hdu)
+        logger.debug("XY FOV:\n%s", corners)
 
-        xy_fov = np.array([fov_volume["xs"], fov_volume["ys"]]).T
-        # TODO: I'm putting this check here to see if this creeps up anywhere.
-        #       If it doesn't, remove the check and just use corners.
-        #       Find out if the arcsec check below is actually needed or if we
-        #       can maybe include units in the corners...
-        corners, _ = self.get_corners("deg")
-        assert (xy_fov.min(axis=0) == corners.min(axis=0)).all(), "Gotcha"
-        assert (xy_fov.max(axis=0) == corners.max(axis=0)).all(), "Gotcha"
-
-        if fov_volume["xs"].unit == "arcsec":
-            xy_fov *= u.arcsec.to(u.deg)
-
-        logger.debug("XY FOV:\n%s", xy_fov)
-
-        xy0s = np.array((xy_hdu.min(axis=0), xy_fov.min(axis=0))).max(axis=0)
-        xy1s = np.array((xy_hdu.max(axis=0), xy_fov.max(axis=0))).min(axis=0)
+        xy0s = np.array((xy_hdu.min(axis=0), corners.min(axis=0))).max(axis=0)
+        xy1s = np.array((xy_hdu.max(axis=0), corners.max(axis=0))).min(axis=0)
 
         # Round to avoid floating point madness
         xyp = image_wcs.wcs_world2pix(np.array([xy0s, xy1s]), 0).round(7)
@@ -889,20 +872,6 @@ class FieldOfView(FieldOfViewBase):
                                        "CTYPE3": "WAVE"})
         # ..todo: Add the log wavelength keyword here, if log scale is needed
         return canvas_cube_hdu      # [ph s-1 AA-1 (arcsec-2)]
-
-    def get_volume(self, wcs_prefix=""):
-        xy = imp_utils.calc_footprint(self.header, wcs_suffix=wcs_prefix)
-        # TODO: Add check for equal units across axis (there's a function for
-        #       this somewhere already...)
-        unit = u.Unit(self.header[f"CUNIT1{wcs_prefix}"].lower())
-        minmax = array_minmax(xy) * unit
-        # FIXME: Setting a private attribute and then returning is is smelly.
-        self._volume = {
-            "xs": minmax[:, 0],
-            "ys": minmax[:, 1],
-            "waves": self.waverange,
-        }
-        return self._volume
 
     @property
     def data(self):

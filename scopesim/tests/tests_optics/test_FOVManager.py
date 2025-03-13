@@ -38,11 +38,11 @@ class TestGenerateFovList:
         effects = eo._mvs_effects_list()
         fov_man = FOVManager(effects=effects, pixel_scale=1, plate_scale=1)
         fovs = list(fov_man.generate_fovs_list())
-        fov_volume = fovs[0].get_volume()
+        fov_skycorners, _ = fovs[0].get_corners("deg")
 
         assert len(fovs) == 1
-        assert fov_volume["xs"][0].value == approx(-1024 / 3600)  # [deg] 2k detector / pixel_scale
-        assert fov_volume["waves"][0] == 0.6 * u.um  # filter blue edge
+        assert fov_skycorners.min(axis=0)[0] == approx(-1024 / 3600)  # [deg] 2k detector / pixel_scale
+        assert fovs[0].waverange[0] == 0.6 * u.um  # filter blue edge
 
     @pytest.mark.parametrize("chunk_size, n_fovs",
                              [(500, 25), (512, 16), (1000, 9), (1024, 4)])
@@ -51,11 +51,11 @@ class TestGenerateFovList:
         fov_man = FOVManager(effects=effects, pixel_scale=1, plate_scale=1,
                              max_segment_size=1024**2, chunk_size=1024)
         fovs = list(fov_man.generate_fovs_list())
-        fov_volume = fovs[0].get_volume()
+        fov_skycorners, _ = fovs[0].get_corners("deg")
 
         assert len(fovs) == 4
-        assert fov_volume["xs"][0].value == approx(-1024 / 3600)  # [deg] 2k detector / pixel_scale
-        assert fov_volume["waves"][0] == 0.6 * u.um  # filter blue edge
+        assert fov_skycorners.min(axis=0)[0] == approx(-1024 / 3600)  # [deg] 2k detector / pixel_scale
+        assert fovs[0].waverange[0] == 0.6 * u.um  # filter blue edge
 
     def test_fov_volumes_have_detector_dimensions_from_detector_list(self):
         effects = eo._mvs_effects_list()

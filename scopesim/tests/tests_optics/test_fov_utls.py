@@ -33,7 +33,7 @@ class TestExtractAreaFromImageHDU:
                                              basic_fov_header):
         fov = FieldOfView(basic_fov_header, [0.5, 2.5])
         field = cube_source.fields[0]
-        new_field = fov.extract_area_from_imagehdu(field, fov.get_volume())
+        new_field = fov.extract_area_from_imagehdu(field, fov.get_corners("deg")[0])
 
         if PLOTS:
             xy = imp_utils.calc_footprint(basic_fov_header)
@@ -56,7 +56,7 @@ class TestExtractAreaFromImageHDU:
                                                       basic_fov_header):
         fov = FieldOfView(basic_fov_header, [1.3, 1.7])
         field = cube_source.fields[0]
-        new_field = fov.extract_area_from_imagehdu(field, fov.get_volume())
+        new_field = fov.extract_area_from_imagehdu(field, fov.get_corners("deg")[0])
 
         if PLOTS:
             xy = imp_utils.calc_footprint(basic_fov_header)
@@ -82,7 +82,7 @@ class TestExtractAreaFromImageHDU:
         hdr["CRVAL2"] += 75 * hdr["CDELT2"]
         fov = FieldOfView(hdr, [1.5, 2.5])
         field = cube_source.fields[0]
-        new_field = fov.extract_area_from_imagehdu(field, fov.get_volume())
+        new_field = fov.extract_area_from_imagehdu(field, fov.get_corners("deg")[0])
 
         if PLOTS:
             xy = imp_utils.calc_footprint(basic_fov_header)
