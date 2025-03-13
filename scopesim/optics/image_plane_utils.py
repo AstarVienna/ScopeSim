@@ -210,21 +210,23 @@ def create_wcs_from_points(points: np.ndarray,
     crpix = (naxis + 1) / 2
     crval = (points.min(axis=0) + points.max(axis=0)) / 2
 
-    ctype = "LINEAR" if wcs_suffix in "DX" else "RA---TAN"
+    # Cannot do `in "DX"` here because that would also match the empty string.
+    linsuff = {"D", "X"}
+    lintype = ["LINEAR", "LINEAR"]
+    # skytype = ["RA---TAN", "DEC--TAN"]  # ScopeSim can't handle the truth yet
+    skytype = ["LINEAR", "LINEAR"]
+    ctype = lintype if wcs_suffix in linsuff else skytype
 
     if isinstance(points, u.Quantity):
         cunit = points.unit
     else:
-        if wcs_suffix == "D":
-            cunit = "mm"
-        else:
-            cunit = "deg"
+        cunit = "mm" if wcs_suffix == "D" else "deg"
 
     if isinstance(pixel_scale, u.Quantity):
         pixel_scale = pixel_scale.value
 
     new_wcs = WCS(key=wcs_suffix)
-    new_wcs.wcs.ctype = 2 * [ctype]
+    new_wcs.wcs.ctype = ctype
     new_wcs.wcs.cunit = 2 * [cunit]
     new_wcs.wcs.cdelt = np.array(2 * [pixel_scale])
     new_wcs.wcs.crval = crval
