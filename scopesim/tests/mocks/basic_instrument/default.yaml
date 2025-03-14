@@ -1,8 +1,7 @@
 # Default config file for setting up the instrument
-object: configuration
-alias : OBS
-name : test_instrument
-description : default parameters needed for a basic simulation
+alias: PKG
+name: test_instrument
+description: default parameters needed for a basic simulation
 status: development
 
 packages :
@@ -13,14 +12,6 @@ yamls :
   - YAML_telescope.yaml          # telescope effects and properties
   - YAML_basic_instrument.yaml   # common instrument effects and properties
   - YAML_detector.yaml           # electronic and detector effects and properties
-
-properties :
-  instrument: "basic_instrument"
-  psf_fwhm: 1.5             # [arcsec]
-  modes : ["imaging"]       # default mode name
-  dit: 60
-  ndit: 1
-  slit_name : "narrow"
 
 mode_yamls :
 - name : imaging
@@ -70,3 +61,13 @@ mode_yamls :
   description: Dummy mode to test deprecated status with message.
   status: deprecated
   deprecate: This mode is deprecated.
+
+---
+alias: OBS
+properties:
+  instrument: "basic_instrument"
+  psf_fwhm: 1.5             # [arcsec]
+  modes: ["imaging"]       # default mode name
+  dit: 60
+  ndit: 1
+  slit_name: "narrow"

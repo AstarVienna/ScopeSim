@@ -1,27 +1,32 @@
 # Instrument
-object : observation
-alias : OBS
-name : test_instrument
+alias: PKG
+name: test_package
+status: production
 
-packages :
-- test_package
+packages:
+  - test_package
 
-yamls :
-- test_package.yaml
-- test_telescope.yaml
-- test_instrument.yaml
-- test_detector.yaml
+yamls:
+  - test_package.yaml
+  - test_telescope.yaml
+  - test_instrument.yaml
+  - test_detector.yaml
 
-properties :
-  airmass : 1.
-  modes : ["mode_1", "mode_2"]
 
-mode_yamls :
-- name : mode_1
-  alias: OBS
-  properties :
-    airmass : 2.
+mode_yamls:
+  - name: mode_1
+    alias: OBS
+    properties:
+      airmass: 2.
 
-- name : mode_2
-  yamls :
-  - test_mode_2.yaml
+  - name: mode_2
+    alias: OBS
+    yamls:
+    - test_mode_2.yaml
+
+---
+alias: OBS
+name: default_obs_properties
+properties:
+  airmass: 1.
+  modes: ["mode_1", "mode_2"]
