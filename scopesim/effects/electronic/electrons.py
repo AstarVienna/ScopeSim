@@ -102,6 +102,7 @@ class ADConversion(Effect):
         super().__init__(**kwargs)
         params = {
             "dtype": "uint16",
+            "gain": 1.
         }
         self.meta.update(params)
         self.meta.update(kwargs)
@@ -164,6 +165,6 @@ class ADConversion(Effect):
         # set to the modified data. It should be fine to simply re-assign the
         # data attribute, but just in case it's not...
         logger.info("Applying digitization to dtype %s.", new_dtype)
-        obj._hdu.data = np.floor(obj._hdu.data).astype(new_dtype)
+        obj._hdu.data = obj._hdu.data.astype(new_dtype)
 
         return obj
