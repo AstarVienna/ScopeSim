@@ -2,7 +2,7 @@
 """Effects related to the conversion of photons into electrons.
 
    - LinearityCurve: Detector linearity
-   - Quantization:   Conversion from electrons to ADU
+   - ADConversion:   Conversion from electrons to ADU
 
 Related effects:
    - QuantumEfficiencyCurve: can be found in ter_curves.py
@@ -14,7 +14,8 @@ import numpy as np
 
 from .. import Effect
 from ...base_classes import DetectorBase
-from ...utils import from_currsys, figure_factory, check_keys
+from ...utils import figure_factory, check_keys
+from ...utils import from_currsys, real_colname
 from . import logger
 
 
@@ -88,46 +89,67 @@ class LinearityCurve(Effect):
         return fig
 
 
-class Quantization(Effect):
-    """Converts raw data to whole photons."""
+class ADConversion(Effect):
+    """Analogue-Digital Conversion effect.
+
+    The effect applies the gain to convert from electrons to ADU
+    and converts the output to the desired data type (e.g. uint16).
+    """
 
     z_order: ClassVar[tuple[int, ...]] = (825,)
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         params = {
-            "dtype": "uint32",
+            "dtype": "uint16",
         }
         self.meta.update(params)
         self.meta.update(kwargs)
 
     def _should_apply(self) -> bool:
+        """Check cases where the effect should not be applied"""
         if self.cmds is None:
-            logger.warning("Cannot access cmds for Quantization effect.")
+            logger.warning("Cannot access cmds for ADConversion effect.")
             return True
-
+        print(f"AUTOEXPSET: {self.cmds.get("!OBS.autoexpset", False)}")
+        # ..todo: need to deal with this case more realistically
         if self.cmds.get("!OBS.autoexpset", False):
-            logger.debug("DIT, NDIT determined by AutoExposure -> "
-                         "quantization is not applied.")
+            logger.info("DIT, NDIT determined by AutoExposure -> "
+                        "Create float32 output.")
             return False
 
         if self.cmds["!OBS.ndit"] > 1:
-            logger.debug("NDIT set to 1 -> quantization is not applied.")
+            logger.info("NDIT larger than 1 -> Create float32 output.")
             return False
 
         return True
 
     def apply_to(self, obj, **kwargs):
+        print("Entering ADConversion.apply_to")
         if not isinstance(obj, DetectorBase):
             return obj
 
         if not self._should_apply():
-            return obj
-
-        new_dtype = self.meta["dtype"]
+            new_dtype = np.float32
+        else:
+            new_dtype = self.meta["dtype"]
         if not np.issubdtype(new_dtype, np.integer):
-            logger.warning("Setting quantized data to dtype %s, which is not "
+            logger.warning("Setting digitized data to dtype %s, which is not "
                            "an integer subtype.", new_dtype)
+
+        # TODO: Apply the gain value (copy from DarkCurrent)
+        logger.info(f"Applying gain {from_currsys(self.meta['gain'], self.cmds)}")
+        if isinstance(from_currsys(self.meta["gain"], self.cmds), dict):
+            dtcr_id = obj.meta[real_colname("id", obj.meta)]
+            gain = from_currsys(self.meta["gain"][dtcr_id], self.cmds)
+        elif isinstance(from_currsys(self.meta["gain"], self.cmds), (float, int)):
+            gain = from_currsys(self.meta["gain"], self.cmds)
+        else:
+            raise ValueError("<ADConversion>.meta['gain'] must be either "
+                             f"dict or float, but is {self.meta['gain']}")
+
+        # Apply gain   TODO: option to turn this off
+        obj._hdu.data /= gain
 
         # Remove values below 0, because for unsigned types these get wrapped
         # around to MAXINT, which is even worse than negative values.
@@ -135,13 +157,13 @@ class Quantization(Effect):
         if np.issubdtype(new_dtype, np.unsignedinteger):
             negvals_mask = obj._hdu.data < 0
             if negvals_mask.any():
-                logger.warning(f"Effect Quantization: {negvals_mask.sum()} negative pixels")
+                logger.warning(f"Effect ADConversion: {negvals_mask.sum()} negative pixels")
                 obj._hdu.data[negvals_mask] = 0
 
         # This used to create a new ImageHDU with the same header but the data
         # set to the modified data. It should be fine to simply re-assign the
         # data attribute, but just in case it's not...
-        logger.debug("Applying quantization to dtype %s.", new_dtype)
+        logger.info("Applying digitization to dtype %s.", new_dtype)
         obj._hdu.data = np.floor(obj._hdu.data).astype(new_dtype)
 
         return obj
