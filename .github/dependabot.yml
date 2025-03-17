@@ -1,0 +1,42 @@
+# To get started with Dependabot version updates, you'll need to specify which
+# package ecosystems to update and where the package manifests are located.
+# Please see the documentation for all configuration options:
+# https://docs.github.com/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
+
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    ignore:
+      # For all packages, ignore all patch updates, the "version-update" only targets non-security related updates
+      - dependency-name: "*"
+        update-types: ["version-update:semver-patch"]
+
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    labels:
+      - "dependencies"
+    ignore:
+      # For all packages, ignore all patch updates, the "version-update" only targets non-security related updates
+      - dependency-name: "*"
+        update-types: ["version-update:semver-patch"]
+    groups:
+      internal-dependencies:
+        applies-to: version-updates
+        patterns:
+          - "astar*"
+          - "scopesim*"
+          - "spextra"
+          - "skycalc-ipy"
+          - "anisocado*"
+      main-dependencies:
+        # Applies to all dependencies defined in the main section of pyproject.toml
+        applies-to: version-updates
+        dependency-type: "production"
+        update-types:
+          - "major"
+          - "minor"

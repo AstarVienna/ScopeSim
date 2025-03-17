@@ -136,6 +136,9 @@ def deriv_polynomial2d(poly):
 
 def _get_required_packages():
     reqs = metadata.requires(__package__)
+    # metadata.requires can return None if the package metadata cannot be found
+    if reqs is None:
+        return []
     for req in reqs:
         # Only include non-extra packages
         if "extra" in req:
@@ -270,7 +273,7 @@ def find_file(filename, path=None, silent=False):
 
     # TODO: Not sure what to do here
     if from_currsys("!SIM.file.error_on_missing_file"):
-        raise ValueError(msg)
+       raise ValueError(msg)
 
     return None
 
@@ -496,14 +499,13 @@ def has_needed_keywords(header, suffix=""):
     return all(key in header.keys() for key in keys)
 
 
-def stringify_dict(dic, ignore_types=(str, int, float)):
+def stringify_dict(dic, ignore_types=(str, int, float, bool)):
     """Turn a dict entries into strings for addition to FITS headers."""
-    dic_new = deepcopy(dic)
-    for key in dic_new:
-        if not isinstance(dic_new[key], ignore_types):
-            dic_new[key] = str(dic_new[key])
-
-    return dic_new
+    for key, value in dic.items():
+        if isinstance(value, ignore_types):
+            yield key, value
+        else:
+            yield key, str(value)
 
 
 def from_currsys(item, cmds=None):
@@ -697,19 +699,10 @@ def top_level_catch(func):
 
 
 def update_logging(capture_warnings=True):
-    """Reload logging configuration from ``rc.__config__``."""
+    """Reload logging configuration from ``rc.__logging_config__``."""
     # Need to access NestedMapping's internal dict here...
-    # HACK: remove this try-except after updating the minimum astar-utils version...
-    try:
-        dictConfig(rc.__config__["!SIM.logging"].dic)
-    except AttributeError:
-        dictConfig(rc.__config__["!SIM.logging"])
+    dictConfig(rc.__logging_config__)
     logging.captureWarnings(capture_warnings)
-
-    # This cannot be in the dict config (yet) because NestedMapping doesn't like
-    #   "." in keys (yet) ...
-    # Set the "astar.scopesim" logger
-    get_logger(__package__).setLevel(logging.DEBUG)
 
 
 def log_to_file(enable=True):
@@ -719,7 +712,7 @@ def log_to_file(enable=True):
     else:
         handlers = ["console"]
 
-    rc.__config__["!SIM.logging.loggers.astar.handlers"] = handlers
+    rc.__logging_config__["loggers"]["astar"]["handlers"] = handlers
     update_logging()
 
 
@@ -729,5 +722,62 @@ def set_console_log_level(level="INFO"):
     This controls what is actually printed to the console by ScopeSim.
     Accepted values are: DEBUG, INFO (default), WARNING, ERROR and CRITICAL.
     """
-    rc.__config__["!SIM.logging.handlers.console.level"] = level
+    rc.__logging_config__["handlers"]["console"]["level"] = level
     update_logging()
+
+
+def seq(start, stop, step=1):
+    """Replacement for numpy.arange modelled after R's seq function.
+
+    Returns an evenly spaced sequence from start to stop. stop is
+    included if the difference between start and stop is an integer
+    multiple of step.  From the documentation of numpy.range: "When
+    using a non-integer step, such as 0.1, the results will often not
+    be consistent." This replacement aims to avoid these
+    inconsistencies.
+
+    Parameters
+    ----------
+    start, stop: [int, float]
+        the starting and (maximal) end values of the sequence.
+    step : [int, float]
+        increment of the sequence, defaults to 1
+
+    """
+    feps = 1e-10  # value used in R seq.default
+    delta = stop - start
+
+    if delta == 0 and stop == 0:
+        return stop
+
+    try:
+        npts = delta / step
+    except ZeroDivisionError:
+        if step == 0 and delta == 0:
+            return start
+        raise ValueError("invalid '(stop - start) / step'")
+
+    if npts < 0:
+        raise ValueError("wrong sign in 'step' argument")
+
+    if npts > sys.maxsize:
+        raise ValueError("'step' argument is much too small")
+
+    reldd = abs(delta) / max(abs(stop), abs(start))
+
+    if reldd < 100 * sys.float_info.epsilon:
+        return start
+
+    if isinstance(delta, int) and isinstance(step, int):
+        # integer sequence
+        npts = int(npts)
+        return start + np.asarray(range(npts + 1)) * step
+
+    npts = int(npts + feps)
+    sequence = start + np.asarray(range(npts + 1)) * step
+
+    # correct for possible overshot because of fuzz (from seq.R)
+    if step > 0:
+        return np.minimum(sequence, stop)
+    else:
+        return np.maximum(sequence, stop)

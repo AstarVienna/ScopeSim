@@ -228,29 +228,29 @@ class TestOverlayImage:
 
 
 class TestRescaleImageHDU:
-    @pytest.mark.parametrize("scale_factor", [0.3, 0.5, 1, 2, 3])
-    def test_rescales_a_2D_imagehdu(self, scale_factor):
+    @pytest.mark.parametrize("pixel_scale", [0.3, 0.5, 1, 2, 3])
+    def test_rescales_a_2D_imagehdu(self, pixel_scale):
         hdu0 = imo._image_hdu_rect()
-        hdu1 = imp_utils.rescale_imagehdu(deepcopy(hdu0), scale_factor)#/3600)
+        hdu1 = imp_utils.rescale_imagehdu(deepcopy(hdu0), pixel_scale)#/3600)
 
         hdr0 = hdu0.header
         hdr1 = hdu1.header
 
-        assert hdr1["NAXIS1"] == np.ceil(hdr0["NAXIS1"] / scale_factor)
-        assert hdr1["NAXIS2"] == np.ceil(hdr0["NAXIS2"] / scale_factor)
+        assert hdr1["NAXIS1"] == np.ceil(hdr0["NAXIS1"] / pixel_scale)
+        assert hdr1["NAXIS2"] == np.ceil(hdr0["NAXIS2"] / pixel_scale)
 
-    @pytest.mark.parametrize("scale_factor", [0.3, 0.5, 1, 2, 3])
-    def test_rescales_a_3D_imagehdu(self, scale_factor):
+    @pytest.mark.parametrize("pixel_scale", [0.3, 0.5, 1, 2, 3])
+    def test_rescales_a_3D_imagehdu(self, pixel_scale):
         hdu0 = imo._image_hdu_rect()
         hdu0.data = hdu0.data[None, :, :] * np.ones(5)[:, None, None]
-        hdu1 = imp_utils.rescale_imagehdu(deepcopy(hdu0), scale_factor)#/3600)
+        hdu1 = imp_utils.rescale_imagehdu(deepcopy(hdu0), pixel_scale)#/3600)
 
         hdr0 = hdu0.header
         hdr1 = hdu1.header
 
         assert np.sum(hdu0.data) == approx(np.sum(hdu1.data))
-        assert hdr1["NAXIS1"] == np.ceil(hdr0["NAXIS1"] / scale_factor)
-        assert hdr1["NAXIS2"] == np.ceil(hdr0["NAXIS2"] / scale_factor)
+        assert hdr1["NAXIS1"] == np.ceil(hdr0["NAXIS1"] / pixel_scale)
+        assert hdr1["NAXIS2"] == np.ceil(hdr0["NAXIS2"] / pixel_scale)
         assert hdr1["NAXIS3"] == hdr0["NAXIS3"]
 
 
@@ -347,3 +347,26 @@ class TestSkyDetWCS:
         # Compare header representations because of missing NAXIS info in new
         assert new_wcs.to_header() == sky_wcs.to_header()
         assert all(nax == (hdu.header["NAXIS1"], hdu.header["NAXIS2"]))
+
+
+class TestWCSFromMinimalPoints:
+    def test_all_zero_points(self):
+        pnts = np.array([[0, 0]])
+        wcs, naxis = imp_utils.create_wcs_from_points(pnts, 5)
+        np.testing.assert_array_equal(naxis, [1, 1])
+        np.testing.assert_array_equal(wcs.wcs.crpix, [1, 1])
+        np.testing.assert_array_equal(wcs.wcs.crval, [0, 0])
+
+    def test_all_within_one_pixel(self):
+        pnts = np.array([[-1, -1], [-1, 1], [1, -1], [1, 1]])
+        wcs, naxis = imp_utils.create_wcs_from_points(pnts, 5)
+        np.testing.assert_array_equal(naxis, [1, 1])
+        np.testing.assert_array_equal(wcs.wcs.crpix, [1, 1])
+        np.testing.assert_array_equal(wcs.wcs.crval, [0, 0])
+
+    def test_all_within_one_pixel_along_one_axis(self):
+        pnts = np.array([[-3, 0], [-2, 0], [0, 0], [2, 0]])
+        wcs, naxis = imp_utils.create_wcs_from_points(pnts, 1)
+        np.testing.assert_array_equal(naxis, [5, 1])
+        np.testing.assert_array_equal(wcs.wcs.crpix, [3, 1])
+        np.testing.assert_array_equal(wcs.wcs.crval, [-0.5, 0])

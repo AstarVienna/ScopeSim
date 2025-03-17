@@ -8,6 +8,8 @@ Related effects:
    - QuantumEfficiencyCurve: can be found in ter_curves.py
 """
 
+from typing import ClassVar
+
 import numpy as np
 
 from .. import Effect
@@ -48,15 +50,12 @@ class LinearityCurve(Effect):
     """
 
     required_keys = {"ndit"}
+    z_order: ClassVar[tuple[int, ...]] = (840,)
+    report_plot_include: ClassVar[bool] = True
+    report_table_include: ClassVar[bool] = False
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        params = {
-            "z_order": [840],
-            "report_plot_include": True,
-            "report_table_include": False,
-        }
-        self.meta.update(params)
         self.meta.update(kwargs)
 
         check_keys(self.meta, self.required_keys, action="error")
@@ -97,10 +96,11 @@ class ADConversion(Effect):
     and converts the output to the desired data type (e.g. uint16).
     """
 
+    z_order: ClassVar[tuple[int, ...]] = (825,)
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         params = {
-            "z_order": [825],
             "dtype": "uint16",
         }
         self.meta.update(params)

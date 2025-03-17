@@ -1,4 +1,5 @@
 """Test a basic instrument setup"""
+# -*- coding: utf-8 -*-
 import pytest
 
 import numpy as np
@@ -44,6 +45,7 @@ class TestLoadsOpticalTrain:
         assert opt["#slit_wheel.current_slit!"] == "narrow"
 
 
+@pytest.mark.slow
 @pytest.mark.usefixtures("protect_currsys", "patch_all_mock_paths")
 class TestObserveImagingMode:
     def test_runs(self):
@@ -67,6 +69,7 @@ class TestObserveImagingMode:
         assert det_im[505:520, 505:520].sum() > 3e6
 
 
+@pytest.mark.slow
 @pytest.mark.usefixtures("protect_currsys", "patch_all_mock_paths")
 class TestObserveSpectroscopyMode:
     """
@@ -117,6 +120,35 @@ class TestObserveSpectroscopyMode:
             assert round(trace_flux / spot_flux) == n
 
 
+@pytest.mark.usefixtures("protect_currsys", "patch_all_mock_paths")
+class TestSourceImageNotAffected:
+    """
+    Test that an ImageHDU source object is not altered during a (spectroscopic) observation
+    where the source is applied to multiple FOVs via FieldOfView._make_cube_imagefields()
+    """
+
+    @pytest.mark.slow
+    def test_runs(self):
+        src = st.uniform_source()
+        src_int = np.mean(src.fields[0].field.data) # original source image intensity
+
+        cmd = sim.UserCommands(
+            use_instrument="basic_instrument",
+            set_modes=["spectroscopy"],
+            ignore_effects=SWITCHOFF,
+        )
+        opt = sim.OpticalTrain(cmd)
+
+        opt.observe(src)
+
+        # iterated through multiple FOVs?
+        assert len(opt.fov_manager.fovs) > 1
+        # source and fov.field objects not altered by observe()?
+        assert np.mean(src.fields[0].field.data) == src_int
+        assert np.mean(opt.fov_manager.fovs[0].fields[0].data) == src_int
+
+
+@pytest.mark.slow
 @pytest.mark.usefixtures("protect_currsys", "patch_all_mock_paths")
 class TestObserveIfuMode:
     def test_runs(self):
@@ -201,6 +233,57 @@ class TestFitsHeader:
         assert hdr["ESO ATM SEEING"] == opt.cmds["!OBS.psf_fwhm"]
 
 
+@pytest.mark.usefixtures("protect_currsys", "patch_all_mock_paths")
+class TestModeStatus:
+    def test_concept_mode_init(self):
+        with pytest.raises(NotImplementedError):
+            _ = sim.UserCommands(use_instrument="basic_instrument",
+                                 set_modes=["mock_concept_mode"])
+
+    def test_concept_mode_change(self):
+        cmd = sim.UserCommands(use_instrument="basic_instrument")
+        with pytest.raises(NotImplementedError):
+            cmd.set_modes("mock_concept_mode")
+
+    def test_experimental_mode_init(self, caplog):
+        _ = sim.UserCommands(use_instrument="basic_instrument",
+                             set_modes=["mock_experimental_mode"])
+        assert ("Mode 'mock_experimental_mode' is still in experimental stage"
+                in caplog.text)
+
+    def test_experimental_mode_change(self, caplog):
+        cmd = sim.UserCommands(use_instrument="basic_instrument")
+        cmd.set_modes("mock_experimental_mode")
+        assert ("Mode 'mock_experimental_mode' is still in experimental stage"
+                in caplog.text)
+
+    def test_deprecated_mode_init(self):
+        with pytest.raises(
+                DeprecationWarning,
+                match="Instrument mode 'mock_deprecated_mode' is deprecated."):
+            _ = sim.UserCommands(use_instrument="basic_instrument",
+                                 set_modes=["mock_deprecated_mode"])
+
+    def test_deprecated_mode_change(self):
+        cmd = sim.UserCommands(use_instrument="basic_instrument")
+        with pytest.raises(
+                DeprecationWarning,
+                match="Instrument mode 'mock_deprecated_mode' is deprecated."):
+            cmd.set_modes("mock_deprecated_mode")
+
+    def test_deprecated_msg_mode_init(self):
+        with pytest.raises(
+                DeprecationWarning, match="This mode is deprecated."):
+            _ = sim.UserCommands(use_instrument="basic_instrument",
+                                 set_modes=["mock_deprecated_mode_msg"])
+
+    def test_deprecated_msg_mode_change(self, caplog):
+        cmd = sim.UserCommands(use_instrument="basic_instrument")
+        with pytest.raises(
+                DeprecationWarning, match="This mode is deprecated."):
+            cmd.set_modes("mock_deprecated_mode_msg")
+
+
 @pytest.fixture(scope="function", name="obs")
 def basic_opt_observed():
     src = st.star(flux=15)
@@ -281,8 +364,7 @@ class TestDitNdit:
         assert adconverter._should_apply() == adconvert
 
     @pytest.mark.parametrize(("exptime", "factor"),
-                             [(20, 2), (30, 3),
-                              pytest.param(None, 6, marks=pytest.mark.xfail(reason="A.E. doesn't understand None yet."))])
+                             [(20, 2), (30, 3), (None, 6)])
     def test_autoexp(self, obs_aeq, exptime, factor):
         """This should prioritize kwargs and fallback to !OBS."""
         opt, default, adconverter = obs_aeq
@@ -294,7 +376,8 @@ class TestDitNdit:
         assert not adconverter._should_apply()
         opt.cmds["!OBS.dit"] = o_dit
         opt.cmds["!OBS.ndit"] = o_ndit
-        assert int(kwarged / default) == factor
+        # Quantization results in ~4% loss, which is fine:
+        assert pytest.approx(kwarged / default, rel=.05) == factor
 
     @pytest.mark.parametrize(("exptime", "factor", "adconvert"),
                              [(30, 3, False),
@@ -310,6 +393,7 @@ class TestDitNdit:
     @pytest.mark.parametrize(("dit", "ndit", "factor", "adconvert"),
                              [pytest.param(90, 1, 90, True, marks=pytest.mark.xfail(reason="S.E. doesn't get kwargs.")),
                               pytest.param(2, 90, 180, False, marks=pytest.mark.xfail(reason="S.E. doesn't get kwargs."))])
+
     def test_ditndit_in_kwargs_while_also_having_autoexp(
             self, obs_aeq, dit, ndit, factor, adconvert):
         """This should prioritize dit, ndit from kwargs."""
@@ -321,6 +405,7 @@ class TestDitNdit:
     @pytest.mark.parametrize(("dit", "ndit", "exptime", "factor", "adconvert"),
                              [pytest.param(90, 1, None, 90, True, marks=pytest.mark.xfail(reason="S.E. doesn't get kwargs.")),
                               pytest.param(2, 90, 20, 180, False, marks=pytest.mark.xfail(reason="S.E. doesn't get kwargs."))])
+
     def test_ditndit_in_kwargs_while_also_having_autoexp_and_exptime(
             self, obs_aeq, dit, ndit, exptime, factor, adconvert):
         """This should prioritize dit, ndit from kwargs and ignore exptime."""
@@ -339,7 +424,7 @@ class TestDitNdit:
         opt.cmds["!OBS.dit"] = None
         opt.cmds["!OBS.ndit"] = None
         with pytest.raises(ValueError):
-            opt.readout()
+            opt.readout(reset=False)
         opt.cmds["!OBS.dit"] = o_dit
         opt.cmds["!OBS.ndit"] = o_ndit
 
@@ -348,7 +433,7 @@ class TestDitNdit:
         opt, default, adconverter = obs
         opt.cmds["!OBS.exptime"] = None
         with pytest.raises(ValueError):
-            opt.readout(exptime=60)
+            opt.readout(exptime=60, reset=False)
 
     def test_throws_for_no_ditndit_no_autoexp_obs(self, obs):
         """This should fallback to !OBS.exptime, but fail w/o AutoExp."""
@@ -359,6 +444,6 @@ class TestDitNdit:
         opt.cmds["!OBS.dit"] = None
         opt.cmds["!OBS.ndit"] = None
         with pytest.raises(ValueError):
-            opt.readout()
+            opt.readout(reset=False)
         opt.cmds["!OBS.dit"] = o_dit
         opt.cmds["!OBS.ndit"] = o_ndit

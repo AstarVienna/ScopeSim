@@ -1,0 +1,17 @@
+# description : WCU focal plane mask, pinhole
+# author : Oliver Czoske
+# source : ...
+# date_created : 2024-11-06
+# date_modified : 2024-11-06
+# status : preliminary fantasy values
+# type : aperture:aperture_mask
+# x_unit : arcsec
+# y_unit : arcsec
+# diam_unit : arcsec
+# notes : use plate scale 3.319 mm / arcsec
+# changes :
+#     - 2025-01-09 :  (OC) change format
+#
+ x   y    diam
+ 0   0    0.007532
+ 0.4 0.4  0.007532

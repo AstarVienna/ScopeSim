@@ -1,8 +1,9 @@
 # Default config file for setting up the instrument
-object : observation
+object: configuration
 alias : OBS
 name : test_instrument
 description : default parameters needed for a basic simulation
+status: development
 
 packages :
 - basic_instrument          # name of package dependencies
@@ -24,6 +25,7 @@ properties :
 mode_yamls :
 - name : imaging
   description: Basic NIR imager
+  status: development
   alias : OBS
   properties :
     include_slit : False
@@ -32,6 +34,7 @@ mode_yamls :
 
 - name : spectroscopy
   description: Basic three-trace long-slit spectrograph
+  status: development
   alias: OBS
   properties :
     include_slit : True
@@ -42,6 +45,7 @@ mode_yamls :
 
 - name : ifu
   description: Basic three-trace integral-field-unit spectrograph
+  status: development
   alias: OBS
   properties:
     include_slit: False
@@ -49,3 +53,20 @@ mode_yamls :
     filter_name: "open"
   yamls:
     - YAML_mode_ifu.yaml   # mode specific effects and properties
+
+- name: mock_concept_mode
+  description: Dummy mode to test concept status.
+  status: concept
+
+- name: mock_experimental_mode
+  description: Dummy mode to test experimental status.
+  status: experimental
+
+- name: mock_deprecated_mode
+  description: Dummy mode to test deprecated status without message.
+  status: deprecated
+
+- name: mock_deprecated_mode_msg
+  description: Dummy mode to test deprecated status with message.
+  status: deprecated
+  deprecate: This mode is deprecated.

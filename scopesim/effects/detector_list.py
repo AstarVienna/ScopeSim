@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Module contains the actual "Detector" effects.
 
@@ -9,6 +10,7 @@ have defined in order to run.
 """
 
 import warnings
+from typing import ClassVar
 
 import numpy as np
 from astropy import units as u
@@ -119,13 +121,14 @@ class DetectorList(Effect):
 
     """
 
+    z_order: ClassVar[tuple[int, ...]] = (90, 290, 390, 490)
+    report_plot_include: ClassVar[bool] = True
+    report_table_include: ClassVar[bool] = True
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        params = {"z_order": [90, 290, 390, 490],
-                  "pixel_scale": "!INST.pixel_scale",      # arcsec
-                  "active_detectors": "all",
-                  "report_plot_include": True,
-                  "report_table_include": True}
+        params = {"pixel_scale": "!INST.pixel_scale",      # arcsec
+                  "active_detectors": "all",}
         self.meta.update(params)
         self.meta.update(kwargs)
 
@@ -195,24 +198,28 @@ class DetectorList(Effect):
         # FIXME: Heavy property.....
         tbl = self.active_table
         pixel_size = np.min(quantity_from_table("pixel_size", tbl, u.mm))
-        x_unit = unit_from_table("x_size", tbl, u.mm)
-        y_unit = unit_from_table("y_size", tbl, u.mm)
+        x_size_unit = unit_from_table("x_size", tbl, u.mm)
+        y_size_unit = unit_from_table("y_size", tbl, u.mm)
+        # This is mm everywhere in the IRDB, but could be something else...
+        x_cen_unit = unit_from_table("x_cen", tbl, u.mm)
+        y_cen_unit = unit_from_table("y_cen", tbl, u.mm)
 
-        xcen = tbl["x_cen"].data.astype(float)
-        ycen = tbl["y_cen"].data.astype(float)
-        dx = 0.5 * tbl["x_size"].data.astype(float)
-        dy = 0.5 * tbl["y_size"].data.astype(float)
+        xcen = tbl["x_cen"].data.astype(float) * x_cen_unit
+        ycen = tbl["y_cen"].data.astype(float) * y_cen_unit
+        dx = 0.5 * tbl["x_size"].data.astype(float) * x_size_unit
+        dy = 0.5 * tbl["y_size"].data.astype(float) * y_size_unit
 
-        scale_unit = 1        # either unitless to retain
-        if "pix" in x_unit.name:
-            scale_unit = u.mm / u.pix
-            dx *= pixel_size.value
-            dy *= pixel_size.value
+        pixel_scale = u.pixel_scale(pixel_size / u.pixel)
+        with u.set_enabled_equivalencies(pixel_scale):
+            xcen <<= u.mm
+            ycen <<= u.mm
+            dx <<= u.mm
+            dy <<= u.mm
 
-        x_det_min = np.min(xcen - dx) * x_unit * scale_unit
-        x_det_max = np.max(xcen + dx) * x_unit * scale_unit
-        y_det_min = np.min(ycen - dy) * y_unit * scale_unit
-        y_det_max = np.max(ycen + dy) * y_unit * scale_unit
+        x_det_min = np.min(xcen - dx)
+        x_det_max = np.max(xcen + dx)
+        y_det_min = np.min(ycen - dy)
+        y_det_max = np.max(ycen + dy)
 
         x_det = [x_det_min.to(u.mm).value, x_det_max.to(u.mm).value]
         y_det = [y_det_min.to(u.mm).value, y_det_max.to(u.mm).value]

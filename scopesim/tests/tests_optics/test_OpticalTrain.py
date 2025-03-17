@@ -112,6 +112,7 @@ class TestInit:
         assert opt["detector QE curve"].include is False
 
 
+@pytest.mark.slow
 @pytest.mark.usefixtures("patch_mock_path")
 class TestObserve:
     """

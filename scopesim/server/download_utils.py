@@ -28,10 +28,10 @@ class ServerError(Exception):
 
 
 def _make_tqdm_kwargs(desc: str = ""):
-    width, _ = get_terminal_size((50, 20))
-    bar_width = max(int(.8 * width) - 30 - len(desc), 10)
+    # width, _ = get_terminal_size((50, 20))
+    # bar_width = max(int(.8 * width) - 30 - len(desc), 10)
     tqdm_kwargs = {
-        "bar_format": f"{{l_bar}}{{bar:{bar_width}}}{{r_bar}}{{bar:-{bar_width}b}}",
+        # "bar_format": f"{{l_bar}}{{bar:{bar_width}}}{{r_bar}}{{bar:-{bar_width}b}}",
         "colour": "green",
         "desc": desc
         }

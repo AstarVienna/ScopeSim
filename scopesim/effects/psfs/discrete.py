@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 """Contains field-constant and field-varying PSFs constructed from a file."""
 
+from typing import ClassVar
+
 import numpy as np
 from scipy.signal import convolve
 from scipy.ndimage import zoom
@@ -20,9 +22,10 @@ from . import PSF, PoorMansFOV, logger
 class DiscretePSF(PSF):
     """Base class for discrete PSFs."""
 
+    z_order: ClassVar[tuple[int, ...]] = (43,)
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.meta["z_order"] = [43]
         self.convolution_classes = FieldOfViewBase
         # self.convolution_classes = ImagePlaneBase
 
@@ -69,6 +72,7 @@ class FieldConstantPSF(DiscretePSF):
     """
 
     required_keys = {"filename"}
+    z_order: ClassVar[tuple[int, ...]] = (262, 662)
 
     def __init__(self, **kwargs):
         # sub_pixel_flag and flux_accuracy are taken care of in PSF base class
@@ -76,7 +80,6 @@ class FieldConstantPSF(DiscretePSF):
 
         check_keys(self.meta, self.required_keys, action="error")
 
-        self.meta["z_order"] = [262, 662]
         self._waveset, self.kernel_indices = self._get_psf_wave_exts()
         self.current_layer_id = None
         self.current_ext = None
@@ -206,14 +209,13 @@ class FieldVaryingPSF(DiscretePSF):
     """
 
     required_keys = {"filename"}
+    z_order: ClassVar[tuple[int, ...]] = (261, 661)
 
     def __init__(self, **kwargs):
         # sub_pixel_flag and flux_accuracy are taken care of in PSF base class
         super().__init__(**kwargs)
 
         check_keys(self.meta, self.required_keys, action="error")
-
-        self.meta["z_order"] = [261, 661]
 
         self._waveset, self.kernel_indices = self._get_psf_wave_exts()
         self.current_ext = None
@@ -232,10 +234,10 @@ class FieldVaryingPSF(DiscretePSF):
         if not fov.fields:
             return fov
 
-        if fov.image is None:
-            fov.image = fov.make_image_hdu().data
+        if fov.hdu is None or fov.hdu.data is None:
+            fov.hdu = fov.make_image_hdu()
 
-        old_shape = fov.image.shape
+        old_shape = fov.hdu.data.shape
 
         # Get kernels that cover this fov, and their respective masks.
         # Kernels and masks returned by .get_kernel as list of tuples.
@@ -250,7 +252,7 @@ class FieldVaryingPSF(DiscretePSF):
                 kernel /= sum_kernel
 
             # image convolution
-            image = fov.image.astype(float)
+            image = fov.hdu.data.astype(float)
             kernel = kernel.astype(float)
             new_image = convolve(image, kernel, mode="same")
             if canvas is None:
@@ -265,7 +267,7 @@ class FieldVaryingPSF(DiscretePSF):
 
         # reset WCS header info
         new_shape = canvas.shape
-        fov.image = canvas
+        fov.hdu.data = canvas
 
         # TODO: careful with which dimensions mean what
         if "CRPIX1" in fov.header:

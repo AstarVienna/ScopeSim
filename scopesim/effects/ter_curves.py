@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 """Transmission, emissivity, reflection curves."""
+
 import warnings
+from typing import ClassVar
 from collections.abc import Collection, Iterable
 
 import numpy as np
@@ -75,18 +77,19 @@ class TERCurve(Effect):
 
     """
 
+    z_order: ClassVar[tuple[int, ...]] = (10, 110, 510)
+    report_plot_include: ClassVar[bool] = True
+    report_table_include: ClassVar[bool] = False
+
     def __init__(self, filename=None, **kwargs):
         super().__init__(filename=filename, **kwargs)
         params = {
-            "z_order": [10, 110, 510],
             "ignore_wings": False,
             "wave_min": "!SIM.spectral.wave_min",
             "wave_max": "!SIM.spectral.wave_max",
             "wave_unit": "!SIM.spectral.wave_unit",
             "wave_bin": "!SIM.spectral.spectral_bin_width",
             "bg_cell_width": "!SIM.computing.bg_cell_width",
-            "report_plot_include": True,
-            "report_table_include": False,
         }
         self.meta.update(params)
         self.meta.update(kwargs)
@@ -95,7 +98,7 @@ class TERCurve(Effect):
         self.surface.meta.update(self.meta)
         self._background_source = None
 
-        data = self.get_data()
+        data = self.data
         if self.meta["ignore_wings"]:
             data = add_edge_zeros(data, "wavelength")
         if data is not None:
@@ -131,7 +134,8 @@ class TERCurve(Effect):
 
             # add the effect background to the source background field
             if self.background_source is not None:
-                obj.append(self.background_source)
+                for bgs in self.background_source:
+                    obj.append(bgs)
 
         if isinstance(obj, FOVSetupBase):
             from ..optics.fov_manager import FovVolumeList
@@ -171,7 +175,7 @@ class TERCurve(Effect):
                                   "SOLIDANG": "arcsec-2"})
             self._background_source = Source(image_hdu=bg_hdu, spectra=flux)
 
-        return self._background_source
+        return [self._background_source]
 
     def plot(self, which="x", wavelength=None, *, axes=None, **kwargs):
         """Plot TER curves.
@@ -240,9 +244,10 @@ class TERCurve(Effect):
 
 
 class AtmosphericTERCurve(TERCurve):
+    z_order: ClassVar[tuple[int, ...]] = (111, 511)
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.meta["z_order"] = [111, 511]
         self.meta["action"] = "transmission"
         self.meta["position"] = 0       # position in surface table
         self.meta.update(kwargs)
@@ -279,9 +284,10 @@ class SkycalcTERCurve(AtmosphericTERCurve):
 
     """
 
+    z_order: ClassVar[tuple[int, ...]] = (112, 512)
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.meta["z_order"] = [112, 512]
         self.meta["use_local_skycalc_file"] = False
         self.meta.update(kwargs)
 
@@ -363,10 +369,11 @@ class SkycalcTERCurve(AtmosphericTERCurve):
 
 
 class QuantumEfficiencyCurve(TERCurve):
+    z_order: ClassVar[tuple[int, ...]] = (113, 513)
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.meta["action"] = "transmission"
-        self.meta["z_order"] = [113, 513]
         self.meta["position"] = -1          # position in surface table
 
 
@@ -394,6 +401,8 @@ class FilterCurve(TERCurve):
 
     """
 
+    z_order: ClassVar[tuple[int, ...]] = (114, 214, 514)
+
     def __init__(self, cmds=None, **kwargs):
         # super().__init__(**kwargs)
         if not np.any([key in kwargs for key in ["filename", "table",
@@ -418,7 +427,6 @@ class FilterCurve(TERCurve):
                   "wing_flux_level": None,
                   "name": "untitled filter"}
         self.meta.update(params)
-        self.meta["z_order"] = [114, 214, 514]
         self.meta.update(kwargs)
 
         min_thru = from_currsys(self.meta["minimum_throughput"], self.cmds)
@@ -585,19 +593,16 @@ class SpanishVOFilterCurve(FilterCurve):
 class FilterWheelBase(Effect):
     """Base class for Filter Wheels."""
 
+    z_order: ClassVar[tuple[int, ...]] = (124, 224, 524)
+    report_plot_include: ClassVar[bool] = True
+    report_table_include: ClassVar[bool] = True
+    report_table_rounding: ClassVar[int] = 4
     _current_str = "current_filter"
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         check_keys(kwargs, self.required_keys, action="error")
 
-        params = {
-            "z_order": [124, 224, 524],
-            "report_plot_include": True,
-            "report_table_include": True,
-            "report_table_rounding": 4,
-        }
-        self.meta.update(params)
         self.meta.update(kwargs)
 
         self.filters = {}
@@ -841,7 +846,7 @@ class SpanishVOFilterWheel(FilterWheelBase):
 
     required_keys = {"observatory", "instrument", "current_filter"}
 
-    def __init__(self, **kwargs):        
+    def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
         params = {"include_str": None,         # passed to
@@ -891,7 +896,77 @@ class PupilTransmission(TERCurve):
                          emissivity=[0., 0.], **self.params)
 
     def update_transmission(self, transmission, **kwargs):
+        """Set a new transmission value"""
         self.__init__(transmission, **kwargs)
+
+
+class PupilMaskWheel(Effect):
+    """
+    Wheel holding a selection of predefined pupil masks
+
+    Currently, changing the PupilMask only changes the relative transmission.
+    Eventually, the change should also affect the total PSF of the OpticalTrain.
+
+    Example
+    -------
+    ::
+
+       name : pupil_masks
+       class : PupilMaskWheel
+       kwargs:
+           pupil_masks: [("name1", transmission1),
+                         ("name2", transmission2)]
+           current_mask: "open"
+    """
+    required_keys = {"pupil_masks", "current_mask"}
+    z_order: ClassVar[tuple[int, ...]] = (126, 226, 526)
+    report_plot_include: ClassVar[bool] = False
+    report_table_include: ClassVar[bool] = True
+    report_table_rounding: ClassVar[int] = 4
+    _current_str = "current_mask"
+
+    def __init__(self, cmds=None, **kwargs):
+        super().__init__(cmds=cmds, **kwargs)
+        check_keys(kwargs, self.required_keys, action="error")
+
+        self.meta.update(kwargs)
+        mask_dict = from_currsys(self.meta["pupil_masks"], cmds=self.cmds)
+        names = mask_dict['names']
+        transmissions = mask_dict['transmissions']
+        self.masks = {}
+        for name, trans in zip(names, transmissions):
+            kwargs["name"] = name
+            self.masks[name] = PupilTransmission(transmission=trans,
+                                                 cmds=cmds,
+                                                 **kwargs)
+        self.table = self.get_table(mask_dict)
+
+    def apply_to(self, obj, **kwargs):
+        """Use ``apply_to`` of current pupil mask."""
+        return self.current_mask.apply_to(obj, **kwargs)
+
+    def change_mask(self, maskname=None):
+        """Change the current pupil mask."""
+        if not maskname or maskname in self.masks:
+            self.meta["current_mask"] = maskname
+            self.include = maskname
+        else:
+            raise ValueError(f"Unknown pupil mask requested: {maskname}")
+
+    @property
+    def current_mask(self):
+        """Return the currently used pupil mask."""
+        currmask = from_currsys(self.meta['current_mask'], cmds=self.cmds)
+        if not currmask:
+            return False
+        return self.masks[currmask]
+
+    def __getattr__(self, item):
+        return getattr(self.current_mask, item)
+
+    def get_table(self, maskdict):
+        """Create a table of pupil masks with throughput."""
+        return Table(maskdict)
 
 
 class ADCWheel(Effect):
@@ -911,17 +986,17 @@ class ADCWheel(Effect):
     """
 
     required_keys = {"adc_names", "filename_format", "current_adc"}
+    z_order: ClassVar[tuple[int, ...]] = (125, 225, 525)
+    report_plot_include: ClassVar[bool] = False
+    report_table_include: ClassVar[bool] = True
+    report_table_rounding: ClassVar[int] = 4
     _current_str = "current_adc"
 
     def __init__(self, cmds=None, **kwargs):
         super().__init__(cmds=cmds, **kwargs)
         check_keys(kwargs, self.required_keys, action="error")
 
-        params = {"z_order": [125, 225, 525],
-                  "path": "",
-                  "report_plot_include": False,
-                  "report_table_include": True,
-                  "report_table_rounding": 4}
+        params = {"path": ""}
         self.meta.update(params)
         self.meta.update(kwargs)
 

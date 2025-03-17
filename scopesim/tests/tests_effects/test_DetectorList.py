@@ -96,7 +96,7 @@ class TestImagePlaneHeader:
             "id": [0, 1],
             "x_cen": [-0.2, 0.2],     # mm
             "y_cen": [0, 0],
-            "x_size": [0.32, 0.32],   # pixel
+            "x_size": [0.32, 0.32],   # mm
             "y_size": [0.32, 0.32],
             "pixsize": [0.01, 0.01],  # mm/pixel
             "angle": [0, 0],
@@ -132,13 +132,12 @@ class TestDetecotrHeaders:
             assert hdr["NAXIS1"] == 32
             assert hdr["NAXIS2"] == 32
 
-    # FIXME: why is this defined twice???
-    def test_happy_using_x_size_unit_in_pixels(self):
+    def test_happy_using_x_size_unit_in_mm(self):
         det_list = DetectorList(array_dict={
             "id": [0, 1],
             "x_cen": [-0.2, 0.2],     # mm
             "y_cen": [0, 0],
-            "x_size": [0.32, 0.32],   # pixel
+            "x_size": [0.32, 0.32],   # mm
             "y_size": [0.32, 0.32],
             "pixsize": [0.01, 0.01],  # mm/pixel
             "angle": [0, 0],

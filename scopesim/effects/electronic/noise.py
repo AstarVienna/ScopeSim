@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 """Any kinds of electronic or photonic noise."""
 
+from typing import ClassVar
+
 import numpy as np
 from astropy.io import fits
 
@@ -14,13 +16,11 @@ class Bias(Effect):
     """Adds a constant bias level to readout."""
 
     required_keys = {"bias"}
+    z_order: ClassVar[tuple[int, ...]] = (855,)
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        params = {"z_order": [855]}
-        self.meta.update(params)
         self.meta.update(kwargs)
-
         check_keys(self.meta, self.required_keys, action="error")
 
     def apply_to(self, obj, **kwargs):
@@ -34,18 +34,18 @@ class Bias(Effect):
 
 class PoorMansHxRGReadoutNoise(Effect):
     required_keys = {"noise_std", "n_channels", "ndit"}
+    z_order: ClassVar[tuple[int, ...]] = (811,)
+    report_plot_include: ClassVar[bool] = False
+    report_table_include: ClassVar[bool] = False
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         params = {
-            "z_order": [811],
             "pedestal_fraction": 0.3,
             "read_fraction": 0.4,
             "line_fraction": 0.25,
             "channel_fraction": 0.05,
             "random_seed": "!SIM.random.seed",
-            "report_plot_include": False,
-            "report_table_include": False,
         }
         self.meta.update(params)
         self.meta.update(kwargs)
@@ -93,10 +93,10 @@ class BasicReadoutNoise(Effect):
     """Readout noise computed as: ron * sqrt(NDIT)."""
 
     required_keys = {"noise_std", "ndit"}
+    z_order: ClassVar[tuple[int, ...]] = (811,)
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.meta["z_order"] = [811]
         self.meta["random_seed"] = "!SIM.random.seed"
         self.meta.update(kwargs)
 
@@ -129,9 +129,10 @@ class BasicReadoutNoise(Effect):
 
 
 class ShotNoise(Effect):
+    z_order: ClassVar[tuple[int, ...]] = (820,)
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.meta["z_order"] = [820]
         self.meta["random_seed"] = "!SIM.random.seed"
         self.meta.update(kwargs)
 
@@ -143,25 +144,48 @@ class ShotNoise(Effect):
                                                 self.cmds)
         rng = np.random.default_rng(self.meta["random_seed"])
 
-        # ! poisson(x) === normal(mu=x, sigma=x**0.5)
-        # Windows has a problem with generating poisson values above 2**30
-        # Above ~100 counts the poisson and normal distribution are
-        # basically the same. For large arrays the normal distribution
-        # takes only 60% as long as the poisson distribution
+        # numpy has a problem with generating Poisson distributions above
+        # certain values. E.g. on linux, numpy.random.poisson(1e20) raises
+        #   ValueError: lam value too large
+        # The value might be smaller on other (operating) systems.
+        #
+        # The poisson and normal distribution are basically the same
+        # above ~100 counts:
+        #   poisson(x) ~= normal(mu=x, sigma=x**0.5)
+        #
+        # Therefore a limit of 1e7 is used, above which the Poisson
+        # distribution is approximated with a normal distribution.
+        #
+        # Also, the normal distribution takes only 60% as long as the
+        # poisson distribution for large arrays.
+        #
+        # Special values should be handled with care:
+        # - Negative values are mapped to 0; there cannot be negative flux.
+        # - numpy.nan are implicitly passed through the normal distribution;
+        #   because the Poisson distribution cannot handle them.
 
-        # Check if there are negative values in the data
-        data = np.ma.masked_less(det._hdu.data, 0)
-        if data.mask.any():
+        data = det._hdu.data
+
+        # Check if there are negative values in the data.
+        values_negative = data < 0
+        if values_negative.any():
             logger.warning(
-                "Effect ShotNoise: %d negative pixels", data.mask.sum())
-        data = data.filled(0)
+                "Effect ShotNoise: %d negative pixels", values_negative.sum())
+        data[values_negative] = 0
 
-        # Weirdly, poisson doesn't understand masked arrays, but normal does...
-        data = np.ma.masked_greater(data, 2**20)
-        data[~data.mask] = rng.poisson(data[~data.mask].data)
-        data.mask = ~data.mask
-        new_imagehdu = fits.ImageHDU(data=rng.normal(data, np.sqrt(data)),
-                                     header=det._hdu.header)
+        # Apply a Poisson distribution to the low values.
+        values_low = data < 1e7
+        data[values_low] = rng.poisson(data[values_low])
+
+        # Apply a normal distribution to the high values.
+        values_high = ~values_low
+        data[values_high] = rng.normal(data[values_high], np.sqrt(data[values_high]))
+
+        new_imagehdu = fits.ImageHDU(
+            data=data,
+            header=det._hdu.header,
+        )
+
         det._hdu = new_imagehdu
         return det
 
@@ -182,11 +206,10 @@ class DarkCurrent(Effect):
     """
 
     required_keys = {"value", "dit", "ndit"}
+    z_order: ClassVar[tuple[int, ...]] = (830,)
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.meta["z_order"] = [830]
-
         check_keys(self.meta, self.required_keys, action="error")
 
     def apply_to(self, obj, **kwargs):

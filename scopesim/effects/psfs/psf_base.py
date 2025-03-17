@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
-"""."""
+"""Contains the base class for all PSF effects."""
+
+from typing import ClassVar
 
 import numpy as np
 from scipy.signal import convolve
@@ -8,8 +10,9 @@ from astropy import units as u
 
 from ..effects import Effect
 from ...base_classes import ImagePlaneBase, FieldOfViewBase, FOVSetupBase
-from ...utils import from_currsys, quantify, figure_factory
+from ...utils import from_currsys, quantify, figure_factory, get_logger
 
+logger = get_logger(__name__)
 
 class PoorMansFOV:
     def __init__(self, pixel_scale, spec_dict, recursion_call=False):
@@ -26,6 +29,10 @@ class PoorMansFOV:
 
 
 class PSF(Effect):
+    z_order: ClassVar[tuple[int, ...]] = (40, 640)
+    report_plot_include: ClassVar[bool] = True
+    report_table_include: ClassVar[bool] = False
+
     def __init__(self, **kwargs):
         self.kernel = None
         self.valid_waverange = None
@@ -35,15 +42,12 @@ class PSF(Effect):
         params = {
             "flux_accuracy": "!SIM.computing.flux_accuracy",
             "sub_pixel_flag": "!SIM.sub_pixel.flag",
-            "z_order": [40, 640],
             "convolve_mode": "same",      # "full", "same"
             "bkg_width": -1,
             "wave_key": "WAVE0",
             "normalise_kernel": True,
             "rounded_edges": True,
             "rotational_blur_angle": 0,
-            "report_plot_include": True,
-            "report_table_include": False,
         }
         self.meta.update(params)
         self.meta.update(kwargs)
@@ -54,6 +58,7 @@ class PSF(Effect):
         """Apply the PSF."""
         # 1. During setup of the FieldOfViews
         if isinstance(obj, FOVSetupBase) and self._waveset is not None:
+            logger.debug("Executing %s, FoV setup", self.meta['name'])
             waveset = self._waveset
             if len(waveset) != 0:
                 waveset_edges = 0.5 * (waveset[:-1] + waveset[1:])
@@ -61,6 +66,7 @@ class PSF(Effect):
 
         # 2. During observe: convolution
         elif isinstance(obj, self.convolution_classes):
+            logger.debug("Executing %s, convolution", self.meta['name'])
             if ((hasattr(obj, "fields") and len(obj.fields) > 0) or
                     (obj.hdu is not None)):
                 kernel = self.get_kernel(obj).astype(float)

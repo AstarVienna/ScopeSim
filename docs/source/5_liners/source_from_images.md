@@ -16,17 +16,17 @@ kernelspec:
 We can use a FITS image as the Source object for a ScopeSim Simulation
 
 **Warning: The simulation output is only as good as the input**
-   
+
    If the pixel scale of the input (`CDELTn`) is bigger than the pixel scale of the instrument, ScopeSim will simply interpolate the image.
-   
+
    Please don't expect wonders if the input image WCS information is not appropriate for the instrument you are using.
-   
-ScopeSim Source objects can be generated from fits.ImageHDU object in the following ways:  
-  
-1. Just an Image and scaling flux value  
+
+ScopeSim Source objects can be generated from fits.ImageHDU object in the following ways:
+
+1. Just an Image and scaling flux value
 2. An Image and the associated synphot Spectrum
 3. An Image and arrays for wavelength and flux
-  
+
 - ``image_hdu=<fits.ImageHDU>`` + ``flux=<astropy.Quantity>``
 - ``image_hdu=<fits.ImageHDU>`` + ``spectra=<list of synphot.SourceSpectrum>``
 - ``image_hdu=<fits.ImageHDU>`` + ``lam=<array>`` + ``spectra=<list of arrays>``
@@ -42,7 +42,7 @@ import matplotlib.pyplot as plt
 import scopesim
 
 # Make an ImageHDU with some pixel data
-hdu = fits.ImageHDU(data=scipy.misc.face(gray=True))
+hdu = fits.ImageHDU(data=scipy.datasets.face(gray=True))
 
 # Give the header some proper WCS info
 hdu.header.update({"CDELT1": 1, "CUNIT1": "arcsec", "CRPIX1": 0, "CRVAL1": 0,
@@ -61,7 +61,7 @@ def plot(src):
     plt.imshow(src.fields[0].data)
 ```
 
-## 1. Just an Image and scaling flux value 
+## 1. Just an Image and scaling flux value
 
 ``image_hdu=<fits.ImageHDU>`` + ``flux=<astropy.Quantity>``
 

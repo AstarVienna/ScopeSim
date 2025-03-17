@@ -1,4 +1,9 @@
+# -*- coding: utf-8 -*-
+"""TBA."""
+
 import warnings
+from typing import ClassVar
+
 import numpy as np
 from astropy import units as u
 from astropy.table import Table
@@ -10,14 +15,12 @@ from ..base_classes import FieldOfViewBase
 
 
 class Shift3D(Effect):
+    z_order: ClassVar[tuple[int, ...]] = (30, 230)
+    report_plot_include: ClassVar[bool] = True
+    report_table_include: ClassVar[bool] = False
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        params = {
-            "z_order": [30, 230],
-            "report_plot_include": True,
-            "report_table_include": False,
-        }
-        self.meta.update(params)
         self.meta.update(kwargs)
 
     def apply_to(self, obj, **kwargs):
@@ -112,11 +115,11 @@ class AtmosphericDispersion(Shift3D):
         "pupil_angle",
         "pixel_scale",
     }
+    z_order: ClassVar[tuple[int, ...]] = (231,)
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         params = {
-            "z_order": [231],
             "wave_min": "!SIM.spectral.wave_min",
             "wave_mid": "!SIM.spectral.wave_mid",
             "wave_max": "!SIM.spectral.wave_max",
@@ -192,12 +195,12 @@ class AtmosphericDispersionCorrection(Shift3D):
         "pixel_scale",
         "wave_mid",
     }
+    z_order: ClassVar[tuple[int, ...]] = (632,)
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.meta["z_order"] = [632]
         if "quick_adc" in self.meta and self.meta["quick_adc"] is True:
-            self.meta["z_order"] += [232]
+            self.z_order = (*self.z_order, 232)
         if "efficiency" not in self.meta:
             self.meta["efficiency"] = 1
         self.apply_to_classes = FieldOfViewBase

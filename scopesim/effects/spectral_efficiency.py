@@ -1,7 +1,9 @@
+# -*- coding: utf-8 -*-
 """Spectral grating efficiencies."""
 
-import numpy as np
+from typing import ClassVar
 
+import numpy as np
 from astropy.io import fits
 from astropy import units as u
 from astropy.wcs import WCS
@@ -61,14 +63,13 @@ class SpectralEfficiency(Effect):
 
     """
 
+    z_order: ClassVar[tuple[int, ...]] = (630,)
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
         if "hdulist" in kwargs and isinstance(kwargs["hdulist"], fits.HDUList):
             self._file = kwargs["hdulist"]
-
-        params = {"z_order": [630]}
-        self.meta.update(params)
 
         self.efficiencies = self.get_efficiencies()
 
@@ -89,8 +90,9 @@ class SpectralEfficiency(Effect):
             tbl = Table.read(hdu)
             wavelength = tbl['wavelength'].quantity
             efficiency = tbl['efficiency'].value
-            effic_curve = TERCurve(wavelength=wavelength,
-                                   transmission=efficiency,
+            params.pop("filename", None)  # don't pass filename to TERCurve!
+            effic_curve = TERCurve(array_dict={"wavelength":wavelength,
+                                   "transmission":efficiency},
                                    **params)
             efficiencies[name] = effic_curve
 

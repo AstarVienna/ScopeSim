@@ -87,9 +87,10 @@ class FieldOfView(FieldOfViewBase):
         self.fields = []
         self.spectra = {}
 
+        # These are apparently not supposed to be used?
         self.cube = None        # 3D array for IFU, long-lit, Slicer-MOS
-        self.image = None       # 2D array for Imagers
-        self.spectrum = None    # SourceSpectrum for Fibre-fed MOS
+        # self.image = None       # 2D array for Imagers
+        # self.spectrum = None    # SourceSpectrum for Fibre-fed MOS
 
         self._waverange = None
         self._wavelength = None
@@ -380,18 +381,19 @@ class FieldOfView(FieldOfViewBase):
 
         """
         spline_order = from_currsys("!SIM.computing.spline_order", self.cmds)
-
         # Make waveset and canvas image
         fov_waveset = self.waveset
         bin_widths = np.diff(fov_waveset)       # u.um
         bin_widths = 0.5 * (np.r_[0, bin_widths] + np.r_[bin_widths, 0])
-        area = from_currsys(self.meta["area"], self.cmds)    # u.m2
+        area = from_currsys(self.meta["area"], self.cmds) << u.m**2   # u.m2
 
         # PHOTLAM * u.um * u.m2 --> ph / s
         specs = {ref: spec(fov_waveset) if use_photlam
                  else (spec(fov_waveset) * bin_widths * area).to(u.ph / u.s)
                  for ref, spec in self.spectra.items()}
+
         fluxes = {ref: np.sum(spec.value) for ref, spec in specs.items()}
+
         canvas_image_hdu = fits.ImageHDU(
             data=np.zeros((self.header["NAXIS2"], self.header["NAXIS1"])),
             header=self.header)
@@ -410,7 +412,10 @@ class FieldOfView(FieldOfViewBase):
                 # enabled, it is therefore not necessary to deploy the fix
                 # below in the else-branch.
                 assert not isinstance(x, Iterable), "x must be an integer"
-                canvas_image_hdu.data[y, x] += flux * weight
+                try:
+                    canvas_image_hdu.data[y, x] += flux * weight
+                except IndexError:
+                    continue
             else:
                 # Mask out any stars that were pushed out of the fov by rounding
                 mask = ((x < canvas_image_hdu.data.shape[1]) *
@@ -476,10 +481,13 @@ class FieldOfView(FieldOfViewBase):
             canvas_image_hdu = fits.ImageHDU(
                 data=np.zeros((self.header["NAXIS2"], self.header["NAXIS1"])),
                 header=self.header)
-            # FIXME: Why here not "Pixel scale conversion" as above?
-            field.data /= self.pixel_area
+            # FIX: Do not scale source data - make a copy first.
+            # FIX: Use "Pixel scale conversion" as above.
+            field_data = field.data * self._pixarea(field.header).value / self.pixel_area
+            field_hdu = fits.ImageHDU(data=field_data, header=field.header)
+
             canvas_image_hdu = imp_utils.add_imagehdu_to_imagehdu(
-                field,
+                field_hdu,
                 canvas_image_hdu,
                 spline_order=spline_order)
             spec = specs[field.header["SPEC_REF"]]

@@ -1,3 +1,120 @@
+# Version 0.9.2
+**2025-03-13**
+
+Mainly the inclusion of METIS WCU effects in https://github.com/AstarVienna/ScopeSim/pull/494 plus a few bugfixes and quality-of-life improvements.
+
+## What's Changed
+### Bugs fixed
+* Fix detectorwindow by @hugobuddel in https://github.com/AstarVienna/ScopeSim/pull/507
+* Don't fail subpixels for edge sources by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/549
+* Ensure at least one pixel in header by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/586
+### Changes to or addition of Effects
+* METIS WCU effects by @oczoske in https://github.com/AstarVienna/ScopeSim/pull/494
+### Dependency Changes
+* Bump abatilo/actions-poetry from 2 to 4 by @dependabot in https://github.com/AstarVienna/ScopeSim/pull/520
+* Bump actions/download-artifact from 4.1.7 to 4.1.8 by @dependabot in https://github.com/AstarVienna/ScopeSim/pull/521
+* Bump jinja2 from 3.1.4 to 3.1.5 by @hugobuddel in https://github.com/AstarVienna/ScopeSim/pull/519
+* Bump sphinx from 5.3.0 to 7.3.7 by @dependabot in https://github.com/AstarVienna/ScopeSim/pull/525
+* Bump jupyter-sphinx from 0.2.3 to 0.5.3 by @dependabot in https://github.com/AstarVienna/ScopeSim/pull/528
+* Bump sphinxcontrib-apidoc from 0.4.0 to 0.5.0 by @dependabot in https://github.com/AstarVienna/ScopeSim/pull/522
+* Bump nbsphinx from 0.9.3 to 0.9.6 by @dependabot in https://github.com/AstarVienna/ScopeSim/pull/526
+* Bump skycalc-ipy from 0.5.1 to 0.5.2 by @dependabot in https://github.com/AstarVienna/ScopeSim/pull/523
+* Bump jupyter from 1.0.0 to 1.1.1 by @dependabot in https://github.com/AstarVienna/ScopeSim/pull/530
+* Bump ipympl from 0.9.4 to 0.9.6 by @dependabot in https://github.com/AstarVienna/ScopeSim/pull/538
+* Bump jupytext from 1.16.0 to 1.16.6 by @dependabot in https://github.com/AstarVienna/ScopeSim/pull/541
+* Bump myst-nb from 1.1.2 to 1.2.0 by @dependabot in https://github.com/AstarVienna/ScopeSim/pull/558
+* Bump matplotlib from 3.8.2 to 3.10.1 by @dependabot in https://github.com/AstarVienna/ScopeSim/pull/577
+* Bump actions/download-artifact from 4.1.8 to 4.1.9 by @dependabot in https://github.com/AstarVienna/ScopeSim/pull/576
+* Bump jinja2 from 3.1.5 to 3.1.6 by @dependabot in https://github.com/AstarVienna/ScopeSim/pull/582
+### Documentation Improvements
+* Add bugfix label to auto release notes by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/562
+### Other Changes
+* make test_applies_dark_current_with_level_of_dit deterministic by @hugobuddel in https://github.com/AstarVienna/ScopeSim/pull/517
+* Add dependabot configuration by @hugobuddel in https://github.com/AstarVienna/ScopeSim/pull/518
+* Fix runnotebooks.sh by sorting the notebooks by @hugobuddel in https://github.com/AstarVienna/ScopeSim/pull/535
+* Add a few more `@pytest.mark.slow` markers by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/560
+* Generatorify `stringify_dict` function by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/563
+* Update dependabot.yml by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/578
+* fix fp mask emission by @oczoske in https://github.com/AstarVienna/ScopeSim/pull/583
+* Fine-tune dependabot config by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/591
+
+**Full Changelog**: https://github.com/AstarVienna/ScopeSim/compare/v0.9.1...v0.9.2
+
+
+# Version 0.9.1
+**2024-11-26**
+
+Many small but important fixes and improvements that were missing in v0.9.0.
+
+## What's Changed
+### Changes to or addition of Effects
+* Improve z_order by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/500
+* Fix FieldVaryingPSF by @hugobuddel in https://github.com/AstarVienna/ScopeSim/pull/506
+### New Features or Improvements
+* Enable DeprecationWarnings by default by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/508
+* Minor fixes for ScopeSimple by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/510
+* Add support for package and mode status keywords by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/509
+### Dependency Changes
+* Require Templates 0.6.0 and sync from there by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/501
+* Bump tornado from 6.4.1 to 6.4.2 by @dependabot in https://github.com/AstarVienna/ScopeSim/pull/511
+### Documentation Improvements
+* Cleanup example notebooks by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/496
+### Other Changes
+* Added source scaling test by @janusbrink in https://github.com/AstarVienna/ScopeSim/pull/495
+* Move logging config to separate yaml, configure individual loggers by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/502
+* Ignore strip_cdata warning by lxml, introduced by bs4 by @hugobuddel in https://github.com/AstarVienna/ScopeSim/pull/504
+* Fix #490: make rescale_imagehdu more robust against dimension mismatches by @oczoske in https://github.com/AstarVienna/ScopeSim/pull/503
+* Make random test deterministic by @hugobuddel in https://github.com/AstarVienna/ScopeSim/pull/512
+* Fix two more issues with ScopeSimple by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/514
+
+**Full Changelog**: https://github.com/AstarVienna/ScopeSim/compare/v0.9.0...v0.9.1
+
+
+# Version 0.9.0
+**2024-11-10**
+
+> [!IMPORTANT]
+> The minimum required Python version for this package is now **3.10** (see Dependency Changes).
+> Python 3.13 is currently not supported as it causes issues on some platforms that are not yet fully understood. We are currently working on fixing 3.13 support.
+
+
+## What's Changed
+### API Changes
+* ScopeSimple by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/426
+* Make `DataContainer` an attribute of `Effect` by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/482
+### New Features or Improvements
+* Replace NaNs in images, log warning by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/466
+* Make observe work with no source (empty field) by @oczoske in https://github.com/AstarVienna/ScopeSim/pull/483
+* Add a new top level to CMDS nested mapping to store current simulation run settings by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/493
+### Dependency Changes
+* Bump actions/download-artifact from 3 to 4.1.7 in /.github/workflows by @dependabot in https://github.com/AstarVienna/ScopeSim/pull/465
+* Drop support for Python 3.9 by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/471
+* Bump some dependency versions by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/472
+* Use sphinx-book-theme for RTD by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/473
+* Bump two dependencies, use tqdm.auto by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/477
+* Bump scipy from 1.11.4 to 1.14.1 and httpx from 0.23.0 to 0.26.0 by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/480
+* Remove skycalc_cli from dependencies by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/481
+* Bump notebook from 7.0.7 to 7.2.2 by @dependabot in https://github.com/AstarVienna/ScopeSim/pull/486
+* Limit supported Python version to 3.10 <= x < 3.13 by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/497
+### Documentation Improvements
+* Update source_from_images.ipynb by @hugobuddel in https://github.com/AstarVienna/ScopeSim/pull/469
+* Update example notebook to properly show the same observation by @hugobuddel in https://github.com/AstarVienna/ScopeSim/pull/476
+### Other Changes
+* Add `SourceField` and subclasses, rework `Source` by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/405
+* Some small improvement, mostly focused on numpy by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/467
+* Don't fail on symlinks for packages path by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/474
+* Cleanup `DataContainer` in preparation for Effect refactoring by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/478
+* Fix Poisson NaN bug and clarify by @hugobuddel in https://github.com/AstarVienna/ScopeSim/pull/484
+* Source object data scaling fix by @janusbrink in https://github.com/AstarVienna/ScopeSim/pull/485
+* Workaround for #491 metadata.requires can return None by @hugobuddel in https://github.com/AstarVienna/ScopeSim/pull/492
+* Fixed cdelt calculation when scaling an imageHDU by @janusbrink in https://github.com/AstarVienna/ScopeSim/pull/490
+
+## New Contributors
+* @janusbrink made their first contribution in https://github.com/AstarVienna/ScopeSim/pull/485
+
+**Full Changelog**: https://github.com/AstarVienna/ScopeSim/compare/v0.8.4...v0.9.0
+
+
 # Version 0.8.4
 **2024-08-29**
 
