@@ -143,7 +143,7 @@ class Source(SourceBase):
 
     def __init__(self, filename=None, cube=None, ext=0,
                  lam=None, spectra=None, x=None, y=None, ref=None, weight=None,
-                 table=None, image_hdu=None, flux=None, **kwargs):
+                 table=None, image_hdu=None, flux=None, field=None, **kwargs):
 
         self._meta = {}
         self.fields: list[SourceField] = []
@@ -187,6 +187,9 @@ class Source(SourceBase):
         elif x is not None and y is not None and \
                 ref is not None and spectra is not None:
             self._from_arrays(x, y, ref, weight, spectra, **kwargs)
+
+        elif field is not None:
+            self._from_field(field)
 
         self.meta.update(kwargs)
 
@@ -359,6 +362,11 @@ class Source(SourceBase):
         cube_hdu.wave = wave          # ..todo: review wave attribute, bad practice
 
         self.fields = [CubeSourceField(cube_hdu, meta=kwargs)]
+
+    def _from_field(self, field: SourceField):
+        """Create from single source field."""
+        assert not self.fields, "Constructor method must act on empty instance!"
+        self.fields = [field]
 
     def _get_fields(self, subclass):
         """Yield fields of specific subclass."""
