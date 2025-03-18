@@ -78,9 +78,10 @@ requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.pytest.ini_options]
-addopts = "--strict-markers"
+addopts = "--strict-markers -m 'not webtest(github=True)'"
 markers = [
     "webtest: marks tests as requiring network (deselect with '-m \"not webtest\"')",
+    "webtest_github: marks tests that download from GitHub (select with '-m \"webtest_github\"')",
     "slow: marks tests that take a while (deselect with '-m \"not slow\"')",
 ]
 filterwarnings = [
