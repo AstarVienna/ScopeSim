@@ -123,6 +123,14 @@ class SpectrumSourceField(SourceField):
 
     spectra: dict
 
+    @property
+    def spectrum(self) -> SourceSpectrum:
+        """Return single spectrum and ref if only one spectrum in spectra."""
+        if len(self.spectra) > 1:
+            raise TypeError("More than one spectrum in field -> use spectra!")
+        spec, = self.spectra.items()
+        return spec
+
 
 @dataclass
 class TableSourceField(SpectrumSourceField):
@@ -346,3 +354,6 @@ class BackgroundSourceField(SpectrumSourceField):
     def get_corners(self, unit: u.Unit | str = "arcsec") -> np.ndarray:
         """Return imaginary corner from + to - infinity."""
         return np.array([-np.inf, np.inf])
+
+    def _write_stream(self, stream: TextIO) -> None:
+        stream.write(f"Background field ref. spectrum {self.spectrum[0]}")
