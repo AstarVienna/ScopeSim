@@ -595,10 +595,10 @@ class Source(SourceBase):
                 field.field["ref"] += specrefoffset
                 self.fields.append(field)
 
-            elif isinstance(field, HDUSourceField):
+            else:
                 if ("SPEC_REF" in field.header and
                         isinstance(field.header["SPEC_REF"], int)):
-                    field.field.header["SPEC_REF"] += specrefoffset
+                    field.header["SPEC_REF"] += specrefoffset
                 self.fields.append(field)
 
             field.spectra = {k + specrefoffset: v for k, v in

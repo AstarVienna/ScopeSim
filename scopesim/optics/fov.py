@@ -21,6 +21,7 @@ from ..source.source_fields import (
     ImageSourceField,
     CubeSourceField,
     TableSourceField,
+    BackgroundSourceField,
 )
 
 from ..base_classes import SourceBase, FieldOfViewBase
@@ -977,9 +978,9 @@ class FieldOfView(FieldOfViewBase):
     @property
     def background_fields(self):
         """Return list of BG_SRC ImageHDU fields."""
-        return [field.field for field in self.fields
-                if isinstance(field, HDUSourceField)
-                and field.header.get("BG_SRC", False)]
+        # HACK: While Sourcefields are not fully supported.
+        return [fits.ImageHDU(header=field.header) for field in self.fields
+                if isinstance(field, BackgroundSourceField)]
 
     def _ensure_deg_header(self):
         cunit = u.Unit(self.header["CUNIT1"].lower())
