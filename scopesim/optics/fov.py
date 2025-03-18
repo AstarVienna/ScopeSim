@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Defines FieldOfView class."""
 
 from copy import deepcopy
@@ -43,16 +44,18 @@ class FieldOfView(FieldOfViewBase):
     Flux units after extracting the fields from the Source are in ph/s/pixel
 
     The initial header should contain an on-sky WCS description:
+
     - CDELT-, CUNIT-, NAXIS- : for pixel scale and size (assumed CUNIT in deg)
     - CRVAL-, CRPIX- : for positioning the final image
     - CTYPE- : is assumed to be "RA---TAN", "DEC--TAN"
 
     and an image-plane WCS description
+
     - CDELT-D, CUNIT-D, NAXISn : for pixel scale and size (assumed CUNIT in mm)
     - CRVAL-D, CRPIX-D : for positioning the final image
     - CTYPE-D : is assumed to be "LINEAR", "LINEAR"
 
-    The wavelength range is given by waverange
+    The wavelength range is given by waverange.
 
     """
 
@@ -67,11 +70,13 @@ class FieldOfView(FieldOfViewBase):
             "area": 0 * u.m**2,
             "pixel_area": None,  # [arcsec]
             "sub_pixel": "!SIM.sub_pixel.flag",
-            "distortion": {"scale": [1, 1],
-                           "offset": [0, 0],
-                           "shear": [1, 1],
-                           "rotation": 0,
-                           "radius_of_curvature": None},
+            "distortion": {
+                "scale": [1, 1],
+                "offset": [0, 0],
+                "shear": [1, 1],
+                "rotation": 0,
+                "radius_of_curvature": None,
+            },
             "conserve_image": True,
             "trace_id": None,
             "aperture_id": None,
@@ -397,14 +402,16 @@ class FieldOfView(FieldOfViewBase):
             #
             # w0, w1 = hdu_waves[i0p], hdu_waves[i1p]
 
-            new_hdr.update({"NAXIS": 3,
-                            "NAXIS3": data.shape[0],
-                            "CRVAL3": hdu_waves[i0p],
-                            "CRPIX3": 0,
-                            "CDELT3": hdr["CDELT3"],
-                            "CUNIT3": hdr["CUNIT3"],
-                            "CTYPE3": hdr["CTYPE3"],
-                            "BUNIT":  hdr["BUNIT"]})
+            new_hdr.update({
+                "NAXIS": 3,
+                "NAXIS3": data.shape[0],
+                "CRVAL3": hdu_waves[i0p],
+                "CRPIX3": 0,
+                "CDELT3": hdr["CDELT3"],
+                "CUNIT3": hdr["CUNIT3"],
+                "CTYPE3": hdr["CTYPE3"],
+                "BUNIT":  hdr["BUNIT"],
+            })
 
         else:
             data = imagehdu.data[xy0p[1]:xy1p[1],
@@ -559,7 +566,7 @@ class FieldOfView(FieldOfViewBase):
             xpix, ypix = imp_utils.val2pix(self.header,
                                            field["x"] / 3600,
                                            field["y"] / 3600)
-            if from_currsys(self.meta["sub_pixel"], self.cmds):
+            if self.sub_pixel:
                 for idx, row in enumerate(field):
                     xs, ys, fracs = imp_utils.sub_pixel_fractions(xpix[idx],
                                                                   ypix[idx])
@@ -603,16 +610,14 @@ class FieldOfView(FieldOfViewBase):
             [ph s-1 pixel-1] or PHOTLAM (if use_photlam=True)
 
         """
-        spline_order = from_currsys("!SIM.computing.spline_order", self.cmds)
         # Make waveset and canvas image
         fov_waveset = self.waveset
         bin_widths = np.diff(fov_waveset)       # u.um
         bin_widths = 0.5 * (np.r_[0, bin_widths] + np.r_[bin_widths, 0])
-        area = from_currsys(self.meta["area"], self.cmds) << u.m**2   # u.m2
 
         # PHOTLAM * u.um * u.m2 --> ph / s
         specs = {ref: spec(fov_waveset) if use_photlam
-                 else (spec(fov_waveset) * bin_widths * area).to(u.ph / u.s)
+                 else (spec(fov_waveset) * bin_widths * self.area).to(u.ph / u.s)
                  for ref, spec in self.spectra.items()}
 
         fluxes = {ref: np.sum(spec.value) for ref, spec in specs.items()}
@@ -621,16 +626,16 @@ class FieldOfView(FieldOfViewBase):
             data=np.zeros((self.header["NAXIS2"], self.header["NAXIS1"])),
             header=self.header)
 
-        for tmp_hdu in chain(self._make_image_cubefields(area),
+        for tmp_hdu in chain(self._make_image_cubefields(self.area),
                              self._make_image_imagefields(fluxes)):
             canvas_image_hdu = imp_utils.add_imagehdu_to_imagehdu(
                 tmp_hdu,
                 canvas_image_hdu,
                 conserve_flux=True,
-                spline_order=spline_order)
+                spline_order=self.spline_order)
 
         for flux, weight, x, y in self._make_image_tablefields(fluxes):
-            if from_currsys(self.meta["sub_pixel"], self.cmds):
+            if self.sub_pixel:
                 # These x and y should not be arrays when sub_pixel is
                 # enabled, it is therefore not necessary to deploy the fix
                 # below in the else-branch.
@@ -735,7 +740,7 @@ class FieldOfView(FieldOfViewBase):
                 xpix, ypix = imp_utils.val2pix(self.header, xsky, ysky)
                 flux_vector = specs[row["ref"]].value * row["weight"] / self.pixel_area
 
-                if from_currsys(self.meta["sub_pixel"], self.cmds):
+                if self.sub_pixel:
                     xs, ys, fracs = imp_utils.sub_pixel_fractions(xpix, ypix)
                     for i, j, k in zip(xs, ys, fracs):
                         yield flux_vector * k, i, j
@@ -801,8 +806,6 @@ class FieldOfView(FieldOfViewBase):
             [ph s-1 AA-1 arcsec-2]      # as needed by SpectralTrace
 
         """
-        spline_order = from_currsys("!SIM.computing.spline_order", self.cmds)
-
         # 1. Make waveset and canvas cube (area, bin_width are applied at end)
         # TODO: Why is this not self.waveset? What's different?
         wave_unit = u.Unit(from_currsys("!SIM.spectral.wave_unit", self.cmds))
@@ -836,11 +839,11 @@ class FieldOfView(FieldOfViewBase):
             canvas_cube_hdu = imp_utils.add_imagehdu_to_imagehdu(
                 field_hdu,
                 canvas_cube_hdu,
-                spline_order=spline_order)
+                spline_order=self.spline_order)
 
-        canvas_cube_hdu.data = sum(self._make_cube_imagefields(specs,
-                                                               spline_order),
-                                   start=canvas_cube_hdu.data)
+        canvas_cube_hdu.data = sum(self._make_cube_imagefields(
+            specs, self.spline_order),
+            start=canvas_cube_hdu.data)
 
         for flux, x, y in self._make_cube_tablefields(specs):
             # To prevent adding array values in this manner.
@@ -855,8 +858,7 @@ class FieldOfView(FieldOfViewBase):
         #    PHOTLAM = ph/s/cm-2/AA
         #    area = m2, fov_waveset = um
         # SpectralTrace wants ph/s/um/arcsec2 --> get rid of m2, leave um
-        area = from_currsys(self.meta["area"], self.cmds)  # u.m2
-        canvas_cube_hdu.data *= area.to(u.cm ** 2).value
+        canvas_cube_hdu.data *= self.area.to(u.cm ** 2).value
         canvas_cube_hdu.data *= 1e4       # ph/s/AA/arcsec2 --> ph/s/um/arcsec2
 
         # TODO: what's with this code??
@@ -933,6 +935,24 @@ class FieldOfView(FieldOfViewBase):
         # and yes, that actually happend...
         _waveset = np.unique(_waveset.to(u.um).round(10))
         return _waveset
+
+    @property
+    def area(self) -> float:
+        """Return meta["area"] from cmds."""
+        # TODO: Make this an attribute once meta resolving is implemented.
+        return from_currsys(self.meta["area"], self.cmds) << u.m**2
+
+    @property
+    def sub_pixel(self) -> bool:
+        """Return meta["sub_pixel"] from cmds."""
+        # TODO: Make this an attribute once meta resolving is implemented.
+        return from_currsys(self.meta["sub_pixel"], self.cmds)
+
+    @property
+    def spline_order(self) -> int:
+        """Return "!SIM.computing.spline_order" from cmds."""
+        # TODO: Make this an attribute once meta resolving is implemented.
+        return from_currsys("!SIM.computing.spline_order", self.cmds)
 
     @property
     def cube_fields(self):
