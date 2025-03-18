@@ -171,10 +171,11 @@ class TERCurve(Effect):
                 "BG_SRC": True,
                 "BG_SURF": self.display_name,
                 "SPEC_REF": 0,
-                "CUNIT1": "ARCSEC",
-                "CUNIT2": "ARCSEC",
-                "CDELT1": 0,
-                "CDELT2": 0,
+                # Seem those are not needed...
+                # "CUNIT1": "ARCSEC",
+                # "CUNIT2": "ARCSEC",
+                # "CDELT1": 0,
+                # "CDELT2": 0,
                 "BUNIT": "PHOTLAM arcsec-2",
                 "SOLIDANG": "arcsec-2",
             })

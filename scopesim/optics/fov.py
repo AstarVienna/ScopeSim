@@ -193,8 +193,8 @@ class FieldOfView(FieldOfViewBase):
                     extracted = extract_range_from_spectrum(spec, self.waverange)
                     self.spectra[ref] = extracted
 
-            # HACK: Remove the NAXIS check once BackgroundSourceField exists!
-            elif isinstance(field, ImageSourceField) and field.header["NAXIS"] == 2:
+            elif isinstance(field, ImageSourceField):
+                assert field.header["NAXIS"] == 2, "Invalid image HDU"
                 extracted = self.extract_area_from_imagehdu(field.field, corners_deg)
                 replace_nans(extracted, self.cmds)
                 new_fld = ImageSourceField(
@@ -202,21 +202,23 @@ class FieldOfView(FieldOfViewBase):
                     spectra=field.spectra,
                 )
                 self.fields.append(new_fld)
-                # ImageField has only one spectrum
-                (ref, spec), = new_fld.spectra.items()
+                ref, spec = new_fld.spectrum  # ImageField has only 1 spectrum
                 self.spectra[ref] = extract_range_from_spectrum(spec, self.waverange)
 
-            elif isinstance(field, CubeSourceField) and field.header["NAXIS"] == 3:
+            elif isinstance(field, CubeSourceField):
+                assert field.header["NAXIS"] == 3, "Invalid cube HDU"
                 extracted = self.extract_area_from_imagehdu(field.field, corners_deg)
                 replace_nans(extracted, self.cmds)
                 new_fld = CubeSourceField(field=extracted)
                 self.fields.append(new_fld)
 
-            else:  # basically BackgroundSourceFields
+            elif isinstance(field, BackgroundSourceField):
                 self.fields.append(field)
-                for ref, spec in field.spectra.items():
-                    extracted = extract_range_from_spectrum(spec, self.waverange)
-                    self.spectra[ref] = extracted
+                ref, spec = field.spectrum  # BkgField has only 1 spectrum
+                self.spectra[ref] = extract_range_from_spectrum(spec, self.waverange)
+
+            else:
+                raise TypeError(f"Unexpected source field type {type(field)}.")
 
     def view(
         self,
@@ -266,11 +268,6 @@ class FieldOfView(FieldOfViewBase):
         fov_corners, _ = self.get_corners("arcsec")
 
         for field in fields:
-            if hasattr(field, "header") and field.header.get("BG_SRC", False):
-                # HACK: While BackgroundSourceField isn't ready...
-                yield field
-                continue
-
             field_corners = field.get_corners("arcsec")
             is_inside_fov = (
                 (field_corners.max(axis=0) > fov_corners.min(axis=0)).all() and
@@ -959,15 +956,13 @@ class FieldOfView(FieldOfViewBase):
     def cube_fields(self):
         """Return list of non-BG_SRC ImageHDU fields with NAXIS=3."""
         return [field.field for field in self.fields
-                if isinstance(field, CubeSourceField)
-                and not field.header.get("BG_SRC", False)]
+                if isinstance(field, CubeSourceField)]
 
     @property
     def image_fields(self):
         """Return list of non-BG_SRC ImageHDU fields with NAXIS=2."""
         return [field.field for field in self.fields
-                if isinstance(field, ImageSourceField)
-                and not field.header.get("BG_SRC", False)]
+                if isinstance(field, ImageSourceField)]
 
     @property
     def table_fields(self):
