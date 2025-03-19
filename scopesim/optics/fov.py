@@ -17,7 +17,6 @@ from synphot.units import PHOTLAM
 from . import image_plane_utils as imp_utils
 from ..source.source_fields import (
     SourceField,
-    HDUSourceField,
     ImageSourceField,
     CubeSourceField,
     TableSourceField,
@@ -31,7 +30,6 @@ from ..utils import (
     has_needed_keywords,
     get_logger,
     array_minmax,
-    quantity_from_table,
 )
 
 
@@ -86,7 +84,7 @@ class FieldOfView(FieldOfViewBase):
 
         self.cmds = cmds
 
-        if not any((has_needed_keywords(header, s) for s in ["", "S"])):
+        if not any((has_needed_keywords(header, s) for s in {"", "S"})):
             raise ValueError(
                 f"Header must contain a valid sky-plane WCS: {dict(header)}")
         if not has_needed_keywords(header, "D"):
@@ -356,61 +354,8 @@ class FieldOfView(FieldOfViewBase):
         new_hdr.update({"NAXIS1": new_naxis[0], "NAXIS2": new_naxis[1]})
 
         if hdr["NAXIS"] == 3:
-
-            # Look 0.5*wdel past the fov edges in each direction to catch any
-            # slices where the middle wavelength value doesn't fall inside the
-            # fov waverange, but up to 50% of the slice is actually inside the
-            # fov waverange:
-            # E.g. FOV: [1.92, 2.095], HDU bin centres: [1.9, 2.0, 2.1]
-            # CDELT3 = 0.1, and HDU bin edges: [1.85, 1.95, 2.05, 2.15]
-            # So 1.9 slice needs to be multiplied by 0.3, and 2.1 slice should be
-            # multipled by 0.45 to reach the scaled contribution of the edge slices
-            # This scaling factor is:
-            # f = ((hdu_bin_centre - fov_edge [+/-] 0.5 * cdelt3) % cdelt3) / cdelt3
-
-            hdu_waves = get_cube_waveset(hdr)
-            wdel = hdr["CDELT3"]
-            wunit = u.Unit(hdr.get("CUNIT3", "AA"))
-            fov_wmin, fov_wmax = (self.waverange).to(wunit).value
-            mask = ((hdu_waves > fov_wmin - 0.5 * wdel) *
-                    (hdu_waves <= fov_wmax + 0.5 * wdel))  # need to go [+/-] half a bin
-
-            # OC [2021-12-14] if fov range is not covered by the source return nothing
-            if not np.any(mask):
-                logger.warning("FOV %s um - %s um: not covered by Source",
-                               fov_wmin, fov_wmax)
-                # FIXME: returning None here breaks the principle that a function
-                #        should always return the same type. Maybe this should
-                #        instead raise an exception that's caught higher up...
-                return None
-
-            i0p, i1p = np.where(mask)[0][0], np.where(mask)[0][-1]
-            f0 = (abs(hdu_waves[i0p] - fov_wmin + 0.5 * wdel) % wdel) / wdel    # blue edge
-            f1 = (abs(hdu_waves[i1p] - fov_wmax - 0.5 * wdel) % wdel) / wdel    # red edge
-            data = imagehdu.data[i0p:i1p+1,
-                                 xy0p[1]:xy1p[1],
-                                 xy0p[0]:xy1p[0]]
-            data[0, :, :] *= f0
-            if i1p > i0p:
-                data[-1, :, :] *= f1
-
-            # w0, w1 : the closest cube wavelengths outside the fov edge wavelengths
-            # fov_waves : the fov edge wavelengths
-            # f0, f1 : the scaling factors for the blue and red edge cube slices
-            #
-            # w0, w1 = hdu_waves[i0p], hdu_waves[i1p]
-
-            new_hdr.update({
-                "NAXIS": 3,
-                "NAXIS3": data.shape[0],
-                "CRVAL3": hdu_waves[i0p],
-                "CRPIX3": 0,
-                "CDELT3": hdr["CDELT3"],
-                "CUNIT3": hdr["CUNIT3"],
-                "CTYPE3": hdr["CTYPE3"],
-                "BUNIT":  hdr["BUNIT"],
-            })
-
+            new_hdr, data = self._extract_volume_from_cube(imagehdu, new_hdr,
+                                                           xy0p, xy1p)
         else:
             data = imagehdu.data[xy0p[1]:xy1p[1],
                                  xy0p[0]:xy1p[0]]
@@ -419,10 +364,65 @@ class FieldOfView(FieldOfViewBase):
         if not data.size:
             logger.warning("Empty image HDU.")
 
-        new_imagehdu = fits.ImageHDU(data=data)
-        new_imagehdu.header.update(new_hdr)
+        return fits.ImageHDU(header=new_hdr, data=data)
 
-        return new_imagehdu
+    def _extract_volume_from_cube(self, cubehdu, new_hdr, xy0p, xy1p):
+        hdr = cubehdu.header
+        # Look 0.5*wdel past the fov edges in each direction to catch any
+        # slices where the middle wavelength value doesn't fall inside the
+        # fov waverange, but up to 50% of the slice is actually inside the
+        # fov waverange:
+        # E.g. FOV: [1.92, 2.095], HDU bin centres: [1.9, 2.0, 2.1]
+        # CDELT3 = 0.1, and HDU bin edges: [1.85, 1.95, 2.05, 2.15]
+        # So 1.9 slice needs to be multiplied by 0.3, and 2.1 slice should be
+        # multipled by 0.45 to reach the scaled contribution of the edge slices
+        # This scaling factor is:
+        # f = ((hdu_bin_centre - fov_edge [+/-] 0.5 * cdelt3) % cdelt3) / cdelt3
+
+        hdu_waves = get_cube_waveset(hdr)
+        wdel = hdr["CDELT3"]
+        wunit = u.Unit(hdr.get("CUNIT3", "AA"))
+        fov_wmin, fov_wmax = (self.waverange).to(wunit).value
+        mask = ((hdu_waves > fov_wmin - 0.5 * wdel) *
+                (hdu_waves <= fov_wmax + 0.5 * wdel))  # need to go [+/-] half a bin
+
+        # OC [2021-12-14] if fov range is not covered by the source return nothing
+        if not np.any(mask):
+            logger.warning("FOV %s um - %s um: not covered by Source",
+                           fov_wmin, fov_wmax)
+            # FIXME: returning None here breaks the principle that a function
+            #        should always return the same type. Maybe this should
+            #        instead raise an exception that's caught higher up...
+            return None
+
+        i0p, i1p = np.where(mask)[0][0], np.where(mask)[0][-1]
+        f0 = (abs(hdu_waves[i0p] - fov_wmin + 0.5 * wdel) % wdel) / wdel    # blue edge
+        f1 = (abs(hdu_waves[i1p] - fov_wmax - 0.5 * wdel) % wdel) / wdel    # red edge
+        data = cubehdu.data[i0p:i1p+1,
+                            xy0p[1]:xy1p[1],
+                            xy0p[0]:xy1p[0]]
+        data[0, :, :] *= f0
+        if i1p > i0p:
+            data[-1, :, :] *= f1
+
+        # w0, w1 : the closest cube wavelengths outside the fov edge wavelengths
+        # fov_waves : the fov edge wavelengths
+        # f0, f1 : the scaling factors for the blue and red edge cube slices
+        #
+        # w0, w1 = hdu_waves[i0p], hdu_waves[i1p]
+
+        new_hdr.update({
+            "NAXIS": 3,
+            "NAXIS3": data.shape[0],
+            "CRVAL3": hdu_waves[i0p],
+            "CRPIX3": 0,
+            "CDELT3": hdr["CDELT3"],
+            "CUNIT3": hdr["CUNIT3"],
+            "CTYPE3": hdr["CTYPE3"],
+            "BUNIT":  hdr["BUNIT"],
+        })
+
+        return new_hdr, data
 
     def _evaluate_spectrum_with_weight(self, ref, waveset, weight):
         return self.spectra[int(ref)](waveset).value * weight
@@ -870,7 +870,7 @@ class FieldOfView(FieldOfViewBase):
                                        "CRPIX3": 1,
                                        "CUNIT3": "um",
                                        "CTYPE3": "WAVE"})
-        # ..todo: Add the log wavelength keyword here, if log scale is needed
+        # TODO: Add the log wavelength keyword here, if log scale is needed
         return canvas_cube_hdu      # [ph s-1 AA-1 (arcsec-2)]
 
     @property
