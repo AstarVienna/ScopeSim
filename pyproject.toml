@@ -50,7 +50,7 @@ ipympl = "^0.9.4"
 
 [tool.poetry.group.test.dependencies]
 pytest = "^8.3.5"
-pytest-cov = "^4.1.0"
+pytest-cov = "^6.0.0"
 scopesim_templates = ">=0.6.0"
 ipykernel = "^6.24.0"
 
