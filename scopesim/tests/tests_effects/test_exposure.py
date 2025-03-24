@@ -23,7 +23,7 @@ def _patched_cmds(exptime=1, dit=None, ndit=None):
 @pytest.fixture(name="imageplane", scope="class")
 def fixture_imageplane():
     """Instantiate an ImagePlane object"""
-    implane = ImagePlane(_image_hdu_square)
+    implane = ImagePlane(_image_hdu_square().header)
     implane.hdu.data += 1.e5
     return implane
 
@@ -50,6 +50,9 @@ class TestExposureOutput:
     def test_fails_without_dit_and_ndit(self):
         with pytest.raises(ValueError):
             expout = ExposureOutput(mode="sum")
+
+    def test_works_only_on_detector_base(self, exposureoutput, imageplane):
+        assert exposureoutput.apply_to(imageplane) is imageplane
 
     def test_can_set_to_new_mode(self, exposureoutput):
         assert exposureoutput.current_mode == "average"
