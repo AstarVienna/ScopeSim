@@ -1,7 +1,6 @@
 """Tests for Effect ExposureOutput"""
 
 import pytest
-from unittest.mock import patch
 
 import numpy as np
 
@@ -12,7 +11,7 @@ from scopesim.effects.electronic import ExposureOutput
 
 from scopesim.tests.mocks.py_objects.imagehdu_objects import _image_hdu_square
 
-# pylint: disable=no-self-use, missing-class-docstring
+# pylint: disable=missing-class-docstring
 # pylint: disable=missing-function-docstring
 
 def _patched_cmds(exptime=1, dit=None, ndit=None):
@@ -35,7 +34,6 @@ def fixture_exposureoutput():
 @pytest.fixture(name="detector", scope="function")
 def fixture_detector():
     det = Detector(_image_hdu_square().header)
-    width = det._hdu.data.shape[1]
     det._hdu.data[:] = 1.e5
     return det
 
@@ -45,11 +43,11 @@ class TestExposureOutput:
 
     def test_fails_with_unknown_mode(self):
         with pytest.raises(ValueError):
-            expout = ExposureOutput(mode="something", dit=1, ndit=4)
+            ExposureOutput(mode="something", dit=1, ndit=4)
 
     def test_fails_without_dit_and_ndit(self):
         with pytest.raises(ValueError):
-            expout = ExposureOutput(mode="sum")
+            ExposureOutput(mode="sum")
 
     def test_works_only_on_detector_base(self, exposureoutput, imageplane):
         assert exposureoutput.apply_to(imageplane) is imageplane

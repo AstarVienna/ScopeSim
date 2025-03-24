@@ -209,24 +209,13 @@ class ExposureOutput(Effect):
         ndit = from_currsys(self.meta["ndit"], self.cmds)
         logger.debug("Exposure: DIT = %s s, NDIT = %s", dit, ndit)
 
-        if (no_dit := dit is None) | (no_ndit := ndit is None):
-            raise ValueError(
-                f"{'DIT' * no_dit}{' & ' * no_dit * no_ndit}{'NDIT' * no_ndit} "
-                "not set. If AutoExposure is not used, please set "
-                f"{'!OBS.dit' * no_dit}{' & ' * no_dit * no_ndit}"
-                f"{'!OBS.ndit' * no_ndit} parameter(s) or pass {'dit' * no_dit}"
-                f"{' & ' * no_dit * no_ndit}{'ndit' * no_ndit} as kwargs to the "
-                "readout call."
-            )
-
-        # Assume that we obtain the total exposure time, hence
-        # only need to do sth for the average
         if self.current_mode == "average":
             obj._hdu.data /= ndit
 
         return obj
 
     def set_mode(self, new_mode):
+        """Set new mode for ExposureOutput (average or sum)"""
         if new_mode in self.modes:
             self.current_mode = new_mode
             self.meta["current_mode"] = self.current_mode
