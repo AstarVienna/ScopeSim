@@ -184,6 +184,56 @@ class AutoExposure(Effect):
         return obj
 
 
+class ExposureOutput(Effect):
+    """Return average or sum of ``ndit`` subexposures."""
+
+    required_keys = {"dit", "ndit"}
+    z_order: ClassVar[tuple[int, ...]] = (861,)
+    _current_str = "current_mode"
+
+    def __init__(self, mode="average", **kwargs):
+        super().__init__(**kwargs)
+        self.meta.update(kwargs)
+        self.modes = ("average", "sum")
+        if mode not in self.modes:
+            raise ValueError("mode must be one of", self.modes)
+        self.current_mode = mode
+        self.meta["current_mode"] = self.current_mode
+        check_keys(self.meta, self.required_keys, action="error")
+
+    def apply_to(self, obj, **kwargs):
+        if not isinstance(obj, DetectorBase):
+            return obj
+
+        dit = from_currsys(self.meta["dit"], self.cmds)
+        ndit = from_currsys(self.meta["ndit"], self.cmds)
+        logger.debug("Exposure: DIT = %s s, NDIT = %s", dit, ndit)
+
+        if (no_dit := dit is None) | (no_ndit := ndit is None):
+            raise ValueError(
+                f"{'DIT' * no_dit}{' & ' * no_dit * no_ndit}{'NDIT' * no_ndit} "
+                "not set. If AutoExposure is not used, please set "
+                f"{'!OBS.dit' * no_dit}{' & ' * no_dit * no_ndit}"
+                f"{'!OBS.ndit' * no_ndit} parameter(s) or pass {'dit' * no_dit}"
+                f"{' & ' * no_dit * no_ndit}{'ndit' * no_ndit} as kwargs to the "
+                "readout call."
+            )
+
+        # Assume that we obtain the total exposure time, hence
+        # only need to do sth for the average
+        if self.current_mode == "average":
+            obj._hdu.data /= ndit
+
+        return obj
+
+    def set_mode(self, new_mode):
+        if new_mode in self.modes:
+            self.current_mode = new_mode
+            self.meta["current_mode"] = self.current_mode
+        else:
+            logger.warning("Trying to set to unknown mode.")
+
+
 class SummedExposure(Effect):
     """Simulates a summed stack of ``ndit`` exposures."""
 
