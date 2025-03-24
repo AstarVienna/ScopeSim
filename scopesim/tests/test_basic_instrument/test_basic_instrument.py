@@ -329,7 +329,11 @@ class TestDitNdit:
         o_dit, o_ndit = opt.cmds["!OBS.dit"], opt.cmds["!OBS.ndit"]
         opt.cmds["!OBS.dit"] = dit
         opt.cmds["!OBS.ndit"] = ndit
-        kwarged = int(opt.readout()[0][1].data.sum())
+        assert adconverter.cmds["!OBS.dit"] == dit
+        assert adconverter.cmds["!OBS.ndit"] == ndit
+        kwarged = int(opt.readout(reset=False)[0][1].data.sum())
+        assert adconverter.cmds["!OBS.dit"] == dit
+        assert adconverter.cmds["!OBS.ndit"] == ndit
         assert adconverter._should_apply() == adconvert
         opt.cmds["!OBS.dit"] = o_dit
         opt.cmds["!OBS.ndit"] = o_ndit
@@ -349,9 +353,12 @@ class TestDitNdit:
         assert pytest.approx(kwarged / default, rel=.05) == factor
 
     @pytest.mark.parametrize(("dit", "ndit", "factor", "adconvert"),
-                             [pytest.param(20, 1, 2, True, marks=pytest.mark.xfail(reason="S.E. doesn't get kwargs without A.E..")),
-                              pytest.param(10, 3, 3, False, marks=pytest.mark.xfail(reason="S.E. doesn't get kwargs without A.E..")),
-                              pytest.param(None, None, 1, True, marks=pytest.mark.xfail(reason="A.E. dosen't use dit, ndit from !OBS if those are None in kwargs."))])
+                             [pytest.param(20, 1, 2, True,
+                                           marks=pytest.mark.xfail(reason="S.E. doesn't get kwargs without A.E..")),
+                              pytest.param(10, 3, 3, False,
+                                           marks=pytest.mark.xfail(reason="S.E. doesn't get kwargs without A.E..")),
+                              pytest.param(None, None, 1, True,
+                                           marks=pytest.mark.xfail(reason="A.E. dosen't use dit, ndit from !OBS if those are None in kwargs."))])
     def test_kwargs_override_obs_dict_also_with_autoexp(
             self, obs_aeq, dit, ndit, factor, adconvert):
         """This should prioritize dit, ndit from kwargs.

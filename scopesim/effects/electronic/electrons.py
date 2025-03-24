@@ -94,6 +94,8 @@ class ADConversion(Effect):
 
     The effect applies the gain to convert from electrons to ADU
     and converts the output to the desired data type (e.g. uint16).
+
+
     """
 
     z_order: ClassVar[tuple[int, ...]] = (825,)
@@ -102,18 +104,20 @@ class ADConversion(Effect):
         super().__init__(**kwargs)
         params = {
             "dtype": "uint16",
-            "gain": 1.
+            "gain": 1.      # default, usually overridden from yaml
         }
         self.meta.update(params)
         self.meta.update(kwargs)
 
     def _should_apply(self) -> bool:
-        """Check cases where the effect should not be applied"""
+        """Check cases where the effect should not be applied
+        """
         if self.cmds is None:
             logger.warning("Cannot access cmds for ADConversion effect.")
             return True
-        print(f"AUTOEXPSET: {self.cmds.get("!OBS.autoexpset", False)}")
+
         # ..todo: need to deal with this case more realistically
+        # Is this still necessary?
         if self.cmds.get("!OBS.autoexpset", False):
             logger.info("DIT, NDIT determined by AutoExposure -> "
                         "Create float32 output.")
