@@ -122,8 +122,8 @@ class TestDownloadPackage:
     #             db.download_package("instruments/bogus.zip")
 
 
-@pytest.mark.webtest
 class TestDownloadPackages:
+    @pytest.mark.webtest
     def test_downloads_stable_package(self):
         with TemporaryDirectory() as tmpdir:
             db.download_packages(["test_package"], release="stable",
@@ -137,6 +137,7 @@ class TestDownloadPackages:
                 version_dict = yaml.full_load(f)
             assert version_dict["release"] == "stable"
 
+    @pytest.mark.webtest
     def test_downloads_latest_package(self):
         with TemporaryDirectory() as tmpdir:
             db.download_packages("test_package", release="latest",
@@ -147,6 +148,7 @@ class TestDownloadPackages:
 
             assert version_dict["release"] == "dev"
 
+    @pytest.mark.webtest
     def test_downloads_specific_package(self):
         release = "2022-04-09.dev"
         with TemporaryDirectory() as tmpdir:
@@ -158,6 +160,7 @@ class TestDownloadPackages:
 
             assert version_dict["version"] == release
 
+    @pytest.mark.webtest(github=True)
     def test_downloads_github_version_of_package_with_semicolon(self):
         release = "github:728761fc76adb548696205139e4e9a4260401dfc"
         with TemporaryDirectory() as tmpdir:
@@ -167,6 +170,7 @@ class TestDownloadPackages:
 
             assert filename.exists()
 
+    @pytest.mark.webtest(github=True)
     def test_downloads_github_version_of_package_with_at_symbol(self):
         release = "github@728761fc76adb548696205139e4e9a4260401dfc"
         with TemporaryDirectory() as tmpdir:
@@ -177,7 +181,7 @@ class TestDownloadPackages:
             assert filename.exists()
 
 
-@pytest.mark.webtest
+@pytest.mark.webtest(github=True)
 class TestDownloadGithubFolder:
     def test_downloads_current_package(self):
         with TemporaryDirectory() as tmpdir:

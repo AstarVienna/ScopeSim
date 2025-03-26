@@ -71,12 +71,13 @@ class WCUSource(TERCurve):
             "position": 0,  # position in surface table
         }
         self.meta.update(params)
-        self.meta.update(kwargs)
         if 'config_file' in self.meta:
             config_file = from_currsys(self.meta['config_file'], self.cmds)
             with open(find_file(config_file), encoding="utf-8") as fd:
                 config = yaml.safe_load(fd)
                 self.meta.update(config)
+
+        self.meta.update(kwargs)
 
         # Check on the presence of one vital parameter
         if "rho_tube" not in self.meta:
