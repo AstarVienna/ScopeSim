@@ -84,7 +84,7 @@ class FieldOfView(FieldOfViewBase):
 
         self.cmds = cmds
 
-        if not any((has_needed_keywords(header, s) for s in {"", "S"})):
+        if not any(has_needed_keywords(header, s) for s in {"", "S"}):
             raise ValueError(
                 f"Header must contain a valid sky-plane WCS: {dict(header)}")
         if not has_needed_keywords(header, "D"):
@@ -314,9 +314,11 @@ class FieldOfView(FieldOfViewBase):
         new_imagehdu : fits.ImageHDU
 
         """
+        # TODO: At some point streamline the debug logging here...
         hdr = imagehdu.header
         image_wcs = WCS(hdr, naxis=2)
         naxis1, naxis2 = hdr["NAXIS1"], hdr["NAXIS2"]
+        logger.debug("old naxis: %s", [naxis1, naxis2])
         xy_hdu = image_wcs.calc_footprint(center=False, axes=(naxis1, naxis2))
 
         if image_wcs.wcs.cunit[0] == "deg":
@@ -331,6 +333,7 @@ class FieldOfView(FieldOfViewBase):
 
         xy0s = np.array((xy_hdu.min(axis=0), corners.min(axis=0))).max(axis=0)
         xy1s = np.array((xy_hdu.max(axis=0), corners.max(axis=0))).min(axis=0)
+        logger.debug("xy0s: %s; xy1s: %s", xy0s, xy1s)
 
         # Round to avoid floating point madness
         xyp = image_wcs.wcs_world2pix(np.array([xy0s, xy1s]), 0).round(7)
@@ -342,10 +345,10 @@ class FieldOfView(FieldOfViewBase):
 
         xy0p = np.max(((0, 0), np.floor(xyp[0]).astype(int)), axis=0)
         xy1p = np.min(((naxis1, naxis2), np.ceil(xyp[1]).astype(int)), axis=0)
+        logger.debug("xy0p: %s; xy1p: %s", xy0p, xy1p)
 
         # Add 1 if the same
         xy1p += (xy0p == xy1p)
-
         logger.debug("xy0p: %s; xy1p: %s", xy0p, xy1p)
 
         new_wcs, new_naxis = imp_utils.create_wcs_from_points(

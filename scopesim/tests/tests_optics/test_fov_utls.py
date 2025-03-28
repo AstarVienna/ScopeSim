@@ -37,15 +37,15 @@ class TestExtractAreaFromImageHDU:
 
         if PLOTS:
             xy = imp_utils.calc_footprint(basic_fov_header)
-            x, y = xy[:, 0], xy[:, 1]
-            plt.fill(x, y, c="r")
+            plt.fill(xy[:, 0], xy[:, 1], c="r", label="FOV")
             xy = imp_utils.calc_footprint(field.header)
-            x, y = xy[:, 0], xy[:, 1]
-            plt.fill(x, y, c="y")
+            plt.fill(xy[:, 0], xy[:, 1], c="y", label="Source")
             xy = imp_utils.calc_footprint(new_field.header)
-            x, y = xy[:, 0], xy[:, 1]
-            plt.fill(x, y, c="g")
+            plt.fill(xy[:, 0], xy[:, 1], c="g", label="Extracted")
 
+            plt.grid()
+            plt.legend()
+            plt.gca().set_aspect("equal")
             plt.show()
 
         assert new_field.header["NAXIS1"] == field.header["NAXIS1"]
@@ -60,15 +60,15 @@ class TestExtractAreaFromImageHDU:
 
         if PLOTS:
             xy = imp_utils.calc_footprint(basic_fov_header)
-            x, y = xy[:, 0], xy[:, 1]
-            plt.fill(x, y, c="r")
+            plt.fill(xy[:, 0], xy[:, 1], c="r", label="FOV")
             xy = imp_utils.calc_footprint(field.header)
-            x, y = xy[:, 0], xy[:, 1]
-            plt.fill(x, y, c="y")
+            plt.fill(xy[:, 0], xy[:, 1], c="y", label="Source")
             xy = imp_utils.calc_footprint(new_field.header)
-            x, y = xy[:, 0], xy[:, 1]
-            plt.fill(x, y, c="g")
+            plt.fill(xy[:, 0], xy[:, 1], c="g", label="Extracted")
 
+            plt.grid()
+            plt.legend()
+            plt.gca().set_aspect("equal")
             plt.show()
 
         assert new_field.header["NAXIS1"] == field.header["NAXIS1"]
@@ -76,7 +76,7 @@ class TestExtractAreaFromImageHDU:
         assert new_field.header["NAXIS3"] == 21
 
     def test_returns_eigth_cube_for_3d_offset_fov(self, cube_source,
-                                                         basic_fov_header):
+                                                  basic_fov_header):
         hdr = basic_fov_header
         hdr["CRVAL1"] += 75 * hdr["CDELT1"]
         hdr["CRVAL2"] += 75 * hdr["CDELT2"]
@@ -86,15 +86,15 @@ class TestExtractAreaFromImageHDU:
 
         if PLOTS:
             xy = imp_utils.calc_footprint(basic_fov_header)
-            x, y = xy[:, 0], xy[:, 1]
-            plt.fill(x, y, c="r")
+            plt.fill(xy[:, 0], xy[:, 1], c="r", label="FOV")
             xy = imp_utils.calc_footprint(field.header)
-            x, y = xy[:, 0], xy[:, 1]
-            plt.fill(x, y, c="y")
+            plt.fill(xy[:, 0], xy[:, 1], c="y", label="Source")
             xy = imp_utils.calc_footprint(new_field.header)
-            x, y = xy[:, 0], xy[:, 1]
-            plt.fill(x, y, c="g")
+            plt.fill(xy[:, 0], xy[:, 1], c="g", label="Extracted")
 
+            plt.grid()
+            plt.legend()
+            plt.gca().set_aspect("equal")
             plt.show()
 
         # Note: 26 is correct because there are actually 25.5 source pixels in
