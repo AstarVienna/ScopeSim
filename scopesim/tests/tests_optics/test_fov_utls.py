@@ -97,8 +97,10 @@ class TestExtractAreaFromImageHDU:
 
             plt.show()
 
-        assert new_field.header["NAXIS1"] == 25
-        assert new_field.header["NAXIS2"] == 25
+        # Note: 26 is correct because there are actually 25.5 source pixels in
+        #       the FOV, but the cutout is "generous".
+        assert new_field.header["NAXIS1"] == 26
+        assert new_field.header["NAXIS2"] == 26
         assert new_field.header["NAXIS3"] == 51
 
 

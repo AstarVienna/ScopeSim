@@ -187,6 +187,7 @@ def create_wcs_from_points(points: np.ndarray,
     pixel_scale = abs(pixel_scale)
     extent = points.ptp(axis=0) / pixel_scale
     naxis = extent.round().astype(int)
+    offset = (extent - naxis) * pixel_scale  # compensate rounding
 
     # FIXME: Woule be nice to have D headers referenced at (1, 1), but that
     #        breaks some things, likely down to rescaling...
@@ -202,13 +203,14 @@ def create_wcs_from_points(points: np.ndarray,
                                         f"pix, got '{naxis.unit}' instead.")
         naxis = naxis.value
 
-    if (naxis == 0).any():
+    if (zeroaxis := (naxis == 0)).any():
         # Ensure at least one pixel in each axis.
         logger.debug("NAXISn == 0, using minimum of 1.")
-        naxis[naxis == 0] = 1
+        naxis[zeroaxis] = 1
+        offset[zeroaxis] = 0
 
     crpix = (naxis + 1) / 2
-    crval = (points.min(axis=0) + points.max(axis=0)) / 2
+    crval = (points.min(axis=0) + points.max(axis=0) + offset) / 2
 
     # Cannot do `in "DX"` here because that would also match the empty string.
     linsuff = {"D", "X"}
