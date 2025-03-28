@@ -60,7 +60,7 @@ class TestObserve:
         print(src_flux, bg_flux)
         area = opt.optics_manager.area.value  # u.m**2
         assert src_flux == approx(1)          # u.Unit("ph s-1")
-        assert np.sum(im) == approx(src_flux * area, rel=2e-3)
+        assert np.sum(im) == approx(src_flux * area)
 
     def test_flux_is_conserved_for_yes_bg_emission(self, non_unity_cmds, tbl_src):
         """
@@ -80,8 +80,8 @@ class TestObserve:
 
         # given a 1 um bandpass
         assert src_flux == approx(1)          # u.Unit("ph s-1")
-        assert np.sum(im - np.median(im)) == approx(0.45, rel=1e-2)
-        assert np.median(im) == approx(1.5, abs=1e-2)
+        assert np.sum(im - np.median(im)) == approx(0.45)
+        assert np.median(im) == approx(1.5, abs=2e-3)
 
 
 @pytest.mark.usefixtures("protect_currsys", "patch_all_mock_paths")
