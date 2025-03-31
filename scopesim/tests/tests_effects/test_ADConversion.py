@@ -6,8 +6,10 @@ from unittest.mock import patch
 
 import numpy as np
 
-from scopesim.detector import Detector
-from scopesim.effects.electronic import ADConversion, DetectorList
+from scopesim.commands import UserCommands
+from scopesim.detector import Detector, DetectorManager
+from scopesim.effects.electronic import ADConversion
+from scopesim.effects.detector_list import DetectorList
 
 from scopesim.tests.mocks.py_objects.header_objects import _implane_header
 
@@ -45,6 +47,7 @@ class TestApplyTo:
         det = detector_with_data
         assert det.data.sum() > det.data.size * 1.2
         adconverter = ADConversion()
+        adconverter.cmds = {"!DET.gain": 1, "!OBS.ndit": 1}
         det = adconverter.apply_to(det)
         assert det.data.sum() == det.data.size
         assert det.data.dtype == np.uint16
@@ -53,6 +56,7 @@ class TestApplyTo:
         det = detector_with_data
         assert det.data.sum() > det.data.size * 1.2
         adconverter = ADConversion(dtype="int16")
+        adconverter.cmds = {"!DET.gain": 1, "!OBS.ndit": 1}
         det = adconverter.apply_to(det)
         assert det.data.sum() == det.data.size
         assert det.data.dtype == np.int16
@@ -61,6 +65,7 @@ class TestApplyTo:
         det = detector_with_data
         assert det.data.sum() > det.data.size * 1.2
         adconverter = ADConversion(dtype=float)
+        adconverter.cmds = {"!DET.gain": 1, "!OBS.ndit": 1}
         det = adconverter.apply_to(det)
         # assert det.data.sum() == det.data.size  # fails after removal of floor
         # Test sub-dtype because exact dtype for "float" may depend on OS
@@ -73,6 +78,7 @@ class TestApplyTo:
         data = np.random.randn(100, 100) * 100. + 1000.
         det._hdu.data = 1. * data
         adconverter = ADConversion(gain=gain)
+        adconverter.cmds = {"!DET.gain": gain, "!OBS.ndit": 1}
         adconverter.apply_to(det)
         assert np.all((data/gain).astype(int) == det._hdu.data)
 
@@ -80,3 +86,13 @@ class TestApplyTo:
     def test_applies_gain_list_to_detector_list(self):
         det_list = DetectorList(filename="FPA_array_layout.dat",
                                 image_plane_id = 0)
+        detmgr = DetectorManager(det_list)
+        for det in detmgr._detectors:
+            det.hdu.data = 100. * np.ones_like(det.hdu.data)
+        adconverter = ADConversion()
+        adconverter.cmds = UserCommands(yamls=["multidetector.yaml"],
+                                        properties={"!OBS.ndit": 1})
+        for i, det in enumerate(detmgr._detectors):
+            oldval = det.data.mean()
+            newdet = adconverter.apply_to(det)
+            assert  newdet.data.mean() == int(oldval / (i + 1))

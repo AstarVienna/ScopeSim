@@ -99,7 +99,7 @@ class DetectorList(Effect):
         - name : full_detector_array
           class : DetectorList
           kwargs :
-            filename : "detecotr_list.dat"
+            filename : "detector_list.dat"
             active_detectors : [1, 3]
             image_plane_id : 0
 

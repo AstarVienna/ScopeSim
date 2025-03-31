@@ -144,14 +144,14 @@ class ADConversion(Effect):
 
         # TODO: Apply the gain value (copy from DarkCurrent)
         logger.info(f"Applying gain {from_currsys(self.meta['gain'], self.cmds)}")
-        if isinstance(from_currsys(self.meta["gain"], self.cmds), dict):
+        if hasattr(self.cmds["!DET.gain"], "dic"):
             dtcr_id = obj.meta[real_colname("id", obj.meta)]
-            gain = from_currsys(self.meta["gain"][dtcr_id], self.cmds)
-        elif isinstance(from_currsys(self.meta["gain"], self.cmds), (float, int)):
-            gain = from_currsys(self.meta["gain"], self.cmds)
+            gain = self.cmds["!DET.gain"].dic[dtcr_id]
+        elif isinstance(self.cmds["!DET.gain"], (float, int)):
+            gain = self.cmds["!DET.gain"]
         else:
             raise ValueError("<ADConversion>.meta['gain'] must be either "
-                             f"dict or float, but is {self.meta['gain']}")
+                             f"dict or float, but is {self.cmds['!DET.gain']}")
 
         # Apply gain   TODO: option to turn this off
         obj._hdu.data /= gain
