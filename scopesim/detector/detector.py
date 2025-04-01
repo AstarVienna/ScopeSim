@@ -3,7 +3,7 @@ import numpy as np
 from astropy.io.fits import ImageHDU
 from astropy.wcs import WCS
 
-from ..base_classes import ImagePlaneBase
+from ..optics import ImagePlane
 from ..optics.image_plane_utils import (add_imagehdu_to_imagehdu,
                                         sky_wcs_from_det_wcs)
 from ..utils import get_logger, from_currsys, stringify_dict
@@ -25,7 +25,7 @@ class Detector:
         """Extract HDU from ImagePlane object and add to internal HDU."""
         if reset:
             self.reset()
-        if not isinstance(image_plane, ImagePlaneBase):
+        if not isinstance(image_plane, ImagePlane):
             raise ValueError("image_plane must be an ImagePlane object, "
                              f"but is: {type(image_plane)}")
 

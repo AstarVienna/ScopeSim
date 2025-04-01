@@ -6,7 +6,7 @@ from typing import ClassVar
 import numpy as np
 
 from .. import Effect
-from ...base_classes import ImagePlaneBase
+from ...optics import ImagePlane
 from ...detector import Detector
 from ...utils import from_currsys, check_keys
 from . import logger
@@ -130,8 +130,8 @@ class AutoExposure(Effect):
         return dit, ndit
 
     def apply_to(self, obj, **kwargs):
-        if not isinstance(obj, (ImagePlaneBase, Detector)):
-            # TODO: figure out why this needs to be applied to ImagePlaneBase?
+        if not isinstance(obj, (ImagePlane, Detector)):
+            # TODO: figure out why this needs to be applied to ImagePlane?
             return obj
 
         exptime = kwargs.pop("exptime",

@@ -4,7 +4,7 @@
 from typing import ClassVar
 
 from .. import Effect
-from ...base_classes import ImagePlaneBase
+from ...optics import ImagePlane
 from ...detector import Detector
 from ...utils import from_currsys, figure_factory, check_keys
 
@@ -20,8 +20,8 @@ class ReferencePixelBorder(Effect):
         self.meta.update(kwargs)
 
     def apply_to(self, implane, **kwargs):
-        # .. todo: should this be ImagePlaneBase here?
-        if isinstance(implane, ImagePlaneBase):
+        # .. todo: should this be ImagePlane here?
+        if isinstance(implane, ImagePlane):
             if self.meta["top"] > 0:
                 implane.hdu.data[:, -self.meta["top"]:] = 0
             if self.meta["bottom"] > 0:

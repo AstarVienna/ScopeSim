@@ -1,14 +1,6 @@
 from astropy.io.fits import Header
 
 
-class ImagePlaneBase:
-    pass
-
-
-class FieldOfViewBase:
-    pass
-
-
 class PoorMansHeader:
     def __init__(self, dic=None):
         self.comments = {}

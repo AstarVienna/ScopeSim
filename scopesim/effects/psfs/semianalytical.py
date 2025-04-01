@@ -10,7 +10,7 @@ from astropy import units as u
 import anisocado as aniso
 
 from .. import ter_curves_utils as tu
-from ...base_classes import FieldOfViewBase
+from ...optics.fov import FieldOfView
 from ...utils import (figure_factory, figure_grid_factory, from_currsys,
                       quantify, check_keys)
 from . import PSF
@@ -23,8 +23,8 @@ class SemiAnalyticalPSF(PSF):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.convolution_classes = FieldOfViewBase
-        # self.convolution_classes = ImagePlaneBase
+        self.convolution_classes = FieldOfView
+        # self.convolution_classes = ImagePlane
 
 
 class AnisocadoConstPSF(SemiAnalyticalPSF):
@@ -108,7 +108,7 @@ class AnisocadoConstPSF(SemiAnalyticalPSF):
         if self._kernel is not None:
             return self._kernel
 
-        if isinstance(fov, FieldOfViewBase):
+        if isinstance(fov, FieldOfView):
             pixel_scale = fov.header["CDELT1"] * u.deg.to(u.arcsec)
         elif isinstance(fov, float):
             pixel_scale = fov

@@ -18,13 +18,12 @@ from . import image_plane_utils as imp_utils
 
 from ..utils import from_currsys, quantify, has_needed_keywords, get_logger
 from ..source.source import Source
-from ..base_classes import FieldOfViewBase
 
 
 logger = get_logger(__name__)
 
 
-class FieldOfView(FieldOfViewBase):
+class FieldOfView:
     """
     A FOV is spectro-spatial volume cut out of a Source object.
 

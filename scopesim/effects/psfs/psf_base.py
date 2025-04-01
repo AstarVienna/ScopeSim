@@ -9,8 +9,9 @@ from scipy.ndimage import rotate
 from astropy import units as u
 
 from ..effects import Effect
+from ...optics import ImagePlane
+from ...optics.fov import FieldOfView
 from ...optics.fov_volume_list import FovVolumeList
-from ...base_classes import ImagePlaneBase, FieldOfViewBase
 from ...utils import from_currsys, quantify, figure_factory, get_logger
 
 logger = get_logger(__name__)
@@ -53,7 +54,7 @@ class PSF(Effect):
         self.meta.update(params)
         self.meta.update(kwargs)
         self.meta = from_currsys(self.meta, self.cmds)
-        self.convolution_classes = (FieldOfViewBase, ImagePlaneBase)
+        self.convolution_classes = (FieldOfView, ImagePlane)
 
     def apply_to(self, obj, **kwargs):
         """Apply the PSF."""
