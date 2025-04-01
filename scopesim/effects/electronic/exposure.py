@@ -6,7 +6,8 @@ from typing import ClassVar
 import numpy as np
 
 from .. import Effect
-from ...base_classes import DetectorBase, ImagePlaneBase
+from ...base_classes import ImagePlaneBase
+from ...detector import Detector
 from ...utils import from_currsys, check_keys
 from . import logger
 
@@ -129,7 +130,7 @@ class AutoExposure(Effect):
         return dit, ndit
 
     def apply_to(self, obj, **kwargs):
-        if not isinstance(obj, (ImagePlaneBase, DetectorBase)):
+        if not isinstance(obj, (ImagePlaneBase, Detector)):
             # TODO: figure out why this needs to be applied to ImagePlaneBase?
             return obj
 
@@ -202,7 +203,7 @@ class ExposureOutput(Effect):
         check_keys(self.meta, self.required_keys, action="error")
 
     def apply_to(self, obj, **kwargs):
-        if not isinstance(obj, DetectorBase):
+        if not isinstance(obj, Detector):
             return obj
 
         dit = from_currsys(self.meta["dit"], self.cmds)
@@ -236,7 +237,7 @@ class SummedExposure(Effect):
         check_keys(self.meta, self.required_keys, action="error")
 
     def apply_to(self, obj, **kwargs):
-        if not isinstance(obj, DetectorBase):
+        if not isinstance(obj, Detector):
             return obj
 
         dit = from_currsys(self.meta["dit"], self.cmds)

@@ -9,10 +9,6 @@ class FieldOfViewBase:
     pass
 
 
-class DetectorBase:
-    pass
-
-
 class PoorMansHeader:
     def __init__(self, dic=None):
         self.comments = {}

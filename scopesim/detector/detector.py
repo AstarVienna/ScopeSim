@@ -3,7 +3,7 @@ import numpy as np
 from astropy.io.fits import ImageHDU
 from astropy.wcs import WCS
 
-from ..base_classes import ImagePlaneBase, DetectorBase
+from ..base_classes import ImagePlaneBase
 from ..optics.image_plane_utils import (add_imagehdu_to_imagehdu,
                                         sky_wcs_from_det_wcs)
 from ..utils import get_logger, from_currsys, stringify_dict
@@ -12,7 +12,7 @@ from ..utils import get_logger, from_currsys, stringify_dict
 logger = get_logger(__name__)
 
 
-class Detector(DetectorBase):
+class Detector:
     def __init__(self, header, cmds=None, **kwargs):
         image = np.zeros((header["NAXIS2"], header["NAXIS1"]))
         self._hdu = ImageHDU(header=header, data=image)
