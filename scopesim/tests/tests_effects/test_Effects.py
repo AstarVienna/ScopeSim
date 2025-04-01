@@ -22,6 +22,10 @@ class TestEffectInit:
     def test_has_method_apply_to(self):
         assert hasattr(Effect(), "apply_to")
 
+    def test_base_class_apply_to_throws(self):
+        with pytest.raises(NotImplementedError):
+            Effect().apply_to("bogus")
+
     def test_has_method_waveset(self):
         assert hasattr(Effect(), "fov_grid")
 
