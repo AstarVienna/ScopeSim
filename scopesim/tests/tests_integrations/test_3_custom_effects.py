@@ -3,12 +3,12 @@
 
 # 3: Writing and including custom Effects
 # =======================================
-# 
+#
 # In this tutorial, we will load the model of MICADO (including Armazones, ELT, MORFEO) and then turn off all effect that modify the spatial extent of the stars. The purpose here is to see in detail what happens to the **distribution of the stars flux on a sub-pixel level** when we add a plug-in astrometric Effect to the optical system.
-# 
+#
 # For real simulation, we will obviously leave all normal MICADO effects turned on, while still adding the plug-in Effect. Hopefully this tutorial will serve as a refernce for those who want to see **how to create Plug-ins** and how to manipulate the effects in the MICADO optical train model.
-# 
-# 
+#
+#
 # Create and optical model for MICADO and the ELT
 # -----------------------------------------------
 
@@ -106,7 +106,7 @@ def run():
     from astropy.table import Table
 
     from scopesim.effects import Effect
-    from scopesim.base_classes import SourceBase
+    from scopesim.source import Source
 
 
     class PointSourceJitter(Effect):
@@ -117,7 +117,7 @@ def run():
             self.meta.update(kwargs)                            # add any extra parameters passed when initialising
 
         def apply_to(self, obj):                                # the function that does the work
-            if isinstance(obj, SourceBase):
+            if isinstance(obj, Source):
                 for field in obj.fields:
                     if isinstance(field, Table):
                         dx, dy = 2 * (np.random.random(size=(2, len(field))) - 0.5)
@@ -147,7 +147,7 @@ def run():
     # The main function of any Effect is the ``apply_to`` method::
     #
     #     def apply_to(self, obj):
-    #         if isinstance(obj, SourceBase):
+    #         if isinstance(obj, Source):
     #             ...
     #
     #         return obj
@@ -158,22 +158,13 @@ def run():
     # For example, if we are writing a redshifting Effect, we could write the code to shift the wavelength array of a ``Source`` object by ``z+1`` here.
     #
     # There are 4 main classes that are cycled through during an observation run:
-    # * ``SourceBase``: contains the original 2+1D distribtion of light,
-    # * ``FieldOfViewBase``: contains a (quasi-)monochromatic cutout from the Source object,
-    # * ``ImagePlaneBase``: contains the expectation flux image on the detector plane
-    # * ``DetectorBase``: contains the electronic readout image
+    # * ``Source``: contains the original 2+1D distribtion of light,
+    # * ``FieldOfView``: contains a (quasi-)monochromatic cutout from the Source object,
+    # * ``ImagePlane``: contains the expectation flux image on the detector plane
+    # * ``Detector``: contains the electronic readout image
     #
     # An ``Effect`` object can be applied to any number of objects based on one or more of these base classes.
     # Just remember to segregate the base-class-specific code with ``if`` statements.
-    #
-    # One further method should be mentioned: ``def fov_grid()``.
-    # This method is used by ``FOVManager`` to estimate how many ``FieldOfView`` objects to generate in order to best simulation the observation.
-    # If your Effect object might alter this estimate, then you should include this method in your class. See the code base for further details.
-    #
-    # .. note:: The ``fov_grid`` method will be depreciated in a future release of ScopeSim.
-    #     It will most likely be replaced by a ``FOVSetupBase`` class that will be cycled through the ``apply_to`` function.
-    #     However this is not yet 100% certain, so please bear with us.
-    #
 
     # Including a custom Effect
     # -------------------------
