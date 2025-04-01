@@ -41,6 +41,11 @@ class TestInit:
         adconverter = ADConversion()
         assert isinstance(adconverter, ADConversion)
 
+    def test_initialised_with_something(self):
+        adconverter = ADConversion(gain=2.3, dtype="uint32")
+        assert adconverter.meta['gain'] == 2.3
+        assert adconverter.meta['dtype'] == "uint32"
+
 
 class TestApplyTo:
     def test_converts_pixels_to_integer_with_default(self, detector_with_data):

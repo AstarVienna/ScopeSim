@@ -92,10 +92,35 @@ class LinearityCurve(Effect):
 class ADConversion(Effect):
     """Analogue-Digital Conversion effect.
 
-    The effect applies the gain to convert from electrons to ADU
+    The effect applies the gain factor (electrons/ADU) to the detector readouts
     and converts the output to the desired data type (e.g. uint16).
 
+    Examples
+    --------
+    The effect is usually instantiated in a yaml file.
 
+    For a single-detector instrument:
+    - name: ad_conversion
+      description: Apply gain and convert electron count into integers
+      class: ADConversion
+      kwargs:
+         dtype: uint16
+         gain: "!DET.gain"       # or a number if !DET.gain has not been set yet
+
+    For a multi-detector instrument the detector ids need to be identical to those
+    used to instantiate the DetectorList effect.
+    - name: ad_conversion
+      description: Apply gain and convert electron count into integers
+      class: ADConversion
+      kwargs:
+         dtype: uint16
+         gain:
+           id1:  2.2
+           id2:  2.1
+           id3   2.3
+
+    Again, `!DET.gain` can be used here. This can be useful when the `DetectorModePropertiesSetter`
+    effect is used to switch between different detector modes with different gain values.
     """
 
     z_order: ClassVar[tuple[int, ...]] = (825,)
@@ -130,7 +155,6 @@ class ADConversion(Effect):
         return True
 
     def apply_to(self, obj, **kwargs):
-        print("Entering ADConversion.apply_to")
         if not isinstance(obj, DetectorBase):
             return obj
 
@@ -142,8 +166,10 @@ class ADConversion(Effect):
             logger.warning("Setting digitized data to dtype %s, which is not "
                            "an integer subtype.", new_dtype)
 
-        # TODO: Apply the gain value (copy from DarkCurrent)
-        logger.info(f"Applying gain {from_currsys(self.meta['gain'], self.cmds)}")
+        # Apply the gain value (copy from DarkCurrent)
+        # Note that this does not cater for the case where the gain is given
+        # as a plain dictionary. Should we implement that?
+        logger.info(f"Applying gain {from_currsys(self.cmds['!DET.gain'])}")
         if hasattr(self.cmds["!DET.gain"], "dic"):
             dtcr_id = obj.meta[real_colname("id", obj.meta)]
             gain = self.cmds["!DET.gain"].dic[dtcr_id]
