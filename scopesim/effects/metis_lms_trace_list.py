@@ -20,8 +20,9 @@ from .spectral_trace_list_utils import Transform2D
 from .spectral_trace_list_utils import make_image_interpolations
 from .apertures import ApertureMask
 from .ter_curves import TERCurve
-from ..base_classes import FieldOfViewBase, FOVSetupBase
+from ..base_classes import FieldOfViewBase
 from ..optics.fov import FieldOfView
+from ..optics.fov_volume_list import FovVolumeList
 
 
 logger = get_logger(__name__)
@@ -69,7 +70,7 @@ class MetisLMSSpectralTraceList(SpectralTraceList):
 
     def apply_to(self, obj, **kwargs):
         """See parent docstring."""
-        if isinstance(obj, FOVSetupBase):
+        if isinstance(obj, FovVolumeList):
             # Create a single volume that covers the aperture and
             # the maximum wavelength range of LMS
             volumes = [spectral_trace.fov_grid()

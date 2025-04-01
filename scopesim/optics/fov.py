@@ -16,8 +16,9 @@ from synphot.units import PHOTLAM
 from . import fov_utils as fu
 from . import image_plane_utils as imp_utils
 
-from ..base_classes import SourceBase, FieldOfViewBase
 from ..utils import from_currsys, quantify, has_needed_keywords, get_logger
+from ..source.source import Source
+from ..base_classes import FieldOfViewBase
 
 
 logger = get_logger(__name__)
@@ -119,8 +120,7 @@ class FieldOfView(FieldOfViewBase):
             They are in original units. ph/s/pix comes in the make_**** methods
 
         """
-        if not isinstance(src, SourceBase):
-            raise ValueError(f"source must be a Source object: {type(src)}")
+        assert isinstance(src, Source), f"expected Source: {type(src)}"
 
         fields_in_fov = [field.field for field in src.fields
                          if fu.is_field_in_fov(self.header, field)]

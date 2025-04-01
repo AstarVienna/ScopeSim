@@ -1,14 +1,6 @@
 from astropy.io.fits import Header
 
 
-class SourceBase:
-    pass
-
-
-class FOVSetupBase:
-    pass
-
-
 class ImagePlaneBase:
     pass
 

@@ -15,7 +15,7 @@ from .effects import Effect
 from .ter_curves_utils import (add_edge_zeros, combine_two_spectra,
                                apply_throughput_to_cube, download_svo_filter,
                                download_svo_filter_list)
-from ..base_classes import SourceBase, FOVSetupBase
+from ..optics.fov_volume_list import FovVolumeList
 from ..optics.surface import SpectralSurface
 from ..source.source import Source
 from ..source.source_fields import CubeSourceField, SpectrumSourceField
@@ -108,8 +108,7 @@ class TERCurve(Effect):
             self.surface.table.meta.update(self.meta)
 
     def apply_to(self, obj, **kwargs):
-        if isinstance(obj, SourceBase):
-            assert isinstance(obj, Source), "Only Source supported."
+        if isinstance(obj, Source):
             self.meta = from_currsys(self.meta, self.cmds)
             wave_min = quantify(self.meta["wave_min"], u.um).to(u.AA)
             wave_max = quantify(self.meta["wave_max"], u.um).to(u.AA)
@@ -137,9 +136,7 @@ class TERCurve(Effect):
                 for bgs in self.background_source:
                     obj.append(bgs)
 
-        if isinstance(obj, FOVSetupBase):
-            from ..optics.fov_manager import FovVolumeList
-            assert isinstance(obj, FovVolumeList), "Only FovVolumeList supported."
+        if isinstance(obj, FovVolumeList):
             wave = self.surface.throughput.waveset
             thru = self.surface.throughput(wave)
             valid_waves = np.argwhere(thru > 0)
