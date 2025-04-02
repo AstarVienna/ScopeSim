@@ -289,7 +289,8 @@ def basic_opt_observed():
     src = st.star(flux=15)
     cmd = sim.UserCommands(use_instrument="basic_instrument",
                            ignore_effects=SWITCHOFF,
-                           properties={"!OBS.dit": 10, "!OBS.ndit": 1})
+                           properties={"!OBS.dit": 10, "!OBS.ndit": 1,
+                                       "!DET.gain": 1.})
     opt = sim.OpticalTrain(cmd)
     opt.observe(src)
     default = int(opt.readout()[0][1].data.sum())
@@ -304,7 +305,8 @@ def basic_opt_with_autoexp_and_digitize_observed():
     src = st.star(flux=15)
     cmd = sim.UserCommands(use_instrument="basic_instrument",
                            ignore_effects=SWITCHOFF,
-                           properties={"!OBS.dit": 10, "!OBS.ndit": 1})
+                           properties={"!OBS.dit": 10, "!OBS.ndit": 1,
+                                       "!DET.gain": 1.})
     opt = sim.OpticalTrain(cmd)
     opt.observe(src)
     default = int(opt.readout()[0][1].data.sum())
@@ -358,7 +360,7 @@ class TestDitNdit:
                               pytest.param(10, 3, 3, False,
                                            marks=pytest.mark.xfail(reason="S.E. doesn't get kwargs without A.E..")),
                               pytest.param(None, None, 1, True,
-                                           marks=pytest.mark.xfail(reason="A.E. dosen't use dit, ndit from !OBS if those are None in kwargs."))])
+                                           marks=pytest.mark.xfail(reason="A.E. doesn't use dit, ndit from !OBS if those are None in kwargs."))])
     def test_kwargs_override_obs_dict_also_with_autoexp(
             self, obs_aeq, dit, ndit, factor, adconvert):
         """This should prioritize dit, ndit from kwargs.
@@ -379,7 +381,9 @@ class TestDitNdit:
         o_dit, o_ndit = opt.cmds["!OBS.dit"], opt.cmds["!OBS.ndit"]
         opt.cmds["!OBS.dit"] = None
         opt.cmds["!OBS.ndit"] = None
+        print("NDIT before:", opt.cmds["!OBS.ndit"])
         kwarged = int(opt.readout(exptime=exptime)[0][1].data.sum())
+        print("NDIT after:", opt.cmds["!OBS.ndit"])
         assert not adconverter._should_apply()
         opt.cmds["!OBS.dit"] = o_dit
         opt.cmds["!OBS.ndit"] = o_ndit
