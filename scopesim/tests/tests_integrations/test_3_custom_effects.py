@@ -158,7 +158,7 @@ def run():
     # For example, if we are writing a redshifting Effect, we could write the code to shift the wavelength array of a ``Source`` object by ``z+1`` here.
     #
     # There are 4 main classes that are cycled through during an observation run:
-    # * ``Source``: contains the original 2+1D distribtion of light,
+    # * ``Source``: contains the original 2+1D distribution of light,
     # * ``FieldOfView``: contains a (quasi-)monochromatic cutout from the Source object,
     # * ``ImagePlane``: contains the expectation flux image on the detector plane
     # * ``Detector``: contains the electronic readout image
