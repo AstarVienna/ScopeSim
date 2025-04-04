@@ -4,7 +4,7 @@
 from typing import ClassVar
 
 from . import Effect
-from ..base_classes import ImagePlaneBase
+from ..optics import ImagePlane
 from ..utils import get_logger
 
 
@@ -18,7 +18,7 @@ class Shutter(Effect):
 
     def apply_to(self, obj, **kwargs):
         """Set all pixels of image plane to zero."""
-        if not isinstance(obj, ImagePlaneBase):
+        if not isinstance(obj, ImagePlane):
             return obj
 
         logger.warning("Shutter is closed, setting all pixels to zero.")

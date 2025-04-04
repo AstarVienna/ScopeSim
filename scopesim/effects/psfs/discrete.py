@@ -14,7 +14,7 @@ from astropy.wcs import WCS
 
 from ...optics.image_plane_utils import (create_wcs_from_points,
                                          add_imagehdu_to_imagehdu)
-from ...base_classes import FieldOfViewBase
+from ...optics.fov import FieldOfView
 from ...utils import from_currsys, check_keys, quantify
 from . import PSF, PoorMansFOV, logger
 
@@ -26,8 +26,8 @@ class DiscretePSF(PSF):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.convolution_classes = FieldOfViewBase
-        # self.convolution_classes = ImagePlaneBase
+        self.convolution_classes = FieldOfView
+        # self.convolution_classes = ImagePlane
 
     def _get_psf_wave_exts(self):
         """
@@ -228,7 +228,7 @@ class FieldVaryingPSF(DiscretePSF):
         # TODO: add in 3D cubes
         # accept "full", "dit", "none"
 
-        if not isinstance(fov, FieldOfViewBase):
+        if not isinstance(fov, FieldOfView):
             return fov
 
         if not fov.fields:

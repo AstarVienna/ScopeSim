@@ -4,7 +4,8 @@
 from typing import ClassVar
 
 from .. import Effect
-from ...base_classes import DetectorBase, ImagePlaneBase
+from ...optics import ImagePlane
+from ...detector import Detector
 from ...utils import from_currsys, figure_factory, check_keys
 
 
@@ -19,8 +20,8 @@ class ReferencePixelBorder(Effect):
         self.meta.update(kwargs)
 
     def apply_to(self, implane, **kwargs):
-        # .. todo: should this be ImagePlaneBase here?
-        if isinstance(implane, ImagePlaneBase):
+        # .. todo: should this be ImagePlane here?
+        if isinstance(implane, ImagePlane):
             if self.meta["top"] > 0:
                 implane.hdu.data[:, -self.meta["top"]:] = 0
             if self.meta["bottom"] > 0:
@@ -48,12 +49,14 @@ class BinnedImage(Effect):
         check_keys(self.meta, self.required_keys, action="error")
 
     def apply_to(self, det, **kwargs):
-        if isinstance(det, DetectorBase):
-            bs = from_currsys(self.meta["bin_size"], self.cmds)
-            image = det._hdu.data
-            h, w = image.shape
-            new_image = image.reshape((h//bs, bs, w//bs, bs))
-            det._hdu.data = new_image.sum(axis=3).sum(axis=1)
+        if not isinstance(det, Detector):
+            return det
+
+        bs = from_currsys(self.meta["bin_size"], self.cmds)
+        image = det._hdu.data
+        h, w = image.shape
+        new_image = image.reshape((h//bs, bs, w//bs, bs))
+        det._hdu.data = new_image.sum(axis=3).sum(axis=1)
 
         return det
 
@@ -67,12 +70,14 @@ class UnequalBinnedImage(Effect):
         check_keys(self.meta, self.required_keys, action="error")
 
     def apply_to(self, det, **kwargs):
-        if isinstance(det, DetectorBase):
-            bx = from_currsys(self.meta["binx"], self.cmds)
-            by = from_currsys(self.meta["biny"], self.cmds)
-            image = det._hdu.data
-            h, w = image.shape
-            new_image = image.reshape((h//bx, bx, w//by, by))
-            det._hdu.data = new_image.sum(axis=3).sum(axis=1)
+        if not isinstance(det, Detector):
+            return det
+
+        bx = from_currsys(self.meta["binx"], self.cmds)
+        by = from_currsys(self.meta["biny"], self.cmds)
+        image = det._hdu.data
+        h, w = image.shape
+        new_image = image.reshape((h//bx, bx, w//by, by))
+        det._hdu.data = new_image.sum(axis=3).sum(axis=1)
 
         return det

@@ -6,7 +6,7 @@ from unittest.mock import patch
 
 import yaml
 
-from scopesim.base_classes import DetectorBase
+from scopesim.detector import Detector
 from scopesim.optics.image_plane import ImagePlane
 from scopesim.effects.electronic import DetectorModePropertiesSetter
 from scopesim.utils import from_currsys
@@ -78,13 +78,13 @@ class TestApplyTo:
                 {"!OBS.detector_readout_mode": "notthere"})
     def test_throws_error_for_unknown_detector_mode(self, basic_dmps):
         with pytest.raises(KeyError):
-            basic_dmps.apply_to(DetectorBase())
+            basic_dmps.apply_to(Detector())
 
     @patch.dict("scopesim.rc.__currsys__",
                 {"!OBS.detector_readout_mode": "fast"})
     def test_returns_object(self, basic_dmps):
-        obj = basic_dmps.apply_to(DetectorBase())
-        assert isinstance(obj, DetectorBase)
+        obj = basic_dmps.apply_to(Detector())
+        assert isinstance(obj, Detector)
 
 
 class TestListModes:

@@ -11,7 +11,7 @@ from astropy.table import Table
 from .effects import Effect
 from ..utils import airmass2zendist, from_currsys, check_keys, quantify, \
     figure_factory
-from ..base_classes import FieldOfViewBase
+from ..optics.fov import FieldOfView
 
 
 class Shift3D(Effect):
@@ -203,7 +203,7 @@ class AtmosphericDispersionCorrection(Shift3D):
             self.z_order = (*self.z_order, 232)
         if "efficiency" not in self.meta:
             self.meta["efficiency"] = 1
-        self.apply_to_classes = FieldOfViewBase
+        self.apply_to_classes = FieldOfView
 
         check_keys(self.meta, self.required_keys, action="error")
 

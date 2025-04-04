@@ -7,7 +7,7 @@ import numpy as np
 from astropy.io import fits
 
 from .. import Effect
-from ...base_classes import DetectorBase
+from ...detector import Detector
 from ...utils import from_currsys, figure_factory, check_keys, real_colname
 from . import logger
 
@@ -24,10 +24,12 @@ class Bias(Effect):
         check_keys(self.meta, self.required_keys, action="error")
 
     def apply_to(self, obj, **kwargs):
-        if isinstance(obj, DetectorBase):
-            biaslevel = from_currsys(self.meta["bias"], self.cmds)
-            # Can't do in-place because of Quantization data type conflicts.
-            obj._hdu.data = obj._hdu.data + biaslevel
+        if not isinstance(obj, Detector):
+            return obj
+
+        biaslevel = from_currsys(self.meta["bias"], self.cmds)
+        # Can't do in-place because of Quantization data type conflicts.
+        obj._hdu.data = obj._hdu.data + biaslevel
 
         return obj
 
@@ -53,28 +55,30 @@ class PoorMansHxRGReadoutNoise(Effect):
         check_keys(self.meta, self.required_keys, action="error")
 
     def apply_to(self, det, **kwargs):
-        if isinstance(det, DetectorBase):
-            self.meta["random_seed"] = from_currsys(self.meta["random_seed"],
-                                                    self.cmds)
-            if self.meta["random_seed"] is not None:
-                np.random.seed(self.meta["random_seed"])
+        if not isinstance(det, Detector):
+            return det
 
-            self.meta = from_currsys(self.meta, self.cmds)
-            ron_keys = ["noise_std", "n_channels", "channel_fraction",
-                        "line_fraction", "pedestal_fraction", "read_fraction"]
-            ron_kwargs = {key: self.meta[key] for key in ron_keys}
-            ron_kwargs["image_shape"] = det._hdu.data.shape
+        self.meta["random_seed"] = from_currsys(self.meta["random_seed"],
+                                                self.cmds)
+        if self.meta["random_seed"] is not None:
+            np.random.seed(self.meta["random_seed"])
 
-            ron_frame = _make_ron_frame(**ron_kwargs)
-            stacked_ron_frame = np.zeros_like(ron_frame)
-            for i in range(self.meta["ndit"]):
-                dx = np.random.randint(0, ron_frame.shape[1])
-                dy = np.random.randint(0, ron_frame.shape[0])
-                stacked_ron_frame += np.roll(ron_frame, (dy, dx), axis=(0, 1))
+        self.meta = from_currsys(self.meta, self.cmds)
+        ron_keys = ["noise_std", "n_channels", "channel_fraction",
+                    "line_fraction", "pedestal_fraction", "read_fraction"]
+        ron_kwargs = {key: self.meta[key] for key in ron_keys}
+        ron_kwargs["image_shape"] = det._hdu.data.shape
 
-            # TODO: this .T is ugly. Work out where things are getting switched and remove it!
-            # Can't do in-place because of Quantization data type conflicts.
-            det._hdu.data = det._hdu.data + stacked_ron_frame.T
+        ron_frame = _make_ron_frame(**ron_kwargs)
+        stacked_ron_frame = np.zeros_like(ron_frame)
+        for i in range(self.meta["ndit"]):
+            dx = np.random.randint(0, ron_frame.shape[1])
+            dy = np.random.randint(0, ron_frame.shape[0])
+            stacked_ron_frame += np.roll(ron_frame, (dy, dx), axis=(0, 1))
+
+        # TODO: this .T is ugly. Work out where things are getting switched and remove it!
+        # Can't do in-place because of Quantization data type conflicts.
+        det._hdu.data = det._hdu.data + stacked_ron_frame.T
 
         return det
 
@@ -103,17 +107,19 @@ class BasicReadoutNoise(Effect):
         check_keys(self.meta, self.required_keys, action="error")
 
     def apply_to(self, det, **kwargs):
-        if isinstance(det, DetectorBase):
-            ndit = from_currsys(self.meta["ndit"], self.cmds)
-            ron = from_currsys(self.meta["noise_std"], self.cmds)
-            noise_std = ron * np.sqrt(float(ndit))
+        if not isinstance(det, Detector):
+            return det
 
-            random_seed = from_currsys(self.meta["random_seed"], self.cmds)
-            if random_seed is not None:
-                np.random.seed(random_seed)
-            # Can't do in-place because of Quantization data type conflicts.
-            det._hdu.data = det._hdu.data + np.random.normal(
-                loc=0, scale=noise_std, size=det._hdu.data.shape)
+        ndit = from_currsys(self.meta["ndit"], self.cmds)
+        ron = from_currsys(self.meta["noise_std"], self.cmds)
+        noise_std = ron * np.sqrt(float(ndit))
+
+        random_seed = from_currsys(self.meta["random_seed"], self.cmds)
+        if random_seed is not None:
+            np.random.seed(random_seed)
+        # Can't do in-place because of Quantization data type conflicts.
+        det._hdu.data = det._hdu.data + np.random.normal(
+            loc=0, scale=noise_std, size=det._hdu.data.shape)
 
         return det
 
@@ -137,7 +143,7 @@ class ShotNoise(Effect):
         self.meta.update(kwargs)
 
     def apply_to(self, det, **kwargs):
-        if not isinstance(det, DetectorBase):
+        if not isinstance(det, Detector):
             return det
 
         self.meta["random_seed"] = from_currsys(self.meta["random_seed"],
@@ -213,21 +219,23 @@ class DarkCurrent(Effect):
         check_keys(self.meta, self.required_keys, action="error")
 
     def apply_to(self, obj, **kwargs):
-        if isinstance(obj, DetectorBase):
-            if isinstance(from_currsys(self.meta["value"], self.cmds), dict):
-                dtcr_id = obj.meta[real_colname("id", obj.meta)]
-                dark = from_currsys(self.meta["value"][dtcr_id], self.cmds)
-            elif isinstance(from_currsys(self.meta["value"], self.cmds), float):
-                dark = from_currsys(self.meta["value"], self.cmds)
-            else:
-                raise ValueError("<DarkCurrent>.meta['value'] must be either "
-                                 f"dict or float, but is {self.meta['value']}")
+        if not isinstance(obj, Detector):
+            return obj
 
-            dit = from_currsys(self.meta["dit"], self.cmds)
-            ndit = from_currsys(self.meta["ndit"], self.cmds)
+        if isinstance(from_currsys(self.meta["value"], self.cmds), dict):
+            dtcr_id = obj.meta[real_colname("id", obj.meta)]
+            dark = from_currsys(self.meta["value"][dtcr_id], self.cmds)
+        elif isinstance(from_currsys(self.meta["value"], self.cmds), float):
+            dark = from_currsys(self.meta["value"], self.cmds)
+        else:
+            raise ValueError("<DarkCurrent>.meta['value'] must be either "
+                             f"dict or float, but is {self.meta['value']}")
 
-            # Can't do in-place because of Quantization data type conflicts.
-            obj._hdu.data = obj._hdu.data + dark * dit * ndit
+        dit = from_currsys(self.meta["dit"], self.cmds)
+        ndit = from_currsys(self.meta["ndit"], self.cmds)
+
+        # Can't do in-place because of Quantization data type conflicts.
+        obj._hdu.data = obj._hdu.data + dark * dit * ndit
 
         return obj
 

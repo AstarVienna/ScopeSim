@@ -16,7 +16,7 @@ import numpy as np
 from astropy import units as u
 from astropy.table import Table
 
-from ..base_classes import FOVSetupBase
+from ..optics.fov_volume_list import FovVolumeList
 from .effects import Effect
 from .apertures import ApertureMask
 from ..optics.image_plane_utils import header_from_list_of_xy, calc_footprint
@@ -148,24 +148,25 @@ class DetectorList(Effect):
             self.meta["y_size_unit"] = self.meta["yhw_unit"]
 
     def apply_to(self, obj, **kwargs):
-        if isinstance(obj, FOVSetupBase):
+        if not isinstance(obj, FovVolumeList):
+            return obj
 
-            hdr = self.image_plane_header
-            xy_mm = calc_footprint(hdr, "D")
-            pixel_size = hdr["CDELT1D"]              # mm
-            pixel_scale = kwargs.get("pixel_scale", self.meta["pixel_scale"])   # ["]
-            pixel_scale = from_currsys(pixel_scale, self.cmds)
+        hdr = self.image_plane_header
+        xy_mm = calc_footprint(hdr, "D")
+        pixel_size = hdr["CDELT1D"]  # mm
+        pixel_scale = kwargs.get("pixel_scale", self.meta["pixel_scale"])  # ["]
+        pixel_scale = from_currsys(pixel_scale, self.cmds)
 
-            # x["] = x[mm] * ["] / [mm]
-            xy_sky = xy_mm * pixel_scale / pixel_size
+        # x["] = x[mm] * ["] / [mm]
+        xy_sky = xy_mm * pixel_scale / pixel_size
 
-            obj.shrink(axis=["x", "y"],
-                       values=(tuple(zip(xy_sky.min(axis=0),
-                                         xy_sky.max(axis=0)))))
+        obj.shrink(axis=["x", "y"],
+                   values=(tuple(zip(xy_sky.min(axis=0),
+                                     xy_sky.max(axis=0)))))
 
-            lims = np.array((xy_mm.min(axis=0), xy_mm.max(axis=0)))
-            keys = ["xd_min", "xd_max", "yd_min", "yd_max"]
-            obj.detector_limits = dict(zip(keys, lims.T.flatten()))
+        lims = np.array((xy_mm.min(axis=0), xy_mm.max(axis=0)))
+        keys = ["xd_min", "xd_max", "yd_min", "yd_max"]
+        obj.detector_limits = dict(zip(keys, lims.T.flatten()))
 
         return obj
 

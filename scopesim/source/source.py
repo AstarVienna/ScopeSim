@@ -46,21 +46,33 @@ from synphot import SpectralElement, SourceSpectrum
 
 from ..optics.image_plane import ImagePlane
 from ..optics import image_plane_utils as imp_utils
-from .source_utils import validate_source_input, convert_to_list_of_spectra, \
-    photons_in_range
-from . import source_templates as src_tmp
-from ..base_classes import SourceBase
-from .source_fields import (SourceField, TableSourceField, SpectrumSourceField,
-                            HDUSourceField, ImageSourceField, CubeSourceField)
-from ..utils import (find_file, is_fits, get_fits_type,
-                     quantity_from_table,
-                     figure_factory, get_logger)
+from .source_utils import (
+    validate_source_input,
+    convert_to_list_of_spectra,
+    photons_in_range,
+)
+from .source_fields import (
+    SourceField,
+    TableSourceField,
+    SpectrumSourceField,
+    HDUSourceField,
+    ImageSourceField,
+    CubeSourceField,
+)
+from ..utils import (
+    find_file,
+    is_fits,
+    get_fits_type,
+    quantity_from_table,
+    figure_factory,
+    get_logger,
+)
 
 
 logger = get_logger(__name__)
 
 
-class Source(SourceBase):
+class Source:
     """
     Create a source object from a file or from arrays.
 
@@ -269,6 +281,8 @@ class Source(SourceBase):
         if isinstance(flux, u.Unit):
             flux = 1 * flux
 
+        # Must place here to avoid circular import.....
+        from . import source_templates as src_tmp
         spec_template = src_tmp.vega_spectrum
         if isinstance(flux, u.Quantity):
             if flux.unit.physical_type == "spectral flux density":  # ABmag and Jy

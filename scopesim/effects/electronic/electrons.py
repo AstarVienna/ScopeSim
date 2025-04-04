@@ -13,7 +13,7 @@ from typing import ClassVar
 import numpy as np
 
 from .. import Effect
-from ...base_classes import DetectorBase
+from ...detector import Detector
 from ...utils import from_currsys, figure_factory, check_keys
 from . import logger
 
@@ -60,17 +60,19 @@ class LinearityCurve(Effect):
         check_keys(self.meta, self.required_keys, action="error")
 
     def apply_to(self, obj, **kwargs):
-        if isinstance(obj, DetectorBase):
-            ndit = from_currsys(self.meta["ndit"], self.cmds)
-            if self.table is not None:
-                incident = self.table["incident"] * ndit
-                measured = self.table["measured"] * ndit
-            else:
-                incident = np.asarray(from_currsys(self.meta["incident"],
-                                                   self.cmds)) * ndit
-                measured = np.asarray(from_currsys(self.meta["measured"],
-                                                   self.cmds)) * ndit
-            obj._hdu.data = np.interp(obj._hdu.data, incident, measured)
+        if not isinstance(obj, Detector):
+            return obj
+
+        ndit = from_currsys(self.meta["ndit"], self.cmds)
+        if self.table is not None:
+            incident = self.table["incident"] * ndit
+            measured = self.table["measured"] * ndit
+        else:
+            incident = np.asarray(from_currsys(self.meta["incident"],
+                                               self.cmds)) * ndit
+            measured = np.asarray(from_currsys(self.meta["measured"],
+                                               self.cmds)) * ndit
+        obj._hdu.data = np.interp(obj._hdu.data, incident, measured)
 
         return obj
 
@@ -118,7 +120,7 @@ class Quantization(Effect):
         return True
 
     def apply_to(self, obj, **kwargs):
-        if not isinstance(obj, DetectorBase):
+        if not isinstance(obj, Detector):
             return obj
 
         if not self._should_apply():
