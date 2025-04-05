@@ -311,7 +311,10 @@ class CubeSourceField(HDUSourceField):
             self.wcs = WCS(self.field)
 
         try:
-            bunit = u.Unit(self.header["BUNIT"])
+            bunit = str(self.header["BUNIT"])
+            # Can't just do .lower because some units are uppercase (e.g. J)
+            bunit = bunit.replace("PHOTLAM", "photlam")
+            bunit = u.Unit(bunit)
         except KeyError:
             bunit = u.erg / u.s / u.cm**2 / u.arcsec**2
             logger.warning(
