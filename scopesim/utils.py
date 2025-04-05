@@ -273,7 +273,7 @@ def find_file(filename, path=None, silent=False):
 
     # TODO: Not sure what to do here
     if from_currsys("!SIM.file.error_on_missing_file"):
-       raise ValueError(msg)
+        raise ValueError(msg)
 
     return None
 
@@ -724,6 +724,16 @@ def set_console_log_level(level="INFO"):
     """
     rc.__logging_config__["handlers"]["console"]["level"] = level
     update_logging()
+
+
+def set_inst_pkgs_path(pkg_path: Path | str) -> None:
+    """Set the local path for !SIM.file.local_packages_path (shortcut)."""
+    rc.__config__["!SIM.file.local_packages_path"] = str(pkg_path)
+
+
+def link_irdb(irdb_path: Path | str = Path("../irdb")) -> None:
+    """Set ``inst_pkgs`` to local clone of IRDB (convenience shortcut)."""
+    set_inst_pkgs_path(irdb_path)
 
 
 def seq(start, stop, step=1):
