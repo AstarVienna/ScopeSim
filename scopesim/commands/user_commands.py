@@ -497,7 +497,10 @@ def patch_fake_symlinks(path: Path):
     # The path does not exist.
     parent = path.parent
     pathup = patch_fake_symlinks(parent)
-    assert pathup != parent, ValueError("Cannot find path")
+
+    if pathup == parent:
+        raise FileNotFoundError(f"Cannot find path '{path.name}'")
+
     return patch_fake_symlinks(pathup / path.name)
 
 
