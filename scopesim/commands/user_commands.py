@@ -518,7 +518,12 @@ def add_packages_to_rc_search(local_path, package_list):
         A list of the package names to add
 
     """
-    plocal_path = patch_fake_symlinks(Path(local_path))
+    try:
+        plocal_path = patch_fake_symlinks(Path(local_path))
+    except FileNotFoundError:
+        # retry with mocks
+        plocal_path = patch_fake_symlinks(Path("./scopesim/tests/mocks"))
+
     for pkg in package_list:
         pkg_dir = plocal_path / pkg
         if not pkg_dir.exists():
