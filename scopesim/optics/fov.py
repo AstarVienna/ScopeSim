@@ -177,6 +177,8 @@ class FieldOfView(FieldOfViewBase):
         for field in fields_in_fov:
             if isinstance(field, TableSourceField):
                 extracted = self.extract_area_from_table(field.field, minmax)
+                if not len(extracted):
+                    continue  # Can happen for small FOV and sparse table
                 # TODO: Rework extract_area_from_table to also affect spectra
                 #       and just return new copy of field.
                 new_fld = TableSourceField(
