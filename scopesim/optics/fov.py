@@ -30,6 +30,7 @@ from ..utils import (
     has_needed_keywords,
     get_logger,
     array_minmax,
+    close_loop,
 )
 
 
@@ -1003,6 +1004,11 @@ class FieldOfView(FieldOfViewBase):
         self.header["CRVAL2"] *= convf
         self.header["CUNIT1"] = "deg"
         self.header["CUNIT2"] = "deg"
+
+    def plot(self, axes, units: str = "arcsec") -> None:
+        """Plot FOV footprint."""
+        outline = np.array(list(close_loop(self.get_corners(units)[0])))
+        axes.plot(*outline.T, label=f"FOV id: {self.meta['id']}")
 
     def __repr__(self) -> str:
         """Return repr(self)."""
