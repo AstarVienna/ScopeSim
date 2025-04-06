@@ -731,8 +731,9 @@ def set_inst_pkgs_path(pkg_path: Path | str) -> None:
     rc.__config__["!SIM.file.local_packages_path"] = str(pkg_path)
 
 
-def link_irdb(irdb_path: Path | str = Path("../irdb")) -> None:
+def link_irdb(irdb_path: Path | str | None = None) -> None:
     """Set ``inst_pkgs`` to local clone of IRDB (convenience shortcut)."""
+    irdb_path = irdb_path or rc.__pkg_dir__.parent.parent / "irdb"
     set_inst_pkgs_path(irdb_path)
 
 
