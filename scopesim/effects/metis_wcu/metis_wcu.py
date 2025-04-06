@@ -17,6 +17,7 @@ from .fpmask import FPMask
 from ..ter_curves import TERCurve, FilterCurve
 from ...utils import get_logger, seq, find_file, from_currsys
 from ...source.source import Source
+from ...source.source_fields import BackgroundSourceField
 from ...optics.surface import SpectralSurface
 
 
@@ -133,11 +134,35 @@ class WCUSource(TERCurve):
         mask_flux = self.mask_emission
         self._background_source = []
 
-        self._background_source.append(Source(image_hdu=self.fpmask.holehdu,
-                                              spectra=bb_flux))
-        if self.fpmask.opaquehdu is not None:   # not the open mask
-            self._background_source.append(Source(image_hdu=self.fpmask.opaquehdu,
-                                                  spectra=mask_flux))
+        # TODO: Turn this into one Source object with multiple fields...
+        # TODO: Not sure how this is generally, if this check is really needed.
+        hole_hdu = self.fpmask.holehdu
+        if hole_hdu.data is None:
+            hole_spec = {0: bb_flux}
+            hole_hdu.header.update({"SPEC_REF": 0})
+            hole_fld = BackgroundSourceField(field=None, spectra=hole_spec,
+                                             header=hole_hdu.header)
+            hole_src = Source(field=hole_fld)
+        else:
+            hole_src = Source(image_hdu=self.fpmask.holehdu, spectra=bb_flux)
+
+        self._background_source.append(hole_src)
+
+        opaque_hdu = self.fpmask.opaquehdu
+        if opaque_hdu is not None:   # not the open mask
+            # TODO: same as above...
+            if opaque_hdu.data is None:
+                opaque_spec = {0: mask_flux}
+                opaque_hdu.header.update({"SPEC_REF": 0})
+                opaque_fld = BackgroundSourceField(field=None,
+                                                   spectra=opaque_spec,
+                                                   header=opaque_hdu.header)
+                opaque_src = Source(field=opaque_fld)
+            else:
+                opaque_src = Source(image_hdu=self.fpmask.opaquehdu,
+                                    spectra=mask_flux)
+            self._background_source.append(opaque_src)
+
         return self._background_source
 
     def set_lamp(self, lamp="bb"):
