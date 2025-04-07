@@ -186,7 +186,8 @@ class TestSourceInit:
     def test_initialises_with_filename_and_spectrum(self, ii, dtype,
                                                     input_files, input_spectra):
         fname = input_files[ii]
-        src = Source(filename=fname, spectra=input_spectra)
+        spec = input_spectra if isinstance(dtype, Table) else input_spectra[0]
+        src = Source(filename=fname, spectra=spec)
         assert isinstance(src, Source)
         assert isinstance(src.spectra[0], SourceSpectrum)
         assert isinstance(src.fields[0].field, dtype)
