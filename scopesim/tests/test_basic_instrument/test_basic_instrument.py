@@ -381,14 +381,14 @@ class TestDitNdit:
         o_dit, o_ndit = opt.cmds["!OBS.dit"], opt.cmds["!OBS.ndit"]
         opt.cmds["!OBS.dit"] = None
         opt.cmds["!OBS.ndit"] = None
-        print("NDIT before:", opt.cmds["!OBS.ndit"])
-        kwarged = int(opt.readout(exptime=exptime)[0][1].data.sum())
-        print("NDIT after:", opt.cmds["!OBS.ndit"])
+        kwarged = int(opt.readout(exptime=exptime, reset=False)[0][1].data.sum())
         assert not adconverter._should_apply()
+
         opt.cmds["!OBS.dit"] = o_dit
         opt.cmds["!OBS.ndit"] = o_ndit
         # Quantization results in ~4% loss, which is fine:
         assert pytest.approx(kwarged / default, rel=.05) == factor
+
 
     @pytest.mark.parametrize(("exptime", "factor", "adconvert"),
                              [(30, 3, False),
