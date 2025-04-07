@@ -273,7 +273,7 @@ def find_file(filename, path=None, silent=False):
 
     # TODO: Not sure what to do here
     if from_currsys("!SIM.file.error_on_missing_file"):
-       raise ValueError(msg)
+        raise ValueError(msg)
 
     return None
 
@@ -699,14 +699,20 @@ def top_level_catch(func):
 
 
 def update_logging(capture_warnings=True):
-    """Reload logging configuration from ``rc.__logging_config__``."""
+    """Reload logging configuration from ``rc.__logging_config__``.
+
+    .. versionadded:: 0.8.0
+    """
     # Need to access NestedMapping's internal dict here...
     dictConfig(rc.__logging_config__)
     logging.captureWarnings(capture_warnings)
 
 
 def log_to_file(enable=True):
-    """Enable or disable logging to file (convenience function)."""
+    """Enable or disable logging to file (convenience function).
+
+    .. versionadded:: 0.8.0
+    """
     if enable:
         handlers = ["console", "file"]
     else:
@@ -721,9 +727,28 @@ def set_console_log_level(level="INFO"):
 
     This controls what is actually printed to the console by ScopeSim.
     Accepted values are: DEBUG, INFO (default), WARNING, ERROR and CRITICAL.
+
+    .. versionadded:: 0.8.0
     """
     rc.__logging_config__["handlers"]["console"]["level"] = level
     update_logging()
+
+
+def set_inst_pkgs_path(pkg_path: Path | str) -> None:
+    """Set the local path for !SIM.file.local_packages_path (shortcut).
+
+    .. versionadded:: PLACEHOLDER_NEXT_RELEASE_VERSION
+    """
+    rc.__config__["!SIM.file.local_packages_path"] = str(pkg_path)
+
+
+def link_irdb(irdb_path: Path | str | None = None) -> None:
+    """Set ``inst_pkgs`` to local clone of IRDB (convenience shortcut).
+
+    .. versionadded:: PLACEHOLDER_NEXT_RELEASE_VERSION
+    """
+    irdb_path = irdb_path or rc.__pkg_dir__.parent.parent / "irdb"
+    set_inst_pkgs_path(irdb_path)
 
 
 def seq(start, stop, step=1):
