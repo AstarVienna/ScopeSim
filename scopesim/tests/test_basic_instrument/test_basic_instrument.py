@@ -343,24 +343,21 @@ class TestDitNdit:
         assert pytest.approx(kwarged / default, rel=.05) == factor
 
     @pytest.mark.parametrize(("dit", "ndit", "factor", "adconvert"),
-                             [pytest.param(20, 1, 2, True, marks=pytest.mark.xfail(reason="S.E. doesn't get kwargs without A.E..")),
-                              pytest.param(10, 3, 3, False, marks=pytest.mark.xfail(reason="S.E. doesn't get kwargs without A.E..")),
+                             [(20, 1, 2, True),
+                              (10, 3, 3, False),
                               (None, None, 1, True)])
     def test_kwargs_override_obs_dict(self, obs, dit, ndit, factor, adconvert):
         """This should prioritize kwargs and fallback to !OBS."""
         opt, default, adconverter = obs
-        kwarged = int(opt.readout(dit=dit, ndit=ndit)[0][1].data.sum())
+        kwarged = int(opt.readout(dit=dit, ndit=ndit, reset=False)[0][1].data.sum())
         assert adconverter._should_apply() == adconvert
         # Digitization results in ~4% loss, which is fine:
         assert pytest.approx(kwarged / default, rel=.05) == factor
 
     @pytest.mark.parametrize(("dit", "ndit", "factor", "adconvert"),
-                             [pytest.param(20, 1, 2, True,
-                                           marks=pytest.mark.xfail(reason="S.E. doesn't get kwargs without A.E..")),
-                              pytest.param(10, 3, 3, False,
-                                           marks=pytest.mark.xfail(reason="S.E. doesn't get kwargs without A.E..")),
-                              pytest.param(None, None, 1, True,
-                                           marks=pytest.mark.xfail(reason="A.E. doesn't use dit, ndit from !OBS if those are None in kwargs."))])
+                             [(20, 1, 2, True),
+                              (10, 3, 3, False),
+                              (None, None, 1, True)])
     def test_kwargs_override_obs_dict_also_with_autoexp(
             self, obs_aeq, dit, ndit, factor, adconvert):
         """This should prioritize dit, ndit from kwargs.
@@ -368,8 +365,8 @@ class TestDitNdit:
         Lacking those, dit and ndit from !OBS should be used over exptime.
         """
         opt, default, adconverter = obs_aeq
-        kwarged = int(opt.readout(dit=dit, ndit=ndit)[0][1].data.sum())
-        assert int(kwarged / default) == factor
+        kwarged = int(opt.readout(dit=dit, ndit=ndit, reset=False)[0][1].data.sum())
+        assert pytest.approx(kwarged / default, rel=0.05) == factor
         assert adconverter._should_apply() == adconvert
 
     @pytest.mark.parametrize(("exptime", "factor"),
@@ -386,7 +383,7 @@ class TestDitNdit:
 
         opt.cmds["!OBS.dit"] = o_dit
         opt.cmds["!OBS.ndit"] = o_ndit
-        # Quantization results in ~4% loss, which is fine:
+        # Digitization results in ~4% loss, which is fine:
         assert pytest.approx(kwarged / default, rel=.05) == factor
 
 
@@ -402,29 +399,29 @@ class TestDitNdit:
         assert pytest.approx(kwarged / default, rel=.05) == factor
 
     @pytest.mark.parametrize(("dit", "ndit", "factor", "adconvert"),
-                             [pytest.param(90, 1, 90, True, marks=pytest.mark.xfail(reason="S.E. doesn't get kwargs.")),
-                              pytest.param(2, 90, 180, False, marks=pytest.mark.xfail(reason="S.E. doesn't get kwargs."))])
-
+                             [(90, 1, 9, True), (2, 90, 18, False)])
     def test_ditndit_in_kwargs_while_also_having_autoexp(
             self, obs_aeq, dit, ndit, factor, adconvert):
         """This should prioritize dit, ndit from kwargs."""
         opt, default, adconverter = obs_aeq
-        kwarged = int(opt.readout(dit=dit, ndit=ndit)[0][1].data.sum())
-        assert int(kwarged / default) == factor
+        kwarged = int(opt.readout(dit=dit, ndit=ndit, reset=False)[0][1].data.sum())
         assert adconverter._should_apply() == adconvert
+        # Digitization results in ~4% loss, which is fine:
+        assert pytest.approx(kwarged / default, rel=.05) == factor
 
     @pytest.mark.parametrize(("dit", "ndit", "exptime", "factor", "adconvert"),
-                             [pytest.param(90, 1, None, 90, True, marks=pytest.mark.xfail(reason="S.E. doesn't get kwargs.")),
-                              pytest.param(2, 90, 20, 180, False, marks=pytest.mark.xfail(reason="S.E. doesn't get kwargs."))])
-
+                             [(90, 1, None, 9, True),
+                              (2, 90, 20, 18, False)])
     def test_ditndit_in_kwargs_while_also_having_autoexp_and_exptime(
             self, obs_aeq, dit, ndit, exptime, factor, adconvert):
         """This should prioritize dit, ndit from kwargs and ignore exptime."""
         opt, default, adconverter = obs_aeq
         kwarged = int(opt.readout(exptime=exptime,
-                                  dit=dit, ndit=ndit)[0][1].data.sum())
-        assert int(kwarged / default) == factor
+                                  dit=dit, ndit=ndit,
+                                  reset=False)[0][1].data.sum())
         assert adconverter._should_apply() == adconvert
+        # Digitization results in ~4% loss, which is fine:
+        assert pytest.approx(kwarged / default, rel=.05) == factor
 
     def test_throws_for_no_anything(self, obs):
         """No specification whatsoever, so throw error."""
