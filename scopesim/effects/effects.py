@@ -7,7 +7,6 @@ from dataclasses import dataclass, field, InitVar, fields
 from typing import NewType, ClassVar
 
 from .data_container import DataContainer
-from .. import base_classes as bc
 from ..utils import from_currsys, write_report
 from ..reports.rst_utils import table_to_rst
 
@@ -57,15 +56,8 @@ class Effect:
         self.meta.update(kwargs)
 
     def apply_to(self, obj, **kwargs):
-        """TBA."""
-        if not isinstance(obj, (bc.FOVSetupBase, bc.SourceBase,
-                                bc.FieldOfViewBase, bc.ImagePlaneBase,
-                                bc.DetectorBase)):
-            raise ValueError("object must one of the following: FOVSetupBase, "
-                             "Source, FieldOfView, ImagePlane, Detector: "
-                             f"{type(obj)}")
-
-        return obj
+        """Apply the effect to the corresponding object."""
+        raise NotImplementedError("Subclasses should implement this.")
 
     def fov_grid(self, which="", **kwargs):
         """

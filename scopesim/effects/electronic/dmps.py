@@ -6,7 +6,7 @@ from typing import ClassVar
 import numpy as np
 
 from .. import Effect
-from ...base_classes import ImagePlaneBase
+from ...optics import ImagePlane
 from ...utils import from_currsys, check_keys, pretty_print_dict
 from . import logger
 
@@ -76,7 +76,7 @@ class DetectorModePropertiesSetter(Effect):
         mode_name = kwargs.get("detector_readout_mode",
                                from_currsys("!OBS.detector_readout_mode",
                                             self.cmds))
-        if isinstance(obj, ImagePlaneBase) and mode_name == "auto":
+        if isinstance(obj, ImagePlane) and mode_name == "auto":
             mode_name = self.select_mode(obj, **kwargs)
             logger.info("Detector mode set to %s", mode_name)
 

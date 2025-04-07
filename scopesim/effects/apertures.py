@@ -13,7 +13,7 @@ from astropy.table import Table
 
 from .effects import Effect
 from ..optics import image_plane_utils as imp_utils
-from ..base_classes import FOVSetupBase
+from ..optics.fov_volume_list import FovVolumeList
 
 from ..utils import (quantify, quantity_from_table, from_currsys, check_keys,
                      figure_factory, get_logger)
@@ -116,7 +116,7 @@ class ApertureMask(Effect):
 
     def apply_to(self, obj, **kwargs):
         """See parent docstring."""
-        if isinstance(obj, FOVSetupBase):
+        if isinstance(obj, FovVolumeList):
             logger.debug("Executing %s, FoV setup", self.meta['name'])
             x = quantity_from_table("x", self.table,
                                     u.arcsec).to(u.arcsec).value
@@ -298,7 +298,7 @@ class ApertureList(Effect):
 
     def apply_to(self, obj, **kwargs):
         """See parent docstring."""
-        if isinstance(obj, FOVSetupBase):
+        if isinstance(obj, FovVolumeList):
             logger.debug("Executing %s, FoV setup", self.meta['name'])
             new_vols = []
             for row in self.table:

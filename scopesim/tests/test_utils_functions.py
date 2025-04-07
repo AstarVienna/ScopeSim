@@ -255,7 +255,6 @@ class TestSeq:
         assert arr[-1] != stop
         assert stop not in arr
 
-
     @pytest.mark.parametrize("start,stop,step",
                              [(0, 10, 1),
                               (10, 0, -1),
@@ -264,3 +263,9 @@ class TestSeq:
     def test_seq_has_correct_step_size(self, start, stop, step):
         arr = utils.seq(start, stop, step)
         assert arr[1:] - arr[:-1] == approx(step)
+
+
+@pytest.mark.usefixtures("protect_currsys")
+def test_setting_instpkgspath():
+    utils.link_irdb("bogus")
+    assert rc.__config__["!SIM.file.local_packages_path"] == "bogus"

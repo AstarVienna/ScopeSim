@@ -61,7 +61,7 @@ from . import utils
 
 # import specific classes from the modules to included in the global namespace
 
-from .utils import bug_report
+from .utils import bug_report, set_inst_pkgs_path, link_irdb
 from .optics.optical_train import OpticalTrain
 from .commands.user_commands import UserCommands
 from .commands.scopesimple import Simulation

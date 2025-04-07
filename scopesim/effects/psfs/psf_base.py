@@ -9,7 +9,9 @@ from scipy.ndimage import rotate
 from astropy import units as u
 
 from ..effects import Effect
-from ...base_classes import ImagePlaneBase, FieldOfViewBase, FOVSetupBase
+from ...optics import ImagePlane
+from ...optics.fov import FieldOfView
+from ...optics.fov_volume_list import FovVolumeList
 from ...utils import from_currsys, quantify, figure_factory, get_logger
 
 logger = get_logger(__name__)
@@ -52,12 +54,12 @@ class PSF(Effect):
         self.meta.update(params)
         self.meta.update(kwargs)
         self.meta = from_currsys(self.meta, self.cmds)
-        self.convolution_classes = (FieldOfViewBase, ImagePlaneBase)
+        self.convolution_classes = (FieldOfView, ImagePlane)
 
     def apply_to(self, obj, **kwargs):
         """Apply the PSF."""
         # 1. During setup of the FieldOfViews
-        if isinstance(obj, FOVSetupBase) and self._waveset is not None:
+        if isinstance(obj, FovVolumeList) and self._waveset is not None:
             logger.debug("Executing %s, FoV setup", self.meta['name'])
             waveset = self._waveset
             if len(waveset) != 0:
