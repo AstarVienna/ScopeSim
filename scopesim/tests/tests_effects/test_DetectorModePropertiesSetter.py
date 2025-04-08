@@ -1,8 +1,8 @@
 """
 Tests for Effect DetectorModePropertiesSetter
 """
-import pytest
 from unittest.mock import patch
+import pytest
 
 import yaml
 
@@ -13,9 +13,11 @@ from scopesim.utils import from_currsys
 
 from scopesim.tests.mocks.py_objects.imagehdu_objects import _image_hdu_square
 
+# pylint: disable=missing-class-docstring
+# pylint: disable=missing-function-docstring
 
-@pytest.fixture(scope="module")
-def kwargs_dict():
+@pytest.fixture(scope="module", name="kwargs_dict")
+def fixture_kwargs_dict():
     return yaml.full_load("""
     mode_properties:
         fast:
