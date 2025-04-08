@@ -481,8 +481,12 @@ class FieldOfView:
                 data=np.zeros((self.header["NAXIS2"], self.header["NAXIS1"])),
                 header=self.header)
             # FIX: Do not scale source data - make a copy first.
-            # FIX: Use "Pixel scale conversion" as above.
-            field_data = field.data * self._pixarea(field.header).value / self.pixel_area
+            # Note: Use NOT "Pixel scale conversion" as above, because the
+            #       values are in photons/second/pixel (see comments above),
+            #       but need to be converted to arcsec-2.
+            #       self.pixel_area is in arcsec-2(/pixel, implicitly), so that
+            #       works out. Need to add unit checks somehow...
+            field_data = field.data / self.pixel_area
             field_hdu = fits.ImageHDU(data=field_data, header=field.header)
 
             canvas_image_hdu = imp_utils.add_imagehdu_to_imagehdu(
@@ -582,6 +586,10 @@ class FieldOfView:
 
         # 1. Make waveset and canvas cube (area, bin_width are applied at end)
         # TODO: Why is this not self.waveset? What's different?
+        # -> For non-cube input but cube output (e.g. 2D image in spec mode),
+        #    waverange needs to be resampled (I guess) to spectral_bin_width,
+        #    but self.waverange can only access the fields.
+        # -> Perhaps change that??
         wave_unit = u.Unit(from_currsys("!SIM.spectral.wave_unit", self.cmds))
         fov_waveset = np.arange(
             self.meta["wave_min"].value, self.meta["wave_max"].value,
