@@ -13,17 +13,20 @@ from scopesim.effects.detector_list import DetectorList
 
 from scopesim.tests.mocks.py_objects.header_objects import _implane_header
 
+
 @pytest.fixture(scope="class")
 def patch_mock_path_micado(mock_path_micado):
     """Set the search path to the test mocks"""
     with patch("scopesim.rc.__search_path__", [mock_path_micado]):
         yield
 
+
 @pytest.fixture(name="mock_detector", scope="function")
 def fixture_mock_detector():
     """Instantiate a Detector object without data"""
     det = Detector(_implane_header())
     return det
+
 
 @pytest.fixture(name="detector_with_data", scope="function")
 def fixture_detector_with_data(mock_detector):
@@ -90,7 +93,7 @@ class TestApplyTo:
     @pytest.mark.usefixtures("patch_mock_path_micado")
     def test_applies_gain_list_to_detector_list(self):
         det_list = DetectorList(filename="FPA_array_layout.dat",
-                                image_plane_id = 0)
+                                image_plane_id=0)
         detmgr = DetectorManager(det_list)
         for det in detmgr._detectors:
             det.hdu.data = 100. * np.ones_like(det.hdu.data)
@@ -100,4 +103,4 @@ class TestApplyTo:
         for i, det in enumerate(detmgr._detectors):
             oldval = det.data.mean()
             newdet = adconverter.apply_to(det)
-            assert  newdet.data.mean() == int(oldval / (i + 1))
+            assert newdet.data.mean() == int(oldval / (i + 1))

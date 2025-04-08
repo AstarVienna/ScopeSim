@@ -1,5 +1,6 @@
-"""Test a basic instrument setup"""
 # -*- coding: utf-8 -*-
+"""Test a basic instrument setup."""
+
 import pytest
 
 import numpy as np
@@ -26,6 +27,7 @@ SWITCHOFF = [
 
 # pylint: disable=missing-class-docstring
 # pylint: disable=missing-function-docstring
+
 
 @pytest.mark.usefixtures("protect_currsys", "patch_all_mock_paths")
 class TestLoadsUserCommands:
@@ -287,10 +289,15 @@ class TestModeStatus:
 @pytest.fixture(scope="function", name="obs")
 def basic_opt_observed():
     src = st.star(flux=15)
-    cmd = sim.UserCommands(use_instrument="basic_instrument",
-                           ignore_effects=SWITCHOFF,
-                           properties={"!OBS.dit": 10, "!OBS.ndit": 1,
-                                       "!DET.gain": 1.})
+    cmd = sim.UserCommands(
+        use_instrument="basic_instrument",
+        ignore_effects=SWITCHOFF,
+        properties={
+            "!OBS.dit": 10,
+            "!OBS.ndit": 1,
+            "!DET.gain": 1.,
+        },
+    )
     opt = sim.OpticalTrain(cmd)
     opt.observe(src)
     default = int(opt.readout()[0][1].data.sum())
@@ -303,10 +310,15 @@ def basic_opt_observed():
 @pytest.fixture(scope="function", name="obs_aeq")
 def basic_opt_with_autoexp_and_digitize_observed():
     src = st.star(flux=15)
-    cmd = sim.UserCommands(use_instrument="basic_instrument",
-                           ignore_effects=SWITCHOFF,
-                           properties={"!OBS.dit": 10, "!OBS.ndit": 1,
-                                       "!DET.gain": 1.})
+    cmd = sim.UserCommands(
+        use_instrument="basic_instrument",
+        ignore_effects=SWITCHOFF,
+        properties={
+            "!OBS.dit": 10,
+            "!OBS.ndit": 1,
+            "!DET.gain": 1.,
+        },
+    )
     opt = sim.OpticalTrain(cmd)
     opt.observe(src)
     default = int(opt.readout()[0][1].data.sum())
@@ -349,7 +361,7 @@ class TestDitNdit:
     def test_kwargs_override_obs_dict(self, obs, dit, ndit, factor, adconvert):
         """This should prioritize kwargs and fallback to !OBS."""
         opt, default, adconverter = obs
-        kwarged = int(opt.readout(dit=dit, ndit=ndit, reset=False)[0][1].data.sum())
+        kwarged = int(opt.readout(dit=dit, ndit=ndit)[0][1].data.sum())
         assert adconverter._should_apply() == adconvert
         # Digitization results in ~4% loss, which is fine:
         assert pytest.approx(kwarged / default, rel=.05) == factor
@@ -366,8 +378,9 @@ class TestDitNdit:
         """
         opt, default, adconverter = obs_aeq
         kwarged = int(opt.readout(dit=dit, ndit=ndit, reset=False)[0][1].data.sum())
-        assert pytest.approx(kwarged / default, rel=0.05) == factor
         assert adconverter._should_apply() == adconvert
+        # Digitization results in ~4% loss, which is fine:
+        assert pytest.approx(kwarged / default, rel=.05) == factor
 
     @pytest.mark.parametrize(("exptime", "factor"),
                              [(20, 2), (30, 3), (None, 6)])
@@ -386,14 +399,12 @@ class TestDitNdit:
         # Digitization results in ~4% loss, which is fine:
         assert pytest.approx(kwarged / default, rel=.05) == factor
 
-
     @pytest.mark.parametrize(("exptime", "factor", "adconvert"),
-                             [(30, 3, False),
-                              (None, 1, True)])
+                             [(30, 3, False), (None, 1, True)])
     def test_autoexp_overrides_obs_dict(self, obs_aeq, exptime, factor, adconvert):
         """This should prioritize kwargs and use dit, ndit when None."""
         opt, default, adconverter = obs_aeq
-        kwarged = int(opt.readout(exptime=exptime)[0][1].data.sum())
+        kwarged = int(opt.readout(exptime=exptime, reset=False)[0][1].data.sum())
         assert adconverter._should_apply() == adconvert
         # Digitization results in ~4% loss, which is fine:
         assert pytest.approx(kwarged / default, rel=.05) == factor
