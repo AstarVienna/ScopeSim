@@ -113,11 +113,12 @@ class TestTrackIpAddress:
         _ = UserCommands(use_instrument="test_package")
 
 
-@pytest.mark.usefixtures("protect_currsys")
 class TestIffyPkgPaths:
+    @pytest.mark.usefixtures("protect_currsys")
     def test_finds_basic_instrument(self):
         UserCommands(use_instrument="basic_instrument")
 
+    @pytest.mark.usefixtures("protect_currsys")
     def test_throws_for_bogus_inst(self):
         with pytest.raises(ValueError):
             UserCommands(use_instrument="bogus_instrument")
