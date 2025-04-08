@@ -54,7 +54,7 @@ class TestInit:
             DetectorModePropertiesSetter()
 
 
-@pytest.mark.skip(
+@pytest.mark.xfail(
         reason="This currently fails if run after a test using OpticalTrain, "
         "because of the rc.__currsys__ type change happening there.")
 class TestApplyTo:
