@@ -16,7 +16,7 @@ from synphot.units import PHOTLAM
 
 from scopesim.source import source_utils
 from scopesim.source.source import Source
-from scopesim.source.source_fields import CubeSourceField
+from scopesim.source.source_fields import CubeSourceField, TableSourceField
 
 from scopesim.optics.image_plane import ImagePlane
 from scopesim.utils import convert_table_comments_to_dict
@@ -186,7 +186,8 @@ class TestSourceInit:
     def test_initialises_with_filename_and_spectrum(self, ii, dtype,
                                                     input_files, input_spectra):
         fname = input_files[ii]
-        src = Source(filename=fname, spectra=input_spectra[0])
+        spec = input_spectra if issubclass(dtype, Table) else input_spectra[0]
+        src = Source(filename=fname, spectra=spec)
         assert isinstance(src, Source)
         assert isinstance(src.spectra[0], SourceSpectrum)
         assert isinstance(src.fields[0].field, dtype)
@@ -447,6 +448,14 @@ def test_cube_source_field():
 
     _, ax = plt.subplots()
     csf.plot(ax, "red")
+
+
+def test_throws_for_invalid_ref():
+    with pytest.raises(KeyError):
+        # Minimal Table
+        tbl = Table(data=[[0, 1]], names=["ref"])
+        TableSourceField(tbl, {0: None})
+
 
 #
 # class TestScaleImageHDU:
