@@ -522,7 +522,7 @@ def add_packages_to_rc_search(local_path, package_list):
         plocal_path = patch_fake_symlinks(Path(local_path))
     except FileNotFoundError:
         # retry with mocks
-        plocal_path = patch_fake_symlinks(Path("./scopesim/tests/mocks"))
+        plocal_path = rc.__pkg_dir__ / "tests/mocks"
 
     for pkg in package_list:
         pkg_dir = plocal_path / pkg
