@@ -150,8 +150,13 @@ def _get_required_packages():
 
 
 def _get_all_irdb_pkgs(root: Path):
+    def _name_valid(pkg_name):
+        if pkg_name in {"docs", "irdb"}:
+            return False
+        return not pkg_name.startswith(("_", "."))
+
     return [pkg_path for pkg_path in root.iterdir() if pkg_path.is_dir()
-            and not pkg_path.name.startswith("__")] if root.is_dir() else []
+            and _name_valid(pkg_path.name)] if root.is_dir() else []
 
 
 def _get_irdb_pkg_version(pkg_path: Path) -> str:
