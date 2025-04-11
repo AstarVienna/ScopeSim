@@ -265,7 +265,7 @@ class TestSeq:
         assert arr[1:] - arr[:-1] == approx(step)
 
 
-@pytest.mark.usefixtures("protect_currsys")
+@pytest.mark.usefixtures("protect_config")
 def test_setting_instpkgspath():
     utils.link_irdb("bogus")
     assert rc.__config__["!SIM.file.local_packages_path"] == "bogus"
