@@ -491,6 +491,14 @@ def unit_from_table(colname: str, table: Table,
     return u.Unit(default_unit)
 
 
+def unit_includes_per_physicyl_type(unit, physical_type):
+    """Check if one of the `unit`'s bases is of 1/`physical_type`."""
+    # TODO: Check again if there isn't any builtin functionality in astropy
+    #       for the same operation!
+    return any(1 / (base**power).physical_type == physical_type
+               for base, power in zip(unit.bases, unit.powers))
+
+
 def has_needed_keywords(header, suffix=""):
     """Check to see if the WCS keywords are in the header."""
     keys = {"CDELT1", "CRVAL1", "CRPIX1"}
