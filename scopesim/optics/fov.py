@@ -16,7 +16,13 @@ from synphot.units import PHOTLAM
 from . import fov_utils as fu
 from . import image_plane_utils as imp_utils
 
-from ..utils import from_currsys, quantify, has_needed_keywords, get_logger
+from ..utils import (
+    from_currsys,
+    quantify,
+    has_needed_keywords,
+    get_logger,
+    unit_includes_per_physicyl_type,
+)
 from ..source.source import Source
 
 
@@ -476,7 +482,6 @@ class FieldOfView:
             # Cube should be in PHOTLAM arcsec-2 for SpectralTrace mapping
             # Assumption is that ImageHDUs have units of PHOTLAM arcsec-2
             # ImageHDUs have photons/second/pixel.
-            # ..todo: Add a catch to get ImageHDU with BUNITs
             canvas_image_hdu = fits.ImageHDU(
                 data=np.zeros((self.header["NAXIS2"], self.header["NAXIS1"])),
                 header=self.header)
@@ -486,7 +491,12 @@ class FieldOfView:
             #       but need to be converted to arcsec-2.
             #       self.pixel_area is in arcsec-2(/pixel, implicitly), so that
             #       works out. Need to add unit checks somehow...
-            field_data = field.data / self.pixel_area
+            bunit = u.Unit(field.header.get("BUNIT", ""))
+            field_data = deepcopy(field.data)
+            if unit_includes_per_physicyl_type(bunit, "solid angle"):
+                # Field is in (PHOTLAM) / arcsec**2, need to scale by pixarea
+                field_data *= self._pixarea(field.header).value
+            field_data /= self.pixel_area
             field_hdu = fits.ImageHDU(data=field_data, header=field.header)
 
             canvas_image_hdu = imp_utils.add_imagehdu_to_imagehdu(
