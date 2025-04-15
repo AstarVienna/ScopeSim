@@ -6,6 +6,7 @@ from unittest.mock import patch
 
 import numpy as np
 from astropy import wcs
+from astropy import units as u
 from astropy.io import ascii as ioascii, fits
 from astropy.table import Table
 
@@ -269,3 +270,8 @@ class TestSeq:
 def test_setting_instpkgspath():
     utils.link_irdb("bogus")
     assert rc.__config__["!SIM.file.local_packages_path"] == "bogus"
+
+
+def test_unit_includes_per_physical_type():
+    unit = u.Unit("photlam") / u.arcsec**2
+    assert utils.unit_includes_per_physical_type(unit, "solid angle")
