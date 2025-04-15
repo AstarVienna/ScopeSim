@@ -177,9 +177,9 @@ class SpectralTrace:
 
         # WCSD from the FieldOfView - this is the full detector plane
         pixsize = fov_header["CDELT1D"] * u.Unit(fov_header["CUNIT1D"])
-        pixsize = pixsize.to(u.mm).value
+        pixsize = pixsize.to_value(u.mm)
         pixscale = fov_header["CDELT1"] * u.Unit(fov_header["CUNIT1"])
-        pixscale = pixscale.to(u.arcsec).value
+        pixscale = pixscale.to_value(u.arcsec)
 
         fpa_wcsd = WCS(det_header, key="D")
         naxis1d, naxis2d = det_header["NAXIS1"], det_header["NAXIS2"]
