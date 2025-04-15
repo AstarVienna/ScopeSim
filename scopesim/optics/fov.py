@@ -21,7 +21,7 @@ from ..utils import (
     quantify,
     has_needed_keywords,
     get_logger,
-    unit_includes_per_physicyl_type,
+    unit_includes_per_physical_type,
 )
 from ..source.source import Source
 
@@ -486,14 +486,9 @@ class FieldOfView:
                 data=np.zeros((self.header["NAXIS2"], self.header["NAXIS1"])),
                 header=self.header)
             # FIX: Do not scale source data - make a copy first.
-            # Note: Use NOT "Pixel scale conversion" as above, because the
-            #       values are in photons/second/pixel (see comments above),
-            #       but need to be converted to arcsec-2.
-            #       self.pixel_area is in arcsec-2(/pixel, implicitly), so that
-            #       works out. Need to add unit checks somehow...
             bunit = u.Unit(field.header.get("BUNIT", ""))
             field_data = deepcopy(field.data)
-            if unit_includes_per_physicyl_type(bunit, "solid angle"):
+            if unit_includes_per_physical_type(bunit, "solid angle"):
                 # Field is in (PHOTLAM) / arcsec**2, need to scale by pixarea
                 field_data *= self._pixarea(field.header).value
             field_data /= self.pixel_area

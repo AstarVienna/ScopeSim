@@ -272,6 +272,6 @@ def test_setting_instpkgspath():
     assert rc.__config__["!SIM.file.local_packages_path"] == "bogus"
 
 
-def test_unit_includes_per_physicyl_type():
+def test_unit_includes_per_physical_type():
     unit = u.Unit("photlam") / u.arcsec**2
-    assert utils.unit_includes_per_physicyl_type(unit, "solid angle")
+    assert utils.unit_includes_per_physical_type(unit, "solid angle")
