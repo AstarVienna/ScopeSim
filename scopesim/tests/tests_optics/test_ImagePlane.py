@@ -824,7 +824,7 @@ class TestMakeImagePlaneHeader:
 #         tbl = Table(names=["x", "y"], data=[x, y])
 #         xsky, ysky = impl_utils.get_corner_sky_coords([tbl, image_hdu_square])
 #
-#         assert np.all((xsky == x.to(u.deg).value))
+#         assert np.all((xsky == x.to_value(u.deg)))
 #
 
 

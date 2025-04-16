@@ -124,7 +124,7 @@ class SurfaceList(TERCurve):
 
     @property
     def area(self):
-        areas = [0] + [self.surfaces[key].area.to(u.m**2).value
+        areas = [0] + [self.surfaces[key].area.to_value(u.m**2)
                        for key in self.surfaces
                        if self.surfaces[key].area is not None]
         return np.max(areas) * u.m**2

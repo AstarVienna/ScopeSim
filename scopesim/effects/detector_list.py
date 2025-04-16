@@ -222,10 +222,10 @@ class DetectorList(Effect):
         y_det_min = np.min(ycen - dy)
         y_det_max = np.max(ycen + dy)
 
-        x_det = [x_det_min.to(u.mm).value, x_det_max.to(u.mm).value]
-        y_det = [y_det_min.to(u.mm).value, y_det_max.to(u.mm).value]
+        x_det = [x_det_min.to_value(u.mm), x_det_max.to_value(u.mm)]
+        y_det = [y_det_min.to_value(u.mm), y_det_max.to_value(u.mm)]
 
-        pixel_size = pixel_size.to(u.mm).value
+        pixel_size = pixel_size.to_value(u.mm)
         hdr = header_from_list_of_xy(x_det, y_det, pixel_size, "D")
         hdr["IMGPLANE"] = self.image_plane_id
 

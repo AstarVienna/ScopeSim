@@ -263,7 +263,7 @@ class TestMakeEmissionFromEmissivity:
         wave = np.arange(3, 20, dlam) * u.um
         wavemax = wave[np.argmax(flux(wave))]
         if isinstance(temp, u.Quantity):
-            temp = temp.to(u.Kelvin, equivalencies=u.temperature()).value
+            temp = temp.to_value(u.Kelvin, equivalencies=u.temperature())
         wienmax = 3669.7 * u.um / temp
         assert np.abs(wavemax - wienmax.to(u.um)) < dlam * u.um
 

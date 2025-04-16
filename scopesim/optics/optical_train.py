@@ -377,7 +377,7 @@ class OpticalTrain:
             new_data = np.zeros((fov_waveset.shape[0], data.shape[1], data.shape[2]),
                                 dtype=np.float32)
             for j in range(data.shape[1]):
-                cube_interp = interp1d(wave.to(u.um).value, data[:, j, :],
+                cube_interp = interp1d(wave.to_value(u.um), data[:, j, :],
                                        axis=0, kind="linear",
                                        bounds_error=False, fill_value=0)
                 new_data[:, j, :] = cube_interp(fov_waveset.value)

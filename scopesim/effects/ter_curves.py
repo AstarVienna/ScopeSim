@@ -143,8 +143,8 @@ class TERCurve(Effect):
             wave_min = wave[max(0, valid_waves[0][0] - 1)]
             wave_max = wave[min(len(wave) - 1, valid_waves[-1][0] + 1)]
 
-            obj.shrink("wave", [wave_min.to(u.um).value,
-                                wave_max.to(u.um).value])
+            obj.shrink("wave", [wave_min.to_value(u.um),
+                                wave_max.to_value(u.um)])
 
         return obj
 
