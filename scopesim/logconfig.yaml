@@ -28,6 +28,8 @@ loggers:
     level: INFO
   astar.scopesim.commands.user_commands:
     level: INFO
+  httpx:  # Switch off INFO calls from httpx, they're spammy.
+    level: WARNING
 
 handlers:
   console:
