@@ -109,8 +109,8 @@ class ADConversion(Effect):
          dtype: uint16
          gain: "!DET.gain"       # or a number if !DET.gain has not been set yet
 
-    For a multi-detector instrument the detector ids need to be identical to those
-    used to instantiate the DetectorList effect.
+    For a multi-detector instrument the detector ids need to be identical to
+    those used to instantiate the DetectorList effect.
     - name: ad_conversion
       description: Apply gain and convert electron count into integers
       class: ADConversion
@@ -121,8 +121,9 @@ class ADConversion(Effect):
            id2:  2.1
            id3   2.3
 
-    Again, `!DET.gain` can be used here. This can be useful when the `DetectorModePropertiesSetter`
-    effect is used to switch between different detector modes with different gain values.
+    Again, `!DET.gain` can be used here. This can be useful when the
+    `DetectorModePropertiesSetter` effect is used to switch between different
+    detector modes with different gain values.
     """
 
     z_order: ClassVar[tuple[int, ...]] = (825,)
@@ -138,6 +139,8 @@ class ADConversion(Effect):
 
     def _should_apply(self) -> bool:
         """Check cases where the effect should not be applied
+
+        This does not do anything right now.
         """
         if self.cmds is None:
             logger.warning("Cannot access cmds for ADConversion effect.")
@@ -145,14 +148,14 @@ class ADConversion(Effect):
 
         # ..todo: need to deal with this case more realistically
         # Is this still necessary?
-        if self.cmds.get("!OBS.autoexpset", False):
-            logger.info("DIT, NDIT determined by AutoExposure -> "
-                        "Create float32 output.")
-            return False
+        #if self.cmds.get("!OBS.autoexpset", False):
+        #    logger.info("DIT, NDIT determined by AutoExposure -> "
+        #                "Create float32 output.")
+        #    return False
 
-        if self.cmds["!OBS.ndit"] > 1:
-            logger.info("NDIT larger than 1 -> Create float32 output.")
-            return False
+        #if self.cmds["!OBS.ndit"] > 1:
+        #    logger.info("NDIT larger than 1 -> Create float32 output.")
+        #    return False
 
         return True
 
@@ -160,13 +163,10 @@ class ADConversion(Effect):
         if not isinstance(obj, Detector):
             return obj
 
-        if not self._should_apply():
-            new_dtype = np.float32
-        else:
-            new_dtype = self.meta["dtype"]
-        if not np.issubdtype(new_dtype, np.integer):
-            logger.warning("Setting digitized data to dtype %s, which is not "
-                           "an integer subtype.", new_dtype)
+        new_dtype = self.meta["dtype"]
+        #if not np.issubdtype(new_dtype, np.integer):
+        #    logger.warning("Setting digitized data to dtype %s, which is not "
+        #                   "an integer subtype.", new_dtype)
 
         # Apply the gain value (copy from DarkCurrent)
         # Note that this does not cater for the case where the gain is given
@@ -181,7 +181,7 @@ class ADConversion(Effect):
             raise ValueError("<ADConversion>.meta['gain'] must be either "
                              f"dict or float, but is {self.cmds['!DET.gain']}")
 
-        # Apply gain   TODO: option to turn this off
+        # Apply gain
         obj._hdu.data /= gain
 
         # Type-conversion wraps around input values that are higher or lower than
@@ -194,11 +194,13 @@ class ADConversion(Effect):
             minvals_mask = obj._hdu.data < minval
             maxvals_mask = obj._hdu.data > maxval
             if minvals_mask.any():
-                logger.warning(f"Effect ADConversion: {minvals_mask.sum()} negative pixels")
                 obj._hdu.data[minvals_mask] = minval
+                logger.warning(
+                    f"Effect ADConversion: {minvals_mask.sum()} negative pixels")
             if maxvals_mask.any():
-                logger.warning(f"Effect ADConversion: {maxvals_mask.sum()} saturated pixels")
                 obj._hdu.data[maxvals_mask] = maxval
+                logger.warning(
+                    f"Effect ADConversion: {maxvals_mask.sum()} saturated pixels")
 
         # This used to create a new ImageHDU with the same header but the data
         # set to the modified data. It should be fine to simply re-assign the
