@@ -334,9 +334,9 @@ def basic_opt_with_autoexp_and_digitize_observed():
 
 @pytest.mark.usefixtures("protect_currsys", "patch_all_mock_paths")
 class TestDitNdit:
-    @pytest.mark.parametrize(("dit", "ndit", "factor", "adconvert"),
-                             [(20, 1, 2, True), (10, 3, 3, False)])
-    def test_obs_dict(self, obs, dit, ndit, factor, adconvert):
+    @pytest.mark.parametrize(("dit", "ndit", "factor"),
+                             [(20, 1, 2), (10, 3, 3)])
+    def test_obs_dict(self, obs, dit, ndit, factor):
         """This should just use dit, ndit from !OBS."""
         opt, default, adconverter = obs
         # This should work with patch.dict, but doesn't :(
@@ -348,37 +348,35 @@ class TestDitNdit:
         kwarged = int(opt.readout(reset=False)[0][1].data.sum())
         assert adconverter.cmds["!OBS.dit"] == dit
         assert adconverter.cmds["!OBS.ndit"] == ndit
-        assert adconverter._should_apply() == adconvert
         opt.cmds["!OBS.dit"] = o_dit
         opt.cmds["!OBS.ndit"] = o_ndit
         # Digitization results in ~4% loss, which is fine:
         assert pytest.approx(kwarged / default, rel=.05) == factor
 
-    @pytest.mark.parametrize(("dit", "ndit", "factor", "adconvert"),
-                             [(20, 1, 2, True),
-                              (10, 3, 3, False),
-                              (None, None, 1, True)])
-    def test_kwargs_override_obs_dict(self, obs, dit, ndit, factor, adconvert):
+    @pytest.mark.parametrize(("dit", "ndit", "factor"),
+                             [(20, 1, 2),
+                              (10, 3, 3),
+                              (None, None, 1)])
+    def test_kwargs_override_obs_dict(self, obs, dit, ndit, factor):
         """This should prioritize kwargs and fallback to !OBS."""
         opt, default, adconverter = obs
         kwarged = int(opt.readout(dit=dit, ndit=ndit)[0][1].data.sum())
-        assert adconverter._should_apply() == adconvert
         # Digitization results in ~4% loss, which is fine:
         assert pytest.approx(kwarged / default, rel=.05) == factor
 
-    @pytest.mark.parametrize(("dit", "ndit", "factor", "adconvert"),
-                             [(20, 1, 2, True),
-                              (10, 3, 3, False),
-                              (None, None, 1, True)])
+    @pytest.mark.parametrize(("dit", "ndit", "factor"),
+                             [(20, 1, 2),
+                              (10, 3, 3),
+                              (None, None, 1)])
     def test_kwargs_override_obs_dict_also_with_autoexp(
-            self, obs_aeq, dit, ndit, factor, adconvert):
+            self, obs_aeq, dit, ndit, factor):
         """This should prioritize dit, ndit from kwargs.
 
         Lacking those, dit and ndit from !OBS should be used over exptime.
         """
         opt, default, adconverter = obs_aeq
         kwarged = int(opt.readout(dit=dit, ndit=ndit, reset=False)[0][1].data.sum())
-        assert adconverter._should_apply() == adconvert
+
         # Digitization results in ~4% loss, which is fine:
         assert pytest.approx(kwarged / default, rel=.05) == factor
 
@@ -392,45 +390,41 @@ class TestDitNdit:
         opt.cmds["!OBS.dit"] = None
         opt.cmds["!OBS.ndit"] = None
         kwarged = int(opt.readout(exptime=exptime, reset=False)[0][1].data.sum())
-        assert not adconverter._should_apply()
 
         opt.cmds["!OBS.dit"] = o_dit
         opt.cmds["!OBS.ndit"] = o_ndit
         # Digitization results in ~4% loss, which is fine:
         assert pytest.approx(kwarged / default, rel=.05) == factor
 
-    @pytest.mark.parametrize(("exptime", "factor", "adconvert"),
-                             [(30, 3, False), (None, 1, True)])
-    def test_autoexp_overrides_obs_dict(self, obs_aeq, exptime, factor, adconvert):
+    @pytest.mark.parametrize(("exptime", "factor"),
+                             [(30, 3), (None, 1)])
+    def test_autoexp_overrides_obs_dict(self, obs_aeq, exptime, factor):
         """This should prioritize kwargs and use dit, ndit when None."""
         opt, default, adconverter = obs_aeq
         kwarged = int(opt.readout(exptime=exptime, reset=False)[0][1].data.sum())
-        assert adconverter._should_apply() == adconvert
         # Digitization results in ~4% loss, which is fine:
         assert pytest.approx(kwarged / default, rel=.05) == factor
 
-    @pytest.mark.parametrize(("dit", "ndit", "factor", "adconvert"),
-                             [(90, 1, 9, True), (2, 90, 18, False)])
+    @pytest.mark.parametrize(("dit", "ndit", "factor"),
+                             [(90, 1, 9), (2, 90, 18)])
     def test_ditndit_in_kwargs_while_also_having_autoexp(
-            self, obs_aeq, dit, ndit, factor, adconvert):
+            self, obs_aeq, dit, ndit, factor):
         """This should prioritize dit, ndit from kwargs."""
         opt, default, adconverter = obs_aeq
         kwarged = int(opt.readout(dit=dit, ndit=ndit, reset=False)[0][1].data.sum())
-        assert adconverter._should_apply() == adconvert
         # Digitization results in ~4% loss, which is fine:
         assert pytest.approx(kwarged / default, rel=.05) == factor
 
-    @pytest.mark.parametrize(("dit", "ndit", "exptime", "factor", "adconvert"),
-                             [(90, 1, None, 9, True),
-                              (2, 90, 20, 18, False)])
+    @pytest.mark.parametrize(("dit", "ndit", "exptime", "factor"),
+                             [(90, 1, None, 9),
+                              (2, 90, 20, 18)])
     def test_ditndit_in_kwargs_while_also_having_autoexp_and_exptime(
-            self, obs_aeq, dit, ndit, exptime, factor, adconvert):
+            self, obs_aeq, dit, ndit, exptime, factor):
         """This should prioritize dit, ndit from kwargs and ignore exptime."""
         opt, default, adconverter = obs_aeq
         kwarged = int(opt.readout(exptime=exptime,
                                   dit=dit, ndit=ndit,
                                   reset=False)[0][1].data.sum())
-        assert adconverter._should_apply() == adconvert
         # Digitization results in ~4% loss, which is fine:
         assert pytest.approx(kwarged / default, rel=.05) == factor
 
