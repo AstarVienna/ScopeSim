@@ -187,11 +187,18 @@ class ADConversion(Effect):
         # Remove values below 0, because for unsigned types these get wrapped
         # around to MAXINT, which is even worse than negative values.
         # TODO: Write a test for this.
-        if np.issubdtype(new_dtype, np.unsignedinteger):
-            negvals_mask = obj._hdu.data < 0
-            if negvals_mask.any():
-                logger.warning(f"Effect ADConversion: {negvals_mask.sum()} negative pixels")
-                obj._hdu.data[negvals_mask] = 0
+        if np.issubdtype(new_dtype, np.integer):
+            minval = np.iinfo(new_dtype).min
+            maxval = np.iinfo(new_dtype).max
+            print("Minval:", minval, "Maxval:", maxval)
+            minvals_mask = obj._hdu.data < minval
+            maxvals_mask = obj._hdu.data > maxval
+            if minvals_mask.any():
+                logger.warning(f"Effect ADConversion: {minvals_mask.sum()} negative pixels")
+                obj._hdu.data[minvals_mask] = minval
+            if maxvals_mask.any():
+                logger.warning(f"Effect ADConversion: {maxvals_mask.sum()} saturated pixels")
+                obj._hdu.data[maxvals_mask] = maxval
 
         # This used to create a new ImageHDU with the same header but the data
         # set to the modified data. It should be fine to simply re-assign the
