@@ -184,13 +184,13 @@ class ADConversion(Effect):
         # Apply gain   TODO: option to turn this off
         obj._hdu.data /= gain
 
-        # Remove values below 0, because for unsigned types these get wrapped
-        # around to MAXINT, which is even worse than negative values.
-        # TODO: Write a test for this.
+        # Type-conversion wraps around input values that are higher or lower than
+        # the respective maximum and minimum values of the new data type. Before
+        # conversion to integer types with limited range (this is in particular
+        # the case for 16 bits), we therefore need to cap the data.
         if np.issubdtype(new_dtype, np.integer):
             minval = np.iinfo(new_dtype).min
             maxval = np.iinfo(new_dtype).max
-            print("Minval:", minval, "Maxval:", maxval)
             minvals_mask = obj._hdu.data < minval
             maxvals_mask = obj._hdu.data > maxval
             if minvals_mask.any():

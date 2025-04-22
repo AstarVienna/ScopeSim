@@ -104,3 +104,21 @@ class TestApplyTo:
             oldval = det.data.mean()
             newdet = adconverter.apply_to(det)
             assert newdet.data.mean() == int(oldval / (i + 1))
+
+    @pytest.mark.parametrize("newtype, minval, maxval", [(np.uint16, 0, 65535),
+                                                         (np.uint32, 0, 4294967295),
+                                                         (np.int16, -32768, 32767)])
+    def test_caps_data_overflow(self, mock_detector, newtype, maxval, minval):
+        det = mock_detector
+        medval = 100.
+        gain = 2.0
+        data = medval * np.ones((100, 100), dtype=np.float64)
+        data[50, 50] = 1.e12
+        data[60, 60] = -100000.
+        det._hdu.data = data
+        adconverter = ADConversion(gain=gain, dtype=newtype)
+        adconverter.cmds = {"!DET.gain": gain, "!OBS.ndit": 1}
+        adconverter.apply_to(det)
+        assert(np.median(det._hdu.data) == newtype(medval/gain))
+        assert(np.max(det._hdu.data) == maxval)
+        assert(np.min(det._hdu.data) == minval)
