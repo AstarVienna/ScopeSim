@@ -164,9 +164,6 @@ class ADConversion(Effect):
             return obj
 
         new_dtype = self.meta["dtype"]
-        #if not np.issubdtype(new_dtype, np.integer):
-        #    logger.warning("Setting digitized data to dtype %s, which is not "
-        #                   "an integer subtype.", new_dtype)
 
         # Apply the gain value (copy from DarkCurrent)
         # Note that this does not cater for the case where the gain is given
