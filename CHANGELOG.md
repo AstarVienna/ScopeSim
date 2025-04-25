@@ -1,3 +1,34 @@
+# Version 0.9.3
+**2025-04-25**
+
+Addition of average exposure effect by @oczoske in https://github.com/AstarVienna/ScopeSim/pull/603, otherwise mostly bugfixes, small quality-of-life improvements and some internal refactoring.
+
+## What's Changed
+### Bugs fixed
+* Fix broken flux scaling for extended sources in spectroscopy by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/638
+### Changes to or addition of Effects
+* Implement average exposure effect by @oczoske in https://github.com/AstarVienna/ScopeSim/pull/603
+* Remove spurious base classes by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/621
+### New Features or Improvements
+* Make setting the `inst_pkgs` path more convenient by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/627
+* Check if all ref keys are found in spectra by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/633
+* Ignore non-package directories for bug_report by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/631
+* Switch off spammy INFO logs from httpx by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/642
+### Dependency Changes
+* Bump beautifulsoup to 4.13.3 to get rid of deprecation warning by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/600
+* Disable GitHub-based webtests by default by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/601
+* Bump actions/download-artifact from 4.1.9 to 4.2.1 by @dependabot in https://github.com/AstarVienna/ScopeSim/pull/602
+* Bump python-dateutil from 2.8.2 to 2.9.0.post0 by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/628
+* Bump h11 from 0.14.0 to 0.16.0 by @dependabot in https://github.com/AstarVienna/ScopeSim/pull/645
+### Other Changes
+* Remove base class check in `Effect.apply_to()` by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/620
+* Fixup adding mock path to UserCommands by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/640
+* Fixup adding mock path to UserCommands (again) by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/641
+* Use `.to_value(<unit>)` instead of `.to(<unit>).value` by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/643
+
+**Full Changelog**: https://github.com/AstarVienna/ScopeSim/compare/v0.9.2...v0.9.3
+
+
 # Version 0.9.2
 **2025-03-13**
 
