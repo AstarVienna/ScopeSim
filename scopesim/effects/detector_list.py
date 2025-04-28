@@ -16,7 +16,7 @@ import numpy as np
 from astropy import units as u
 from astropy.table import Table
 
-from ..base_classes import FOVSetupBase
+from ..optics.fov_volume_list import FovVolumeList
 from .effects import Effect
 from .apertures import ApertureMask
 from ..optics.image_plane_utils import header_from_list_of_xy, calc_footprint
@@ -99,7 +99,7 @@ class DetectorList(Effect):
         - name : full_detector_array
           class : DetectorList
           kwargs :
-            filename : "detecotr_list.dat"
+            filename : "detector_list.dat"
             active_detectors : [1, 3]
             image_plane_id : 0
 
@@ -148,24 +148,25 @@ class DetectorList(Effect):
             self.meta["y_size_unit"] = self.meta["yhw_unit"]
 
     def apply_to(self, obj, **kwargs):
-        if isinstance(obj, FOVSetupBase):
+        if not isinstance(obj, FovVolumeList):
+            return obj
 
-            hdr = self.image_plane_header
-            xy_mm = calc_footprint(hdr, "D")
-            pixel_size = hdr["CDELT1D"]              # mm
-            pixel_scale = kwargs.get("pixel_scale", self.meta["pixel_scale"])   # ["]
-            pixel_scale = from_currsys(pixel_scale, self.cmds)
+        hdr = self.image_plane_header
+        xy_mm = calc_footprint(hdr, "D")
+        pixel_size = hdr["CDELT1D"]  # mm
+        pixel_scale = kwargs.get("pixel_scale", self.meta["pixel_scale"])  # ["]
+        pixel_scale = from_currsys(pixel_scale, self.cmds)
 
-            # x["] = x[mm] * ["] / [mm]
-            xy_sky = xy_mm * pixel_scale / pixel_size
+        # x["] = x[mm] * ["] / [mm]
+        xy_sky = xy_mm * pixel_scale / pixel_size
 
-            obj.shrink(axis=["x", "y"],
-                       values=(tuple(zip(xy_sky.min(axis=0),
-                                         xy_sky.max(axis=0)))))
+        obj.shrink(axis=["x", "y"],
+                   values=(tuple(zip(xy_sky.min(axis=0),
+                                     xy_sky.max(axis=0)))))
 
-            lims = array_minmax(xy_mm)
-            keys = ["xd_min", "xd_max", "yd_min", "yd_max"]
-            obj.detector_limits = dict(zip(keys, lims.T.flatten()))
+        lims = array_minmax(xy_mm)
+        keys = ["xd_min", "xd_max", "yd_min", "yd_max"]
+        obj.detector_limits = dict(zip(keys, lims.T.flatten()))
 
         return obj
 
@@ -221,10 +222,10 @@ class DetectorList(Effect):
         y_det_min = np.min(ycen - dy)
         y_det_max = np.max(ycen + dy)
 
-        x_det = [x_det_min.to(u.mm).value, x_det_max.to(u.mm).value]
-        y_det = [y_det_min.to(u.mm).value, y_det_max.to(u.mm).value]
+        x_det = [x_det_min.to_value(u.mm), x_det_max.to_value(u.mm)]
+        y_det = [y_det_min.to_value(u.mm), y_det_max.to_value(u.mm)]
 
-        pixel_size = pixel_size.to(u.mm).value
+        pixel_size = pixel_size.to_value(u.mm)
         hdr = header_from_list_of_xy(x_det, y_det, pixel_size, "D")
         hdr["IMGPLANE"] = self.image_plane_id
 

@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+"""Test a basic instrument setup."""
+
 import pytest
 
 import numpy as np
@@ -8,7 +10,7 @@ from astropy import units as u
 
 import scopesim as sim
 from scopesim.source import source_templates as st
-from scopesim.effects import AutoExposure, Quantization
+from scopesim.effects import AutoExposure, ADConversion
 
 
 PLOTS = False
@@ -22,6 +24,9 @@ SWITCHOFF = [
     "effects_fits_keywords",
     "config_fits_keywords",
 ]
+
+# pylint: disable=missing-class-docstring
+# pylint: disable=missing-function-docstring
 
 
 @pytest.mark.usefixtures("protect_currsys", "patch_all_mock_paths")
@@ -284,137 +289,148 @@ class TestModeStatus:
 @pytest.fixture(scope="function", name="obs")
 def basic_opt_observed():
     src = st.star(flux=15)
-    cmd = sim.UserCommands(use_instrument="basic_instrument",
-                           ignore_effects=SWITCHOFF,
-                           properties={"!OBS.dit": 10, "!OBS.ndit": 1})
+    cmd = sim.UserCommands(
+        use_instrument="basic_instrument",
+        ignore_effects=SWITCHOFF,
+        properties={
+            "!OBS.dit": 10,
+            "!OBS.ndit": 1,
+            "!DET.gain": 1.,
+        },
+    )
     opt = sim.OpticalTrain(cmd)
     opt.observe(src)
     default = int(opt.readout()[0][1].data.sum())
 
-    quanteff = Quantization(cmds=opt.cmds)
-    opt.optics_manager["basic_detector"].effects.append(quanteff)
-    return opt, default, quanteff
+    adconverter = ADConversion(cmds=opt.cmds)
+    opt.optics_manager["basic_detector"].effects.append(adconverter)
+    return opt, default, adconverter
 
 
 @pytest.fixture(scope="function", name="obs_aeq")
-def basic_opt_with_autoexp_and_quant_observed():
+def basic_opt_with_autoexp_and_digitize_observed():
     src = st.star(flux=15)
-    cmd = sim.UserCommands(use_instrument="basic_instrument",
-                           ignore_effects=SWITCHOFF,
-                           properties={"!OBS.dit": 10, "!OBS.ndit": 1})
+    cmd = sim.UserCommands(
+        use_instrument="basic_instrument",
+        ignore_effects=SWITCHOFF,
+        properties={
+            "!OBS.dit": 10,
+            "!OBS.ndit": 1,
+            "!DET.gain": 1.,
+        },
+    )
     opt = sim.OpticalTrain(cmd)
     opt.observe(src)
     default = int(opt.readout()[0][1].data.sum())
 
     autoexp = AutoExposure(cmds=opt.cmds, mindit=1,
                            full_well=100, fill_frac=0.8)
-    quanteff = Quantization(cmds=opt.cmds)
+    adconverter = ADConversion(cmds=opt.cmds)
     opt.optics_manager["basic_detector"].effects.insert(2, autoexp)
-    opt.optics_manager["basic_detector"].effects.append(quanteff)
+    opt.optics_manager["basic_detector"].effects.append(adconverter)
     opt.cmds["!OBS.exptime"] = 60
-    return opt, default, quanteff
+    return opt, default, adconverter
 
 
 @pytest.mark.usefixtures("protect_currsys", "patch_all_mock_paths")
 class TestDitNdit:
-    @pytest.mark.parametrize(("dit", "ndit", "factor", "quant"),
-                             [(20, 1, 2, True), (10, 3, 3, False)])
-    def test_obs_dict(self, obs, dit, ndit, factor, quant):
+    @pytest.mark.parametrize(("dit", "ndit", "factor"),
+                             [(20, 1, 2), (10, 3, 3)])
+    def test_obs_dict(self, obs, dit, ndit, factor):
         """This should just use dit, ndit from !OBS."""
-        opt, default, quanteff = obs
+        opt, default, adconverter = obs
         # This should work with patch.dict, but doesn't :(
         o_dit, o_ndit = opt.cmds["!OBS.dit"], opt.cmds["!OBS.ndit"]
         opt.cmds["!OBS.dit"] = dit
         opt.cmds["!OBS.ndit"] = ndit
+        assert adconverter.cmds["!OBS.dit"] == dit
+        assert adconverter.cmds["!OBS.ndit"] == ndit
         kwarged = int(opt.readout(reset=False)[0][1].data.sum())
-        assert quanteff._should_apply() == quant
+        assert adconverter.cmds["!OBS.dit"] == dit
+        assert adconverter.cmds["!OBS.ndit"] == ndit
         opt.cmds["!OBS.dit"] = o_dit
         opt.cmds["!OBS.ndit"] = o_ndit
-        # Quantization results in ~4% loss, which is fine:
+        # Digitization results in ~4% loss, which is fine:
         assert pytest.approx(kwarged / default, rel=.05) == factor
 
-    @pytest.mark.parametrize(("dit", "ndit", "factor", "quant"),
-                             [(20, 1, 2, True),
-                              (10, 3, 3, False),
-                              (None, None, 1, True)])
-    def test_kwargs_override_obs_dict(self, obs, dit, ndit, factor, quant):
+    @pytest.mark.parametrize(("dit", "ndit", "factor"),
+                             [(20, 1, 2),
+                              (10, 3, 3),
+                              (None, None, 1)])
+    def test_kwargs_override_obs_dict(self, obs, dit, ndit, factor):
         """This should prioritize kwargs and fallback to !OBS."""
-        opt, default, quanteff = obs
+        opt, default, adconverter = obs
         kwarged = int(opt.readout(dit=dit, ndit=ndit)[0][1].data.sum())
-        assert quanteff._should_apply() == quant
-        # Quantization results in ~4% loss, which is fine:
+        # Digitization results in ~4% loss, which is fine:
         assert pytest.approx(kwarged / default, rel=.05) == factor
 
-    @pytest.mark.parametrize(("dit", "ndit", "factor", "quant"),
-                             [(20, 1, 2, True),
-                              (10, 3, 3, False),
-                              (None, None, 1, True)])
+    @pytest.mark.parametrize(("dit", "ndit", "factor"),
+                             [(20, 1, 2),
+                              (10, 3, 3),
+                              (None, None, 1)])
     def test_kwargs_override_obs_dict_also_with_autoexp(
-            self, obs_aeq, dit, ndit, factor, quant):
+            self, obs_aeq, dit, ndit, factor):
         """This should prioritize dit, ndit from kwargs.
 
         Lacking those, dit and ndit from !OBS should be used over exptime.
         """
-        opt, default, quanteff = obs_aeq
+        opt, default, adconverter = obs_aeq
         kwarged = int(opt.readout(dit=dit, ndit=ndit, reset=False)[0][1].data.sum())
-        assert quanteff._should_apply() == quant
-        # Quantization results in ~4% loss, which is fine:
+
+        # Digitization results in ~4% loss, which is fine:
         assert pytest.approx(kwarged / default, rel=.05) == factor
 
     @pytest.mark.parametrize(("exptime", "factor"),
                              [(20, 2), (30, 3), (None, 6)])
     def test_autoexp(self, obs_aeq, exptime, factor):
         """This should prioritize kwargs and fallback to !OBS."""
-        opt, default, quanteff = obs_aeq
+        opt, default, adconverter = obs_aeq
         # This should work with patch.dict, but doesn't :(
         o_dit, o_ndit = opt.cmds["!OBS.dit"], opt.cmds["!OBS.ndit"]
         opt.cmds["!OBS.dit"] = None
         opt.cmds["!OBS.ndit"] = None
         kwarged = int(opt.readout(exptime=exptime, reset=False)[0][1].data.sum())
-        assert not quanteff._should_apply()
+
         opt.cmds["!OBS.dit"] = o_dit
         opt.cmds["!OBS.ndit"] = o_ndit
-        # Quantization results in ~4% loss, which is fine:
+        # Digitization results in ~4% loss, which is fine:
         assert pytest.approx(kwarged / default, rel=.05) == factor
 
-    @pytest.mark.parametrize(("exptime", "factor", "quant"),
-                             [(30, 3, False), (None, 1, True)])
-    def test_autoexp_overrides_obs_dict(self, obs_aeq, exptime, factor, quant):
+    @pytest.mark.parametrize(("exptime", "factor"),
+                             [(30, 3), (None, 1)])
+    def test_autoexp_overrides_obs_dict(self, obs_aeq, exptime, factor):
         """This should prioritize kwargs and use dit, ndit when None."""
-        opt, default, quanteff = obs_aeq
+        opt, default, adconverter = obs_aeq
         kwarged = int(opt.readout(exptime=exptime, reset=False)[0][1].data.sum())
-        assert quanteff._should_apply() == quant
-        # Quantization results in ~4% loss, which is fine:
+        # Digitization results in ~4% loss, which is fine:
         assert pytest.approx(kwarged / default, rel=.05) == factor
 
-    @pytest.mark.parametrize(("dit", "ndit", "factor", "quant"),
-                             [(90, 1, 9, True), (2, 90, 18, False)])
+    @pytest.mark.parametrize(("dit", "ndit", "factor"),
+                             [(90, 1, 9), (2, 90, 18)])
     def test_ditndit_in_kwargs_while_also_having_autoexp(
-            self, obs_aeq, dit, ndit, factor, quant):
+            self, obs_aeq, dit, ndit, factor):
         """This should prioritize dit, ndit from kwargs."""
-        opt, default, quanteff = obs_aeq
+        opt, default, adconverter = obs_aeq
         kwarged = int(opt.readout(dit=dit, ndit=ndit, reset=False)[0][1].data.sum())
-        assert quanteff._should_apply() == quant
-        # Quantization results in ~4% loss, which is fine:
+        # Digitization results in ~4% loss, which is fine:
         assert pytest.approx(kwarged / default, rel=.05) == factor
 
-    @pytest.mark.parametrize(("dit", "ndit", "exptime", "factor", "quant"),
-                             [(90, 1, None, 9, True),
-                              (2, 90, 20, 18, False)])
+    @pytest.mark.parametrize(("dit", "ndit", "exptime", "factor"),
+                             [(90, 1, None, 9),
+                              (2, 90, 20, 18)])
     def test_ditndit_in_kwargs_while_also_having_autoexp_and_exptime(
-            self, obs_aeq, dit, ndit, exptime, factor, quant):
+            self, obs_aeq, dit, ndit, exptime, factor):
         """This should prioritize dit, ndit from kwargs and ignore exptime."""
-        opt, default, quanteff = obs_aeq
+        opt, default, adconverter = obs_aeq
         kwarged = int(opt.readout(exptime=exptime,
                                   dit=dit, ndit=ndit,
                                   reset=False)[0][1].data.sum())
-        assert quanteff._should_apply() == quant
-        # Quantization results in ~4% loss, which is fine:
+        # Digitization results in ~4% loss, which is fine:
         assert pytest.approx(kwarged / default, rel=.05) == factor
 
     def test_throws_for_no_anything(self, obs):
         """No specification whatsoever, so throw error."""
-        opt, default, quanteff = obs
+        opt, default, adconverter = obs
         opt.cmds["!OBS.exptime"] = None
         # This should work with patch.dict, but doesn't :(
         o_dit, o_ndit = opt.cmds["!OBS.dit"], opt.cmds["!OBS.ndit"]
@@ -427,14 +443,14 @@ class TestDitNdit:
 
     def test_throws_for_no_ditndit_no_autoexp_kwargs(self, obs):
         """This should use exptime from kwargs, but fail w/o AutoExp."""
-        opt, default, quanteff = obs
+        opt, default, adconverter = obs
         opt.cmds["!OBS.exptime"] = None
         with pytest.raises(ValueError):
             opt.readout(exptime=60, reset=False)
 
     def test_throws_for_no_ditndit_no_autoexp_obs(self, obs):
         """This should fallback to !OBS.exptime, but fail w/o AutoExp."""
-        opt, default, quanteff = obs
+        opt, default, adconverter = obs
         opt.cmds["!OBS.exptime"] = 60
         # This should work with patch.dict, but doesn't :(
         o_dit, o_ndit = opt.cmds["!OBS.dit"], opt.cmds["!OBS.ndit"]

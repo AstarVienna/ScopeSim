@@ -113,6 +113,16 @@ class TestTrackIpAddress:
         _ = UserCommands(use_instrument="test_package")
 
 
+@pytest.mark.usefixtures("no_file_error", "protect_search_path", "protect_config")
+class TestIffyPkgPaths:
+    def test_finds_basic_instrument(self):
+        UserCommands(use_instrument="basic_instrument")
+
+    def test_throws_for_bogus_inst(self):
+        with pytest.raises(ValueError):
+            UserCommands(use_instrument="bogus_instrument")
+
+
 def test_patch_fake_symlinks(tmp_path):
     """Setup a temporary directory with files and links."""
     # tmp_path is a fixture

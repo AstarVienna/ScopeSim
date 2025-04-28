@@ -7,7 +7,8 @@ import numpy as np
 from astropy import units as u
 from astropy.convolution import Gaussian2DKernel
 
-from ...base_classes import ImagePlaneBase, FieldOfViewBase
+from ...optics import ImagePlane
+from ...optics.fov import FieldOfView
 from ...utils import (from_currsys, quantify, quantity_from_table,
                       figure_factory, check_keys)
 from . import PSF, PoorMansFOV
@@ -20,7 +21,7 @@ class AnalyticalPSF(PSF):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.convolution_classes = FieldOfViewBase
+        self.convolution_classes = FieldOfView
 
 
 class Vibration(AnalyticalPSF):
@@ -32,7 +33,7 @@ class Vibration(AnalyticalPSF):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.meta["width_n_fwhms"] = 4
-        self.convolution_classes = ImagePlaneBase
+        self.convolution_classes = ImagePlane
 
         check_keys(self.meta, self.required_keys, action="error")
         self.kernel = None
@@ -74,7 +75,7 @@ class NonCommonPathAberration(AnalyticalPSF):
 
         self.valid_waverange = [0.1 * u.um, 0.2 * u.um]
 
-        self.convolution_classes = FieldOfViewBase
+        self.convolution_classes = FieldOfView
         check_keys(self.meta, self.required_keys, action="error")
 
     def get_kernel(self, obj):

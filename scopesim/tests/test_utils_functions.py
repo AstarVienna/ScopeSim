@@ -6,6 +6,7 @@ from unittest.mock import patch
 
 import numpy as np
 from astropy import wcs
+from astropy import units as u
 from astropy.io import ascii as ioascii, fits
 from astropy.table import Table
 
@@ -255,7 +256,6 @@ class TestSeq:
         assert arr[-1] != stop
         assert stop not in arr
 
-
     @pytest.mark.parametrize("start,stop,step",
                              [(0, 10, 1),
                               (10, 0, -1),
@@ -264,3 +264,14 @@ class TestSeq:
     def test_seq_has_correct_step_size(self, start, stop, step):
         arr = utils.seq(start, stop, step)
         assert arr[1:] - arr[:-1] == approx(step)
+
+
+@pytest.mark.usefixtures("protect_config")
+def test_setting_instpkgspath():
+    utils.link_irdb("bogus")
+    assert rc.__config__["!SIM.file.local_packages_path"] == "bogus"
+
+
+def test_unit_includes_per_physical_type():
+    unit = u.Unit("photlam") / u.arcsec**2
+    assert utils.unit_includes_per_physical_type(unit, "solid angle")

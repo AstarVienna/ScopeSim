@@ -1,3 +1,6 @@
+# -*- coding: utf-8 -*-
+"""Contains much of the core functionality of ScopeSim."""
+
 from .image_plane import ImagePlane
 from . import image_plane_utils
 
@@ -13,3 +16,4 @@ from . import radiometry_utils
 
 from .fov import FieldOfView
 from .fov_manager import FOVManager
+from .fov_volume_list import FovVolumeList

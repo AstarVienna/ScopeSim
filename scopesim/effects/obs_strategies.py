@@ -9,7 +9,7 @@ from typing import ClassVar
 
 import numpy as np
 
-from scopesim.base_classes import DetectorBase
+from ..detector import Detector
 from scopesim.effects import Effect
 from scopesim.utils import from_currsys, check_keys
 
@@ -71,7 +71,7 @@ class ChopNodCombiner(Effect):
         self.meta.update(kwargs)
 
     def apply_to(self, obj, **kwargs):
-        if not isinstance(obj, DetectorBase):
+        if not isinstance(obj, Detector):
             return obj
 
         chop_offsets = from_currsys(self.meta["chop_offsets"], self.cmds)

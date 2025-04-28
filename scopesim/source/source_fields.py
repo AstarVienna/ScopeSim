@@ -176,6 +176,9 @@ class TableSourceField(SpectrumSourceField):
     def __post_init__(self):
         """Validate input."""
         assert self.spectra, "Spectra must be non-empty for table source."
+        if not (uniquerefs := set(self.field["ref"])).issubset(self.spectra):
+            raise KeyError(f"Refs {uniquerefs.difference(self.spectra)} "
+                           "not found in spectra.")
         if "weight" not in self.field.colnames:
             self.field.add_column(
                 Column(name="weight", data=np.ones(len(self.field)))

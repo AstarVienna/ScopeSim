@@ -1,21 +1,23 @@
 """
 Tests for Effect DetectorModePropertiesSetter
 """
-import pytest
 from unittest.mock import patch
+import pytest
 
 import yaml
 
-from scopesim.base_classes import DetectorBase
+from scopesim.detector import Detector
 from scopesim.optics.image_plane import ImagePlane
 from scopesim.effects.electronic import DetectorModePropertiesSetter
 from scopesim.utils import from_currsys
 
 from scopesim.tests.mocks.py_objects.imagehdu_objects import _image_hdu_square
 
+# pylint: disable=missing-class-docstring
+# pylint: disable=missing-function-docstring
 
-@pytest.fixture(scope="module")
-def kwargs_dict():
+@pytest.fixture(scope="module", name="kwargs_dict")
+def fixture_kwargs_dict():
     return yaml.full_load("""
     mode_properties:
         fast:
@@ -54,7 +56,7 @@ class TestInit:
             DetectorModePropertiesSetter()
 
 
-@pytest.mark.skip(
+@pytest.mark.xfail(
         reason="This currently fails if run after a test using OpticalTrain, "
         "because of the rc.__currsys__ type change happening there.")
 class TestApplyTo:
@@ -78,13 +80,13 @@ class TestApplyTo:
                 {"!OBS.detector_readout_mode": "notthere"})
     def test_throws_error_for_unknown_detector_mode(self, basic_dmps):
         with pytest.raises(KeyError):
-            basic_dmps.apply_to(DetectorBase())
+            basic_dmps.apply_to(Detector())
 
     @patch.dict("scopesim.rc.__currsys__",
                 {"!OBS.detector_readout_mode": "fast"})
     def test_returns_object(self, basic_dmps):
-        obj = basic_dmps.apply_to(DetectorBase())
-        assert isinstance(obj, DetectorBase)
+        obj = basic_dmps.apply_to(Detector())
+        assert isinstance(obj, Detector)
 
 
 class TestListModes:

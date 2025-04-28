@@ -13,7 +13,7 @@ from astropy.table import Table
 
 from .effects import Effect
 from ..optics import image_plane_utils as imp_utils
-from ..base_classes import FOVSetupBase
+from ..optics.fov_volume_list import FovVolumeList
 
 from ..utils import (quantify, quantity_from_table, from_currsys, check_keys,
                      figure_factory, get_logger)
@@ -116,12 +116,12 @@ class ApertureMask(Effect):
 
     def apply_to(self, obj, **kwargs):
         """See parent docstring."""
-        if isinstance(obj, FOVSetupBase):
+        if isinstance(obj, FovVolumeList):
             logger.debug("Executing %s, FoV setup", self.meta['name'])
             x = quantity_from_table("x", self.table,
-                                    u.arcsec).to(u.arcsec).value
+                                    u.arcsec).to_value(u.arcsec)
             y = quantity_from_table("y", self.table,
-                                    u.arcsec).to(u.arcsec).value
+                                    u.arcsec).to_value(u.arcsec)
             obj.shrink(["x", "y"], ([min(x), max(x)], [min(y), max(y)]))
 
             # ..todo: HUGE HACK - Get rid of this!
@@ -156,8 +156,8 @@ class ApertureMask(Effect):
 
     def get_header(self):
         self.meta = from_currsys(self.meta, self.cmds)
-        x = quantity_from_table("x", self.table, u.arcsec).to(u.deg).value
-        y = quantity_from_table("y", self.table, u.arcsec).to(u.deg).value
+        x = quantity_from_table("x", self.table, u.arcsec).to_value(u.deg)
+        y = quantity_from_table("y", self.table, u.arcsec).to_value(u.deg)
         pix_scale_deg = self.meta["pixel_scale"] / 3600.
         header = imp_utils.header_from_list_of_xy(x, y, pix_scale_deg)
         header["APERTURE"] = self.meta["id"]
@@ -180,8 +180,8 @@ class ApertureMask(Effect):
         self.meta = from_currsys(self.meta, self.cmds)
 
         if self.meta["no_mask"] is False:
-            x = quantity_from_table("x", self.table, u.arcsec).to(u.deg).value
-            y = quantity_from_table("y", self.table, u.arcsec).to(u.deg).value
+            x = quantity_from_table("x", self.table, u.arcsec).to_value(u.deg)
+            y = quantity_from_table("y", self.table, u.arcsec).to_value(u.deg)
             pixel_scale_deg = self.meta["pixel_scale"] / 3600.
             mask = mask_from_coords(x, y, pixel_scale_deg)
         else:
@@ -298,7 +298,7 @@ class ApertureList(Effect):
 
     def apply_to(self, obj, **kwargs):
         """See parent docstring."""
-        if isinstance(obj, FOVSetupBase):
+        if isinstance(obj, FovVolumeList):
             logger.debug("Executing %s, FoV setup", self.meta['name'])
             new_vols = []
             for row in self.table:

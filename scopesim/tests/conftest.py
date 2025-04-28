@@ -104,3 +104,17 @@ def protect_currsys():
     """Prevent modification of global currsys."""
     with patch("scopesim.rc.__currsys__"):
         yield
+
+
+@pytest.fixture(scope="function")
+def protect_config():
+    """Prevent modification of global config."""
+    with patch.dict("scopesim.rc.__config__"):
+        yield
+
+
+@pytest.fixture(scope="function")
+def protect_search_path():
+    """Prevent modification of global search_path."""
+    with patch("scopesim.rc.__search_path__"):
+        yield

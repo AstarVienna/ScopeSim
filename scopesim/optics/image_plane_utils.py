@@ -95,9 +95,9 @@ def _make_bounding_header_from_headers(*headers, pixel_scale=1*u.arcsec):
 
     if unit.physical_type == "angle":
         unit = "deg"
-        pixel_scale = pixel_scale.to(u.deg).value
+        pixel_scale = pixel_scale.to_value(u.deg)
     else:
-        pixel_scale = pixel_scale.to(unit).value
+        pixel_scale = pixel_scale.to_value(unit)
 
     extents = [calc_footprint(header, wcs_suffix, unit) for header in headers]
     pnts = np.vstack(extents)
@@ -969,7 +969,7 @@ def calc_table_footprint(table: Table, x_name: str, y_name: str,
 
     """
     if padding is not None:
-        padding = padding.to(new_unit).value
+        padding = padding.to_value(new_unit)
     else:
         padding = 0.
 

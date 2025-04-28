@@ -20,6 +20,9 @@ updates:
       interval: "monthly"
     labels:
       - "dependencies"
+    allow:
+      # Allow both direct and indirect updates for all packages.
+      - dependency-type: "all"
     ignore:
       # For all packages, ignore all patch updates, the "version-update" only targets non-security related updates
       - dependency-name: "*"
@@ -37,6 +40,13 @@ updates:
         # Applies to all dependencies defined in the main section of pyproject.toml
         applies-to: version-updates
         dependency-type: "production"
+        update-types:
+          - "major"
+          - "minor"
+      dev-dependencies:
+        # Applies to all dependencies defined in the main section of pyproject.toml
+        applies-to: version-updates
+        dependency-type: "development"
         update-types:
           - "major"
           - "minor"

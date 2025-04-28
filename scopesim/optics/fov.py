@@ -23,7 +23,6 @@ from ..source.source_fields import (
     BackgroundSourceField,
 )
 
-from ..base_classes import SourceBase, FieldOfViewBase
 from ..utils import (
     from_currsys,
     quantify,
@@ -31,13 +30,15 @@ from ..utils import (
     get_logger,
     array_minmax,
     close_loop,
+    unit_includes_per_physical_type,
 )
+from ..source.source import Source
 
 
 logger = get_logger(__name__)
 
 
-class FieldOfView(FieldOfViewBase):
+class FieldOfView:
     """
     A FOV is spectro-spatial volume cut out of a Source object.
 
@@ -153,7 +154,7 @@ class FieldOfView(FieldOfViewBase):
         This method assumes that Bandpass has been applied.
 
         """
-        assert isinstance(src, SourceBase), f"expected Source: {type(src)}"
+        assert isinstance(src, Source), f"expected Source: {type(src)}"
 
         fields_in_fov = list(self.get_fields_in_fov(src.fields))
 
@@ -720,13 +721,16 @@ class FieldOfView(FieldOfViewBase):
             # Cube should be in PHOTLAM arcsec-2 for SpectralTrace mapping
             # Assumption is that ImageHDUs have units of PHOTLAM arcsec-2
             # ImageHDUs have photons/second/pixel.
-            # ..todo: Add a catch to get ImageHDU with BUNITs
             canvas_image_hdu = fits.ImageHDU(
                 data=np.zeros((self.header["NAXIS2"], self.header["NAXIS1"])),
                 header=self.header)
             # FIX: Do not scale source data - make a copy first.
-            # FIX: Use "Pixel scale conversion" as above.
-            field_data = field.data * self._pixarea(field.header).value / self.pixel_area
+            bunit = u.Unit(field.header.get("BUNIT", ""))
+            field_data = deepcopy(field.data)
+            if unit_includes_per_physical_type(bunit, "solid angle"):
+                # Field is in (PHOTLAM) / arcsec**2, need to scale by pixarea
+                field_data *= self._pixarea(field.header).value
+            field_data /= self.pixel_area
             field_hdu = fits.ImageHDU(data=field_data, header=field.header)
 
             canvas_image_hdu = imp_utils.add_imagehdu_to_imagehdu(
@@ -824,6 +828,10 @@ class FieldOfView(FieldOfViewBase):
         """
         # 1. Make waveset and canvas cube (area, bin_width are applied at end)
         # TODO: Why is this not self.waveset? What's different?
+        # -> For non-cube input but cube output (e.g. 2D image in spec mode),
+        #    waverange needs to be resampled (I guess) to spectral_bin_width,
+        #    but self.waverange can only access the fields.
+        # -> Perhaps change that??
         wave_unit = u.Unit(from_currsys("!SIM.spectral.wave_unit", self.cmds))
         fov_waveset = np.arange(
             self.meta["wave_min"].value, self.meta["wave_max"].value,

@@ -18,7 +18,8 @@ from .effects import Effect
 from .ter_curves import FilterCurve
 from .spectral_trace_list_utils import SpectralTrace, make_image_interpolations
 from ..optics.image_plane_utils import header_from_list_of_xy
-from ..base_classes import FieldOfViewBase, FOVSetupBase
+from ..optics.fov import FieldOfView
+from ..optics.fov_volume_list import FovVolumeList
 from ..utils import from_currsys, check_keys, figure_factory, get_logger
 
 
@@ -190,7 +191,7 @@ class SpectralTraceList(Effect):
         The FieldOfView object is associated to one SpectralTrace from the
         list, identified by meta["trace_id"].
         """
-        if isinstance(obj, FOVSetupBase):
+        if isinstance(obj, FovVolumeList):
             # Setup of FieldOfView object
             # volumes = [spectral_trace.fov_grid()
             #            for spectral_trace in self.spectral_traces.values()]
@@ -222,7 +223,7 @@ class SpectralTraceList(Effect):
 
             obj.volumes = new_vols_list
 
-        if isinstance(obj, FieldOfViewBase):
+        if isinstance(obj, FieldOfView):
             # Application to field of view
             if obj.hdu is not None and obj.hdu.header["NAXIS"] == 3:
                 obj.cube = obj.hdu

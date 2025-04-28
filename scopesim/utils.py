@@ -155,8 +155,13 @@ def _get_required_packages():
 
 
 def _get_all_irdb_pkgs(root: Path):
+    def _name_valid(pkg_name):
+        if pkg_name in {"docs", "irdb"}:
+            return False
+        return not pkg_name.startswith(("_", "."))
+
     return [pkg_path for pkg_path in root.iterdir() if pkg_path.is_dir()
-            and not pkg_path.name.startswith("__")] if root.is_dir() else []
+            and _name_valid(pkg_path.name)] if root.is_dir() else []
 
 
 def _get_irdb_pkg_version(pkg_path: Path) -> str:
@@ -278,7 +283,7 @@ def find_file(filename, path=None, silent=False):
 
     # TODO: Not sure what to do here
     if from_currsys("!SIM.file.error_on_missing_file"):
-       raise ValueError(msg)
+        raise ValueError(msg)
 
     return None
 
@@ -496,6 +501,14 @@ def unit_from_table(colname: str, table: Table,
     return u.Unit(default_unit)
 
 
+def unit_includes_per_physical_type(unit, physical_type):
+    """Check if one of the `unit`'s bases is of 1/`physical_type`."""
+    # TODO: Check again if there isn't any builtin functionality in astropy
+    #       for the same operation!
+    return any(1 / (base**power).physical_type == physical_type
+               for base, power in zip(unit.bases, unit.powers))
+
+
 def has_needed_keywords(header, suffix=""):
     """Check to see if the WCS keywords are in the header."""
     keys = {"CDELT1", "CRVAL1", "CRPIX1"}
@@ -704,14 +717,20 @@ def top_level_catch(func):
 
 
 def update_logging(capture_warnings=True):
-    """Reload logging configuration from ``rc.__logging_config__``."""
+    """Reload logging configuration from ``rc.__logging_config__``.
+
+    .. versionadded:: 0.8.0
+    """
     # Need to access NestedMapping's internal dict here...
     dictConfig(rc.__logging_config__)
     logging.captureWarnings(capture_warnings)
 
 
 def log_to_file(enable=True):
-    """Enable or disable logging to file (convenience function)."""
+    """Enable or disable logging to file (convenience function).
+
+    .. versionadded:: 0.8.0
+    """
     if enable:
         handlers = ["console", "file"]
     else:
@@ -726,9 +745,28 @@ def set_console_log_level(level="INFO"):
 
     This controls what is actually printed to the console by ScopeSim.
     Accepted values are: DEBUG, INFO (default), WARNING, ERROR and CRITICAL.
+
+    .. versionadded:: 0.8.0
     """
     rc.__logging_config__["handlers"]["console"]["level"] = level
     update_logging()
+
+
+def set_inst_pkgs_path(pkg_path: Path | str) -> None:
+    """Set the local path for !SIM.file.local_packages_path (shortcut).
+
+    .. versionadded:: 0.9.3
+    """
+    rc.__config__["!SIM.file.local_packages_path"] = str(pkg_path)
+
+
+def link_irdb(irdb_path: Path | str | None = None) -> None:
+    """Set ``inst_pkgs`` to local clone of IRDB (convenience shortcut).
+
+    .. versionadded:: 0.9.3
+    """
+    irdb_path = irdb_path or rc.__pkg_dir__.parent.parent / "irdb"
+    set_inst_pkgs_path(irdb_path)
 
 
 def seq(start, stop, step=1):
