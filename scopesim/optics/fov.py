@@ -103,7 +103,12 @@ class FieldOfView:
         self.hdu = None
 
         self.image_plane_id = 0
-        self.fields: list[SourceField] = []
+
+        self.cube_fields: list[CubeSourceField] = []
+        self.image_fields: list[ImageSourceField] = []
+        self.table_fields: list[TableSourceField] = []
+        self.background_fields: list[BackgroundSourceField] = []
+
         self.spectra = {}
 
         # These are apparently not supposed to be used?
@@ -169,11 +174,6 @@ class FieldOfView:
 
         # TODO: Not sure why it's necessary to recreate the fields here, but
         #       perhasps for multi-fov instruments?
-        # TODO: Perhaps already split into cube, image and table fields here,
-        #       i.e. don't even bother with the total fields list and thus also
-        #       eleminate the need for the properties later on? It doesn't
-        #       seem like either the .fields attribute nor the various
-        #       fields properties are actually used outside the class itself...
         # TODO: Perhaps remove .spectra and just keep spectra as source field
         #       attributes, removing the need for SPEC_REF?
         for field in fields_in_fov:
@@ -190,7 +190,7 @@ class FieldOfView:
                         if ref in extracted["ref"]
                     },
                 )
-                self.fields.append(new_fld)
+                self.table_fields.append(new_fld)
                 for ref, spec in new_fld.spectra.items():
                     extracted = extract_range_from_spectrum(spec, self.waverange)
                     self.spectra[ref] = extracted
@@ -203,7 +203,7 @@ class FieldOfView:
                     field=extracted,
                     spectra=field.spectra,
                 )
-                self.fields.append(new_fld)
+                self.image_fields.append(new_fld)
                 ref, spec = new_fld.spectrum  # ImageField has only 1 spectrum
                 self.spectra[ref] = extract_range_from_spectrum(spec, self.waverange)
 
@@ -212,10 +212,10 @@ class FieldOfView:
                 extracted = self.extract_area_from_imagehdu(field.field, corners_deg)
                 replace_nans(extracted, self.cmds)
                 new_fld = CubeSourceField(field=extracted)
-                self.fields.append(new_fld)
+                self.cube_fields.append(new_fld)
 
             elif isinstance(field, BackgroundSourceField):
-                self.fields.append(field)
+                self.background_fields.append(field)
                 ref, spec = field.spectrum  # BkgField has only 1 spectrum
                 self.spectra[ref] = extract_range_from_spectrum(spec, self.waverange)
 
@@ -937,11 +937,11 @@ class FieldOfView:
     @property
     def waveset(self):
         """Return a wavelength vector in um."""
-        if field_cubes := self.cube_fields:
+        if self.cube_fields:
             naxis3_max = np.argmax([cube.header["NAXIS3"]
-                                    for cube in field_cubes])
+                                    for cube in self.cube_fields])
             _waveset = get_cube_waveset(
-                field_cubes[naxis3_max].header,
+                self.cube_fields[naxis3_max].header,
                 return_quantity=True,
             )
         elif self.spectra:
@@ -979,29 +979,10 @@ class FieldOfView:
         return from_currsys("!SIM.computing.spline_order", self.cmds)
 
     @property
-    def cube_fields(self):
-        """Return list of non-BG_SRC ImageHDU fields with NAXIS=3."""
-        return [field.field for field in self.fields
-                if isinstance(field, CubeSourceField)]
-
-    @property
-    def image_fields(self):
-        """Return list of non-BG_SRC ImageHDU fields with NAXIS=2."""
-        return [field.field for field in self.fields
-                if isinstance(field, ImageSourceField)]
-
-    @property
-    def table_fields(self):
-        """Return list of Table fields."""
-        return [field.field for field in self.fields
-                if isinstance(field, TableSourceField)]
-
-    @property
-    def background_fields(self):
-        """Return list of BG_SRC ImageHDU fields."""
-        # HACK: While Sourcefields are not fully supported.
-        return [fits.ImageHDU(header=field.header) for field in self.fields
-                if isinstance(field, BackgroundSourceField)]
+    def fields(self):
+        """Return list of all fields, for backwards compatibility."""
+        return (self.cube_fields + self.image_fields + self.table_fields +
+                self.background_fields)
 
     def _ensure_deg_header(self):
         cunit = u.Unit(self.header["CUNIT1"].lower())

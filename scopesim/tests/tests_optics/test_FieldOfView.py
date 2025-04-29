@@ -135,9 +135,9 @@ class TestExtractFrom:
         fov = _fov_190_210_um()
         fov.extract_from(src)
         # check the same spectrum object is referenced by both lists
-        assert fov.fields[0].header["SPEC_REF"] == \
-               src.fields[0].header["SPEC_REF"]
-        assert all(fov.fields[2][i]["ref"] == src.fields[2][i]["ref"]
+        assert fov.image_fields[0].header["SPEC_REF"] == \
+               src.image_fields[0].header["SPEC_REF"]
+        assert all(fov.table_fields[0][i]["ref"] == src.table_fields[0][i]["ref"]
                    for i in range(4))
 
     def test_contains_all_fields_inside_fov(self):
@@ -148,7 +148,7 @@ class TestExtractFrom:
         assert len(the_fov.fields) == 3
         assert isinstance(the_fov.fields[0].field, fits.ImageHDU)
         assert isinstance(the_fov.fields[1].field, fits.ImageHDU)
-        assert the_fov.fields[1].header["NAXIS"] == 3
+        assert the_fov.cube_fields[0].header["NAXIS"] == 3
         assert isinstance(the_fov.fields[2].field, Table)
 
     def test_handles_nans(self):
