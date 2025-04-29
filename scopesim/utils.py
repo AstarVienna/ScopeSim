@@ -134,6 +134,11 @@ def deriv_polynomial2d(poly):
     return dpoly_dx, dpoly_dy
 
 
+def array_minmax(arr):
+    """Create min and max from array of points, useful for footprint."""
+    return np.array((arr.min(axis=0), arr.max(axis=0)))
+
+
 def _get_required_packages():
     reqs = metadata.requires(__package__)
     # metadata.requires can return None if the package metadata cannot be found

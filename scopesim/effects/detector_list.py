@@ -20,7 +20,7 @@ from ..optics.fov_volume_list import FovVolumeList
 from .effects import Effect
 from .apertures import ApertureMask
 from ..optics.image_plane_utils import header_from_list_of_xy, calc_footprint
-from ..utils import (from_currsys, close_loop, figure_factory,
+from ..utils import (from_currsys, close_loop, figure_factory, array_minmax,
                      quantity_from_table, unit_from_table, get_logger)
 
 logger = get_logger(__name__)
@@ -164,7 +164,7 @@ class DetectorList(Effect):
                    values=(tuple(zip(xy_sky.min(axis=0),
                                      xy_sky.max(axis=0)))))
 
-        lims = np.array((xy_mm.min(axis=0), xy_mm.max(axis=0)))
+        lims = array_minmax(xy_mm)
         keys = ["xd_min", "xd_max", "yd_min", "yd_max"]
         obj.detector_limits = dict(zip(keys, lims.T.flatten()))
 

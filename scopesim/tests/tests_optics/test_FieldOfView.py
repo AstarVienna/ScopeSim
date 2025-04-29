@@ -9,8 +9,7 @@ from matplotlib.colors import LogNorm
 
 from scopesim.tests.mocks.py_objects import header_objects as ho
 from scopesim.tests.mocks.py_objects import source_objects as so
-from scopesim.optics.fov import FieldOfView
-from scopesim.optics.fov_utils import get_cube_waveset
+from scopesim.optics.fov import FieldOfView, get_cube_waveset
 
 PLOTS = False
 
@@ -60,8 +59,8 @@ class TestExtractFrom:
     #                            "is extracted..."))
     def test_extract_point_sources_from_table(self):
         src = so._table_source()
-        src.fields[0]["x"] = [-15,-5,0,0] * u.arcsec
-        src.fields[0]["y"] = [0,0,5,15] * u.arcsec
+        src.fields[0]["x"] = [-15, -5, 0, 0] * u.arcsec
+        src.fields[0]["y"] = [0, 0, 5, 15] * u.arcsec
         fov = _fov_190_210_um()
         fov.extract_from(src)
 
@@ -94,15 +93,15 @@ class TestExtractFrom:
         fov = _fov_197_202_um()
         fov.extract_from(src)
 
-        assert fov.fields[0].shape == (3, 51, 25)
+        assert fov.fields[0].field.shape == (3, 51, 25)
 
     # @pytest.mark.xfail(reason=("is_field_in_fov drops table if anything is "
     #                            "outside fov volume, therefore no point source "
     #                            "is extracted..."))
     def test_extract_one_of_each_type_from_source_object(self):
         src_table = so._table_source()              # 4 sources, put two outside of FOV
-        src_table.fields[0]["x"] = [-15,-5,0,0] * u.arcsec
-        src_table.fields[0]["y"] = [0,0,5,15] * u.arcsec
+        src_table.fields[0]["x"] = [-15, -5, 0, 0] * u.arcsec
+        src_table.fields[0]["y"] = [0, 0, 5, 15] * u.arcsec
         src_image = so._image_source(dx=10)         # 10x10" @ 0.2"/pix
         src_cube = so._cube_source()                # 10x10" @ 0.2"/pix, [0.5, 2.5]m @ 0.02µm
         src = src_cube + src_image + src_table
@@ -110,9 +109,9 @@ class TestExtractFrom:
         fov = _fov_197_202_um()
         fov.extract_from(src)
 
-        assert fov.fields[0].shape == (3, 51, 51)
-        assert fov.fields[1].shape == (51, 25)
-        assert len(fov.fields[2]) == 2
+        assert fov.fields[0].field.shape == (3, 51, 51)
+        assert fov.fields[1].field.shape == (51, 25)
+        assert len(fov.fields[2].field) == 2
 
         assert len(fov.spectra) == 3
         assert fov.fields[1].header["SPEC_REF"] == 0
@@ -147,10 +146,10 @@ class TestExtractFrom:
                               area=1 * u.m ** 2)
         the_fov.extract_from(src)
         assert len(the_fov.fields) == 3
-        assert isinstance(the_fov.fields[0], fits.ImageHDU)
-        assert isinstance(the_fov.fields[1], fits.ImageHDU)
+        assert isinstance(the_fov.fields[0].field, fits.ImageHDU)
+        assert isinstance(the_fov.fields[1].field, fits.ImageHDU)
         assert the_fov.fields[1].header["NAXIS"] == 3
-        assert isinstance(the_fov.fields[2], Table)
+        assert isinstance(the_fov.fields[2].field, Table)
 
     def test_handles_nans(self):
         src = so._image_source()

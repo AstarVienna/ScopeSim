@@ -18,7 +18,8 @@ from .ter_curves_utils import (add_edge_zeros, combine_two_spectra,
 from ..optics.fov_volume_list import FovVolumeList
 from ..optics.surface import SpectralSurface
 from ..source.source import Source
-from ..source.source_fields import CubeSourceField, SpectrumSourceField
+from ..source.source_fields import (CubeSourceField, SpectrumSourceField,
+                                    BackgroundSourceField)
 from ..utils import (from_currsys, quantify, check_keys, find_file,
                      figure_factory, get_logger)
 
@@ -160,17 +161,28 @@ class TERCurve(Effect):
     def background_source(self):
         if self._background_source is None:
             flux = self.emission
-            bg_hdu = fits.ImageHDU()
+            bkg_spec = {0: flux}
+            bkg_hdr = fits.Header()
 
-            bg_hdu.header.update({"BG_SRC": True,
-                                  "BG_SURF": self.display_name,
-                                  "CUNIT1": "ARCSEC",
-                                  "CUNIT2": "ARCSEC",
-                                  "CDELT1": 0,
-                                  "CDELT2": 0,
-                                  "BUNIT": "PHOTLAM arcsec-2",
-                                  "SOLIDANG": "arcsec-2"})
-            self._background_source = Source(image_hdu=bg_hdu, spectra=flux)
+            bkg_hdr.update({
+                "BG_SRC": True,
+                "BG_SURF": self.display_name,
+                "SPEC_REF": 0,
+                # Seem those are not needed...
+                # "CUNIT1": "ARCSEC",
+                # "CUNIT2": "ARCSEC",
+                # "CDELT1": 0,
+                # "CDELT2": 0,
+                "BUNIT": "PHOTLAM arcsec-2",
+                "SOLIDANG": "arcsec-2",
+            })
+            bkg_fld = BackgroundSourceField(field=None, spectra=bkg_spec, header=bkg_hdr)
+            bkg_src = Source(field=bkg_fld)
+
+            # Before BackgroundSourceField:
+            # bkg_hdu = fits.ImageHDU(header=bkg_hdr)
+            # bkg_src = Source(image_hdu=bkg_hdu, spectra=flux)
+            self._background_source = bkg_src
 
         return [self._background_source]
 

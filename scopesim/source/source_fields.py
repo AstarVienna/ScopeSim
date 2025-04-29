@@ -112,12 +112,24 @@ class SourceField:
         """Name of the object (if set)."""
         return self.meta.get("object", "<unknown>")
 
+    def get_corners(self, unit: u.Unit | str = "arcsec") -> np.ndarray:
+        """Calculate and return footprint corner points in `unit`."""
+        raise NotImplementedError("Subclasses should implement this.")
+
 
 @dataclass
 class SpectrumSourceField(SourceField):
     """Base class for source fields with separate spectra (no cube)."""
 
     spectra: dict
+
+    @property
+    def spectrum(self) -> SourceSpectrum:
+        """Return single spectrum and ref if only one spectrum in spectra."""
+        if len(self.spectra) > 1:
+            raise TypeError("More than one spectrum in field -> use spectra!")
+        spec, = self.spectra.items()
+        return spec
 
 
 @dataclass
@@ -181,6 +193,20 @@ class TableSourceField(SpectrumSourceField):
         stream.write(f"Table with {len(self)} rows, referencing "
                      f"spectra {set(self.spectra)}")
 
+    def get_corners(self, unit: u.Unit | str = "arcsec") -> np.ndarray:
+        """Calculate and return footprint corner points in `unit`."""
+        x_qty = self.field["x"].quantity.to(unit).value
+        y_qty = self.field["y"].quantity.to(unit).value
+        x_min, x_max = x_qty.min(), x_qty.max()
+        y_min, y_max = y_qty.min(), y_qty.max()
+        corners = np.array([
+            [x_min, y_min],
+            [x_min, y_max],
+            [x_max, y_min],
+            [x_max, y_max],
+        ])
+        return corners
+
     def plot(self, axes, color) -> None:
         """Plot source."""
         axes.plot(self.field["x"], self.field["y"], color+".", label=self.name)
@@ -243,11 +269,13 @@ class HDUSourceField(SourceField):
         stream.write(f"ImageHDU with size {self.img_size}, referencing "
                      f"spectrum {self.field.header.get('SPEC_REF', '-')}")
 
+    def get_corners(self, unit: u.Unit | str = "arcsec") -> np.ndarray:
+        """Calculate and return footprint corner points in `unit`."""
+        return imp_utils.calc_footprint(self.header, new_unit=unit)
+
     def plot(self, axes, color) -> None:
         """Plot source."""
-        xypts = imp_utils.calc_footprint(self.header)
-        convf = u.Unit(self.header["CUNIT1"]).to(u.arcsec)
-        outline = np.array(list(close_loop(xypts))) * convf
+        outline = np.array(list(close_loop(self.get_corners())))
         axes.plot(*outline.T, color, label=self.name)
 
     def shift(self, dx, dy) -> None:
@@ -286,7 +314,10 @@ class CubeSourceField(HDUSourceField):
             self.wcs = WCS(self.field)
 
         try:
-            bunit = u.Unit(self.header["BUNIT"])
+            bunit = str(self.header["BUNIT"])
+            # Can't just do .lower because some units are uppercase (e.g. J)
+            bunit = bunit.replace("PHOTLAM", "photlam")
+            bunit = u.Unit(bunit)
         except KeyError:
             bunit = u.erg / u.s / u.cm**2 / u.arcsec**2
             logger.warning(
@@ -318,3 +349,17 @@ class CubeSourceField(HDUSourceField):
         with u.set_enabled_equivalencies(u.spectral()):
             wave = swcs.pixel_to_world(np.arange(swcs.pixel_shape[0])) << u.um
         return wave
+
+
+@dataclass
+class BackgroundSourceField(SpectrumSourceField):
+    """Source field with spectrum only, for TER curve emissions."""
+
+    header: fits.Header
+
+    def get_corners(self, unit: u.Unit | str = "arcsec") -> np.ndarray:
+        """Return imaginary corner from + to - infinity."""
+        return np.array([-np.inf, np.inf])
+
+    def _write_stream(self, stream: TextIO) -> None:
+        stream.write(f"Background field ref. spectrum {self.spectrum[0]}")
