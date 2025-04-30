@@ -441,7 +441,7 @@ def test_cube_source_field():
     hdu.header["CRVAL2"] = 0
     csf = CubeSourceField(hdu)
 
-    np.testing.assert_equal(csf.wave.value, np.arange(1, 6))
+    np.testing.assert_equal(csf.waveset.value, np.arange(1, 6))
     csf.shift(2, 3)
     assert csf.header["CRVAL1"] == 2
     assert csf.header["CRVAL2"] == 3

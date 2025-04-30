@@ -52,6 +52,7 @@ HDUSourceField <|-- CubeSourceField
 
 """
 
+from warnings import warn
 from copy import deepcopy
 from pathlib import Path
 from typing import TextIO, Any
@@ -343,12 +344,24 @@ class CubeSourceField(HDUSourceField):
         super().shift(dx, dy)
 
     @property
-    def wave(self) -> u.Quantity:
+    def waveset(self) -> u.Quantity:
         """Construct wavelength axis for cube in um."""
         swcs = self.wcs.spectral
         with u.set_enabled_equivalencies(u.spectral()):
             wave = swcs.pixel_to_world(np.arange(swcs.pixel_shape[0])) << u.um
         return wave
+
+    @property
+    def wave(self) -> u.Quantity:
+        """Construct wavelength axis for cube in um.
+
+        .. deprecated:: PLACEHOLDER_NEXT_RELEASE_VERSION
+
+           Use `.waveset` instead for consistency with other code.
+        """
+        warn("Deprecated since vPLACEHOLDER_NEXT_RELEASE_VERSION, "
+             "use `.waveset` instead.", DeprecationWarning, stacklevel=2)
+        return self.waveset
 
 
 @dataclass
