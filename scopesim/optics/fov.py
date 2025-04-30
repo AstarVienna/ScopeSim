@@ -396,12 +396,16 @@ class FieldOfView:
         # This scaling factor is:
         # f = ((hdu_bin_centre - fov_edge [+/-] 0.5 * cdelt3) % cdelt3) / cdelt3
 
-        hdu_waves = get_cube_waveset(hdr)
-        wdel = hdr["CDELT3"]
-        wunit = u.Unit(hdr.get("CUNIT3", "AA"))
-        fov_wmin, fov_wmax = (self.waverange).to(wunit).value
+        swcs = WCS(hdr).spectral
+        with u.set_enabled_equivalencies(u.spectral()):
+            hdu_waves = swcs.pixel_to_world(np.arange(swcs.pixel_shape[0]))
+            hdu_waves = hdu_waves.quantity.to(u.um)
+
+        wdel = hdr["CDELT3"] * u.Unit(hdr.get("CUNIT3", "AA"))
+        fov_wmin, fov_wmax = self.waverange
+        # need to go [+/-] half a bin
         mask = ((hdu_waves > fov_wmin - 0.5 * wdel) *
-                (hdu_waves <= fov_wmax + 0.5 * wdel))  # need to go [+/-] half a bin
+                (hdu_waves <= fov_wmax + 0.5 * wdel))
 
         # OC [2021-12-14] if fov range is not covered by the source return nothing
         if not np.any(mask):
@@ -415,12 +419,13 @@ class FieldOfView:
         i0p, i1p = np.where(mask)[0][0], np.where(mask)[0][-1]
         f0 = (abs(hdu_waves[i0p] - fov_wmin + 0.5 * wdel) % wdel) / wdel    # blue edge
         f1 = (abs(hdu_waves[i1p] - fov_wmax - 0.5 * wdel) % wdel) / wdel    # red edge
+
         data = cubehdu.data[i0p:i1p+1,
                             xy0p[1]:xy1p[1],
                             xy0p[0]:xy1p[0]]
-        data[0, :, :] *= f0
+        data[0, :, :] *= f0.to(1).round(11).value  # decompose dimensionless
         if i1p > i0p:
-            data[-1, :, :] *= f1
+            data[-1, :, :] *= f1.to(1).round(11).value
 
         # w0, w1 : the closest cube wavelengths outside the fov edge wavelengths
         # fov_waves : the fov edge wavelengths
@@ -431,8 +436,8 @@ class FieldOfView:
         new_hdr.update({
             "NAXIS": 3,
             "NAXIS3": data.shape[0],
-            "CRVAL3": round(hdu_waves[i0p], 11),
-            "CRPIX3": 0,
+            "CRVAL3": hdu_waves[i0p].to(hdr["CUNIT3"]).round(11).value,
+            "CRPIX3": 1,  # 1 because FITS...
             "CDELT3": hdr["CDELT3"],
             "CUNIT3": hdr["CUNIT3"],
             "CTYPE3": hdr["CTYPE3"],
@@ -457,12 +462,8 @@ class FieldOfView:
         * yield scaled flux to be added to canvas flux
         """
         for field in self._get_cube_fields():
-            # TODO: if SourceFields were kept in the _fields lists, the wave
-            #       attribute of CubeSourceField might be used directly (but
-            #       check if extraction limits the waves accordingly!!).
-            hdu_waveset = get_cube_waveset(field.header, return_quantity=True)
             fluxes = field.data.sum(axis=(1, 2))
-            fov_waveset_fluxes = np.interp(self.waveset, hdu_waveset, fluxes)
+            fov_waveset_fluxes = np.interp(self.waveset, field.waveset, fluxes)
 
             # .lower() is needed because astropy doesn't recognize PHOTLAM
             field_unit = field.header.get("BUNIT", PHOTLAM).lower()
@@ -705,10 +706,9 @@ class FieldOfView:
         for field in self._get_cube_fields():
             # Cube should be in PHOTLAM arcsec-2 for SpectralTrace mapping
             # Assumption is that ImageHDUs have units of PHOTLAM arcsec-2
-            field_waveset = get_cube_waveset(field.header, return_quantity=True)
 
             # ..todo: Deal with this bounds_error in a more elegant way
-            field_interp = interp1d(field_waveset.to(u.um).value,
+            field_interp = interp1d(field.waveset.to(u.um).value,
                                     field.data, axis=0, kind="linear",
                                     bounds_error=False, fill_value=0)
 
@@ -945,13 +945,10 @@ class FieldOfView:
     @property
     def waveset(self):
         """Return a wavelength vector in um."""
-        if field_cubes := self._get_cube_fields():
+        if cube_fields := self._get_cube_fields():
             naxis3_max = np.argmax([cube.header["NAXIS3"]
-                                    for cube in field_cubes])
-            _waveset = get_cube_waveset(
-                field_cubes[naxis3_max].header,
-                return_quantity=True,
-            )
+                                    for cube in cube_fields])
+            _waveset = cube_fields[naxis3_max].waveset
         elif specfields := self._get_fields(SpectrumSourceField):
             _waveset = np.concatenate([
                 spec.waveset.to(u.um)
@@ -1077,26 +1074,6 @@ def replace_nans(field, cmds) -> None:
         logger.info(
             "The replacement value for NaNs in sources can be "
             "set in '!SIM.computing.nan_fill_value'.")
-
-
-def get_cube_waveset(hdr, return_quantity=False):
-    wval, wdel, wpix, wlen, = [hdr[kw] for kw in ["CRVAL3", "CDELT3",
-                                                  "CRPIX3", "NAXIS3"]]
-    # ASSUMPTION - cube wavelength is in regularly spaced units of um
-    wmin = wval - wdel * wpix
-    wmax = wmin + wdel * (wlen - 1)
-    wunit = u.Unit(hdr.get("CUNIT3", "AA"))
-
-    if "LOG" in hdr.get("CTYPE3", ""):
-        hdu_waves = np.logspace(wmin, wmax, wlen)
-    else:
-        hdu_waves = np.linspace(wmin, wmax, wlen)
-
-    if return_quantity:
-        hdu_waves = hdu_waves << wunit
-        hdu_waves.to(u.um)
-
-    return hdu_waves
 
 
 def extract_range_from_spectrum(spectrum, waverange):
