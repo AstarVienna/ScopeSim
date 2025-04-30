@@ -17,6 +17,7 @@ from synphot.units import PHOTLAM
 from . import image_plane_utils as imp_utils
 from ..source.source_fields import (
     SourceField,
+    SpectrumSourceField,
     ImageSourceField,
     CubeSourceField,
     TableSourceField,
@@ -109,8 +110,6 @@ class FieldOfView:
         self.table_fields: list[TableSourceField] = []
         self.background_fields: list[BackgroundSourceField] = []
 
-        self.spectra = {}
-
         # These are apparently not supposed to be used?
         self.cube = None        # 3D array for IFU, long-lit, Slicer-MOS
         # self.image = None       # 2D array for Imagers
@@ -174,8 +173,6 @@ class FieldOfView:
 
         # TODO: Not sure why it's necessary to recreate the fields here, but
         #       perhasps for multi-fov instruments?
-        # TODO: Perhaps remove .spectra and just keep spectra as source field
-        #       attributes, removing the need for SPEC_REF?
         for field in fields_in_fov:
             if isinstance(field, TableSourceField):
                 extracted = self.extract_area_from_table(field.field, minmax)
@@ -186,14 +183,12 @@ class FieldOfView:
                 new_fld = TableSourceField(
                     field=extracted,
                     spectra={
-                        ref: spec for ref, spec in field.spectra.items()
+                        ref: extract_range_from_spectrum(spec, self.waverange)
+                        for ref, spec in field.spectra.items()
                         if ref in extracted["ref"]
                     },
                 )
                 self.table_fields.append(new_fld)
-                for ref, spec in new_fld.spectra.items():
-                    extracted = extract_range_from_spectrum(spec, self.waverange)
-                    self.spectra[ref] = extracted
 
             elif isinstance(field, ImageSourceField):
                 assert field.header["NAXIS"] == 2, "Invalid image HDU"
@@ -201,11 +196,12 @@ class FieldOfView:
                 replace_nans(extracted, self.cmds)
                 new_fld = ImageSourceField(
                     field=extracted,
-                    spectra=field.spectra,
+                    spectra={
+                        ref: extract_range_from_spectrum(spec, self.waverange)
+                        for ref, spec in field.spectra.items()
+                    },
                 )
                 self.image_fields.append(new_fld)
-                ref, spec = new_fld.spectrum  # ImageField has only 1 spectrum
-                self.spectra[ref] = extract_range_from_spectrum(spec, self.waverange)
 
             elif isinstance(field, CubeSourceField):
                 assert field.header["NAXIS"] == 3, "Invalid cube HDU"
@@ -215,9 +211,15 @@ class FieldOfView:
                 self.cube_fields.append(new_fld)
 
             elif isinstance(field, BackgroundSourceField):
-                self.background_fields.append(field)
-                ref, spec = field.spectrum  # BkgField has only 1 spectrum
-                self.spectra[ref] = extract_range_from_spectrum(spec, self.waverange)
+                new_fld = BackgroundSourceField(
+                    field=None,
+                    header=field.header,
+                    spectra={
+                        ref: extract_range_from_spectrum(spec, self.waverange)
+                        for ref, spec in field.spectra.items()
+                    },
+                )
+                self.background_fields.append(new_fld)
 
             else:
                 raise TypeError(f"Unexpected source field type {type(field)}.")
@@ -378,7 +380,7 @@ class FieldOfView:
         else:
             data = imagehdu.data[xy0p[1]:xy1p[1],
                                  xy0p[0]:xy1p[0]]
-            new_hdr["SPEC_REF"] = hdr.get("SPEC_REF")
+            # new_hdr["SPEC_REF"] = hdr.get("SPEC_REF")
 
         if not data.size:
             logger.warning("Empty image HDU.")
@@ -443,16 +445,13 @@ class FieldOfView:
 
         return new_hdr, data
 
-    def _evaluate_spectrum_with_weight(self, ref, waveset, weight):
-        return self.spectra[int(ref)](waveset).value * weight
-
     def _calc_area_factor(self, field):
         bg_solid_angle = u.Unit(field.header["SOLIDANG"]).to(u.arcsec**-2)
         # arcsec**2 * arcsec**-2
         area_factor = self.pixel_area * bg_solid_angle
         return area_factor
 
-    def _make_spectrum_cubefields(self, fov_waveset):
+    def _make_spectrum_cubefields(self):
         """
         Find Cube fields.
 
@@ -466,28 +465,27 @@ class FieldOfView:
             #       attribute of CubeSourceField might be used directly (but
             #       check if extraction limits the waves accordingly!!).
             hdu_waveset = get_cube_waveset(field.header, return_quantity=True)
-            fluxes = field.data.sum(axis=2).sum(axis=1)
-            fov_waveset_fluxes = np.interp(fov_waveset, hdu_waveset, fluxes)
+            fluxes = field.data.sum(axis=(1, 2))
+            fov_waveset_fluxes = np.interp(self.waveset, hdu_waveset, fluxes)
 
             field_unit = field.header.get("BUNIT", PHOTLAM)
             flux_scale_factor = u.Unit(field_unit).to(PHOTLAM)
 
             yield fov_waveset_fluxes * flux_scale_factor
 
-    def _make_spectrum_imagefields(self, waveset):
+    def _make_spectrum_imagefields(self):
         """
         Find Image fields.
 
         * sum image over both dimensions
-        * evaluate SPEC_REF spectum at waveset
+        * evaluate spectum at waveset
         * yield spectrum multiply by sum to be added to canvas flux
         """
         for field in self.image_fields:
-            weight = np.sum(field.data)
-            yield self._evaluate_spectrum_with_weight(field.header["SPEC_REF"],
-                                                      waveset, weight)
+            weight = np.sum(field.data)  # Shouldn't that be 1 by convention?
+            yield field.spectrum(self.waveset).value * weight
 
-    def _make_spectrum_tablefields(self, waveset):
+    def _make_spectrum_tablefields(self):
         """
         Find Table fields.
 
@@ -501,13 +499,12 @@ class FieldOfView:
             # TODO: could do grouping of table with both columns??
             for ref in set(refs):
                 weight = np.sum(weights, where=refs == ref)
-                yield self._evaluate_spectrum_with_weight(ref, waveset, weight)
+                yield field.spectra[int(ref)](self.waveset).value * weight
 
-    def _make_spectrum_backfields(self, waveset):
+    def _make_spectrum_backfields(self):
         for field in self.background_fields:
-            yield self._evaluate_spectrum_with_weight(
-                field.header["SPEC_REF"], waveset,
-                self._calc_area_factor(field))
+            weight = self._calc_area_factor(field)
+            yield field.spectrum(self.waveset).value * weight
 
     def make_spectrum(self):
         """
@@ -522,17 +519,16 @@ class FieldOfView:
             [PHOTLAM]
 
         """
-        fov_waveset = self.waveset
         # Start with zero flux no ensure correct array shape even if none of
         # the sub-functions yield anything.
         canvas_flux = sum(chain(
-            self._make_spectrum_cubefields(fov_waveset),
-            self._make_spectrum_imagefields(fov_waveset),
-            self._make_spectrum_tablefields(fov_waveset),
-            self._make_spectrum_backfields(fov_waveset),
-        ), start=np.zeros_like(fov_waveset.value))
+            self._make_spectrum_cubefields(),
+            self._make_spectrum_imagefields(),
+            self._make_spectrum_tablefields(),
+            self._make_spectrum_backfields(),
+        ), start=np.zeros_like(self.waveset.value))
 
-        spectrum = SourceSpectrum(Empirical1D, points=fov_waveset,
+        spectrum = SourceSpectrum(Empirical1D, points=self.waveset,
                                   lookup_table=canvas_flux)
         return spectrum
 
@@ -558,7 +554,7 @@ class FieldOfView:
                      spectral_bin_width).to(u.ph/u.s)
             yield fits.ImageHDU(data=image, header=field.header)
 
-    def _make_image_imagefields(self, fluxes):
+    def _make_image_imagefields(self, fov_waveset, bin_widths, use_photlam):
         """
         Find Image fields.
 
@@ -568,10 +564,17 @@ class FieldOfView:
         """
         for field in self.image_fields:
             image = deepcopy(field.data)
-            image *= fluxes[field.header["SPEC_REF"]]  # ph / s
+
+            # TODO: Improve this...
+            spec = (field.spectrum(fov_waveset) if use_photlam
+                    else (field.spectrum(fov_waveset) *
+                          bin_widths * self.area).to(u.ph / u.s))
+
+            flux = spec.value.sum()
+            image *= flux  # ph / s
             yield fits.ImageHDU(data=image, header=field.header)
 
-    def _make_image_tablefields(self, fluxes):
+    def _make_image_tablefields(self, fov_waveset, bin_widths, use_photlam):
         """
         Find Table fields.
 
@@ -583,6 +586,14 @@ class FieldOfView:
             xpix, ypix = imp_utils.val2pix(self.header,
                                            field["x"] / 3600,
                                            field["y"] / 3600)
+
+            fluxes = {
+                ref: spec(fov_waveset).value.sum() if use_photlam
+                else (spec(fov_waveset) *
+                      bin_widths * self.area).to(u.ph / u.s).value.sum()
+                for ref, spec in field.spectra.items()
+            }
+
             if self.sub_pixel:
                 for idx, row in enumerate(field):
                     xs, ys, fracs = imp_utils.sub_pixel_fractions(xpix[idx],
@@ -597,9 +608,15 @@ class FieldOfView:
                 flux = np.array([fluxes[int(ref)] for ref in field["ref"]])
                 yield flux, np.array(field["weight"]), x, y
 
-    def _make_image_backfields(self, fluxes):
+    def _make_image_backfields(self, fov_waveset, bin_widths, use_photlam):
         for field in self.background_fields:
-            flux = fluxes[field.header["SPEC_REF"]]
+
+            # TODO: Improve this...
+            spec = (field.spectrum(fov_waveset) if use_photlam
+                    else (field.spectrum(fov_waveset) *
+                          bin_widths * self.area).to(u.ph / u.s))
+
+            flux = spec.value.sum()
             yield flux * self._calc_area_factor(field)
 
     def make_image_hdu(self, use_photlam=False):
@@ -632,26 +649,21 @@ class FieldOfView:
         bin_widths = np.diff(fov_waveset)       # u.um
         bin_widths = 0.5 * (np.r_[0, bin_widths] + np.r_[bin_widths, 0])
 
-        # PHOTLAM * u.um * u.m2 --> ph / s
-        specs = {ref: spec(fov_waveset) if use_photlam
-                 else (spec(fov_waveset) * bin_widths * self.area).to(u.ph / u.s)
-                 for ref, spec in self.spectra.items()}
-
-        fluxes = {ref: np.sum(spec.value) for ref, spec in specs.items()}
-
         canvas_image_hdu = fits.ImageHDU(
             data=np.zeros((self.header["NAXIS2"], self.header["NAXIS1"])),
             header=self.header)
 
         for tmp_hdu in chain(self._make_image_cubefields(self.area),
-                             self._make_image_imagefields(fluxes)):
+                             self._make_image_imagefields(
+                                 fov_waveset, bin_widths, use_photlam)):
             canvas_image_hdu = imp_utils.add_imagehdu_to_imagehdu(
                 tmp_hdu,
                 canvas_image_hdu,
                 conserve_flux=True,
                 spline_order=self.spline_order)
 
-        for flux, weight, x, y in self._make_image_tablefields(fluxes):
+        for flux, weight, x, y in self._make_image_tablefields(
+                fov_waveset, bin_widths, use_photlam):
             if self.sub_pixel:
                 # These x and y should not be arrays when sub_pixel is
                 # enabled, it is therefore not necessary to deploy the fix
@@ -678,9 +690,9 @@ class FieldOfView:
                         y[mask], x[mask], flux[mask], weight[mask]):
                     canvas_image_hdu.data[yi, xi] += fluxi * weighti
 
-
-        canvas_image_hdu.data = sum(self._make_image_backfields(fluxes),
-                                    start=canvas_image_hdu.data)
+        canvas_image_hdu.data = sum(
+            self._make_image_backfields(fov_waveset, bin_widths, use_photlam),
+            start=canvas_image_hdu.data)
         return canvas_image_hdu  # [ph s-1 pixel-1]
 
     def _make_cube_cubefields(self, fov_waveset):
@@ -708,7 +720,7 @@ class FieldOfView:
             field_hdu = fits.ImageHDU(data=field_data, header=field.header)
             yield field_hdu
 
-    def _make_cube_imagefields(self, specs, spline_order):
+    def _make_cube_imagefields(self, fov_waveset, spline_order):
         """
         Find Image fields.
 
@@ -737,13 +749,13 @@ class FieldOfView:
                 field_hdu,
                 canvas_image_hdu,
                 spline_order=spline_order)
-            spec = specs[field.header["SPEC_REF"]]
+            spec = field.spectrum(fov_waveset)
 
             # 2D * 1D -> 3D
             field_cube = canvas_image_hdu.data[None, :, :] * spec[:, None, None]
             yield field_cube.value
 
-    def _make_cube_tablefields(self, specs):
+    def _make_cube_tablefields(self, fov_waveset):
         """
         Find Table fields.
 
@@ -757,8 +769,10 @@ class FieldOfView:
             for row in field:
                 xsky, ysky = row["x"] / 3600, row["y"] / 3600
                 # x, y are ALWAYS in arcsec - crval is in deg
+                # TODO: Change this to some proper WCS function!
                 xpix, ypix = imp_utils.val2pix(self.header, xsky, ysky)
-                flux_vector = specs[row["ref"]].value * row["weight"] / self.pixel_area
+                flux = field.spectra[row["ref"]](fov_waveset)
+                flux_vector = flux.value * row["weight"] / self.pixel_area
 
                 if self.sub_pixel:
                     xs, ys, fracs = imp_utils.sub_pixel_fractions(xpix, ypix)
@@ -767,17 +781,14 @@ class FieldOfView:
                 else:
                     yield flux_vector, int(xpix), int(ypix)
 
-    def _make_cube_backfields(self, specs):
+    def _make_cube_backfields(self, fov_waveset):
         for field in self.background_fields:
-            # TODO: The following would have been identical to the other two
-            #       make methods, but was commented out. Why?
-            # bg_solid_angle = u.Unit(field.header["SOLIDANG"]).to(u.arcsec**-2)  # float [arcsec-2]
-            # pixel_area = from_currsys(self.meta["pixel_scale"]) ** 2      # float [arcsec2]
-            # area_factor = pixel_area * bg_solid_angle                           # float [arcsec2 * arcsec-2]
-
-            # Cube should be in PHOTLAM arcsec-2 for SpectralTrace mapping
-            # spec = specs[field.header["SPEC_REF"]] * area_factor
-            spec = specs[field.header["SPEC_REF"]]
+            # FIXME: This assumes that SOLIDANG == arcsec-2, which is usually
+            #        True, but doesn't have to be. Maybe solve via BUNIT?
+            #        Remember, cube output needs PHOTLAM / arcsec**2 !
+            #        So if SOLIDANG or BUNIT or whatever is not in arcsec-2,
+            #        the spectrum shoule be scaled accordingly!
+            spec = field.spectrum(fov_waveset)
             yield spec[:, None, None].value
 
     def make_cube_hdu(self):
@@ -847,9 +858,6 @@ class FieldOfView:
         #     wmin, wmax = wave_min.to(u.um).value, wave_max.to(u.um).value
         #     fov_waveset = np.logspace(wmin, wmax, wave_bin_n)
 
-        specs = {ref: spec(fov_waveset)                 # PHOTLAM = ph/s/cm2/AA
-                 for ref, spec in self.spectra.items()}
-
         # make canvas cube based on waveset of largest cube and NAXIS1,2
         # from fov.header
         canvas_cube_hdu = fits.ImageHDU(
@@ -866,15 +874,15 @@ class FieldOfView:
                 spline_order=self.spline_order)
 
         canvas_cube_hdu.data = sum(self._make_cube_imagefields(
-            specs, self.spline_order),
+            fov_waveset, self.spline_order),
             start=canvas_cube_hdu.data)
 
-        for flux, x, y in self._make_cube_tablefields(specs):
+        for flux, x, y in self._make_cube_tablefields(fov_waveset):
             # To prevent adding array values in this manner.
             assert not isinstance(x, Iterable), "x should be integer"
             canvas_cube_hdu.data[:, y, x] += flux
 
-        canvas_cube_hdu.data = sum(self._make_cube_backfields(specs),
+        canvas_cube_hdu.data = sum(self._make_cube_backfields(fov_waveset),
                                    start=canvas_cube_hdu.data)
 
         # TODO: what's with this code??
@@ -979,10 +987,21 @@ class FieldOfView:
         return from_currsys("!SIM.computing.spline_order", self.cmds)
 
     @property
-    def fields(self):
+    def fields(self) -> list[SourceField]:
         """Return list of all fields, for backwards compatibility."""
         return (self.cube_fields + self.image_fields + self.table_fields +
                 self.background_fields)
+
+    @property
+    def spectra(self) -> dict[int, SourceSpectrum]:
+        """Return a collection of all fields' spectra."""
+        specs = {}
+        for field in self.fields:
+            if not isinstance(field, SpectrumSourceField):
+                continue
+            for ref, spec in field.spectra.items():
+                specs[ref] = spec
+        return specs
 
     def _ensure_deg_header(self):
         cunit = u.Unit(self.header["CUNIT1"].lower())

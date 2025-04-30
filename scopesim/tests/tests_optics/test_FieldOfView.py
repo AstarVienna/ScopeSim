@@ -114,7 +114,7 @@ class TestExtractFrom:
         assert len(fov.fields[2].field) == 2
 
         assert len(fov.spectra) == 3
-        assert fov.fields[1].header["SPEC_REF"] == 0
+        # assert fov.fields[1].header["SPEC_REF"] == 0
         for spec in fov.spectra.values():
             assert spec.waveset[0].value == approx(1.97e4)
             assert spec.waveset[-1].value == approx(2.02e4)     # Angstrom
@@ -130,6 +130,7 @@ class TestExtractFrom:
 
         assert len(fov.fields) == 0
 
+    @pytest.mark.skip(reason="SPEC_REF is obsolete, just rm this test?")
     def test_all_spectra_are_referenced_correctly(self):
         src = so._image_source() + so._cube_source() + so._table_source()
         fov = _fov_190_210_um()
