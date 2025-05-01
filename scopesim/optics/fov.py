@@ -947,9 +947,12 @@ class FieldOfView:
                 field_cubes[naxis3_max].header,
                 return_quantity=True,
             )
-        elif self.spectra:
-            wavesets = [spec.waveset for spec in self.spectra.values()]
-            _waveset = np.concatenate(wavesets)
+        elif specfields := self._get_fields(SpectrumSourceField):
+            _waveset = np.concatenate([
+                spec.waveset.to(u.um)
+                for field in specfields
+                for spec in field.spectra.values()
+            ])
         else:
             _waveset = self.waverange << u.um
 
@@ -960,7 +963,7 @@ class FieldOfView:
         #   0.7000000000000001 um
         #   0.7000000000000002 um
         # and yes, that actually happend...
-        _waveset = np.unique(_waveset.to(u.um).round(10))
+        _waveset = np.unique(_waveset.round(10))
         return _waveset
 
     @property
@@ -1003,7 +1006,12 @@ class FieldOfView:
 
     @property
     def spectra(self) -> dict[int, SourceSpectrum]:
-        """Return a collection of all fields' spectra."""
+        """Return a collection of all fields' spectra.
+
+        .. deprecated:: PLACEHOLDER_NEXT_RELEASE_VERSION
+
+           Use individual fields' spectra instead.
+        """
         specs = {
             ref: spec
             for field in [
