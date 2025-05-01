@@ -455,7 +455,7 @@ class FieldOfView:
         * interpolate at waveset
         * yield scaled flux to be added to canvas flux
         """
-        for field in self.cube_fields:
+        for field in self._get_cube_fields():
             # TODO: if SourceFields were kept in the _fields lists, the wave
             #       attribute of CubeSourceField might be used directly (but
             #       check if extraction limits the waves accordingly!!).
@@ -476,7 +476,7 @@ class FieldOfView:
         * evaluate spectum at waveset
         * yield spectrum multiply by sum to be added to canvas flux
         """
-        for field in self.image_fields:
+        for field in self._get_image_fields():
             weight = np.sum(field.data)  # Shouldn't that be 1 by convention?
             yield field.spectrum(self.waveset).value * weight
 
@@ -488,7 +488,7 @@ class FieldOfView:
         * for each unique ref, sum the weights
         * yield each spectrum * sum of weights to be added to canvas flux
         """
-        for field in self.table_fields:
+        for field in self._get_table_fields():
             refs = np.array(field["ref"])
             weights = np.array(field["weight"])
             # TODO: could do grouping of table with both columns??
@@ -497,7 +497,7 @@ class FieldOfView:
                 yield field.spectra[int(ref)](self.waveset).value * weight
 
     def _make_spectrum_backfields(self):
-        for field in self.background_fields:
+        for field in self._get_background_fields():
             weight = self._calc_area_factor(field)
             yield field.spectrum(self.waveset).value * weight
 
@@ -535,7 +535,7 @@ class FieldOfView:
         * rescale and reorient image
         * yield cube image  to be added to canvas image
         """
-        for field in self.cube_fields:
+        for field in self._get_cube_fields():
             # cube_fields come in with units of photlam/arcsec2,
             # need to convert to ph/s
             # We need to the voxel volume (spectral and solid angle) for that.
@@ -557,7 +557,7 @@ class FieldOfView:
         * multiply image by summed spectrum
         * yield image  to be added to canvas image
         """
-        for field in self.image_fields:
+        for field in self._get_image_fields():
             image = deepcopy(field.data)
 
             # TODO: Improve this...
@@ -576,7 +576,7 @@ class FieldOfView:
         * sum spectra between wavelength edges
         * yield summed flux at x,y position to be added to canvas image
         """
-        for field in self.table_fields:
+        for field in self._get_table_fields():
             # x, y are ALWAYS in arcsec - crval is in deg
             xpix, ypix = imp_utils.val2pix(self.header,
                                            field["x"] / 3600,
@@ -604,7 +604,7 @@ class FieldOfView:
                 yield flux, np.array(field["weight"]), x, y
 
     def _make_image_backfields(self, fov_waveset, bin_widths, use_photlam):
-        for field in self.background_fields:
+        for field in self._get_background_fields():
 
             # TODO: Improve this...
             spec = (field.spectrum(fov_waveset) if use_photlam
@@ -698,7 +698,7 @@ class FieldOfView:
         * interp1d smaller cubes with waveset
         * yield cubes to be added to cavas cube
         """
-        for field in self.cube_fields:
+        for field in self._get_cube_fields():
             # Cube should be in PHOTLAM arcsec-2 for SpectralTrace mapping
             # Assumption is that ImageHDUs have units of PHOTLAM arcsec-2
             field_waveset = get_cube_waveset(field.header, return_quantity=True)
@@ -724,7 +724,7 @@ class FieldOfView:
         * expand image by spectra to 3D form
         * yield image cubes to be added to cavas cube
         """
-        for field in self.image_fields:
+        for field in self._get_image_fields():
             # Cube should be in PHOTLAM arcsec-2 for SpectralTrace mapping
             # Assumption is that ImageHDUs have units of PHOTLAM arcsec-2
             # ImageHDUs have photons/second/pixel.
@@ -757,7 +757,7 @@ class FieldOfView:
         * evaluate spectra at waveset
         * yield spectrum at x,y position to be added cavas to cube
         """
-        for field in self.table_fields:
+        for field in self._get_table_fields():
             # Cube should be in PHOTLAM arcsec-2 for SpectralTrace mapping
             # Point sources are in PHOTLAM per pixel
             # Point sources need to be scaled up by inverse pixel_area
@@ -777,7 +777,7 @@ class FieldOfView:
                     yield flux_vector, int(xpix), int(ypix)
 
     def _make_cube_backfields(self, fov_waveset):
-        for field in self.background_fields:
+        for field in self._get_background_fields():
             # FIXME: This assumes that SOLIDANG == arcsec-2, which is usually
             #        True, but doesn't have to be. Maybe solve via BUNIT?
             #        Remember, cube output needs PHOTLAM / arcsec**2 !
@@ -940,7 +940,7 @@ class FieldOfView:
     @property
     def waveset(self):
         """Return a wavelength vector in um."""
-        if field_cubes := self.cube_fields:
+        if field_cubes := self._get_cube_fields():
             naxis3_max = np.argmax([cube.header["NAXIS3"]
                                     for cube in field_cubes])
             _waveset = get_cube_waveset(
@@ -981,30 +981,25 @@ class FieldOfView:
         # TODO: Make this an attribute once meta resolving is implemented.
         return from_currsys("!SIM.computing.spline_order", self.cmds)
 
-    @property
-    def cube_fields(self):
-        """Return list of non-BG_SRC ImageHDU fields with NAXIS=3."""
-        return [field for field in self.fields
-                if isinstance(field, CubeSourceField)]
+    def _get_fields(self, subclass) -> list[SourceField]:
+        """Return list of fields of specific SourceField subclass."""
+        return [field for field in self.fields if isinstance(field, subclass)]
 
-    @property
-    def image_fields(self):
-        """Return list of non-BG_SRC ImageHDU fields with NAXIS=2."""
-        return [field for field in self.fields
-                if isinstance(field, ImageSourceField)]
+    def _get_cube_fields(self) -> list[CubeSourceField]:
+        """Return list of CubeSourceFields."""
+        return self._get_fields(CubeSourceField)
 
-    @property
-    def table_fields(self):
-        """Return list of Table fields."""
-        return [field for field in self.fields
-                if isinstance(field, TableSourceField)]
+    def _get_image_fields(self) -> list[ImageSourceField]:
+        """Return list of ImageSourceFields."""
+        return self._get_fields(ImageSourceField)
 
-    @property
-    def background_fields(self):
-        """Return list of BG_SRC ImageHDU fields."""
-        # HACK: While Sourcefields are not fully supported.
-        return [field for field in self.fields
-                if isinstance(field, BackgroundSourceField)]
+    def _get_table_fields(self) -> list[TableSourceField]:
+        """Return list of TableSourceFields."""
+        return self._get_fields(TableSourceField)
+
+    def _get_background_fields(self) -> list[BackgroundSourceField]:
+        """Return list of BackgroundSourceFields."""
+        return self._get_fields(BackgroundSourceField)
 
     @property
     def spectra(self) -> dict[int, SourceSpectrum]:
