@@ -20,21 +20,21 @@ classifiers = [
 
 [tool.poetry.dependencies]
 python = ">=3.10, <3.13"
-numpy = "^1.26.3"
+numpy = "^1.26.4"
 scipy = "^1.14.1"
 astropy = "^6.0.1"
 matplotlib = "^3.8.2"
 pooch = "^1.8.2"
 
 docutils = "^0.19"
-httpx = ">=0.26.0"
+httpx = ">=0.28.1"
 beautifulsoup4 = "^4.13.3"
 lxml = "^5.2.2"
 pyyaml = "^6.0.1"
 more-itertools = "^10.2.0"
 tqdm = "^4.66.5"
 
-synphot = "^1.4.0"
+synphot = "^1.5.0"
 skycalc-ipy = ">=0.5.1"
 anisocado = ">=0.3.0"
 astar-utils = ">=0.3.1"
