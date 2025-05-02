@@ -6,10 +6,8 @@ import numpy as np
 from synphot import Empirical1D, SourceSpectrum
 from synphot.units import PHOTLAM
 from astropy import units as u
-from astropy.io import fits
 
 from scopesim.optics.fov import FieldOfView, extract_range_from_spectrum
-from scopesim.optics.fov_utils import make_cube_from_table
 from scopesim.optics import image_plane_utils as imp_utils
 
 from scopesim.tests.mocks.py_objects import header_objects as ho
@@ -130,22 +128,3 @@ class TestExtractRangeFromSpectrum:
         extract_range_from_spectrum(spec, waverange)
 
         assert msg in caplog.text
-
-
-class TestMakeCubeFromTable():
-    def test_returns_an_imagehdu(self):
-        src_table = so._table_source()
-        src_table.fields[0]["x"] = [-15, -5, 0, 0] * u.arcsec
-        src_table.fields[0]["y"] = [0, 0, 5, 15] * u.arcsec
-
-        hdr = ho._fov_header()  # 20x20" @ 0.2" --> [-10, 10]"
-        wav = [1.9, 2.1] * u.um
-        fov = FieldOfView(hdr, wav)
-
-        fov.extract_from(src_table)
-
-        waveset = np.linspace(wav[0], wav[1], 51)
-        hdu = make_cube_from_table(fov.fields[0], fov.spectra,
-                                   waveset, fov.header)
-
-        assert isinstance(hdu, fits.ImageHDU)
