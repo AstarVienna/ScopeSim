@@ -128,7 +128,7 @@ class SpectrumSourceField(SourceField):
         """Return single spectrum and ref if only one spectrum in spectra."""
         if len(self.spectra) > 1:
             raise TypeError("More than one spectrum in field -> use spectra!")
-        spec, = self.spectra.items()
+        (_, spec), = self.spectra.items()
         return spec
 
 
