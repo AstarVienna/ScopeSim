@@ -689,6 +689,8 @@ class FieldOfView:
         canvas_image_hdu.data = sum(
             self._make_image_backfields(fov_waveset, bin_widths, use_photlam),
             start=canvas_image_hdu.data)
+
+        canvas_image_hdu.header["BUNIT"] = "ph s-1 pixel-1"
         return canvas_image_hdu  # [ph s-1 pixel-1]
 
     def _make_cube_cubefields(self, fov_waveset):
