@@ -863,7 +863,7 @@ class FieldOfView:
                            self.header["NAXIS2"],
                            self.header["NAXIS1"])),
             header=self.header)
-        canvas_cube_hdu.header["BUNIT"] = "ph s-1 cm-2 AA-1"
+        # canvas_cube_hdu.header["BUNIT"] = "ph s-1 cm-2 AA-1"
 
         for field_hdu in self._make_cube_cubefields(fov_waveset):
             canvas_cube_hdu = imp_utils.add_imagehdu_to_imagehdu(
@@ -902,8 +902,9 @@ class FieldOfView:
                                        "CRPIX3": 1,
                                        "CUNIT3": "um",
                                        "CTYPE3": "WAVE"})
+        canvas_cube_hdu.header["BUNIT"] = "ph s-1 um-1 arcsec-2"
         # TODO: Add the log wavelength keyword here, if log scale is needed
-        return canvas_cube_hdu      # [ph s-1 AA-1 (arcsec-2)]
+        return canvas_cube_hdu      # [ph s-1 um-1 (arcsec-2)]
 
     @property
     def data(self):
