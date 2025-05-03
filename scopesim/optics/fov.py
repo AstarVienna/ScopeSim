@@ -464,7 +464,8 @@ class FieldOfView:
             fluxes = field.data.sum(axis=(1, 2))
             fov_waveset_fluxes = np.interp(self.waveset, hdu_waveset, fluxes)
 
-            field_unit = field.header.get("BUNIT", PHOTLAM)
+            # .lower() is needed because astropy doesn't recognize PHOTLAM
+            field_unit = field.header.get("BUNIT", PHOTLAM).lower()
             flux_scale_factor = u.Unit(field_unit).to(PHOTLAM)
 
             yield fov_waveset_fluxes * flux_scale_factor
