@@ -64,9 +64,9 @@ class TestExtractFrom:
         fov = _fov_190_210_um()
         fov.extract_from(src)
 
-        assert len(fov.fields[0]) == 2
-        assert len(fov.spectra[0].waveset) == 11
-        assert fov.spectra[0].waveset[0].value == approx(19000)
+        assert len(fov.fields[0].field) == 2
+        assert len(fov.fields[0].spectra[0].waveset) == 11
+        assert fov.fields[0].spectra[0].waveset[0].value == approx(19000)
 
     def test_extract_2d_image_from_hduimage(self):
         src = so._image_source(dx=10)       # 10x10" @ 0.2"/pix, offset by 10"
@@ -74,8 +74,8 @@ class TestExtractFrom:
         fov.extract_from(src)
 
         assert fov.fields[0].data.shape == (51, 25)
-        assert len(fov.spectra[0].waveset) == 11
-        assert fov.spectra[0].waveset[0].value == approx(19000)
+        assert len(fov.fields[0].spectra[0].waveset) == 11
+        assert fov.fields[0].spectra[0].waveset[0].value == approx(19000)
 
     def test_extract_3d_cube_from_hduimage(self):
         src = so._cube_source()             # 10x10" @ 0.2"/pix, [0.5, 2.5]m @ 0.02µm
@@ -86,7 +86,6 @@ class TestExtractFrom:
         assert s198 == approx(s200, rel=0.02)
         assert s202 == approx(s200 * 0.5, rel=0.02)
         assert fov.fields[0].data.shape == (3, 51, 51)
-        assert len(fov.spectra) == 0
 
     def test_extract_3d_cube_that_is_offset_relative_to_fov(self):
         src = so._cube_source(dx=10)        # 10x10" @ 0.2"/pix, [0.5, 2.5]m @ 0.02µm, centre offset to (10, 0)"
@@ -113,11 +112,12 @@ class TestExtractFrom:
         assert fov.fields[1].field.shape == (51, 25)
         assert len(fov.fields[2].field) == 2
 
-        assert len(fov.spectra) == 3
+        # assert len(fov.spectra) == 3
         # assert fov.fields[1].header["SPEC_REF"] == 0
-        for spec in fov.spectra.values():
-            assert spec.waveset[0].value == approx(1.97e4)
-            assert spec.waveset[-1].value == approx(2.02e4)     # Angstrom
+        for fld in fov.fields[1:]:
+            for spec in fld.spectra.values():
+                assert spec.waveset[0].value == approx(1.97e4)
+                assert spec.waveset[-1].value == approx(2.02e4)     # Angstrom
 
     # Below are tests from original FieldOfView object
 
@@ -306,7 +306,7 @@ class TestMakeImage:
         fov.extract_from(src_table)
 
         in_sum = 0
-        waveset = fov.spectra[0].waveset
+        waveset = fov.fields[0].spectra[0].waveset
         for x, y, ref, weight in src_table.fields[0]:
             flux = src_table.spectra[ref](waveset).to(u.ph/u.s/u.m**2/u.um)
             flux *= 1 * u.m**2 * 0.02 * u.um * 0.9      # 0.9 is to catch the half bins at either end
@@ -329,7 +329,7 @@ class TestMakeImage:
         fov.extract_from(src_table)
 
         in_sum = 0
-        waveset = fov.spectra[0].waveset
+        waveset = fov.fields[0].spectra[0].waveset
         for x, y, ref, weight in src_table.fields[0]:
             flux = src_table.spectra[ref](waveset).to(u.ph/u.s/u.m**2/u.um)
             flux *= 1 * u.m**2 * 0.02 * u.um * 0.9      # 0.9 is to catch the half bins at either end

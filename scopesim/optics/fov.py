@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Defines FieldOfView class."""
 
+from warnings import warn
 from copy import deepcopy
 from itertools import chain
 from collections.abc import Iterable, Generator
@@ -1012,6 +1013,8 @@ class FieldOfView:
 
            Use individual fields' spectra instead.
         """
+        warn("Deprecated since vPLACEHOLDER_NEXT_RELEASE_VERSION.",
+             DeprecationWarning, stacklevel=2)
         specs = {
             ref: spec
             for field in [
