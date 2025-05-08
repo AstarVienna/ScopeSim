@@ -283,8 +283,12 @@ class OpticalTrain:
                                    desc=" FOV effects", position=1):#, leave=False):
                     fov = effect.apply_to(fov)
 
-                fov.flatten()
-                self.image_planes[fov.image_plane_id].add(fov.hdu, wcs_suffix="D")
+                if self.cmds.get("!INST.flatten", True):
+                    fov.flatten()
+                    self.image_planes[fov.image_plane_id].add(fov.hdu, wcs_suffix="D")
+                else:  # cube output
+                    self.image_planes[fov.image_plane_id].add(fov.hdu, wcs_suffix="D")
+
                 # ..todo: finish off the multiple image plane stuff
 
         # END OF MULTIPROCESSING

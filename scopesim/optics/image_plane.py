@@ -58,7 +58,11 @@ class ImagePlane:
                              f"{dict(header)}")
 
         # image = np.zeros((header["NAXIS2"]+1, header["NAXIS1"]+1))
-        image = np.zeros((header["NAXIS2"], header["NAXIS1"]))
+        # TODO: find the branch where I made the generalized utils function for that!!!!
+        if header["NAXIS"] == 3:
+            image = np.zeros((header["NAXIS3"], header["NAXIS2"], header["NAXIS1"]))
+        else:
+            image = np.zeros((header["NAXIS2"], header["NAXIS1"]))
         self.hdu = fits.ImageHDU(data=image, header=header)
 
         self._det_wcs = self._get_wcs(header, "D")
