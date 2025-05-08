@@ -14,18 +14,30 @@ from typing import ClassVar
 
 import numpy as np
 from astropy import units as u
+from astropy.io import fits
 from astropy.table import Table
 
 from ..optics.fov_volume_list import FovVolumeList
 from .effects import Effect
 from .apertures import ApertureMask
-from ..optics.image_plane_utils import header_from_list_of_xy, calc_footprint
-from ..utils import (from_currsys, close_loop, figure_factory, array_minmax,
-                     quantity_from_table, unit_from_table, get_logger)
+from ..optics.image_plane_utils import (
+    header_from_list_of_xy,
+    calc_footprint,
+    create_wcs_from_points,
+)
+from ..utils import (
+    from_currsys,
+    close_loop,
+    figure_factory,
+    array_minmax,
+    quantity_from_table,
+    unit_from_table,
+    get_logger,
+)
 
 logger = get_logger(__name__)
 
-__all__ = ["DetectorList", "DetectorWindow"]
+__all__ = ["DetectorList", "DetectorWindow", "DetectorList3D"]
 
 
 class DetectorList(Effect):
@@ -364,3 +376,56 @@ class DetectorWindow(DetectorList):
         }
 
         super().__init__(array_dict=array_dict, **params)
+
+
+class DetectorList3D(DetectorList):
+    """Pseudo-detector for simple IFU mode."""
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        params = {"pixel_scale": "!INST.pixel_scale",      # arcsec
+                  "active_detectors": "all",}
+        self.meta.update(params)
+        self.meta.update(kwargs)
+
+    @property
+    def image_plane_header(self):
+        """Create and return the Image Plane Header."""
+        # FIXME: Heavy property.....
+        tbl = self.active_table
+        pixel_size = np.min(quantity_from_table("pixel_size", tbl, u.mm))
+        pixel_scale = u.pixel_scale(pixel_size / u.pixel)
+
+        with u.set_enabled_equivalencies(pixel_scale):
+            cens = {
+                dim: (tbl[f"{dim}_cen"].data.astype(float) *
+                      unit_from_table(f"{dim}_cen", tbl, u.mm) << u.mm)
+                for dim in "xyz"
+            }
+
+            ds = {
+                dim: (0.5 * tbl[f"{dim}_size"].data.astype(float) *
+                      unit_from_table(f"{dim}_size", tbl, u.mm) << u.mm)
+                for dim in "xyz"
+            }
+
+        det_mins = {dim: np.min(cens[dim] - ds[dim]) for dim in "xyz"}
+        det_maxs = {dim: np.max(cens[dim] + ds[dim]) for dim in "xyz"}
+
+        pixel_size = pixel_size.to_value(u.mm)
+        points = np.array([
+            [det_mins[dim].to_value(u.mm) for dim in "xyz"],
+            [det_maxs[dim].to_value(u.mm) for dim in "xyz"],
+        ])
+
+        new_wcs, naxis = create_wcs_from_points(points, pixel_size, "D")
+
+        hdr = fits.Header()
+        hdr["NAXIS"] = 3
+        hdr["NAXIS1"] = int(naxis[0])
+        hdr["NAXIS2"] = int(naxis[1])
+        hdr["NAXIS3"] = int(naxis[2])
+        hdr.update(new_wcs.to_header())
+        hdr["IMGPLANE"] = self.image_plane_id
+
+        return hdr

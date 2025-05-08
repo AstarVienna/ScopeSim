@@ -187,6 +187,7 @@ def create_wcs_from_points(points: np.ndarray,
     pixel_scale = abs(pixel_scale)
     extent = points.ptp(axis=0) / pixel_scale
     naxis = extent.round().astype(int)
+    ndims = len(naxis)
     offset = (extent - naxis) * pixel_scale  # compensate rounding
 
     # FIXME: Woule be nice to have D headers referenced at (1, 1), but that
@@ -214,10 +215,15 @@ def create_wcs_from_points(points: np.ndarray,
 
     # Cannot do `in "DX"` here because that would also match the empty string.
     linsuff = {"D", "X"}
-    lintype = ["LINEAR", "LINEAR"]
+    lintype = ndims * ["LINEAR"]
     # skytype = ["RA---TAN", "DEC--TAN"]  # ScopeSim can't handle the truth yet
     skytype = ["LINEAR", "LINEAR"]
-    ctype = lintype if wcs_suffix in linsuff else skytype
+    if wcs_suffix in linsuff:
+        ctype = lintype
+    else:
+        if ndims != 2:
+            raise ValueError("The sky must be two-dimensional!")
+        ctype = skytype
 
     if isinstance(points, u.Quantity):
         cunit = points.unit
@@ -227,10 +233,10 @@ def create_wcs_from_points(points: np.ndarray,
     if isinstance(pixel_scale, u.Quantity):
         pixel_scale = pixel_scale.value
 
-    new_wcs = WCS(key=wcs_suffix)
+    new_wcs = WCS(key=wcs_suffix, naxis=ndims)
     new_wcs.wcs.ctype = ctype
-    new_wcs.wcs.cunit = 2 * [cunit]
-    new_wcs.wcs.cdelt = np.array(2 * [pixel_scale])
+    new_wcs.wcs.cunit = ndims * [cunit]
+    new_wcs.wcs.cdelt = np.array(ndims * [pixel_scale])
     new_wcs.wcs.crval = crval
     new_wcs.wcs.crpix = crpix
 
