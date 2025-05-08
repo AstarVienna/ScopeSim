@@ -376,6 +376,10 @@ class OpticalTrain:
             fov_waveset = np.arange(wave_min.value, wave_max.value, dwave) * wave_unit
             fov_waveset = fov_waveset.to(u.um)
 
+            if (wave.to(u.um).min() > fov_waveset.max() or
+                    wave.to(u.um).max() < fov_waveset.min()):
+                logger.warning("Source and FOV wavesets disjoint.")
+
             # Interpolate into new data cube.
             # This is done layer by layer for memory reasons.
             new_data = np.zeros((fov_waveset.shape[0], data.shape[1], data.shape[2]),
