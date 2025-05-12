@@ -418,6 +418,10 @@ class DetectorList3D(DetectorList):
             [det_maxs[dim].to_value(u.mm) for dim in "xyz"],
         ])
 
+        pixel_size = [
+            pixel_size, pixel_size,
+            from_currsys("!SIM.spectral.spectral_bin_width", self.cmds)
+        ]
         new_wcs, naxis = create_wcs_from_points(points, pixel_size, "D")
 
         hdr = fits.Header()

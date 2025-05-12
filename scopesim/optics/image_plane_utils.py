@@ -183,11 +183,17 @@ def create_wcs_from_points(points: np.ndarray,
     if wcs_suffix != "D":
         points = _fix_360(points)
 
+    ndims = points.shape[1]  # basically 2D or 3D
+
     # TODO: test whether abs(pixel_scale) breaks anything
-    pixel_scale = abs(pixel_scale)
+    pixel_scale = abs(np.atleast_1d(pixel_scale))
+    if len(pixel_scale) != ndims:
+        if len(pixel_scale) > 1:
+            raise ValueError("shape mismatch between points and pixel_scale")
+        pixel_scale = np.repeat(pixel_scale, ndims)
+
     extent = points.ptp(axis=0) / pixel_scale
     naxis = extent.round().astype(int)
-    ndims = len(naxis)
     offset = (extent - naxis) * pixel_scale  # compensate rounding
 
     # FIXME: Woule be nice to have D headers referenced at (1, 1), but that
@@ -236,7 +242,7 @@ def create_wcs_from_points(points: np.ndarray,
     new_wcs = WCS(key=wcs_suffix, naxis=ndims)
     new_wcs.wcs.ctype = ctype
     new_wcs.wcs.cunit = ndims * [cunit]
-    new_wcs.wcs.cdelt = np.array(ndims * [pixel_scale])
+    new_wcs.wcs.cdelt = pixel_scale
     new_wcs.wcs.crval = crval
     new_wcs.wcs.crpix = crpix
 
