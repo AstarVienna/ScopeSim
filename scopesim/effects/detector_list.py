@@ -139,8 +139,10 @@ class DetectorList(Effect):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        params = {"pixel_scale": "!INST.pixel_scale",      # arcsec
-                  "active_detectors": "all",}
+        params = {
+            "pixel_scale": "!INST.pixel_scale",  # arcsec
+            "active_detectors": "all",
+        }
         self.meta.update(params)
         self.meta.update(kwargs)
 
@@ -163,6 +165,12 @@ class DetectorList(Effect):
         if not isinstance(obj, FovVolumeList):
             return obj
 
+        shrink_axis, shrink_values = self._get_fov_limits(**kwargs)
+        obj.shrink(axis=shrink_axis, values=shrink_values)
+
+        return obj
+
+    def _get_fov_limits(self, **kwargs):
         hdr = self.image_plane_header
         xy_mm = calc_footprint(hdr, "D")
         pixel_size = hdr["CDELT1D"]  # mm
@@ -172,11 +180,9 @@ class DetectorList(Effect):
         # x["] = x[mm] * ["] / [mm]
         xy_sky = xy_mm * pixel_scale / pixel_size
 
-        obj.shrink(axis=["x", "y"],
-                   values=(tuple(zip(xy_sky.min(axis=0),
-                                     xy_sky.max(axis=0)))))
-
-        return obj
+        axis = ["x", "y"]
+        values = (tuple(zip(xy_sky.min(axis=0), xy_sky.max(axis=0))))
+        return axis, values
 
     def fov_grid(self, which="edges", **kwargs):
         """Return an ApertureMask object. kwargs are "pixel_scale" [arcsec]."""
@@ -379,18 +385,49 @@ class DetectorList3D(DetectorList):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        params = {"pixel_scale": "!INST.pixel_scale",      # arcsec
-                  "active_detectors": "all",}
+        params = {
+            "pixel_scale": "!INST.pixel_scale",  # arcsec
+            "active_detectors": "all",
+            "wavelen": "!OBS.wavelen",
+            "dwave": "!SIM.spectral.spectral_bin_width",
+        }
         self.meta.update(params)
         self.meta.update(kwargs)
 
-    @property
-    def image_plane_header(self):
-        """Create and return the Image Plane Header."""
-        # FIXME: Heavy property.....
+    def _get_fov_limits(self, **kwargs):
+        points = self._get_corner_points() * u.mm
+        pixel_size = self.pixel_size / u.pixel
+        pixel_scale = u.pixel_scale(
+            from_currsys(
+                kwargs.get("pixel_scale", self.meta["pixel_scale"]),
+                self.cmds,
+            ) << u.arcsec / u.pixel
+        )
+
+        with u.set_enabled_equivalencies(pixel_scale):
+            xy_sky = (points[:, :2] / pixel_size).to_value(u.arcsec)
+
+        wave_mid = from_currsys(
+            kwargs.get("wavelen", self.meta["wavelen"]),
+            self.cmds,
+        ) * u.um  # TODO: dynamic wave unit
+        dwave = from_currsys(
+            kwargs.get("dwave", self.meta["dwave"]),
+            self.cmds,
+        ) * u.um / u.pixel  # TODO: dynamic wave unit
+        wave_shrink = points[:, 2] / pixel_size * dwave + wave_mid
+
+        axis = ["x", "y", "wave"]
+        values = (
+            *zip(xy_sky.min(axis=0), xy_sky.max(axis=0)),
+            tuple(wave_shrink.to_value(u.um).round(7))
+        )
+
+        return axis, values
+
+    def _get_corner_points(self):
         tbl = self.active_table
-        pixel_size = np.min(quantity_from_table("pixel_size", tbl, u.mm))
-        pixel_scale = u.pixel_scale(pixel_size / u.pixel)
+        pixel_scale = u.pixel_scale(self.pixel_size / u.pixel)
 
         with u.set_enabled_equivalencies(pixel_scale):
             cens = {
@@ -408,13 +445,27 @@ class DetectorList3D(DetectorList):
         det_mins = {dim: np.min(cens[dim] - ds[dim]) for dim in "xyz"}
         det_maxs = {dim: np.max(cens[dim] + ds[dim]) for dim in "xyz"}
 
-        pixel_size = pixel_size.to_value(u.mm)
         points = np.array([
             [det_mins[dim].to_value(u.mm) for dim in "xyz"],
             [det_maxs[dim].to_value(u.mm) for dim in "xyz"],
         ])
 
-        new_wcs, naxis = create_wcs_from_points(points, pixel_size, "D")
+        return points
+
+    @property
+    def pixel_size(self):
+        # TODO: put this in base class, chk name conflicts
+        pixel_size = np.min(
+            quantity_from_table("pixel_size", self.active_table, u.mm))
+        return pixel_size
+
+    @property
+    def image_plane_header(self):
+        """Create and return the Image Plane Header."""
+        # FIXME: Heavy property.....
+        points = self._get_corner_points()
+        new_wcs, naxis = create_wcs_from_points(
+            points, self.pixel_size.to_value(u.mm), "D")
 
         hdr = fits.Header()
         hdr["NAXIS"] = 3
