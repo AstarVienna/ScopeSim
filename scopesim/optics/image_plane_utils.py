@@ -757,7 +757,7 @@ def add_imagehdu_to_imagehdu(image_hdu: fits.ImageHDU,
         canvas_wcs = wcs_suffix
     else:
         wcs_suffix = wcs_suffix or " "
-        canvas_wcs = WCS(canvas_hdu.header, key=wcs_suffix, naxis=2)
+        canvas_wcs = WCS(canvas_hdu.header, key=wcs_suffix)
 
     if isinstance(image_hdu.data, u.Quantity):
         image_hdu.data = image_hdu.data.value
@@ -779,11 +779,16 @@ def add_imagehdu_to_imagehdu(image_hdu: fits.ImageHDU,
                                 spline_order=spline_order,
                                 conserve_flux=conserve_flux)
 
-    img_center = np.array([[new_hdu.header["NAXIS1"],
-                            new_hdu.header["NAXIS2"]]])
+    img_center = np.array([[new_hdu.header[f"NAXIS{i+1}"]
+                           for i in range(new_hdu.header["NAXIS"])]])
     img_center = (img_center - 1) / 2
 
-    new_wcs = WCS(new_hdu.header, key=canvas_wcs.wcs.alt, naxis=2)
+    new_wcs = WCS(
+        new_hdu.header,
+        key=canvas_wcs.wcs.alt,
+        naxis=canvas_wcs.naxis,
+    )
+
     sky_center = new_wcs.wcs_pix2world(img_center, 0)
     if new_wcs.wcs.cunit[0] == "deg":
         sky_center = _fix_360(sky_center)
