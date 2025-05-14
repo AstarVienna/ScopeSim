@@ -176,10 +176,6 @@ class DetectorList(Effect):
                    values=(tuple(zip(xy_sky.min(axis=0),
                                      xy_sky.max(axis=0)))))
 
-        lims = array_minmax(xy_mm)
-        keys = ["xd_min", "xd_max", "yd_min", "yd_max"]
-        obj.detector_limits = dict(zip(keys, lims.T.flatten()))
-
         return obj
 
     def fov_grid(self, which="edges", **kwargs):
