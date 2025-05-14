@@ -863,6 +863,22 @@ class FieldOfView:
             header=self.header)
         canvas_cube_hdu.header["BUNIT"] = "ph s-1 cm-2 AA-1"
 
+        canvas_cube_hdu.header.update({
+            "CDELT3": np.diff(fov_waveset[:2])[0].to_value(u.um),
+            "CRVAL3": fov_waveset[0].value,
+            "CRPIX3": 1,
+            "CUNIT3": "um",
+            "CTYPE3": "WAVE",
+        })
+        # TODO: Add the log wavelength keyword here, if log scale is needed
+
+        if (self.detector_header is not None and
+                self.detector_header["NAXIS"] == 3):  # cube ifu mode
+            # TODO: Find out why not always do that, probably related to this
+            #       "!INST.decouple_detector_from_sky_headers" thingy
+            new_det_wcs = WCS(self.detector_header, key="D")
+            canvas_cube_hdu.header.update(new_det_wcs.to_header())
+
         for field_hdu in self._make_cube_cubefields(fov_waveset):
             canvas_cube_hdu = imp_utils.add_imagehdu_to_imagehdu(
                 field_hdu,
@@ -894,13 +910,6 @@ class FieldOfView:
         # bin_widths = 0.5 * (np.r_[0, bin_widths] + np.r_[bin_widths, 0])
         # canvas_cube_hdu.data *= bin_widths[:, None, None]
 
-        cdelt3 = np.diff(fov_waveset[:2])[0]
-        canvas_cube_hdu.header.update({"CDELT3": cdelt3.to(u.um).value,
-                                       "CRVAL3": fov_waveset[0].value,
-                                       "CRPIX3": 1,
-                                       "CUNIT3": "um",
-                                       "CTYPE3": "WAVE"})
-        # TODO: Add the log wavelength keyword here, if log scale is needed
         return canvas_cube_hdu      # [ph s-1 AA-1 (arcsec-2)]
 
     @property
