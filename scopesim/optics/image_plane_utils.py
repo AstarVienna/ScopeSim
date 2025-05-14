@@ -430,40 +430,47 @@ def overlay_image(small_im, big_im, coords, mask=None, sub_pixel=False):
     if sub_pixel:
         raise NotImplementedError
 
+    if len(coords) != small_im.ndim:
+        coords = np.array([*coords, (big_im.shape[0] - 1) / 2])
+
     # FIXME: this would not be necessary if we used WCS instead of manual 2pix
     coords = np.ceil(np.asarray(coords).round(10)).astype(int)
-    y, x = coords.astype(int)[::-1] - np.array(small_im.shape[-2:]) // 2
+    idx = coords.astype(int)[::-1] - np.array(small_im.shape) // 2
 
     # Image ranges
-    x1, x2 = max(0, x), min(big_im.shape[-1], x + small_im.shape[-1])
-    y1, y2 = max(0, y), min(big_im.shape[-2], y + small_im.shape[-2])
+    idx1 = np.maximum(0, idx)
+    idx2 = np.minimum(big_im.shape, idx + small_im.shape)
 
     # Overlay ranges
-    x1o, x2o = max(0, -x), min(small_im.shape[-1], big_im.shape[-1] - x)
-    y1o, y2o = max(0, -y), min(small_im.shape[-2], big_im.shape[-2] - y)
+    idx1o = np.maximum(0, -idx)
+    idx2o = np.minimum(small_im.shape, big_im.shape - idx)
+
+    # Convert to tuples of slices for indexing
+    idx_slcs = tuple(slice(i1, i2) for i1, i2 in zip(idx1, idx2))
+    idx_slcso = tuple(slice(i1, i2) for i1, i2 in zip(idx1o, idx2o))
 
     # Exit if nothing to do
-    if y1 >= y2 or x1 >= x2 or y1o >= y2o or x1o >= x2o:
+    if (idx1 >= idx2).any() or (idx1o >= idx2o).any():
         return big_im
 
-    if small_im.ndim == 2 and big_im.ndim == 2:
-        small_im_3 = small_im[None, :, :]
-        big_im_3 = big_im[None, :, :]
-    elif small_im.ndim == 3 and big_im.ndim == 3:
-        small_im_3 = small_im
-        big_im_3 = big_im
-    else:
+    if mask is not None:
+        # The mask option was never used anywhere and got complicated.
+        # Keeping the previous code around just in case.
+        # mask = mask[None, idx_slcso[-2:]] * np.ones(small_im_3.shape[-3])
+        # mask = mask.astype(bool)
+        # big_im_3[idx_slcs][mask] = big_im_3[idx_slcs][mask] + \
+        #     small_im_3[idx_slcso][mask]
+        raise NotImplementedError()
+
+    if small_im.ndim == 2 != big_im.ndim == 2:
         raise ValueError(f"Dimensions mismatch between big_im and small_im: "
                          f"{big_im.ndim} : {small_im.ndim}")
 
-    if mask is None:
-        big_im_3[:, y1:y2, x1:x2] = big_im_3[:, y1:y2, x1:x2] + \
-                                    small_im_3[:, y1o:y2o, x1o:x2o]
-    else:
-        mask = mask[None, y1o:y2o, x1o:x2o] * np.ones(small_im_3.shape[-3])
-        mask = mask.astype(bool)
-        big_im_3[:, y1:y2, x1:x2][mask] = big_im_3[:, y1:y2, x1:x2][mask] + \
-                                          small_im_3[:, y1o:y2o, x1o:x2o][mask]
+    # Note: Could also do np.add(big_im, idx_slcs, small_im),
+    #       IF small_im[idx_slcso] == small_im (is that always?)
+    #       Both options modify the original as far as I can tell.
+
+    big_im[idx_slcs] = big_im[idx_slcs] + small_im[idx_slcso]
 
     return big_im
 
