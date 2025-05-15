@@ -6,7 +6,12 @@ from astropy.wcs import WCS
 
 from .image_plane_utils import add_table_to_imagehdu, add_imagehdu_to_imagehdu
 
-from ..utils import from_currsys, has_needed_keywords, get_logger
+from ..utils import (
+    from_currsys,
+    has_needed_keywords,
+    get_logger,
+    zeros_from_header,
+)
 from .. import rc
 
 logger = get_logger(__name__)
@@ -57,12 +62,7 @@ class ImagePlane:
             raise ValueError(f"header must have a valid image-plane WCS: "
                              f"{dict(header)}")
 
-        # image = np.zeros((header["NAXIS2"]+1, header["NAXIS1"]+1))
-        # TODO: find the branch where I made the generalized utils function for that!!!!
-        if header["NAXIS"] == 3:
-            image = np.zeros((header["NAXIS3"], header["NAXIS2"], header["NAXIS1"]))
-        else:
-            image = np.zeros((header["NAXIS2"], header["NAXIS1"]))
+        image = zeros_from_header(header)
         self.hdu = fits.ImageHDU(data=image, header=header)
 
         self._det_wcs = self._get_wcs(header, "D")
