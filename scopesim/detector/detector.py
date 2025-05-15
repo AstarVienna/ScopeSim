@@ -6,7 +6,7 @@ from astropy.wcs import WCS
 from ..optics import ImagePlane
 from ..optics.image_plane_utils import (add_imagehdu_to_imagehdu,
                                         sky_wcs_from_det_wcs)
-from ..utils import get_logger, from_currsys, stringify_dict
+from ..utils import get_logger, from_currsys, stringify_dict, zeros_from_header
 
 
 logger = get_logger(__name__)
@@ -14,8 +14,7 @@ logger = get_logger(__name__)
 
 class Detector:
     def __init__(self, header, cmds=None, **kwargs):
-        image = np.zeros((header["NAXIS2"], header["NAXIS1"]))
-        self._hdu = ImageHDU(header=header, data=image)
+        self._hdu = ImageHDU(header=header, data=zeros_from_header(header))
         self.meta = {}
         self.meta.update(header)
         self.meta.update(kwargs)
@@ -45,7 +44,8 @@ class Detector:
 
         pixel_scale = from_currsys("!INST.pixel_scale", self.cmds)
         plate_scale = from_currsys("!INST.plate_scale", self.cmds)
-        if pixel_scale == 0 or plate_scale == 0:
+        if (pixel_scale == 0 or plate_scale == 0
+                or self._hdu.header["NAXIS"] == 3):
             logger.warning("Could not create sky WCS.")
         else:
             sky_wcs, _ = sky_wcs_from_det_wcs(

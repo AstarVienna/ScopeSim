@@ -366,6 +366,14 @@ class FieldOfView:
         #     np.testing.assert_array_equal(roundtrip[1], new_naxis - [1, 1])
         # except AssertionError:
         #     logger.exception("WCS roundtrip assertion failed.")
+        # FIXME: Related to the above, this sometimes fails:
+        # np.testing.assert_equal(xy1p - xy0p, new_naxis)
+        # This occurs when the floor and ceil in xy0s and xy1s produce an
+        # off-by-one error. Using .round instead for both would solve things
+        # in those cases, but breaks in other cases. Find a proper solution!
+        # Note: This is not super fatal, because the resulting projections
+        #       will trim off that extra pixel later on, but this should still
+        #       be addressed.
 
         new_hdr = new_wcs.to_header()
         new_hdr.update({"NAXIS1": new_naxis[0], "NAXIS2": new_naxis[1]})
@@ -432,7 +440,7 @@ class FieldOfView:
             "NAXIS": 3,
             "NAXIS3": data.shape[0],
             "CRVAL3": round(hdu_waves[i0p], 11),
-            "CRPIX3": 0,
+            "CRPIX3": 1,  # 1 because FITS
             "CDELT3": hdr["CDELT3"],
             "CUNIT3": hdr["CUNIT3"],
             "CTYPE3": hdr["CTYPE3"],
@@ -843,7 +851,17 @@ class FieldOfView:
         fov_waveset = np.arange(
             self.meta["wave_min"].value, self.meta["wave_max"].value,
             from_currsys("!SIM.spectral.spectral_bin_width", self.cmds)) * wave_unit
-        fov_waveset = fov_waveset.to(u.um)
+
+        # Note: There is an edge case where some floating point madness
+        #       results in the arange ticking over by another bin by just
+        #       .000000000005 (yeah...), which creates and off-by-one error
+        #       further down the line.
+        # TODO: Find a better way to solve this, perhaps with linspace...
+        n_wave = int(
+            (self.meta["wave_max"].value - self.meta["wave_min"].value) /
+            from_currsys("!SIM.spectral.spectral_bin_width", self.cmds)
+        )
+        fov_waveset = fov_waveset[:n_wave].to(u.um)
 
         # TODO: what's with this code??
         # fov_waveset = self.waveset
@@ -862,6 +880,24 @@ class FieldOfView:
                            self.header["NAXIS1"])),
             header=self.header)
         canvas_cube_hdu.header["BUNIT"] = "ph s-1 cm-2 AA-1"
+
+        canvas_cube_hdu.header.update({
+            "CDELT3": np.diff(fov_waveset[:2])[0].to_value(u.um),
+            "CRVAL3": fov_waveset[0].value,
+            "CRPIX3": 1,
+            "CUNIT3": "um",
+            "CTYPE3": "WAVE",
+        })
+        # TODO: Add the log wavelength keyword here, if log scale is needed
+
+        if (self.detector_header is not None and
+                self.detector_header["NAXIS"] == 3):  # cube ifu mode
+            # TODO: Find out why not always do that, probably related to this
+            #       "!INST.decouple_detector_from_sky_headers" thingy
+            new_det_wcs = WCS(self.detector_header, key="D")
+            canvas_cube_hdu.header.update(new_det_wcs.to_header())
+
+            assert canvas_cube_hdu.header["NAXIS3"] == self.detector_header["NAXIS3"]
 
         for field_hdu in self._make_cube_cubefields(fov_waveset):
             canvas_cube_hdu = imp_utils.add_imagehdu_to_imagehdu(
@@ -894,13 +930,6 @@ class FieldOfView:
         # bin_widths = 0.5 * (np.r_[0, bin_widths] + np.r_[bin_widths, 0])
         # canvas_cube_hdu.data *= bin_widths[:, None, None]
 
-        cdelt3 = np.diff(fov_waveset[:2])[0]
-        canvas_cube_hdu.header.update({"CDELT3": cdelt3.to(u.um).value,
-                                       "CRVAL3": fov_waveset[0].value,
-                                       "CRPIX3": 1,
-                                       "CUNIT3": "um",
-                                       "CTYPE3": "WAVE"})
-        # TODO: Add the log wavelength keyword here, if log scale is needed
         return canvas_cube_hdu      # [ph s-1 AA-1 (arcsec-2)]
 
     @property

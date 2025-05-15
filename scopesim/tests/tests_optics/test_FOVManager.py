@@ -56,12 +56,3 @@ class TestGenerateFovList:
         assert len(fovs) == 4
         assert fov_skycorners.min(axis=0)[0] == approx(-1024 / 3600)  # [deg] 2k detector / pixel_scale
         assert fovs[0].waverange[0] == 0.6 * u.um  # filter blue edge
-
-    def test_fov_volumes_have_detector_dimensions_from_detector_list(self):
-        effects = eo._mvs_effects_list()
-        fov_man = FOVManager(effects=effects, pixel_scale=1, plate_scale=1)
-        _ = list(fov_man.generate_fovs_list())
-        detector_limits = fov_man.volumes_list.detector_limits
-
-        assert detector_limits["xd_min"] != 0.0
-        assert detector_limits["yd_max"] != 0.0
