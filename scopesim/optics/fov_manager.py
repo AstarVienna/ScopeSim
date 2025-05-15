@@ -169,10 +169,12 @@ class FOVManager:
 
             # useful for spectroscopy mode where slit dimensions is not the same
             # as detector dimensions
-            # ..todo: Make sure this changes for multiple image planes
+            # TODO: Make sure this changes for multiple image planes
             if from_currsys(self.meta["decouple_sky_det_hdrs"], self.cmds):
                 det_eff = eu.get_all_effects(self.effects, DetectorList)[0]
                 dethdr = det_eff.image_plane_header
+                # TODO: Why is this .image_plane_header and not
+                #       .detector_headers()[0] or something?
 
             yield FieldOfView(skyhdr,
                               waverange,

@@ -264,6 +264,8 @@ class DetectorList(Effect):
 
     def detector_headers(self, ids=None):
         """Create detector headers from active detectors or given IDs."""
+        # Note: the ids argument is not used anywhere in ScopeSim.
+
         if ids is not None and all(isinstance(ii, int) for ii in ids):
             self.meta["active_detectors"] = list(ids)
 
@@ -476,3 +478,7 @@ class DetectorList3D(DetectorList):
         hdr["IMGPLANE"] = self.image_plane_id
 
         return hdr
+
+    def detector_headers(self, ids=None):
+        """Override for simplified 3D case."""
+        return [self.image_plane_header]
