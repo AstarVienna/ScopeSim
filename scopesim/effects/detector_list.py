@@ -214,26 +214,28 @@ class DetectorList(Effect):
 
     def fov_grid(self, which="edges", **kwargs):
         """Return an ApertureMask object. kwargs are "pixel_scale" [arcsec]."""
-        warnings.warn("The fov_grid method is deprecated and will be removed "
-                      "in a future release.", DeprecationWarning, stacklevel=2)
-        aperture_mask = None
-        if which == "edges":
-            self.meta.update(kwargs)
-            self.meta = from_currsys(self.meta, self.cmds)
+        # This has really been taken care of by apply_to now
+        # TODO v1.0: finally rm this completely
+        raise AttributeError("The DetectorList.fov_grid() method has been "
+                             "removed in vPLACEHOLDER_NEXT_RELEASE_VERSION.")
+        # aperture_mask = None
+        # if which == "edges":
+        #     self.meta.update(kwargs)
+        #     self.meta = from_currsys(self.meta, self.cmds)
 
-            hdr = self.image_plane_header
-            xy_mm = calc_footprint(hdr, "D")
-            pixel_size = hdr["CDELT1D"]              # mm
-            pixel_scale = self.meta["pixel_scale"]   # ["]
+        #     hdr = self.image_plane_header
+        #     xy_mm = calc_footprint(hdr, "D")
+        #     pixel_size = hdr["CDELT1D"]              # mm
+        #     pixel_scale = self.meta["pixel_scale"]   # ["]
 
-            # x["] = x[mm] * ["] / [mm]
-            xy_sky = xy_mm * pixel_scale / pixel_size
+        #     # x["] = x[mm] * ["] / [mm]
+        #     xy_sky = xy_mm * pixel_scale / pixel_size
 
-            aperture_mask = ApertureMask(array_dict={"x": xy_sky[:, 0],
-                                                     "y": xy_sky[:, 1]},
-                                         pixel_scale=pixel_scale)
+        #     aperture_mask = ApertureMask(array_dict={"x": xy_sky[:, 0],
+        #                                              "y": xy_sky[:, 1]},
+        #                                  pixel_scale=pixel_scale)
 
-        return aperture_mask
+        # return aperture_mask
 
     @property
     def image_plane_header(self):

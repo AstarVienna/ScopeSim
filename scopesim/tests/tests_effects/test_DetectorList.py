@@ -154,24 +154,6 @@ class TestDetecotrHeaders:
             assert hdr["NAXIS2"] == 32
 
 
-@pytest.mark.usefixtures("patch_mock_path_micado")
-class TestFovGrid:
-    def test_returns_aperture_mask_object(self):
-        det_list = DetectorList(filename="FPA_array_layout.dat",
-                                image_plane_id=0)
-        apm = det_list.fov_grid(pixel_scale=0.004)
-        assert isinstance(apm, ApertureMask)
-
-    def test_aperture_mask_header_covers_all_of_detector_header(self):
-        det_list = DetectorList(filename="FPA_array_layout.dat",
-                                image_plane_id=0)
-        apm = det_list.fov_grid(pixel_scale=0.004)
-        apm_hdr = apm.header
-        det_hdr = det_list.image_plane_header
-        assert apm_hdr["NAXIS1"] == det_hdr["NAXIS1"]
-        assert apm_hdr["NAXIS2"] == det_hdr["NAXIS2"]
-
-
 class TestDetectorWindowInit:
     def test_throws_error_when_initialises_with_nothing(self):
         with pytest.raises(TypeError):
