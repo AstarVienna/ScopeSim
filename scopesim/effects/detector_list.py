@@ -9,7 +9,6 @@ above. The effects here (or one of them) are what ScopeSim "actually needs" to
 have defined in order to run.
 """
 
-import warnings
 from typing import ClassVar
 
 import numpy as np
@@ -19,7 +18,6 @@ from astropy.table import Table
 
 from ..optics.fov_volume_list import FovVolumeList
 from .effects import Effect
-from .apertures import ApertureMask
 from ..optics.image_plane_utils import (
     header_from_list_of_xy,
     calc_footprint,
@@ -29,7 +27,6 @@ from ..utils import (
     from_currsys,
     close_loop,
     figure_factory,
-    array_minmax,
     quantity_from_table,
     unit_from_table,
     get_logger,
@@ -133,6 +130,7 @@ class DetectorList(Effect):
 
     """
 
+    dims = "xy"  # 2 spatial dimensions
     z_order: ClassVar[tuple[int, ...]] = (90, 290, 390, 490)
     report_plot_include: ClassVar[bool] = True
     report_table_include: ClassVar[bool] = True
@@ -169,6 +167,36 @@ class DetectorList(Effect):
         obj.shrink(axis=shrink_axis, values=shrink_values)
 
         return obj
+
+    @property
+    def pixel_size(self) -> u.Quantity[u.mm]:
+        """Return size of one pixel in mm."""
+        # TODO: put this in base class, chk name conflicts
+        pixel_size = np.min(
+            quantity_from_table("pixel_size", self.active_table, u.mm))
+        return pixel_size
+
+    @property
+    def pixel_scale_mm(self) -> u.Equivalency:
+        """Return pixel scale (mm / pix) as equivalency."""
+        # TODO: put this in base class, chk name conflicts
+        return u.pixel_scale(self.pixel_size / u.pixel)
+
+    def _get_pixel_scale_arcsec(self, **kwargs) -> u.Equivalency:
+        """To allow overriding defaults, but use defaults in property."""
+        pixel_scale = u.pixel_scale(
+            from_currsys(
+                kwargs.get("pixel_scale", self.meta["pixel_scale"]),
+                self.cmds,
+            ) << u.arcsec / u.pixel
+        )
+        return pixel_scale
+
+    @property
+    def pixel_scale_arcsec(self) -> u.Equivalency:
+        """Return pixel scale (arcsec / pix) as equivalency."""
+        # TODO: put this in base class, chk name conflicts
+        return self._get_pixel_scale_arcsec()
 
     def _get_fov_limits(self, **kwargs):
         hdr = self.image_plane_header
@@ -383,7 +411,12 @@ class DetectorWindow(DetectorList):
 
 
 class DetectorList3D(DetectorList):
-    """Pseudo-detector for simple IFU mode."""
+    """Pseudo-detector for simple IFU mode.
+
+    .. versionadded:: PLACEHOLDER_NEXT_RELEASE_VERSION
+    """
+
+    dims = "xyz"  # 2 spatial dimensions, 1 spectral dimension
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -396,76 +429,63 @@ class DetectorList3D(DetectorList):
         self.meta.update(params)
         self.meta.update(kwargs)
 
+    @property
+    def waverange(self) -> u.Quantity[u.um]:
+        """Return wavelength range in um [wave_min, wave_max]."""
+        # TODO: dynamic wave unit ?
+        wave_points = self._get_corner_points()[:, 2]
+        wave_mid = from_currsys(self.meta["wavelen"], self.cmds) * u.um
+        dwave = from_currsys(self.meta["dwave"], self.cmds) * u.um / u.pixel
+
+        with u.set_enabled_equivalencies(self.pixel_scale_mm):
+            waverange = wave_points.to(u.pixel) * dwave + wave_mid
+        return waverange
+
     def _get_fov_limits(self, **kwargs):
-        points = self._get_corner_points() * u.mm
-        pixel_size = self.pixel_size / u.pixel
-        pixel_scale = u.pixel_scale(
-            from_currsys(
-                kwargs.get("pixel_scale", self.meta["pixel_scale"]),
-                self.cmds,
-            ) << u.arcsec / u.pixel
-        )
+        sky_points = self._get_corner_points()[:, :2]
+        pixel_scale = self._get_pixel_scale_arcsec(**kwargs)
 
-        with u.set_enabled_equivalencies(pixel_scale):
-            xy_sky = (points[:, :2] / pixel_size).to_value(u.arcsec)
-
-        wave_mid = from_currsys(
-            kwargs.get("wavelen", self.meta["wavelen"]),
-            self.cmds,
-        ) * u.um  # TODO: dynamic wave unit
-        dwave = from_currsys(
-            kwargs.get("dwave", self.meta["dwave"]),
-            self.cmds,
-        ) * u.um / u.pixel  # TODO: dynamic wave unit
-        wave_shrink = points[:, 2] / pixel_size * dwave + wave_mid
+        with u.set_enabled_equivalencies(pixel_scale + self.pixel_scale_mm):
+            xy_sky = (sky_points << u.pixel).to_value(u.arcsec)
 
         axis = ["x", "y", "wave"]
         values = (
             *zip(xy_sky.min(axis=0), xy_sky.max(axis=0)),
-            tuple(wave_shrink.to_value(u.um).round(7))
+            tuple(self.waverange.to_value(u.um).round(7))
         )
 
-        return axis, values
+        return axis, values  # [arcsec, arcsec, um]
 
     def _get_corner_points(self):
         tbl = self.active_table
-        pixel_scale = u.pixel_scale(self.pixel_size / u.pixel)
-
-        with u.set_enabled_equivalencies(pixel_scale):
+        with u.set_enabled_equivalencies(self.pixel_scale_mm):
             cens = {
                 dim: (tbl[f"{dim}_cen"].data.astype(float) *
                       unit_from_table(f"{dim}_cen", tbl, u.mm) << u.mm)
-                for dim in "xyz"
+                for dim in self.dims
             }
 
             ds = {
                 dim: (0.5 * tbl[f"{dim}_size"].data.astype(float) *
                       unit_from_table(f"{dim}_size", tbl, u.mm) << u.mm)
-                for dim in "xyz"
+                for dim in self.dims
             }
 
-        det_mins = {dim: np.min(cens[dim] - ds[dim]) for dim in "xyz"}
-        det_maxs = {dim: np.max(cens[dim] + ds[dim]) for dim in "xyz"}
+        det_mins = {dim: np.min(cens[dim] - ds[dim]) for dim in self.dims}
+        det_maxs = {dim: np.max(cens[dim] + ds[dim]) for dim in self.dims}
 
         points = np.array([
-            [det_mins[dim].to_value(u.mm) for dim in "xyz"],
-            [det_maxs[dim].to_value(u.mm) for dim in "xyz"],
+            [det_mins[dim].to_value(u.mm) for dim in self.dims],
+            [det_maxs[dim].to_value(u.mm) for dim in self.dims],
         ])
 
-        return points
-
-    @property
-    def pixel_size(self):
-        # TODO: put this in base class, chk name conflicts
-        pixel_size = np.min(
-            quantity_from_table("pixel_size", self.active_table, u.mm))
-        return pixel_size
+        return points * u.mm
 
     @property
     def image_plane_header(self):
         """Create and return the Image Plane Header."""
         # FIXME: Heavy property.....
-        points = self._get_corner_points()
+        points = self._get_corner_points().value
         new_wcs, naxis = create_wcs_from_points(
             points, self.pixel_size.to_value(u.mm), "D")
 
