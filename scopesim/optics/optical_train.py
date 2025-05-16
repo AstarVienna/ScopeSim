@@ -288,6 +288,9 @@ class OpticalTrain:
                     self.image_planes[fov.image_plane_id].add(fov.hdu, wcs_suffix="D")
                 else:  # cube output
                     self.image_planes[fov.image_plane_id].add(fov.hdu, wcs_suffix="D")
+                    # HACK: to get sky WCS from FOV into image plane...
+                    self.image_planes[fov.image_plane_id].header.update(
+                        WCS(fov.hdu).to_header())
 
                 # ..todo: finish off the multiple image plane stuff
 

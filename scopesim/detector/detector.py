@@ -31,6 +31,14 @@ class Detector:
         self._hdu = add_imagehdu_to_imagehdu(
             image_plane.hdu, self.hdu, spline_order, wcs_suffix="D")
 
+        # HACK: to get sky WCS from image plane into detector...
+        if self._hdu.header["NAXIS"] == 3:
+            sky_wcs = WCS(image_plane.hdu)
+            # HACK: hardcode force back to celestial, this isn't great but will
+            #       have to do for now
+            sky_wcs.wcs.ctype = ["RA---TAN", "DEC--TAN", "WAVE"]
+            self.header.update(sky_wcs.to_header())
+
     def reset(self):
         """Reset internal HDU data to all-zeros-array."""
         # The detector might have been converted to integers by the
