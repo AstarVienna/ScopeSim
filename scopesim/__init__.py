@@ -1,13 +1,14 @@
 """Generalised telescope observation simulator."""
 
 from importlib import metadata
+from packaging.version import parse
 
 ###############################################################################
 #                          VERSION INFORMATION                                #
 ###############################################################################
 
 try:
-    __version__ = metadata.version(__package__)
+    __version__ = parse(metadata.version(__package__))
 except metadata.PackageNotFoundError:
     __version__ = "undetermined"
 
