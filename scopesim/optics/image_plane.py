@@ -133,11 +133,9 @@ class ImagePlane:
                      "to ImagePlane.add() will raise an error in the future. "
                      "Use FOV to add tables and image HDUs together before.",
                      DeprecationWarning, stacklevel=2)
-                self.hdu.header["COMMENT"] = "Adding files from table"
                 self.hdu = add_table_to_imagehdu(hdus_or_tables, self.hdu,
                                                  sub_pixel, wcs_suffix)
             elif isinstance(hdus_or_tables, fits.ImageHDU):
-                self.hdu.header["COMMENT"] = "Adding files from table"
                 self.hdu = add_imagehdu_to_imagehdu(hdus_or_tables, self.hdu,
                                                     spline_order, wcs_suffix)
 
