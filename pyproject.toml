@@ -33,6 +33,7 @@ lxml = "^5.2.2"
 pyyaml = "^6.0.1"
 more-itertools = "^10.2.0"
 tqdm = "^4.66.5"
+packaging = ">=23.2"
 
 synphot = "^1.5.0"
 skycalc-ipy = ">=0.5.1"

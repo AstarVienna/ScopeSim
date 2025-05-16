@@ -9,11 +9,12 @@ from typing import Any
 
 import yaml
 import httpx
+from packaging.version import parse
 
 from astar_utils import NestedMapping, RecursiveNestedMapping, NestedChainMap
 from astar_utils.nested_mapping import recursive_update, is_bangkey
 
-from .. import rc
+from .. import rc, __version__
 from ..utils import find_file, top_level_catch, get_logger
 
 
@@ -221,6 +222,8 @@ class UserCommands(NestedChainMap):
                     "instrument, use with care."
                 )
 
+            check_version(yaml_dict)
+
         logger.debug("      dict yaml done")
 
     def _load_yamls(self, yamls: Collection) -> None:
@@ -389,6 +392,8 @@ class UserCommands(NestedChainMap):
                     raise NotImplementedError(
                         f"Instrument mode '{mode}' is not yet supported."
                     )
+
+                check_version(self.modes_dict[mode], mode=mode)
 
         # Note: This used to completely reset the instance via the line below.
         #       Calling init like this is bad design, so I replaced is with a
@@ -602,3 +607,17 @@ def list_local_packages(action="display"):
         print(msg)
     else:
         return main_pkgs, ext_pkgs
+
+
+def check_version(yaml_dict, mode=None):
+    try:
+        needs_scopesim = parse(yaml_dict.get("needs_scopesim"))
+        if __version__ < needs_scopesim:
+            msg = f"Mode {mode}" if mode else "The selected instrument package"
+            raise NotImplementedError(
+                f"{msg} requires ScopeSim version {needs_scopesim}, but "
+                f"version {__version__} is installed. Please update your "
+                "ScopeSim installation by running 'pip install -U scopesim'."
+            )
+    except TypeError:  # needs_scopesim key not present -> None
+        pass
