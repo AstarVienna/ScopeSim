@@ -1,4 +1,7 @@
-import numpy as np
+# -*- coding: utf-8 -*-
+"""Contains ``ImagePlane`` class."""
+
+from warnings import warn
 
 from astropy.io import fits
 from astropy.table import Table
@@ -90,6 +93,11 @@ class ImagePlane:
             - `x`, `y`: `arcsec`
             - `flux` : `ph / s / pix`
 
+        .. versionchanged:: PLACEHOLDER_NEXT_RELEASE_VERSION
+
+           Adding a table directly to the ImagePlane is deprecated. Use FOV to
+           add tables and image HDUs together before adding them to here.
+
         Parameters
         ----------
         hdus_or_tables : `fits.ImageHDU` or `astropy.Table`
@@ -118,6 +126,11 @@ class ImagePlane:
                 self.add(hdu_or_table, sub_pixel, spline_order, wcs_suffix)
         else:
             if isinstance(hdus_or_tables, Table):
+                warn("Adding a table directly to the ImagePlane is deprecated "
+                     "since vPLACEHOLDER_NEXT_RELEASE_VERSION. Passing a table "
+                     "to ImagePlane.add() will raise an error in the future. "
+                     "Use FOV to add tables and image HDUs together before.",
+                     DeprecationWarning, stacklevel=2)
                 self.hdu.header["COMMENT"] = "Adding files from table"
                 self.hdu = add_table_to_imagehdu(hdus_or_tables, self.hdu,
                                                  sub_pixel, wcs_suffix)
