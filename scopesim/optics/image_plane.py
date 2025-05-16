@@ -122,6 +122,7 @@ class ImagePlane:
             spline_order = from_currsys("!SIM.computing.spline_order", self.cmds)
 
         if isinstance(hdus_or_tables, (list, tuple)):
+            logger.debug("Adding multiple HDUs to ImagePlane.")
             for hdu_or_table in hdus_or_tables:
                 self.add(hdu_or_table, sub_pixel, spline_order, wcs_suffix)
         else:
@@ -134,6 +135,8 @@ class ImagePlane:
                 self.hdu = add_table_to_imagehdu(hdus_or_tables, self.hdu,
                                                  sub_pixel, wcs_suffix)
             elif isinstance(hdus_or_tables, fits.ImageHDU):
+                logger.debug("Adding HDU with shape %d to ImagePlane.",
+                             hdus_or_tables.data.shape)
                 self.hdu = add_imagehdu_to_imagehdu(hdus_or_tables, self.hdu,
                                                     spline_order, wcs_suffix)
 
