@@ -962,6 +962,8 @@ class TestImagePlaneAdd:
 
         assert np.sum(implane.data) == approx(orig_sum, rel=1e-2)
 
+    # TODO: rm this test once deprecation is complete
+    @pytest.mark.filterwarnings("ignore:Adding a table directly*:DeprecationWarning")
     def test_simple_add_table_conserves_flux(self, image_hdu_rect):
         x = [75, -75]*u.arcsec
         y = [0, 0]*u.arcsec
@@ -975,6 +977,8 @@ class TestImagePlaneAdd:
         implane.add(tbl)
         assert np.isclose(np.sum(implane.data), np.sum(flux.value))
 
+    # TODO: rm this test once deprecation is complete
+    @pytest.mark.filterwarnings("ignore:Adding a table directly*:DeprecationWarning")
     def test_compound_add_image_and_table_conserves_flux(self, image_hdu_rect):
         x = [75, -75]*u.arcsec
         y = [0, 0]*u.arcsec

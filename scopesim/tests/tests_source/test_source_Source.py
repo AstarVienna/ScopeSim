@@ -262,10 +262,14 @@ class TestSourceAddition:
 
 
 class TestSourceImageInRange:
+    # TODO: figure out why this occurs here, then solve it
+    @pytest.mark.filterwarnings("ignore:Adding a table directly*:DeprecationWarning")
     def test_returns_an_image_plane_object(self, table_source):
         im = table_source.image_in_range(1*u.um, 2*u.um)
         assert isinstance(im, ImagePlane)
 
+    # TODO: figure out why this occurs here, then solve it
+    @pytest.mark.filterwarnings("ignore:Adding a table directly*:DeprecationWarning")
     def test_flux_from_table_on_image_is_as_expected(self, table_source):
         ph = table_source.photons_in_range(1*u.um, 2*u.um)
         ref = table_source.fields[0]["ref"]

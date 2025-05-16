@@ -1,3 +1,8 @@
+# -*- coding: utf-8 -*-
+"""Contains ``ImagePlane`` class."""
+
+from warnings import warn
+
 import numpy as np
 
 from astropy.io import fits
@@ -7,7 +12,6 @@ from astropy.wcs import WCS
 from .image_plane_utils import add_table_to_imagehdu, add_imagehdu_to_imagehdu
 
 from ..utils import from_currsys, has_needed_keywords, get_logger
-from .. import rc
 
 logger = get_logger(__name__)
 
@@ -47,8 +51,7 @@ class ImagePlane:
     def __init__(self, header, cmds=None, **kwargs):
 
         self.cmds = cmds
-        max_seg_size = rc.__config__["!SIM.computing.max_segment_size"]
-        self.meta = {"SIM_MAX_SEGMENT_SIZE": max_seg_size}
+        self.meta = {}
         self.meta.update(kwargs)
         self.id = header["IMGPLANE"] if "IMGPLANE" in header else 0
 
@@ -90,6 +93,11 @@ class ImagePlane:
             - `x`, `y`: `arcsec`
             - `flux` : `ph / s / pix`
 
+        .. versionchanged:: PLACEHOLDER_NEXT_RELEASE_VERSION
+
+           Adding a table directly to the ImagePlane is deprecated. Use FOV to
+           add tables and image HDUs together before adding them to here.
+
         Parameters
         ----------
         hdus_or_tables : `fits.ImageHDU` or `astropy.Table`
@@ -114,15 +122,21 @@ class ImagePlane:
             spline_order = from_currsys("!SIM.computing.spline_order", self.cmds)
 
         if isinstance(hdus_or_tables, (list, tuple)):
+            logger.debug("Adding multiple HDUs to ImagePlane.")
             for hdu_or_table in hdus_or_tables:
                 self.add(hdu_or_table, sub_pixel, spline_order, wcs_suffix)
         else:
             if isinstance(hdus_or_tables, Table):
-                self.hdu.header["COMMENT"] = "Adding files from table"
+                warn("Adding a table directly to the ImagePlane is deprecated "
+                     "since vPLACEHOLDER_NEXT_RELEASE_VERSION. Passing a table "
+                     "to ImagePlane.add() will raise an error in the future. "
+                     "Use FOV to add tables and image HDUs together before.",
+                     DeprecationWarning, stacklevel=2)
                 self.hdu = add_table_to_imagehdu(hdus_or_tables, self.hdu,
                                                  sub_pixel, wcs_suffix)
             elif isinstance(hdus_or_tables, fits.ImageHDU):
-                self.hdu.header["COMMENT"] = "Adding files from table"
+                logger.debug("Adding HDU with shape %d to ImagePlane.",
+                             hdus_or_tables.data.shape)
                 self.hdu = add_imagehdu_to_imagehdu(hdus_or_tables, self.hdu,
                                                     spline_order, wcs_suffix)
 
