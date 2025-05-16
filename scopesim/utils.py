@@ -348,6 +348,8 @@ def zeros_from_header(
     """
     Create all-zero array of the shape given by NAXISn keywords in `header`.
 
+    .. versionadded:: PLACEHOLDER_NEXT_RELEASE_VERSION
+
     Parameters
     ----------
     header : fits.Header
