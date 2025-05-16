@@ -464,7 +464,8 @@ class FieldOfView:
             fluxes = field.data.sum(axis=(1, 2))
             fov_waveset_fluxes = np.interp(self.waveset, hdu_waveset, fluxes)
 
-            field_unit = field.header.get("BUNIT", PHOTLAM)
+            # .lower() is needed because astropy doesn't recognize PHOTLAM
+            field_unit = field.header.get("BUNIT", PHOTLAM).lower()
             flux_scale_factor = u.Unit(field_unit).to(PHOTLAM)
 
             yield fov_waveset_fluxes * flux_scale_factor
@@ -689,6 +690,8 @@ class FieldOfView:
         canvas_image_hdu.data = sum(
             self._make_image_backfields(fov_waveset, bin_widths, use_photlam),
             start=canvas_image_hdu.data)
+
+        canvas_image_hdu.header["BUNIT"] = "ph s-1 pixel-1"
         return canvas_image_hdu  # [ph s-1 pixel-1]
 
     def _make_cube_cubefields(self, fov_waveset):
@@ -818,7 +821,7 @@ class FieldOfView:
         3. Find Image fields (see ``FieldOfView._make_cube_imagefields()``).
         4. Find Table fields (see ``FieldOfView._make_cube_tablefields()``).
 
-        ``PHOTLAM = ph / (s * m2 * um)``.
+        ``PHOTLAM = ph / (cm2 * s * AA)``.
         Original source fields are in units of:
 
         - tables: (PHOTLAM in spectrum)
@@ -861,7 +864,7 @@ class FieldOfView:
                            self.header["NAXIS2"],
                            self.header["NAXIS1"])),
             header=self.header)
-        canvas_cube_hdu.header["BUNIT"] = "ph s-1 cm-2 AA-1"
+        # canvas_cube_hdu.header["BUNIT"] = "ph s-1 cm-2 AA-1"
 
         for field_hdu in self._make_cube_cubefields(fov_waveset):
             canvas_cube_hdu = imp_utils.add_imagehdu_to_imagehdu(
@@ -900,8 +903,9 @@ class FieldOfView:
                                        "CRPIX3": 1,
                                        "CUNIT3": "um",
                                        "CTYPE3": "WAVE"})
+        canvas_cube_hdu.header["BUNIT"] = "ph s-1 um-1 arcsec-2"
         # TODO: Add the log wavelength keyword here, if log scale is needed
-        return canvas_cube_hdu      # [ph s-1 AA-1 (arcsec-2)]
+        return canvas_cube_hdu      # [ph s-1 um-1 (arcsec-2)]
 
     @property
     def data(self):
