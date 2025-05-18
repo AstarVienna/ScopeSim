@@ -33,13 +33,22 @@ effects:
   description: Virtual 3D detector for simulating reduced ifu cubes
   include: "!OBS.include_det_3d"
   kwargs:
+    x_size_unit: pixel
+    y_size_unit: pixel
+    z_size_unit: pixel
     image_plane_id: 0
-    pixel_size: 0.01
-    x: "!DET.x"
-    y: "!DET.y"
-    width: "!DET.width"
-    height: "!DET.height"
-    units: pixel
+    pixel_scale: 0.5
+    array_dict:
+      id: [0]
+      x_cen: [0]
+      y_cen: [0]
+      z_cen: [0]
+      x_size: [15]
+      y_size: [25]
+      z_size: [5]
+      pixel_size: [0.01]
+      angle: [0]
+      gain: [1]
 
 - name : qe_curve
   description : Quantum efficiency curve (pseudo transmission curve)

@@ -22,3 +22,12 @@ properties:
     wave_mid: 2.1
     wave_max: 2.5
     spectral_bin_width: !!float 9E-4
+
+---
+
+name: config_overrides
+alias: INST
+description: INST config param overrides
+
+properties:
+  flatten: False

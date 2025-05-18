@@ -218,6 +218,35 @@ class TestObserveIfuMode:
             plt.show()
 
 
+@pytest.mark.slow
+@pytest.mark.usefixtures("protect_currsys", "patch_all_mock_paths")
+class TestObserveSimpleIfuMode:
+    def test_runs(self):
+        wave = np.arange(0.7, 2.5, 0.001)
+        spec = np.zeros_like(wave)
+        spec[25::50] += 100      # every 0.05µm, offset by 0.025µm
+        x = np.tile(np.arange(-4, 5, 2), 5)
+        y = np.repeat(np.arange(-4, 5, 2), 5)
+        src = sim.Source(lam=wave*u.um, spectra=spec,
+                         x=x, y=y, ref=[0]*len(x), weight=[1e-3]*len(x))
+
+        cmd = sim.UserCommands(
+            use_instrument="basic_instrument",
+            set_modes=["simple_ifu"],
+            ignore_effects=SWITCHOFF,
+        )
+        opt = sim.OpticalTrain(cmd)
+
+        opt.observe(src)
+        hdul = opt.readout()[0]
+
+        imp_im = opt.image_planes[0].data
+        det_im = hdul[1].data
+
+        assert imp_im.ndim == 3
+        assert det_im.ndim == 3
+
+
 @pytest.mark.usefixtures("protect_currsys", "patch_all_mock_paths")
 class TestFitsHeader:
     def test_source_keywords_in_header(self):
