@@ -18,6 +18,20 @@ effects:
 - name: detector_window
   class: DetectorWindow
   description: Cut-out of the focal plane image with custom dimensions and coordinates
+  include: "!OBS.include_det_window"
+  kwargs:
+    image_plane_id: 0
+    pixel_size: 0.01
+    x: "!DET.x"
+    y: "!DET.y"
+    width: "!DET.width"
+    height: "!DET.height"
+    units: pixel
+
+- name: detector_3d
+  class: DetectorList3D
+  description: Virtual 3D detector for simulating reduced ifu cubes
+  include: "!OBS.include_det_3d"
   kwargs:
     image_plane_id: 0
     pixel_size: 0.01
@@ -84,3 +98,12 @@ effects:
   class : ExtraFitsKeywords
   kwargs :
     filename: FITS_extra_keywords.yaml
+
+---
+
+name: config_overrides
+alias: OBS
+description: OBS config param overrides
+
+properties:
+  wavelen: 2.1
