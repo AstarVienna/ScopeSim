@@ -3,7 +3,7 @@ from unittest.mock import patch
 
 from astropy.table import Table
 
-from scopesim.effects import DetectorList, DetectorWindow, ApertureMask
+from scopesim.effects import DetectorList, DetectorWindow, DetectorList3D
 
 
 @pytest.fixture(scope="class")
@@ -195,3 +195,30 @@ class TestDetectorWindowInit:
                                  width="!DET.width", units="pixel")
             assert det.image_plane_header["NAXIS1"] == 42
             assert det.detector_headers()[0]["NAXIS1"] == 42
+
+
+@pytest.mark.usefixtures("patch_all_mock_paths")
+class TestDetectorList3D:
+    def test_load_from_kwargs(self):
+        det_list = DetectorList3D(array_dict={
+            "id": [0],
+            "x_cen": [0],
+            "y_cen": [0],
+            "z_cen": [0],
+            "x_size": [15],
+            "y_size": [25],
+            "z_size": [5],
+            "pixsize": [0.01],
+            "angle": [0],
+            "gain": [1]},
+            x_size_unit="pixel",
+            y_size_unit="pixel",
+            z_size_unit="pixel",
+            image_plane_id=0,
+        )
+        impl_hdr = det_list.image_plane_header
+
+        assert impl_hdr["NAXIS"] == 3
+        assert impl_hdr["NAXIS1"] == 15
+        assert impl_hdr["NAXIS2"] == 25
+        assert impl_hdr["NAXIS3"] == 5
