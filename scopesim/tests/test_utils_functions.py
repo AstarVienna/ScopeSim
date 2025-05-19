@@ -275,3 +275,42 @@ def test_setting_instpkgspath():
 def test_unit_includes_per_physical_type():
     unit = u.Unit("photlam") / u.arcsec**2
     assert utils.unit_includes_per_physical_type(unit, "solid angle")
+
+
+class TestZerosFromHeader:
+    def test_1d(self):
+        hdr = fits.Header({
+            "NAXIS": 1,
+            "NAXIS1": 42,
+        })
+        data = utils.zeros_from_header(hdr)
+        assert data.shape == (42,)
+
+    def test_2d(self):
+        hdr = fits.Header({
+            "NAXIS": 2,
+            "NAXIS1": 3,
+            "NAXIS2": 5,
+        })
+        data = utils.zeros_from_header(hdr)
+        assert data.shape == (5, 3)
+
+    def test_3d(self):
+        hdr = fits.Header({
+            "NAXIS": 3,
+            "NAXIS1": 3,
+            "NAXIS2": 5,
+            "NAXIS3": 7,
+        })
+        data = utils.zeros_from_header(hdr)
+        assert data.shape == (7, 5, 3)  # founding date of Rome
+
+    def test_2d_from_3d(self):
+        hdr = fits.Header({
+            "NAXIS": 3,
+            "NAXIS1": 3,
+            "NAXIS2": 5,
+            "NAXIS3": 7,
+        })
+        data = utils.zeros_from_header(hdr, ndims=2)
+        assert data.shape == (5, 3)
