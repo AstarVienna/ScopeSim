@@ -609,7 +609,48 @@ def list_local_packages(action="display"):
         return main_pkgs, ext_pkgs
 
 
-def check_version(yaml_dict, mode=None):
+def check_version(yaml_dict: Mapping, mode: str | None = None) -> None:
+    """
+    Check if ScopeSim version required by instrument package or mode is met.
+
+    Check the `yaml_dict` for a key named "needs_scopesim". If found, try to
+    pare it into a version number and compare that to the currently installed
+    ScopeSim version. If a higher version is required for the selected
+    instrument package or mode, raise an exception. If the key is not found in
+    the yaml, silently proceed for backwards compatibility.
+
+    This can be called from either the top level of an instrument package's
+    default.yaml, in which case the version requirement is interpreted to apply
+    to the entire package as a minimum. If called from a "mode_yamls" section,
+    the requirement is interpreted to apply only to that mode. Different modes
+    in the same package may have different requirements, e.g. if one mode needs
+    an effect that was only added in a recent ScopeSim version, but the other
+    modes work without it. Note that a version requirement in the package level
+    (if any) serves as a minimum, meaning any mode can only have a stricter
+    requirement (or none, in which case the package level is used).
+
+    .. versionadded:: PLACEHOLDER_NEXT_RELEASE_VERSION
+
+    Parameters
+    ----------
+    yaml_dict : Mapping
+        Top-level or mode-level dict from the package's default.yaml.
+    mode : str | None, optional
+        Name of the mode if called from a mode section. If None (the default),
+        assumes called from the package top level. Only used for more
+        meaningful error message.
+
+    Raises
+    ------
+    NotImplementedError
+        Raised if the currently installed ScopeSim version is less than the
+        version required by the loaded instrument package or mode.
+
+    Returns
+    -------
+    None.
+
+    """
     try:
         needs_scopesim = parse(yaml_dict.get("needs_scopesim"))
         if __version__ < needs_scopesim:
