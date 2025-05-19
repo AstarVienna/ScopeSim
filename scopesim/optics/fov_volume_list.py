@@ -54,12 +54,6 @@ class FovVolumeList(MutableSequence):
             },
         }]
         self.volumes[0].update(initial_volume)  # .. TODO: Careful! This overwrites meta
-        self.detector_limits = {
-            "xd_min": 0,
-            "xd_max": 0,
-            "yd_min": 0,
-            "yd_max": 0,
-        }
 
     def split(self, axis, value, aperture_id=None) -> None:
         """
