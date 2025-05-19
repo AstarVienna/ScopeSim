@@ -841,7 +841,7 @@ class FieldOfView:
         Returns
         -------
         canvas_cube_hdu : fits.ImageHDU
-            [ph s-1 AA-1 arcsec-2]      # as needed by SpectralTrace
+            [ph s-1 um-1 arcsec-2]      # as needed by SpectralTrace
 
         """
         # 1. Make waveset and canvas cube (area, bin_width are applied at end)
@@ -882,7 +882,8 @@ class FieldOfView:
                            self.header["NAXIS2"],
                            self.header["NAXIS1"])),
             header=self.header)
-        # canvas_cube_hdu.header["BUNIT"] = "ph s-1 cm-2 AA-1"
+        # set BUNIT initially to PHOTLAM / arcsec**2
+        canvas_cube_hdu.header["BUNIT"] = "ph cm-2 s-1 AA-1 arcsec-2"
 
         canvas_cube_hdu.header.update({
             "CDELT3": np.diff(fov_waveset[:2])[0].to_value(u.um),
@@ -927,13 +928,13 @@ class FieldOfView:
         # SpectralTrace wants ph/s/um/arcsec2 --> get rid of m2, leave um
         canvas_cube_hdu.data *= self.area.to(u.cm ** 2).value
         canvas_cube_hdu.data *= 1e4       # ph/s/AA/arcsec2 --> ph/s/um/arcsec2
+        canvas_cube_hdu.header["BUNIT"] = "ph s-1 um-1 arcsec-2"
 
         # TODO: what's with this code??
         # bin_widths = np.diff(fov_waveset).to(u.AA).value
         # bin_widths = 0.5 * (np.r_[0, bin_widths] + np.r_[bin_widths, 0])
         # canvas_cube_hdu.data *= bin_widths[:, None, None]
 
-        canvas_cube_hdu.header["BUNIT"] = "ph s-1 um-1 arcsec-2"
         return canvas_cube_hdu      # [ph s-1 um-1 (arcsec-2)]
 
     @property
