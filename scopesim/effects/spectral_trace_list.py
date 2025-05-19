@@ -394,11 +394,8 @@ class SpectralTraceList(Effect):
 
         return fig
 
-    def __repr__(self) -> str:
-        return f"{self.__class__.__name__}(**{self.meta!r})"
-
     def __str__(self) -> str:
-        msg = (f"SpectralTraceList: \"{self.meta.get('name')}\" : "
+        msg = (f"{self.__class__.__name__}: \"{self.display_name}\": "
                f"{len(self.spectral_traces)} traces")
         return msg
 
