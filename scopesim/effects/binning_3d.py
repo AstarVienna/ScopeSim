@@ -16,7 +16,7 @@ logger = get_logger(__name__)
 class FluxBinning3D(Effect):
     """Takes care of cube flux conversion in absence of a SpectralTraceList."""
 
-    z_order: ClassVar[tuple[int, ...]] = (690)
+    z_order: ClassVar[tuple[int, ...]] = (690,)
 
     def apply_to(self, fov, **kwargs):
         """See parent docstring."""
