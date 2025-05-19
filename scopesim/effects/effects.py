@@ -333,6 +333,13 @@ Meta-data
     def __str__(self) -> str:
         return f"{self.__class__.__name__}: \"{self.display_name}\""
 
+    def _repr_pretty_(self, p, cycle):
+        """For ipython."""
+        if cycle:
+            p.text(f"{self.__class__.__name__}(...)")
+        else:
+            p.text(str(self))
+
     def __getitem__(self, item):
         if isinstance(item, str) and item.startswith("#"):
             if len(item) > 1:
