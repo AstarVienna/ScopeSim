@@ -171,7 +171,6 @@ class DetectorList(Effect):
     @property
     def pixel_size(self) -> u.Quantity[u.mm]:
         """Return size of one pixel in mm."""
-        # TODO: put this in base class, chk name conflicts
         pixel_size = np.min(
             quantity_from_table("pixel_size", self.active_table, u.mm))
         return pixel_size
@@ -179,7 +178,6 @@ class DetectorList(Effect):
     @property
     def pixel_scale_mm(self) -> u.Equivalency:
         """Return pixel scale (mm / pix) as equivalency."""
-        # TODO: put this in base class, chk name conflicts
         return u.pixel_scale(self.pixel_size / u.pixel)
 
     def _get_pixel_scale_arcsec(self, **kwargs) -> u.Equivalency:
@@ -195,22 +193,43 @@ class DetectorList(Effect):
     @property
     def pixel_scale_arcsec(self) -> u.Equivalency:
         """Return pixel scale (arcsec / pix) as equivalency."""
-        # TODO: put this in base class, chk name conflicts
         return self._get_pixel_scale_arcsec()
 
     def _get_fov_limits(self, **kwargs):
-        hdr = self.image_plane_header
-        xy_mm = calc_footprint(hdr, "D")
-        pixel_size = hdr["CDELT1D"]  # mm
-        pixel_scale = kwargs.get("pixel_scale", self.meta["pixel_scale"])  # ["]
-        pixel_scale = from_currsys(pixel_scale, self.cmds)
+        sky_points = self._get_corner_points()[:, :2]
+        pixel_scale = self._get_pixel_scale_arcsec(**kwargs)
 
-        # x["] = x[mm] * ["] / [mm]
-        xy_sky = xy_mm * pixel_scale / pixel_size
+        with u.set_enabled_equivalencies(pixel_scale + self.pixel_scale_mm):
+            xy_sky = (sky_points << u.pixel).to_value(u.arcsec)
 
         axis = ["x", "y"]
         values = (tuple(zip(xy_sky.min(axis=0), xy_sky.max(axis=0))))
         return axis, values
+
+    def _get_corner_points(self):
+        tbl = self.active_table
+        with u.set_enabled_equivalencies(self.pixel_scale_mm):
+            cens = {
+                dim: (tbl[f"{dim}_cen"].data.astype(float) *
+                      unit_from_table(f"{dim}_cen", tbl, u.mm) << u.mm)
+                for dim in self.dims
+            }
+
+            ds = {
+                dim: (0.5 * tbl[f"{dim}_size"].data.astype(float) *
+                      unit_from_table(f"{dim}_size", tbl, u.mm) << u.mm)
+                for dim in self.dims
+            }
+
+        det_mins = {dim: np.min(cens[dim] - ds[dim]) for dim in self.dims}
+        det_maxs = {dim: np.max(cens[dim] + ds[dim]) for dim in self.dims}
+
+        points = np.array([
+            [det_mins[dim].to_value(u.mm) for dim in self.dims],
+            [det_maxs[dim].to_value(u.mm) for dim in self.dims],
+        ])
+
+        return points * u.mm
 
     def fov_grid(self, which="edges", **kwargs):
         """Return an ApertureMask object. kwargs are "pixel_scale" [arcsec]."""
@@ -241,6 +260,7 @@ class DetectorList(Effect):
     def image_plane_header(self):
         """Create and return the Image Plane Header."""
         # FIXME: Heavy property.....
+        # TODO: refactor this using (parts of) 3D implementation below
         tbl = self.active_table
         pixel_size = np.min(quantity_from_table("pixel_size", tbl, u.mm))
         x_size_unit = unit_from_table("x_size", tbl, u.mm)
@@ -457,31 +477,6 @@ class DetectorList3D(DetectorList):
         )
 
         return axis, values  # [arcsec, arcsec, um]
-
-    def _get_corner_points(self):
-        tbl = self.active_table
-        with u.set_enabled_equivalencies(self.pixel_scale_mm):
-            cens = {
-                dim: (tbl[f"{dim}_cen"].data.astype(float) *
-                      unit_from_table(f"{dim}_cen", tbl, u.mm) << u.mm)
-                for dim in self.dims
-            }
-
-            ds = {
-                dim: (0.5 * tbl[f"{dim}_size"].data.astype(float) *
-                      unit_from_table(f"{dim}_size", tbl, u.mm) << u.mm)
-                for dim in self.dims
-            }
-
-        det_mins = {dim: np.min(cens[dim] - ds[dim]) for dim in self.dims}
-        det_maxs = {dim: np.max(cens[dim] + ds[dim]) for dim in self.dims}
-
-        points = np.array([
-            [det_mins[dim].to_value(u.mm) for dim in self.dims],
-            [det_maxs[dim].to_value(u.mm) for dim in self.dims],
-        ])
-
-        return points * u.mm
 
     @property
     def image_plane_header(self):
