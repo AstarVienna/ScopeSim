@@ -614,7 +614,7 @@ def check_version(yaml_dict: Mapping, mode: str | None = None) -> None:
     Check if ScopeSim version required by instrument package or mode is met.
 
     Check the `yaml_dict` for a key named "needs_scopesim". If found, try to
-    pare it into a version number and compare that to the currently installed
+    parse it into a version number and compare that to the currently installed
     ScopeSim version. If a higher version is required for the selected
     instrument package or mode, raise an exception. If the key is not found in
     the yaml, silently proceed for backwards compatibility.
@@ -628,6 +628,12 @@ def check_version(yaml_dict: Mapping, mode: str | None = None) -> None:
     modes work without it. Note that a version requirement in the package level
     (if any) serves as a minimum, meaning any mode can only have a stricter
     requirement (or none, in which case the package level is used).
+
+    .. note::
+
+       The value for any "needs_scopesim" key must be prefixed by a "v", e.g.:
+
+           needs_scopesim: "v0.10"
 
     .. versionadded:: PLACEHOLDER_NEXT_RELEASE_VERSION
 
@@ -646,19 +652,26 @@ def check_version(yaml_dict: Mapping, mode: str | None = None) -> None:
         Raised if the currently installed ScopeSim version is less than the
         version required by the loaded instrument package or mode.
 
+    ValueError
+        Raised if version number does not start with "v" (see notes).
+
     Returns
     -------
     None.
 
     """
-    try:
-        needs_scopesim = parse(yaml_dict.get("needs_scopesim"))
-        if __version__ < needs_scopesim:
-            msg = f"Mode {mode}" if mode else "The selected instrument package"
-            raise NotImplementedError(
-                f"{msg} requires ScopeSim version {needs_scopesim}, but "
-                f"version {__version__} is installed. Please update your "
-                "ScopeSim installation by running 'pip install -U scopesim'."
-            )
-    except TypeError:  # needs_scopesim key not present -> None
-        pass
+    if (needs_scopesim := yaml_dict.get("needs_scopesim")) is None:
+        return  # needs_scopesim key not present -> None
+
+    if not needs_scopesim.startswith("v"):
+        raise ValueError(
+            "Version number in 'needs_scopesim' must start with 'v'.")
+
+    needs_scopesim = parse(needs_scopesim)
+    if __version__ < needs_scopesim:
+        msg = f"Mode {mode}" if mode else "The selected instrument package"
+        raise NotImplementedError(
+            f"{msg} requires ScopeSim version {needs_scopesim}, but version "
+            f"{__version__} is installed. Please update your ScopeSim "
+            "installation by running 'pip install -U scopesim'."
+        )
