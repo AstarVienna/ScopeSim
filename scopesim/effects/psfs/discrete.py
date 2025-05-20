@@ -179,6 +179,8 @@ class FieldConstantPSF(DiscretePSF):
 
         xworld, yworld = cubewcs.all_pix2world(xcube, ycube, 1)
         outcube = np.zeros((lam.shape[0], nypsf, nxpsf), dtype=np.float32)
+        logger.info("Interpolating PSF onto %s cube", outcube.shape)
+
         for i, wave in enumerate(lam):
             psf_wave_pixscale = ref_pixel_scale * wave / refwave
             psfwcs.wcs.cdelt = [psf_wave_pixscale,
