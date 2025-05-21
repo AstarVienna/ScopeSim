@@ -630,6 +630,19 @@ class OpticalTrain:
             with p.indent(2):
                 p.pretty(self.effects)
 
+    def _repr_html_(self) -> str:
+        """For notebooks."""
+        html = (
+            "<div>"
+            f"<h4>{self.__class__.__name__} "
+            f"for {self.cmds['!OBS.instrument']} "
+            f"@ {self.cmds['!TEL.telescope']}</h4>"
+            f"<div><h5>Settings</h5>{self.cmds._repr_html_()}</div>"
+            f"<div><h5>Effects</h5>{self.effects._repr_html_()}</div>"
+            "</div>"
+        )
+        return html
+
     def __getitem__(self, item):
         return self.optics_manager[item]
 
