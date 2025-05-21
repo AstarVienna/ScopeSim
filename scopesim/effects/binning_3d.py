@@ -28,7 +28,7 @@ class FluxBinning3D(Effect):
             return fov
 
         bunit = u.Unit(fov.hdu.header["BUNIT"].lower())
-        pixel_area = fov.pixel_area * u.arcsec**2
+        pixel_area = fov.pixel_area << u.arcsec**2
 
         # Spatial binning
         if unit_includes_per_physical_type(bunit, "solid angle"):
