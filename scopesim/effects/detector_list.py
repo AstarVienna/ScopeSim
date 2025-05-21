@@ -196,14 +196,23 @@ class DetectorList(Effect):
         return self._get_pixel_scale_arcsec()
 
     def _get_fov_limits(self, pixel_scale=None):
-        sky_points = self._get_corner_points()[:, :2]
+        mm_points = self._get_corner_points()[:, :2]
         pixel_scale = self._get_pixel_scale_arcsec(pixel_scale)
 
+        # The line below combines the pixesl <=> arcsec scale with the
+        # pixel <=> mm scale (both are astropy equivalencies, which can be
+        # simply added together), to allow an indirect conversion from mm via
+        # pixel to arcsec, converting the detector's mm footprint to an on-sky
+        # FOV limit. Conceptually, this should involve the plate scale, but
+        # ScopeSim is still somewhat inconsistent / redundant in defining
+        # pixel size, pixel scale and plate scale.
+        # TODO: Consider using plate scale here once that's generally been
+        #       refactored to be more consistent everywhere.
         with u.set_enabled_equivalencies(pixel_scale + self.pixel_scale_mm):
-            xy_sky = (sky_points << u.pixel).to_value(u.arcsec)
+            sky_points = (mm_points << u.pixel).to_value(u.arcsec)
 
         axis = ["x", "y"]
-        values = (tuple(zip(xy_sky.min(axis=0), xy_sky.max(axis=0))))
+        values = (tuple(zip(sky_points.min(axis=0), sky_points.max(axis=0))))
         return axis, values
 
     def _get_corner_points(self):
@@ -464,15 +473,16 @@ class DetectorList3D(DetectorList):
         return waverange
 
     def _get_fov_limits(self, pixel_scale=None):
-        sky_points = self._get_corner_points()[:, :2]
+        mm_points = self._get_corner_points()[:, :2]
         pixel_scale = self._get_pixel_scale_arcsec(pixel_scale)
 
+        # See parent class for explanation of this operation.
         with u.set_enabled_equivalencies(pixel_scale + self.pixel_scale_mm):
-            xy_sky = (sky_points << u.pixel).to_value(u.arcsec)
+            sky_points = (mm_points << u.pixel).to_value(u.arcsec)
 
         axis = ["x", "y", "wave"]
         values = (
-            *zip(xy_sky.min(axis=0), xy_sky.max(axis=0)),
+            *zip(sky_points.min(axis=0), sky_points.max(axis=0)),
             tuple(self.waverange.to_value(u.um).round(7))
         )
 
