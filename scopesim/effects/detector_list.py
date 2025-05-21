@@ -180,11 +180,11 @@ class DetectorList(Effect):
         """Return pixel scale (mm / pix) as equivalency."""
         return u.pixel_scale(self.pixel_size / u.pixel)
 
-    def _get_pixel_scale_arcsec(self, **kwargs) -> u.Equivalency:
+    def _get_pixel_scale_arcsec(self, pixel_scale=None) -> u.Equivalency:
         """To allow overriding defaults, but use defaults in property."""
         pixel_scale = u.pixel_scale(
             from_currsys(
-                kwargs.get("pixel_scale", self.meta["pixel_scale"]),
+                pixel_scale if pixel_scale is not None else self.meta["pixel_scale"],
                 self.cmds,
             ) << u.arcsec / u.pixel
         )
@@ -195,9 +195,9 @@ class DetectorList(Effect):
         """Return pixel scale (arcsec / pix) as equivalency."""
         return self._get_pixel_scale_arcsec()
 
-    def _get_fov_limits(self, **kwargs):
+    def _get_fov_limits(self, pixel_scale=None):
         sky_points = self._get_corner_points()[:, :2]
-        pixel_scale = self._get_pixel_scale_arcsec(**kwargs)
+        pixel_scale = self._get_pixel_scale_arcsec(pixel_scale)
 
         with u.set_enabled_equivalencies(pixel_scale + self.pixel_scale_mm):
             xy_sky = (sky_points << u.pixel).to_value(u.arcsec)
@@ -463,9 +463,9 @@ class DetectorList3D(DetectorList):
             waverange = wave_points.to(u.pixel) * dwave + wave_mid
         return waverange
 
-    def _get_fov_limits(self, **kwargs):
+    def _get_fov_limits(self, pixel_scale=None):
         sky_points = self._get_corner_points()[:, :2]
-        pixel_scale = self._get_pixel_scale_arcsec(**kwargs)
+        pixel_scale = self._get_pixel_scale_arcsec(pixel_scale)
 
         with u.set_enabled_equivalencies(pixel_scale + self.pixel_scale_mm):
             xy_sky = (sky_points << u.pixel).to_value(u.arcsec)
