@@ -163,7 +163,9 @@ class DetectorList(Effect):
         if not isinstance(obj, FovVolumeList):
             return obj
 
-        shrink_axis, shrink_values = self._get_fov_limits(**kwargs)
+        logger.debug("apply_to got kwargs: %s", kwargs)
+        shrink_axis, shrink_values = self._get_fov_limits(
+            pixel_scale=kwargs.get("pixel_scale", None))
         obj.shrink(axis=shrink_axis, values=shrink_values)
 
         return obj
