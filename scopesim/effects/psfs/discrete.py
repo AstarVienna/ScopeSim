@@ -150,6 +150,9 @@ class FieldConstantPSF(DiscretePSF):
         hdr = self._file[ext].header
         refwave = hdr[self.meta["wave_key"]]
 
+        if not self.cmds.get("!OBS.interp_psf", True):
+            lam = np.array([refwave])
+
         if "CUNIT1" in hdr:
             unit_factor = u.Unit(hdr["CUNIT1"].lower()).to(
                 u.Unit(fov_pixel_unit))
@@ -189,7 +192,8 @@ class FieldConstantPSF(DiscretePSF):
             outcube[i,] = (ipsf(ypsf, xpsf, grid=False)
                            * fov_pixel_scale**2 / psf_wave_pixscale**2)
 
-        self.kernel = outcube.reshape((lam.shape[0], nypsf, nxpsf))
+        # .squeeze() gets rid of any axes with length one
+        self.kernel = outcube.reshape((lam.shape[0], nypsf, nxpsf)).squeeze()
         # fits.writeto("test_psfcube.fits", data=self.kernel, overwrite=True)
 
     def plot(self):
