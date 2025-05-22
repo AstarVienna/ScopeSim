@@ -24,6 +24,7 @@ from ..detector import DetectorManager
 from ..effects import ExtraFitsKeywords
 from ..utils import from_currsys, top_level_catch, get_logger
 from ..source.source_templates import empty_sky
+from ..source.source_fields import SpectrumSourceField
 from .. import __version__
 
 
@@ -318,25 +319,28 @@ class OpticalTrain:
         than used internally, or if the source data are sampled on irregular
         wavelengths.
         For cube fields, the method assumes that the wavelengths at which the
-        cube is sampled is provided explicitely as attribute `wave` if the cube
+        cube is sampled is provided explicitely as attribute `wave` of the cube
         ImageHDU.
         """
         # Convert to PHOTLAM per arcsec2
         # TODO: this is not sufficiently general
         # TODO: Maybe move this to source_fields??
 
-        for ispec, spec in source.spectra.items():
-            # Put on fov wavegrid
-            wave_min = min(fov.meta["wave_min"] for fov in self.fov_manager.fovs)
-            wave_max = max(fov.meta["wave_max"] for fov in self.fov_manager.fovs)
-            wave_unit = u.Unit(from_currsys("!SIM.spectral.wave_unit", self.cmds))
-            dwave = from_currsys("!SIM.spectral.spectral_bin_width", self.cmds)  # Not a quantity
-            fov_waveset = np.arange(wave_min.value, wave_max.value, dwave) * wave_unit
-            fov_waveset = fov_waveset.to(u.um)
+        for field in source.fields:
+            if not isinstance(field, SpectrumSourceField):
+                continue
+            for ispec, spec in field.spectra.items():
+                # Put on fov wavegrid
+                wave_min = min(fov.meta["wave_min"] for fov in self.fov_manager.fovs)
+                wave_max = max(fov.meta["wave_max"] for fov in self.fov_manager.fovs)
+                wave_unit = u.Unit(from_currsys("!SIM.spectral.wave_unit", self.cmds))
+                dwave = from_currsys("!SIM.spectral.spectral_bin_width", self.cmds)  # Not a quantity
+                fov_waveset = np.arange(wave_min.value, wave_max.value, dwave) * wave_unit
+                fov_waveset = fov_waveset.to(u.um)
 
-            source.spectra[ispec] = SourceSpectrum(Empirical1D,
-                                                   points=fov_waveset,
-                                                   lookup_table=spec(fov_waveset))
+                field.spectra[ispec] = SourceSpectrum(Empirical1D,
+                                                      points=fov_waveset,
+                                                      lookup_table=spec(fov_waveset))
 
         for cube in source.cube_fields:
             header, data, wave = cube.header, cube.data, cube.wave
