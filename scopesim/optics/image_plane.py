@@ -11,7 +11,13 @@ from astropy.wcs import WCS
 
 from .image_plane_utils import add_table_to_imagehdu, add_imagehdu_to_imagehdu
 
-from ..utils import from_currsys, has_needed_keywords, get_logger
+from ..utils import (
+    from_currsys,
+    has_needed_keywords,
+    get_logger,
+    zeros_from_header,
+)
+
 
 logger = get_logger(__name__)
 
@@ -53,16 +59,16 @@ class ImagePlane:
         self.cmds = cmds
         self.meta = {}
         self.meta.update(kwargs)
-        self.id = header["IMGPLANE"] if "IMGPLANE" in header else 0
+        self.id = header.get("IMGPLANE", 0)
 
         if not any(has_needed_keywords(header, s)
                    for s in ["", "D", "S"]):
             raise ValueError(f"header must have a valid image-plane WCS: "
                              f"{dict(header)}")
 
-        # image = np.zeros((header["NAXIS2"]+1, header["NAXIS1"]+1))
-        image = np.zeros((header["NAXIS2"], header["NAXIS1"]))
+        image = zeros_from_header(header)
         self.hdu = fits.ImageHDU(data=image, header=header)
+        self.hdu.header["BUNIT"] = "ph s-1"  # photons per second (per pixel)
 
         self._det_wcs = self._get_wcs(header, "D")
         logger.debug("det %s", self._det_wcs)
@@ -139,6 +145,12 @@ class ImagePlane:
                              hdus_or_tables.data.shape)
                 self.hdu = add_imagehdu_to_imagehdu(hdus_or_tables, self.hdu,
                                                     spline_order, wcs_suffix)
+                if (img_bunit := hdus_or_tables.header.get("BUNIT")) is not None:
+                    if img_bunit != (imp_bunit := self.hdu.header["BUNIT"]):
+                        logger.warning("Added mismatched BUNIT %s to %s.",
+                                       img_bunit, imp_bunit)
+                else:
+                    logger.info("No BUNIT found in added HDU.")
 
     @property
     def header(self):

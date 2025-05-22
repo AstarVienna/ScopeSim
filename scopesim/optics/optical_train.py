@@ -283,8 +283,15 @@ class OpticalTrain:
                                    desc=" FOV effects", position=1):#, leave=False):
                     fov = effect.apply_to(fov)
 
-                fov.flatten()
-                self.image_planes[fov.image_plane_id].add(fov.hdu, wcs_suffix="D")
+                if self.cmds.get("!INST.flatten", True):
+                    fov.flatten()
+                    self.image_planes[fov.image_plane_id].add(fov.hdu, wcs_suffix="D")
+                else:  # cube output
+                    self.image_planes[fov.image_plane_id].add(fov.hdu, wcs_suffix="D")
+                    # HACK: to get sky WCS from FOV into image plane...
+                    self.image_planes[fov.image_plane_id].header.update(
+                        WCS(fov.hdu).to_header())
+
                 # ..todo: finish off the multiple image plane stuff
 
         # END OF MULTIPROCESSING
@@ -371,6 +378,10 @@ class OpticalTrain:
             dwave = from_currsys("!SIM.spectral.spectral_bin_width", self.cmds)  # Not a quantity
             fov_waveset = np.arange(wave_min.value, wave_max.value, dwave) * wave_unit
             fov_waveset = fov_waveset.to(u.um)
+
+            if (wave.to(u.um).min() > fov_waveset.max() or
+                    wave.to(u.um).max() < fov_waveset.min()):
+                logger.warning("Source and FOV wavesets disjoint.")
 
             # Interpolate into new data cube.
             # This is done layer by layer for memory reasons.

@@ -30,6 +30,8 @@ mode_yamls :
   properties :
     include_slit : False
     include_slicer: False
+    include_det_window: True
+    include_det_3d: False
     filter_name : "J"
 
 - name : spectroscopy
@@ -39,6 +41,8 @@ mode_yamls :
   properties :
     include_slit : True
     include_slicer: False
+    include_det_window: True
+    include_det_3d: False
     filter_name : "open"
   yamls :
     - YAML_mode_spectroscopy.yaml   # mode specific effects and properties
@@ -50,9 +54,24 @@ mode_yamls :
   properties:
     include_slit: False
     include_slicer: True
+    include_det_window: True
+    include_det_3d: False
     filter_name: "open"
   yamls:
     - YAML_mode_ifu.yaml   # mode specific effects and properties
+
+- name : simple_ifu
+  description: For testing the virtual 3D Detector with direct cube output
+  status: development
+  alias: OBS
+  properties:
+    include_slit: False
+    include_slicer: False
+    include_det_window: False
+    include_det_3d: True
+    filter_name: "open"
+  yamls:
+    - YAML_mode_simple_ifu.yaml   # mode specific effects and properties
 
 - name: mock_concept_mode
   description: Dummy mode to test concept status.
