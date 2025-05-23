@@ -141,6 +141,9 @@ class FieldConstantPSF(DiscretePSF):
             + fov.hdu.header["CRVAL3"]
         )
 
+        if not self.cmds.get("!OBS.interp_psf", True):
+            lam = lam[len(lam)//2]
+
         # adapt the size of the output cube to the FOV's spatial shape
         nxpsf = min(512, 2 * nxfov + 1)
         nypsf = min(512, 2 * nyfov + 1)
@@ -149,9 +152,6 @@ class FieldConstantPSF(DiscretePSF):
         ext = self.current_layer_id
         hdr = self._file[ext].header
         refwave = hdr[self.meta["wave_key"]]
-
-        if not self.cmds.get("!OBS.interp_psf", True):
-            lam = np.array([refwave])
 
         if "CUNIT1" in hdr:
             unit_factor = u.Unit(hdr["CUNIT1"].lower()).to(
