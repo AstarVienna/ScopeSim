@@ -142,7 +142,7 @@ class FieldConstantPSF(DiscretePSF):
         )
 
         if not self.cmds.get("!OBS.interp_psf", True):
-            lam = lam[len(lam)//2]
+            lam = np.array([lam[len(lam)//2]])
 
         # adapt the size of the output cube to the FOV's spatial shape
         nxpsf = min(512, 2 * nxfov + 1)
