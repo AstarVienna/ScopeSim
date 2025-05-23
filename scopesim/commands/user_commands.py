@@ -9,11 +9,12 @@ from typing import Any
 
 import yaml
 import httpx
+from packaging.version import parse
 
 from astar_utils import NestedMapping, RecursiveNestedMapping, NestedChainMap
 from astar_utils.nested_mapping import recursive_update, is_bangkey
 
-from .. import rc
+from .. import rc, __version__
 from ..utils import find_file, top_level_catch, get_logger
 
 
@@ -221,6 +222,8 @@ class UserCommands(NestedChainMap):
                     "instrument, use with care."
                 )
 
+            check_version(yaml_dict)
+
         logger.debug("      dict yaml done")
 
     def _load_yamls(self, yamls: Collection) -> None:
@@ -389,6 +392,8 @@ class UserCommands(NestedChainMap):
                     raise NotImplementedError(
                         f"Instrument mode '{mode}' is not yet supported."
                     )
+
+                check_version(self.modes_dict[mode], mode=mode)
 
         # Note: This used to completely reset the instance via the line below.
         #       Calling init like this is bad design, so I replaced is with a
@@ -602,3 +607,71 @@ def list_local_packages(action="display"):
         print(msg)
     else:
         return main_pkgs, ext_pkgs
+
+
+def check_version(yaml_dict: Mapping, mode: str | None = None) -> None:
+    """
+    Check if ScopeSim version required by instrument package or mode is met.
+
+    Check the `yaml_dict` for a key named "needs_scopesim". If found, try to
+    parse it into a version number and compare that to the currently installed
+    ScopeSim version. If a higher version is required for the selected
+    instrument package or mode, raise an exception. If the key is not found in
+    the yaml, silently proceed for backwards compatibility.
+
+    This can be called from either the top level of an instrument package's
+    default.yaml, in which case the version requirement is interpreted to apply
+    to the entire package as a minimum. If called from a "mode_yamls" section,
+    the requirement is interpreted to apply only to that mode. Different modes
+    in the same package may have different requirements, e.g. if one mode needs
+    an effect that was only added in a recent ScopeSim version, but the other
+    modes work without it. Note that a version requirement in the package level
+    (if any) serves as a minimum, meaning any mode can only have a stricter
+    requirement (or none, in which case the package level is used).
+
+    .. note::
+
+       The value for any "needs_scopesim" key must be prefixed by a "v", e.g.:
+
+           needs_scopesim: "v0.10"
+
+    .. versionadded:: PLACEHOLDER_NEXT_RELEASE_VERSION
+
+    Parameters
+    ----------
+    yaml_dict : Mapping
+        Top-level or mode-level dict from the package's default.yaml.
+    mode : str | None, optional
+        Name of the mode if called from a mode section. If None (the default),
+        assumes called from the package top level. Only used for more
+        meaningful error message.
+
+    Raises
+    ------
+    NotImplementedError
+        Raised if the currently installed ScopeSim version is less than the
+        version required by the loaded instrument package or mode.
+
+    ValueError
+        Raised if version number does not start with "v" (see notes).
+
+    Returns
+    -------
+    None.
+
+    """
+    if (needs_scopesim := yaml_dict.get("needs_scopesim")) is None:
+        return  # needs_scopesim key not present -> None
+
+    if not needs_scopesim.startswith("v"):
+        raise ValueError(
+            "Version number in 'needs_scopesim' must start with 'v'.")
+
+    needs_scopesim = parse(needs_scopesim)
+    if __version__ < needs_scopesim:
+        msg = f"Mode {mode}" if mode else "The selected instrument package"
+        raise NotImplementedError(
+            f"{msg} requires ScopeSim version {needs_scopesim}, but version "
+            f"{__version__} is installed. Please update your ScopeSim "
+            "installation by running 'pip install -U scopesim'."
+        )

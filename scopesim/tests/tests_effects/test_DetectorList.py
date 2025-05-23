@@ -2,8 +2,9 @@ import pytest
 from unittest.mock import patch
 
 from astropy.table import Table
+from astropy import units as u
 
-from scopesim.effects import DetectorList, DetectorWindow, ApertureMask
+from scopesim.effects import DetectorList, DetectorWindow, DetectorList3D
 
 
 @pytest.fixture(scope="class")
@@ -154,24 +155,6 @@ class TestDetecotrHeaders:
             assert hdr["NAXIS2"] == 32
 
 
-@pytest.mark.usefixtures("patch_mock_path_micado")
-class TestFovGrid:
-    def test_returns_aperture_mask_object(self):
-        det_list = DetectorList(filename="FPA_array_layout.dat",
-                                image_plane_id=0)
-        apm = det_list.fov_grid(pixel_scale=0.004)
-        assert isinstance(apm, ApertureMask)
-
-    def test_aperture_mask_header_covers_all_of_detector_header(self):
-        det_list = DetectorList(filename="FPA_array_layout.dat",
-                                image_plane_id=0)
-        apm = det_list.fov_grid(pixel_scale=0.004)
-        apm_hdr = apm.header
-        det_hdr = det_list.image_plane_header
-        assert apm_hdr["NAXIS1"] == det_hdr["NAXIS1"]
-        assert apm_hdr["NAXIS2"] == det_hdr["NAXIS2"]
-
-
 class TestDetectorWindowInit:
     def test_throws_error_when_initialises_with_nothing(self):
         with pytest.raises(TypeError):
@@ -213,3 +196,44 @@ class TestDetectorWindowInit:
                                  width="!DET.width", units="pixel")
             assert det.image_plane_header["NAXIS1"] == 42
             assert det.detector_headers()[0]["NAXIS1"] == 42
+
+
+@pytest.fixture(name="det_list")
+def basic_detectorlist3d():
+    det_list = DetectorList3D(array_dict={
+        "id": [0],
+        "x_cen": [0],
+        "y_cen": [0],
+        "z_cen": [0],
+        "x_size": [15],
+        "y_size": [25],
+        "z_size": [5],
+        "pixel_size": [0.01],
+        "angle": [0],
+        "gain": [1]},
+        x_size_unit="pixel",
+        y_size_unit="pixel",
+        z_size_unit="pixel",
+        image_plane_id=0,
+        pixel_scale=0.5,
+    )
+    return det_list
+
+
+@pytest.mark.usefixtures("patch_all_mock_paths")
+class TestDetectorList3D:
+    def test_image_plane_header_is_3d(self, det_list):
+        impl_hdr = det_list.image_plane_header
+
+        assert impl_hdr["NAXIS"] == 3
+        assert impl_hdr["NAXIS1"] == 15
+        assert impl_hdr["NAXIS2"] == 25
+        assert impl_hdr["NAXIS3"] == 5
+
+    def test_pixel_scale_arcsec(self, det_list):
+        equiv = det_list.pixel_scale_arcsec
+        assert (1 * u.pixel).to(u.arcsec, equiv) == .5 * u.arcsec
+
+    def test_pixel_scale_mm(self, det_list):
+        equiv = det_list.pixel_scale_mm
+        assert (1 * u.pixel).to(u.mm, equiv) == .01 * u.mm

@@ -187,6 +187,7 @@ def create_wcs_from_points(points: np.ndarray,
     pixel_scale = abs(pixel_scale)
     extent = points.ptp(axis=0) / pixel_scale
     naxis = extent.round().astype(int)
+    ndims = len(naxis)
     offset = (extent - naxis) * pixel_scale  # compensate rounding
 
     # FIXME: Woule be nice to have D headers referenced at (1, 1), but that
@@ -214,10 +215,15 @@ def create_wcs_from_points(points: np.ndarray,
 
     # Cannot do `in "DX"` here because that would also match the empty string.
     linsuff = {"D", "X"}
-    lintype = ["LINEAR", "LINEAR"]
+    lintype = ndims * ["LINEAR"]
     # skytype = ["RA---TAN", "DEC--TAN"]  # ScopeSim can't handle the truth yet
     skytype = ["LINEAR", "LINEAR"]
-    ctype = lintype if wcs_suffix in linsuff else skytype
+    if wcs_suffix in linsuff:
+        ctype = lintype
+    else:
+        if ndims != 2:
+            raise ValueError("The sky must be two-dimensional!")
+        ctype = skytype
 
     if isinstance(points, u.Quantity):
         cunit = points.unit
@@ -227,10 +233,10 @@ def create_wcs_from_points(points: np.ndarray,
     if isinstance(pixel_scale, u.Quantity):
         pixel_scale = pixel_scale.value
 
-    new_wcs = WCS(key=wcs_suffix)
+    new_wcs = WCS(key=wcs_suffix, naxis=ndims)
     new_wcs.wcs.ctype = ctype
-    new_wcs.wcs.cunit = 2 * [cunit]
-    new_wcs.wcs.cdelt = np.array(2 * [pixel_scale])
+    new_wcs.wcs.cunit = ndims * [cunit]
+    new_wcs.wcs.cdelt = np.array(ndims * [pixel_scale])
     new_wcs.wcs.crval = crval
     new_wcs.wcs.crpix = crpix
 
@@ -424,40 +430,47 @@ def overlay_image(small_im, big_im, coords, mask=None, sub_pixel=False):
     if sub_pixel:
         raise NotImplementedError
 
+    if len(coords) != small_im.ndim:
+        coords = np.array([*coords, (big_im.shape[0] - 1) / 2])
+
     # FIXME: this would not be necessary if we used WCS instead of manual 2pix
     coords = np.ceil(np.asarray(coords).round(10)).astype(int)
-    y, x = coords.astype(int)[::-1] - np.array(small_im.shape[-2:]) // 2
+    idx = coords.astype(int)[::-1] - np.array(small_im.shape) // 2
 
     # Image ranges
-    x1, x2 = max(0, x), min(big_im.shape[-1], x + small_im.shape[-1])
-    y1, y2 = max(0, y), min(big_im.shape[-2], y + small_im.shape[-2])
+    idx1 = np.maximum(0, idx)
+    idx2 = np.minimum(big_im.shape, idx + small_im.shape)
 
     # Overlay ranges
-    x1o, x2o = max(0, -x), min(small_im.shape[-1], big_im.shape[-1] - x)
-    y1o, y2o = max(0, -y), min(small_im.shape[-2], big_im.shape[-2] - y)
+    idx1o = np.maximum(0, -idx)
+    idx2o = np.minimum(small_im.shape, big_im.shape - idx)
+
+    # Convert to tuples of slices for indexing
+    idx_slcs = tuple(slice(i1, i2) for i1, i2 in zip(idx1, idx2))
+    idx_slcso = tuple(slice(i1, i2) for i1, i2 in zip(idx1o, idx2o))
 
     # Exit if nothing to do
-    if y1 >= y2 or x1 >= x2 or y1o >= y2o or x1o >= x2o:
+    if (idx1 >= idx2).any() or (idx1o >= idx2o).any():
         return big_im
 
-    if small_im.ndim == 2 and big_im.ndim == 2:
-        small_im_3 = small_im[None, :, :]
-        big_im_3 = big_im[None, :, :]
-    elif small_im.ndim == 3 and big_im.ndim == 3:
-        small_im_3 = small_im
-        big_im_3 = big_im
-    else:
+    if mask is not None:
+        # The mask option was never used anywhere and got complicated.
+        # Keeping the previous code around just in case.
+        # mask = mask[None, idx_slcso[-2:]] * np.ones(small_im_3.shape[-3])
+        # mask = mask.astype(bool)
+        # big_im_3[idx_slcs][mask] = big_im_3[idx_slcs][mask] + \
+        #     small_im_3[idx_slcso][mask]
+        raise NotImplementedError()
+
+    if small_im.ndim == 2 != big_im.ndim == 2:
         raise ValueError(f"Dimensions mismatch between big_im and small_im: "
                          f"{big_im.ndim} : {small_im.ndim}")
 
-    if mask is None:
-        big_im_3[:, y1:y2, x1:x2] = big_im_3[:, y1:y2, x1:x2] + \
-                                    small_im_3[:, y1o:y2o, x1o:x2o]
-    else:
-        mask = mask[None, y1o:y2o, x1o:x2o] * np.ones(small_im_3.shape[-3])
-        mask = mask.astype(bool)
-        big_im_3[:, y1:y2, x1:x2][mask] = big_im_3[:, y1:y2, x1:x2][mask] + \
-                                          small_im_3[:, y1o:y2o, x1o:x2o][mask]
+    # Note: Could also do np.add(big_im, idx_slcs, small_im),
+    #       IF small_im[idx_slcso] == small_im (is that always?)
+    #       Both options modify the original as far as I can tell.
+
+    big_im[idx_slcs] = big_im[idx_slcs] + small_im[idx_slcso]
 
     return big_im
 
@@ -744,7 +757,7 @@ def add_imagehdu_to_imagehdu(image_hdu: fits.ImageHDU,
         canvas_wcs = wcs_suffix
     else:
         wcs_suffix = wcs_suffix or " "
-        canvas_wcs = WCS(canvas_hdu.header, key=wcs_suffix, naxis=2)
+        canvas_wcs = WCS(canvas_hdu.header, key=wcs_suffix)
 
     if isinstance(image_hdu.data, u.Quantity):
         image_hdu.data = image_hdu.data.value
@@ -766,11 +779,16 @@ def add_imagehdu_to_imagehdu(image_hdu: fits.ImageHDU,
                                 spline_order=spline_order,
                                 conserve_flux=conserve_flux)
 
-    img_center = np.array([[new_hdu.header["NAXIS1"],
-                            new_hdu.header["NAXIS2"]]])
+    img_center = np.array([[new_hdu.header[f"NAXIS{i+1}"]
+                           for i in range(new_hdu.header["NAXIS"])]])
     img_center = (img_center - 1) / 2
 
-    new_wcs = WCS(new_hdu.header, key=canvas_wcs.wcs.alt, naxis=2)
+    new_wcs = WCS(
+        new_hdu.header,
+        key=canvas_wcs.wcs.alt,
+        naxis=canvas_wcs.naxis,
+    )
+
     sky_center = new_wcs.wcs_pix2world(img_center, 0)
     if new_wcs.wcs.cunit[0] == "deg":
         sky_center = _fix_360(sky_center)

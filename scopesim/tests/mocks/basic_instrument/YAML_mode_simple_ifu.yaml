@@ -1,0 +1,33 @@
+# IFU Spectroscopy mode specific Effects and properties
+name : mode_simple_ifu
+alias : INST
+
+properties :
+  decouple_detector_from_sky_headers: True
+
+effects :
+- name : flux_binning
+  description : Binning sampled flux for virtual 3D detector
+  class : FluxBinning3D
+
+---
+
+name: config_overrides
+alias: SIM
+description: SIM config param overrides
+
+properties:
+  spectral:
+    wave_min: 1.7
+    wave_mid: 2.1
+    wave_max: 2.5
+    spectral_bin_width: !!float 9E-4
+
+---
+
+name: config_overrides
+alias: INST
+description: INST config param overrides
+
+properties:
+  flatten: False

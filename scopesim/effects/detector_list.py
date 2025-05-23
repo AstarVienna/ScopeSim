@@ -9,23 +9,32 @@ above. The effects here (or one of them) are what ScopeSim "actually needs" to
 have defined in order to run.
 """
 
-import warnings
 from typing import ClassVar
 
 import numpy as np
 from astropy import units as u
+from astropy.io import fits
 from astropy.table import Table
 
 from ..optics.fov_volume_list import FovVolumeList
 from .effects import Effect
-from .apertures import ApertureMask
-from ..optics.image_plane_utils import header_from_list_of_xy, calc_footprint
-from ..utils import (from_currsys, close_loop, figure_factory, array_minmax,
-                     quantity_from_table, unit_from_table, get_logger)
+from ..optics.image_plane_utils import (
+    header_from_list_of_xy,
+    calc_footprint,
+    create_wcs_from_points,
+)
+from ..utils import (
+    from_currsys,
+    close_loop,
+    figure_factory,
+    quantity_from_table,
+    unit_from_table,
+    get_logger,
+)
 
 logger = get_logger(__name__)
 
-__all__ = ["DetectorList", "DetectorWindow"]
+__all__ = ["DetectorList", "DetectorWindow", "DetectorList3D"]
 
 
 class DetectorList(Effect):
@@ -121,14 +130,17 @@ class DetectorList(Effect):
 
     """
 
+    dims = "xy"  # 2 spatial dimensions
     z_order: ClassVar[tuple[int, ...]] = (90, 290, 390, 490)
     report_plot_include: ClassVar[bool] = True
     report_table_include: ClassVar[bool] = True
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        params = {"pixel_scale": "!INST.pixel_scale",      # arcsec
-                  "active_detectors": "all",}
+        params = {
+            "pixel_scale": "!INST.pixel_scale",  # arcsec
+            "active_detectors": "all",
+        }
         self.meta.update(params)
         self.meta.update(kwargs)
 
@@ -151,48 +163,115 @@ class DetectorList(Effect):
         if not isinstance(obj, FovVolumeList):
             return obj
 
-        hdr = self.image_plane_header
-        xy_mm = calc_footprint(hdr, "D")
-        pixel_size = hdr["CDELT1D"]  # mm
-        pixel_scale = kwargs.get("pixel_scale", self.meta["pixel_scale"])  # ["]
-        pixel_scale = from_currsys(pixel_scale, self.cmds)
-
-        # x["] = x[mm] * ["] / [mm]
-        xy_sky = xy_mm * pixel_scale / pixel_size
-
-        obj.shrink(axis=["x", "y"],
-                   values=(tuple(zip(xy_sky.min(axis=0),
-                                     xy_sky.max(axis=0)))))
+        logger.debug("apply_to got kwargs: %s", kwargs)
+        shrink_axis, shrink_values = self._get_fov_limits(
+            pixel_scale=kwargs.get("pixel_scale", None))
+        obj.shrink(axis=shrink_axis, values=shrink_values)
 
         return obj
 
+    @property
+    def pixel_size(self) -> u.Quantity[u.mm]:
+        """Return size of one pixel in mm."""
+        pixel_size = np.min(
+            quantity_from_table("pixel_size", self.active_table, u.mm))
+        return pixel_size
+
+    @property
+    def pixel_scale_mm(self) -> u.Equivalency:
+        """Return pixel scale (mm / pix) as equivalency."""
+        return u.pixel_scale(self.pixel_size / u.pixel)
+
+    def _get_pixel_scale_arcsec(self, pixel_scale=None) -> u.Equivalency:
+        """To allow overriding defaults, but use defaults in property."""
+        pixel_scale = u.pixel_scale(
+            from_currsys(
+                pixel_scale if pixel_scale is not None else self.meta["pixel_scale"],
+                self.cmds,
+            ) << u.arcsec / u.pixel
+        )
+        return pixel_scale
+
+    @property
+    def pixel_scale_arcsec(self) -> u.Equivalency:
+        """Return pixel scale (arcsec / pix) as equivalency."""
+        return self._get_pixel_scale_arcsec()
+
+    def _get_fov_limits(self, pixel_scale=None):
+        mm_points = self._get_corner_points()[:, :2]
+        pixel_scale = self._get_pixel_scale_arcsec(pixel_scale)
+
+        # The line below combines the pixesl <=> arcsec scale with the
+        # pixel <=> mm scale (both are astropy equivalencies, which can be
+        # simply added together), to allow an indirect conversion from mm via
+        # pixel to arcsec, converting the detector's mm footprint to an on-sky
+        # FOV limit. Conceptually, this should involve the plate scale, but
+        # ScopeSim is still somewhat inconsistent / redundant in defining
+        # pixel size, pixel scale and plate scale.
+        # TODO: Consider using plate scale here once that's generally been
+        #       refactored to be more consistent everywhere.
+        with u.set_enabled_equivalencies(pixel_scale + self.pixel_scale_mm):
+            sky_points = (mm_points << u.pixel).to_value(u.arcsec)
+
+        axis = ["x", "y"]
+        values = (tuple(zip(sky_points.min(axis=0), sky_points.max(axis=0))))
+        return axis, values
+
+    def _get_corner_points(self):
+        tbl = self.active_table
+        with u.set_enabled_equivalencies(self.pixel_scale_mm):
+            cens = {
+                dim: (tbl[f"{dim}_cen"].data.astype(float) *
+                      unit_from_table(f"{dim}_cen", tbl, u.mm) << u.mm)
+                for dim in self.dims
+            }
+
+            ds = {
+                dim: (0.5 * tbl[f"{dim}_size"].data.astype(float) *
+                      unit_from_table(f"{dim}_size", tbl, u.mm) << u.mm)
+                for dim in self.dims
+            }
+
+        det_mins = {dim: np.min(cens[dim] - ds[dim]) for dim in self.dims}
+        det_maxs = {dim: np.max(cens[dim] + ds[dim]) for dim in self.dims}
+
+        points = np.array([
+            [det_mins[dim].to_value(u.mm) for dim in self.dims],
+            [det_maxs[dim].to_value(u.mm) for dim in self.dims],
+        ])
+
+        return points * u.mm
+
     def fov_grid(self, which="edges", **kwargs):
         """Return an ApertureMask object. kwargs are "pixel_scale" [arcsec]."""
-        warnings.warn("The fov_grid method is deprecated and will be removed "
-                      "in a future release.", DeprecationWarning, stacklevel=2)
-        aperture_mask = None
-        if which == "edges":
-            self.meta.update(kwargs)
-            self.meta = from_currsys(self.meta, self.cmds)
+        # This has really been taken care of by apply_to now
+        # TODO v1.0: finally rm this completely
+        raise AttributeError("The DetectorList.fov_grid() method has been "
+                             "removed in vPLACEHOLDER_NEXT_RELEASE_VERSION.")
+        # aperture_mask = None
+        # if which == "edges":
+        #     self.meta.update(kwargs)
+        #     self.meta = from_currsys(self.meta, self.cmds)
 
-            hdr = self.image_plane_header
-            xy_mm = calc_footprint(hdr, "D")
-            pixel_size = hdr["CDELT1D"]              # mm
-            pixel_scale = self.meta["pixel_scale"]   # ["]
+        #     hdr = self.image_plane_header
+        #     xy_mm = calc_footprint(hdr, "D")
+        #     pixel_size = hdr["CDELT1D"]              # mm
+        #     pixel_scale = self.meta["pixel_scale"]   # ["]
 
-            # x["] = x[mm] * ["] / [mm]
-            xy_sky = xy_mm * pixel_scale / pixel_size
+        #     # x["] = x[mm] * ["] / [mm]
+        #     xy_sky = xy_mm * pixel_scale / pixel_size
 
-            aperture_mask = ApertureMask(array_dict={"x": xy_sky[:, 0],
-                                                     "y": xy_sky[:, 1]},
-                                         pixel_scale=pixel_scale)
+        #     aperture_mask = ApertureMask(array_dict={"x": xy_sky[:, 0],
+        #                                              "y": xy_sky[:, 1]},
+        #                                  pixel_scale=pixel_scale)
 
-        return aperture_mask
+        # return aperture_mask
 
     @property
     def image_plane_header(self):
         """Create and return the Image Plane Header."""
         # FIXME: Heavy property.....
+        # TODO: refactor this using (parts of) 3D implementation below
         tbl = self.active_table
         pixel_size = np.min(quantity_from_table("pixel_size", tbl, u.mm))
         x_size_unit = unit_from_table("x_size", tbl, u.mm)
@@ -246,6 +325,8 @@ class DetectorList(Effect):
 
     def detector_headers(self, ids=None):
         """Create detector headers from active detectors or given IDs."""
+        # Note: the ids argument is not used anywhere in ScopeSim.
+
         if ids is not None and all(isinstance(ii, int) for ii in ids):
             self.meta["active_detectors"] = list(ids)
 
@@ -360,3 +441,73 @@ class DetectorWindow(DetectorList):
         }
 
         super().__init__(array_dict=array_dict, **params)
+
+
+class DetectorList3D(DetectorList):
+    """Pseudo-detector for simple IFU mode.
+
+    .. versionadded:: PLACEHOLDER_NEXT_RELEASE_VERSION
+    """
+
+    dims = "xyz"  # 2 spatial dimensions, 1 spectral dimension
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        params = {
+            "pixel_scale": "!INST.pixel_scale",  # arcsec
+            "active_detectors": "all",
+            "wavelen": "!OBS.wavelen",
+            "dwave": "!SIM.spectral.spectral_bin_width",
+        }
+        self.meta.update(params)
+        self.meta.update(kwargs)
+
+    @property
+    def waverange(self) -> u.Quantity[u.um]:
+        """Return wavelength range in um [wave_min, wave_max]."""
+        # TODO: dynamic wave unit ?
+        wave_points = self._get_corner_points()[:, 2]
+        wave_mid = from_currsys(self.meta["wavelen"], self.cmds) * u.um
+        dwave = from_currsys(self.meta["dwave"], self.cmds) * u.um / u.pixel
+
+        with u.set_enabled_equivalencies(self.pixel_scale_mm):
+            waverange = wave_points.to(u.pixel) * dwave + wave_mid
+        return waverange
+
+    def _get_fov_limits(self, pixel_scale=None):
+        mm_points = self._get_corner_points()[:, :2]
+        pixel_scale = self._get_pixel_scale_arcsec(pixel_scale)
+
+        # See parent class for explanation of this operation.
+        with u.set_enabled_equivalencies(pixel_scale + self.pixel_scale_mm):
+            sky_points = (mm_points << u.pixel).to_value(u.arcsec)
+
+        axis = ["x", "y", "wave"]
+        values = (
+            *zip(sky_points.min(axis=0), sky_points.max(axis=0)),
+            tuple(self.waverange.to_value(u.um).round(7))
+        )
+
+        return axis, values  # [arcsec, arcsec, um]
+
+    @property
+    def image_plane_header(self):
+        """Create and return the Image Plane Header."""
+        # FIXME: Heavy property.....
+        points = self._get_corner_points().value
+        new_wcs, naxis = create_wcs_from_points(
+            points, self.pixel_size.to_value(u.mm), "D")
+
+        hdr = fits.Header()
+        hdr["NAXIS"] = 3
+        hdr["NAXIS1"] = int(naxis[0])
+        hdr["NAXIS2"] = int(naxis[1])
+        hdr["NAXIS3"] = int(naxis[2])
+        hdr.update(new_wcs.to_header())
+        hdr["IMGPLANE"] = self.image_plane_id
+
+        return hdr
+
+    def detector_headers(self, ids=None):
+        """Override for simplified 3D case."""
+        return [self.image_plane_header]

@@ -24,6 +24,7 @@ from ..detector import DetectorManager
 from ..effects import ExtraFitsKeywords
 from ..utils import from_currsys, top_level_catch, get_logger
 from ..source.source_templates import empty_sky
+from ..source.source_fields import SpectrumSourceField
 from .. import __version__
 
 
@@ -283,8 +284,15 @@ class OpticalTrain:
                                    desc=" FOV effects", position=1):#, leave=False):
                     fov = effect.apply_to(fov)
 
-                fov.flatten()
-                self.image_planes[fov.image_plane_id].add(fov.hdu, wcs_suffix="D")
+                if self.cmds.get("!INST.flatten", True):
+                    fov.flatten()
+                    self.image_planes[fov.image_plane_id].add(fov.hdu, wcs_suffix="D")
+                else:  # cube output
+                    self.image_planes[fov.image_plane_id].add(fov.hdu, wcs_suffix="D")
+                    # HACK: to get sky WCS from FOV into image plane...
+                    self.image_planes[fov.image_plane_id].header.update(
+                        WCS(fov.hdu).to_header())
+
                 # ..todo: finish off the multiple image plane stuff
 
         # END OF MULTIPROCESSING
@@ -311,25 +319,28 @@ class OpticalTrain:
         than used internally, or if the source data are sampled on irregular
         wavelengths.
         For cube fields, the method assumes that the wavelengths at which the
-        cube is sampled is provided explicitely as attribute `wave` if the cube
+        cube is sampled is provided explicitely as attribute `wave` of the cube
         ImageHDU.
         """
         # Convert to PHOTLAM per arcsec2
         # TODO: this is not sufficiently general
         # TODO: Maybe move this to source_fields??
 
-        for ispec, spec in source.spectra.items():
-            # Put on fov wavegrid
-            wave_min = min(fov.meta["wave_min"] for fov in self.fov_manager.fovs)
-            wave_max = max(fov.meta["wave_max"] for fov in self.fov_manager.fovs)
-            wave_unit = u.Unit(from_currsys("!SIM.spectral.wave_unit", self.cmds))
-            dwave = from_currsys("!SIM.spectral.spectral_bin_width", self.cmds)  # Not a quantity
-            fov_waveset = np.arange(wave_min.value, wave_max.value, dwave) * wave_unit
-            fov_waveset = fov_waveset.to(u.um)
+        for field in source.fields:
+            if not isinstance(field, SpectrumSourceField):
+                continue
+            for ispec, spec in field.spectra.items():
+                # Put on fov wavegrid
+                wave_min = min(fov.meta["wave_min"] for fov in self.fov_manager.fovs)
+                wave_max = max(fov.meta["wave_max"] for fov in self.fov_manager.fovs)
+                wave_unit = u.Unit(from_currsys("!SIM.spectral.wave_unit", self.cmds))
+                dwave = from_currsys("!SIM.spectral.spectral_bin_width", self.cmds)  # Not a quantity
+                fov_waveset = np.arange(wave_min.value, wave_max.value, dwave) * wave_unit
+                fov_waveset = fov_waveset.to(u.um)
 
-            source.spectra[ispec] = SourceSpectrum(Empirical1D,
-                                                   points=fov_waveset,
-                                                   lookup_table=spec(fov_waveset))
+                field.spectra[ispec] = SourceSpectrum(Empirical1D,
+                                                      points=fov_waveset,
+                                                      lookup_table=spec(fov_waveset))
 
         for cube in source.cube_fields:
             header, data, wave = cube.header, cube.data, cube.wave
@@ -371,6 +382,10 @@ class OpticalTrain:
             dwave = from_currsys("!SIM.spectral.spectral_bin_width", self.cmds)  # Not a quantity
             fov_waveset = np.arange(wave_min.value, wave_max.value, dwave) * wave_unit
             fov_waveset = fov_waveset.to(u.um)
+
+            if (wave.to(u.um).min() > fov_waveset.max() or
+                    wave.to(u.um).max() < fov_waveset.min()):
+                logger.warning("Source and FOV wavesets disjoint.")
 
             # Interpolate into new data cube.
             # This is done layer by layer for memory reasons.
@@ -629,6 +644,19 @@ class OpticalTrain:
             p.breakable()
             with p.indent(2):
                 p.pretty(self.effects)
+
+    def _repr_html_(self) -> str:
+        """For notebooks."""
+        html = (
+            "<div>"
+            f"<h4>{self.__class__.__name__} "
+            f"for {self.cmds['!OBS.instrument']} "
+            f"@ {self.cmds['!TEL.telescope']}</h4>"
+            f"<div><h5>Settings</h5>{self.cmds._repr_html_()}</div>"
+            f"<div><h5>Effects</h5>{self.effects._repr_html_()}</div>"
+            "</div>"
+        )
+        return html
 
     def __getitem__(self, item):
         return self.optics_manager[item]
