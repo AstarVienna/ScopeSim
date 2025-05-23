@@ -9,7 +9,7 @@ from matplotlib.colors import LogNorm
 
 from scopesim.tests.mocks.py_objects import header_objects as ho
 from scopesim.tests.mocks.py_objects import source_objects as so
-from scopesim.optics.fov import FieldOfView, get_cube_waveset
+from scopesim.optics.fov import FieldOfView
 
 PLOTS = False
 
@@ -298,7 +298,6 @@ class TestMakeCube:
         assert "CTYPE3" in cube.header
 
 
-# @pytest.mark.xfail(reason="revisit fov.waveset e.g. use make_cube waveset")
 class TestMakeImage:
     def test_makes_image_from_table(self):
         src_table = so._table_source()            # 10x10" @ 0.2"/pix, [0.5, 2.5]m @ 0.02µm
@@ -424,7 +423,6 @@ class TestMakeImage:
             plt.show()
 
 
-# @pytest.mark.xfail(reason="revisit fov.waveset e.g. use make_cube waveset")
 class TestMakeSpectrum:
     def test_make_spectrum_from_table(self):
         src_table = so._table_source()            # 10x10" @ 0.2"/pix, [0.5, 2.5]m @ 0.02µm
@@ -476,11 +474,13 @@ class TestMakeSpectrum:
 
         spec = fov.make_spectrum()
 
-        table_sum = np.sum([n * spec(fov.waveset).value
-                            for n, spec in zip([3, 1, 1], src_table.spectra.values())])  # sum of weights [3,1,1]
+        table_sum = np.sum([
+            n * spec(fov.waveset).value
+            for n, spec in zip([3, 1, 1], src_table.spectra.values())
+        ])  # sum of weights [3, 1, 1]
         image_sum = np.sum(src_image.fields[0].data) * \
-                    np.sum(src_image.spectra[0](fov.waveset).value)
-        cube_sum = np.sum(src_cube.fields[0].data[70:81, :, :]) * 1e-8
+            np.sum(src_image.spectra[0](fov.waveset).value)
+        cube_sum = np.sum(src_cube.fields[0].data[70:81]) * 1e-8
 
         in_sum = table_sum + image_sum + cube_sum
         out_sum = np.sum(spec(fov.waveset).value)
@@ -507,7 +507,7 @@ class TestMakeSpectrumImageCubeAllPlayNicely:
 
         # if photlam, units of ph / s / cm2 / AA, else units of ph / s / voxel
         cube = fov.make_cube_hdu()
-        cube_waves = get_cube_waveset(cube.header)
+        # cube_waves = get_cube_waveset(cube.header)
         cube_spectrum = cube.data.sum(axis=2).sum(axis=1)
 
         # always units of ph / s / cm-2 / AA-1
@@ -522,7 +522,7 @@ class TestMakeSpectrumImageCubeAllPlayNicely:
 
         if PLOTS:
             plt.plot(waves, spectrum, "k")
-            plt.plot(cube_waves, cube_spectrum, "r")
+            # plt.plot(cube_waves, cube_spectrum, "r")
             plt.show()
 
         assert np.sum(cube.data) == approx(np.sum(spectrum), rel=0.001)

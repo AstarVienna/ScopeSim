@@ -169,13 +169,9 @@ def _cube_source(**kwargs):
 
     # Broadcast the array onto a 3rd dimension and scale along the new axis
     im_hdu.data = data[None, :, :] * np.linspace(0, 4, n)[:, None, None]
-    # im_src.spectra = {}
 
-    # FIXME: CRPIX might be wrong here, aka off-by-one!!
-    # But all other code assumes it like this, so I'm keeping it for now.
-    # astropy WCS spectral would need 51 to work correctly...
     cube_hdr_dict = {"CUNIT3": "um", "CTYPE3": "WAVE", "CDELT3": 0.02,
-                     "CRVAL3": 1.5, "CRPIX3": 50, "SPEC_REF": None,
+                     "CRVAL3": 1.5, "CRPIX3": 51, "SPEC_REF": None,
                      "BUNIT": "ph s-1 m-2 um-1"}
 
     im_hdu.header.update(cube_hdr_dict)
