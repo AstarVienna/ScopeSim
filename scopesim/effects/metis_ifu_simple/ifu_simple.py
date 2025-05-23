@@ -16,6 +16,29 @@ logger = get_logger(__name__)
 class LineSpreadFunction(Effect):
     """
     Compute and apply line spread function to IFU cube
+
+    The effect can be instantiated either with the single parameter
+
+    - lsfwidth : float
+         Width of the line-spread function in pixels
+
+    or with the following set of parameters:
+
+    - wavelen : float
+         Central wavelength of the LMS setting [um]
+    - fit_slope, fit_intercept : float
+         Parameters of a linear fit of the mean dispersion (Delta lambda
+         per pixel on the LMS detector) as a function of central wavelength.
+         For METIS LMS, these values are obtained from `TRACE_LMS.fits` with
+         the script `fit_ifu_dispersion.py` in `irdb/METIS/code`.
+    - slice_width : float
+         On-sky width of a slice of the LMS slicer [arcsec]
+    - pixel_scale : float
+         On-sky angle covered by a pixel of the LMS detector array [arcsec]
+    - spec_binwidth : float
+         Spectral bin width of the 3D detector of the lms_cube mode.
+
+    These values are set in `METIS_LMS_SMPL.yaml`.
     """
     z_order: ClassVar[tuple[int, ...]] = (660,)
     report_plot_include: ClassVar[bool] = True
@@ -23,10 +46,6 @@ class LineSpreadFunction(Effect):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        params = {
-
-        }
-        self.meta.update(params)
         self.meta.update(kwargs)
         self.meta = from_currsys(self.meta, self.cmds)
 
@@ -36,20 +55,18 @@ class LineSpreadFunction(Effect):
             self.lsfwidth = self.meta["lsfwidth"]
         self.kernel = self.get_kernel()
 
-    def apply_to(self, fov, **kwargs):
+    def apply_to(self, obj, **kwargs):
         """Apply the LSF"""
-        if not isinstance(fov, FieldOfView):
-            return fov
+        if not isinstance(obj, FieldOfView):
+            return obj
 
-        if fov.hdu is None or fov.hdu.header["NAXIS"] != 3:
+        if obj.hdu is None or obj.hdu.header["NAXIS"] != 3:
             logger.error("Cannot apply LSF convolution")
-            return fov
+            return obj
 
-
-        print("Happily convolving with LSF")
-        fov.hdu.data = convolve(fov.hdu.data, self.kernel)
-        fov.cube = fov.hdu
-        return fov
+        obj.hdu.data = convolve(obj.hdu.data, self.kernel)
+        obj.cube = obj.hdu
+        return obj
 
     def get_lsf_width(self):
         """Determine width of the LSF kernel at central wavelength"""
