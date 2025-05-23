@@ -141,6 +141,9 @@ class FieldConstantPSF(DiscretePSF):
             + fov.hdu.header["CRVAL3"]
         )
 
+        if not self.cmds.get("!OBS.interp_psf", True):
+            lam = np.array([lam[len(lam)//2]])
+
         # adapt the size of the output cube to the FOV's spatial shape
         nxpsf = min(512, 2 * nxfov + 1)
         nypsf = min(512, 2 * nyfov + 1)
@@ -189,7 +192,8 @@ class FieldConstantPSF(DiscretePSF):
             outcube[i,] = (ipsf(ypsf, xpsf, grid=False)
                            * fov_pixel_scale**2 / psf_wave_pixscale**2)
 
-        self.kernel = outcube.reshape((lam.shape[0], nypsf, nxpsf))
+        # .squeeze() gets rid of any axes with length one
+        self.kernel = outcube.reshape((lam.shape[0], nypsf, nxpsf)).squeeze()
         # fits.writeto("test_psfcube.fits", data=self.kernel, overwrite=True)
 
     def plot(self):
