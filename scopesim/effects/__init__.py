@@ -22,5 +22,5 @@ from .fits_headers import *
 from .rotation import *
 
 from .metis_wcu import *
-
+from .metis_ifu_simple import *
 # from . import effects_utils
