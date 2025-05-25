@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "ScopeSim"
-version = "0.10.0a2"
+version = "0.10.0b0"
 description = "Generalised telescope observation simulator"
 license = "GPL-3.0-or-later"
 authors = ["Kieran Leschinski <kieran.leschinski@unive.ac.at>"]
@@ -36,9 +36,9 @@ tqdm = "^4.66.5"
 packaging = ">=23.2"
 
 synphot = "^1.5.0"
-skycalc-ipy = ">=0.5.1"
+skycalc-ipy = ">=0.5.3"
 anisocado = ">=0.3.0"
-astar-utils = ">=0.3.1"
+astar-utils = ">=0.3.2"
 
 [tool.poetry.group.dev]
 optional = true
