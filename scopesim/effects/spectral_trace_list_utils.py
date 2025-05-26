@@ -158,7 +158,7 @@ class SpectralTrace:
         The method returns a section of the fov image along with info on
         where this image lies in the focal plane.
         """
-        logger.info("Mapping %s", fov.trace_id)
+        logger.debug("Mapping %s", fov.trace_id)
         # Initialise the image based on the footprint of the spectral
         # trace and the focal plane WCS
         wave_min = fov.meta["wave_min"].value       # [um]
