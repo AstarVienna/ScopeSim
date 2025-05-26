@@ -92,7 +92,7 @@ class LineSpreadFunction(Effect):
         box = Box1DKernel(width=self.lsfwidth)
         gauss = Gaussian1DKernel(1)
         if box.shape > gauss.shape:
-            kernel = convolve(box.array, gauss)[np.newaxis, np.newaxis, :]
+            kernel = convolve(box.array, gauss)[:, np.newaxis, np.newaxis]
         else:
-            kernel = convolve(gauss.array, box)[np.newaxis, np.newaxis, :]
+            kernel = convolve(gauss.array, box)[:, np.newaxis, np.newaxis]
         return kernel
