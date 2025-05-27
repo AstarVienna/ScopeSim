@@ -4,6 +4,7 @@
 import copy
 import warnings
 
+from tqdm.auto import tqdm
 import numpy as np
 from scipy.interpolate import RectBivariateSpline
 
@@ -104,7 +105,8 @@ class MetisLMSSpectralTraceList(SpectralTraceList):
                                  obj.detector_header["NAXIS1"]),
                                 dtype=np.float32)
 
-            for sptid, spt in self.spectral_traces.items():
+            for sptid, spt in tqdm(self.spectral_traces.items(),
+                                   desc="  Spectral Traces", position=2):
                 ymin = spt.meta["fov"]["y_min"]
                 ymax = spt.meta["fov"]["y_max"]
 
