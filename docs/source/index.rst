@@ -90,7 +90,9 @@ API reference
    :recursive:
    :caption: Package Contents
 
-   scopesim_templates.stellar
-   scopesim_templates.extragalactic
-   scopesim_templates.calibration.calibration
-   scopesim_templates.misc.misc
+   scopesim.commands
+   scopesim.detector
+   scopesim.effects
+   scopesim.optics
+   scopesim.server
+   scopesim.source
