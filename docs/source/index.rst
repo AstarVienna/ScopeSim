@@ -32,8 +32,6 @@ ScopeSim_ is on pip::
     examples/index
     5_liners/index
     faqs/index
-    effects_docstrings/index
-    Reference API <reference/modules>
 
 
 The ScopeSim python ecosystem
