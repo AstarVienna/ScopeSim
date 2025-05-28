@@ -124,6 +124,10 @@ class ADConversion(Effect):
     Again, `!DET.gain` can be used here. This can be useful when the
     `DetectorModePropertiesSetter` effect is used to switch between different
     detector modes with different gain values.
+
+    .. versionchanged:: PLACEHOLDER_NEXT_RELEASE_VERSION
+
+       Renamed from `Quantization` to `ADConversion`.
     """
 
     z_order: ClassVar[tuple[int, ...]] = (825,)

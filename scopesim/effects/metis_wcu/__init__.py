@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 """
-Effects for METIS Warm Calibration Unit
+Effects for METIS Warm Calibration Unit.
+
+.. versionadded:: 0.9.2
 
 Classes:
 - WCUSource

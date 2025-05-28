@@ -50,6 +50,8 @@ HDUSourceField <|-- ImageSourceField
 HDUSourceField <|-- CubeSourceField
 ```
 
+.. versionadded:: 0.9.0
+
 """
 
 from warnings import warn
@@ -81,7 +83,11 @@ logger = get_logger(__name__)
 # TODO: consider making this a metaclass
 @dataclass
 class SourceField:
-    """Base class for source fields, not meant to be instantiated."""
+    """Base class for source fields, not meant to be instantiated.
+
+    .. versionadded:: 0.9.0
+
+    """
 
     field: Any
     _: KW_ONLY
@@ -114,13 +120,23 @@ class SourceField:
         return self.meta.get("object", "<unknown>")
 
     def get_corners(self, unit: u.Unit | str = "arcsec") -> np.ndarray:
-        """Calculate and return footprint corner points in `unit`."""
+        """Calculate and return footprint corner points in `unit`.
+
+        .. versionadded:: PLACEHOLDER_NEXT_RELEASE_VERSION
+
+           Implemented for all subclasses to refactor in FieldOfView.
+
+        """
         raise NotImplementedError("Subclasses should implement this.")
 
 
 @dataclass
 class SpectrumSourceField(SourceField):
-    """Base class for source fields with separate spectra (no cube)."""
+    """Base class for source fields with separate spectra (no cube).
+
+    .. versionadded:: 0.9.0
+
+    """
 
     spectra: dict
 
@@ -135,7 +151,11 @@ class SpectrumSourceField(SourceField):
 
 @dataclass
 class TableSourceField(SpectrumSourceField):
-    """Source field with table of point source(s)."""
+    """Source field with table of point source(s).
+
+    .. versionadded:: 0.9.0
+
+    """
 
     field: Table
 
@@ -225,7 +245,11 @@ class TableSourceField(SpectrumSourceField):
 
 @dataclass
 class HDUSourceField(SourceField):
-    """Base class for source fields with HDU."""
+    """Base class for source fields with HDU.
+
+    .. versionadded:: 0.9.0
+
+    """
 
     field: fits.ImageHDU
     wcs: WCS | None = dataclass_field(default=None, init=False)
@@ -290,7 +314,11 @@ class HDUSourceField(SourceField):
 
 @dataclass
 class ImageSourceField(SpectrumSourceField, HDUSourceField):
-    """Source field with 2D image and a single (average) spectrum."""
+    """Source field with 2D image and a single (average) spectrum.
+
+    .. versionadded:: 0.9.0
+
+    """
 
     def __post_init__(self):
         """Validate input."""
@@ -305,7 +333,11 @@ class ImageSourceField(SpectrumSourceField, HDUSourceField):
 
 @dataclass
 class CubeSourceField(HDUSourceField):
-    """Source field with 3D data cube."""
+    """Source field with 3D data cube.
+
+    .. versionadded:: 0.9.0
+
+    """
 
     from_hdul: bool = False
 
@@ -366,7 +398,11 @@ class CubeSourceField(HDUSourceField):
 
 @dataclass
 class BackgroundSourceField(SpectrumSourceField):
-    """Source field with spectrum only, for TER curve emissions."""
+    """Source field with spectrum only, for TER curve emissions.
+
+    .. versionadded:: PLACEHOLDER_NEXT_RELEASE_VERSION
+
+    """
 
     header: fits.Header
 

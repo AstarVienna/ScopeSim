@@ -1,5 +1,9 @@
 # -*- coding: utf-8 -*-
-"""A class for the METIS WCU focal-plane mask."""
+"""A class for the METIS WCU focal-plane mask.
+
+.. versionadded:: 0.9.2
+
+"""
 
 from pathlib import Path
 
@@ -21,6 +25,8 @@ class FPMask:
     Parameters
     ----------
     See :class:`DataContainer` for input parameters
+
+    .. versionadded:: 0.9.2
 
     """
 

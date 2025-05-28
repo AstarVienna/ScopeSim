@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Effects for the METIS ifu_cube mode"""
+"""Effects for the METIS ifu_cube mode."""
 
 from typing import ClassVar
 
@@ -15,7 +15,7 @@ logger = get_logger(__name__)
 
 class LineSpreadFunction(Effect):
     """
-    Compute and apply line spread function to IFU cube
+    Compute and apply line spread function to IFU cube.
 
     The effect can be instantiated either with the single parameter
 
@@ -39,7 +39,11 @@ class LineSpreadFunction(Effect):
          Spectral bin width of the 3D detector of the lms_cube mode.
 
     These values are set in `METIS_LMS_SMPL.yaml`.
+
+    .. versionadded:: PLACEHOLDER_NEXT_RELEASE_VERSION
+
     """
+
     z_order: ClassVar[tuple[int, ...]] = (660,)
     report_plot_include: ClassVar[bool] = True
     report_table_include: ClassVar[bool] = False
@@ -56,7 +60,7 @@ class LineSpreadFunction(Effect):
         self.kernel = self.get_kernel()
 
     def apply_to(self, obj, **kwargs):
-        """Apply the LSF"""
+        """Apply the LSF."""
         if not isinstance(obj, FieldOfView):
             return obj
 
@@ -69,8 +73,7 @@ class LineSpreadFunction(Effect):
         return obj
 
     def get_lsf_width(self):
-        """Determine width of the LSF kernel at central wavelength"""
-
+        """Determine width of the LSF kernel at central wavelength."""
         slope = self.meta['fit_slope']
         intercept = self.meta['fit_intercept']
         lamc = self.meta["wavelen"]
@@ -85,10 +88,8 @@ class LineSpreadFunction(Effect):
 
         return dlam_per_slice / spec_binwidth
 
-
     def get_kernel(self):
-        """Build LSF kernel: box kernel smoothed with narrow Gauss"""
-
+        """Build LSF kernel: box kernel smoothed with narrow Gauss."""
         box = Box1DKernel(width=self.lsfwidth)
         gauss = Gaussian1DKernel(1)
         if box.shape > gauss.shape:

@@ -69,6 +69,11 @@ class FieldConstantPSF(DiscretePSF):
 
     For spectroscopy, a wavelength-dependent PSF cube is built, where for each
     wavelength the reference PSF is scaled proportional to wavelength.
+
+    .. versionchanged:: PLACEHOLDER_NEXT_RELEASE_VERSION
+       PSF interpolation can now be limited to the central wavelength by
+       setting the "!OBS.interp_psf" keyword to False.
+
     """
 
     required_keys = {"filename"}
