@@ -26,3 +26,11 @@ from .noise import (Bias, PoorMansHxRGReadoutNoise, BasicReadoutNoise,
 from .exposure import AutoExposure, SummedExposure, ExposureOutput
 from .pixels import ReferencePixelBorder, BinnedImage, UnequalBinnedImage
 from .dmps import DetectorModePropertiesSetter
+
+
+# TODO: rm this in v1.0
+def Quantization(*args, **kwargs):
+    raise AttributeError(
+        "The `Quantization` effect was removed in vPLACEHOLDER_NEXT_RELEASE_VERSION. Please update the "
+        "requested IRDB package by running `download_packages(<package_name>)`"
+        "or by updating your local IRDB clone.")
