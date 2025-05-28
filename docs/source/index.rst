@@ -94,3 +94,4 @@ API reference
    scopesim.optics
    scopesim.server
    scopesim.source
+   scopesim.utils
