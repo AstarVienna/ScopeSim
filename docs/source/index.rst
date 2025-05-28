@@ -80,3 +80,17 @@ Contact
   - `kieran.leschinski@univie.ac.at <kieran.leschinski@univie.ac.at>`_
 
 - For friendly chat, join the slack at https://join.slack.com/t/scopesim/shared_invite/zt-143s42izo-LnyqoG7gH5j~aGn51Z~4IA
+
+API reference
+-------------
+
+.. autosummary::
+   :toctree: _autosummary
+   :template: custom-module-template.rst
+   :recursive:
+   :caption: Package Contents
+
+   scopesim_templates.stellar
+   scopesim_templates.extragalactic
+   scopesim_templates.calibration.calibration
+   scopesim_templates.misc.misc

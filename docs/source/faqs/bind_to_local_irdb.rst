@@ -8,7 +8,7 @@ This is quite easy and involves only two steps:
 1. `Make a local copy of the IRDB`_
 2. `Tell ScopeSim where to find the IRDB`_
 
-   - `By using runtime ScopeSIm commands`_
+   - `By using runtime ScopeSim commands`_
    - `By editing the ScopeSim config file`_
 
 Make a local copy of the IRDB
@@ -32,8 +32,8 @@ By using runtime ScopeSim commands
 At the beginning of any script or jupyter notebook we can run the following command to set the default location of the instrument packages:
 This is by far the simplest method, but it requires this lone of code in every script::
 
-    import scopesim
-    scopesim.rc.__config__["!SIM.file.local_packages_path"] = "<path/to/IRDB>"
+    import scopesim as sim
+    sim.link_irdb("<path/to/IRDB>")
 
 
 By editing the ScopeSim config file

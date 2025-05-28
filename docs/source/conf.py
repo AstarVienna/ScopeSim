@@ -57,23 +57,26 @@ release = ''
 # ones.
 extensions = [
     'scopesim_sphinx_ext',
-    'sphinx.ext.intersphinx',
     'sphinx.ext.todo',
-    'sphinx.ext.mathjax',
-    'sphinx.ext.viewcode',
-    'numpydoc',
-    'matplotlib.sphinxext.plot_directive',
-    'sphinxcontrib.apidoc',
     'sphinx.ext.autodoc',
+    'sphinx.ext.autosummary',
+    'sphinx.ext.intersphinx',
+    'sphinx.ext.inheritance_diagram',
+    'sphinx.ext.mathjax',
+    'sphinx.ext.extlinks',
+    'sphinx.ext.doctest',
+    'sphinx.ext.napoleon',
     'sphinx_copybutton',
     'myst_nb',
 ]
 
 # apidoc settings
-numpydoc_show_class_members = False
-apidoc_module_dir = pth.abspath('../../scopesim/')
-apidoc_output_dir = 'reference'
-apidoc_separate_modules = True
+autosummary_generate = True
+autoclass_content = "class"
+autodoc_default_flags = ["members", "inherited-members"]
+autodoc_docstring_signature = False
+napoleon_numpy_docstring = True
+napoleon_use_admonition_for_references = True
 apidoc_excluded_paths = ["tests/", "docs/"]
 
 # Matplotlib plot directive config parameters
