@@ -186,7 +186,11 @@ class AutoExposure(Effect):
 
 
 class ExposureOutput(Effect):
-    """Return average or sum of ``ndit`` subexposures."""
+    """Return average or sum of ``ndit`` subexposures.
+
+    .. versionadded:: 0.9.3
+
+    """
 
     required_keys = {"dit", "ndit"}
     z_order: ClassVar[tuple[int, ...]] = (861,)

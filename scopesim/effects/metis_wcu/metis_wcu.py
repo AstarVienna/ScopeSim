@@ -1,5 +1,9 @@
 # -*- coding: utf-8 -*-
-"""Classes for the METIS Warm Calibration Unit."""
+"""Classes for the METIS Warm Calibration Unit.
+
+.. versionadded:: 0.9.2
+
+"""
 
 from typing import ClassVar
 
@@ -70,6 +74,9 @@ class WCUSource(TERCurve):
 
     Which laser is seen depends on the wavelength of the observation. Note that
     the tunable laser currently cannot be tuned.
+
+    .. versionadded:: 0.9.2
+
     """
 
     z_order: ClassVar[tuple[int, ...]] = (113, 513)

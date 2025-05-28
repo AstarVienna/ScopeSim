@@ -14,7 +14,11 @@ logger = get_logger(__name__)
 
 
 class FluxBinning3D(Effect):
-    """Takes care of cube flux conversion in absence of a SpectralTraceList."""
+    """Takes care of cube flux conversion in absence of a SpectralTraceList.
+
+    .. versionadded:: PLACEHOLDER_NEXT_RELEASE_VERSION
+
+    """
 
     z_order: ClassVar[tuple[int, ...]] = (690,)
 

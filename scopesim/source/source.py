@@ -151,6 +151,11 @@ class Source:
     --------
     synphot : ``https://synphot.readthedocs.io/en/latest/``
 
+    .. versionchanged:: PLACEHOLDER_NEXT_RELEASE_VERSION
+
+       Added the ability to instantiate directly from an existing SourceField
+       subclass instance.
+
     """
 
     def __init__(self, filename=None, cube=None, ext=0,
