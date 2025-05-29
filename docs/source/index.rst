@@ -32,8 +32,6 @@ ScopeSim_ is on pip::
     examples/index
     5_liners/index
     faqs/index
-    effects_docstrings/index
-    Reference API <reference/modules>
 
 
 The ScopeSim python ecosystem
@@ -80,3 +78,20 @@ Contact
   - `kieran.leschinski@univie.ac.at <kieran.leschinski@univie.ac.at>`_
 
 - For friendly chat, join the slack at https://join.slack.com/t/scopesim/shared_invite/zt-143s42izo-LnyqoG7gH5j~aGn51Z~4IA
+
+API reference
+-------------
+
+.. autosummary::
+   :toctree: _autosummary
+   :template: custom-module-template.rst
+   :recursive:
+   :caption: Package Contents
+
+   scopesim.commands
+   scopesim.detector
+   scopesim.effects
+   scopesim.optics
+   scopesim.server
+   scopesim.source
+   scopesim.utils

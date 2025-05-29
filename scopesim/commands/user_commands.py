@@ -151,7 +151,8 @@ class UserCommands(NestedChainMap):
 
     .. versionchanged:: v0.8.0
 
-    This now inherits from (a subclass of) `collections.ChainMap`.
+       This now inherits from (a subclass of) `collections.ChainMap`.
+
     """
 
     @top_level_catch

@@ -50,7 +50,6 @@ dist
 *misc/
 *temp/
 *TEST.fits
-*temp*
 *speclecado*.fits
 *inst_pkgs/
 
