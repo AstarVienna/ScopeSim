@@ -43,6 +43,7 @@ class TestChopNodCombinerApplyTo:
             plt.show()
 
         outimg = basic_detector.hdu.data
+        assert outimg.dtype == np.float32
         assert outimg.sum() == 0
         assert ((outimg == 0.).sum() / outimg.size) > .8  # most elements zero
 
@@ -56,5 +57,6 @@ class TestChopNodCombinerApplyTo:
             plt.show()
 
         outimg = basic_detector.hdu.data
+        assert outimg.dtype == np.float32
         assert outimg.sum() == 0
         assert ((outimg == 0.).sum() / outimg.size) > .8  # most elements zero
