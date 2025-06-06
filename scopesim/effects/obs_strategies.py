@@ -95,7 +95,7 @@ def chop_nod_image(img, chop_offsets, nod_offsets=None):
     if nod_offsets is None:
         nod_offsets = tuple(-np.array(chop_offsets))
 
-    im_aa = np.copy(img)
+    im_aa = img.copy().astype(np.float32)    # in case img is uint
     im_ab = np.roll(im_aa, chop_offsets, (1, 0))
     im_ba = np.roll(im_aa, nod_offsets, (1, 0))
     im_bb = np.roll(im_ba, chop_offsets, (1, 0))
