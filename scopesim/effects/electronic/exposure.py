@@ -131,7 +131,10 @@ class AutoExposure(Effect):
 
     def apply_to(self, obj, **kwargs):
         if not isinstance(obj, (ImagePlane, Detector)):
-            # TODO: figure out why this needs to be applied to ImagePlane?
+            # TODO: Figure out why this needs to be applied to Detector?
+            # Note: This is never actually applied to Detector. It is called
+            #       twice within DetectorManager.readout() - not sure why - but
+            #       in both cases, `obj` is an ImagePlane.
             return obj
 
         exptime = kwargs.pop("exptime",
