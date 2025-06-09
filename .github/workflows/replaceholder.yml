@@ -1,0 +1,17 @@
+name: Replace version placeholders
+on:
+  workflow_dispatch:
+    inputs:
+      file-pattern:
+        type: string
+        description: Glob pattern for files to find
+        required: false
+        default: "*.py"
+
+jobs:
+  replace:
+    uses: AstarVienna/DevOps/.github/workflows/replaceholder.yml@main
+    secrets: inherit
+    with:
+      pkg-path: ./scopesim
+      file-pattern: ${{ inputs.file-pattern }}
