@@ -67,6 +67,7 @@ extensions = [
     'sphinx.ext.doctest',
     'sphinx.ext.napoleon',
     'sphinx_copybutton',
+    'sphinxcontrib.mermaid',
     'myst_nb',
 ]
 
