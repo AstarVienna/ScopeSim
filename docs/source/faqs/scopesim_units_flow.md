@@ -16,11 +16,13 @@ flowchart TB
     SPT{{"`SpectralTrace:
           dispersion, sum(sky)`"}}
     IMP["ImagePlane [ph/s]"]
-    Det1["Detector [ph]"]
-    QECurve{{"QECurve: ph -> e-"}}
-    Det2["Detector [e-]"]
+    Det1["Detector [ph/s]"]
+    QECurve{{"QECurve: ph/s -> e-/s"}}
+    Det2["Detector [e-/s]"]
+    SE{{"ExposureIntegration: sum(time)"}}
+    Det3["Detector [e-]"]
     ADC{{"ADConversion: e- -> ADU"}}
-    Det3["Detector [ADU]"]
+    Det4["Detector [ADU]"]
     Output(["Output [ADU]"])
 
     Source-- extract -->FOV1
@@ -35,10 +37,12 @@ flowchart TB
     end
     FOV2-- project -->IMP
     FOV5-- project -->IMP
-    IMP-- "readout: sum(time)" -->Det1
+    IMP-- "extract" -->Det1
     Det1-->QECurve
     QECurve-->Det2
-    Det2-->ADC
-    ADC-->Det3
-    Det3-->Output
+    Det2-->SE
+    SE-->Det3
+    Det3-->ADC
+    ADC-->Det4
+    Det4-->Output
 ```
