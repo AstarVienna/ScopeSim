@@ -45,7 +45,8 @@ class OpticsManager:
 
         self.cmds = cmds
         if self.cmds is None:
-            logger.warning("No UserCommands object was passed when initialising OpticsManager")
+            logger.warning("No UserCommands object was passed when "
+                           "initialising OpticsManager")
             self.cmds = rc.__currsys__
 
         if yaml_dicts is not None:
@@ -96,8 +97,9 @@ class OpticsManager:
         """
         if not isinstance(yaml_dicts, Sequence):
             yaml_dicts = [yaml_dicts]
-        self.optical_elements.extend(OpticalElement(dic, cmds=self.cmds, **kwargs)
-                                     for dic in yaml_dicts if "effects" in dic)
+        self.optical_elements.extend(
+            OpticalElement(dic, cmds=self.cmds, **kwargs)
+            for dic in yaml_dicts if "effects" in dic)
 
     def add_effect(self, effect, ext=0) -> None:
         """
@@ -273,7 +275,6 @@ class OpticsManager:
 
     @property
     def system_transmission(self):
-
         wave_unit = u.Unit(from_currsys("!SIM.spectral.wave_unit", self.cmds))
         dwave = from_currsys("!SIM.spectral.spectral_bin_width", self.cmds)
         wave_min = from_currsys("!SIM.spectral.wave_min", self.cmds)
@@ -313,10 +314,9 @@ class OpticsManager:
         names = [eff.display_name for eff in all_effs]
         classes = [eff.__class__.__name__ for eff in all_effs]
         included = [eff.meta["include"] for eff in all_effs]
-        z_orders = [eff.z_order for eff in all_effs]
 
-        colnames = ["element", "name", "class", "included"]     #, "z_orders"
-        data = [elements, names, classes, included]             #, z_orders
+        colnames = ["element", "name", "class", "included"]
+        data = [elements, names, classes, included]
         data = from_currsys(data, self.cmds)
         tbl = Table(names=colnames, data=data, copy=False)
 
@@ -385,7 +385,8 @@ Summary of Effects in Optical Elements:
         """Set self[key] to value."""
         obj = self.__getitem__(key)
         if isinstance(obj, list) and len(obj) > 1:
-            logger.warning("%s does not return a singular object:\n %s", key, obj)
+            logger.warning("%s does not return a singular object:\n %s",
+                           key, obj)
         elif isinstance(obj, efs.Effect) and isinstance(value, dict):
             obj.meta.update(value)
 
