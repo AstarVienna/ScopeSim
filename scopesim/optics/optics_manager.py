@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+"""Contains ``OpticsManager``, the "executive branch" for ``OpticalTrain``."""
 
 from inspect import isclass
 from typing import TextIO
@@ -40,12 +42,11 @@ class OpticsManager:
         self.optical_elements = []
         self.meta = {}
         self.meta.update(kwargs)
-        self._surfaces_table = None
-        self._surface_like_effects = None
 
         self.cmds = cmds
         if self.cmds is None:
-            logger.warning("No UserCommands object was passed when initialising OpticsManager")
+            logger.warning("No UserCommands object was passed when "
+                           "initialising OpticsManager")
             self.cmds = rc.__currsys__
 
         if yaml_dicts is not None:
@@ -53,8 +54,7 @@ class OpticsManager:
 
         self.set_derived_parameters()
 
-    def set_derived_parameters(self):
-
+    def set_derived_parameters(self) -> None:
         if "!INST.pixel_scale" not in self.cmds:
             raise ValueError("'!INST.pixel_scale' is missing from the current"
                              "system. Please add this to the instrument (INST)"
@@ -71,8 +71,8 @@ class OpticsManager:
         params = {"area": area, "pixel_scale": pixel_scale, "etendue": etendue}
         self.meta.update(params)
 
-    def load_effects(self, yaml_dicts, **kwargs):
-        """
+    def load_effects(self, yaml_dicts, **kwargs) -> None:
+        r"""
         Generate an OpticalElement for each section of the Optical System.
 
         Make an ``OpticalElement`` for each YAML document in the system.
@@ -97,10 +97,11 @@ class OpticsManager:
         """
         if not isinstance(yaml_dicts, Sequence):
             yaml_dicts = [yaml_dicts]
-        self.optical_elements.extend(OpticalElement(dic, cmds=self.cmds, **kwargs)
-                                     for dic in yaml_dicts if "effects" in dic)
+        self.optical_elements.extend(
+            OpticalElement(dic, cmds=self.cmds, **kwargs)
+            for dic in yaml_dicts if "effects" in dic)
 
-    def add_effect(self, effect, ext=0):
+    def add_effect(self, effect, ext=0) -> None:
         """
         Add an Effect object to an OpticalElement at index ``ext``.
 
@@ -117,7 +118,7 @@ class OpticsManager:
         if isinstance(effect, efs.Effect):
             self.optical_elements[ext].add_effect(effect)
 
-    def update(self, **obs_dict):
+    def update(self, **obs_dict) -> None:
         """
         Update the meta dictionary with keyword-value pairs.
 
@@ -129,7 +130,7 @@ class OpticsManager:
         """
         self.meta.update(**obs_dict)
 
-    def get_all(self, class_type):
+    def get_all(self, class_type) -> list[efs.Effect]:
         """
         Return list of all effects from all optical elements with `class_type`.
 
@@ -150,7 +151,7 @@ class OpticsManager:
 
         return effects
 
-    def get_z_order_effects(self, z_level: int):
+    def get_z_order_effects(self, z_level: int) -> list[efs.Effect]:
         """
         Return a list of all effects with a z_order keywords within `z_level`.
 
@@ -189,7 +190,7 @@ class OpticsManager:
         return list(_gather_effects())
 
     @property
-    def is_spectroscope(self):
+    def is_spectroscope(self) -> bool:
         """Return True if any of the effects is a spectroscope."""
         return is_spectroscope(self.all_effects)
 
@@ -203,47 +204,47 @@ class OpticsManager:
         return [det_list.image_plane_header for det_list in detector_lists]
 
     @property
-    def fits_header_effects(self):
+    def fits_header_effects(self) -> list[efs.Effect]:
         """Get effects with z_order = 1000...1099."""
         return self.get_z_order_effects(1000)
 
     @property
-    def detector_array_effects(self):
+    def detector_array_effects(self) -> list[efs.Effect]:
         """Get effects with z_order = 900...999."""
         return self.get_z_order_effects(900)
 
     @property
-    def detector_effects(self):
+    def detector_effects(self) -> list[efs.Effect]:
         """Get effects with z_order = 800...899."""
         return self.get_z_order_effects(800)
 
     @property
-    def image_plane_effects(self):
+    def image_plane_effects(self) -> list[efs.Effect]:
         """Get effects with z_order = 700...799."""
         return self.get_z_order_effects(700)
 
     @property
-    def fov_effects(self):
+    def fov_effects(self) -> list[efs.Effect]:
         """Get effects with z_order = 600...699."""
         return self.get_z_order_effects(600)
 
     @property
-    def source_effects(self):
+    def source_effects(self) -> list[efs.Effect]:
         """Get effects with z_order = 500...599."""
         return self.get_z_order_effects(500)   # Transmission
 
     @property
-    def detector_setup_effects(self):
+    def detector_setup_effects(self) -> list[efs.Effect]:
         """Get effects with z_order = 400...499 (DetectorLists only!)."""
         return self.get_z_order_effects(400)
 
     @property
-    def image_plane_setup_effects(self):
+    def image_plane_setup_effects(self) -> list[efs.Effect]:
         """Get effects with z_order = 300...399."""
         return self.get_z_order_effects(300)
 
     @property
-    def fov_setup_effects(self):
+    def fov_setup_effects(self) -> list[efs.Effect]:
         """Get effects with z_order = 200...299."""
         # Working out where to set wave_min, wave_max
         return self.get_z_order_effects(200)
@@ -268,13 +269,12 @@ class OpticsManager:
         return comb_table
 
     @property
-    def all_effects(self):
+    def all_effects(self) -> list[efs.Effect]:
         """Get all effects in all optical elements."""
         return [eff for opt_eff in self.optical_elements for eff in opt_eff]
 
     @property
     def system_transmission(self):
-
         wave_unit = u.Unit(from_currsys("!SIM.spectral.wave_unit", self.cmds))
         dwave = from_currsys("!SIM.spectral.spectral_bin_width", self.cmds)
         wave_min = from_currsys("!SIM.spectral.wave_min", self.cmds)
@@ -290,14 +290,14 @@ class OpticsManager:
         return sys_trans
 
     @property
-    def area(self):
+    def area(self) -> u.Quantity[u.m**2]:
         surf_lists = self.get_all(efs.SurfaceList)
         areas = [0] + [surf_list.area.value for surf_list in surf_lists]
         _area = np.max(areas) * u.m**2
 
         return _area
 
-    def list_effects(self):
+    def list_effects(self) -> Table:
         # unfortunately this does not work because of the astropy internal
         # conversion to np.arrays if all column entries are a list with the
         # same number of entries
@@ -314,17 +314,16 @@ class OpticsManager:
         names = [eff.display_name for eff in all_effs]
         classes = [eff.__class__.__name__ for eff in all_effs]
         included = [eff.meta["include"] for eff in all_effs]
-        z_orders = [eff.z_order for eff in all_effs]
 
-        colnames = ["element", "name", "class", "included"]     #, "z_orders"
-        data = [elements, names, classes, included]             #, z_orders
+        colnames = ["element", "name", "class", "included"]
+        data = [elements, names, classes, included]
         data = from_currsys(data, self.cmds)
         tbl = Table(names=colnames, data=data, copy=False)
 
         return tbl
 
     def report(self, filename=None, output="rst", rst_title_chars="_^#*+",
-               **kwargs):
+               **kwargs) -> str:
 
         rst_str = f"""
 List of Optical Elements
@@ -347,10 +346,11 @@ Summary of Effects in Optical Elements:
 
         return rst_str
 
-    def __add__(self, other):
+    def __add__(self, other) -> None:
         self.add_effect(other)
 
     def __getitem__(self, item):
+        """x.__getitem__(y) <==> x[y]."""
         obj = []
         if isclass(item):
             obj += [opt_el.get_all(item) for opt_el in self.optical_elements]
@@ -381,14 +381,17 @@ Summary of Effects in Optical Elements:
 
         return obj
 
-    def __setitem__(self, key, value):
+    def __setitem__(self, key, value) -> None:
+        """Set self[key] to value."""
         obj = self.__getitem__(key)
         if isinstance(obj, list) and len(obj) > 1:
-            logger.warning("%s does not return a singular object:\n %s", key, obj)
+            logger.warning("%s does not return a singular object:\n %s",
+                           key, obj)
         elif isinstance(obj, efs.Effect) and isinstance(value, dict):
             obj.meta.update(value)
 
     def __contains__(self, key):
+        """Enable "x in y"-like lookup of effects."""
         try:
             self[key]
             return True
@@ -397,7 +400,7 @@ Summary of Effects in Optical Elements:
             return False
 
     def write_string(self, stream: TextIO) -> None:
-        """Write formatted string representation to I/O stream"""
+        """Write formatted string representation to I/O stream."""
         stream.write(f"{self!s} contains {len(self.optical_elements)} "
                      "OpticalElements\n")
         for opt_elem in enumerate(self.optical_elements):
@@ -411,11 +414,14 @@ Summary of Effects in Optical Elements:
         return output
 
     @property
-    def display_name(self):
+    def display_name(self) -> str:
+        """Return name or filename or placeholder."""
         return self.meta.get("name", self.meta.get("filename", "<empty>"))
 
-    def __repr__(self):
+    def __repr__(self) -> str:
+        """Return repr(self)."""
         return f"<{self.__class__.__name__}>"
 
-    def __str__(self):
+    def __str__(self) -> str:
+        """Return str(self)."""
         return f"{self.__class__.__name__}: \"{self.display_name}\""
