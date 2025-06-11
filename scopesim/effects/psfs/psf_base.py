@@ -97,6 +97,7 @@ class PSF(Effect):
                 # do the convolution
                 mode = from_currsys(self.meta["convolve_mode"], self.cmds)
 
+                logger.debug("PSF convolution start")
                 if image.ndim == 2 and kernel.ndim == 2:
                     new_image = convolve(image - bkg_level, kernel, mode=mode)
                 elif image.ndim == 3 and kernel.ndim == 2:
@@ -112,6 +113,7 @@ class PSF(Effect):
                             kernel[iplane,], mode=mode)
 
                 obj.hdu.data = new_image + bkg_level
+                logger.debug("PSF convolution done")
 
                 # TODO: careful with which dimensions mean what
                 d_x = new_image.shape[-1] - image.shape[-1]
