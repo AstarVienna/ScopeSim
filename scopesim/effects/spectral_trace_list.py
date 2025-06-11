@@ -338,7 +338,7 @@ class SpectralTraceList(Effect):
         outhdul = fits.HDUList([pdu])
 
         for i, trace_id in tqdm(enumerate(self.spectral_traces, start=1),
-                                desc=" Traces"):
+                                desc=" Traces", total=len(self.spectral_traces)):
             hdu = self[trace_id].rectify(hdulist,
                                          interps=interps,
                                          bin_width=bin_width,

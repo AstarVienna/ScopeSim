@@ -106,7 +106,7 @@ class MetisLMSSpectralTraceList(SpectralTraceList):
                                 dtype=np.float32)
 
             for sptid, spt in tqdm(self.spectral_traces.items(),
-                                   desc="  Spectral Traces", position=2):
+                                   desc=" Spectral Traces", position=2):
                 ymin = spt.meta["fov"]["y_min"]
                 ymax = spt.meta["fov"]["y_max"]
 
