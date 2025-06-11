@@ -8,9 +8,9 @@ Parallelogram boxes are lists of other entities.
 %%{init: {"theme": "dark"} }%%
 flowchart TB
     Source(["Source [PHOTLAM(/arcsec2)]"])
-    FOV1[/"FOV.fields"/]
+    FOV1[/"FOV.fields [ph/cm2/s/AA(/arcsec2)]"/]
     FOV2["FOV.hdu [ph/s]"]
-    FOV3[/"FOV.fields"/]
+    FOV3[/"FOV.fields [ph/cm2/s/AA(/arcsec2)]"/]
     FOV4["FOV.hdu [ph/s/um/arcsec2]"]
     FOV5["FOV.hdu [ph/s]"]
     SPT{{"`SpectralTrace:
