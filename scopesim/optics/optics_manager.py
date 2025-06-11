@@ -40,8 +40,6 @@ class OpticsManager:
         self.optical_elements = []
         self.meta = {}
         self.meta.update(kwargs)
-        self._surfaces_table = None
-        self._surface_like_effects = None
 
         self.cmds = cmds
         if self.cmds is None:
