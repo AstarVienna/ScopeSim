@@ -192,6 +192,8 @@ class SpectralTraceList(Effect):
         list, identified by meta["trace_id"].
         """
         if isinstance(obj, FovVolumeList):
+            logger.debug("%s applied to %s", self.display_name,
+                         obj.__class__.__name__)
             # Setup of FieldOfView object
             # volumes = [spectral_trace.fov_grid()
             #            for spectral_trace in self.spectral_traces.values()]
@@ -224,6 +226,8 @@ class SpectralTraceList(Effect):
             obj.volumes = new_vols_list
 
         if isinstance(obj, FieldOfView):
+            logger.debug("%s applied to %s", self.display_name,
+                         obj.__class__.__name__)
             # Application to field of view
             if obj.hdu is not None and obj.hdu.header["NAXIS"] == 3:
                 obj.cube = obj.hdu
@@ -238,6 +242,7 @@ class SpectralTraceList(Effect):
             spt = self.spectral_traces[obj.trace_id]
             obj.hdu = spt.map_spectra_to_focal_plane(obj)
 
+        logger.debug("%s done", self.display_name)
         return obj
 
     @property
@@ -338,7 +343,7 @@ class SpectralTraceList(Effect):
         outhdul = fits.HDUList([pdu])
 
         for i, trace_id in tqdm(enumerate(self.spectral_traces, start=1),
-                                desc=" Traces"):
+                                desc=" Traces", total=len(self.spectral_traces)):
             hdu = self[trace_id].rectify(hdulist,
                                          interps=interps,
                                          bin_width=bin_width,
