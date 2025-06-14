@@ -85,7 +85,8 @@ class OpticalElement:
             self.effects.append(make_effect(eff_dic, self.cmds,
                                             **self.properties))
 
-    def add_effect(self, effect):
+    def add_effect(self, effect: efs.Effect) -> None:
+        """Add `effect` to self if it's a valid ``Effect``."""
         if isinstance(effect, efs.Effect):
             self.effects.append(effect)
         else:
@@ -154,16 +155,16 @@ class OpticalElement:
                 and eff.include or not only_included)
 
     @property
-    def surfaces_list(self):
+    def surfaces_list(self) -> list[efs.Effect]:
         effect_classes = (efs.SurfaceList, efs.FilterWheel, efs.TERCurve)
         return list(self._get_matching_effects(effect_classes))
 
     @property
-    def masks_list(self):
+    def masks_list(self) -> list[efs.Effect]:
         effect_classes = (efs.ApertureList, efs.ApertureMask)
         return list(self._get_matching_effects(effect_classes))
 
-    def list_effects(self):
+    def list_effects(self) -> Table:
         elements = [self.meta["name"]] * len(self.effects)
         names = [eff.display_name for eff in self.effects]
         classes = [eff.__class__.__name__ for eff in self.effects]
@@ -176,7 +177,7 @@ class OpticalElement:
 
         return tbl
 
-    def __add__(self, other):
+    def __add__(self, other) -> None:
         self.add_effect(other)
 
     def __getitem__(self, item):
@@ -245,13 +246,16 @@ class OpticalElement:
         return output
 
     @property
-    def display_name(self):
+    def display_name(self) -> str:
+        """Return name or filename or placeholder."""
         return self.meta.get("name", self.meta.get("filename", "<empty>"))
 
-    def __repr__(self):
+    def __repr__(self) -> str:
+        """Return repr(self)."""
         return f"<{self.__class__.__name__}>"
 
-    def __str__(self):
+    def __str__(self) -> str:
+        """Return str(self)."""
         return f"{self.__class__.__name__}: \"{self.display_name}\""
 
     def _repr_pretty_(self, p, cycle):
@@ -262,7 +266,7 @@ class OpticalElement:
             p.text(str(self))
 
     @property
-    def properties_str(self):
+    def properties_str(self) -> str:
         # TODO: This seems to be used only in the report below.
         #       Once the report uses stream writing, change this to a function
         #       that simply write to that same stream...
