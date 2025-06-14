@@ -1,6 +1,10 @@
+# -*- coding: utf-8 -*-
+"""Contains ``OpticalElement``, which stores ``Effect``s."""
+
 from inspect import isclass
 from typing import TextIO
 from io import StringIO
+from collections.abc import Mapping
 
 from astropy.table import Table
 
@@ -9,7 +13,6 @@ from ..effects.effects_utils import (make_effect, get_all_effects,
                                      z_order_in_range)
 from ..utils import write_report, get_logger
 from ..reports.rst_utils import table_to_rst
-from .. import rc
 
 
 logger = get_logger(__name__)
@@ -64,23 +67,24 @@ class OpticalElement:
         self.effects = []
         self.cmds = cmds
 
-        if isinstance(yaml_dict, dict):
-            self.meta.update({key: yaml_dict[key] for key in yaml_dict
-                              if key not in {"properties", "effects"}})
-            if "properties" in yaml_dict:
-                self.properties = yaml_dict["properties"] or {}
-            if "name" in yaml_dict:
-                self.properties["element_name"] = yaml_dict["name"]
-            if "effects" in yaml_dict and len(yaml_dict["effects"]) > 0:
-                for eff_dic in yaml_dict["effects"]:
-                    if "name" in eff_dic and hasattr(self.cmds,
-                                                     "ignore_effects"):
-                        if eff_dic["name"] in self.cmds.ignore_effects:
-                            eff_dic["include"] = False
+        if not isinstance(yaml_dict, Mapping):
+            return
 
-                    self.effects.append(make_effect(eff_dic,
-                                                    self.cmds,
-                                                    **self.properties))
+        self.meta.update({key: yaml_dict[key] for key in yaml_dict
+                          if key not in {"properties", "effects"}})
+        self.properties = yaml_dict.get("properties", {})
+        # FIXME: Why meta["name"] and also properties["element_name"] ??
+        self.properties["element_name"] = yaml_dict.get("name")
+
+        if "effects" not in yaml_dict or len(yaml_dict["effects"]) == 0:
+            return
+
+        for eff_dic in yaml_dict["effects"]:
+            if eff_dic.get("name") in getattr(self.cmds, "ignore_effects", []):
+                eff_dic["include"] = False
+
+            self.effects.append(make_effect(eff_dic, self.cmds,
+                                            **self.properties))
 
     def add_effect(self, effect):
         if isinstance(effect, efs.Effect):
