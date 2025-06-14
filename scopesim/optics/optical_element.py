@@ -9,8 +9,7 @@ from collections.abc import Mapping
 from astropy.table import Table
 
 from .. import effects as efs
-from ..effects.effects_utils import (make_effect, get_all_effects,
-                                     z_order_in_range)
+from ..effects.effects_utils import make_effect, z_order_in_range
 from ..utils import write_report, get_logger
 from ..reports.rst_utils import table_to_rst
 
@@ -94,7 +93,9 @@ class OpticalElement:
                            effect)
 
     def get_all(self, effect_class):
-        return get_all_effects(self.effects, effect_class)
+        """Return a list of all effects in self that match `effect_class`."""
+        return list(self._get_matching_effects(effect_class,
+                                               only_included=True))
 
     def get_z_order_effects(self, z_level: int, z_max: int = None):
         """
@@ -148,8 +149,9 @@ class OpticalElement:
             if z_order_in_range(eff.z_order, z_range):
                 yield eff
 
-    def _get_matching_effects(self, effect_classes):
-        return (eff for eff in self.effects if isinstance(eff, effect_classes))
+    def _get_matching_effects(self, effect_classes, only_included=False):
+        return (eff for eff in self.effects if isinstance(eff, effect_classes)
+                and eff.include or not only_included)
 
     @property
     def surfaces_list(self):
