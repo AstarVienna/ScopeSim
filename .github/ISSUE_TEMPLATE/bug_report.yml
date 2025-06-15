@@ -1,0 +1,82 @@
+name: Bug Report
+description: File a bug report.
+type: bug
+body:
+  - type: markdown
+    attributes:
+      value: Thanks for taking the time to fill out this bug report!
+
+  - type: textarea
+    id: report
+    attributes:
+      label: What happened?
+      description: Please tell us in detail what bug you encountered.
+    validations:
+      required: true
+
+  - type: textarea
+    id: code
+    attributes:
+      label: Code to reproduce
+      description: |
+        Please paste below the code / script you used for your simulation when you ran into this bug.
+        This is crucial for us to be able to reproduce the issue.
+        If you used any custom files for creating your source object which you cannot share,
+        please describe above what they contain and if possible include an image.
+        Any code pasted in this field will render automatically, no need to include backticks.
+      render: python
+
+  - type: textarea
+    id: traceback
+    attributes:
+      label: Exception traceback
+      description: |
+        Please paste below the complete exception traceback if you encountered one.
+        Make sure to not just copy the final error message, but the _full_ stack
+        (feel free to remove any root directories in file paths for privacy).
+      placeholder: "astar.bug_report - ERROR: Unhandled exception occured, see log file for details."
+      render: bash
+
+  - type: textarea
+    id: bug_report
+    attributes:
+      label: ScopeSim `bug_report()`
+      description: |
+        If you did not encounter an unhandled exception that produced an exception traceback (see above),
+        but rather just some unexpected or unintended behavior, please run `sim.bug_report()` and past the _full_ output below.
+        This should include all version numbers to we can check if it might be a version imcompatibility issue.
+      placeholder: |
+        Python:
+        3.12.7 | packaged by Anaconda, Inc. | (main, Oct  4 2024, 13:17:27) [MSC v.1929 64 bit (AMD64)]
+
+        Installed Python packages:
+      render: bash
+
+  - type: dropdown
+    id: irdb
+    attributes:
+      label: IRDB installation
+      description: How did you install the IRDB package(s) you are using?
+      options:
+        - Downloaded via `sim.download_packages()`
+        - Cloned and linked IRDB repository
+        - "I'm creating my own instrument package"
+        - "Don't know"
+      default: 0
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: usecase
+    attributes:
+      label: Use case
+      description: |
+        Which of the following option(s) describes best your use case for ScopeSim?
+        You may select more than one.
+      options:
+        - label: Pipeline development
+        - label: Science Team member
+        - label: Student working on thesis
+        - label: Other
+    validations:
+      required: true
