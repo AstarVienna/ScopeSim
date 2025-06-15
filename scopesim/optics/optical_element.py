@@ -1,15 +1,17 @@
+# -*- coding: utf-8 -*-
+"""Contains ``OpticalElement``, which stores ``Effect``s."""
+
 from inspect import isclass
 from typing import TextIO
 from io import StringIO
+from collections.abc import Mapping
 
 from astropy.table import Table
 
 from .. import effects as efs
-from ..effects.effects_utils import (make_effect, get_all_effects,
-                                     z_order_in_range)
+from ..effects.effects_utils import make_effect, z_order_in_range
 from ..utils import write_report, get_logger
 from ..reports.rst_utils import table_to_rst
-from .. import rc
 
 
 logger = get_logger(__name__)
@@ -64,25 +66,27 @@ class OpticalElement:
         self.effects = []
         self.cmds = cmds
 
-        if isinstance(yaml_dict, dict):
-            self.meta.update({key: yaml_dict[key] for key in yaml_dict
-                              if key not in {"properties", "effects"}})
-            if "properties" in yaml_dict:
-                self.properties = yaml_dict["properties"] or {}
-            if "name" in yaml_dict:
-                self.properties["element_name"] = yaml_dict["name"]
-            if "effects" in yaml_dict and len(yaml_dict["effects"]) > 0:
-                for eff_dic in yaml_dict["effects"]:
-                    if "name" in eff_dic and hasattr(self.cmds,
-                                                     "ignore_effects"):
-                        if eff_dic["name"] in self.cmds.ignore_effects:
-                            eff_dic["include"] = False
+        if not isinstance(yaml_dict, Mapping):
+            return
 
-                    self.effects.append(make_effect(eff_dic,
-                                                    self.cmds,
-                                                    **self.properties))
+        self.meta.update({key: yaml_dict[key] for key in yaml_dict
+                          if key not in {"properties", "effects"}})
+        self.properties = yaml_dict.get("properties", {})
+        # FIXME: Why meta["name"] and also properties["element_name"] ??
+        self.properties["element_name"] = yaml_dict.get("name")
 
-    def add_effect(self, effect):
+        if "effects" not in yaml_dict or len(yaml_dict["effects"]) == 0:
+            return
+
+        for eff_dic in yaml_dict["effects"]:
+            if eff_dic.get("name") in getattr(self.cmds, "ignore_effects", []):
+                eff_dic["include"] = False
+
+            self.effects.append(make_effect(eff_dic, self.cmds,
+                                            **self.properties))
+
+    def add_effect(self, effect: efs.Effect) -> None:
+        """Add `effect` to self if it's a valid ``Effect``."""
         if isinstance(effect, efs.Effect):
             self.effects.append(effect)
         else:
@@ -90,7 +94,9 @@ class OpticalElement:
                            effect)
 
     def get_all(self, effect_class):
-        return get_all_effects(self.effects, effect_class)
+        """Return a list of all effects in self that match `effect_class`."""
+        return list(self._get_matching_effects(effect_class,
+                                               only_included=True))
 
     def get_z_order_effects(self, z_level: int, z_max: int = None):
         """
@@ -144,20 +150,21 @@ class OpticalElement:
             if z_order_in_range(eff.z_order, z_range):
                 yield eff
 
-    def _get_matching_effects(self, effect_classes):
-        return (eff for eff in self.effects if isinstance(eff, effect_classes))
+    def _get_matching_effects(self, effect_classes, only_included=False):
+        return (eff for eff in self.effects if isinstance(eff, effect_classes)
+                and eff.include or not only_included)
 
     @property
-    def surfaces_list(self):
+    def surfaces_list(self) -> list[efs.Effect]:
         effect_classes = (efs.SurfaceList, efs.FilterWheel, efs.TERCurve)
         return list(self._get_matching_effects(effect_classes))
 
     @property
-    def masks_list(self):
+    def masks_list(self) -> list[efs.Effect]:
         effect_classes = (efs.ApertureList, efs.ApertureMask)
         return list(self._get_matching_effects(effect_classes))
 
-    def list_effects(self):
+    def list_effects(self) -> Table:
         elements = [self.meta["name"]] * len(self.effects)
         names = [eff.display_name for eff in self.effects]
         classes = [eff.__class__.__name__ for eff in self.effects]
@@ -170,7 +177,7 @@ class OpticalElement:
 
         return tbl
 
-    def __add__(self, other):
+    def __add__(self, other) -> None:
         self.add_effect(other)
 
     def __getitem__(self, item):
@@ -239,13 +246,16 @@ class OpticalElement:
         return output
 
     @property
-    def display_name(self):
+    def display_name(self) -> str:
+        """Return name or filename or placeholder."""
         return self.meta.get("name", self.meta.get("filename", "<empty>"))
 
-    def __repr__(self):
+    def __repr__(self) -> str:
+        """Return repr(self)."""
         return f"<{self.__class__.__name__}>"
 
-    def __str__(self):
+    def __str__(self) -> str:
+        """Return str(self)."""
         return f"{self.__class__.__name__}: \"{self.display_name}\""
 
     def _repr_pretty_(self, p, cycle):
@@ -256,7 +266,7 @@ class OpticalElement:
             p.text(str(self))
 
     @property
-    def properties_str(self):
+    def properties_str(self) -> str:
         # TODO: This seems to be used only in the report below.
         #       Once the report uses stream writing, change this to a function
         #       that simply write to that same stream...
