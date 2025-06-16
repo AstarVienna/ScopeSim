@@ -116,7 +116,7 @@ class TestStackedStars:
         micado["dark_current"].include = False
         micado["shot_noise"].include = False
         micado["detector_linearity"].include = False
-        micado["exposure_action"].include = False
+        micado["exposure_integration"].include = False
         micado['readout_noise'].include = False
         micado["source_fits_keywords"].include = False
         micado["effects_fits_keywords"].include = False

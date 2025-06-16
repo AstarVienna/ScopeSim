@@ -231,8 +231,14 @@ class ExposureOutput(Effect):
             logger.warning("Trying to set to unknown mode.")
 
 
-class SummedExposure(Effect):
-    """Simulates a summed stack of ``ndit`` exposures."""
+class ExposureIntegration(Effect):
+    """Integrate the expected flux over ``exptime``.
+
+
+    This effect multiplies the expected photon flux from the
+    ``ImagePlane`` by the total exposure time, computed as
+    the product of ``dit`` and ``ndit``.
+    """
 
     required_keys = {"dit", "ndit"}
     z_order: ClassVar[tuple[int, ...]] = (860,)
@@ -249,7 +255,7 @@ class SummedExposure(Effect):
 
         dit = from_currsys(self.meta["dit"], self.cmds)
         ndit = from_currsys(self.meta["ndit"], self.cmds)
-        logger.debug("S.E.: DIT = %s s, NDIT = %s", dit, ndit)
+        logger.debug("ExposureIntegration.: DIT = %s s, NDIT = %s", dit, ndit)
         # TODO: Remove this silly try-except once currsys works properly...
         # TODO: Check the following case: dit, ndit None in kwargs, but
         #       exptime set and AutoExp sets dit, ndit in !OBS (but not kwargs)

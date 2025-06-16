@@ -61,17 +61,17 @@ We list the meta dictionary contents by using the string format
 **Note: The `.` at the end is important, otherwise the optical train will look for a non-existant effect named `#<effect-name>`**
 
 ```{code-cell} ipython3
-opt["#exposure_action."]
+opt["#exposure_integration."]
 ```
 
 We print a specific meta parameter by adding it after the `.`
 
 ```{code-cell} ipython3
-opt["#exposure_action.ndit"]
+opt["#exposure_integration.ndit"]
 ```
 
 Notice that the value of this dictionary entry is itself a !-string. We can resolve this by adding a `!` to the end of the string, to force it to get the actual value from `opt.cmds`:
 
 ```{code-cell} ipython3
-opt["#exposure_action.ndit!"]
+opt["#exposure_integration.ndit!"]
 ```

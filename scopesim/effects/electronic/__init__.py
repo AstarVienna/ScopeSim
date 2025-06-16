@@ -5,7 +5,7 @@ Electronic detector effects - related to detector readout.
 Classes:
 - DetectorModePropertiesSetter - set parameters for readout mode
 - AutoExposure - determine DIT and NDIT automatically
-- SummedExposure - simulates a summed stack of ``ndit`` exposures
+- ExposureIntegration - integrates flux over exposure time
 - PoorMansHxRGReadoutNoise - simple readout noise for HAWAII detectors
 - BasicReadoutNoise - readout noise
 - ShotNoise - realisation of Poissonian photon noise
@@ -23,7 +23,7 @@ logger = get_logger(__name__)
 from .electrons import LinearityCurve, ADConversion
 from .noise import (Bias, PoorMansHxRGReadoutNoise, BasicReadoutNoise,
                     ShotNoise, DarkCurrent)
-from .exposure import AutoExposure, SummedExposure, ExposureOutput
+from .exposure import AutoExposure, ExposureIntegration, ExposureOutput
 from .pixels import ReferencePixelBorder, BinnedImage, UnequalBinnedImage
 from .dmps import DetectorModePropertiesSetter
 
@@ -32,5 +32,11 @@ from .dmps import DetectorModePropertiesSetter
 def Quantization(*args, **kwargs):
     raise AttributeError(
         "The `Quantization` effect was removed in vPLACEHOLDER_NEXT_RELEASE_VERSION. Please update the "
+        "requested IRDB package by running `download_packages(<package_name>)`"
+        "or by updating your local IRDB clone.")
+
+def SummedExposure(*args, **kwargs):
+    raise AttributeError(
+        "The `SummedExposure` effect was removed in vPLACEHOLDER_NEXT_RELEASE_VERSION. Please update the "
         "requested IRDB package by running `download_packages(<package_name>)`"
         "or by updating your local IRDB clone.")

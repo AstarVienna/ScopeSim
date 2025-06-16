@@ -60,9 +60,9 @@ effects:
     wavelength_unit : um
     action : transmission
 
-- name: exposure_action
+- name: exposure_integration
   description: Summing up sky signal for all DITs and NDITs
-  class: SummedExposure
+  class: ExposureIntegration
 
 - name: dark_current
   class: DarkCurrent
