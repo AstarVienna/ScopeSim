@@ -38,7 +38,7 @@ packaging = ">=23.2"
 synphot = "^1.5.0"
 skycalc-ipy = ">=0.5.3"
 anisocado = ">=0.3.0"
-astar-utils = ">=0.3.2"
+astar-utils = ">=0.3.3"
 
 [tool.poetry.group.dev]
 optional = true
