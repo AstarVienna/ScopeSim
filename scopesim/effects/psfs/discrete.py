@@ -4,6 +4,7 @@
 from typing import ClassVar
 
 import numpy as np
+from tqdm.auto import tqdm
 from scipy.signal import convolve
 from scipy.ndimage import zoom
 from scipy.interpolate import RectBivariateSpline, griddata
@@ -189,7 +190,9 @@ class FieldConstantPSF(DiscretePSF):
         outcube = np.zeros((lam.shape[0], nypsf, nxpsf), dtype=np.float32)
         logger.info("Interpolating PSF onto %s cube", outcube.shape)
 
-        for i, wave in enumerate(lam):
+        nlam = len(lam)
+        for i, wave in tqdm(enumerate(lam), desc=" PSF slices", position=2,
+                            total=nlam, disable=(nlam <= 1)):
             psf_wave_pixscale = ref_pixel_scale * wave / refwave
             psfwcs.wcs.cdelt = [psf_wave_pixscale,
                                 psf_wave_pixscale]

@@ -169,14 +169,14 @@ test = ["dateparser (==1.*)", "pre-commit", "pytest", "pytest-cov", "pytest-mock
 
 [[package]]
 name = "astar-utils"
-version = "0.3.2"
+version = "0.3.3"
 description = "Contains commonly-used utilities for AstarVienna's projects."
 optional = false
 python-versions = "<4.0,>=3.10"
 groups = ["main", "docs", "test"]
 files = [
-    {file = "astar_utils-0.3.2-py3-none-any.whl", hash = "sha256:d7ebdb93889de891d26613044e1354462c4911a789a7d2e7585902bb2bc1a302"},
-    {file = "astar_utils-0.3.2.tar.gz", hash = "sha256:1f25abf3114a98d7fa476b8b9b67619ecfee58866f220045b4c4dbccec36306b"},
+    {file = "astar_utils-0.3.3-py3-none-any.whl", hash = "sha256:b1abb5fb9a20b73f796d204b3e054ddcb29c27c26a6d01eb6943abd671a248a8"},
+    {file = "astar_utils-0.3.3.tar.gz", hash = "sha256:14efaf744f13a695498170ceadbf979c8d71c3c06b204c8bbce1db468f3cccc4"},
 ]
 
 [package.dependencies]
@@ -3248,19 +3248,19 @@ rpds-py = ">=0.7.0"
 
 [[package]]
 name = "requests"
-version = "2.32.2"
+version = "2.32.4"
 description = "Python HTTP for Humans."
 optional = false
 python-versions = ">=3.8"
 groups = ["main", "dev", "docs", "test"]
 files = [
-    {file = "requests-2.32.2-py3-none-any.whl", hash = "sha256:fc06670dd0ed212426dfeb94fc1b983d917c4f9847c863f313c9dfaaffb7c23c"},
-    {file = "requests-2.32.2.tar.gz", hash = "sha256:dd951ff5ecf3e3b3aa26b40703ba77495dab41da839ae72ef3c8e5d8e2433289"},
+    {file = "requests-2.32.4-py3-none-any.whl", hash = "sha256:27babd3cda2a6d50b30443204ee89830707d396671944c998b5975b031ac2b2c"},
+    {file = "requests-2.32.4.tar.gz", hash = "sha256:27d0316682c8a29834d3264820024b62a36942083d52caf2f14c0591336d3422"},
 ]
 
 [package.dependencies]
 certifi = ">=2017.4.17"
-charset-normalizer = ">=2,<4"
+charset_normalizer = ">=2,<4"
 idna = ">=2.5,<4"
 urllib3 = ">=1.21.1,<3"
 
@@ -3592,14 +3592,14 @@ files = [
 
 [[package]]
 name = "spextra"
-version = "0.41.3"
+version = "0.41.4"
 description = "Tool to manage and manipulate astronomical spectra."
 optional = false
 python-versions = "<4.0,>=3.10"
 groups = ["docs", "test"]
 files = [
-    {file = "spextra-0.41.3-py3-none-any.whl", hash = "sha256:16c66064cfb13c9df039977bc7d30f605e24f1cfead4a2c391d16082619bf7f9"},
-    {file = "spextra-0.41.3.tar.gz", hash = "sha256:03ea77ff2d64704a60917509bebee8111d70b953d5758b9b18cc6cb522244b88"},
+    {file = "spextra-0.41.4-py3-none-any.whl", hash = "sha256:bab09cedffc92ab3353127fcb49a40e9aab5be42609161fd1f764f408a9d7ef1"},
+    {file = "spextra-0.41.4.tar.gz", hash = "sha256:d1b76204d8543994c41c36fbc2b54fa406b69a102bf7e6ba0ef3c0cfc13a6c47"},
 ]
 
 [package.dependencies]
@@ -4130,20 +4130,21 @@ dev = ["flake8", "flake8-annotations", "flake8-bandit", "flake8-bugbear", "flake
 
 [[package]]
 name = "urllib3"
-version = "1.26.19"
+version = "2.5.0"
 description = "HTTP library with thread-safe connection pooling, file post, and more."
 optional = false
-python-versions = "!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,!=3.5.*,>=2.7"
+python-versions = ">=3.9"
 groups = ["main", "dev", "docs", "test"]
 files = [
-    {file = "urllib3-1.26.19-py2.py3-none-any.whl", hash = "sha256:37a0344459b199fce0e80b0d3569837ec6b6937435c5244e7fd73fa6006830f3"},
-    {file = "urllib3-1.26.19.tar.gz", hash = "sha256:3e3d753a8618b86d7de333b4223005f68720bcd6a7d2bcb9fbd2229ec7c1e429"},
+    {file = "urllib3-2.5.0-py3-none-any.whl", hash = "sha256:e6b01673c0fa6a13e374b50871808eb3bf7046c4b125b216f6bf1cc604cff0dc"},
+    {file = "urllib3-2.5.0.tar.gz", hash = "sha256:3fc47733c7e419d4bc3f6b3dc2b4f890bb743906a30d56ba4a5bfa4bbff92760"},
 ]
 
 [package.extras]
-brotli = ["brotli (==1.0.9) ; os_name != \"nt\" and python_version < \"3\" and platform_python_implementation == \"CPython\"", "brotli (>=1.0.9) ; python_version >= \"3\" and platform_python_implementation == \"CPython\"", "brotlicffi (>=0.8.0) ; (os_name != \"nt\" or python_version >= \"3\") and platform_python_implementation != \"CPython\"", "brotlipy (>=0.6.0) ; os_name == \"nt\" and python_version < \"3\""]
-secure = ["certifi", "cryptography (>=1.3.4)", "idna (>=2.0.0)", "ipaddress ; python_version == \"2.7\"", "pyOpenSSL (>=0.14)", "urllib3-secure-extra"]
-socks = ["PySocks (>=1.5.6,!=1.5.7,<2.0)"]
+brotli = ["brotli (>=1.0.9) ; platform_python_implementation == \"CPython\"", "brotlicffi (>=0.8.0) ; platform_python_implementation != \"CPython\""]
+h2 = ["h2 (>=4,<5)"]
+socks = ["pysocks (>=1.5.6,!=1.5.7,<2.0)"]
+zstd = ["zstandard (>=0.18.0)"]
 
 [[package]]
 name = "wcwidth"
@@ -4233,4 +4234,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10, <3.13"
-content-hash = "aa5a64045d93fcff2dc30e69a45fa7ba82a923229f4f07178142a361c1231c04"
+content-hash = "27ae7d7654554bdb3e96de42a777e7e8b57120d7c19ac3104bf78c3a95159236"
