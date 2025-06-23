@@ -1,16 +1,15 @@
 # Approximate sketch of "units flow" in ScopeSim
 
 Effects that change units are shown in hexagonal boxes.
-Rectangular boxes are basically `ImageHDU` wrappers.
-Parallelogram boxes are lists of other entities.
+Rectangular boxes are `ImageHDU` wrappers or lists of other entities.
 
 ```{mermaid}
 %%{init: {"theme": "dark"} }%%
 flowchart TB
-    Source(["Source [PHOTLAM(/arcsec2)]"])
-    FOV1[/"FOV.fields [ph/cm2/s/AA(/arcsec2)]"/]
+    Source["Source [PHOTLAM(/arcsec2)]"]
+    FOV1["FOV.fields [ph/cm2/s/AA(/arcsec2)]"]
     FOV2["FOV.hdu [ph/s]"]
-    FOV3[/"FOV.fields [ph/cm2/s/AA(/arcsec2)]"/]
+    FOV3["FOV.fields [ph/cm2/s/AA(/arcsec2)]"]
     FOV4["FOV.hdu [ph/s/um/arcsec2]"]
     FOV5["FOV.hdu [ph/s]"]
     SPT{{"`SpectralTrace:
@@ -23,7 +22,6 @@ flowchart TB
     Det3["Detector [e-]"]
     ADC{{"ADConversion: e- -> ADU"}}
     Det4["Detector [ADU]"]
-    Output(["Output [ADU]"])
 
     Source-- extract -->FOV1
     subgraph Imaging
@@ -44,5 +42,4 @@ flowchart TB
     SE-->Det3
     Det3-->ADC
     ADC-->Det4
-    Det4-->Output
 ```
