@@ -7,7 +7,7 @@ import numpy as np
 from scopesim import UserCommands
 from scopesim.optics.image_plane import ImagePlane
 from scopesim.detector import Detector
-from scopesim.effects.electronic import ExposureOutput
+from scopesim.effects.electronic import ExposureOutput, ExposureIntegration
 
 from scopesim.tests.mocks.py_objects.imagehdu_objects import _image_hdu_square
 
@@ -26,6 +26,11 @@ def fixture_imageplane():
     implane.hdu.data += 1.e5
     return implane
 
+@pytest.fixture(name="exposureintegration", scope="function")
+def fixture_exposureintegration():
+    """Instantiate an ExposureIntegration object"""
+    return ExposureIntegration(dit=1., ndit=4)
+
 @pytest.fixture(name="exposureoutput", scope="function")
 def fixture_exposureoutput():
     """Instantiate an ExposureOutput object"""
@@ -36,6 +41,24 @@ def fixture_detector():
     det = Detector(_image_hdu_square().header)
     det._hdu.data[:] = 1.e5
     return det
+
+class TestExposureIntegration:
+    def test_initialises_correctly(self, exposureintegration):
+        assert isinstance(exposureintegration, ExposureIntegration)
+
+    def test_integrates_correctly(self, exposureintegration, detector):
+        orig = 1. * detector._hdu.data
+        assert isinstance(exposureintegration.apply_to(detector), Detector)
+        assert np.allclose(detector._hdu.data, 4 * orig)
+
+    def test_fails_without_dit(self):
+        with pytest.raises(ValueError):
+            ExposureIntegration(ndit=5)
+
+    def test_fails_without_ndit(self):
+        with pytest.raises(ValueError):
+            ExposureIntegration(dit=3.24)
+
 
 class TestExposureOutput:
     def test_initialises_correctly(self, exposureoutput):
