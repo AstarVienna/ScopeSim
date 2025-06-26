@@ -68,18 +68,16 @@ body:
     validations:
       required: true
 
-  - type: checkboxes
+  - type: dropdown
     id: usecase
     attributes:
       label: Use case
-      description: |
-        Which of the following option(s) describes best your use case for ScopeSim?
-        You may select more than one.
+      description: Which of the following option describes best your use case for ScopeSim?
       options:
-        - label: Pipeline development
-        - label: Science Team member
-        - label: Student working on thesis
-        - label: Other
+        - Pipeline development
+        - Science Team member
+        - Student working on thesis
+        - Other
     validations:
       required: true
 
