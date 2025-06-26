@@ -343,7 +343,7 @@ class OpticalTrain:
                                                       lookup_table=spec(fov_waveset))
 
         for cube in source.cube_fields:
-            header, data, wave = cube.header, cube.data, cube.wave
+            header, data, wave = cube.header, cube.data, cube.waveset
 
             # Need to check whether BUNIT is per arcsec2 or per pixel
             inunit = u.Unit(header["BUNIT"])

@@ -120,7 +120,7 @@ class TERCurve(Effect):
             for fld in obj.fields:
                 if isinstance(fld, CubeSourceField):
                     fld.field = apply_throughput_to_cube(
-                        fld.field, thru, fld.wave)
+                        fld.field, thru, fld.waveset)
                 elif isinstance(fld, SpectrumSourceField):
                     fld.spectra = {
                         isp: combine_two_spectra(spec, thru, "multiply",
