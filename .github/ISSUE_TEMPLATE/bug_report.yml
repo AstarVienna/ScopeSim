@@ -74,10 +74,11 @@ body:
       label: Use case
       description: Which of the following option describes best your use case for ScopeSim?
       options:
+        - Other
         - Pipeline development
         - Science Team member
         - Student working on thesis
-        - Other
+      default: 0
     validations:
       required: true
 
