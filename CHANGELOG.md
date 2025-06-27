@@ -1,3 +1,71 @@
+# Version 0.10.0
+**2025-06-27**
+
+Large release before the summer, with many improvements and also breaking changes, please make sure to also update your IRDB packages accordingly!
+
+## Highlights
+* Many new features, including the "simplified IFU cube readout" mode.
+* More physical treatment of the "electrons to ADU" process, including different gain values (#604).
+* Extensive refactoring and many many bug fixes.
+* More consistency across different classes with similar attributes.
+* Improved treatment of flux units (still WIP, see #662).
+* Many improvements to visual outputs (especially in notebooks), a few new progress bars in long-running loops.
+
+## What's Changed
+### API Changes
+* Refactor FOV, add `BackgroundSourceField` by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/610
+* Deprecate `FieldOfView.spectra` by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/653
+* Deprecate adding a `Table` directly to an `ImagePlane` by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/657
+* Implement simplified IFU mode with cube readout by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/654
+* Rename `CubeSourceField.wave` to `.waveset` for consistency by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/666
+* Rename `SummedExposure` ➡️ `ExposureIntegration` by @oczoske in https://github.com/AstarVienna/ScopeSim/pull/701
+* Change  `.wave` to `.waveset` by @oczoske in https://github.com/AstarVienna/ScopeSim/pull/707
+### Bugs fixed
+* Fix BUNIT in `FieldOfView` by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/659
+* Fix source spectral resolution by @oczoske in https://github.com/AstarVienna/ScopeSim/pull/669
+* Fix METIS LSF axes orientation by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/673
+* Remove "per pixel" from BUNIT for consistency by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/684
+* Fix search path when updating inst pkgs path by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/710
+### Changes to or addition of Effects
+* ADConversion effect by @oczoske in https://github.com/AstarVienna/ScopeSim/pull/455
+* Add pretty repr to `Effect` base class to avoid cmds spam by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/661
+* Allow PSF interpolation to be switched off by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/671
+* Implement line spread function for IFU cube mode by @oczoske in https://github.com/AstarVienna/ScopeSim/pull/670
+* Convert to signed float before chopnodcombine by @oczoske in https://github.com/AstarVienna/ScopeSim/pull/687
+### New Features or Improvements
+* Add `zeros_from_header()` utils function by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/656
+* Add `._repr_html_()` magic method to `OpticalTrain` for nice notebook display by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/667
+* Add version requirement support for IRDB packages by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/660
+* Use progress bar for spectral traces by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/674
+* More logging and another progress bar by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/697
+### Dependency Changes
+* Bump actions/download-artifact from 4.2.1 to 4.3.0 by @dependabot in https://github.com/AstarVienna/ScopeSim/pull/647
+* Bump numpy, astropy, httpx and synphot by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/652
+* Bump setuptools from 75.3.0 to 78.1.1 by @dependabot in https://github.com/AstarVienna/ScopeSim/pull/663
+* Bump tornado to get rid of security warning by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/664
+* Bump versions of internal dependencies by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/672
+* Bring dependency versions back in sync with lock file by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/675
+* Bump a few minor dependencies by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/681
+* Bump requests from 2.32.2 to 2.32.4 by @dependabot in https://github.com/AstarVienna/ScopeSim/pull/690
+* Bump spextra from 0.41.3 to 0.41.4 by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/695
+* Bump urllib3 from 1.26.19 to 2.5.0 by @dependabot in https://github.com/AstarVienna/ScopeSim/pull/703
+* Bump astar-utils from 0.3.2 to 0.3.3 by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/704
+* Bump internal dependencies by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/711
+### Documentation Improvements
+* Add proper error message for removed `Quantization` effect by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/676
+* Add version info in various docstrings by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/678
+* Minor cleanup of docs by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/677
+* Add units flow page to docs by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/689
+### Other Changes
+* Make better use of `SourceField` in `FieldOfView` by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/651
+* Remove obsolete `FovVolumeList.detector_limits` by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/655
+* Add replaceholder workflow by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/688
+* Remove unused private attributes from `OpticsManager` by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/694
+* Refactor and cleanup in `OpticalElement` by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/700
+
+**Full Changelog**: https://github.com/AstarVienna/ScopeSim/compare/v0.9.3...v0.10.0
+
+
 # Version 0.9.3
 **2025-04-25**
 
