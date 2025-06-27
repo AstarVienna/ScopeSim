@@ -2835,14 +2835,14 @@ tests = ["pytest"]
 
 [[package]]
 name = "pyckles"
-version = "0.4.0"
+version = "0.4.1"
 description = "Simple interface to the Pickles 1998 stellar spectra catalogue"
 optional = false
 python-versions = "<4.0,>=3.10"
 groups = ["docs", "test"]
 files = [
-    {file = "pyckles-0.4.0-py3-none-any.whl", hash = "sha256:29daa6c64ba77b787e152cf695759877cf89219f67e16809d40dad50ea53418e"},
-    {file = "pyckles-0.4.0.tar.gz", hash = "sha256:67362dabc7439d9337cb4cb0b49cc035ea3298382b0117569f2606e4716023cd"},
+    {file = "pyckles-0.4.1-py3-none-any.whl", hash = "sha256:ecddbd065e687b7ce64dca65db819e9a44787436ce4293bb714ff04154708de2"},
+    {file = "pyckles-0.4.1.tar.gz", hash = "sha256:6c3242388047f6eb80593f93eb2b45e6a4a6f46c745fc2a3994e58b57a6a1ce6"},
 ]
 
 [package.dependencies]
@@ -3457,30 +3457,30 @@ test = ["Cython", "array-api-strict (>=2.0)", "asv", "gmpy2", "hypothesis (>=6.3
 
 [[package]]
 name = "scopesim-templates"
-version = "0.6.0"
+version = "0.6.2"
 description = "On-sky source templates for ScopeSim"
 optional = false
 python-versions = "<3.13,>=3.10"
 groups = ["docs", "test"]
 files = [
-    {file = "scopesim_templates-0.6.0-py3-none-any.whl", hash = "sha256:378cdf9fcdf8976779907a0905ef9309884c52cf3e941cfaafd698c6dc44ee70"},
-    {file = "scopesim_templates-0.6.0.tar.gz", hash = "sha256:0c8695d0577585f2fd89f1e8ba20521b6074a3c0d079fe117665751abcdc82c2"},
+    {file = "scopesim_templates-0.6.2-py3-none-any.whl", hash = "sha256:5dcdec7db21ce8ab49daa220568e91a1364a88c0df335b12162f8b0d901af927"},
+    {file = "scopesim_templates-0.6.2.tar.gz", hash = "sha256:e1a210cc27bf5ed9612f6b8113d356111858e1c1ffe2a3bebe82fe4d1947215a"},
 ]
 
 [package.dependencies]
-astar-utils = ">=0.3.1"
-astropy = ">=6.0.1,<7.0.0"
-beautifulsoup4 = ">=4.12.1,<5.0.0"
+astar-utils = ">=0.3.2"
+astropy = ">=6.1.5,<7.0.0"
+beautifulsoup4 = ">=4.13.3,<5.0.0"
 docutils = ">=0.19,<0.20"
 lxml = ">=5.2.2,<6.0.0"
-matplotlib = ">=3.8.2,<4.0.0"
-numpy = ">=1.26.3,<2.0.0"
-pyckles = ">=0.4.0"
+matplotlib = ">=3.10.1,<4.0.0"
+numpy = ">=1.26.4,<2.0.0"
+pyckles = ">=0.4.1"
 pyyaml = ">=6.0.1,<7.0.0"
 scipy = ">=1.14.1,<2.0.0"
-scopesim = ">=0.9.0"
-spextra = ">=0.41.3"
-synphot = ">=1.4.0,<2.0.0"
+scopesim = ">=0.9.1"
+spextra = ">=0.41.4"
+synphot = ">=1.5.0,<2.0.0"
 
 [[package]]
 name = "send2trash"
@@ -4234,4 +4234,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10, <3.13"
-content-hash = "d188d292d2d52113b7d037b7087359909509f57a2c360b91b7f22df327eadf51"
+content-hash = "948cfff213e2881cbdd75ac1f1192a9fb08577982f1df9cbf2271dd4aee86592"
