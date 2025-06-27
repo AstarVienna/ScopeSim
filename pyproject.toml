@@ -52,7 +52,7 @@ ipympl = "^0.9.6"
 [tool.poetry.group.test.dependencies]
 pytest = "^8.3.5"
 pytest-cov = "^6.1.1"
-scopesim_templates = ">=0.6.0"
+scopesim_templates = ">=0.6.2"
 ipykernel = "^6.24.0"
 
 [tool.poetry.group.docs]
@@ -68,7 +68,7 @@ sphinxcontrib-apidoc = ">=0.6.0"
 sphinxcontrib-mermaid = "^1.0.0"
 nbsphinx = "^0.9.6"
 numpydoc = "^1.6.0"
-scopesim_templates = ">=0.6.0"
+scopesim_templates = ">=0.6.2"
 ipykernel = "^6.24.0"
 ipympl = "^0.9.4"
 
