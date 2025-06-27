@@ -636,7 +636,7 @@ def check_version(yaml_dict: Mapping, mode: str | None = None) -> None:
 
            needs_scopesim: "v0.10"
 
-    .. versionadded:: PLACEHOLDER_NEXT_RELEASE_VERSION
+    .. versionadded:: 0.10.0
 
     Parameters
     ----------

@@ -151,7 +151,7 @@ class Source:
     --------
     synphot : ``https://synphot.readthedocs.io/en/latest/``
 
-    .. versionchanged:: PLACEHOLDER_NEXT_RELEASE_VERSION
+    .. versionchanged:: 0.10.0
 
        Added the ability to instantiate directly from an existing SourceField
        subclass instance.

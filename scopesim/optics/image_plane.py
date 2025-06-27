@@ -99,7 +99,7 @@ class ImagePlane:
             - `x`, `y`: `arcsec`
             - `flux` : `ph / s / pix`
 
-        .. versionchanged:: PLACEHOLDER_NEXT_RELEASE_VERSION
+        .. versionchanged:: 0.10.0
 
            Adding a table directly to the ImagePlane is deprecated. Use FOV to
            add tables and image HDUs together before adding them to here.
@@ -134,7 +134,7 @@ class ImagePlane:
         else:
             if isinstance(hdus_or_tables, Table):
                 warn("Adding a table directly to the ImagePlane is deprecated "
-                     "since vPLACEHOLDER_NEXT_RELEASE_VERSION. Passing a table "
+                     "since v0.10.0. Passing a table "
                      "to ImagePlane.add() will raise an error in the future. "
                      "Use FOV to add tables and image HDUs together before.",
                      DeprecationWarning, stacklevel=2)

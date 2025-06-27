@@ -31,12 +31,12 @@ from .dmps import DetectorModePropertiesSetter
 # TODO: rm this in v1.0
 def Quantization(*args, **kwargs):
     raise AttributeError(
-        "The `Quantization` effect was removed in vPLACEHOLDER_NEXT_RELEASE_VERSION. Please update the "
+        "The `Quantization` effect was removed in v0.10.0. Please update the "
         "requested IRDB package by running `download_packages(<package_name>)`"
         "or by updating your local IRDB clone.")
 
 def SummedExposure(*args, **kwargs):
     raise AttributeError(
-        "The `SummedExposure` effect was removed in vPLACEHOLDER_NEXT_RELEASE_VERSION. Please update the "
+        "The `SummedExposure` effect was removed in v0.10.0. Please update the "
         "requested IRDB package by running `download_packages(<package_name>)`"
         "or by updating your local IRDB clone.")

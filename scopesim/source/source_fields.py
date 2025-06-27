@@ -122,7 +122,7 @@ class SourceField:
     def get_corners(self, unit: u.Unit | str = "arcsec") -> np.ndarray:
         """Calculate and return footprint corner points in `unit`.
 
-        .. versionadded:: PLACEHOLDER_NEXT_RELEASE_VERSION
+        .. versionadded:: 0.10.0
 
            Implemented for all subclasses to refactor in FieldOfView.
 
@@ -387,11 +387,11 @@ class CubeSourceField(HDUSourceField):
     def wave(self) -> u.Quantity:
         """Construct wavelength axis for cube in um.
 
-        .. deprecated:: PLACEHOLDER_NEXT_RELEASE_VERSION
+        .. deprecated:: 0.10.0
 
            Use `.waveset` instead for consistency with other code.
         """
-        warn("Deprecated since vPLACEHOLDER_NEXT_RELEASE_VERSION, "
+        warn("Deprecated since v0.10.0, "
              "use `.waveset` instead.", DeprecationWarning, stacklevel=2)
         return self.waveset
 
@@ -400,7 +400,7 @@ class CubeSourceField(HDUSourceField):
 class BackgroundSourceField(SpectrumSourceField):
     """Source field with spectrum only, for TER curve emissions.
 
-    .. versionadded:: PLACEHOLDER_NEXT_RELEASE_VERSION
+    .. versionadded:: 0.10.0
 
     """
 

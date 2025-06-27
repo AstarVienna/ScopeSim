@@ -348,7 +348,7 @@ def zeros_from_header(
     """
     Create all-zero array of the shape given by NAXISn keywords in `header`.
 
-    .. versionadded:: PLACEHOLDER_NEXT_RELEASE_VERSION
+    .. versionadded:: 0.10.0
 
     Parameters
     ----------
@@ -789,7 +789,7 @@ def set_inst_pkgs_path(pkg_path: Path | str) -> None:
 
     .. versionadded:: 0.9.3
 
-    .. versionchanged:: PLACEHOLDER_NEXT_RELEASE_VERSION
+    .. versionchanged:: 0.10.0
 
        Also update search path.
     """

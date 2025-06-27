@@ -247,7 +247,7 @@ class DetectorList(Effect):
         # This has really been taken care of by apply_to now
         # TODO v1.0: finally rm this completely
         raise AttributeError("The DetectorList.fov_grid() method has been "
-                             "removed in vPLACEHOLDER_NEXT_RELEASE_VERSION.")
+                             "removed in v0.10.0.")
         # aperture_mask = None
         # if which == "edges":
         #     self.meta.update(kwargs)
@@ -446,7 +446,7 @@ class DetectorWindow(DetectorList):
 class DetectorList3D(DetectorList):
     """Pseudo-detector for simple IFU mode.
 
-    .. versionadded:: PLACEHOLDER_NEXT_RELEASE_VERSION
+    .. versionadded:: 0.10.0
     """
 
     dims = "xyz"  # 2 spatial dimensions, 1 spectral dimension

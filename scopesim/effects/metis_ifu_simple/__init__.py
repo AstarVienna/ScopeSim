@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Effects for the METIS IFU_SMPL mode.
 
-.. versionadded:: PLACEHOLDER_NEXT_RELEASE_VERSION
+.. versionadded:: 0.10.0
 
 Classes:
 - LineSpreadFunction

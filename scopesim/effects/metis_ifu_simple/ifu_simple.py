@@ -40,7 +40,7 @@ class LineSpreadFunction(Effect):
 
     These values are set in `METIS_LMS_SMPL.yaml`.
 
-    .. versionadded:: PLACEHOLDER_NEXT_RELEASE_VERSION
+    .. versionadded:: 0.10.0
 
     """
 

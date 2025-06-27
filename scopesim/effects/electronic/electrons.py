@@ -125,7 +125,7 @@ class ADConversion(Effect):
     `DetectorModePropertiesSetter` effect is used to switch between different
     detector modes with different gain values.
 
-    .. versionchanged:: PLACEHOLDER_NEXT_RELEASE_VERSION
+    .. versionchanged:: 0.10.0
 
        Renamed from `Quantization` to `ADConversion`.
     """

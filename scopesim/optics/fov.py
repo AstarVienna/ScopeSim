@@ -1040,11 +1040,11 @@ class FieldOfView:
     def spectra(self) -> dict[int, SourceSpectrum]:
         """Return a collection of all fields' spectra.
 
-        .. deprecated:: PLACEHOLDER_NEXT_RELEASE_VERSION
+        .. deprecated:: 0.10.0
 
            Use individual fields' spectra instead.
         """
-        warn("Deprecated since vPLACEHOLDER_NEXT_RELEASE_VERSION.",
+        warn("Deprecated since v0.10.0.",
              DeprecationWarning, stacklevel=2)
         specs = {
             ref: spec
