@@ -788,8 +788,15 @@ def set_inst_pkgs_path(pkg_path: Path | str) -> None:
     """Set the local path for !SIM.file.local_packages_path (shortcut).
 
     .. versionadded:: 0.9.3
+
+    .. versionchanged:: PLACEHOLDER_NEXT_RELEASE_VERSION
+
+       Also update search path.
     """
+    pkg_path = Path(pkg_path)
     rc.__config__["!SIM.file.local_packages_path"] = str(pkg_path)
+    rc.__search_path__.pop(0)
+    rc.__search_path__.append_first(pkg_path.absolute())
 
 
 def link_irdb(irdb_path: Path | str | None = None) -> None:
