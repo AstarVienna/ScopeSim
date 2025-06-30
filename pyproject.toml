@@ -35,7 +35,7 @@ more-itertools = "^10.2.0"
 tqdm = "^4.66.5"
 packaging = ">=23.2"
 
-synphot = "^1.5.0"
+synphot = "^1.6.0"
 skycalc-ipy = ">=0.5.3"
 anisocado = ">=0.3.0"
 astar-utils = ">=0.3.3"

@@ -3930,25 +3930,33 @@ tests = ["cython", "littleutils", "pygments", "pytest", "typeguard"]
 
 [[package]]
 name = "synphot"
-version = "1.5.0"
+version = "1.6.0"
 description = "Synthetic photometry"
 optional = false
 python-versions = ">=3.10"
 groups = ["main", "docs", "test"]
 files = [
-    {file = "synphot-1.5.0-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:2d97829de48ddf86b06f6cb6d3bc63f692ff5f3b6b6ab83175154ef5b6778315"},
-    {file = "synphot-1.5.0-cp310-cp310-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:3c7514b0c382e3c8e14e249986ef831b4a95622345b8919b21693f5cb1416778"},
-    {file = "synphot-1.5.0-cp310-cp310-win_amd64.whl", hash = "sha256:13362a5427a6e2369a2f8892790fd4846272422f66950628f9c61e7afb7013b9"},
-    {file = "synphot-1.5.0-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:c9c54416eb0a54f37ea9b63bdcde5f3092954c88977672293a8c03ca46a4bfaf"},
-    {file = "synphot-1.5.0-cp311-cp311-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:f4687d55bc301104f581874056ecaffd5cc94b60d4fb51eeec9af662c8e84d00"},
-    {file = "synphot-1.5.0-cp311-cp311-win_amd64.whl", hash = "sha256:bcfafb041104384d59bb8b3c3f98f25d98b9939eb9cacd9cba38929e375b1bd7"},
-    {file = "synphot-1.5.0-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:7fe386e569a0a41fd9660633eeb0e893d65b41deff602ace904422d3b7e67f66"},
-    {file = "synphot-1.5.0-cp312-cp312-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:5d9461162be9858943412249b30ce29eb5915c74b4e7f140fa853bc8bc309922"},
-    {file = "synphot-1.5.0-cp312-cp312-win_amd64.whl", hash = "sha256:399fd4f09ce5300d3a477229de77b0418ebfc466bde9cc322963f5510a8a3b95"},
-    {file = "synphot-1.5.0-cp313-cp313-macosx_11_0_arm64.whl", hash = "sha256:d6b02347cedc21f8df58258306e34939ecc86f17d5698bbce44f6a7301d15c23"},
-    {file = "synphot-1.5.0-cp313-cp313-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:9334ee359e17514e2025206b6c9805de89de03bb5971290cb0daa777ba990c82"},
-    {file = "synphot-1.5.0-cp313-cp313-win_amd64.whl", hash = "sha256:18d6c9bae7d193b13b9e1132964298a240e349d907b6e843bef8d596ada50842"},
-    {file = "synphot-1.5.0.tar.gz", hash = "sha256:4cb384a1b45ea301ad30690a1af2fbb485023160049458ac1c320bb81c782e76"},
+    {file = "synphot-1.6.0-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:1a4622415e2a781f8a95950ed9dc4b5ff147e1890ebf5a66daa0e3c5e3e3c183"},
+    {file = "synphot-1.6.0-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:213cddf1ba2a5239484594966514cde4ed8eb969b23438eddebeee55983b842d"},
+    {file = "synphot-1.6.0-cp310-cp310-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:9af8d1d61827da8ec9c76c73b0554387746e0758ee86ebe093307a5173ecbf83"},
+    {file = "synphot-1.6.0-cp310-cp310-musllinux_1_2_x86_64.whl", hash = "sha256:d87c96263eb0b91da0c5d40cf1d17fd766a7e4a1ff11e9ed6ed088e508a9778c"},
+    {file = "synphot-1.6.0-cp310-cp310-win_amd64.whl", hash = "sha256:e8b1363cb66f841a215269e8fc98a9767a8c36ef25b9135bed03a1cdc0bd94df"},
+    {file = "synphot-1.6.0-cp311-cp311-macosx_10_9_x86_64.whl", hash = "sha256:cfa8445d3c420a888061ccde1a7ffb061539c26414bbc44d7ab6dbfc5bac7df6"},
+    {file = "synphot-1.6.0-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:f06cce0dbffdd0ef3dbde6fabfa7f80b039f17eb4ef429adefefd3d9b41969cc"},
+    {file = "synphot-1.6.0-cp311-cp311-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:6127ed3234f796551af21a9bbabaf7709a1067682484725e41bb85bb26be6a42"},
+    {file = "synphot-1.6.0-cp311-cp311-musllinux_1_2_x86_64.whl", hash = "sha256:f821677fde9a776949348e3618aeda1da613858a109d11b70215abb862a015e6"},
+    {file = "synphot-1.6.0-cp311-cp311-win_amd64.whl", hash = "sha256:80b2ae59b96de738a3a75290629f5d9823ece90f85b86cb403e614e3eb854f86"},
+    {file = "synphot-1.6.0-cp312-cp312-macosx_10_13_x86_64.whl", hash = "sha256:5a1f7727824fd58432facb4ff70be5a669e1306452607e9a37515e87a9e94ba9"},
+    {file = "synphot-1.6.0-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:c4966e9857a550f3d091dc78e32b22b562d0a888de9fd9a92bcbd894749067f0"},
+    {file = "synphot-1.6.0-cp312-cp312-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:142c32c9bde08633e56b16f0addc5658cac8aadbc3546a48a35756885676f4d2"},
+    {file = "synphot-1.6.0-cp312-cp312-musllinux_1_2_x86_64.whl", hash = "sha256:7d945fdbb9ce804ce0e319ab77c41e0855c2a09d85ee74436f8acd25567af417"},
+    {file = "synphot-1.6.0-cp312-cp312-win_amd64.whl", hash = "sha256:9b5c61d6fe22c575f2c9d04cc86ada8b0b26d897214f4651935ea6f208803962"},
+    {file = "synphot-1.6.0-cp313-cp313-macosx_10_13_x86_64.whl", hash = "sha256:ac75c7d078adace98858b8c134cdf952c916430ecf96713373cf0fb1c43be106"},
+    {file = "synphot-1.6.0-cp313-cp313-macosx_11_0_arm64.whl", hash = "sha256:30d99af02bcc4f32fa620c46695fac665492252774f63399dd906b22143af71d"},
+    {file = "synphot-1.6.0-cp313-cp313-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:5ef837635dbaf41304a5ac51ee2770be0e391d59155318bbaa705a79c3fa5ac2"},
+    {file = "synphot-1.6.0-cp313-cp313-musllinux_1_2_x86_64.whl", hash = "sha256:3812f9a0380f64ff8ee8efa5e956f88ccf3b7fe24262da0294001b9bdcfee568"},
+    {file = "synphot-1.6.0-cp313-cp313-win_amd64.whl", hash = "sha256:fb2e31137910b8fa0a6f7ebc13a32061c9df2f1703e2bd75746c1e68593c3a1d"},
+    {file = "synphot-1.6.0.tar.gz", hash = "sha256:999c12191607cd0669752417d890001aa0e44c44e541dfb041c26cd766898a6d"},
 ]
 
 [package.dependencies]
@@ -3957,7 +3965,7 @@ numpy = ">=1.23"
 scipy = ">=1.9"
 
 [package.extras]
-all = ["dust-extinction", "specutils (>=0.7)"]
+all = ["dust-extinction", "specutils (>=1.10)"]
 docs = ["matplotlib", "sphinx-astropy"]
 test = ["pytest-astropy"]
 
@@ -4234,4 +4242,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10, <3.13"
-content-hash = "948cfff213e2881cbdd75ac1f1192a9fb08577982f1df9cbf2271dd4aee86592"
+content-hash = "421ee6d8ff7c7c2cd823cf1ee6125836767a7274afbd51945026828c204d8363"
