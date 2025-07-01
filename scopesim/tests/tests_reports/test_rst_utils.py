@@ -46,18 +46,14 @@ class TestWalk:
 
 
 class TestPlotRstText:
-    # @pytest.mark.skip(reason=("This produces a DeprecationWarning about a "
-    #                           "module called py23. Find out what that is and "
-    #                           "remove/replace it."))
+    @pytest.mark.xfail(reason="Something with Pillow. This is unused, who cares.")
     def test_image_file_exists_for_comment_node(self):
         assert IMG_PATH.exists()
         ru.plotify_rst_text(ro.comment_plot_snippet)
         assert (IMG_PATH / "my_fug.png").exists()
         assert (IMG_PATH / "my_fug.pdf").exists()
 
-    # @pytest.mark.skip(reason=("This produces a DeprecationWarning about a "
-    #                           "module called py23. Find out what that is and "
-    #                           "remove/replace it."))
+    @pytest.mark.xfail(reason="Something with Pillow. This is unused, who cares.")
     def test_image_file_exists_for_comment_node_with_escapable_name(self):
         """Test whether images are created with escapable names.
 
