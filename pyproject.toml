@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "ScopeSim"
-version = "0.10.1a0"
+version = "0.10.1a1"
 description = "Generalised telescope observation simulator"
 license = "GPL-3.0-or-later"
 authors = ["Kieran Leschinski <kieran.leschinski@unive.ac.at>"]
