@@ -21,8 +21,8 @@ classifiers = [
 [tool.poetry.dependencies]
 python = ">=3.10, <3.13"
 numpy = "^1.26.4"
-scipy = "^1.14.1"
-astropy = "^6.1.5"
+scipy = "^1.15.3"
+astropy = "^6.1.7"
 matplotlib = "^3.10.1"
 pooch = "^1.8.2"
 
@@ -46,7 +46,7 @@ optional = true
 [tool.poetry.group.dev.dependencies]
 jupyter = "^1.1.1"
 jupytext = "^1.17.1"
-ipykernel = "^6.24.0"
+ipykernel = "^6.29.5"
 ipympl = "^0.9.6"
 
 [tool.poetry.group.test.dependencies]
