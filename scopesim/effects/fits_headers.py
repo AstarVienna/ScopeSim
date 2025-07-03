@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
-"""TBA."""
+"""Effects to produce realistic FITS headers for pipeline development."""
 
 from copy import deepcopy
-import datetime
+import datetime as dt
 from typing import ClassVar
+from collections.abc import Iterable, Mapping, MutableMapping
 
 import yaml
 import numpy as np
@@ -20,6 +21,7 @@ from ..utils import from_currsys, find_file
 from ..utils import get_logger
 
 logger = get_logger(__name__)
+
 
 class ExtraFitsKeywords(Effect):
     """
@@ -286,14 +288,7 @@ class ExtraFitsKeywords(Effect):
                 unresolved = flatten_dict(dic.get("unresolved_keywords", {}))
                 exts = get_relevant_extensions(dic, hdul)
                 for i in exts:
-                    # On windows machines Â appears in the string when using §
-                    resolved_with_counters = {
-                        k: v.replace("Â",
-                                     "").replace("§",
-                                                 str(i)).replace("++", str(i))
-                        if isinstance(v, str) else v for k, v in resolved.items()
-                    }
-                    hdul[i].header.update(resolved_with_counters)
+                    hdul[i].header.update(dict(_resolve_counters(resolved, i)))
                     hdul[i].header.update(unresolved)
 
         return hdul
@@ -318,8 +313,32 @@ def get_relevant_extensions(dic, hdul):
     return exts
 
 
-def flatten_dict(dic, base_key="", flat_dict=None, resolve=False,
-                 optics_manager=None, cmds=None):
+def _resolve_paragraph_strings(value, i_ext):
+    """Resolve §-strings by adding extention index ("coutner")"."""
+    if not isinstance(value, str):
+        return value
+    # On windows machines Â appears in the string when using § (sometimes)
+    value = value.replace("Â", "")
+    return value.replace("§", str(i_ext)).replace("++", str(i_ext))
+
+
+def _resolve_counters(dic, i_ext):
+    """Deal with (key, value) and (key, (value, comment)) cases."""
+    for key, value in dic.items():
+        match value:
+            case [value, comment]:
+                yield key, (_resolve_paragraph_strings(value, i_ext), comment)
+            case value:
+                yield key, _resolve_paragraph_strings(value, i_ext)
+
+
+def flatten_dict(
+    dic: Mapping,
+    base_key: str = "",
+    flat_dict: MutableMapping | None = None,
+    resolve: bool = False,
+    optics_manager=None,
+) -> MutableMapping:
     """
     Flattens nested yaml dictionaries into a single level dictionary.
 
@@ -332,74 +351,98 @@ def flatten_dict(dic, base_key="", flat_dict=None, resolve=False,
     resolve : bool
         If True, resolves !-str via from_currsys and #-str via optics_manager
     optics_manager : scopesim.OpticsManager
-        Required for resolving #-strings
-    cmds : UserCommands
-        To use for resolving !-strings
+        Required for resolving #-strings and !-strings (via .cmds)
 
     Returns
     -------
     flat_dict : dict
 
     """
-    if cmds is None and optics_manager is not None:
-        cmds = optics_manager.cmds
+    cmds = optics_manager.cmds if optics_manager is not None else None
 
     if flat_dict is None:
         flat_dict = {}
+
     for key, val in dic.items():
         flat_key = f"{base_key}{key} "
-        if isinstance(val, dict):
-            flatten_dict(val, flat_key, flat_dict, resolve, optics_manager, cmds)
-        else:
-            flat_key = flat_key[:-1]
+        if isinstance(val, Mapping):
+            # recursive
+            flatten_dict(val, flat_key, flat_dict, resolve, optics_manager)
+            continue
 
-            # catch any value+comments lists
-            comment = ""
-            if isinstance(val, list) and len(val) == 2 and isinstance(val[1],
-                                                                      str):
-                value, comment = val
-            else:
-                value = deepcopy(val)
+        flat_key = flat_key.strip()
 
-            # resolve any bang or hash strings
-            if resolve and isinstance(value, str):
-                if value.startswith("!"):
-                    value = from_currsys(value, cmds)
-                elif value.startswith("#"):
-                    if optics_manager is None:
-                        raise ValueError("An OpticsManager object must be "
-                                         "passed in order to resolve "
-                                         "#-strings")
-                    try:
-                        value = optics_manager[value]
-                    except ValueError:
-                        logger.warning("%s not found", value)
-                        value = "Not applicable or not found"
+        # Catch any value+comments lists/tuples
+        match val:
+            case [value, str(comment)]:
+                pass  # values get bound to variables anyway
+            case value:
+                value = deepcopy(value)  # TODO: is this really required?
+                comment = ""
 
-            if isinstance(value, u.Quantity):
-                comment = f"[{str(value.unit)}] {comment}"
+        # Resolve any bang or hash strings
+        match value:
+            case str(s) if resolve and s.startswith("!"):
+                value = from_currsys(value, cmds)
+            case str(s) if resolve and s.startswith("#"):
+                if optics_manager is None:
+                    raise ValueError("An OpticsManager object must be passed "
+                                     "in order to resolve #-strings")
+                try:
+                    value = optics_manager[value]
+                except ValueError:
+                    logger.warning("%s not found", value)
+                    value = "Not applicable or not found"
+            case str():
+                # Any normal string or resolving is off, we can just write to
+                # the output dict and move on, no need to evaluate the rest.
+                if comment:
+                    flat_dict[flat_key] = (value, comment)
+                else:
+                    flat_dict[flat_key] = value
+                continue
+
+        # Must re-match because resolving might have changed types
+        match value:
+            case str():
+                # Still a string, don't do anything (avoids catching the string
+                # later on as it would also match Iterable).
+                pass
+
+            case u.Quantity():
+                comment = f"[{value.unit.to_string(format='fits')}] {comment}"
                 value = value.value
 
-            # Convert e.g.  Unit(mag) to just "mag". Not sure how this will
-            # work when deserializing though.
-            if isinstance(value, u.Unit):
-                value = str(value)
+            case u.Unit():
+                # Note: Convert e.g.  Unit(mag) to just "mag". Not sure how
+                #       this will work when deserializing though.
+                value = value.to_string(format="fits")
 
-            if isinstance(value, (list, np.ndarray)):
-                value = f"{value.__class__.__name__}:{str(list(value))}"
+            case Iterable():  # could also do [*_] instead...
+                value = f"{value.__class__.__name__}: {list(value)!s}"
+                # TODO: maybe just do value = f"{value!r}" instead?
+
                 max_len = 80 - len(flat_key)
                 if len(value) > max_len:
                     value = f"{value[:max_len-4]} ..."
 
-            if isinstance(value, (datetime.time, datetime.date,
-                                  datetime.datetime)):
+            case dt.time() | dt.date() | dt.datetime():
                 value = value.isoformat()
 
-            # Add the flattened KEYWORD = (value, comment) to the header dict
-            if comment:
-                flat_dict[flat_key] = (value, str(comment))
-            else:
-                flat_dict[flat_key] = value
+        # Add the flattened KEYWORD = (value, comment) to the header dict
+        # Note: I removed the str() around comment here. If anything other than
+        #       a string ends up in comment, we should really know about it!
+        # TODO: Perhaps already create fits.Card instances here?
+        #       But would run into issues with §-style replacements...
+        # TODO: There's no need to distinguish between comment and no comment
+        #       cases here, because fits.Card has a default of "" for the
+        #       comment anyway. That is, the resulting header will look exactly
+        #       identical with our without an empyt comment passed here.
+        #       But there are a few tests that expect the single-value case...
+        if comment:
+            flat_dict[flat_key] = (value, comment)
+        else:
+            flat_dict[flat_key] = value
 
     return flat_dict
 

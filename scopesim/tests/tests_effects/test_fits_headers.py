@@ -218,7 +218,7 @@ class TestEffectsMetaKeywordsApplyTo:
         pri_hdr = hdul[0].header
 
         assert pri_hdr["SIM EFF0 class"] == "DetectorList"
-        assert pri_hdr["SIM EFF0 array_dict pixsize"] == "list:[0.015]"
+        assert pri_hdr["SIM EFF0 array_dict pixsize"] == "list: [0.015]"
 
     def test_effect_meta_in_secondary_header(self, yaml_string, simplecado_opt,
                                              comb_hdul):
@@ -230,7 +230,7 @@ class TestEffectsMetaKeywordsApplyTo:
 
         assert "GOKU EFF0 class" not in pri_hdr
         assert sec_hdr["GOKU EFF0 class"] == "DetectorList"
-        assert sec_hdr["GOKU EFF0 array_dict pixsize"] == "list:[0.015]"
+        assert sec_hdr["GOKU EFF0 array_dict pixsize"] == "list: [0.015]"
 
 
 class TestSourceDescriptionFitsKeywordsApplyTo:
