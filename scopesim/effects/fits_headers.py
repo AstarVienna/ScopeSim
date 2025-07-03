@@ -4,6 +4,7 @@
 from copy import deepcopy
 import datetime
 from typing import ClassVar
+from collections.abc import Mapping
 
 import yaml
 import numpy as np
@@ -347,58 +348,58 @@ def flatten_dict(dic, base_key="", flat_dict=None, resolve=False,
 
     for key, val in dic.items():
         flat_key = f"{base_key}{key} "
-        if isinstance(val, dict):
+        if isinstance(val, Mapping):
+            # recursive
             flatten_dict(val, flat_key, flat_dict, resolve, optics_manager)
+            continue
+
+        flat_key = flat_key[:-1]
+
+        # catch any value+comments lists
+        comment = ""
+        if isinstance(val, list) and len(val) == 2 and isinstance(val[1], str):
+            value, comment = val
         else:
-            flat_key = flat_key[:-1]
+            value = deepcopy(val)
 
-            # catch any value+comments lists
-            comment = ""
-            if isinstance(val, list) and len(val) == 2 and isinstance(val[1],
-                                                                      str):
-                value, comment = val
-            else:
-                value = deepcopy(val)
+        # resolve any bang or hash strings
+        if resolve and isinstance(value, str):
+            if value.startswith("!"):
+                value = from_currsys(value, cmds)
+            elif value.startswith("#"):
+                if optics_manager is None:
+                    raise ValueError("An OpticsManager object must be passed "
+                                     "in order to resolve #-strings")
+                try:
+                    value = optics_manager[value]
+                except ValueError:
+                    logger.warning("%s not found", value)
+                    value = "Not applicable or not found"
 
-            # resolve any bang or hash strings
-            if resolve and isinstance(value, str):
-                if value.startswith("!"):
-                    value = from_currsys(value, cmds)
-                elif value.startswith("#"):
-                    if optics_manager is None:
-                        raise ValueError("An OpticsManager object must be "
-                                         "passed in order to resolve "
-                                         "#-strings")
-                    try:
-                        value = optics_manager[value]
-                    except ValueError:
-                        logger.warning("%s not found", value)
-                        value = "Not applicable or not found"
+        if isinstance(value, u.Quantity):
+            comment = f"[{str(value.unit)}] {comment}"
+            value = value.value
 
-            if isinstance(value, u.Quantity):
-                comment = f"[{str(value.unit)}] {comment}"
-                value = value.value
+        # Convert e.g.  Unit(mag) to just "mag". Not sure how this will
+        # work when deserializing though.
+        if isinstance(value, u.Unit):
+            value = value.to_string(format="fits")
 
-            # Convert e.g.  Unit(mag) to just "mag". Not sure how this will
-            # work when deserializing though.
-            if isinstance(value, u.Unit):
-                value = str(value)
+        if isinstance(value, (list, np.ndarray)):
+            value = f"{value.__class__.__name__}:{str(list(value))}"
+            max_len = 80 - len(flat_key)
+            if len(value) > max_len:
+                value = f"{value[:max_len-4]} ..."
 
-            if isinstance(value, (list, np.ndarray)):
-                value = f"{value.__class__.__name__}:{str(list(value))}"
-                max_len = 80 - len(flat_key)
-                if len(value) > max_len:
-                    value = f"{value[:max_len-4]} ..."
+        if isinstance(value, (datetime.time, datetime.date,
+                              datetime.datetime)):
+            value = value.isoformat()
 
-            if isinstance(value, (datetime.time, datetime.date,
-                                  datetime.datetime)):
-                value = value.isoformat()
-
-            # Add the flattened KEYWORD = (value, comment) to the header dict
-            if comment:
-                flat_dict[flat_key] = (value, str(comment))
-            else:
-                flat_dict[flat_key] = value
+        # Add the flattened KEYWORD = (value, comment) to the header dict
+        if comment:
+            flat_dict[flat_key] = (value, str(comment))
+        else:
+            flat_dict[flat_key] = value
 
     return flat_dict
 
