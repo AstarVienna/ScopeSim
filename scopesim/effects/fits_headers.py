@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""TBA."""
+"""Effects to produce realistic FITS headers for pipeline development."""
 
 from copy import deepcopy
 import datetime
@@ -20,6 +20,7 @@ from ..utils import from_currsys, find_file
 from ..utils import get_logger
 
 logger = get_logger(__name__)
+
 
 class ExtraFitsKeywords(Effect):
     """
