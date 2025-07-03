@@ -320,7 +320,7 @@ def get_relevant_extensions(dic, hdul):
 
 
 def flatten_dict(dic, base_key="", flat_dict=None, resolve=False,
-                 optics_manager=None, cmds=None):
+                 optics_manager=None):
     """
     Flattens nested yaml dictionaries into a single level dictionary.
 
@@ -333,24 +333,22 @@ def flatten_dict(dic, base_key="", flat_dict=None, resolve=False,
     resolve : bool
         If True, resolves !-str via from_currsys and #-str via optics_manager
     optics_manager : scopesim.OpticsManager
-        Required for resolving #-strings
-    cmds : UserCommands
-        To use for resolving !-strings
+        Required for resolving #-strings and !-strings (via .cmds)
 
     Returns
     -------
     flat_dict : dict
 
     """
-    if cmds is None and optics_manager is not None:
-        cmds = optics_manager.cmds
+    cmds = optics_manager.cmds if optics_manager is not None else None
 
     if flat_dict is None:
         flat_dict = {}
+
     for key, val in dic.items():
         flat_key = f"{base_key}{key} "
         if isinstance(val, dict):
-            flatten_dict(val, flat_key, flat_dict, resolve, optics_manager, cmds)
+            flatten_dict(val, flat_key, flat_dict, resolve, optics_manager)
         else:
             flat_key = flat_key[:-1]
 
