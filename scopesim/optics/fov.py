@@ -460,6 +460,159 @@ class FieldOfView:
         area_factor = self.pixel_area * bg_solid_angle
         return area_factor
 
+    @property
+    def data(self):
+        """Return either hdu.data, image, cube, spectrum or None."""
+        if self.hdu is not None:
+            return self.hdu.data
+        if self.image is not None:
+            return self.image
+        if self.cube is not None:
+            return self.cube
+        if self.spectrum is not None:
+            return self.spectrum
+        return None
+
+    def get_corners(self, new_unit: str = None):
+        """Return sky footprint, image plane footprint."""
+        sky_corners = imp_utils.calc_footprint(self.header, new_unit=new_unit)
+        imp_corners = imp_utils.calc_footprint(self.header, "D")
+        return sky_corners, imp_corners
+
+    @property
+    def waverange(self):
+        """Return wavelength range in um [wave_min, wave_max]."""
+        if self._waverange is None:
+            wave_min = self.meta["wave_min"]
+            wave_max = self.meta["wave_max"]
+            self._waverange = [wave_min, wave_max] << u.um
+        return self._waverange
+
+    @property
+    def wavelength(self):
+        """Return central wavelength in um."""
+        if self._wavelength is None:
+            self._wavelength = self.waverange.mean() << u.um
+        return self._wavelength
+
+    @property
+    def waveset(self):
+        """Return a wavelength vector in um."""
+        if cube_fields := self._get_cube_fields():
+            naxis3_max = np.argmax([cube.header["NAXIS3"]
+                                    for cube in cube_fields])
+            _waveset = cube_fields[naxis3_max].waveset
+        elif specfields := self._get_fields(SpectrumSourceField):
+            _waveset = np.concatenate([
+                spec.waveset.to(u.um)
+                for field in specfields
+                for spec in field.spectra.values()
+            ])
+        else:
+            _waveset = self.waverange << u.um
+
+        # TODO: tie the round to a global precision setting (this is defined
+        #       better in another TODO somewhere...)
+        # The rounding is necessary to not end up with things like:
+        #   0.7 um
+        #   0.7000000000000001 um
+        #   0.7000000000000002 um
+        # and yes, that actually happend...
+        _waveset = np.unique(_waveset.round(10))
+        return _waveset
+
+    @property
+    def area(self) -> float:
+        """Return meta["area"] from cmds."""
+        # TODO: Make this an attribute once meta resolving is implemented.
+        return from_currsys(self.meta["area"], self.cmds) << u.m**2
+
+    @property
+    def sub_pixel(self) -> bool:
+        """Return meta["sub_pixel"] from cmds."""
+        # TODO: Make this an attribute once meta resolving is implemented.
+        return from_currsys(self.meta["sub_pixel"], self.cmds)
+
+    @property
+    def spline_order(self) -> int:
+        """Return "!SIM.computing.spline_order" from cmds."""
+        # TODO: Make this an attribute once meta resolving is implemented.
+        return from_currsys("!SIM.computing.spline_order", self.cmds)
+
+    def _get_fields(self, subclass) -> list[SourceField]:
+        """Return list of fields of specific SourceField subclass."""
+        return [field for field in self.fields if isinstance(field, subclass)]
+
+    def _get_cube_fields(self) -> list[CubeSourceField]:
+        """Return list of CubeSourceFields."""
+        return self._get_fields(CubeSourceField)
+
+    def _get_image_fields(self) -> list[ImageSourceField]:
+        """Return list of ImageSourceFields."""
+        return self._get_fields(ImageSourceField)
+
+    def _get_table_fields(self) -> list[TableSourceField]:
+        """Return list of TableSourceFields."""
+        return self._get_fields(TableSourceField)
+
+    def _get_background_fields(self) -> list[BackgroundSourceField]:
+        """Return list of BackgroundSourceFields."""
+        return self._get_fields(BackgroundSourceField)
+
+    @property
+    def spectra(self) -> dict[int, SourceSpectrum]:
+        """Return a collection of all fields' spectra.
+
+        .. deprecated:: 0.10.0
+
+           Use individual fields' spectra instead.
+        """
+        warn("Deprecated since v0.10.0.",
+             DeprecationWarning, stacklevel=2)
+        specs = {
+            ref: spec
+            for field in [
+                fld for fld in self.fields
+                if isinstance(fld, SpectrumSourceField)
+            ]
+            for ref, spec in field.spectra.items()
+        }
+        return specs
+
+    def _ensure_deg_header(self):
+        cunit = u.Unit(self.header["CUNIT1"].lower())
+        convf = cunit.to(u.deg)
+        self.header["CDELT1"] *= convf
+        self.header["CDELT2"] *= convf
+        self.header["CRVAL1"] *= convf
+        self.header["CRVAL2"] *= convf
+        self.header["CUNIT1"] = "deg"
+        self.header["CUNIT2"] = "deg"
+
+    def plot(self, axes, units: str = "arcsec") -> None:
+        """Plot FOV footprint."""
+        outline = np.array(list(close_loop(self.get_corners(units)[0])))
+        axes.plot(*outline.T, label=f"FOV id: {self.meta['id']}")
+
+    def __repr__(self) -> str:
+        """Return repr(self)."""
+        msg = (f"{self.__class__.__name__}({self.header!r}, "
+               f"{self.waverange!r}, {self.detector_header!r}, "
+               f"**{self.meta!r})")
+        return msg
+
+    def __str__(self) -> str:
+        """Return str(self)."""
+        msg = (f"FOV id: {self.meta['id']}, with dimensions "
+               f"({self.header['NAXIS1']}, {self.header['NAXIS2']})\n"
+               f"Sky centre: ({self.header['CRVAL1']}, "
+               f"{self.header['CRVAL2']})\n"
+               f"Image centre: ({self.header['CRVAL1D']}, "
+               f"{self.header['CRVAL2D']})\n"
+               f"Wavelength range: {self.waverange!s}\n")
+        return msg
+
+
     def _make_spectrum_cubefields(self):
         """
         Find Cube fields.
@@ -936,158 +1089,6 @@ class FieldOfView:
         # canvas_cube_hdu.data *= bin_widths[:, None, None]
 
         return canvas_cube_hdu      # [ph s-1 um-1 (arcsec-2)]
-
-    @property
-    def data(self):
-        """Return either hdu.data, image, cube, spectrum or None."""
-        if self.hdu is not None:
-            return self.hdu.data
-        if self.image is not None:
-            return self.image
-        if self.cube is not None:
-            return self.cube
-        if self.spectrum is not None:
-            return self.spectrum
-        return None
-
-    def get_corners(self, new_unit: str = None):
-        """Return sky footprint, image plane footprint."""
-        sky_corners = imp_utils.calc_footprint(self.header, new_unit=new_unit)
-        imp_corners = imp_utils.calc_footprint(self.header, "D")
-        return sky_corners, imp_corners
-
-    @property
-    def waverange(self):
-        """Return wavelength range in um [wave_min, wave_max]."""
-        if self._waverange is None:
-            wave_min = self.meta["wave_min"]
-            wave_max = self.meta["wave_max"]
-            self._waverange = [wave_min, wave_max] << u.um
-        return self._waverange
-
-    @property
-    def wavelength(self):
-        """Return central wavelength in um."""
-        if self._wavelength is None:
-            self._wavelength = self.waverange.mean() << u.um
-        return self._wavelength
-
-    @property
-    def waveset(self):
-        """Return a wavelength vector in um."""
-        if cube_fields := self._get_cube_fields():
-            naxis3_max = np.argmax([cube.header["NAXIS3"]
-                                    for cube in cube_fields])
-            _waveset = cube_fields[naxis3_max].waveset
-        elif specfields := self._get_fields(SpectrumSourceField):
-            _waveset = np.concatenate([
-                spec.waveset.to(u.um)
-                for field in specfields
-                for spec in field.spectra.values()
-            ])
-        else:
-            _waveset = self.waverange << u.um
-
-        # TODO: tie the round to a global precision setting (this is defined
-        #       better in another TODO somewhere...)
-        # The rounding is necessary to not end up with things like:
-        #   0.7 um
-        #   0.7000000000000001 um
-        #   0.7000000000000002 um
-        # and yes, that actually happend...
-        _waveset = np.unique(_waveset.round(10))
-        return _waveset
-
-    @property
-    def area(self) -> float:
-        """Return meta["area"] from cmds."""
-        # TODO: Make this an attribute once meta resolving is implemented.
-        return from_currsys(self.meta["area"], self.cmds) << u.m**2
-
-    @property
-    def sub_pixel(self) -> bool:
-        """Return meta["sub_pixel"] from cmds."""
-        # TODO: Make this an attribute once meta resolving is implemented.
-        return from_currsys(self.meta["sub_pixel"], self.cmds)
-
-    @property
-    def spline_order(self) -> int:
-        """Return "!SIM.computing.spline_order" from cmds."""
-        # TODO: Make this an attribute once meta resolving is implemented.
-        return from_currsys("!SIM.computing.spline_order", self.cmds)
-
-    def _get_fields(self, subclass) -> list[SourceField]:
-        """Return list of fields of specific SourceField subclass."""
-        return [field for field in self.fields if isinstance(field, subclass)]
-
-    def _get_cube_fields(self) -> list[CubeSourceField]:
-        """Return list of CubeSourceFields."""
-        return self._get_fields(CubeSourceField)
-
-    def _get_image_fields(self) -> list[ImageSourceField]:
-        """Return list of ImageSourceFields."""
-        return self._get_fields(ImageSourceField)
-
-    def _get_table_fields(self) -> list[TableSourceField]:
-        """Return list of TableSourceFields."""
-        return self._get_fields(TableSourceField)
-
-    def _get_background_fields(self) -> list[BackgroundSourceField]:
-        """Return list of BackgroundSourceFields."""
-        return self._get_fields(BackgroundSourceField)
-
-    @property
-    def spectra(self) -> dict[int, SourceSpectrum]:
-        """Return a collection of all fields' spectra.
-
-        .. deprecated:: 0.10.0
-
-           Use individual fields' spectra instead.
-        """
-        warn("Deprecated since v0.10.0.",
-             DeprecationWarning, stacklevel=2)
-        specs = {
-            ref: spec
-            for field in [
-                fld for fld in self.fields
-                if isinstance(fld, SpectrumSourceField)
-            ]
-            for ref, spec in field.spectra.items()
-        }
-        return specs
-
-    def _ensure_deg_header(self):
-        cunit = u.Unit(self.header["CUNIT1"].lower())
-        convf = cunit.to(u.deg)
-        self.header["CDELT1"] *= convf
-        self.header["CDELT2"] *= convf
-        self.header["CRVAL1"] *= convf
-        self.header["CRVAL2"] *= convf
-        self.header["CUNIT1"] = "deg"
-        self.header["CUNIT2"] = "deg"
-
-    def plot(self, axes, units: str = "arcsec") -> None:
-        """Plot FOV footprint."""
-        outline = np.array(list(close_loop(self.get_corners(units)[0])))
-        axes.plot(*outline.T, label=f"FOV id: {self.meta['id']}")
-
-    def __repr__(self) -> str:
-        """Return repr(self)."""
-        msg = (f"{self.__class__.__name__}({self.header!r}, "
-               f"{self.waverange!r}, {self.detector_header!r}, "
-               f"**{self.meta!r})")
-        return msg
-
-    def __str__(self) -> str:
-        """Return str(self)."""
-        msg = (f"FOV id: {self.meta['id']}, with dimensions "
-               f"({self.header['NAXIS1']}, {self.header['NAXIS2']})\n"
-               f"Sky centre: ({self.header['CRVAL1']}, "
-               f"{self.header['CRVAL2']})\n"
-               f"Image centre: ({self.header['CRVAL1D']}, "
-               f"{self.header['CRVAL2D']})\n"
-               f"Wavelength range: {self.waverange!s}\n")
-        return msg
 
 
 def replace_nans(field, cmds) -> None:
