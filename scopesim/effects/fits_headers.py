@@ -2,9 +2,9 @@
 """Effects to produce realistic FITS headers for pipeline development."""
 
 from copy import deepcopy
-import datetime
+import datetime as dt
 from typing import ClassVar
-from collections.abc import Mapping, MutableMapping
+from collections.abc import Iterable, Mapping, MutableMapping
 
 import yaml
 import numpy as np
@@ -360,18 +360,19 @@ def flatten_dict(
 
         flat_key = flat_key.strip()
 
-        # catch any value+comments lists
-        comment = ""
-        if isinstance(val, list) and len(val) == 2 and isinstance(val[1], str):
-            value, comment = val
-        else:
-            value = deepcopy(val)
+        # Catch any value+comments lists/tuples
+        match val:
+            case [value, comment] if isinstance(comment, str):
+                pass  # values get bound to variables anyway
+            case value:
+                value = deepcopy(value)  # TODO: is this really required?
+                comment = ""
 
-        # resolve any bang or hash strings
-        if resolve and isinstance(value, str):
-            if value.startswith("!"):
+        # Resolve any bang or hash strings
+        match value:
+            case str(s) if resolve and s.startswith("!"):
                 value = from_currsys(value, cmds)
-            elif value.startswith("#"):
+            case str(s) if resolve and s.startswith("#"):
                 if optics_manager is None:
                     raise ValueError("An OpticsManager object must be passed "
                                      "in order to resolve #-strings")
@@ -381,26 +382,32 @@ def flatten_dict(
                     logger.warning("%s not found", value)
                     value = "Not applicable or not found"
 
-        if isinstance(value, u.Quantity):
-            comment = f"[{value.unit.to_string(format='fits')}] {comment}"
-            value = value.value
+        # Must re-match because resolving might have changed types
+        match value:
+            case str():
+                # Still a string, don't do anything (avoids catching the string
+                # later on as it would also match Iterable).
+                pass
 
-        # Convert e.g.  Unit(mag) to just "mag". Not sure how this will
-        # work when deserializing though.
-        if isinstance(value, u.Unit):
-            value = value.to_string(format="fits")
+            case u.Quantity():
+                comment = f"[{value.unit.to_string(format='fits')}] {comment}"
+                value = value.value
 
-        if isinstance(value, (list, np.ndarray)):
-            value = f"{value.__class__.__name__}: {list(value)!s}"
-            # TODO: maybe just do value = f"{value!r}" instead?
+            case u.Unit():
+                # Note: Convert e.g.  Unit(mag) to just "mag". Not sure how
+                #       this will work when deserializing though.
+                value = value.to_string(format="fits")
 
-            max_len = 80 - len(flat_key)
-            if len(value) > max_len:
-                value = f"{value[:max_len-4]} ..."
+            case Iterable():  # could also do [*_] instead...
+                value = f"{value.__class__.__name__}: {list(value)!s}"
+                # TODO: maybe just do value = f"{value!r}" instead?
 
-        if isinstance(value, (datetime.time, datetime.date,
-                              datetime.datetime)):
-            value = value.isoformat()
+                max_len = 80 - len(flat_key)
+                if len(value) > max_len:
+                    value = f"{value[:max_len-4]} ..."
+
+            case dt.time() | dt.date() | dt.datetime():
+                value = value.isoformat()
 
         # Add the flattened KEYWORD = (value, comment) to the header dict
         if comment:
