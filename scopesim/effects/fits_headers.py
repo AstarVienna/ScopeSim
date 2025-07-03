@@ -288,14 +288,7 @@ class ExtraFitsKeywords(Effect):
                 unresolved = flatten_dict(dic.get("unresolved_keywords", {}))
                 exts = get_relevant_extensions(dic, hdul)
                 for i in exts:
-                    # On windows machines Â appears in the string when using §
-                    resolved_with_counters = {
-                        k: v.replace("Â",
-                                     "").replace("§",
-                                                 str(i)).replace("++", str(i))
-                        if isinstance(v, str) else v for k, v in resolved.items()
-                    }
-                    hdul[i].header.update(resolved_with_counters)
+                    hdul[i].header.update(dict(_resolve_counters(resolved, i)))
                     hdul[i].header.update(unresolved)
 
         return hdul
@@ -318,6 +311,25 @@ def get_relevant_extensions(dic, hdul):
         exts.extend(i for i, hdu in enumerate(hdul) if isinstance(hdu, cls))
 
     return exts
+
+
+def _resolve_paragraph_strings(value, i_ext):
+    """Resolve §-strings by adding extention index ("coutner")"."""
+    if not isinstance(value, str):
+        return value
+    # On windows machines Â appears in the string when using § (sometimes)
+    value = value.replace("Â", "")
+    return value.replace("§", str(i_ext)).replace("++", str(i_ext))
+
+
+def _resolve_counters(dic, i_ext):
+    """Deal with (key, value) and (key, (value, comment)) cases."""
+    for key, value in dic.items():
+        match value:
+            case [value, comment]:
+                yield key, (_resolve_paragraph_strings(value, i_ext), comment)
+            case value:
+                yield key, _resolve_paragraph_strings(value, i_ext)
 
 
 def flatten_dict(
