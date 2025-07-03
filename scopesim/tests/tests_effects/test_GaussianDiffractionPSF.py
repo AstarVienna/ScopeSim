@@ -62,7 +62,7 @@ class TestApplyTo:
             plt.subplot(121)
             plt.imshow(basic_fov.fields[0].data, origin="lower", norm=LogNorm())
             plt.subplot(122)
-            plt.imshow(basic_fov.data, origin="lower", norm=LogNorm())
+            plt.imshow(basic_fov.hdu.data, origin="lower", norm="log")
             plt.show()
 
 

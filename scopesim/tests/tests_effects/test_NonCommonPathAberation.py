@@ -85,9 +85,9 @@ class TestGetKernel:
 class TestApplyTo:
     def test_convolves_kernel_with_fov_image(self, ncpa_kwargs, fov_Ks):
         ncpa = NonCommonPathAberration(**ncpa_kwargs)
-        pre_max_flux = np.max(fov_Ks.data)
+        pre_max_flux = np.max(fov_Ks.hdu.data)
         fov_Ks = ncpa.apply_to(fov_Ks)
-        post_max_flux = np.max(fov_Ks.data)
+        post_max_flux = np.max(fov_Ks.hdu.data)
 
         assert post_max_flux/pre_max_flux == approx(0.954, rel=0.002)
 

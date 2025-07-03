@@ -106,6 +106,7 @@ class FOVManager:
         self.effects = effects or []
         self._fovs_list = []
         self.is_spectroscope = eu.is_spectroscope(self.effects)
+        self.is_coherent = True  # incoherent MOS not yet implemented
 
         if from_currsys(self.meta["preload_fovs"], self.cmds):
             logger.debug("Generating initial fovs_list.")
@@ -176,10 +177,19 @@ class FOVManager:
                 # TODO: Why is this .image_plane_header and not
                 #       .detector_headers()[0] or something?
 
+            if not self.is_spectroscope:
+                hdu_type = "image"
+            else:
+                if self.is_coherent:
+                    hdu_type = "cube"
+                else:
+                    hdu_type = "spectrum"
+
             yield FieldOfView(skyhdr,
                               waverange,
                               detector_header=dethdr,
                               cmds=self.cmds,
+                              hdu_type=hdu_type,
                               **vol["meta"])
 
     @property

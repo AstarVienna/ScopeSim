@@ -97,7 +97,7 @@ class TestApplyTo:
         psf.apply_to(fov)
 
         if PLOTS:
-            plt.imshow(fov.data, norm=LogNorm(), vmin=1)
+            plt.imshow(fov.hdu.data, norm="log", vmin=1)
             plt.show()
 
-        assert 1e-99 < np.average(fov.data) < 1e99
+        assert 1e-99 < np.average(fov.hdu.data) < 1e99

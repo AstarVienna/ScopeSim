@@ -14,27 +14,27 @@ from scopesim.optics.fov import FieldOfView
 PLOTS = False
 
 
-def _fov_190_210_um():
+def _fov_190_210_um(hdu_type="image"):
     """ A FOV compatible with 11 slices of so._cube_source()"""
     hdr = ho._fov_header()  # 20x20" @ 0.2" --> [-10, 10]"
     wav = [1.9, 2.1] * u.um
-    fov = FieldOfView(hdr, wav, area=1 * u.m ** 2)
+    fov = FieldOfView(hdr, wav, area=1 * u.m ** 2, hdu_type=hdu_type)
     return fov
 
 
-def _fov_190_210_um_subpx():
+def _fov_190_210_um_subpx(hdu_type="image"):
     """ A FOV compatible with 11 slices of so._cube_source()"""
     hdr = ho._fov_header()  # 20x20" @ 0.2" --> [-10, 10]"
     wav = [1.9, 2.1] * u.um
-    fov = FieldOfView(hdr, wav, area=1 * u.m ** 2, sub_pixel=True)
+    fov = FieldOfView(hdr, wav, area=1 * u.m ** 2, sub_pixel=True, hdu_type=hdu_type)
     return fov
 
 
-def _fov_197_202_um():
+def _fov_197_202_um(hdu_type="image"):
     """ A FOV compatible with 3 slices of so._cube_source()"""
     hdr = ho._fov_header()  # 20x20" @ 0.2" --> [-10, 10]"
     wav = [1.97000000001, 2.02] * u.um  # Needs [1.98, 2.00, 2.02] µm --> 3 slices
-    fov = FieldOfView(hdr, wav, area=1*u.m**2)
+    fov = FieldOfView(hdr, wav, area=1*u.m**2, hdu_type=hdu_type)
     return fov
 
 
@@ -167,10 +167,10 @@ class TestMakeCube:
     @pytest.mark.xfail(reason="cube flux is broken")
     def test_makes_cube_from_table(self):
         src_table = so._table_source()            # 10x10" @ 0.2"/pix, [0.5, 2.5]m @ 0.02µm
-        fov = _fov_190_210_um()
+        fov = _fov_190_210_um(hdu_type="cube")
         fov.extract_from(src_table)
 
-        cube = fov.make_cube_hdu()
+        cube = fov.make_hdu()
 
         in_sum = 0
         waveset = fov.spectra[0].waveset
@@ -189,10 +189,10 @@ class TestMakeCube:
     @pytest.mark.xfail(reason="cube flux is broken")
     def test_makes_cube_from_imagehdu(self):
         src_image = so._image_source()            # 10x10" @ 0.2"/pix, [0.5, 2.5]m @ 0.02µm
-        fov = _fov_190_210_um()
+        fov = _fov_190_210_um(hdu_type="cube")
         fov.extract_from(src_image)
 
-        cube = fov.make_cube_hdu()
+        cube = fov.make_hdu()
 
         waveset = np.linspace(1.9, 2.1, np.shape(cube)[0]) * u.um
         spec = fov.spectra[0](waveset).to(u.ph/u.s/u.m**2/u.um).value
@@ -210,10 +210,10 @@ class TestMakeCube:
         import scopesim as sim
         sim.rc.__currsys__["!SIM.spectral.spectral_bin_width"] = 0.01
         src_cube = so._cube_source()            # 10x10" @ 0.2"/pix, [0.5, 2.5]m @ 0.02µm
-        fov = _fov_197_202_um()
+        fov = _fov_197_202_um(hdu_type="cube")
         fov.extract_from(src_cube)
 
-        cube = fov.make_cube_hdu()
+        cube = fov.make_hdu()
 
         # layer 74 to 77 are extracted by FOV
         in_sum = np.sum(src_cube.fields[0].data[74:77, :, :])
@@ -229,10 +229,10 @@ class TestMakeCube:
     @pytest.mark.xfail(reason="cube flux is broken")
     def test_makes_cube_from_two_similar_cube_imagehdus(self):
         src_cube = so._cube_source() + so._cube_source(dx=1)            # 2 cubes 10x10" @ 0.2"/pix, [0.5, 2.5]m @ 0.02µm
-        fov = _fov_197_202_um()
+        fov = _fov_197_202_um(hdu_type="cube")
         fov.extract_from(src_cube)
 
-        cube = fov.make_cube_hdu()
+        cube = fov.make_hdu()
 
         # layer 74 to 77 are extracted by FOV
         bin_widths = np.array([0.01, 0.02, 0.01])[:, None, None] * 1e4      # um -> AA
@@ -252,10 +252,10 @@ class TestMakeCube:
                   so._image_source(dx=-4, dy=-4) + \
                   so._cube_source(weight=1e-8, dx=4)
 
-        fov = _fov_190_210_um()
+        fov = _fov_190_210_um(hdu_type="cube")
         fov.extract_from(src_all)
 
-        cube = fov.make_cube_hdu()
+        cube = fov.make_hdu()
 
         # sum up the expected flux in the output cube
         # bin_width * half width edge bin * PHOTLAM -> SI
@@ -286,10 +286,10 @@ class TestMakeCube:
                                      so._image_source(),
                                      so._cube_source()])
     def test_cube_has_full_wcs(self, src):
-        fov = _fov_190_210_um()
+        fov = _fov_190_210_um(hdu_type="cube")
         fov.extract_from(src)
 
-        cube = fov.make_cube_hdu()
+        cube = fov.make_hdu()
 
         assert "CDELT3" in cube.header
         assert "CRVAL3" in cube.header
@@ -301,7 +301,7 @@ class TestMakeCube:
 class TestMakeImage:
     def test_makes_image_from_table(self):
         src_table = so._table_source()            # 10x10" @ 0.2"/pix, [0.5, 2.5]m @ 0.02µm
-        fov = _fov_190_210_um()
+        fov = _fov_190_210_um(hdu_type="image")
         fov.extract_from(src_table)
 
         in_sum = 0
@@ -311,7 +311,7 @@ class TestMakeImage:
             flux *= 1 * u.m**2 * 0.02 * u.um * 0.9      # 0.9 is to catch the half bins at either end
             in_sum += np.sum(flux).value * weight
 
-        img = fov.make_image_hdu()
+        img = fov.make_hdu()
         out_sum = np.sum(img.data)
 
         if PLOTS:
@@ -324,7 +324,7 @@ class TestMakeImage:
         src_table = so._table_source()            # 10x10" @ 0.2"/pix, [0.5, 2.5]m @ 0.02µm
         # Shift one source very close to edge to provoke index error in canvas
         src_table.fields[0].field["y"][-1] = 9.9999
-        fov = _fov_190_210_um_subpx()
+        fov = _fov_190_210_um_subpx(hdu_type="image")
         fov.extract_from(src_table)
 
         in_sum = 0
@@ -336,7 +336,7 @@ class TestMakeImage:
                 weight /= 2
             in_sum += np.sum(flux).value * weight
 
-        img = fov.make_image_hdu()
+        img = fov.make_hdu()
         out_sum = np.sum(img.data)
 
         if PLOTS:
@@ -347,10 +347,10 @@ class TestMakeImage:
 
     def test_makes_image_from_image(self):
         src_image = so._image_source()  # 10x10" @ 0.2"/pix, [0.5, 2.5]m @ 0.02µm
-        fov = _fov_190_210_um()
+        fov = _fov_190_210_um(hdu_type="image")
         fov.extract_from(src_image)
 
-        img = fov.make_image_hdu()
+        img = fov.make_hdu()
 
         src_im_sum = np.sum(src_image.fields[0].data)
         src_spec = src_image.spectra[0](fov.waveset).to(u.ph/u.s/u.m**2/u.um)
@@ -371,10 +371,10 @@ class TestMakeImage:
     @pytest.mark.xfail(reason="revisit fov.waveset e.g. use make_cube waveset")
     def test_makes_image_from_cube(self):
         src_cube = so._cube_source()  # 10x10" @ 0.2"/pix, [0.5, 2.5]m @ 0.02µm
-        fov = _fov_197_202_um()
+        fov = _fov_197_202_um(hdu_type="image")
         fov.extract_from(src_cube)
 
-        image = fov.make_image_hdu()
+        image = fov.make_hdu()
 
         # layer 74 to 77 are extracted by FOV
         in_sum = np.sum(src_cube.fields[0].data[74:77, :, :])
@@ -392,10 +392,10 @@ class TestMakeImage:
                   so._image_source(dx=-4, dy=-4) + \
                   so._cube_source(weight=1e-8, dx=4)
 
-        fov = _fov_190_210_um()
+        fov = _fov_190_210_um(hdu_type="image")
         fov.extract_from(src_all)
 
-        image = fov.make_image_hdu()
+        image = fov.make_hdu()
 
         # sum up the expected flux in the output cube
         waveset = fov.spectra[0].waveset
@@ -426,10 +426,10 @@ class TestMakeImage:
 class TestMakeSpectrum:
     def test_make_spectrum_from_table(self):
         src_table = so._table_source()            # 10x10" @ 0.2"/pix, [0.5, 2.5]m @ 0.02µm
-        fov = _fov_190_210_um()
+        fov = _fov_190_210_um(hdu_type="spectrum")
         fov.extract_from(src_table)
 
-        spec = fov.make_spectrum()
+        spec = fov.make_hdu()
 
         in_sum = np.sum([n * spec(fov.waveset).value
                         for n, spec in zip([3, 1, 1], src_table.spectra.values())])      # sum of weights [3,1,1]
@@ -439,10 +439,10 @@ class TestMakeSpectrum:
 
     def test_make_spectrum_from_image(self):
         src_image = so._image_source()  # 10x10" @ 0.2"/pix, [0.5, 2.5]m @ 0.02µm
-        fov = _fov_190_210_um()
+        fov = _fov_190_210_um(hdu_type="spectrum")
         fov.extract_from(src_image)
 
-        spec = fov.make_spectrum()
+        spec = fov.make_hdu()
 
         in_sum = np.sum(src_image.fields[0].data) * \
                  np.sum(src_image.spectra[0](fov.waveset).value)
@@ -452,10 +452,10 @@ class TestMakeSpectrum:
 
     def test_make_spectrum_from_cube(self):
         src_cube = so._cube_source()  # 10x10" @ 0.2"/pix, [0.5, 2.5]m @ 0.02µm
-        fov = _fov_197_202_um()
+        fov = _fov_197_202_um(hdu_type="spectrum")
         fov.extract_from(src_cube)
 
-        spec = fov.make_spectrum()
+        spec = fov.make_hdu()
 
         in_sum = np.sum(src_cube.fields[0].data[74:77, :, :]) * 1e-8
         out_sum = np.sum(spec(fov.waveset).value)
@@ -468,10 +468,10 @@ class TestMakeSpectrum:
         src_cube = so._cube_source(weight=1e-8, dx=4)
         src_all = src_table + src_image + src_cube
 
-        fov = _fov_190_210_um()
+        fov = _fov_190_210_um(hdu_type="spectrum")
         fov.extract_from(src_all)
 
-        spec = fov.make_spectrum()
+        spec = fov.make_hdu()
 
         table_sum = np.sum([
             n * spec(fov.waveset).value
@@ -494,24 +494,24 @@ class TestMakeSpectrum:
             plt.show()
 
 
-@pytest.mark.xfail(reason="revisit fov.waveset e.g. use make_cube waveset")
+@pytest.mark.skip(reason="needs split FOVs after subclass refactor")
 class TestMakeSpectrumImageCubeAllPlayNicely:
     def test_make_cube_and_make_spectrum_return_the_same_fluxes(self):
         src_all = so._table_source() + \
                   so._image_source(dx=-4, dy=-4) + \
                   so._cube_source(weight=1e-8, dx=4)
 
-        fov = _fov_190_210_um()
+        fov = _fov_190_210_um(hdu_type="cube")
         fov.extract_from(src_all)
 
         # if photlam, units of ph / s / cm2 / AA, else units of ph / s / voxel
-        cube = fov.make_cube_hdu()
+        cube = fov.make_hdu()
         # cube_waves = get_cube_waveset(cube.header)
         cube_spectrum = cube.data.sum(axis=2).sum(axis=1)
 
         # always units of ph / s / cm-2 / AA-1
         waves = fov.waveset
-        spectrum = fov.make_spectrum()(waves).value
+        spectrum = fov.make_hdu()(waves).value
 
         bin_width = 0.02        # um
         photlam_to_si = 1e8     # cm-2 AA-1 --> m-2 um-1
@@ -535,8 +535,8 @@ class TestMakeSpectrumImageCubeAllPlayNicely:
         fov.extract_from(src_all)
 
         # if photlam, units of ph / s / cm2 / AA, else units of ph / s / voxel
-        cube_sum = np.sum(fov.make_cube_hdu().data)
+        cube_sum = np.sum(fov.make_hdu().data)
         # if photlam, units of ph / s / cm2 / AA, else units of ph / s / pixel
-        image_sum = np.sum(fov.make_image_hdu().data)
+        image_sum = np.sum(fov.make_hdu().data)
 
         assert cube_sum == approx(image_sum, rel=0.05)

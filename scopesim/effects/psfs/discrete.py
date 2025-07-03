@@ -249,7 +249,7 @@ class FieldVaryingPSF(DiscretePSF):
             return fov
 
         if fov.hdu is None or fov.hdu.data is None:
-            fov.hdu = fov.make_image_hdu()
+            fov.hdu = fov.make_hdu()
 
         old_shape = fov.hdu.data.shape
 

@@ -1072,7 +1072,7 @@ class FieldOfView3D(FieldOfView):
             fov_waveset, self.spline_order),
             start=canvas_cube_hdu.data)
 
-        for flux, x, y in self._maketablefields(fov_waveset):
+        for flux, x, y in self._make_tablefields(fov_waveset):
             # To prevent adding array values in this manner.
             assert not isinstance(x, Iterable), "x should be integer"
             canvas_cube_hdu.data[:, y, x] += flux

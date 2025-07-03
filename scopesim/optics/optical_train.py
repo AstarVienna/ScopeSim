@@ -273,8 +273,7 @@ class OpticalTrain:
             for fov in tqdm(fovs, desc=" FOVs", position=0, disable=nobar):
                 fov.extract_from(source)
 
-                hdu_type = "cube" if self.fov_manager.is_spectroscope else "image"
-                fov.view(hdu_type)
+                fov.view()
                 foveffs = self.optics_manager.fov_effects
                 nobar = len(foveffs) <= 1
                 for effect in tqdm(foveffs, disable=nobar,

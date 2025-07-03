@@ -21,7 +21,7 @@ from .spectral_trace_list_utils import Transform2D
 from .spectral_trace_list_utils import make_image_interpolations
 from .apertures import ApertureMask
 from .ter_curves import TERCurve
-from ..optics.fov import FieldOfView
+from ..optics.fov import FieldOfView, FieldOfView3D
 from ..optics.fov_volume_list import FovVolumeList
 
 
@@ -87,7 +87,7 @@ class MetisLMSSpectralTraceList(SpectralTraceList):
             if obj.hdu is not None and obj.hdu.header["NAXIS"] == 3:
                 obj.cube = obj.hdu
             elif obj.hdu is None and obj.cube is None:
-                obj.cube = obj.make_cube_hdu()
+                obj.cube = obj.make_hdu()
 
             fovcube = obj.cube.data
             n_z, n_y, n_x = fovcube.shape
@@ -132,9 +132,9 @@ class MetisLMSSpectralTraceList(SpectralTraceList):
                                                fovcube[islice], kx=1, ky=1)
                     slicecube[islice] = ifov(yfov, xfov, grid=False)
 
-                slicefov = FieldOfView(obj.header,
-                                       [obj.meta["wave_min"],
-                                        obj.meta["wave_max"]])
+                slicefov = FieldOfView3D(obj.header,
+                                         [obj.meta["wave_min"],
+                                          obj.meta["wave_max"]])
                 slicefov.detector_header = obj.detector_header
                 slicefov.meta["xi_min"] = obj.meta["xi_min"]
                 slicefov.meta["xi_max"] = obj.meta["xi_max"]
