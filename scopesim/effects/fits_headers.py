@@ -374,7 +374,7 @@ def flatten_dict(
 
         # Catch any value+comments lists/tuples
         match val:
-            case [value, comment] if isinstance(comment, str):
+            case [value, str(comment)]:
                 pass  # values get bound to variables anyway
             case value:
                 value = deepcopy(value)  # TODO: is this really required?
@@ -393,6 +393,14 @@ def flatten_dict(
                 except ValueError:
                     logger.warning("%s not found", value)
                     value = "Not applicable or not found"
+            case str():
+                # Any normal string or resolving is off, we can just write to
+                # the output dict and move on, no need to evaluate the rest.
+                if comment:
+                    flat_dict[flat_key] = (value, comment)
+                else:
+                    flat_dict[flat_key] = value
+                continue
 
         # Must re-match because resolving might have changed types
         match value:
@@ -422,8 +430,17 @@ def flatten_dict(
                 value = value.isoformat()
 
         # Add the flattened KEYWORD = (value, comment) to the header dict
+        # Note: I removed the str() around comment here. If anything other than
+        #       a string ends up in comment, we should really know about it!
+        # TODO: Perhaps already create fits.Card instances here?
+        #       But would run into issues with §-style replacements...
+        # TODO: There's no need to distinguish between comment and no comment
+        #       cases here, because fits.Card has a default of "" for the
+        #       comment anyway. That is, the resulting header will look exactly
+        #       identical with our without an empyt comment passed here.
+        #       But there are a few tests that expect the single-value case...
         if comment:
-            flat_dict[flat_key] = (value, str(comment))
+            flat_dict[flat_key] = (value, comment)
         else:
             flat_dict[flat_key] = value
 
