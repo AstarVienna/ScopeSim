@@ -4,7 +4,7 @@
 from copy import deepcopy
 import datetime
 from typing import ClassVar
-from collections.abc import Mapping
+from collections.abc import Mapping, MutableMapping
 
 import yaml
 import numpy as np
@@ -320,8 +320,13 @@ def get_relevant_extensions(dic, hdul):
     return exts
 
 
-def flatten_dict(dic, base_key="", flat_dict=None, resolve=False,
-                 optics_manager=None):
+def flatten_dict(
+    dic: Mapping,
+    base_key: str = "",
+    flat_dict: MutableMapping | None = None,
+    resolve: bool = False,
+    optics_manager=None,
+) -> MutableMapping:
     """
     Flattens nested yaml dictionaries into a single level dictionary.
 
