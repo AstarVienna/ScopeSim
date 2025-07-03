@@ -358,7 +358,7 @@ def flatten_dict(
             flatten_dict(val, flat_key, flat_dict, resolve, optics_manager)
             continue
 
-        flat_key = flat_key[:-1]
+        flat_key = flat_key.strip()
 
         # catch any value+comments lists
         comment = ""
@@ -382,7 +382,7 @@ def flatten_dict(
                     value = "Not applicable or not found"
 
         if isinstance(value, u.Quantity):
-            comment = f"[{str(value.unit)}] {comment}"
+            comment = f"[{value.unit.to_string(format='fits')}] {comment}"
             value = value.value
 
         # Convert e.g.  Unit(mag) to just "mag". Not sure how this will
@@ -391,7 +391,9 @@ def flatten_dict(
             value = value.to_string(format="fits")
 
         if isinstance(value, (list, np.ndarray)):
-            value = f"{value.__class__.__name__}:{str(list(value))}"
+            value = f"{value.__class__.__name__}: {list(value)!s}"
+            # TODO: maybe just do value = f"{value!r}" instead?
+
             max_len = 80 - len(flat_key)
             if len(value) > max_len:
                 value = f"{value[:max_len-4]} ..."
