@@ -1,17 +1,17 @@
 # -*- coding: utf-8 -*-
 """Store the example data functions here instead of polluting database.py."""
 
-from warnings import warn
 from pathlib import Path
-from typing import Optional, Union
 
 import pooch
 
 from scopesim import rc
 
 
-def _create_retriever(save_dir: Optional[Union[Path, str]] = None,
-                      url: Optional[str] = None) -> pooch.Pooch:
+def _create_retriever(
+    save_dir: Path | str | None = None,
+    url: str | None = None,
+) -> pooch.Pooch:
     """Create Pooch retriever and load example data registry."""
     svrconf = rc.__config__["!SIM.file"]
 
@@ -29,9 +29,11 @@ def _create_retriever(save_dir: Optional[Union[Path, str]] = None,
     return retriever
 
 
-def list_example_data(url: Optional[str] = None,
-                      return_files: bool = False,
-                      silent: bool = False) -> list[str]:
+def list_example_data(
+    url: str | None = None,
+    return_files: bool = False,
+    silent: bool = False,
+) -> list[str]:
     """
     List all example files found under ``url``.
 
@@ -70,9 +72,11 @@ def list_example_data(url: Optional[str] = None,
     return None
 
 
-def download_example_data(*files: str,
-                          save_dir: Optional[Union[Path, str]] = None,
-                          url: Optional[str] = None) -> list[Path]:
+def download_example_data(
+    *files: str,
+    save_dir: Path | str | None = None,
+    url: str | None = None,
+) -> list[Path]:
     """
     Download example fits files to the local disk.
 

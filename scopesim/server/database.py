@@ -4,10 +4,10 @@
 from datetime import date
 from warnings import warn
 from pathlib import Path
-from typing import Optional, Union
 from collections.abc import Iterator, Iterable, Mapping
 
 import yaml
+import httpx
 from more_itertools import first, last, groupby_transform
 
 from scopesim import rc
@@ -130,7 +130,9 @@ def group_package_versions(all_packages: Iterable[tuple[str, str]]) -> _GrpItrTy
     return version_groups
 
 
-def crawl_server_dirs(client=None) -> Iterator[tuple[str, set[str]]]:
+def crawl_server_dirs(
+    client: httpx.Client | None = None,
+) -> Iterator[tuple[str, set[str]]]:
     """Search all folders on server for .zip files."""
     if client is None:
         with create_client(get_base_url()) as client:
@@ -148,7 +150,9 @@ def crawl_server_dirs(client=None) -> Iterator[tuple[str, set[str]]]:
         yield dir_name, p_dir
 
 
-def get_all_package_versions(client=None) -> dict[str, list[str]]:
+def get_all_package_versions(
+    client: httpx.Client | None = None,
+) -> dict[str, list[str]]:
     """Gather all versions for all packages present in any folder on server."""
     if client is None:
         with create_client(get_base_url()) as client:
@@ -163,7 +167,7 @@ def get_all_package_versions(client=None) -> dict[str, list[str]]:
     return grouped
 
 
-def get_package_folders(client) -> dict[str, str]:
+def get_package_folders(client: httpx.Client) -> dict[str, str]:
     """Map package names to server locations."""
     folders_dict = {pkg: path.strip("/")
                     for path, pkgs in dict(crawl_server_dirs(client)).items()
@@ -171,7 +175,10 @@ def get_package_folders(client) -> dict[str, str]:
     return folders_dict
 
 
-def get_server_folder_package_names(client, dir_name: str) -> set[str]:
+def get_server_folder_package_names(
+    client: httpx.Client,
+    dir_name: str,
+) -> set[str]:
     """
     Retrieve all unique package names present on server in `dir_name` folder.
 
@@ -226,7 +233,7 @@ def get_all_packages_on_server() -> Iterator[tuple[str, set]]:
     yield from crawl_server_dirs()
 
 
-def list_packages(pkg_name: Optional[str] = None) -> list[str]:
+def list_packages(pkg_name: str | None = None) -> list[str]:
     """
     List all packages, or all variants of a single package.
 
@@ -283,9 +290,15 @@ def _get_zipname(pkg_name: str, release: str, all_versions) -> str:
     return _unparse_raw_version(zip_name, pkg_name)
 
 
-def _download_single_package(client, pkg_name: str, release: str, all_versions,
-                             folders_dict: Path, save_dir: Path,
-                             padlen: int) -> Path:
+def _download_single_package(
+    client: httpx.Client,
+    pkg_name: str,
+    release: str,
+    all_versions: _GrpVerType,
+    folders_dict: Path,
+    save_dir: Path,
+    padlen: int,
+) -> Path:
     if pkg_name not in all_versions:
         maybe = ""
         for key in folders_dict:
@@ -324,9 +337,11 @@ def _download_single_package(client, pkg_name: str, release: str, all_versions,
     return save_path.absolute()
 
 
-def download_packages(pkg_names: Union[Iterable[str], str],
-                      release: str = "stable",
-                      save_dir: Optional[str] = None) -> list[Path]:
+def download_packages(
+    pkg_names: Iterable[str] | str,
+    release: str = "stable",
+    save_dir: Path | str | None = None,
+) -> list[Path]:
     """
     Download one or more packages to the local disk.
 
