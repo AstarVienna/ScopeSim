@@ -141,7 +141,7 @@ class AnisocadoConstPSF(SemiAnalyticalPSF):
              "will be removed in a future release. If you are using this "
              "method, pleas let us know by creating an issue at: "
              "https://github.com/AstarVienna/ScopeSim/issues",
-             DeprecationWarning, stacklevel=2)
+             FutureWarning, stacklevel=2)
         self._kernel = None
         return self.get_kernel(x)
 
