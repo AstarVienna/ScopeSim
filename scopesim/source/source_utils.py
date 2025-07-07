@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from typing import Optional, Union
+
 from collections.abc import Iterable
 from pathlib import Path
 
@@ -114,12 +114,12 @@ def convert_to_list_of_spectra(spectra, lam) -> list[SourceSpectrum]:
 #        conversion is done anyway) Quantity["length"] (or "area" resp.), but
 #        doing so currently causes a NameError. Not sure what's going on.
 def photons_in_range(
-        spectra: SourceSpectrum,
-        wave_min: u.Quantity[u.um] | float,
-        wave_max: u.Quantity[u.um] | float,
-        area: Optional[Union[u.Quantity[u.m**2], float]] = None,
-        bandpass: Optional[SpectralElement] = None,
-) -> Union[u.Quantity[u.ph * u.s**-1 * u.m**-2], u.Quantity[u.ph * u.s**-1]]:
+    spectra: SourceSpectrum,
+    wave_min: u.Quantity[u.um] | float,
+    wave_max: u.Quantity[u.um] | float,
+    area: u.Quantity[u.m**2] | float | None = None,
+    bandpass: SpectralElement | None = None,
+) -> u.Quantity[u.ph * u.s**-1 * u.m**-2] | u.Quantity[u.ph * u.s**-1]:
     """
     Integrate photons from spectrum in given wavelength range.
 
@@ -127,13 +127,13 @@ def photons_in_range(
     ----------
     spectra : SourceSpectrum
         Input spectrum.
-    wave_min : Union[u.Quantity["length"], float]
+    wave_min : u.Quantity["length"] or float
         Minimum wavelength. If float, assumes um.
-    wave_max : Union[u.Quantity["length"], float]
+    wave_max : u.Quantity["length"] or float
         Maximum wavelength. If float, assumes um.
-    area : Optional[Union[u.Quantity["area"], float]], optional
+    area : u.Quantity["area"] or float, optional
         Area to multiply with. If float, assumes m**2. The default is None.
-    bandpass : Optional[SpectralElement], optional
+    bandpass : SpectralElement, optional
         Filter to take into account, if any. The default is None.
 
     Returns
