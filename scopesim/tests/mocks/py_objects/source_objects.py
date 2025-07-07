@@ -184,14 +184,14 @@ def _combined_source(im_angle=0, dx=(0, 0, 0), dy=(0, 0, 0), weight=(1, 1, 1)):
     tblsrc1 = _table_source()
 
     tblsrc2 = _table_source()
-    tblsrc2.fields[0]["x"] += dx[0]
-    tblsrc2.fields[0]["y"] += dy[0]
-    tblsrc2.fields[0]["weight"] *= weight[0]
+    tblsrc2.fields[0].field["x"] += dx[0]
+    tblsrc2.fields[0].field["y"] += dy[0]
+    tblsrc2.fields[0].field["weight"] *= weight[0]
 
     tblsrc3 = _table_source()
-    tblsrc3.fields[0]["x"] += dx[1]
-    tblsrc3.fields[0]["y"] += dy[1]
-    tblsrc3.fields[0]["weight"] *= weight[1]
+    tblsrc3.fields[0].field["x"] += dx[1]
+    tblsrc3.fields[0].field["y"] += dy[1]
+    tblsrc3.fields[0].field["weight"] *= weight[1]
 
     imsrc = _image_source(dx[2], dy[2], im_angle, weight[2])
 
