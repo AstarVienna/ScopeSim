@@ -11,8 +11,8 @@ Original comment for these functions:
 """
 
 import re
+from warnings import warn
 from pathlib import Path
-from typing import Union
 
 from .download_utils import handle_download, send_get, create_client
 from ..utils import get_logger
@@ -26,7 +26,14 @@ def create_github_url(url: str) -> None:
     From the given url, produce a URL compatible with Github's REST API.
 
     Can handle blob or tree paths.
+
+    .. deprecated:: PLACEHOLDER_NEXT_RELEASE_VERSION
+
+       This function is deprecated and will be removed in version 0.12.
     """
+    warn("The function ``create_github_url`` is deprecated and will be "
+         "removed in version 0.12.", DeprecationWarning, stacklevel=2)
+
     repo_only_url = re.compile(r"https:\/\/github\.com\/[a-z\d](?:[a-z\d]|-(?=[a-z\d])){0,38}\/[a-zA-Z0-9]+$")
     re_branch = re.compile("/(tree|blob)/(.+?)/")
 
@@ -47,13 +54,20 @@ def create_github_url(url: str) -> None:
 
 
 def download_github_folder(repo_url: str,
-                           output_dir: Union[Path, str] = "./") -> None:
+                           output_dir: Path | str = "./") -> None:
     """
     Download the files and directories in repo_url.
 
     Re-written based on the on the download function
     `here <https://github.com/sdushantha/gitdir/blob/f47ce9d85ee29f8612ce5ae804560a12b803ddf3/gitdir/gitdir.py#L55>`_
+
+    .. deprecated:: PLACEHOLDER_NEXT_RELEASE_VERSION
+
+       This function is deprecated and will be removed in version 0.12.
     """
+    warn("The function ``download_github_folder`` is deprecated and will be "
+         "removed in version 0.12.", DeprecationWarning, stacklevel=2)
+
     output_dir = Path(output_dir)
 
     # convert repo_url into an api_url

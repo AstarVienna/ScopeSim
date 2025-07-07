@@ -12,9 +12,8 @@ from more_itertools import first, last, groupby_transform
 
 from scopesim import rc
 from .github_utils import download_github_folder
-from .example_data_utils import download_example_data, list_example_data
 from .download_utils import (get_server_folder_contents, handle_download,
-                             handle_unzipping, create_client, ServerError)
+                             handle_unzipping, create_client)
 from ..utils import get_logger
 from ..commands.user_commands import patch_fake_symlinks
 
@@ -35,27 +34,10 @@ def get_base_url():
 
 
 def get_server_package_list():
-    warn("Function Depreciated", DeprecationWarning, stacklevel=2)
-
-    # Emulate legacy API without using the problematic yaml file
-    with create_client(get_base_url()) as client:
-        folders = list(dict(crawl_server_dirs(client)).keys())
-        pkgs_dict = {}
-        for dir_name in folders:
-            p_list = [_parse_package_version(package) for package
-                      in get_server_folder_contents(client, dir_name)]
-            grouped = dict(group_package_versions(p_list))
-            for p_name in grouped:
-                p_dict = {
-                    "latest": _unparse_raw_version(get_latest(grouped[p_name]),
-                                                   p_name).strip(".zip"),
-                    "path": dir_name.strip("/"),
-                    "stable": _unparse_raw_version(get_stable(grouped[p_name]),
-                                                   p_name).strip(".zip"),
-                }
-                pkgs_dict[p_name] = p_dict
-
-    return pkgs_dict
+    """Deprecated since v0.6.0."""
+    raise AttributeError(
+        "The singular variant of this function has been deprecated since "
+        "version 0.6.0 of ScopeSim and will be completely removed in v0.12.")
 
 
 def _get_package_name(package: str) -> str:
@@ -320,6 +302,12 @@ def _download_single_package(client, pkg_name: str, release: str, all_versions,
     save_dir.mkdir(parents=True, exist_ok=True)
 
     if "github" in release:
+        warn("Downloading IRDB packages directly from GitHub is deprecated "
+             "and will raise an error from ScopeSim version 0.12 onwards. "
+             "If you really need to use an unreleased version of an IRDB "
+             "package, please use a local clone of the IRDB repo instead.",
+             FutureWarning, stacklevel=3)
+
         base_url = "https://github.com/AstarVienna/irdb/tree/"
         github_hash = release.split(":")[-1].split("@")[-1]
         pkg_url = f"{base_url}{github_hash}/{pkg_name}"
@@ -342,9 +330,15 @@ def download_packages(pkg_names: Union[Iterable[str], str],
     """
     Download one or more packages to the local disk.
 
-    1. Download stable, dev
-    2. Download specific version
-    3. Download from github via url
+    The downloaded version may be specified as stable, latest (dev) or fixed to
+    a specific release.
+
+    .. versionchanged:: PLACEHOLDER_NEXT_RELEASE_VERSION
+
+       Downloading from the GitHub repository is deprecated and will be
+       removed in a future version. If you need to use an unreleased dev
+       version, please clone the IRDB repo instead and link your local clone
+       using ``sim.link_irdb()``.
 
     Parameters
     ----------
@@ -357,7 +351,6 @@ def download_packages(pkg_names: Union[Iterable[str], str],
         - "stable" : the most recent stable version
         - "latest" : the latest development version to be published
         - a specific package filename as given by list_packages (see examples)
-        - a github url for the specific branch and package (see examples)
 
     save_dir : str, optional
         The place on the local disk where the ``.zip`` package is to be saved.
@@ -387,11 +380,6 @@ def download_packages(pkg_names: Union[Iterable[str], str],
         # Specific version of the package
         list_packages("test_package")
         download_packages("test_package", release="2022-04-09.dev")
-
-        # Specific package from a Gtihub commit hash or branch/tag name (use "@" or ":")
-        download_packages("ELT", release="github:728761fc76adb548696205139e4e9a4260401dfc")
-        download_packages("ELT", release="github@728761fc76adb548696205139e4e9a4260401dfc")
-        download_packages("ELT", release="github@dev_master")
 
     """
     base_url = get_base_url()
@@ -463,42 +451,9 @@ def check_packages(instrument: str, download_missing: bool) -> None:
 # Funtions below from from OLD_database.py
 # ==============================================================================
 
-# for backwards compatibility
-def download_package(pkg_path, save_dir=None, url=None, from_cache=None):
-    """
-    DEPRECATED -- only kept for backwards compatibility
-
-    Downloads a package to the local disk
-
-    Parameters
-    ----------
-    pkg_path : str, list
-        A ``.zip`` package path as given by ``list_packages()``
-
-    save_dir : str
-        The place on the local disk where the ``.zip`` package is to be saved.
-        If left as None, defaults to the value in
-        scopesim.rc.__config__["!SIM.file.local_packages_path"]
-
-    url : str
-        The URL of the IRDB HTTP server. If left as None, defaults to the
-        value in scopesim.rc.__config__["!SIM.file.server_base_url"]
-
-    from_cache : bool
-        Use the cached versions of the packages. If None, defaults to the RC
-        value: ``!SIM.file.use_cached_downloads``
-
-    Returns
-    -------
-    save_path : str
-        The absolute path to the saved ``.zip`` package
-
-    """
-    warn("Function Depreciated --> please use scopesim.download_package-s-()",
-         DeprecationWarning, stacklevel=2)
-
-    if isinstance(pkg_path, str):
-        pkg_path = [pkg_path]
-
-    pkg_names = [pkg.replace(".zip", "").split("/")[-1] for pkg in pkg_path]
-    return download_packages(pkg_names, release="stable", save_dir=save_dir)
+def download_package(*args, **kwargs):
+    """Deprecated since v0.5.0."""
+    raise AttributeError(
+        "The singular variant of this function has been deprecated since "
+        "version 0.5.0 of ScopeSim. It will be completely removed in version "
+        "0.12. Please use ``download_packages`` (plural variant) instead!")

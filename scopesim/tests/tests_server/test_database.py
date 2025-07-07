@@ -5,6 +5,7 @@ from tempfile import TemporaryDirectory
 
 import yaml
 
+from scopesim.server import ServerError
 from scopesim.server import database as db
 from scopesim.server import example_data_utils as dbex
 from scopesim.server import github_utils as dbgh
@@ -23,13 +24,9 @@ def all_pkg():
     yield db.get_all_package_versions()
 
 
-@pytest.mark.webtest
-def test_package_list_loads():
-    with pytest.warns(DeprecationWarning):
-        pkgs = db.get_server_package_list()
-    assert isinstance(pkgs, dict)
-    assert "test_package" in pkgs
-    assert "latest" in pkgs["test_package"]
+def test_package_throws():
+    with pytest.raises(AttributeError):
+        db.get_server_package_list()
 
 
 def test_get_package_name():
@@ -81,7 +78,7 @@ class TestGetServerFolderContents:
 
     def test_throws_for_wrong_url_server(self):
         with db.create_client("https://scopesim.univie.ac.at/bogus/") as client:
-            with pytest.raises(db.ServerError):
+            with pytest.raises(ServerError):
                 list(db.get_server_folder_contents(client, "locations"))
 
 
@@ -99,27 +96,6 @@ class TestListPackages:
     def test_throws_for_nonexisting_pkgname(self):
         with pytest.raises(ValueError):
             db.list_packages("bogus")
-
-
-class TestDownloadPackage:
-    """
-    Old download function, for backwards compatibility
-    """
-    @pytest.mark.webtest
-    def test_downloads_package_successfully(self):
-        pkg_path = "instruments/test_package.zip"
-
-        with pytest.warns(DeprecationWarning):
-            save_paths = db.download_package(pkg_path)
-        assert save_paths[0].exists()
-
-    # This no longer raises, but logs an error. This is intended.
-    # TODO: Change test to capture log and assert if error log is present.
-    # Actually, the new single download function should be tested here instead
-    # def test_raise_error_when_package_not_found(self):
-    #     if sys.version_info.major >= 3:
-    #         with pytest.raises(HTTPError):
-    #             db.download_package("instruments/bogus.zip")
 
 
 class TestDownloadPackages:
@@ -161,6 +137,8 @@ class TestDownloadPackages:
             assert version_dict["version"] == release
 
     @pytest.mark.webtest(github=True)
+    @pytest.mark.filterwarnings("ignore:Downloading IRDB packages:FutureWarning")
+    @pytest.mark.filterwarnings("ignore:The function*:DeprecationWarning")
     def test_downloads_github_version_of_package_with_semicolon(self):
         release = "github:728761fc76adb548696205139e4e9a4260401dfc"
         with TemporaryDirectory() as tmpdir:
@@ -171,6 +149,8 @@ class TestDownloadPackages:
             assert filename.exists()
 
     @pytest.mark.webtest(github=True)
+    @pytest.mark.filterwarnings("ignore:Downloading IRDB packages:FutureWarning")
+    @pytest.mark.filterwarnings("ignore:The function*:DeprecationWarning")
     def test_downloads_github_version_of_package_with_at_symbol(self):
         release = "github@728761fc76adb548696205139e4e9a4260401dfc"
         with TemporaryDirectory() as tmpdir:
@@ -182,6 +162,7 @@ class TestDownloadPackages:
 
 
 @pytest.mark.webtest(github=True)
+@pytest.mark.filterwarnings("ignore:The function*:DeprecationWarning")
 class TestDownloadGithubFolder:
     def test_downloads_current_package(self):
         with TemporaryDirectory() as tmpdir:
@@ -203,20 +184,8 @@ class TestDownloadGithubFolder:
     def test_throws_for_bad_url(self):
         with TemporaryDirectory() as tmpdir:
             url = "https://github.com/AstarVienna/irdb/tree/bogus/MICADO"
-            with pytest.raises(db.ServerError):
+            with pytest.raises(ServerError):
                 dbgh.download_github_folder(url, output_dir=tmpdir)
-
-
-@pytest.mark.webtest
-def test_old_download_package_signature():
-    with TemporaryDirectory() as tmpdir:
-        with pytest.warns(DeprecationWarning):
-            db.download_package(["instruments/test_package.zip"], save_dir=tmpdir)
-        version_path = Path(tmpdir, "test_package", "version.yaml")
-        with version_path.open("r", encoding="utf-8") as file:
-            version_dict = yaml.full_load(file)
-
-        assert version_dict["release"] == "stable"
 
 
 def test_registry_files():

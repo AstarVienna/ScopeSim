@@ -93,13 +93,26 @@ def download_example_data(*files: str,
     -------
     save_path : list of Paths
         The absolute path(s) to the saved files
+
+    .. versionchanged:: 0.8.4
+
+       Passing a list to ``download_example_data`` is deprecated since version
+       0.8.4, this function now accepts multiple file names in *args-style.
+
+    .. versionchanged:: PLACEHOLDER_NEXT_RELEASE_VERSION
+
+       Passing a list to ``download_example_data`` as the first argument will
+       now throw a TypeError. This is to catch any remaining uses of the old
+       call signature of this function. From version 0.12 onwards, agruments
+       will be silently passed to the `retriever`.
+
     """
-    if isinstance(files[0], list):  # to preserve combatibility with notebooks
-        warn("Passing a list to download_example_data is deprecated. "
-             "Simply pass filenames as *args, i.e. "
-             "download_example_data(\"foo.fits\", \"bar.fits\").",
-             DeprecationWarning, stacklevel=2)
-        files = files[0]
+    if isinstance(files[0], list):
+        raise TypeError(
+            "Passing a list to download_example_data is deprecated. "
+            "Simply pass filenames as *args, i.e. "
+            "download_example_data(\"foo.fits\", \"bar.fits\")."
+        )
 
     retriever = _create_retriever(save_dir, url)
 
