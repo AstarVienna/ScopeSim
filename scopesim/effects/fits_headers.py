@@ -234,12 +234,13 @@ class ExtraFitsKeywords(Effect):
     def __init__(self, cmds=None, **kwargs):
         # don't pass kwargs, as DataContainer can't handle yaml files
         super().__init__(cmds=cmds)
-        params = {"name": "extra_fits_keywords",
-                  "description": "Extra FITS headers",
-                  "header_dict": None,
-                  "filename": None,
-                  "yaml_string": None,
-                  }
+        params = {
+            "name": "extra_fits_keywords",
+            "description": "Extra FITS headers",
+            "header_dict": None,
+            "filename": None,
+            "yaml_string": None,
+        }
         self.meta.update(params)
         self.meta.update(kwargs)
 
@@ -348,6 +349,7 @@ def _resolve_paragraph_strings(value, i_ext):
 def _resolve_counters(dic, i_ext):
     """Deal with (key, value) and (key, (value, comment)) cases."""
     for key, value in dic.items():
+        # Catch any value+comments lists/tuples
         match value:
             case [value, comment]:
                 yield key, (_resolve_paragraph_strings(value, i_ext), comment)
