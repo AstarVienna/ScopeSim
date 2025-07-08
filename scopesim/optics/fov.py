@@ -133,8 +133,6 @@ class FieldOfView:
 
         # These are apparently not supposed to be used?
         self.cube = None        # 3D array for IFU, long-lit, Slicer-MOS
-        # self.image = None       # 2D array for Imagers
-        # self.spectrum = None    # SourceSpectrum for Fibre-fed MOS
 
         self._waverange = None
         self._wavelength = None
@@ -474,12 +472,8 @@ class FieldOfView:
         """Return either hdu.data, image, cube, spectrum or None."""
         if self.hdu is not None:
             return self.hdu.data
-        if self.image is not None:
-            return self.image
         if self.cube is not None:
             return self.cube
-        if self.spectrum is not None:
-            return self.spectrum
         return None
 
     def get_corners(self, new_unit: str = None):
@@ -801,10 +795,6 @@ class FieldOfView2D(FieldOfView):
         Used for imaging.
 
         Output image units are ph s-1 pixel-1
-
-        .. note:: ``self.make_image()`` does NOT store anything in ``self.image``
-
-            See make_cube for an explanation
 
         Make canvas image from NAXIS1,2 from fov.header
 
