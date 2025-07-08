@@ -17,7 +17,7 @@ class TestStar:
     @pytest.mark.parametrize("flux", [5, 5*u.ABmag, 36.31*u.Jy])
     def test_accepts_mag_ABmag_jansky(self, flux):
         src = src_ts.star(flux=flux)
-        assert src.fields[0]["weight"] == approx(0.01, rel=0.01)
+        assert src.fields[0].field["weight"] == approx(0.01, rel=0.01)
         src.shift(0.1, 0.2)
 
 
@@ -34,13 +34,13 @@ class TestStarField:
     def test_star_fields_data(self):
         src = src_ts.star_field(100, 15, 25, 60)
         assert isinstance(src.fields[0].field, Table)
-        assert all(src.fields[0]["weight"] == 10**(-0.4 * src.fields[0]["mag"]))
+        assert all(src.fields[0].field["weight"] == 10**(-0.4 * src.fields[0].field["mag"]))
         src.shift(0.1, 0.2)
 
     def test_makes_grid_for_jansky_flux(self):
         src = src_ts.star_field(4, 3631*u.Jy, 36.31*u.Jy, 1)
-        assert src.fields[0]["weight"][0] == approx(1, rel=0.01)
-        assert src.fields[0]["weight"][-1] == approx(0.01, rel=0.01)
+        assert src.fields[0].field["weight"][0] == approx(1, rel=0.01)
+        assert src.fields[0].field["weight"][-1] == approx(0.01, rel=0.01)
         src.shift(0.1, 0.2)
 
 

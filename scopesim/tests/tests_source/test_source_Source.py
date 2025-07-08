@@ -209,16 +209,16 @@ class TestSourceAddition:
     def test_ref_column_always_references_correct_spectrum(self, table_source,
                                                            image_source):
         image_source.append(table_source)
-        comb_refs = image_source.fields[1]["ref"]
-        tbl_refs = table_source.fields[0]["ref"]
+        comb_refs = image_source.fields[1].field["ref"]
+        tbl_refs = table_source.fields[0].field["ref"]
         assert all(tbl_refs.data + 1 == comb_refs.data)
         assert image_source.fields[0].header["SPEC_REF"] == 0
         image_source.shift(0.1, 0.2)
 
     def test_same_as_above_but_reversed(self, table_source, image_source):
         new_source = table_source + image_source
-        comb_refs = new_source.fields[0]["ref"]
-        tbl_refs = table_source.fields[0]["ref"]
+        comb_refs = new_source.fields[0].field["ref"]
+        tbl_refs = table_source.fields[0].field["ref"]
         assert all(tbl_refs.data == comb_refs.data)
         assert new_source.fields[1].header["SPEC_REF"] == 3
         new_source.shift(0.1, 0.2)
@@ -272,8 +272,8 @@ class TestSourceImageInRange:
     @pytest.mark.filterwarnings("ignore:Adding a table directly*:DeprecationWarning")
     def test_flux_from_table_on_image_is_as_expected(self, table_source):
         ph = table_source.photons_in_range(1*u.um, 2*u.um)
-        ref = table_source.fields[0]["ref"]
-        weight = table_source.fields[0]["weight"]
+        ref = table_source.fields[0].field["ref"]
+        weight = table_source.fields[0].field["weight"]
         counts = np.sum([ph.value[r] * w for r, w in zip(ref, weight)])
 
         im = table_source.image_in_range(1*u.um, 2*u.um)
@@ -289,9 +289,9 @@ class TestSourceImageInRange:
     def test_combines_more_that_one_field_into_image(self, image_source,
                                                      table_source):
         ph = table_source.photons_in_range(1 * u.um, 2 * u.um)
-        tbl = table_source.fields[0]
-        tbl_sum = u.Quantity([ph[tbl["ref"][ii]] * tbl["weight"][ii]
-                              for ii in range(len(tbl))])
+        fld = table_source.fields[0]
+        tbl_sum = u.Quantity([ph[fld.field["ref"][ii]] * fld.field["weight"][ii]
+                              for ii in range(len(fld.field))])
         tbl_sum = np.sum(tbl_sum.value)
 
         ph = image_source.photons_in_range(1 * u.um, 2 * u.um)[0]

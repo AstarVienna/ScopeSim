@@ -500,8 +500,8 @@ class FieldOfView:
         * yield each spectrum * sum of weights to be added to canvas flux
         """
         for field in self._get_table_fields():
-            refs = np.array(field["ref"])
-            weights = np.array(field["weight"])
+            refs = np.array(field.field["ref"])
+            weights = np.array(field.field["weight"])
             # TODO: could do grouping of table with both columns??
             for ref in set(refs):
                 weight = np.sum(weights, where=refs == ref)
@@ -590,8 +590,8 @@ class FieldOfView:
         for field in self._get_table_fields():
             # x, y are ALWAYS in arcsec - crval is in deg
             xpix, ypix = imp_utils.val2pix(self.header,
-                                           field["x"] / 3600,
-                                           field["y"] / 3600)
+                                           field.field["x"] / 3600,
+                                           field.field["y"] / 3600)
 
             fluxes = {
                 ref: spec(fov_waveset).value.sum() if use_photlam
@@ -601,7 +601,7 @@ class FieldOfView:
             }
 
             if self.sub_pixel:
-                for idx, row in enumerate(field):
+                for idx, row in enumerate(field.field):
                     xs, ys, fracs = imp_utils.sub_pixel_fractions(xpix[idx],
                                                                   ypix[idx])
                     for x, y, frac in zip(xs, ys, fracs):
@@ -611,8 +611,8 @@ class FieldOfView:
                 # TODO: could these be something more numpythonic grid-ish?
                 x = np.array(xpix).astype(int)
                 y = np.array(ypix).astype(int)     # quickest way to round
-                flux = np.array([fluxes[int(ref)] for ref in field["ref"]])
-                yield flux, np.array(field["weight"]), x, y
+                flux = np.array([fluxes[int(ref)] for ref in field.field["ref"]])
+                yield flux, np.array(field.field["weight"]), x, y
 
     def _make_image_backfields(self, fov_waveset, bin_widths, use_photlam):
         for field in self._get_background_fields():
@@ -773,7 +773,7 @@ class FieldOfView:
             # Cube should be in PHOTLAM arcsec-2 for SpectralTrace mapping
             # Point sources are in PHOTLAM per pixel
             # Point sources need to be scaled up by inverse pixel_area
-            for row in field:
+            for row in field.field:
                 xsky, ysky = row["x"] / 3600, row["y"] / 3600
                 # x, y are ALWAYS in arcsec - crval is in deg
                 # TODO: Change this to some proper WCS function!

@@ -306,7 +306,7 @@ class TestMakeImage:
 
         in_sum = 0
         waveset = fov.fields[0].spectra[0].waveset
-        for x, y, ref, weight in src_table.fields[0]:
+        for x, y, ref, weight in src_table.fields[0].field:
             flux = src_table.spectra[ref](waveset).to(u.ph/u.s/u.m**2/u.um)
             flux *= 1 * u.m**2 * 0.02 * u.um * 0.9      # 0.9 is to catch the half bins at either end
             in_sum += np.sum(flux).value * weight
@@ -329,7 +329,7 @@ class TestMakeImage:
 
         in_sum = 0
         waveset = fov.fields[0].spectra[0].waveset
-        for x, y, ref, weight in src_table.fields[0]:
+        for x, y, ref, weight in src_table.fields[0].field:
             flux = src_table.spectra[ref](waveset).to(u.ph/u.s/u.m**2/u.um)
             flux *= 1 * u.m**2 * 0.02 * u.um * 0.9      # 0.9 is to catch the half bins at either end
             if y >= 9.9:  # edge source ends up with half the flux

@@ -100,9 +100,9 @@ class SourceField:
         # For backwards-combatibility to allow direct access of
         # Source.fields[x][y] if possible. Maybe in the long run get rid of
         # this and force the use of .field...
-        # warn("Direct item access for source fields may become deprecated "
-        #      "in the future. Use the .field attribute instead.",
-        #      PendingDeprecationWarning, stacklevel=2)
+        warn("Direct item access for source fields may become deprecated "
+             "in the future. Use the .field attribute instead.",
+             PendingDeprecationWarning, stacklevel=2)
         return self.field.__getitem__(key)
 
     def __setitem__(self, key, value):
