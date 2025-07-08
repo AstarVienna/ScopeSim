@@ -1,17 +1,17 @@
 # -*- coding: utf-8 -*-
 """Store the example data functions here instead of polluting database.py."""
 
-from warnings import warn
 from pathlib import Path
-from typing import Optional, Union
 
 import pooch
 
 from scopesim import rc
 
 
-def _create_retriever(save_dir: Optional[Union[Path, str]] = None,
-                      url: Optional[str] = None) -> pooch.Pooch:
+def _create_retriever(
+    save_dir: Path | str | None = None,
+    url: str | None = None,
+) -> pooch.Pooch:
     """Create Pooch retriever and load example data registry."""
     svrconf = rc.__config__["!SIM.file"]
 
@@ -29,9 +29,11 @@ def _create_retriever(save_dir: Optional[Union[Path, str]] = None,
     return retriever
 
 
-def list_example_data(url: Optional[str] = None,
-                      return_files: bool = False,
-                      silent: bool = False) -> list[str]:
+def list_example_data(
+    url: str | None = None,
+    return_files: bool = False,
+    silent: bool = False,
+) -> list[str]:
     """
     List all example files found under ``url``.
 
@@ -70,9 +72,11 @@ def list_example_data(url: Optional[str] = None,
     return None
 
 
-def download_example_data(*files: str,
-                          save_dir: Optional[Union[Path, str]] = None,
-                          url: Optional[str] = None) -> list[Path]:
+def download_example_data(
+    *files: str,
+    save_dir: Path | str | None = None,
+    url: str | None = None,
+) -> list[Path]:
     """
     Download example fits files to the local disk.
 
@@ -93,13 +97,26 @@ def download_example_data(*files: str,
     -------
     save_path : list of Paths
         The absolute path(s) to the saved files
+
+    .. versionchanged:: 0.8.4
+
+       Passing a list to ``download_example_data`` is deprecated since version
+       0.8.4, this function now accepts multiple file names in *args-style.
+
+    .. versionchanged:: PLACEHOLDER_NEXT_RELEASE_VERSION
+
+       Passing a list to ``download_example_data`` as the first argument will
+       now throw a TypeError. This is to catch any remaining uses of the old
+       call signature of this function. From version 0.12 onwards, agruments
+       will be silently passed to the `retriever`.
+
     """
-    if isinstance(files[0], list):  # to preserve combatibility with notebooks
-        warn("Passing a list to download_example_data is deprecated. "
-             "Simply pass filenames as *args, i.e. "
-             "download_example_data(\"foo.fits\", \"bar.fits\").",
-             DeprecationWarning, stacklevel=2)
-        files = files[0]
+    if isinstance(files[0], list):
+        raise TypeError(
+            "Passing a list to download_example_data is deprecated. "
+            "Simply pass filenames as *args, i.e. "
+            "download_example_data(\"foo.fits\", \"bar.fits\")."
+        )
 
     retriever = _create_retriever(save_dir, url)
 

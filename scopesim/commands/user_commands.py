@@ -533,12 +533,16 @@ def add_packages_to_rc_search(local_path, package_list):
     for pkg in package_list:
         pkg_dir = plocal_path / pkg
         if not pkg_dir.exists():
-            # For sub-packages (e.g. ELT, Armazones) it might be ok to not find
-            # them, but if we're at the top level, this should not go silent.
-            if len(package_list) == 1:
-                raise ValueError(f"Package could not be found: {pkg_dir}")
-            else:
-                logger.warning("Package could not be found: %s", pkg_dir)
+            # retry with mocks
+            pkg_dir = rc.__pkg_dir__ / "tests/mocks" / pkg
+            if not pkg_dir.exists():  # still no
+                # For sub-packages (e.g. ELT, Armazones) it might be ok to not
+                # find them, but if we're at the top level, this should not go
+                # silent.
+                if len(package_list) == 1:
+                    raise ValueError(f"Package could not be found: {pkg_dir}")
+                else:
+                    logger.warning("Package could not be found: %s", pkg_dir)
 
         rc.__search_path__.append_first(pkg_dir)
 

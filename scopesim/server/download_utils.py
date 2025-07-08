@@ -2,12 +2,9 @@
 """Used only by the `database` and `github_utils` submodules."""
 
 import re
-
 from collections.abc import Iterator
-
 from zipfile import ZipFile
 from pathlib import Path
-from shutil import get_terminal_size
 
 import httpx
 import bs4
@@ -83,7 +80,7 @@ def handle_download(
 
     Parameters
     ----------
-    client : : httpx.Client
+    client : httpx.Client
         Client instance.
     sub_url : str
         URL of file to be downloaded, relative to the `client`'s base URL.

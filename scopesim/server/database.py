@@ -4,17 +4,16 @@
 from datetime import date
 from warnings import warn
 from pathlib import Path
-from typing import Optional, Union
 from collections.abc import Iterator, Iterable, Mapping
 
 import yaml
+import httpx
 from more_itertools import first, last, groupby_transform
 
 from scopesim import rc
 from .github_utils import download_github_folder
-from .example_data_utils import download_example_data, list_example_data
 from .download_utils import (get_server_folder_contents, handle_download,
-                             handle_unzipping, create_client, ServerError)
+                             handle_unzipping, create_client)
 from ..utils import get_logger
 from ..commands.user_commands import patch_fake_symlinks
 
@@ -35,27 +34,10 @@ def get_base_url():
 
 
 def get_server_package_list():
-    warn("Function Depreciated", DeprecationWarning, stacklevel=2)
-
-    # Emulate legacy API without using the problematic yaml file
-    with create_client(get_base_url()) as client:
-        folders = list(dict(crawl_server_dirs(client)).keys())
-        pkgs_dict = {}
-        for dir_name in folders:
-            p_list = [_parse_package_version(package) for package
-                      in get_server_folder_contents(client, dir_name)]
-            grouped = dict(group_package_versions(p_list))
-            for p_name in grouped:
-                p_dict = {
-                    "latest": _unparse_raw_version(get_latest(grouped[p_name]),
-                                                   p_name).strip(".zip"),
-                    "path": dir_name.strip("/"),
-                    "stable": _unparse_raw_version(get_stable(grouped[p_name]),
-                                                   p_name).strip(".zip"),
-                }
-                pkgs_dict[p_name] = p_dict
-
-    return pkgs_dict
+    """Deprecated since v0.6.0."""
+    raise AttributeError(
+        "The singular variant of this function has been deprecated since "
+        "version 0.6.0 of ScopeSim and will be completely removed in v0.12.")
 
 
 def _get_package_name(package: str) -> str:
@@ -148,7 +130,9 @@ def group_package_versions(all_packages: Iterable[tuple[str, str]]) -> _GrpItrTy
     return version_groups
 
 
-def crawl_server_dirs(client=None) -> Iterator[tuple[str, set[str]]]:
+def crawl_server_dirs(
+    client: httpx.Client | None = None,
+) -> Iterator[tuple[str, set[str]]]:
     """Search all folders on server for .zip files."""
     if client is None:
         with create_client(get_base_url()) as client:
@@ -166,7 +150,9 @@ def crawl_server_dirs(client=None) -> Iterator[tuple[str, set[str]]]:
         yield dir_name, p_dir
 
 
-def get_all_package_versions(client=None) -> dict[str, list[str]]:
+def get_all_package_versions(
+    client: httpx.Client | None = None,
+) -> dict[str, list[str]]:
     """Gather all versions for all packages present in any folder on server."""
     if client is None:
         with create_client(get_base_url()) as client:
@@ -181,7 +167,7 @@ def get_all_package_versions(client=None) -> dict[str, list[str]]:
     return grouped
 
 
-def get_package_folders(client) -> dict[str, str]:
+def get_package_folders(client: httpx.Client) -> dict[str, str]:
     """Map package names to server locations."""
     folders_dict = {pkg: path.strip("/")
                     for path, pkgs in dict(crawl_server_dirs(client)).items()
@@ -189,7 +175,10 @@ def get_package_folders(client) -> dict[str, str]:
     return folders_dict
 
 
-def get_server_folder_package_names(client, dir_name: str) -> set[str]:
+def get_server_folder_package_names(
+    client: httpx.Client,
+    dir_name: str,
+) -> set[str]:
     """
     Retrieve all unique package names present on server in `dir_name` folder.
 
@@ -244,7 +233,7 @@ def get_all_packages_on_server() -> Iterator[tuple[str, set]]:
     yield from crawl_server_dirs()
 
 
-def list_packages(pkg_name: Optional[str] = None) -> list[str]:
+def list_packages(pkg_name: str | None = None) -> list[str]:
     """
     List all packages, or all variants of a single package.
 
@@ -301,9 +290,15 @@ def _get_zipname(pkg_name: str, release: str, all_versions) -> str:
     return _unparse_raw_version(zip_name, pkg_name)
 
 
-def _download_single_package(client, pkg_name: str, release: str, all_versions,
-                             folders_dict: Path, save_dir: Path,
-                             padlen: int) -> Path:
+def _download_single_package(
+    client: httpx.Client,
+    pkg_name: str,
+    release: str,
+    all_versions: _GrpVerType,
+    folders_dict: Path,
+    save_dir: Path,
+    padlen: int,
+) -> Path:
     if pkg_name not in all_versions:
         maybe = ""
         for key in folders_dict:
@@ -320,6 +315,12 @@ def _download_single_package(client, pkg_name: str, release: str, all_versions,
     save_dir.mkdir(parents=True, exist_ok=True)
 
     if "github" in release:
+        warn("Downloading IRDB packages directly from GitHub is deprecated "
+             "and will raise an error from ScopeSim version 0.12 onwards. "
+             "If you really need to use an unreleased version of an IRDB "
+             "package, please use a local clone of the IRDB repo instead.",
+             FutureWarning, stacklevel=3)
+
         base_url = "https://github.com/AstarVienna/irdb/tree/"
         github_hash = release.split(":")[-1].split("@")[-1]
         pkg_url = f"{base_url}{github_hash}/{pkg_name}"
@@ -336,15 +337,23 @@ def _download_single_package(client, pkg_name: str, release: str, all_versions,
     return save_path.absolute()
 
 
-def download_packages(pkg_names: Union[Iterable[str], str],
-                      release: str = "stable",
-                      save_dir: Optional[str] = None) -> list[Path]:
+def download_packages(
+    pkg_names: Iterable[str] | str,
+    release: str = "stable",
+    save_dir: Path | str | None = None,
+) -> list[Path]:
     """
     Download one or more packages to the local disk.
 
-    1. Download stable, dev
-    2. Download specific version
-    3. Download from github via url
+    The downloaded version may be specified as stable, latest (dev) or fixed to
+    a specific release.
+
+    .. versionchanged:: PLACEHOLDER_NEXT_RELEASE_VERSION
+
+       Downloading from the GitHub repository is deprecated and will be
+       removed in a future version. If you need to use an unreleased dev
+       version, please clone the IRDB repo instead and link your local clone
+       using ``sim.link_irdb()``.
 
     Parameters
     ----------
@@ -357,7 +366,6 @@ def download_packages(pkg_names: Union[Iterable[str], str],
         - "stable" : the most recent stable version
         - "latest" : the latest development version to be published
         - a specific package filename as given by list_packages (see examples)
-        - a github url for the specific branch and package (see examples)
 
     save_dir : str, optional
         The place on the local disk where the ``.zip`` package is to be saved.
@@ -387,11 +395,6 @@ def download_packages(pkg_names: Union[Iterable[str], str],
         # Specific version of the package
         list_packages("test_package")
         download_packages("test_package", release="2022-04-09.dev")
-
-        # Specific package from a Gtihub commit hash or branch/tag name (use "@" or ":")
-        download_packages("ELT", release="github:728761fc76adb548696205139e4e9a4260401dfc")
-        download_packages("ELT", release="github@728761fc76adb548696205139e4e9a4260401dfc")
-        download_packages("ELT", release="github@dev_master")
 
     """
     base_url = get_base_url()
@@ -463,42 +466,9 @@ def check_packages(instrument: str, download_missing: bool) -> None:
 # Funtions below from from OLD_database.py
 # ==============================================================================
 
-# for backwards compatibility
-def download_package(pkg_path, save_dir=None, url=None, from_cache=None):
-    """
-    DEPRECATED -- only kept for backwards compatibility
-
-    Downloads a package to the local disk
-
-    Parameters
-    ----------
-    pkg_path : str, list
-        A ``.zip`` package path as given by ``list_packages()``
-
-    save_dir : str
-        The place on the local disk where the ``.zip`` package is to be saved.
-        If left as None, defaults to the value in
-        scopesim.rc.__config__["!SIM.file.local_packages_path"]
-
-    url : str
-        The URL of the IRDB HTTP server. If left as None, defaults to the
-        value in scopesim.rc.__config__["!SIM.file.server_base_url"]
-
-    from_cache : bool
-        Use the cached versions of the packages. If None, defaults to the RC
-        value: ``!SIM.file.use_cached_downloads``
-
-    Returns
-    -------
-    save_path : str
-        The absolute path to the saved ``.zip`` package
-
-    """
-    warn("Function Depreciated --> please use scopesim.download_package-s-()",
-         DeprecationWarning, stacklevel=2)
-
-    if isinstance(pkg_path, str):
-        pkg_path = [pkg_path]
-
-    pkg_names = [pkg.replace(".zip", "").split("/")[-1] for pkg in pkg_path]
-    return download_packages(pkg_names, release="stable", save_dir=save_dir)
+def download_package(*args, **kwargs):
+    """Deprecated since v0.5.0."""
+    raise AttributeError(
+        "The singular variant of this function has been deprecated since "
+        "version 0.5.0 of ScopeSim. It will be completely removed in version "
+        "0.12. Please use ``download_packages`` (plural variant) instead!")

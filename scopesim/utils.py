@@ -7,7 +7,7 @@ import logging
 from logging.config import dictConfig
 from collections.abc import Iterable, Generator, Set, Mapping
 from copy import deepcopy
-from typing import TextIO, Union
+from typing import TextIO, Literal
 from io import StringIO
 from importlib import metadata
 import functools
@@ -608,10 +608,12 @@ def from_rc_config(item):
     return from_currsys(item, rc.__config__)
 
 
-def check_keys(input_dict: Union[Mapping, Iterable],
-               required_keys: Set,
-               action: str = "error",
-               all_any: str = "all") -> bool:
+def check_keys(
+    input_dict: Mapping | Iterable,
+    required_keys: Set,
+    action: Literal["error", "warn", "warning"] = "error",
+    all_any: Literal["all", "any"] = "all",
+) -> bool:
     """
     Check to see if all/any of the required keys are present in a dict.
 
@@ -620,7 +622,7 @@ def check_keys(input_dict: Union[Mapping, Iterable],
 
     Parameters
     ----------
-    input_dict : Union[Mapping, Iterable]
+    input_dict : Mapping | Iterable
         The mapping to be checked.
     required_keys : Set
         Set containing the keys to look for.

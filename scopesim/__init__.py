@@ -68,7 +68,12 @@ from .commands.user_commands import UserCommands
 from .commands.scopesimple import Simulation
 from .source.source import Source
 
-from .server.database import (list_packages, download_packages, download_package,
-                              list_example_data, download_example_data)
+from .server import (
+    list_packages,
+    download_packages,
+    list_example_data,
+    download_example_data,
+)
+from .server.database import download_package  # remove in v0.12
 
 from .tests.mocks.load_basic_instrument import load_example_optical_train, example_simulation
