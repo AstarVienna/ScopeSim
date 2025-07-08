@@ -10,7 +10,6 @@ from scopesim.tests.mocks.py_objects import fov_objects as fovobj
 from scopesim.tests.mocks.py_objects import source_objects as srcobj
 
 import matplotlib.pyplot as plt
-from matplotlib.colors import LogNorm
 
 
 PLOTS = False
@@ -56,7 +55,7 @@ class TestGetKernel:
         kernel = psf_object.get_kernel(fov_object)
 
         if PLOTS:
-            plt.imshow(kernel, norm=LogNorm())
+            plt.imshow(kernel, norm="log")
             plt.show()
 
         assert isinstance(kernel, np.ndarray)
@@ -72,7 +71,7 @@ class TestGetKernel:
         kernel = psf.get_kernel(0.004)
 
         if PLOTS:
-            plt.imshow(kernel, norm=LogNorm())
+            plt.imshow(kernel, norm="log")
             plt.show()
 
         assert isinstance(kernel, np.ndarray)

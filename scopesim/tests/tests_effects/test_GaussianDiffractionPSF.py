@@ -12,7 +12,6 @@ from scopesim.tests.mocks.py_objects.source_objects import _image_source
 from scopesim.tests.mocks.py_objects.header_objects import _basic_fov_header
 
 import matplotlib.pyplot as plt
-from matplotlib.colors import LogNorm
 
 PLOTS = False
 
@@ -60,7 +59,7 @@ class TestApplyTo:
 
         if PLOTS:
             plt.subplot(121)
-            plt.imshow(basic_fov.fields[0].data, origin="lower", norm=LogNorm())
+            plt.imshow(basic_fov.fields[0].data, origin="lower", norm="log")
             plt.subplot(122)
             plt.imshow(basic_fov.hdu.data, origin="lower", norm="log")
             plt.show()

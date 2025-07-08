@@ -4,13 +4,11 @@ from pytest import approx
 
 import numpy as np
 from matplotlib import pyplot as plt
-from matplotlib.colors import LogNorm
 from astropy import units as u
 
 from scopesim.effects.psfs import NonCommonPathAberration
 from scopesim.effects.psfs.analytical import _strehl2sigma, _sigma2gauss, wfe2gauss, wfe2strehl
 from scopesim.optics import FieldOfView, ImagePlane
-from scopesim.utils import from_currsys
 
 from scopesim.tests.mocks.py_objects.source_objects import _single_table_source
 from scopesim.tests.mocks.py_objects.header_objects import \
@@ -77,7 +75,7 @@ class TestGetKernel:
         assert np.sum(kernel) == approx(1)
 
         if PLOTS:
-            plt.imshow(kernel, norm=LogNorm(), vmax=1, vmin=1e-4)
+            plt.imshow(kernel, norm="log", vmax=1, vmin=1e-4)
             plt.colorbar()
             plt.show()
 
@@ -92,7 +90,7 @@ class TestApplyTo:
         assert post_max_flux/pre_max_flux == approx(0.954, rel=0.002)
 
         if PLOTS:
-            plt.imshow(fov_Ks.image[40:60, 40:60], norm=LogNorm())
+            plt.imshow(fov_Ks.image[40:60, 40:60], norm="log")
             plt.show()
 
     def test_ignores_classes_other_than_fov(self, ncpa_kwargs):

@@ -106,6 +106,10 @@ class ImagePlane:
            Adding a table directly to the ImagePlane is deprecated. Use FOV to
            add tables and image HDUs together before adding them to here.
 
+        .. versionchanged:: PLACEHOLDER_NEXT_RELEASE_VERSION
+
+           Here's a version changed message.
+
         Parameters
         ----------
         hdus_or_tables : `fits.ImageHDU` or `astropy.Table`
