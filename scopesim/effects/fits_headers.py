@@ -8,6 +8,7 @@ from collections.abc import Iterable, Mapping, MutableMapping
 
 import yaml
 import numpy as np
+from more_itertools import always_iterable
 
 from astropy.io import fits
 from astropy import units as u
@@ -289,8 +290,7 @@ class ExtraFitsKeywords(Effect):
             resolved = flatten_dict(dic.get("keywords", {}), resolve=True,
                                     optics_manager=opt_train)
             unresolved = flatten_dict(dic.get("unresolved_keywords", {}))
-            exts = get_relevant_extensions(dic, hdul)
-            for i in exts:
+            for i in get_relevant_extensions(dic, hdul):
                 hdul[i].header.update(dict(_resolve_counters(resolved, i)))
                 hdul[i].header.update(unresolved)
 
@@ -298,22 +298,20 @@ class ExtraFitsKeywords(Effect):
 
 
 def get_relevant_extensions(dic, hdul):
-    exts = []
-    if dic.get("ext_name") is not None:
-        exts.extend(i for i, hdu in enumerate(hdul)
-                    if hdu.header["EXTNAME"] == dic["ext_name"])
-    elif dic.get("ext_number") is not None:
-        ext_n = np.array(dic["ext_number"])
-        exts.extend(ext_n[ext_n < len(hdul)])
-    elif dic.get("ext_type") is not None:
-        if isinstance(dic["ext_type"], list):
-            ext_type_list = dic["ext_type"]
-        else:
-            ext_type_list = [dic["ext_type"]]
-        cls = tuple(getattr(fits, cls_str) for cls_str in ext_type_list)
-        exts.extend(i for i, hdu in enumerate(hdul) if isinstance(hdu, cls))
+    if (ext_name := dic.get("ext_name")) is not None:
+        yield hdul.index_of(ext_name)
 
-    return exts
+    elif (ext_number := dic.get("ext_number")) is not None:
+        for ext_num in always_iterable(ext_number):
+            if ext_num < len(hdul):
+                yield ext_num
+
+    elif (ext_type := dic.get("ext_type")) is not None:
+        ext_type_list = always_iterable(ext_type)
+        cls = tuple(getattr(fits, cls_str) for cls_str in ext_type_list)
+        for i_ext, hdu in enumerate(hdul):
+            if isinstance(hdu, cls):
+                yield i_ext
 
 
 def _resolve_references(value, optics_manager):
