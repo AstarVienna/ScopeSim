@@ -85,7 +85,7 @@ class DataContainer:
 
         if filename is None and "file_name" in kwargs:
             warn("The 'file_name' kwarg is deprecated and will raise an error "
-                 "in the future, please use 'filename' instead!",
+                 "from version 0.12 onwards, please use 'filename' instead!",
                  DeprecationWarning, stacklevel=2)
             filename = kwargs["file_name"]
 

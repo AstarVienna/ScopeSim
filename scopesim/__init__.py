@@ -14,7 +14,7 @@ except metadata.PackageNotFoundError:
 
 
 ###############################################################################
-#                            TURN OFF WARNINGS                                #
+#                         TURN OFF SOME WARNINGS                              #
 ###############################################################################
 
 import warnings
@@ -22,9 +22,16 @@ import yaml
 from astropy.utils.exceptions import AstropyWarning
 
 warnings.simplefilter('ignore', UserWarning)
-warnings.simplefilter('ignore', FutureWarning)
 warnings.simplefilter('ignore', RuntimeWarning)  # warnings for the developer
-warnings.simplefilter('default', DeprecationWarning)  # allow in general
+
+try:
+    if __version__.is_prerelease or __version__.is_devrelease:
+        # Those are usually ignored, but in development we should see them.
+        warnings.simplefilter("default", DeprecationWarning)
+        warnings.simplefilter("default", PendingDeprecationWarning)
+except AttributeError:  # catch __version__ = "undetermined"
+    pass
+
 warnings.simplefilter('ignore', category=AstropyWarning)
 yaml.warnings({'YAMLLoadWarning': False})
 

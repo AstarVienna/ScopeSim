@@ -134,9 +134,9 @@ class ImagePlane:
         else:
             if isinstance(hdus_or_tables, Table):
                 warn("Adding a table directly to the ImagePlane is deprecated "
-                     "since v0.10.0. Passing a table "
-                     "to ImagePlane.add() will raise an error in the future. "
-                     "Use FOV to add tables and image HDUs together before.",
+                     "since v0.10.0. Passing a table to ImagePlane.add() will "
+                     "raise an error from version 0.12 onwards. Use FOV to "
+                     "add tables and image HDUs together before.",
                      DeprecationWarning, stacklevel=2)
                 self.hdu = add_table_to_imagehdu(hdus_or_tables, self.hdu,
                                                  sub_pixel, wcs_suffix)
