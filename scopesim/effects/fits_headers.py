@@ -313,6 +313,27 @@ def get_relevant_extensions(dic, hdul):
     return exts
 
 
+def _resolve_references(value, optics_manager):
+    """Resolve !-strings from cmds and #-strings from `optics_manager`."""
+    cmds = optics_manager.cmds if optics_manager is not None else None
+
+    if value.startswith("!"):
+        return from_currsys(value, cmds)
+
+    if value.startswith("#"):
+        if optics_manager is None:
+            raise ValueError("An OpticsManager object must be passed "
+                             "in order to resolve #-strings")
+        try:
+            return optics_manager[value]
+        except ValueError:
+            logger.warning("%s not found", value)
+            return "Not applicable or not found"
+
+    # Else, return as-is
+    return value
+
+
 def _resolve_paragraph_strings(value, i_ext):
     """Resolve §-strings by adding extention index ("coutner")"."""
     if not isinstance(value, str):
@@ -358,8 +379,6 @@ def flatten_dict(
     flat_dict : dict
 
     """
-    cmds = optics_manager.cmds if optics_manager is not None else None
-
     if flat_dict is None:
         flat_dict = {}
 
@@ -381,21 +400,12 @@ def flatten_dict(
                 comment = ""
 
         # Resolve any bang or hash strings
-        match value:
-            case str(s) if resolve and s.startswith("!"):
-                value = from_currsys(value, cmds)
-            case str(s) if resolve and s.startswith("#"):
-                if optics_manager is None:
-                    raise ValueError("An OpticsManager object must be passed "
-                                     "in order to resolve #-strings")
-                try:
-                    value = optics_manager[value]
-                except ValueError:
-                    logger.warning("%s not found", value)
-                    value = "Not applicable or not found"
-            case str():
-                # Any normal string or resolving is off, we can just write to
-                # the output dict and move on, no need to evaluate the rest.
+        if isinstance(value, str):
+            if resolve:
+                value = _resolve_references(value, optics_manager)
+            else:
+                # If resolving is off, we can just write to the output dict
+                # and move on, no need to evaluate the rest.
                 if comment:
                     flat_dict[flat_key] = (value, comment)
                 else:
