@@ -281,15 +281,17 @@ class ExtraFitsKeywords(Effect):
 
         """
         opt_train = kwargs.get("optical_train")
-        if isinstance(hdul, fits.HDUList):
-            for dic in self.dict_list:
-                resolved = flatten_dict(dic.get("keywords", {}), resolve=True,
-                                        optics_manager=opt_train)
-                unresolved = flatten_dict(dic.get("unresolved_keywords", {}))
-                exts = get_relevant_extensions(dic, hdul)
-                for i in exts:
-                    hdul[i].header.update(dict(_resolve_counters(resolved, i)))
-                    hdul[i].header.update(unresolved)
+        if not isinstance(hdul, fits.HDUList):
+            return hdul
+
+        for dic in self.dict_list:
+            resolved = flatten_dict(dic.get("keywords", {}), resolve=True,
+                                    optics_manager=opt_train)
+            unresolved = flatten_dict(dic.get("unresolved_keywords", {}))
+            exts = get_relevant_extensions(dic, hdul)
+            for i in exts:
+                hdul[i].header.update(dict(_resolve_counters(resolved, i)))
+                hdul[i].header.update(unresolved)
 
         return hdul
 
