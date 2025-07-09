@@ -18,6 +18,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 from astropy import units as u
 from astropy.io import fits
+from astropy.wcs import WCS
 from astropy.table import Column, Table
 
 from astar_utils import get_logger, is_bangkey
@@ -725,6 +726,53 @@ def figure_grid_factory(nrows=1, ncols=1, **kwargs):
     fig = plt.figure()
     gs = fig.add_gridspec(nrows, ncols, **kwargs)
     return fig, gs
+
+
+def image_plotter(axes, img_array, aspect="equal", **kwargs):
+    defaults = {
+        "origin": "lower",
+        "norm": "log",
+        "vmin": None,
+        "vmax": None,
+    }
+    img_map = axes.imshow(img_array, **(defaults | kwargs))
+    axes.set_aspect(aspect)
+    return img_map
+
+
+def colorbar_plotter(fig, mappable, label="pixel values", **kwargs):
+    defaults = {
+        "fraction": .2,
+        "aspect": 15,
+        "pad": .1,
+    }
+    fig.colorbar(mappable, label=label, **(defaults | kwargs))
+
+
+def cube_plotter(cube_hdu):
+    fig, (ax_img, ax_spec) = figure_factory(2, height_ratios=(2, 1))
+    cube_wcs = WCS(cube_hdu)
+    cdelt = cube_wcs.sub(2).wcs.cdelt
+    aspect = cdelt[1] / cdelt[0]
+    img_map = image_plotter(ax_img, cube_hdu.data.sum(axis=0), aspect=aspect)
+    if bunit := cube_hdu.header.get("BUNIT") is not None:
+        flux_unit = u.Unit(bunit)
+    else:
+        flux_unit = "pixel values"
+    colorbar_plotter(fig, img_map, label=flux_unit)
+
+    swcs = cube_wcs.spectral if cube_wcs.has_spectral else cube_wcs.sub([3])
+    with u.set_enabled_equivalencies(u.spectral()):
+        wave = swcs.pixel_to_world(np.arange(swcs.pixel_shape[0]))
+        try:
+            wave <<= u.um
+        except u.UnitConversionError:
+            # TODO: perhaps deal with pixel and/or mm separately and let
+            #       anything else fail on purpose??
+            pass  # catch and ignore dimensionless or pixel coordinates
+    ax_spec.plot(wave, cube_hdu.data.sum(axis=(1, 2)))
+    ax_spec.set_xlabel(wave.unit)
+    ax_spec.set_ylabel(flux_unit)
 
 
 def top_level_catch(func):
