@@ -290,24 +290,30 @@ class ExtraFitsKeywords(Effect):
             resolved = flatten_dict(dic.get("keywords", {}), resolve=True,
                                     optics_manager=opt_train)
             unresolved = flatten_dict(dic.get("unresolved_keywords", {}))
-            for i in get_relevant_extensions(dic, hdul):
+            for i in _get_relevant_extensions(dic, hdul):
                 hdul[i].header.update(dict(_resolve_counters(resolved, i)))
                 hdul[i].header.update(unresolved)
 
         return hdul
 
 
-def get_relevant_extensions(dic, hdul):
+def _get_relevant_extensions(dic, hdul):
+    """Find indices of HDUL extension(s) by type, name or index."""
     if (ext_name := dic.get("ext_name")) is not None:
+        # Simply find by name, can only be a single one (as before).
         yield hdul.index_of(ext_name)
 
     elif (ext_number := dic.get("ext_number")) is not None:
+        # Could do fancy comprehension here but would be unreadable...
         for ext_num in always_iterable(ext_number):
             if ext_num < len(hdul):
                 yield ext_num
 
     elif (ext_type := dic.get("ext_type")) is not None:
         ext_type_list = always_iterable(ext_type)
+        # If anyone has a better way of doing this, feel free. Keep in mind to
+        # also accept subclasses (at least in theory), so comparing class name
+        # directly doesn't really work. But this here is fine...
         cls = tuple(getattr(fits, cls_str) for cls_str in ext_type_list)
         for i_ext, hdu in enumerate(hdul):
             if isinstance(hdu, cls):

@@ -145,7 +145,7 @@ class TestExtraFitsKeywordsApplyTo:
 class TestGetRelevantExtensions:
     def test_works_for_ext_name(self, comb_hdul):
         dic = {"ext_name": "PRIMARY"}
-        exts = list(fh.get_relevant_extensions(dic, comb_hdul))
+        exts = list(fh._get_relevant_extensions(dic, comb_hdul))
         answer = [0]
 
         assert all(ans in exts for ans in answer)
@@ -153,7 +153,7 @@ class TestGetRelevantExtensions:
 
     def test_works_for_ext_number(self, comb_hdul):
         dic = {"ext_number": [1, 2, 3]}
-        exts = list(fh.get_relevant_extensions(dic, comb_hdul))
+        exts = list(fh._get_relevant_extensions(dic, comb_hdul))
         answer = [1, 2]
 
         assert all(ans in exts for ans in answer)
@@ -164,7 +164,7 @@ class TestGetRelevantExtensions:
                               (["ImageHDU", "PrimaryHDU"], [0, 1])])
     def test_works_for_ext_type(self, comb_hdul, ext_type, answer):
         dic = {"ext_type": ext_type}
-        exts = list(fh.get_relevant_extensions(dic, comb_hdul))
+        exts = list(fh._get_relevant_extensions(dic, comb_hdul))
 
         assert all(ans in exts for ans in answer)
         assert len(exts) == len(answer)
