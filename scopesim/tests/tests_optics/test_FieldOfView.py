@@ -59,8 +59,8 @@ class TestExtractFrom:
     #                            "is extracted..."))
     def test_extract_point_sources_from_table(self):
         src = so._table_source()
-        src.fields[0]["x"] = [-15, -5, 0, 0] * u.arcsec
-        src.fields[0]["y"] = [0, 0, 5, 15] * u.arcsec
+        src.fields[0].field["x"] = [-15, -5, 0, 0] * u.arcsec
+        src.fields[0].field["y"] = [0, 0, 5, 15] * u.arcsec
         fov = _fov_190_210_um()
         fov.extract_from(src)
 
@@ -99,8 +99,8 @@ class TestExtractFrom:
     #                            "is extracted..."))
     def test_extract_one_of_each_type_from_source_object(self):
         src_table = so._table_source()              # 4 sources, put two outside of FOV
-        src_table.fields[0]["x"] = [-15, -5, 0, 0] * u.arcsec
-        src_table.fields[0]["y"] = [0, 0, 5, 15] * u.arcsec
+        src_table.fields[0].field["x"] = [-15, -5, 0, 0] * u.arcsec
+        src_table.fields[0].field["y"] = [0, 0, 5, 15] * u.arcsec
         src_image = so._image_source(dx=10)         # 10x10" @ 0.2"/pix
         src_cube = so._cube_source()                # 10x10" @ 0.2"/pix, [0.5, 2.5]m @ 0.02µm
         src = src_cube + src_image + src_table
@@ -123,7 +123,7 @@ class TestExtractFrom:
 
     def test_ignores_fields_outside_fov_boundary(self):
         src = so._combined_source(dx=[200, 200, 200])
-        src.fields[0]["x"] += 200
+        src.fields[0].field["x"] += 200
 
         fov = _fov_197_202_um()
         fov.extract_from(src)
@@ -306,7 +306,7 @@ class TestMakeImage:
 
         in_sum = 0
         waveset = fov.fields[0].spectra[0].waveset
-        for x, y, ref, weight in src_table.fields[0]:
+        for x, y, ref, weight in src_table.fields[0].field:
             flux = src_table.spectra[ref](waveset).to(u.ph/u.s/u.m**2/u.um)
             flux *= 1 * u.m**2 * 0.02 * u.um * 0.9      # 0.9 is to catch the half bins at either end
             in_sum += np.sum(flux).value * weight
@@ -329,7 +329,7 @@ class TestMakeImage:
 
         in_sum = 0
         waveset = fov.fields[0].spectra[0].waveset
-        for x, y, ref, weight in src_table.fields[0]:
+        for x, y, ref, weight in src_table.fields[0].field:
             flux = src_table.spectra[ref](waveset).to(u.ph/u.s/u.m**2/u.um)
             flux *= 1 * u.m**2 * 0.02 * u.um * 0.9      # 0.9 is to catch the half bins at either end
             if y >= 9.9:  # edge source ends up with half the flux
