@@ -729,6 +729,7 @@ def figure_grid_factory(nrows=1, ncols=1, **kwargs):
 
 
 def image_plotter(axes, img_array, aspect="equal", **kwargs):
+    """Wrap ``plt.imshow()`` with sensible default keywords."""
     defaults = {
         "origin": "lower",
         "norm": "log",
@@ -741,6 +742,7 @@ def image_plotter(axes, img_array, aspect="equal", **kwargs):
 
 
 def colorbar_plotter(fig, mappable, label="pixel values", **kwargs):
+    """Wrap ``plt.colorbar()`` with sensible default keywords."""
     defaults = {
         "fraction": .2,
         "aspect": 15,
@@ -749,17 +751,10 @@ def colorbar_plotter(fig, mappable, label="pixel values", **kwargs):
     fig.colorbar(mappable, label=label, **(defaults | kwargs))
 
 
-def cube_plotter(cube_hdu):
-    fig, (ax_img, ax_spec) = figure_factory(2, height_ratios=(2, 1))
-    cube_wcs = WCS(cube_hdu)
-    cdelt = cube_wcs.sub(2).wcs.cdelt
-    aspect = cdelt[1] / cdelt[0]
-    img_map = image_plotter(ax_img, cube_hdu.data.sum(axis=0), aspect=aspect)
-    if bunit := cube_hdu.header.get("BUNIT") is not None:
-        flux_unit = u.Unit(bunit)
-    else:
-        flux_unit = "pixel values"
-    colorbar_plotter(fig, img_map, label=flux_unit)
+def cube_spec_plotter(axes, cube_hdu, cube_wcs=None):
+    """Plot spectral part of cube into existing axes."""
+    if cube_wcs is None:
+        cube_wcs = WCS(cube_hdu)
 
     swcs = cube_wcs.spectral if cube_wcs.has_spectral else cube_wcs.sub([3])
     with u.set_enabled_equivalencies(u.spectral()):
@@ -770,9 +765,32 @@ def cube_plotter(cube_hdu):
             # TODO: perhaps deal with pixel and/or mm separately and let
             #       anything else fail on purpose??
             pass  # catch and ignore dimensionless or pixel coordinates
-    ax_spec.plot(wave, cube_hdu.data.sum(axis=(1, 2)))
-    ax_spec.set_xlabel(wave.unit)
-    ax_spec.set_ylabel(flux_unit)
+
+    axes.plot(wave, cube_hdu.data.sum(axis=(1, 2)))
+    axes.set_xlabel(wave.unit)
+    axes.set_ylabel(_get_bunit_label(cube_hdu.header))
+
+
+def _get_bunit_label(header: fits.Header) -> str:
+    if bunit := header.get("BUNIT") is not None:
+        try:
+            flux_unit = u.Unit(bunit)
+        except ValueError:
+            flux_unit = "pixel values"
+    else:
+        flux_unit = "pixel values"
+    return flux_unit
+
+
+def cube_plotter(cube_hdu):
+    fig, (ax_img, ax_spec) = figure_factory(2, height_ratios=(2, 1))
+    cube_wcs = WCS(cube_hdu)
+    cdelt = cube_wcs.sub(2).wcs.cdelt
+    aspect = cdelt[1] / cdelt[0]
+    img_map = image_plotter(ax_img, cube_hdu.data.sum(axis=0), aspect=aspect)
+
+    colorbar_plotter(fig, img_map, label=_get_bunit_label(cube_hdu.header))
+    cube_spec_plotter(ax_spec, cube_hdu, cube_wcs)
 
 
 def top_level_catch(func):
