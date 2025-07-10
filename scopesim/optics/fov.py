@@ -34,6 +34,9 @@ from ..utils import (
     array_minmax,
     close_loop,
     unit_includes_per_physical_type,
+    figure_factory,
+    image_plotter,
+    cube_plotter,
 )
 from ..source.source import Source
 
@@ -597,6 +600,10 @@ class FieldOfView:
         outline = np.array(list(close_loop(self.get_corners(units)[0])))
         axes.plot(*outline.T, label=f"FOV id: {self.meta['id']}")
 
+    def plot_data(self):
+        """Plot HDU or spectrum data if already exists."""
+        raise NotImplementedError("Subclasses should implement this.")
+
     def __repr__(self) -> str:
         """Return repr(self)."""
         msg = (f"{self.__class__.__name__}({self.header!r}, "
@@ -696,6 +703,16 @@ class FieldOfView1D(FieldOfView):
         spectrum = SourceSpectrum(Empirical1D, points=self.waveset,
                                   lookup_table=canvas_flux)
         return spectrum
+
+    def plot_data(self):
+        """Plot spectrum data if already exists."""
+        if self.hdu is None:
+            raise ValueError("FOV HDU is empty.")
+        fig, ax = figure_factory()
+        ax.plot(self.waveset, self.hdu(self.waveset))
+        ax.set_xlabel(self.waveset.unit)
+        ax.set_ylabel("PHOTLAM")
+        return fig, ax
 
 
 class FieldOfView2D(FieldOfView):
@@ -856,6 +873,12 @@ class FieldOfView2D(FieldOfView):
 
         canvas_image_hdu.header["BUNIT"] = "ph s-1"
         return canvas_image_hdu  # [ph s-1]
+
+    def plot_data(self):
+        """Plot HDU data if already exists."""
+        if self.hdu is None:
+            raise ValueError("FOV HDU is empty.")
+        return image_plotter(self.hdu)
 
 
 class FieldOfView3D(FieldOfView):
@@ -1076,6 +1099,12 @@ class FieldOfView3D(FieldOfView):
         canvas_cube_hdu.header["BUNIT"] = "ph s-1 um-1 arcsec-2"
 
         return canvas_cube_hdu  # [ph s-1 um-1 (arcsec-2)]
+
+    def plot_data(self):
+        """Plot HDU data if already exists."""
+        if self.hdu is None:
+            raise ValueError("FOV HDU is empty.")
+        return cube_plotter(self.hdu)
 
 
 def replace_nans(field, cmds) -> None:
