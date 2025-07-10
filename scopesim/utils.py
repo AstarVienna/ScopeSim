@@ -729,7 +729,7 @@ def figure_grid_factory(nrows=1, ncols=1, **kwargs):
     return fig, gs
 
 
-def image_plotter(axes: mpl.axes.Axes, img_array, aspect="equal", **kwargs):
+def _image_plotter(axes: mpl.axes.Axes, img_array, aspect="equal", **kwargs):
     """Wrap ``plt.imshow()`` with sensible default keywords."""
     defaults = {
         "origin": "lower",
@@ -742,7 +742,7 @@ def image_plotter(axes: mpl.axes.Axes, img_array, aspect="equal", **kwargs):
     return img_map
 
 
-def colorbar_plotter(
+def _colorbar_plotter(
     fig: mpl.figure.Figure,
     mappable,
     label: str = "pixel values",
@@ -757,7 +757,7 @@ def colorbar_plotter(
     fig.colorbar(mappable, label=label, **(defaults | kwargs))
 
 
-def cube_image_plotter(
+def _cube_image_plotter(
     fig: mpl.figure.Figure,
     axes: mpl.axes.Axes,
     cube_hdu: fits.Header,
@@ -767,11 +767,11 @@ def cube_image_plotter(
     cdelt = cube_wcs.sub(2).wcs.cdelt
     aspect = cdelt[1] / cdelt[0]
 
-    img_map = image_plotter(axes, cube_hdu.data.sum(axis=0), aspect=aspect)
-    colorbar_plotter(fig, img_map, label=_get_bunit_label(cube_hdu.header))
+    img_map = _image_plotter(axes, cube_hdu.data.sum(axis=0), aspect=aspect)
+    _colorbar_plotter(fig, img_map, label=_get_bunit_label(cube_hdu.header))
 
 
-def cube_spec_plotter(
+def _cube_spec_plotter(
     axes: mpl.axes.Axes,
     cube_hdu: fits.Header,
     cube_wcs: WCS | None = None,
@@ -806,6 +806,21 @@ def _get_bunit_label(header: fits.Header) -> str:
     return flux_unit
 
 
+def image_plotter(
+    image_hdu: fits.ImageHDU
+) -> tuple[mpl.figure.Figure, tuple[mpl.axes.Axes, mpl.axes.Axes]]:
+    """Plot HDU image and add colorbar."""
+    fig, ax = figure_factory()
+    cdelt = WCS(image_hdu).wcs.cdelt
+    aspect = cdelt[1] / cdelt[0]
+    img_map = image_plotter(ax, image_hdu.data, aspect=aspect)
+    _colorbar_plotter(
+        fig, img_map,
+        label=_get_bunit_label(image_hdu.header),
+    )
+    return fig, ax
+
+
 def cube_plotter(
     cube_hdu: fits.ImageHDU
 ) -> tuple[mpl.figure.Figure, tuple[mpl.axes.Axes, mpl.axes.Axes]]:
@@ -813,8 +828,8 @@ def cube_plotter(
     fig, (ax_img, ax_spec) = figure_factory(2, height_ratios=(2, 1))
     cube_wcs = WCS(cube_hdu)
 
-    cube_image_plotter(fig, ax_img, cube_hdu, cube_wcs)
-    cube_spec_plotter(ax_spec, cube_hdu, cube_wcs)
+    _cube_image_plotter(fig, ax_img, cube_hdu, cube_wcs)
+    _cube_spec_plotter(ax_spec, cube_hdu, cube_wcs)
 
     return fig, (ax_img, ax_spec)
 
