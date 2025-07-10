@@ -16,6 +16,8 @@ from ..utils import (
     has_needed_keywords,
     get_logger,
     zeros_from_header,
+    image_plotter,
+    cube_plotter,
 )
 
 
@@ -185,3 +187,9 @@ class ImagePlane:
             except KeyError:
                 wcs = None
         return wcs
+
+    def plot(self):
+        """Plot data in image plane."""
+        if self.header["NAXIS"] == 3:
+            return cube_plotter(self.hdu)
+        return image_plotter(self.hdu)
