@@ -729,7 +729,7 @@ def figure_grid_factory(nrows=1, ncols=1, **kwargs):
     return fig, gs
 
 
-def image_plotter(axes: mpl.Axes, img_array, aspect="equal", **kwargs):
+def image_plotter(axes: mpl.axes.Axes, img_array, aspect="equal", **kwargs):
     """Wrap ``plt.imshow()`` with sensible default keywords."""
     defaults = {
         "origin": "lower",
@@ -743,7 +743,7 @@ def image_plotter(axes: mpl.Axes, img_array, aspect="equal", **kwargs):
 
 
 def colorbar_plotter(
-    fig: mpl.Figure,
+    fig: mpl.figure.Figure,
     mappable,
     label: str = "pixel values",
     **kwargs,
@@ -758,8 +758,8 @@ def colorbar_plotter(
 
 
 def cube_image_plotter(
-    fig: mpl.Figure,
-    axes: mpl.Axes,
+    fig: mpl.figure.Figure,
+    axes: mpl.axes.Axes,
     cube_hdu: fits.Header,
     cube_wcs: WCS | None = None,
 ) -> None:
@@ -772,7 +772,7 @@ def cube_image_plotter(
 
 
 def cube_spec_plotter(
-    axes: mpl.Axes,
+    axes: mpl.axes.Axes,
     cube_hdu: fits.Header,
     cube_wcs: WCS | None = None,
 ) -> None:
@@ -808,7 +808,7 @@ def _get_bunit_label(header: fits.Header) -> str:
 
 def cube_plotter(
     cube_hdu: fits.ImageHDU
-) -> tuple[mpl.Figure, tuple[mpl.Axes, mpl.Axes]]:
+) -> tuple[mpl.figure.Figure, tuple[mpl.axes.Axes, mpl.axes.Axes]]:
     """Plot cube in separate plots for spatial and spectral parts."""
     fig, (ax_img, ax_spec) = figure_factory(2, height_ratios=(2, 1))
     cube_wcs = WCS(cube_hdu)
