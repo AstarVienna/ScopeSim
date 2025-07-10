@@ -15,6 +15,7 @@ import functools
 from docutils.core import publish_string
 import yaml
 import numpy as np
+import matplotlib as mpl
 from matplotlib import pyplot as plt
 from astropy import units as u
 from astropy.io import fits
@@ -728,7 +729,7 @@ def figure_grid_factory(nrows=1, ncols=1, **kwargs):
     return fig, gs
 
 
-def image_plotter(axes, img_array, aspect="equal", **kwargs):
+def image_plotter(axes: mpl.Axes, img_array, aspect="equal", **kwargs):
     """Wrap ``plt.imshow()`` with sensible default keywords."""
     defaults = {
         "origin": "lower",
@@ -741,7 +742,12 @@ def image_plotter(axes, img_array, aspect="equal", **kwargs):
     return img_map
 
 
-def colorbar_plotter(fig, mappable, label="pixel values", **kwargs):
+def colorbar_plotter(
+    fig: mpl.Figure,
+    mappable,
+    label: str = "pixel values",
+    **kwargs,
+) -> None:
     """Wrap ``plt.colorbar()`` with sensible default keywords."""
     defaults = {
         "fraction": .2,
@@ -751,7 +757,25 @@ def colorbar_plotter(fig, mappable, label="pixel values", **kwargs):
     fig.colorbar(mappable, label=label, **(defaults | kwargs))
 
 
-def cube_spec_plotter(axes, cube_hdu, cube_wcs=None):
+def cube_image_plotter(
+    fig: mpl.Figure,
+    axes: mpl.Axes,
+    cube_hdu: fits.Header,
+    cube_wcs: WCS | None = None,
+) -> None:
+    """Plot spatial part of cube into existing axes."""
+    cdelt = cube_wcs.sub(2).wcs.cdelt
+    aspect = cdelt[1] / cdelt[0]
+
+    img_map = image_plotter(axes, cube_hdu.data.sum(axis=0), aspect=aspect)
+    colorbar_plotter(fig, img_map, label=_get_bunit_label(cube_hdu.header))
+
+
+def cube_spec_plotter(
+    axes: mpl.Axes,
+    cube_hdu: fits.Header,
+    cube_wcs: WCS | None = None,
+) -> None:
     """Plot spectral part of cube into existing axes."""
     if cube_wcs is None:
         cube_wcs = WCS(cube_hdu)
@@ -782,15 +806,17 @@ def _get_bunit_label(header: fits.Header) -> str:
     return flux_unit
 
 
-def cube_plotter(cube_hdu):
+def cube_plotter(
+    cube_hdu: fits.ImageHDU
+) -> tuple[mpl.Figure, tuple[mpl.Axes, mpl.Axes]]:
+    """Plot cube in separate plots for spatial and spectral parts."""
     fig, (ax_img, ax_spec) = figure_factory(2, height_ratios=(2, 1))
     cube_wcs = WCS(cube_hdu)
-    cdelt = cube_wcs.sub(2).wcs.cdelt
-    aspect = cdelt[1] / cdelt[0]
-    img_map = image_plotter(ax_img, cube_hdu.data.sum(axis=0), aspect=aspect)
 
-    colorbar_plotter(fig, img_map, label=_get_bunit_label(cube_hdu.header))
+    cube_image_plotter(fig, ax_img, cube_hdu, cube_wcs)
     cube_spec_plotter(ax_spec, cube_hdu, cube_wcs)
+
+    return fig, (ax_img, ax_spec)
 
 
 def top_level_catch(func):
