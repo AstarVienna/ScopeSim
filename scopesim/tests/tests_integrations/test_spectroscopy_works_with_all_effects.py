@@ -4,7 +4,7 @@ from matplotlib import pyplot as plt
 
 from scopesim import rc
 from scopesim.optics import FOVManager, FieldOfView, ImagePlane
-from scopesim.base_classes import PoorMansHeader
+
 import scopesim.effects as efs
 from scopesim.tests.mocks.py_objects import integr_spectroscopy_objects as iso
 
@@ -211,4 +211,4 @@ class TestSpectroscopyMICADO:
                   "wave_max": "!SIM.spectral.wave_max"}
         fovs = spt.fov_grid(which="edges", **params)
         print("# fovs:", len(fovs))
-        assert isinstance(fovs[-1], (fits.Header, PoorMansHeader))
+        assert isinstance(fovs[-1], fits.Header)
