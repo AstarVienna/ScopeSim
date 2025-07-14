@@ -66,27 +66,6 @@ class FieldOfView:
 
     """
 
-    def __new__(
-        cls,
-        *args,
-        hdu_type: Literal["spectrum", "image", "cube"] = "image",
-        **kwargs,
-    ):
-        """Override creation to create subclasses."""
-        if cls is not FieldOfView:
-            # Allow for direct subclass access
-            return super().__new__(cls)
-
-        if hdu_type == "spectrum":
-            return super().__new__(FieldOfView1D)
-        if hdu_type == "image":
-            return super().__new__(FieldOfView2D)
-        if hdu_type == "cube":
-            return super().__new__(FieldOfView3D)
-
-        # If we get here, something went wrong
-        raise TypeError(f"{hdu_type=} not recognized.")
-
     def __init__(self, header, waverange, detector_header=None, cmds=None, **kwargs):
         self.meta = {
             "id": None,
@@ -109,7 +88,6 @@ class FieldOfView:
             "trace_id": None,
             "aperture_id": None,
         }
-        kwargs.pop("hdu_type", None)
         self.meta.update(kwargs)
 
         self.cmds = cmds
@@ -250,8 +228,6 @@ class FieldOfView:
 
         Parameters
         ----------
-        hdu_type : {"image", "cube", "spectrum"}
-            DESCRIPTION.
         sub_pixel : bool | None, optional
             If None (the default), use value from meta.
 

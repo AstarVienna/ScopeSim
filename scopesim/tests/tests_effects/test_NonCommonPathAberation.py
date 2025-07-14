@@ -8,7 +8,7 @@ from astropy import units as u
 
 from scopesim.effects.psfs import NonCommonPathAberration
 from scopesim.effects.psfs.analytical import _strehl2sigma, _sigma2gauss, wfe2gauss, wfe2strehl
-from scopesim.optics import FieldOfView, ImagePlane
+from scopesim.optics import FieldOfView2D, ImagePlane
 
 from scopesim.tests.mocks.py_objects.source_objects import _single_table_source
 from scopesim.tests.mocks.py_objects.header_objects import \
@@ -21,7 +21,7 @@ PLOTS = False
 @pytest.fixture(scope="function")
 def fov_Ks():
     _src = _single_table_source()
-    _fov = FieldOfView(header=_fov_header(), waverange=(1.9, 2.4), area=1*u.m**2)
+    _fov = FieldOfView2D(header=_fov_header(), waverange=(1.9, 2.4), area=1*u.m**2)
     _fov.extract_from(_src)
     _fov.view()
     return _fov

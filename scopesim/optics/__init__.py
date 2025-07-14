@@ -12,6 +12,6 @@ from .surface import SpectralSurface
 from . import surface_utils
 from . import radiometry_utils
 
-from .fov import FieldOfView
+from .fov import FieldOfView, FieldOfView1D, FieldOfView2D, FieldOfView3D
 from .fov_manager import FOVManager
 from .fov_volume_list import FovVolumeList

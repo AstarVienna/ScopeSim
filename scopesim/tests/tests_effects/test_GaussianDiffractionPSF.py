@@ -5,7 +5,7 @@ import numpy as np
 from astropy import units as u
 
 from scopesim import effects as efs
-from scopesim.optics.fov import FieldOfView
+from scopesim.optics.fov import FieldOfView2D
 from scopesim.optics.image_plane_utils import pix2val
 
 from scopesim.tests.mocks.py_objects.source_objects import _image_source
@@ -18,7 +18,7 @@ PLOTS = False
 
 def _basic_fov():
     src = _image_source()
-    fov = FieldOfView(_basic_fov_header(), waverange=[1, 2]*u.um, area=1*u.m**2)
+    fov = FieldOfView2D(_basic_fov_header(), waverange=[1, 2]*u.um, area=1*u.m**2)
     fov.extract_from(src)
 
     return fov

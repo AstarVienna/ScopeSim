@@ -54,7 +54,7 @@ from ..effects import DetectorList
 from ..effects import effects_utils as eu
 from ..utils import from_currsys, get_logger
 
-from .fov import FieldOfView
+from .fov import FieldOfView, FieldOfView1D, FieldOfView2D, FieldOfView3D
 from .fov_volume_list import FovVolumeList
 
 
@@ -134,7 +134,7 @@ class FOVManager:
 
         Yields
         ------
-        Iterator[FieldOfView]
+        new_fov : Iterator[FieldOfView]
             Generator-Iterator of FieldOfView objects.
 
         """
@@ -178,19 +178,22 @@ class FOVManager:
                 #       .detector_headers()[0] or something?
 
             if not self.is_spectroscope:
-                hdu_type = "image"
+                fovcls = FieldOfView2D
             else:
                 if self.is_coherent:
-                    hdu_type = "cube"
+                    fovcls = FieldOfView3D
                 else:
-                    hdu_type = "spectrum"
+                    fovcls = FieldOfView1D
 
-            yield FieldOfView(skyhdr,
-                              waverange,
-                              detector_header=dethdr,
-                              cmds=self.cmds,
-                              hdu_type=hdu_type,
-                              **vol["meta"])
+            new_fov = fovcls(
+                skyhdr,
+                waverange,
+                detector_header=dethdr,
+                cmds=self.cmds,
+                **vol["meta"],
+            )
+
+            yield new_fov
 
     @property
     def fovs(self):
