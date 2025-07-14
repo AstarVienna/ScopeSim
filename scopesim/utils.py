@@ -781,18 +781,42 @@ def _cube_spec_plotter(
         cube_wcs = WCS(cube_hdu)
 
     swcs = cube_wcs.spectral if cube_wcs.has_spectral else cube_wcs.sub([3])
-    with u.set_enabled_equivalencies(u.spectral()):
-        wave = swcs.pixel_to_world(np.arange(swcs.pixel_shape[0]))
-        try:
-            wave <<= u.um
-        except u.UnitConversionError:
-            # TODO: perhaps deal with pixel and/or mm separately and let
-            #       anything else fail on purpose??
-            pass  # catch and ignore dimensionless or pixel coordinates
+    px = np.arange(swcs.pixel_shape[0]) * u.pixel
 
-    axes.plot(wave, cube_hdu.data.sum(axis=(1, 2)))
-    axes.set_xlabel(wave.unit)
-    axes.set_ylabel(_get_bunit_label(cube_hdu.header))
+    def _px2wave(pixel):
+        with u.set_enabled_equivalencies(u.spectral()):
+            wave = swcs.pixel_to_world(pixel)
+        return (wave << u.um).value
+
+    def _wave2px(wave):
+        if not len(wave):
+            # Catch empty list which matplotib passes here for whatever reason.
+            return wave
+        with u.set_enabled_equivalencies(u.spectral()):
+            wave = (wave << u.um).to_value(u.m)
+            shape = wave.shape
+            wave = np.atleast_1d(wave.squeeze())
+            pix = np.array(swcs.all_world2pix(wave, 0)).reshape(shape)
+        return pix
+
+    drawstyle = "default"
+    y_label = r"$F_\lambda$"
+    if (bunit := cube_hdu.header.get("BUNIT")) is not None:
+        try:
+            flux_unit = u.Unit(bunit)
+            if not unit_includes_per_physical_type(flux_unit, "length"):
+                # Binned flux
+                drawstyle = "steps-mid"
+                y_label = r"$F$"
+        except ValueError:
+            pass  # Catch missing unit, default to default
+
+    axes.plot(px, cube_hdu.data.sum(axis=(1, 2)), drawstyle=drawstyle)
+    axes.set_xlabel(px.unit)
+    wax = axes.secondary_xaxis(location="top", functions=(_px2wave, _wave2px))
+    wax.set_xlabel(fr"$\lambda$ [{u.um}]")
+    axes.set_ylabel(f"{y_label} [{_get_bunit_label(cube_hdu.header)}]")
+    axes.grid()
 
 
 def _get_bunit_label(header: fits.Header) -> u.Unit | str:
@@ -829,7 +853,8 @@ def cube_plotter(
     cube_hdu: fits.ImageHDU
 ) -> tuple[mpl.figure.Figure, tuple[mpl.axes.Axes, mpl.axes.Axes]]:
     """Plot cube in separate plots for spatial and spectral parts."""
-    fig, (ax_img, ax_spec) = figure_factory(2, height_ratios=(2, 1))
+    fig, (ax_img, ax_spec) = figure_factory(2, height_ratios=(2, 1),
+                                            layout="tight")
     cube_wcs = WCS(cube_hdu)
 
     _cube_image_plotter(fig, ax_img, cube_hdu, cube_wcs)
