@@ -1,11 +1,15 @@
+# -*- coding: utf-8 -*-
 """
 Effects describing observing strategies.
 
 - ChopNodCombiner: simulate chop-nod cycle
 """
+
+from typing import ClassVar
+
 import numpy as np
 
-from scopesim.base_classes import DetectorBase
+from ..detector import Detector
 from scopesim.effects import Effect
 from scopesim.utils import from_currsys, check_keys
 
@@ -50,8 +54,11 @@ class ChopNodCombiner(Effect):
 
     """
 
+    required_keys = {"chop_offsets", "pixel_scale"}
+    z_order: ClassVar[tuple[int, ...]] = (863,)
+
     def __init__(self, **kwargs):
-        check_keys(kwargs, ["chop_offsets", "pixel_scale"])
+        check_keys(kwargs, self.required_keys)
 
         super().__init__(**kwargs)
         params = {
@@ -59,27 +66,26 @@ class ChopNodCombiner(Effect):
             "nod_offsets": None,
             "pixel_scale": None,
             "include": True,
-            "z_order": [863],
         }
         self.meta.update(params)
         self.meta.update(kwargs)
 
     def apply_to(self, obj, **kwargs):
-        if isinstance(obj, DetectorBase):
-            chop_offsets = from_currsys(self.meta["chop_offsets"], self.cmds)
-            nod_offsets = from_currsys(self.meta["nod_offsets"], self.cmds)
-            if nod_offsets is None:
-                nod_offsets = -np.array(chop_offsets)
+        if not isinstance(obj, Detector):
+            return obj
 
-            # these offsets are in pixels, not in arcsec or mm
-            pixel_scale = float(from_currsys(self.meta["pixel_scale"], self.cmds))
-            chop_offsets_pixel = np.array(chop_offsets) / pixel_scale
-            nod_offsets_pixel = np.array(nod_offsets) / pixel_scale
+        chop_offsets = from_currsys(self.meta["chop_offsets"], self.cmds)
+        nod_offsets = from_currsys(self.meta["nod_offsets"], self.cmds)
+        if nod_offsets is None:
+            nod_offsets = -np.array(chop_offsets)
 
-            image = obj.hdu.data
-            obj.hdu.data = chop_nod_image(image,
-                                          chop_offsets_pixel.astype(int),
-                                          nod_offsets_pixel.astype(int))
+        # these offsets are in pixels, not in arcsec or mm
+        pixel_scale = float(from_currsys(self.meta["pixel_scale"], self.cmds))
+        chop_offsets_px = (np.array(chop_offsets) / pixel_scale).astype(int)
+        nod_offsets_px = (np.array(nod_offsets) / pixel_scale).astype(int)
+
+        image = obj.hdu.data
+        obj.hdu.data = chop_nod_image(image, chop_offsets_px, nod_offsets_px)
 
         return obj
 
@@ -95,5 +101,4 @@ def chop_nod_image(img, chop_offsets, nod_offsets=None):
     im_bb = np.roll(im_ba, chop_offsets, (1, 0))
 
     im_comb = (im_aa - im_ab) - (im_ba - im_bb)
-
     return im_comb

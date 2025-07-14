@@ -5,7 +5,7 @@ from collections.abc import Iterable
 
 import numpy as np
 from astropy import units as u
-from astropy.wcs import WCS
+from astropy.wcs import WCS, find_all_wcs
 from astropy.io import fits
 from astropy.table import Table
 from astropy.utils.exceptions import AstropyWarning
@@ -53,7 +53,7 @@ def get_canvas_header(hdu_or_table_list, pixel_scale=1 * u.arcsec):
             else:
                 raise TypeError(
                     "hdu_or_table_list may only contain fits.ImageHDU, Table "
-                    "or fits.Header, found {type(hdu_or_table)}.")
+                    f"or fits.Header, found {type(hdu_or_table)}.")
         if tables:
             yield _make_bounding_header_for_tables(*tables,
                                                    pixel_scale=pixel_scale)
@@ -96,9 +96,9 @@ def _make_bounding_header_from_headers(*headers, pixel_scale=1*u.arcsec):
 
     if unit.physical_type == "angle":
         unit = "deg"
-        pixel_scale = pixel_scale.to(u.deg).value
+        pixel_scale = pixel_scale.to_value(u.deg)
     else:
-        pixel_scale = pixel_scale.to(unit).value
+        pixel_scale = pixel_scale.to_value(unit)
 
     extents = [calc_footprint(header, wcs_suffix, unit) for header in headers]
     pnts = np.vstack(extents)
@@ -188,6 +188,7 @@ def create_wcs_from_points(points: np.ndarray,
     pixel_scale = abs(pixel_scale)
     extent = points.ptp(axis=0) / pixel_scale
     naxis = extent.round().astype(int)
+    offset = (extent - naxis) * pixel_scale  # compensate rounding
 
     # FIXME: Woule be nice to have D headers referenced at (1, 1), but that
     #        breaks some things, likely down to rescaling...
@@ -203,24 +204,32 @@ def create_wcs_from_points(points: np.ndarray,
                                         f"pix, got '{naxis.unit}' instead.")
         naxis = naxis.value
 
-    crpix = (naxis + 1) / 2
-    crval = (points.min(axis=0) + points.max(axis=0)) / 2
+    if (zeroaxis := (naxis == 0)).any():
+        # Ensure at least one pixel in each axis.
+        logger.debug("NAXISn == 0, using minimum of 1.")
+        naxis[zeroaxis] = 1
+        offset[zeroaxis] = 0
 
-    ctype = "LINEAR" if wcs_suffix in "DX" else "RA---TAN"
+    crpix = (naxis + 1) / 2
+    crval = (points.min(axis=0) + points.max(axis=0) + offset) / 2
+
+    # Cannot do `in "DX"` here because that would also match the empty string.
+    linsuff = {"D", "X"}
+    lintype = ["LINEAR", "LINEAR"]
+    # skytype = ["RA---TAN", "DEC--TAN"]  # ScopeSim can't handle the truth yet
+    skytype = ["LINEAR", "LINEAR"]
+    ctype = lintype if wcs_suffix in linsuff else skytype
 
     if isinstance(points, u.Quantity):
         cunit = points.unit
     else:
-        if wcs_suffix == "D":
-            cunit = "mm"
-        else:
-            cunit = "deg"
+        cunit = "mm" if wcs_suffix == "D" else "deg"
 
     if isinstance(pixel_scale, u.Quantity):
         pixel_scale = pixel_scale.value
 
     new_wcs = WCS(key=wcs_suffix)
-    new_wcs.wcs.ctype = 2 * [ctype]
+    new_wcs.wcs.ctype = ctype
     new_wcs.wcs.cunit = 2 * [cunit]
     new_wcs.wcs.cdelt = np.array(2 * [pixel_scale])
     new_wcs.wcs.crval = crval
@@ -470,7 +479,7 @@ def overlay_image(small_im, big_im, coords, mask=None, sub_pixel=False):
     return big_im
 
 
-def rescale_imagehdu(imagehdu: fits.ImageHDU, pixel_scale: float,
+def rescale_imagehdu(imagehdu: fits.ImageHDU, pixel_scale: float | u.Quantity,
                      wcs_suffix: str = "", conserve_flux: bool = True,
                      spline_order: int = 1) -> fits.ImageHDU:
     """
@@ -481,9 +490,12 @@ def rescale_imagehdu(imagehdu: fits.ImageHDU, pixel_scale: float,
     Parameters
     ----------
     imagehdu : fits.ImageHDU
-    pixel_scale : float
-        [deg] NOT to be passed as a Quantity
+    pixel_scale : float or Quantity
+        the desired pixel scale of the scaled ImageHDU, as applicable to the WCS
+        identified by `wcs_suffix` (by default " "). If float the units are assumed
+        to be the same as CUNITa; if a Quantity, the unit need to be convertible.
     wcs_suffix : str
+        identifier of the WCS to use for rescaling, By default, this is " ".
 
     conserve_flux : bool
 
@@ -496,30 +508,36 @@ def rescale_imagehdu(imagehdu: fits.ImageHDU, pixel_scale: float,
     imagehdu : fits.ImageHDU
 
     """
-    # WCS needs single space as key for default wcs
+
+    # Identify the wcs to which pixel_scale refers to and determine the zoom factor
     wcs_suffix = wcs_suffix or " "
     primary_wcs = WCS(imagehdu.header, key=wcs_suffix[0])
 
-    # making sure all are positive
-    zoom = np.abs(primary_wcs.wcs.cdelt / pixel_scale)
+    # make sure that units are correct and zoom factor is positive
+    # The length of the zoom factor will be determined by imagehdu.data,
+    # which might differ from the dimension of primary_wcs. Here, pick
+    # the spatial dimensions only.
+    pixel_scale = pixel_scale << u.Unit(primary_wcs.wcs.cunit[0])
+    zoom = np.abs(primary_wcs.wcs.cdelt[:2] / pixel_scale.value)
 
-    if primary_wcs.naxis == 3:
-        # zoom = np.append(zoom, [1])
-        zoom[2] = 1.
+    if len(imagehdu.data.shape) == 3:
+        zoom = np.append(zoom, [1.])  # wavelength dimension unscaled if present
+
+    logger.debug("zoom factor: %s", zoom)
+
     if primary_wcs.naxis != imagehdu.data.ndim:
+        # FIXME: this happens often - shouldn't WCSs be trimmed down before? (OC)
         logger.warning("imagehdu.data.ndim is %d, but primary_wcs.naxis with "
-                        "key %s is %d, both should be equal.",
-                        imagehdu.data.ndim, wcs_suffix, primary_wcs.naxis)
-        zoom = zoom[:2]
-
-    logger.debug("zoom %s", zoom)
+                       "key %s is %d, both should be equal.",
+                       imagehdu.data.ndim, wcs_suffix, primary_wcs.naxis)
 
     if all(zoom == 1.):
         # Nothing to do
         return imagehdu
 
     sum_orig = np.sum(imagehdu.data)
-    # Not sure why the reverse order is necessary here
+
+    # Perform the rescaling. Axes need to be inverted because python.
     new_im = ndi.zoom(imagehdu.data, zoom[::-1], order=spline_order)
 
     if conserve_flux:
@@ -530,37 +548,37 @@ def rescale_imagehdu(imagehdu: fits.ImageHDU, pixel_scale: float,
 
     imagehdu.data = new_im
 
-    for key in wcs_suffix:
-        # TODO: can this be done with astropy wcs sub-wcs? or wcs.find_all_wcs?
-        ww = WCS(imagehdu.header, key=key)
-
+    # Rescale all WCSs in the header
+    wcses = find_all_wcs(imagehdu.header)
+    for ww in wcses:
         if ww.naxis != imagehdu.data.ndim:
             logger.warning("imagehdu.data.ndim is %d, but wcs.naxis with key "
                            "%s is %d, both should be equal.",
-                           imagehdu.data.ndim, key, ww.naxis)
-            # TODO: could this be ww = ww.sub(2) instead? or .celestial?
-            ww = WCS(imagehdu.header, key=key, naxis=imagehdu.data.ndim)
+                           imagehdu.data.ndim, ww.wcs.alt, ww.naxis)
 
         if any(ctype != "LINEAR" for ctype in ww.wcs.ctype):
             logger.warning("Non-linear WCS rescaled using linear procedure.")
 
-        new_crpix = (zoom + 1) / 2 + (ww.wcs.crpix - 1) * zoom
-        new_crpix = np.round(new_crpix * 2) / 2  # round to nearest half-pixel
-        logger.debug("new crpix %s", new_crpix)
-        ww.wcs.crpix = new_crpix
-
-        # Keep CDELT3 if cube...
-        new_cdelt = ww.wcs.cdelt[:]
-        new_cdelt[0] = pixel_scale
-        new_cdelt[1] = pixel_scale
-        ww.wcs.cdelt = new_cdelt
-
-        # TODO: is forcing deg here really the best way?
-        # FIXME: NO THIS WILL MESS UP IF new_cdelt IS IN ARCSEC!!!!!
-        # new_cunit = [str(cunit) for cunit in ww.wcs.cunit]
-        # new_cunit[0] = "mm" if key == "D" else "deg"
-        # new_cunit[1] = "mm" if key == "D" else "deg"
-        # ww.wcs.cunit = new_cunit
+        # Assuming linearity, a given world coordinate is determined by
+        #   VAL = CRVAL  + (PIX  - CRPIX ) * CDELT   (old system)
+        #       = CRVAL' + (PIX' - CRPIX') * CDELT'  (new system)
+        # CDELT is simply transformed by the zoom factor:
+        #   CDELT' = CDELT / ZOOM
+        # The transformation keeps CRVAL' = CRVAL, hence
+        #   CRPIX' = PIX' - (PIX - CRPIX) * ZOOM
+        # The relation between PIX' and PIX is linear
+        #   PIX' = CONST + ZOOM * PIX
+        # The fix point is PIX = PIX' = 1/2, which is the lower/left edge of
+        # the field,
+        # thus  PIX' = (1 - ZOOM)/2 + ZOOM * PIX
+        # This leads to
+        #   CRPIX' = 1/2 + (CRPIX - 1/2) * ZOOM
+        #
+        # The transformation only applies to spatial coordinates, which we
+        # assume to be the first two in the WCS.
+        ww.wcs.cdelt[:2] /= zoom[:2]
+        ww.wcs.crpix[:2] = 0.5 + (ww.wcs.crpix[:2] - 0.5) * zoom[:2]
+        logger.debug("new crpix %s", ww.wcs.crpix)
 
         imagehdu.header.update(ww.to_header())
 
@@ -924,6 +942,8 @@ def calc_footprint(header, wcs_suffix="", new_unit: str = None):
         xy0 = np.array([[0, 0], [0, y_ext], [x_ext, y_ext], [x_ext, 0]])
         xy1 = coords.wcs_pix2world(xy0, 0)
 
+    # FIXME: Catch case of unit mismatch in CUNIT1 and CUNIT2, there should be
+    #        a function for this somewhere but I forgot.
     if (cunit := coords.wcs.cunit[0]) == "deg":
         xy1 = _fix_360(xy1)
 
@@ -966,7 +986,7 @@ def calc_table_footprint(table: Table, x_name: str, y_name: str,
 
     """
     if padding is not None:
-        padding = padding.to(new_unit).value
+        padding = padding.to_value(new_unit)
     else:
         padding = 0.
 

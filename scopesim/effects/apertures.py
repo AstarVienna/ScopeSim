@@ -1,17 +1,19 @@
+# -*- coding: utf-8 -*-
 """Effects related to field masks, including spectroscopic slits."""
 
 import warnings
-import yaml
+from typing import ClassVar
 
+import yaml
 import numpy as np
 from matplotlib.path import Path as MPLPath  # rename to avoid conflict with pathlib
 from astropy.io import fits
 from astropy import units as u
-from astropy.table import Table, Column
+from astropy.table import Table
 
 from .effects import Effect
 from ..optics import image_plane_utils as imp_utils
-from ..base_classes import FOVSetupBase, FieldOfViewBase
+from ..optics.fov_volume_list import FovVolumeList
 
 from ..utils import (quantify, quantity_from_table, from_currsys, check_keys,
                      figure_factory, get_logger)
@@ -70,10 +72,6 @@ class ApertureMask(Effect):
 
     Other Parameters
     ----------------
-    extend_fov_beyond_slit : float
-        [arcsec] Default 0. Increases the on-sky size of the FOV by this
-        amount in all directions when extracting flux from the Source object.
-
     pixel_scale : float
         [arcsec] Defaults to ``"!INST.pixel_scale"`` from the config
 
@@ -81,6 +79,12 @@ class ApertureMask(Effect):
         An integer to identify the ``ApertureMask`` in a list of apertures
 
     """
+
+    required_keys = {"filename", "table", "array_dict"}
+    z_order: ClassVar[tuple[int, ...]] = (80, 280, 380)
+    report_plot_include: ClassVar[bool] = False
+    report_table_include: ClassVar[bool] = True
+    report_table_rounding: ClassVar[int] = 4
 
     def __init__(self, **kwargs):
         if not np.any([key in kwargs for key in ["filename", "table",
@@ -93,19 +97,14 @@ class ApertureMask(Effect):
 
         super().__init__(**kwargs)
         params = {
-            "extend_fov_beyond_slit": 0,
             "pixel_scale": "!INST.pixel_scale",
             "no_mask": True,
             "angle": 0,
             "shape": "rect",
             "conserve_image": True,
             "id": 0,
-            "report_plot_include": False,
-            "report_table_include": True,
-            "report_table_rounding": 4,
         }
 
-        self.meta["z_order"] = [80, 280, 380]
         self.meta.update(params)
         self.meta.update(kwargs)
 
@@ -113,23 +112,19 @@ class ApertureMask(Effect):
         self._mask = None
         self.mask_sum = None
 
-        self.required_keys = ["filename", "table", "array_dict"]
         check_keys(kwargs, self.required_keys, "warning", all_any="any")
 
     def apply_to(self, obj, **kwargs):
         """See parent docstring."""
-        if isinstance(obj, FOVSetupBase):
+        if isinstance(obj, FovVolumeList):
+            logger.debug("Executing %s, FoV setup", self.meta['name'])
             x = quantity_from_table("x", self.table,
-                                    u.arcsec).to(u.arcsec).value
+                                    u.arcsec).to_value(u.arcsec)
             y = quantity_from_table("y", self.table,
-                                    u.arcsec).to(u.arcsec).value
-            dr = self.meta["extend_fov_beyond_slit"]
-            x_min, x_max = min(x) - dr, max(x) + dr
-            y_min, y_max = min(y) - dr, max(y) + dr
-            obj.shrink(["x", "y"], ([x_min, x_max], [y_min, y_max]))
+                                    u.arcsec).to_value(u.arcsec)
+            obj.shrink(["x", "y"], ([min(x), max(x)], [min(y), max(y)]))
 
             # ..todo: HUGE HACK - Get rid of this!
-            # Assume the slit coord 'xi' is along the x axis
             for vol in obj.volumes:
                 vol["meta"]["xi_min"] = min(x) * u.arcsec
                 vol["meta"]["xi_max"] = max(x) * u.arcsec
@@ -161,8 +156,8 @@ class ApertureMask(Effect):
 
     def get_header(self):
         self.meta = from_currsys(self.meta, self.cmds)
-        x = quantity_from_table("x", self.table, u.arcsec).to(u.deg).value
-        y = quantity_from_table("y", self.table, u.arcsec).to(u.deg).value
+        x = quantity_from_table("x", self.table, u.arcsec).to_value(u.deg)
+        y = quantity_from_table("y", self.table, u.arcsec).to_value(u.deg)
         pix_scale_deg = self.meta["pixel_scale"] / 3600.
         header = imp_utils.header_from_list_of_xy(x, y, pix_scale_deg)
         header["APERTURE"] = self.meta["id"]
@@ -185,8 +180,8 @@ class ApertureMask(Effect):
         self.meta = from_currsys(self.meta, self.cmds)
 
         if self.meta["no_mask"] is False:
-            x = quantity_from_table("x", self.table, u.arcsec).to(u.deg).value
-            y = quantity_from_table("y", self.table, u.arcsec).to(u.deg).value
+            x = quantity_from_table("x", self.table, u.arcsec).to_value(u.deg)
+            y = quantity_from_table("y", self.table, u.arcsec).to_value(u.deg)
             pixel_scale_deg = self.meta["pixel_scale"] / 3600.
             mask = mask_from_coords(x, y, pixel_scale_deg)
         else:
@@ -209,13 +204,15 @@ class ApertureMask(Effect):
 
 
 class RectangularApertureMask(ApertureMask):
+    required_keys = {"x", "y", "width", "height"}
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         params = {"x_unit": "arcsec",
                   "y_unit": "arcsec"}
         self.meta.update(params)
         self.meta.update(kwargs)
-        check_keys(self.meta, ["x", "y", "width", "height"])
+        check_keys(self.meta, self.required_keys)
 
         self.table = self.get_table(**kwargs)
 
@@ -241,25 +238,6 @@ class ApertureList(Effect):
 
     Examples
     --------
-    Defining the apertures of an image slicer IFU::
-
-        - name: image_slicer
-          description: collection of slits corresponding to the image slicer apertures
-          class: ApertureList
-          kwargs:
-            filename: "INS_ifu_apertures.dat"
-            fov_for_each_aperture : True
-            extend_fov_beyond_slit : 2            # [arcsec]
-
-    Where the file ``INS_ifu_apertures.dat`` includes this table::
-
-        id  left    right   bottom  top     angle   conserve_image  shape
-        0   -14     14      -5      -3      0       True            rect
-        1   -14     14      -3      -1      0       True            rect
-        2   -14     14      -1      1       0       True            rect
-        3   -14     14      1       3       0       True            rect
-        4   -14     14      3       5       0       True            rect
-
 
     File format
     -----------
@@ -289,7 +267,7 @@ class ApertureList(Effect):
     .. note:: ``shape`` values ``"rect"`` and ``4`` do not produce equal results
 
        Both use 4 equidistant points around an ellipse constrained by
-       [``left``, ..., etc]. However ``"rect"`` aims to fill the constraining
+       [``left``, ..., etc]. However ``"rect"`` aims to fill the contraining
        area, while ``4`` simply uses 4 points on the ellipse.
        Consequently, ``4`` results in a diamond shaped mask covering only
        half of the constraining area filled by ``"rect"``.
@@ -297,73 +275,48 @@ class ApertureList(Effect):
 
     """
 
+    z_order: ClassVar[tuple[int, ...]] = (81, 281)
+    report_plot_include: ClassVar[bool] = True
+    report_table_include: ClassVar[bool] = True
+    report_table_rounding: ClassVar[int] = 4
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         params = {
-            "fov_for_each_aperture": True,
-            "extend_fov_beyond_slit": 0,
             "pixel_scale": "!INST.pixel_scale",
             "n_round_corners": 32,        # number of corners use to estimate ellipse
             "no_mask": False,             # .. todo:: is this necessary when we have conserve_image?
-            "report_plot_include": True,
-            "report_table_include": True,
-            "report_table_rounding": 4
         }
-        self.meta["z_order"] = [81, 281]
         self.meta.update(params)
         self.meta.update(kwargs)
 
         if self.table is not None:
-            required_keys = ["id", "left", "right", "top", "bottom", "angle",
-                             "conserve_image", "shape"]
+            # Why not always?
+            required_keys = {"id", "left", "right", "top", "bottom", "angle",
+                             "conserve_image", "shape"}
             check_keys(self.table.colnames, required_keys)
 
     def apply_to(self, obj, **kwargs):
         """See parent docstring."""
-        if isinstance(obj, FOVSetupBase):
-            dr = self.meta["extend_fov_beyond_slit"]
-            if self.meta["fov_for_each_aperture"] is True:
-                new_vols = []
-                for row in self.table:
-                    x_min, x_max = row["left"] - dr, row["right"] + dr
-                    y_min, y_max = row["bottom"] - dr, row["top"] + dr
-                    vols = obj.extract(["x", "y"], ([x_min, x_max],
-                                                    [y_min, y_max]))
-                    for vol in vols:
-                        vol["meta"]["aperture_id"] = row["id"]
-                        vol["meta"]["extend_fov_beyond_slit"] = dr
-                        vol["meta"]["sub_apertures"] = Table(rows=row)
+        if isinstance(obj, FovVolumeList):
+            logger.debug("Executing %s, FoV setup", self.meta['name'])
+            new_vols = []
+            for row in self.table:
+                vols = obj.extract(["x", "y"], ([row["left"], row["right"]],
+                                                [row["bottom"], row["top"]]))
+                for vol in vols:
+                    vol["meta"]["aperture_id"] = row["id"]
 
-                        # ..todo: HUGE HACK - Get rid of this!
-                        # Assume the slit coord 'xi' is along the x axis
-                        vol["meta"]["xi_min"] = row["left"] * u.arcsec
-                        vol["meta"]["xi_max"] = row["right"] * u.arcsec
-                        vol["conserve_image"] = row["conserve_image"]
-                        vol["shape"] = row["shape"]
-                        vol["angle"] = row["angle"]
+                    # ..todo: HUGE HACK - Get rid of this!
+                    vol["meta"]["xi_min"] = row["left"] * u.arcsec
+                    vol["meta"]["xi_max"] = row["right"] * u.arcsec
+                    vol["conserve_image"] = row["conserve_image"]
+                    vol["shape"] = row["shape"]
+                    vol["angle"] = row["angle"]
 
-                    new_vols += vols
+                new_vols += vols
 
-                obj.volumes = new_vols
-
-            else:
-                x_min = min(self.table["left"]) - dr
-                x_max = max(self.table["right"]) + dr
-                y_min = min(self.table["bottom"]) - dr
-                y_max = max(self.table["top"]) + dr
-
-                obj.shrink(["x", "y"], ([x_min, x_max], [y_min, y_max]))
-                vol = obj.volumes[0]
-                vol["meta"]["aperture_id"] = list(self.table["id"])
-                vol["meta"]["sub_apertures"] = self.table
-
-                # ..todo: HUGE HACK - Get rid of this!
-                # Assume the slit coord 'xi' is along the x axis
-                vol["meta"]["xi_min"] = x_min * u.arcsec
-                vol["meta"]["xi_max"] = x_max * u.arcsec
-                vol["conserve_image"] = True
-                vol["shape"] = "rect"
-                vol["angle"] = 0
+            obj.volumes = new_vols
 
         return obj
 
@@ -429,63 +382,8 @@ class ApertureList(Effect):
             raise ValueError("Secondary argument not of type ApertureList: "
                              f"{type(other) = }")
 
-
-class FibreApertureList(ApertureList):
-    """
-    A subclass of ApertureList for fibre apertures
-
-    File format
-    -----------
-    Much like an ApertureList, a FibreApertureList can be initialised by either
-    of the three standard DataContainer methods.
-    The easiest is however to make an ASCII file with the following columns::
-
-        id  x       y       r       angle  conserve_image  shape
-            arcsec  arcsec  arcsec  deg
-        int float   float   float   float  bool            str/int
-
-    where:
-    - x,y : centres of the fibres
-    - r : radius (NOT diameter) of the fibre head.
-    - angle : rotation of the first vertex from x=0
-    - conserve_image : flag for maintaining spatial information of flux
-    - shape : string or int. See ApertureList for allowed strings
-
-    .. note:: FibreApertureList does not support Elliptical fibres.
-
-
-    """
-    def __init__(self, **kwargs):
-        # Initialise with the super-super class, i.e. Effect, not ApertureList
-        super(ApertureList, self).__init__(**kwargs)
-        params = {"fov_for_each_aperture": True,
-                  "extend_fov_beyond_slit": 0,
-                  "pixel_scale": "!INST.pixel_scale",
-                  "n_round_corners": 32,        # number of corners use to estimate ellipse
-                  "no_mask": False,             # .. todo:: is this necessary when we have conserve_image?
-                  "report_plot_include": True,
-                  "report_table_include": True,
-                  "report_table_rounding": 4}
-        self.meta["z_order"] = [81, 281]
-        self.meta.update(params)
-        self.meta.update(kwargs)
-
-        if self.table is not None:
-            required_keys = ["id", "x", "y", "r", "angle",
-                             "conserve_image", "shape"]
-            check_keys(self.table.colnames, required_keys)
-
-        left = self.table["x"] - self.table["r"]
-        right = self.table["x"] + self.table["r"]
-        bottom = self.table["y"] - self.table["r"]
-        top = self.table["y"] + self.table["r"]
-        left.name = "left"
-        right.name = "right"
-        bottom.name = "bottom"
-        top.name = "top"
-        self.table.add_columns([left, right, bottom, top])
-
-
+    # def __getitem__(self, item):
+    #     return self.get_apertures(item)[0]
 
 
 class SlitWheel(Effect):
@@ -531,6 +429,10 @@ class SlitWheel(Effect):
     """
 
     required_keys = {"slit_names", "filename_format", "current_slit"}
+    z_order: ClassVar[tuple[int, ...]] = (80, 280, 580)
+    report_plot_include: ClassVar[bool] = False
+    report_table_include: ClassVar[bool] = True
+    report_table_rounding: ClassVar[int] = 4
     _current_str = "current_slit"
 
     def __init__(self, **kwargs):
@@ -538,11 +440,7 @@ class SlitWheel(Effect):
         check_keys(kwargs, self.required_keys, action="error")
 
         params = {
-            "z_order": [80, 280, 580],
             "path": "",
-            "report_plot_include": False,
-            "report_table_include": True,
-            "report_table_rounding": 4,
         }
         self.meta.update(params)
         self.meta.update(kwargs)
@@ -596,11 +494,6 @@ class SlitWheel(Effect):
         if not currslit:
             return False
         return self.slits[currslit]
-
-    @property
-    def display_name(self):
-        return f'{self.meta["name"]} : ' \
-               f'[{from_currsys(self.meta["current_slit"])}]'
 
     def __getattr__(self, item):
         return getattr(self.current_slit, item)

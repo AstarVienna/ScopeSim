@@ -67,6 +67,7 @@ def star(x=0, y=0, flux=0):
     ref = 0
 
     tbl = Table(data=[[x], [y], [w], [ref], [flux]],
+                dtype=[float, float, float, int, float],
                 names=["x", "y", "weight", "ref", "mag"],
                 units=[u.arcsec, u.arcsec, None, None, mag_unit])
     tbl.meta["photometric_system"] = "vega" if mag_unit == u.mag else "ab"

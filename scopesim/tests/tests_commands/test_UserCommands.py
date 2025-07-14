@@ -76,9 +76,7 @@ class TestInit:
         """Check whether we can recreate a UserCommand by evaluating its __repr__."""
         cmd1 = UserCommands(use_instrument="test_package")
         cmd2 = eval(repr(cmd1))
-        # TODO: Create a proper __eq__ so we can assert cmd1 == cmd2
-        assert str(cmd1) == str(cmd2)
-        assert cmd1.cmds == cmd2.cmds
+        assert cmd1 == cmd2
 
 
 @pytest.mark.usefixtures("patch_all_mock_paths")
@@ -113,6 +111,16 @@ class TestListLocalPackages:
 class TestTrackIpAddress:
     def test_see_if_theres_an_entry_on_the_server_log_file(self):
         _ = UserCommands(use_instrument="test_package")
+
+
+@pytest.mark.usefixtures("no_file_error", "protect_search_path", "protect_config")
+class TestIffyPkgPaths:
+    def test_finds_basic_instrument(self):
+        UserCommands(use_instrument="basic_instrument")
+
+    def test_throws_for_bogus_inst(self):
+        with pytest.raises(ValueError):
+            UserCommands(use_instrument="bogus_instrument")
 
 
 def test_patch_fake_symlinks(tmp_path):

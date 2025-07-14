@@ -1,6 +1,12 @@
+"""Tests for ImagePlane and some ImagePlaneUtils"""
+
+# pylint: disable=missing-class-docstring
+# pylint: disable=missing-function-docstring
+
+from copy import deepcopy
+
 import pytest
 from pytest import approx
-from copy import deepcopy
 
 import numpy as np
 from astropy.io import fits
@@ -8,41 +14,51 @@ from astropy import units as u
 from astropy.table import Table
 from astropy import wcs
 
+import matplotlib.pyplot as plt
+from matplotlib.colors import LogNorm
+
 import scopesim.optics.image_plane as opt_imp
 import scopesim.optics.image_plane_utils as imp_utils
 
 from scopesim.tests.mocks.py_objects.imagehdu_objects import \
-    _image_hdu_square, _image_hdu_rect
-
-import matplotlib.pyplot as plt
-from matplotlib.colors import LogNorm
-
+    _image_hdu_square, _image_hdu_rect, _image_hdu_three_wcs,\
+    _image_hdu_3d_data
 
 PLOTS = False
 
 
-@pytest.fixture(scope="function")
-def image_hdu_rect():
+@pytest.fixture(scope="function", name="image_hdu_rect")
+def fixture_image_hdu_rect():
     return _image_hdu_rect()
 
 
-@pytest.fixture(scope="function")
-def image_hdu_rect_mm():
+@pytest.fixture(scope="function", name="image_hdu_rect_mm")
+def fixture_image_hdu_rect_mm():
     return _image_hdu_rect("D")
 
 
-@pytest.fixture(scope="function")
-def image_hdu_square():
+@pytest.fixture(scope="function", name="image_hdu_square")
+def fixture_image_hdu_square():
     return _image_hdu_square()
 
 
-@pytest.fixture(scope="function")
-def image_hdu_square_mm():
+@pytest.fixture(scope="function", name="image_hdu_square_mm")
+def fixture_image_hdu_square_mm():
     return _image_hdu_square("D")
 
 
-@pytest.fixture(scope="function")
-def input_table():
+@pytest.fixture(scope="function", name="image_hdu_three_wcs")
+def fixture_image_hdu_three_wcs():
+    return _image_hdu_three_wcs()
+
+
+@pytest.fixture(scope="function", name="image_hdu_3d_data")
+def fixture_image_hdu_3d_data():
+    return _image_hdu_3d_data()
+
+
+@pytest.fixture(scope="function", name="input_table")
+def fixture_input_table():
     x = [-10, -10, 0, 10, 10] * u.arcsec
     y = [-10, 10, 0, -10, 10] * u.arcsec
     f = [1, 3, 1, 1, 5]
@@ -51,8 +67,8 @@ def input_table():
     return tbl
 
 
-@pytest.fixture(scope="function")
-def input_table_mm():
+@pytest.fixture(scope="function", name="input_table_mm")
+def fixture_input_table_mm():
     x = [-10, -10, 0, 10, 10] * u.mm
     y = [-10, 10, 0, -10, 10] * u.mm
     f = [1, 3, 1, 1, 5]
@@ -309,7 +325,7 @@ class TestAddTableToImageHDU:
         assert np.sum(canvas_hdu.data) == np.sum(tbl1["flux"])
 
         if PLOTS:
-            "top left is green, top right is yellow"
+            # "top left is green, top right is yellow"
             plt.imshow(canvas_hdu.data, origin="lower")
             plt.show()
 
@@ -325,7 +341,7 @@ class TestAddTableToImageHDU:
         assert np.sum(canvas_hdu.data) == np.sum(tbl1["flux"])
 
         if PLOTS:
-            "top left is green, top right is yellow"
+            # "top left is green, top right is yellow"
             plt.imshow(canvas_hdu.data, origin="lower")
             plt.show()
 
@@ -384,7 +400,7 @@ class TestAddTableToImageHDU:
         if PLOTS:
             x, y = imp_utils.val2pix(hdr, 0, 0, "D")
             plt.plot(x, y, "ro")
-            "top left is green, top right is yellow"
+            # "top left is green, top right is yellow"
             plt.imshow(canvas_hdu.data, origin="lower")
             plt.show()
 
@@ -657,7 +673,7 @@ class TestReorientImageHDU:
 
 
 class TestRescaleImageHDU:
-    @pytest.mark.parametrize("pixel_scale", [0.1, 0.2, 1, 2])
+    @pytest.mark.parametrize("pixel_scale", [0.1, 0.237, 1, 2])
     def test_flux_remains_constant(self, image_hdu_rect, pixel_scale):
         orig_sum = np.sum(image_hdu_rect.data)
         new_hdu = imp_utils.rescale_imagehdu(image_hdu_rect,
@@ -666,7 +682,7 @@ class TestRescaleImageHDU:
 
         assert new_sum == approx(orig_sum)
 
-    @pytest.mark.parametrize("pixel_scale", [0.1, 0.2, 1, 2])
+    @pytest.mark.parametrize("pixel_scale", [0.1, 0.237, 1, 2])
     def test_mm_flux_remains_constant(self, image_hdu_rect_mm, pixel_scale):
         orig_sum = np.sum(image_hdu_rect_mm.data)
         new_hdu = imp_utils.rescale_imagehdu(image_hdu_rect_mm, pixel_scale,
@@ -674,6 +690,41 @@ class TestRescaleImageHDU:
         new_sum = np.sum(new_hdu.data)
 
         assert new_sum == approx(orig_sum)
+
+    @pytest.mark.parametrize("pixel_scale", [0.1, 0.237, 1, 2])
+    def test_wcs_cdelt_scaled_correctly(self, image_hdu_three_wcs, pixel_scale):
+        wcses = wcs.find_all_wcs(image_hdu_three_wcs.header)
+        # this relies on find_all_wcs() sorting suffixes alphabetically
+        fact = pixel_scale / wcses[0].wcs.cdelt[0]
+
+        new_hdu = imp_utils.rescale_imagehdu(image_hdu_three_wcs, pixel_scale)
+        new_wcses = wcs.find_all_wcs(new_hdu.header)
+        assert new_wcses[0].wcs.cdelt[0] == pixel_scale
+        assert new_wcses[0].wcs.cdelt[0] / fact == approx(wcses[0].wcs.cdelt[0])
+        assert new_wcses[0].wcs.cdelt[1] / fact == approx(wcses[0].wcs.cdelt[1])
+        assert new_wcses[1].wcs.cdelt[0] / fact == approx(wcses[1].wcs.cdelt[0])
+        assert new_wcses[1].wcs.cdelt[1] / fact == approx(wcses[1].wcs.cdelt[1])
+        assert new_wcses[2].wcs.cdelt[0] / fact == approx(wcses[2].wcs.cdelt[0])
+        assert new_wcses[2].wcs.cdelt[1] / fact == approx(wcses[2].wcs.cdelt[1])
+
+    def test_rescale_works_on_nondefault_wcs(self, image_hdu_three_wcs):
+        pixel_scale = 2 * u.cm
+        new_hdu = imp_utils.rescale_imagehdu(image_hdu_three_wcs,
+                                             pixel_scale, "D")
+        assert new_hdu.header['CDELT1D'] == 20
+
+
+    def test_rescale_works_on_3d_imageplane(self, image_hdu_3d_data):
+        pixel_scale = 0.274
+        wcses = wcs.find_all_wcs(image_hdu_3d_data.header)
+        fact = pixel_scale / wcses[0].wcs.cdelt[0]
+
+        new_hdu = imp_utils.rescale_imagehdu(image_hdu_3d_data, pixel_scale)
+        new_wcses = wcs.find_all_wcs(new_hdu.header)
+
+        assert new_wcses[0].wcs.cdelt[0] == pixel_scale
+        assert new_wcses[0].wcs.cdelt[2] == wcses[0].wcs.cdelt[2]
+        assert new_wcses[1].wcs.cdelt[1] / fact == approx(wcses[1].wcs.cdelt[1])
 
 
 ###############################################################################
@@ -773,7 +824,7 @@ class TestMakeImagePlaneHeader:
 #         tbl = Table(names=["x", "y"], data=[x, y])
 #         xsky, ysky = impl_utils.get_corner_sky_coords([tbl, image_hdu_square])
 #
-#         assert np.all((xsky == x.to(u.deg).value))
+#         assert np.all((xsky == x.to_value(u.deg)))
 #
 
 

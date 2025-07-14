@@ -1,10 +1,12 @@
 """Unit tests for module scopesim.utils"""
 
 import pytest
+from pytest import approx
 from unittest.mock import patch
 
 import numpy as np
 from astropy import wcs
+from astropy import units as u
 from astropy.io import ascii as ioascii, fits
 from astropy.table import Table
 
@@ -131,7 +133,7 @@ class TestDerivPolynomial2D:
 
 class TestConvertCommentsToDict:
     def test_converts_list_of_strings_to_dict_if_comments_in_table_meta(self):
-        tbl = ioascii.read("""# key1 : val 1 
+        tbl = ioascii.read("""# key1 : val 1
                               # key2 : extra long entry
                               col1    col2
                               0       1 """)
@@ -147,8 +149,8 @@ class TestConvertCommentsToDict:
 
     def test_returns_input_if_conversion_doesnt_work(self):
         tbl_str = """
-        # key1 : val 1 
-        # 
+        # key1 : val 1
+        #
         # key2
         col1    col2
         0       1 """
@@ -232,3 +234,44 @@ class TestLoadExampleOptTrain:
     #
     #     assert isinstance(opt, OpticalTrain)
     #     assert from_currsys(opt["slit_wheel"].include)
+
+
+class TestSeq:
+    @pytest.mark.parametrize("start,stop,step",
+                             [(0, 10, 1),
+                              (10, 0, -1),
+                              (-3., 17., 0.05),
+                              (-2000., 5200., 200.)])
+    def test_seq_includes_last_when_it_should(self, start, stop, step):
+        arr = utils.seq(start, stop, step)
+        assert stop == arr[-1]
+
+    @pytest.mark.parametrize("start,stop,step",
+                             [(0, 10, 3),
+                              (10, 0, -3),
+                              (-3., 17., 0.07),
+                              (-2000., 5200., 210.)])
+    def test_seq_includes_last_when_it_should_not(self, start, stop, step):
+        arr = utils.seq(start, stop, step)
+        assert arr[-1] != stop
+        assert stop not in arr
+
+    @pytest.mark.parametrize("start,stop,step",
+                             [(0, 10, 1),
+                              (10, 0, -1),
+                              (-3., 17., 0.17),
+                              (-2000., 5200., 312.)])
+    def test_seq_has_correct_step_size(self, start, stop, step):
+        arr = utils.seq(start, stop, step)
+        assert arr[1:] - arr[:-1] == approx(step)
+
+
+@pytest.mark.usefixtures("protect_config")
+def test_setting_instpkgspath():
+    utils.link_irdb("bogus")
+    assert rc.__config__["!SIM.file.local_packages_path"] == "bogus"
+
+
+def test_unit_includes_per_physical_type():
+    unit = u.Unit("photlam") / u.arcsec**2
+    assert utils.unit_includes_per_physical_type(unit, "solid angle")

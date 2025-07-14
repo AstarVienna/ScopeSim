@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "ScopeSim"
-version = "0.8.0a0"
+version = "0.10.0a0"
 description = "Generalised telescope observation simulator"
 license = "GPL-3.0-or-later"
 authors = ["Kieran Leschinski <kieran.leschinski@unive.ac.at>"]
@@ -19,25 +19,25 @@ classifiers = [
 ]
 
 [tool.poetry.dependencies]
-python = "^3.9"
-numpy = "^1.26.3"
-scipy = "^1.11.4"
-astropy = "^5.3.3"
-matplotlib = "^3.7.2"
-pooch = "^1.7.0"
+python = ">=3.10, <3.13"
+numpy = "^1.26.4"
+scipy = "^1.14.1"
+astropy = "^6.1.5"
+matplotlib = "^3.8.2"
+pooch = "^1.8.2"
 
 docutils = "^0.19"
-httpx = "^0.23.0"
-beautifulsoup4 = "^4.12.1"
-lxml = "^4.9.3"
+httpx = ">=0.28.1"
+beautifulsoup4 = "^4.13.3"
+lxml = "^5.2.2"
 pyyaml = "^6.0.1"
-more-itertools = "^10.1.0"
-tqdm = "^4.66.1"
+more-itertools = "^10.2.0"
+tqdm = "^4.66.5"
 
-synphot = "^1.2.1"
-skycalc_ipy = ">=0.4.0"
+synphot = "^1.5.0"
+skycalc-ipy = ">=0.5.1"
 anisocado = ">=0.3.0"
-astar-utils = ">=0.2.0"
+astar-utils = ">=0.3.1"
 
 [tool.poetry.group.dev]
 optional = true
@@ -46,27 +46,29 @@ optional = true
 jupyter = "^1.0"
 jupytext = "^1.10.0"
 ipykernel = "^6.24.0"
+ipympl = "^0.9.4"
 
 [tool.poetry.group.test.dependencies]
-pytest = "^7.4.3"
-pytest-cov = "^4.1.0"
-scopesim_templates = ">=0.5.1"
-# Just so that readthedocs doesn't include the tests module - yes it's hacky
-skycalc_cli = "*"
+pytest = "^8.3.5"
+pytest-cov = "^6.0.0"
+scopesim_templates = ">=0.6.0"
 ipykernel = "^6.24.0"
 
 [tool.poetry.group.docs]
 optional = true
 
 [tool.poetry.group.docs.dependencies]
-sphinx = "^5.3.0"
-sphinx-rtd-theme = "^0.5.1"
-jupyter-sphinx = "^0.2.3"
-sphinxcontrib-apidoc = "^0.4.0"
+sphinx = ">=5.3,<8.0"
+sphinx-book-theme = "^1.1.0"
+jupyter-sphinx = ">=0.2.3,<0.6.0"
+sphinx-copybutton = "^0.5.2"
+myst-nb = "^1.0.0"
+sphinxcontrib-apidoc = ">=0.4,<0.6"
 nbsphinx = "^0.9.3"
 numpydoc = "^1.6.0"
-scopesim_templates = ">=0.5.1"
+scopesim_templates = ">=0.6.0"
 ipykernel = "^6.24.0"
+ipympl = "^0.9.4"
 
 [tool.poetry.urls]
 "Bug Tracker" = "https://github.com/AstarVienna/ScopeSim/issues"
@@ -76,9 +78,11 @@ requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.pytest.ini_options]
-addopts = "--strict-markers"
+addopts = "--strict-markers -m 'not webtest(github=True)'"
 markers = [
     "webtest: marks tests as requiring network (deselect with '-m \"not webtest\"')",
+    "webtest_github: marks tests that download from GitHub (select with '-m \"webtest_github\"')",
+    "slow: marks tests that take a while (deselect with '-m \"not slow\"')",
 ]
 filterwarnings = [
     "error",
@@ -92,19 +96,22 @@ filterwarnings = [
     "ignore:invalid value encountered in multiply:RuntimeWarning",
     "ignore:invalid value encountered in divide:RuntimeWarning",
     "ignore:Cannot merge meta key.*:astropy.utils.metadata.MergeConflictWarning",
+    "ignore::astropy.wcs.wcs.FITSFixedWarning",
     "default:The fov_grid*:DeprecationWarning",
     # Raised when saving fits files, not so important to fix:
     "ignore:.*a HIERARCH card will be created.*:astropy.io.fits.verify.VerifyWarning",
     # Web-related issues, fix at some point
     "ignore:'urllib3.contrib.pyopenssl'*:DeprecationWarning",
     "ignore:Blowfish*:UserWarning",
+    "ignore:TripleDES*:UserWarning",
     # Not sure what that is but it's everywhere...
     "ignore:'cgi'*:DeprecationWarning",
     "ignore:The py23*:DeprecationWarning",
     "ignore:datetime.datetime.utcfromtimestamp()*:DeprecationWarning",
     # Pytest Notebook stuff
-    "ignore:The*:pytest.PytestRemovedIn8Warning",
     "ignore:Proactor*:RuntimeWarning",
+    # lxml warning introduced by beautifulsoup
+    "ignore:The 'strip_cdata' option of HTMLParser*:DeprecationWarning",
 ]
 
 [tool.coverage.report]

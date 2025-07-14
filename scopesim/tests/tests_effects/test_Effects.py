@@ -22,6 +22,10 @@ class TestEffectInit:
     def test_has_method_apply_to(self):
         assert hasattr(Effect(), "apply_to")
 
+    def test_base_class_apply_to_throws(self):
+        with pytest.raises(NotImplementedError):
+            Effect().apply_to("bogus")
+
     def test_has_method_waveset(self):
         assert hasattr(Effect(), "fov_grid")
 
@@ -29,9 +33,9 @@ class TestEffectInit:
 class TestEffectReport:
     def test_report_returns_full_rst_text(self):
         det_list = eo._detector_list()
+        det_list.report_plot_include = False
         det_list.meta.update(
-            {"report_plot_include": False,
-             "report_table_caption":
+            {"report_table_caption":
                  "The dimensions of the MICADO central detector"}
         )
         rst_str = det_list.report()

@@ -22,7 +22,8 @@ from astropy.utils.exceptions import AstropyWarning
 
 warnings.simplefilter('ignore', UserWarning)
 warnings.simplefilter('ignore', FutureWarning)
-warnings.simplefilter('ignore', RuntimeWarning)    # warnings for the developer
+warnings.simplefilter('ignore', RuntimeWarning)  # warnings for the developer
+warnings.simplefilter('default', DeprecationWarning)  # allow in general
 warnings.simplefilter('ignore', category=AstropyWarning)
 yaml.warnings({'YAMLLoadWarning': False})
 
@@ -60,12 +61,13 @@ from . import utils
 
 # import specific classes from the modules to included in the global namespace
 
-from .utils import bug_report
+from .utils import bug_report, set_inst_pkgs_path, link_irdb
 from .optics.optical_train import OpticalTrain
 from .commands.user_commands import UserCommands
+from .commands.scopesimple import Simulation
 from .source.source import Source
 
 from .server.database import (list_packages, download_packages, download_package,
                               list_example_data, download_example_data)
 
-from .tests.mocks.load_basic_instrument import load_example_optical_train
+from .tests.mocks.load_basic_instrument import load_example_optical_train, example_simulation

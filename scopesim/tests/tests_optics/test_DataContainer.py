@@ -31,19 +31,29 @@ class TestInit:
     def test_initialised_with_psf_input(self, data_files):
         dat = DataContainer(data_files[0])
         assert isinstance(dat, DataContainer)
-        assert dat.is_fits is True
+        assert dat._is_fits
 
     def test_initialised_with_ascii_input(self, data_files):
         dat = DataContainer(data_files[1])
         assert isinstance(dat, DataContainer)
-        assert dat.is_fits is False
+        assert not dat._is_fits
+        assert dat.table.colnames == ['wavelength', 'transmission']
+        column = dat.table['wavelength']
+        assert column.unit == "um"
+
+    def test_raises_wrong_units(self, data_files):
+        with pytest.raises(ValueError):
+            _ = DataContainer(
+                data_files[1],
+                wavelength_unit="m",
+            )
 
     def test_initialised_with_arrays_dict_input(self):
         array_dict = {"wavelength": np.linspace(1, 2, 11)*u.um,
                       "transmission": np.ones(11)}
         dat = DataContainer(array_dict=array_dict)
         assert isinstance(dat, DataContainer)
-        assert dat.is_fits is False
+        assert not dat._is_fits
 
 
 class TestGetData:

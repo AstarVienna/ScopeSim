@@ -51,6 +51,7 @@ class TestGetKernel:
     def test_strehl_map_is_in_data(self, psf_object):
         assert isinstance(psf_object._file[0], fits.PrimaryHDU)
 
+    @pytest.mark.slow
     def test_returns_kernel(self, psf_object, fov_object):
         kernel = psf_object.get_kernel(fov_object)
 
@@ -62,6 +63,8 @@ class TestGetKernel:
         assert np.shape(kernel) == (512, 512)
         assert psf_object.strehl_ratio == approx(0.5, rel=0.01)
 
+    @pytest.mark.webtest
+    @pytest.mark.usefixtures("no_file_error")
     def test_returns_kernel_for_filtername_wavelength(self, mock_path):
         psf = AnisocadoConstPSF(
             filename=str(mock_path / "test_AnisoCADO_rms_map.fits"),
@@ -75,6 +78,7 @@ class TestGetKernel:
         assert isinstance(kernel, np.ndarray)
 
 
+@pytest.mark.slow
 class TestApplyTo:
     def test_is_applied_to_point_sources(self, mock_path):
         n = 10

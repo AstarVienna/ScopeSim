@@ -1,26 +1,32 @@
+# -*- coding: utf-8 -*-
+"""Contains the DataContainer class."""
+
 from warnings import warn
+from pathlib import Path
+from collections.abc import Mapping
 
 from astropy.table import Table
 from astropy.io import ascii as ioascii
 from astropy.io import fits
 
+from ..commands import UserCommands
 from .. import utils
 
 
 class DataContainer:
     """
-    A class to hold data files needed by all Effects objects.
+    A class to hold data (file(s)) needed by some Effects objects.
 
     Parameters
     ----------
-    filename : str
+    filename : str, optional
         Path to file containing data.
         Accepted formats: ASCII table, FITS table, FITS image
 
-    table : astropy.Table
+    table : astropy.Table, optional
         An astropy Table containing data
 
-    array_dict : dict
+    array_dict : dict, optional
         A dictionary out of which an astropy.Table object can be constructed.
 
     kwargs :
@@ -29,7 +35,7 @@ class DataContainer:
 
     Notes
     -----
-    If a table is to be generated from an ``array_dict`` parameter, column
+    If a table is to be generated from an `array_dict` parameter, column
     units can be passed as keyword arguments (kwargs) using the following
     format::
 
@@ -51,43 +57,70 @@ class DataContainer:
 
     table : astropy.Table
         If the file has a table format (ASCII of FITS) it is read in
-        immediately and stored in ``.table``
+        immediately and stored in `.table`
 
     _file : HDUList pointer
         If the file is a FITS image or cube, the data is only read in when
-        needed in order to save on memory usage. ``._file`` contains a pointer
+        needed in order to save on memory usage. `._file` contains a pointer
         to the data open FITS file.
 
     """
 
-    def __init__(self, filename=None, table=None, array_dict=None, cmds=None,
-                 **kwargs):
+    meta = None
 
+    def __init__(
+        self,
+        filename: Path | str | None = None,
+        table: Table | None = None,
+        array_dict: Mapping | None = None,
+        cmds: UserCommands | None = None,
+        **kwargs
+    ):
         self.cmds = cmds
+        # Setting a default for cmds cannot be done here, because from_currsys
+        # checks whether cmds is None. TODO: make this possible.
+        # if self.cmds is None:
+        #     from scopesim import UserCommands
+        #     self.cmds = UserCommands()
+
         if filename is None and "file_name" in kwargs:
             warn("The 'file_name' kwarg is deprecated and will raise an error "
                  "in the future, please use 'filename' instead!",
                  DeprecationWarning, stacklevel=2)
             filename = kwargs["file_name"]
 
+        # A !-string filename is immediately resolved, but the file is not yet
+        # searched for. This makes sense, as the filename should end up in the
+        # FITS headers, and should therefor be independent of any particular
+        # system.
+        #
+        # It would perhaps be even better to not resolve a !-string filename
+        # here, but that currently does not make sense because the file is
+        # directly read in. That is, the file would not be read again if
+        # someone changes the value that the !-string points to. So changing
+        # the value a !-string points to would lead to an inconsistent state.
+        # Immediately resolving the !-string prevents such an inconsistency.
         if isinstance(filename, str) and filename.startswith("!"):
             filename = utils.from_currsys(filename, self.cmds)
 
-        filename = utils.find_file(filename)
-        self.meta = {
+        # A derived clas might have set .meta before calling super().__init__()
+        if self.meta is None:
+            self.meta = {}
+        self.meta.update({
             "filename": filename,
             "description": "",
             "history": [],
             "name": "<empty>",
-        }
+        })
         self.meta.update(kwargs)
 
-        self.headers = []
+        self._headers = []  # TODO: What is this attribute used for??
         self.table = None
         self._file = None
 
-        if filename is not None:
-            if self.is_fits:
+        # Need to check whether the file exists before trying to load it.
+        if utils.find_file(self.meta["filename"]) is not None:
+            if self._is_fits:
                 self._load_fits()
             else:
                 self._load_ascii()
@@ -98,52 +131,88 @@ class DataContainer:
         if array_dict is not None:
             self._from_arrays(array_dict)
 
-    def _from_table(self, table):
-        self.table = table
-        self.headers += [table.meta]
-        self.meta.update(table.meta)
-        self.meta["history"] += ["Table added directly"]
+        # Get units as they are given in the kworgs.
+        unit_dict_kwargs = {
+            k: v
+            for k, v in kwargs.items()
+            if k.endswith("_unit")
+        }
 
-    def _from_arrays(self, array_dict):
+        # Collect the units from the table. self.meta should contain both
+        # kwargs and headers from the file at this point.
+        unit_dict = {
+            k: v
+            for k, v in self.meta.items()
+            if k.endswith("_unit")
+        }
+
+        # Verify that any units given in the kwargs
+        # are the same as those given in the table.
+        for k, v_kwargs in unit_dict_kwargs.items():
+            v_table = unit_dict.get(k, v_kwargs)
+            if v_kwargs != v_table:
+                raise ValueError(f"Column {k} has unit {v_table} in table, but"
+                                 f" {v_kwargs} in kwargs")
+
+        # Add units from kwargs if they are given.
+        if self.table:
+            for column in self.table.columns.values():
+                key_unit = f"{column.name}_unit"
+                if key_unit not in unit_dict:
+                    continue
+                unit_kwargs = unit_dict[key_unit]
+                if column.unit is None:
+                    column.unit = unit_kwargs
+
+    # TODO: could this be a classmethod constructor??
+    def _from_table(self, table: Table) -> None:
+        self.table = table
+        self._headers.append(table.meta)
+        self.meta.update(table.meta)
+        self.meta["history"].append("Table added directly")
+
+    # TODO: could this be a classmethod constructor??
+    def _from_arrays(self, array_dict: Mapping) -> None:
         data = []
         colnames = []
         for key, val in array_dict.items():
-            data += [val]
-            colnames += [key]
+            data.append(val)
+            colnames.append(key)
+
         self.table = Table(names=colnames, data=data)
-        self.headers += [None]
-        self.meta["history"] += ["Table generated from arrays"]
+        self._headers.append(None)
+        self.meta["history"].append("Table generated from arrays")
         self.table.meta.update(self.meta)
 
     def _load_ascii(self):
-        self.table = ioascii.read(self.meta["filename"],
+        self.table = ioascii.read(utils.find_file(self.meta["filename"]),
                                   format="basic", guess=False)
         hdr_dict = utils.convert_table_comments_to_dict(self.table)
         if isinstance(hdr_dict, dict):
-            self.headers += [hdr_dict]
+            self._headers.append(hdr_dict)
         else:
-            self.headers += [None]
+            self._headers.append(None)
 
         self.meta.update(self.table.meta)
         self.meta.update(hdr_dict)
-        # self.table.meta.update(hdr_dict)
         self.table.meta.update(self.meta)
-        if self.table.meta.get("cmds"):
-            self.table.meta.pop("cmds")
+        self.table.meta.pop("cmds", None)
 
-        self.meta["history"] += ["ASCII table read from "
-                                 f"{self.meta['filename']}"]
+        self.meta["history"].append(
+            f"ASCII table read from {self.meta['filename']}"
+        )
 
     def _load_fits(self):
-        self._file = fits.open(self.meta["filename"])
+        self._file = fits.open(utils.find_file(self.meta["filename"]))
         for ext in self._file:
-            self.headers += [ext.header]
+            self._headers.append(ext.header)
 
         self.meta.update(dict(self._file[0].header))
-        self.meta["history"] += ["Opened handle to FITS file "
-                                 f"{self.meta['filename']}"]
+        self.meta["history"].append(
+            f"Opened handle to FITS file {self.meta['filename']}"
+        )
 
-    def get_data(self, ext=0, layer=None):
+    def get_data(self, ext: int = 0, layer: int | None = None):
         """
         Return either a table or a ImageHDU object.
 
@@ -161,48 +230,48 @@ class DataContainer:
 
         Returns
         -------
-        data_set : astropy.Table, fits.ImageHDU
+        data : astropy.Table, fits.ImageHDU
 
         """
-        data_set = None
-        if self.is_fits:
-            if isinstance(self._file[ext], fits.BinTableHDU):
-                data_set = Table.read(self._file[ext], format="fits")
-            else:
-                if self._file[ext].data is not None:
-                    data_dims = len(self._file[ext].data.shape)
-                    if data_dims == 3 and layer is not None:
-                        data_set = self._file[ext].data[layer]
-                    else:
-                        data_set = self._file[ext].data
-        else:
-            data_set = self.table
+        # This is duplicated in the .data property. Urgh.
+        if not self._is_fits:
+            return self.table
 
-        return data_set
+        if isinstance(self._file[ext], fits.BinTableHDU):
+            return Table.read(self._file[ext], format="fits")
+
+        if self._file[ext].data is not None and layer is not None:
+            if len(self._file[ext].data.shape) != 3:
+                raise TypeError("'layer' needs cube!")
+            return self._file[ext].data[layer]
+
+        # If data is None or no layer given just return data
+        return self._file[ext].data
 
     @property
-    def is_fits(self):
-        flag = False
+    def _is_fits(self) -> bool:
         if isinstance(self._file, fits.HDUList):
-            flag = True
-        elif isinstance(self.meta["filename"], str):
-            flag = utils.is_fits(self.meta["filename"])
+            return True
 
-        return flag
+        if isinstance(self.meta["filename"], str):
+            return utils.is_fits(utils.find_file(self.meta["filename"]))
+
+        return False
 
     @property
     def data(self):
-        data_set = None
-        if self.is_fits:
-            for ii in range(len(self._file)):
-                data_set = self.get_data(ii)
-                if data_set is not None:
-                    break
-        else:
-            data_set = self.table
+        if not self._is_fits:
+            return self.table
 
-        return data_set
+        for ii, _ in enumerate(self._file):
+            if (data_set := self.get_data(ii)) is not None:
+                return data_set
+
+        return None
 
     def validate(self, etype):
+        # TODO: This method seems to be unused. Consider removing it.
+        warn("DataContainer.validate appears to be unused. Let's see if this "
+             "warning pops up anywhere...", RuntimeWarning, stacklevel=2)
         etype_colname = utils.real_colname("ETYPE", self.meta.colnames)
         return self.meta[etype_colname] == etype

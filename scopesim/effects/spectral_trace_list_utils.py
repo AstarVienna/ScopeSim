@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Utility classes and functions for ``SpectralTraceList``.
 
@@ -184,9 +185,9 @@ class SpectralTrace:
 
         # WCSD from the FieldOfView - this is the full detector plane
         pixsize = fov_header["CDELT1D"] * u.Unit(fov_header["CUNIT1D"])
-        pixsize = pixsize.to(u.mm).value
+        pixsize = pixsize.to_value(u.mm)
         pixscale = fov_header["CDELT1"] * u.Unit(fov_header["CUNIT1"])
-        pixscale = pixscale.to(u.arcsec).value
+        pixscale = pixscale.to_value(u.arcsec)
 
         fpa_wcsd = WCS(det_header, key="D")
         naxis1d, naxis2d = det_header["NAXIS1"], det_header["NAXIS2"]
@@ -199,7 +200,7 @@ class SpectralTrace:
         # Check if spectral trace footprint is outside FoV
         if xmax < 0 or xmin > naxis1d or ymax < 0 or ymin > naxis2d:
             logger.info(
-                "Spectral trace %d: footprint is outside FoV", fov.trace_id)
+                "Spectral trace %s: footprint is outside FoV", fov.trace_id)
             return None
 
         # Only work on parts within the FoV
@@ -230,7 +231,7 @@ class SpectralTrace:
             xilam = XiLamImage(fov, self.dlam_per_pix)
             self._xilamimg = xilam   # ..todo: remove or make available with a debug flag?
         except ValueError:
-            logger.warning(" ---> %d gave ValueError", self.trace_id)
+            logger.warning(" ---> %s gave ValueError", self.trace_id)
 
         npix_xi, npix_lam = xilam.npix_xi, xilam.npix_lam
         xilam_wcs = xilam.wcs

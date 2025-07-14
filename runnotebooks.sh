@@ -84,7 +84,10 @@ fi
 
 echo "## Notebooks tested" >> $STEP_SUMMARY
 # https://github.com/koalaman/shellcheck/wiki/SC2044
-find ./docs -iname "*.ipynb" -print0 | while IFS= read -r -d '' fnnotebook
+# Sort is necessary because some notebooks are intended to be ran in order.
+# E.g. 3_custom_effects.ipynb uses MICADO, which is downloaded by 1_scopesim_intro.ipynb
+# Also, sorting makes the test deterministic.
+find ./docs -iname "*.ipynb" -print0 | sort -z | while IFS= read -r -d '' fnnotebook
 do
   echo "Testing ${fnnotebook} ..."
   fnpy="${fnnotebook%.ipynb}.py"

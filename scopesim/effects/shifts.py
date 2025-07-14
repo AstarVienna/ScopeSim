@@ -1,4 +1,9 @@
+# -*- coding: utf-8 -*-
+"""TBA."""
+
 import warnings
+from typing import ClassVar
+
 import numpy as np
 from astropy import units as u
 from astropy.table import Table
@@ -6,18 +11,16 @@ from astropy.table import Table
 from .effects import Effect
 from ..utils import airmass2zendist, from_currsys, check_keys, quantify, \
     figure_factory
-from ..base_classes import FieldOfViewBase
+from ..optics.fov import FieldOfView
 
 
 class Shift3D(Effect):
+    z_order: ClassVar[tuple[int, ...]] = (30, 230)
+    report_plot_include: ClassVar[bool] = True
+    report_table_include: ClassVar[bool] = False
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        params = {
-            "z_order": [30, 230],
-            "report_plot_include": True,
-            "report_table_include": False,
-        }
-        self.meta.update(params)
         self.meta.update(kwargs)
 
     def apply_to(self, obj, **kwargs):
@@ -102,10 +105,21 @@ class AtmosphericDispersion(Shift3D):
 
     """
 
+    required_keys = {
+        "airmass",
+        "temperature",
+        "humidity",
+        "pressure",
+        "latitude",
+        "altitude",
+        "pupil_angle",
+        "pixel_scale",
+    }
+    z_order: ClassVar[tuple[int, ...]] = (231,)
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         params = {
-            "z_order": [231],
             "wave_min": "!SIM.spectral.wave_min",
             "wave_mid": "!SIM.spectral.wave_mid",
             "wave_max": "!SIM.spectral.wave_max",
@@ -115,9 +129,7 @@ class AtmosphericDispersion(Shift3D):
         self.meta.update(params)
         self.meta.update(kwargs)
 
-        required_keys = ["airmass", "temperature", "humidity", "pressure",
-                         "latitude", "altitude", "pupil_angle", "pixel_scale"]
-        check_keys(self.meta, required_keys, action="error")
+        check_keys(self.meta, self.required_keys, action="error")
 
     def get_table(self, **kwargs):
         """
@@ -172,19 +184,28 @@ class AtmosphericDispersionCorrection(Shift3D):
     kwargs
     """
 
+    required_keys = {
+        "airmass",
+        "temperature",
+        "humidity",
+        "pressure",
+        "latitude",
+        "altitude",
+        "pupil_angle",
+        "pixel_scale",
+        "wave_mid",
+    }
+    z_order: ClassVar[tuple[int, ...]] = (632,)
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.meta["z_order"] = [632]
         if "quick_adc" in self.meta and self.meta["quick_adc"] is True:
-            self.meta["z_order"] += [232]
+            self.z_order = (*self.z_order, 232)
         if "efficiency" not in self.meta:
             self.meta["efficiency"] = 1
-        self.apply_to_classes = FieldOfViewBase
+        self.apply_to_classes = FieldOfView
 
-        required_keys = ["airmass", "temperature", "humidity", "pressure",
-                         "latitude", "altitude", "pupil_angle", "pixel_scale",
-                         "wave_mid"]
-        check_keys(self.meta, required_keys, action="error")
+        check_keys(self.meta, self.required_keys, action="error")
 
         if self.table is None:
             self.table = self.get_table()

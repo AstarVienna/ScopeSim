@@ -1,16 +1,26 @@
-"""TBA."""
+# -*- coding: utf-8 -*-
+"""
+Module contains the actual "Detector" effects.
+
+As opposed to the Detector class and the DetectorManager (ex DetectorArray),
+which are kept in the scopesim.detector subpackage. The effects here are used
+to define the detector geometry and help creating the other classes mentioned
+above. The effects here (or one of them) are what ScopeSim "actually needs" to
+have defined in order to run.
+"""
 
 import warnings
+from typing import ClassVar
 
 import numpy as np
 from astropy import units as u
 from astropy.table import Table
 
-from ..base_classes import FOVSetupBase
+from ..optics.fov_volume_list import FovVolumeList
 from .effects import Effect
 from .apertures import ApertureMask
 from ..optics.image_plane_utils import header_from_list_of_xy, calc_footprint
-from ..utils import (from_currsys, close_loop, figure_factory,
+from ..utils import (from_currsys, close_loop, figure_factory, array_minmax,
                      quantity_from_table, unit_from_table, get_logger)
 
 logger = get_logger(__name__)
@@ -89,7 +99,7 @@ class DetectorList(Effect):
         - name : full_detector_array
           class : DetectorList
           kwargs :
-            filename : "detecotr_list.dat"
+            filename : "detector_list.dat"
             active_detectors : [1, 3]
             image_plane_id : 0
 
@@ -111,13 +121,14 @@ class DetectorList(Effect):
 
     """
 
+    z_order: ClassVar[tuple[int, ...]] = (90, 290, 390, 490)
+    report_plot_include: ClassVar[bool] = True
+    report_table_include: ClassVar[bool] = True
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        params = {"z_order": [90, 290, 390, 490],
-                  "pixel_scale": "!INST.pixel_scale",      # arcsec
-                  "active_detectors": "all",
-                  "report_plot_include": True,
-                  "report_table_include": True}
+        params = {"pixel_scale": "!INST.pixel_scale",      # arcsec
+                  "active_detectors": "all",}
         self.meta.update(params)
         self.meta.update(kwargs)
 
@@ -137,24 +148,25 @@ class DetectorList(Effect):
             self.meta["y_size_unit"] = self.meta["yhw_unit"]
 
     def apply_to(self, obj, **kwargs):
-        if isinstance(obj, FOVSetupBase):
+        if not isinstance(obj, FovVolumeList):
+            return obj
 
-            hdr = self.image_plane_header
-            xy_mm = calc_footprint(hdr, "D")
-            pixel_size = hdr["CDELT1D"]              # mm
-            pixel_scale = kwargs.get("pixel_scale", self.meta["pixel_scale"])   # ["]
-            pixel_scale = from_currsys(pixel_scale, self.cmds)
+        hdr = self.image_plane_header
+        xy_mm = calc_footprint(hdr, "D")
+        pixel_size = hdr["CDELT1D"]  # mm
+        pixel_scale = kwargs.get("pixel_scale", self.meta["pixel_scale"])  # ["]
+        pixel_scale = from_currsys(pixel_scale, self.cmds)
 
-            # x["] = x[mm] * ["] / [mm]
-            xy_sky = xy_mm * pixel_scale / pixel_size
+        # x["] = x[mm] * ["] / [mm]
+        xy_sky = xy_mm * pixel_scale / pixel_size
 
-            obj.shrink(axis=["x", "y"],
-                       values=(tuple(zip(xy_sky.min(axis=0),
-                                         xy_sky.max(axis=0)))))
+        obj.shrink(axis=["x", "y"],
+                   values=(tuple(zip(xy_sky.min(axis=0),
+                                     xy_sky.max(axis=0)))))
 
-            lims = np.array((xy_mm.min(axis=0), xy_mm.max(axis=0)))
-            keys = ["xd_min", "xd_max", "yd_min", "yd_max"]
-            obj.detector_limits = dict(zip(keys, lims.T.flatten()))
+        lims = array_minmax(xy_mm)
+        keys = ["xd_min", "xd_max", "yd_min", "yd_max"]
+        obj.detector_limits = dict(zip(keys, lims.T.flatten()))
 
         return obj
 
@@ -183,31 +195,37 @@ class DetectorList(Effect):
 
     @property
     def image_plane_header(self):
+        """Create and return the Image Plane Header."""
+        # FIXME: Heavy property.....
         tbl = self.active_table
         pixel_size = np.min(quantity_from_table("pixel_size", tbl, u.mm))
-        x_unit = unit_from_table("x_size", tbl, u.mm)
-        y_unit = unit_from_table("y_size", tbl, u.mm)
+        x_size_unit = unit_from_table("x_size", tbl, u.mm)
+        y_size_unit = unit_from_table("y_size", tbl, u.mm)
+        # This is mm everywhere in the IRDB, but could be something else...
+        x_cen_unit = unit_from_table("x_cen", tbl, u.mm)
+        y_cen_unit = unit_from_table("y_cen", tbl, u.mm)
 
-        xcen = tbl["x_cen"].data.astype(float)
-        ycen = tbl["y_cen"].data.astype(float)
-        dx = 0.5 * tbl["x_size"].data.astype(float)
-        dy = 0.5 * tbl["y_size"].data.astype(float)
+        xcen = tbl["x_cen"].data.astype(float) * x_cen_unit
+        ycen = tbl["y_cen"].data.astype(float) * y_cen_unit
+        dx = 0.5 * tbl["x_size"].data.astype(float) * x_size_unit
+        dy = 0.5 * tbl["y_size"].data.astype(float) * y_size_unit
 
-        scale_unit = 1        # either unitless to retain
-        if "pix" in x_unit.name:
-            scale_unit = u.mm / u.pix
-            dx *= pixel_size.value
-            dy *= pixel_size.value
+        pixel_scale = u.pixel_scale(pixel_size / u.pixel)
+        with u.set_enabled_equivalencies(pixel_scale):
+            xcen <<= u.mm
+            ycen <<= u.mm
+            dx <<= u.mm
+            dy <<= u.mm
 
-        x_det_min = np.min(xcen - dx) * x_unit * scale_unit
-        x_det_max = np.max(xcen + dx) * x_unit * scale_unit
-        y_det_min = np.min(ycen - dy) * y_unit * scale_unit
-        y_det_max = np.max(ycen + dy) * y_unit * scale_unit
+        x_det_min = np.min(xcen - dx)
+        x_det_max = np.max(xcen + dx)
+        y_det_min = np.min(ycen - dy)
+        y_det_max = np.max(ycen + dy)
 
-        x_det = [x_det_min.to(u.mm).value, x_det_max.to(u.mm).value]
-        y_det = [y_det_min.to(u.mm).value, y_det_max.to(u.mm).value]
+        x_det = [x_det_min.to_value(u.mm), x_det_max.to_value(u.mm)]
+        y_det = [y_det_min.to_value(u.mm), y_det_max.to_value(u.mm)]
 
-        pixel_size = pixel_size.to(u.mm).value
+        pixel_size = pixel_size.to_value(u.mm)
         hdr = header_from_list_of_xy(x_det, y_det, pixel_size, "D")
         hdr["IMGPLANE"] = self.image_plane_id
 
@@ -215,6 +233,8 @@ class DetectorList(Effect):
 
     @property
     def active_table(self):
+        """Create and return the active table."""
+        # FIXME: Heavy property.....
         if self.meta["active_detectors"] == "all":
             tbl = self.table
         elif isinstance(self.meta["active_detectors"], (list, tuple)):
@@ -229,6 +249,7 @@ class DetectorList(Effect):
         return tbl
 
     def detector_headers(self, ids=None):
+        """Create detector headers from active detectors or given IDs."""
         if ids is not None and all(isinstance(ii, int) for ii in ids):
             self.meta["active_detectors"] = list(ids)
 
@@ -268,6 +289,7 @@ class DetectorList(Effect):
         return hdrs
 
     def plot(self, axes=None):
+        """Plot the detector layout."""
         if axes is None:
             _, axes = figure_factory()
 
@@ -330,10 +352,15 @@ class DetectorWindow(DetectorList):
                   "image_plane_id": 0}
         params.update(kwargs)
 
-        tbl = Table(data=[[0], [x], [y], [width], [height],
-                          [angle], [gain], [pixel_size]],
-                    names=["id", "x_cen", "y_cen", "x_size", "y_size",
-                           "angle", "gain", "pixel_size"])
-        tbl.meta.update(params)
+        array_dict = {
+            "id": [0],
+            "x_cen": [x],
+            "y_cen": [y],
+            "x_size": [width],
+            "y_size": [height],
+            "angle": [angle],
+            "gain": [gain],
+            "pixel_size": [pixel_size],
+        }
 
-        super().__init__(table=tbl, **params)
+        super().__init__(array_dict=array_dict, **params)

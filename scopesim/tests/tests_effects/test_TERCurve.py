@@ -111,6 +111,8 @@ class TestDownloadableFilterCurveInit:
         with pytest.raises(ValueError):
             tc.DownloadableFilterCurve()
 
+    @pytest.mark.webtest
+    @pytest.mark.usefixtures("no_file_error")
     @pytest.mark.parametrize("name_format, name",
                              [("Paranal/HAWKI.{}", "Ks"),
                               ("HST/WFC3_IR.{}", "F160W"),
@@ -123,6 +125,8 @@ class TestDownloadableFilterCurveInit:
         assert isinstance(filt, tc.FilterCurve)
 
 
+@pytest.mark.webtest
+@pytest.mark.usefixtures("no_file_error")
 class TestSpanishVOFilterCurveInit:
     @pytest.mark.parametrize("observatory, instrument, filt_name",
                              [("Paranal", "HAWKI", "Ks"),
@@ -178,6 +182,8 @@ class TestSpanishVOFilterWheelInit:
         with pytest.raises(ValueError):
             tc.SpanishVOFilterWheel()
 
+    @pytest.mark.webtest
+    @pytest.mark.usefixtures("no_file_error")
     @pytest.mark.parametrize("observatory, instrument, default_filter",
                              [("GTC", "OSIRIS", "sdss_r_filter"),
                               ("JWST", "MIRI", "F2300C")])
@@ -191,6 +197,8 @@ class TestSpanishVOFilterWheelInit:
         assert isinstance(filt_wheel, tc.FilterWheelBase)
         assert default_filter in filt_wheel.filters
 
+    @pytest.mark.webtest
+    @pytest.mark.usefixtures("no_file_error")
     def test_returns_filters_with_include_str(self):
         filt_wheel = tc.SpanishVOFilterWheel(observatory="GTC",
                                              instrument="OSIRIS",
@@ -200,8 +208,10 @@ class TestSpanishVOFilterWheelInit:
 
         # last filter is an open filter by default
         filt_names = list(filt_wheel.filters.keys())[:-1]
-        assert np.all(["_filter" in name for name in filt_names])
+        assert all("_filter" in name for name in filt_names)
 
+    @pytest.mark.webtest
+    @pytest.mark.usefixtures("no_file_error")
     def test_returns_filters_with_exclude_str(self):
         filt_wheel = tc.SpanishVOFilterWheel(observatory="GTC",
                                              instrument="OSIRIS",
@@ -209,7 +219,7 @@ class TestSpanishVOFilterWheelInit:
                                              name="test_svo_wheel",
                                              exclude_str="_filter")
 
-        assert np.all(["_filter" not in name for name in filt_wheel.filters])
+        assert all("_filter" not in name for name in filt_wheel.filters)
 
 
 class TestTopHatFilterList:

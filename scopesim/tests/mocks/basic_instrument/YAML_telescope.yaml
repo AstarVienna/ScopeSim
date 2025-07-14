@@ -5,6 +5,7 @@ name : basic_telescope
 description : The telescope properties and effects
 
 properties :
+  telescope : Basic Telescope
   temperature : 0   # [deg C]
 
 effects :
@@ -26,4 +27,3 @@ effects :
     outer_unit : m
     inner : 0
     inner_unit : m
-

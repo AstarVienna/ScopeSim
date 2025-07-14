@@ -77,6 +77,7 @@ def simplecado_opt(mock_path_yamls):
     return sim.OpticalTrain(cmd)
 
 
+@pytest.mark.usefixtures("patch_mock_path")
 class TestInit:
     def test_initialises_with_nothing(self):
         assert isinstance(OpticalTrain(), OpticalTrain)
@@ -111,13 +112,19 @@ class TestInit:
         assert opt["detector QE curve"].include is False
 
 
+@pytest.mark.slow
 @pytest.mark.usefixtures("patch_mock_path")
 class TestObserve:
     """
-    All tests here are for visual inspection.
+    Almost all tests here are for visual inspection.
     No asserts, this just to test that the puzzle gets put back together
     after it is chopped up by the FOVs.
     """
+    def test_observe_works_for_none(self, cmds):
+        opt = OpticalTrain(cmds)
+        opt.observe()
+        empty = sim.source.source_templates.empty_sky()
+        assert(opt._last_source.fields[0].field == empty.fields[0].field)
 
     def test_observe_works_for_table(self, cmds, tbl_src):
         opt = OpticalTrain(cmds)
@@ -294,7 +301,8 @@ class TestShutdown:
         # Add an effect with a psf
         with patch("scopesim.rc.__search_path__", [mock_path]):
             psf = sim.effects.FieldConstantPSF(filename="test_ConstPSF.fits",
-                                               name="testpsf")
+                                               name="testpsf",
+                                               cmds=simplecado_opt.cmds)
         simplecado_opt.optics_manager.add_effect(psf)
         # This is just to make sure that we have an open file
         assert not simplecado_opt['testpsf']._file._file.closed

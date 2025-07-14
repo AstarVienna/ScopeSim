@@ -6,14 +6,13 @@ from astropy.wcs import WCS
 
 from .image_plane_utils import add_table_to_imagehdu, add_imagehdu_to_imagehdu
 
-from ..base_classes import ImagePlaneBase
 from ..utils import from_currsys, has_needed_keywords, get_logger
 from .. import rc
 
 logger = get_logger(__name__)
 
 
-class ImagePlane(ImagePlaneBase):
+class ImagePlane:
     """
     A class to act as a canvas onto which to project `Source` images or tables.
 

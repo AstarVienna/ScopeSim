@@ -1,14 +1,23 @@
+# -*- coding: utf-8 -*-
 """Contains base class for effects."""
 
 from pathlib import Path
+from collections.abc import Mapping, MutableMapping
+from dataclasses import dataclass, field, InitVar, fields
+from typing import NewType, ClassVar
 
-from ..effects.data_container import DataContainer
-from .. import base_classes as bc
+from .data_container import DataContainer
 from ..utils import from_currsys, write_report
 from ..reports.rst_utils import table_to_rst
 
 
-class Effect(DataContainer):
+# FIXME: This docstring is out-of-date for several reasons:
+#   - Effects can act on objects other than Source (eg FOV, IMP, DET)
+#   - fov_grid is outdated
+
+
+# @dataclass(kw_only=True, eq=False)
+class Effect:
     """
     Base class for representing the effects (artifacts) in an optical system.
 
@@ -34,22 +43,21 @@ class Effect(DataContainer):
 
     """
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.meta["z_order"] = []
+    z_order: ClassVar[tuple[int, ...]] = tuple()
+    required_keys = set()
+
+    def __init__(self, filename=None, **kwargs):
+        self.data_container = DataContainer(filename=filename, **kwargs)
+        self.meta = kwargs.get("meta", {})
+        self.cmds = kwargs.get("cmds")
+
+        self.meta.update(self.data_container.meta)
         self.meta["include"] = True
         self.meta.update(kwargs)
 
     def apply_to(self, obj, **kwargs):
-        """TBA."""
-        if not isinstance(obj, (bc.FOVSetupBase, bc.SourceBase,
-                                bc.FieldOfViewBase, bc.ImagePlaneBase,
-                                bc.DetectorBase)):
-            raise ValueError("object must one of the following: FOVSetupBase, "
-                             "Source, FieldOfView, ImagePlane, Detector: "
-                             f"{type(obj)}")
-
-        return obj
+        """Apply the effect to the corresponding object."""
+        raise NotImplementedError("Subclasses should implement this.")
 
     def fov_grid(self, which="", **kwargs):
         """
@@ -86,29 +94,45 @@ class Effect(DataContainer):
             [um, arcsec, arcsec]
 
         """
-        self.update(**kwargs)
+        # self.update(**kwargs)
         return []
 
-    def update(self, **kwargs):
-        self.meta.update(kwargs)
-        # self.update_bang_keywords()
-
-    # def update_bang_keywords(self):
-    #     for key in self.meta:
-    #         if isinstance(self.meta[key], str) and self.meta[key][0] == "!":
-    #             bang_key = self.meta[key]
-    #             self.meta[key] = rc.__currsys__[bang_key]
+    # *******************************************************************
+    # ported from DataContainer, previous base class
+    # *******************************************************************
 
     @property
-    def include(self):
+    def table(self):
+        return self.data_container.table
+
+    @table.setter
+    def table(self, value):
+        self.data_container.table = value
+
+    @property
+    def data(self):
+        return self.data_container.data
+
+    @property
+    def _file(self):
+        return self.data_container._file
+
+    @_file.setter
+    def _file(self, value):
+        self.data_container._file = value
+
+    # *******************************************************************
+
+    @property
+    def include(self) -> bool:
         return from_currsys(self.meta["include"], self.cmds)
 
     @include.setter
-    def include(self, item):
-        self.meta["include"] = item
+    def include(self, value: bool):
+        self.meta["include"] = value
 
     @property
-    def display_name(self):
+    def display_name(self) -> str:
         name = self.meta.get("name", self.meta.get("filename", "<untitled>"))
         if not hasattr(self, "_current_str"):
             return name
@@ -116,7 +140,7 @@ class Effect(DataContainer):
         return f"{name} : [{current_str}]"
 
     @property
-    def meta_string(self):
+    def meta_string(self) -> str:
         padlen = 4 + len(max(self.meta, key=len))
         exclude = {"comments", "changes", "description", "history",
                    "report_table_caption", "report_plot_caption", "table"}
@@ -207,10 +231,10 @@ class Effect(DataContainer):
             "report_plot_filename": None,
             "report_plot_file_formats": ["png"],
             "report_plot_caption": "",
-            "report_plot_include": False,
-            "report_table_include": False,
+            "report_plot_include": getattr(self, "report_plot_include", False),
+            "report_table_include": getattr(self, "report_table_include", False),
             "report_table_caption": "",
-            "report_table_rounding": None,
+            "report_table_rounding": getattr(self, "report_table_rounding", None),
             "report_image_path": "!SIM.reports.image_path",
             "report_rst_path": "!SIM.reports.rst_path",
             "report_latex_path": "!SIM.reports.latex_path",
@@ -296,17 +320,17 @@ Meta-data
 
         return rst_str
 
-    def info(self):
+    def info(self) -> None:
         """Print basic information on the effect, notably the description."""
         if (desc := self.meta.get("description")) is not None:
             print(f"{self}\nDescription: {desc}")
         else:
             print(self)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"{self.__class__.__name__}(**{self.meta!r})"
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{self.__class__.__name__}: \"{self.display_name}\""
 
     def __getitem__(self, item):

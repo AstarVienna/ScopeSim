@@ -1,3 +1,6 @@
+# pylint: disable=missing-class-docstring
+# pylint: disable=missing-function-docstring
+
 import pytest
 from unittest.mock import patch
 
@@ -12,16 +15,16 @@ from scopesim.source.source_templates import star
 import scopesim as sim
 
 
-@pytest.fixture(scope="function")
-def simplecado_opt(mock_path_yamls):
+@pytest.fixture(name="simplecado_opt", scope="function")
+def fixture_simplecado_opt(mock_path_yamls):
     with patch("scopesim.rc.__currsys__"):
         simplecado_yaml = str(mock_path_yamls / "SimpleCADO.yaml")
         cmd = sim.UserCommands(yamls=[simplecado_yaml])
         yield sim.OpticalTrain(cmd)
 
 
-@pytest.fixture(scope="function")
-def comb_hdul():
+@pytest.fixture(name="comb_hdul", scope="function")
+def fixture_comb_hdul():
     pri = fits.PrimaryHDU(header=fits.Header({"EXTNAME": "PriHDU"}))
     im = fits.ImageHDU(header=fits.Header({"EXTNAME": "ImHDU"}))
     tbl = fits.BinTableHDU(header=fits.Header({"EXTNAME": "BinTblHDU"}))
@@ -31,8 +34,8 @@ def comb_hdul():
 
 
 # taken from the example yaml in docstring of ExtraFitsKeywords
-@pytest.fixture(scope="function")
-def yaml_string():
+@pytest.fixture(name="yaml_string", scope="function")
+def fixture_yaml_string():
     return """
 - ext_type: PrimaryHDU
   keywords:
@@ -118,7 +121,7 @@ class TestExtraFitsKeywordsApplyTo:
                             optical_train=simplecado_opt)
 
         assert hdul[0].header["HIERARCH SIM dark_current"] == 0.1
-        assert hdul[0].header["HIERARCH SIM telescope_area"] == 0.
+        assert hdul[0].header["HIERARCH SIM telescope_area"] == 1.
 
     def test_full_yaml_string(self, yaml_string, simplecado_opt, comb_hdul):
         eff = fh.ExtraFitsKeywords(yaml_string=yaml_string)
@@ -126,7 +129,7 @@ class TestExtraFitsKeywordsApplyTo:
         pri_hdr = hdul[0].header
 
         # resolved keywords
-        assert pri_hdr["HIERARCH ESO TEL area"] == 0             # !-str
+        assert pri_hdr["HIERARCH ESO TEL area"] == 1             # !-str
         assert pri_hdr["HIERARCH ESO TEL pixel_scale"] == 0.004  # !-str
         assert pri_hdr["HIERARCH ESO DAR VALUE"] == 0.1          # #-str
         assert pri_hdr["HIERARCH ESO TEL its_over"] == 9000      # normal
@@ -145,7 +148,7 @@ class TestGetRelevantExtensions:
         exts = fh.get_relevant_extensions(dic, comb_hdul)
         answer = [0]
 
-        assert np.all([ans in exts for ans in answer])
+        assert all(ans in exts for ans in answer)
         assert len(exts) == len(answer)
 
     def test_works_for_ext_number(self, comb_hdul):
@@ -153,7 +156,7 @@ class TestGetRelevantExtensions:
         exts = fh.get_relevant_extensions(dic, comb_hdul)
         answer = [1, 2]
 
-        assert np.all([ans in exts for ans in answer])
+        assert all(ans in exts for ans in answer)
         assert len(exts) == len(answer)
 
     @pytest.mark.parametrize("ext_type, answer",
@@ -163,7 +166,7 @@ class TestGetRelevantExtensions:
         dic = {"ext_type": ext_type}
         exts = fh.get_relevant_extensions(dic, comb_hdul)
 
-        assert np.all([ans in exts for ans in answer])
+        assert all(ans in exts for ans in answer)
         assert len(exts) == len(answer)
 
 
@@ -301,10 +304,11 @@ class TestAllFitsKeywordEffects:
                        }
                    }
                    }
-        extra_keys = fh.ExtraFitsKeywords(header_dict=hdr_dic)
-        opt_keys = fh.EffectsMetaKeywords()
-        src_keys = fh.SourceDescriptionFitsKeywords()
-        config_keys = fh.SimulationConfigFitsKeywords()
+        cmds = simplecado_opt.cmds
+        extra_keys = fh.ExtraFitsKeywords(header_dict=hdr_dic, cmds=cmds)
+        opt_keys = fh.EffectsMetaKeywords(cmds=cmds)
+        src_keys = fh.SourceDescriptionFitsKeywords(cmds=cmds)
+        config_keys = fh.SimulationConfigFitsKeywords(cmds=cmds)
 
         for eff in [src_keys, opt_keys, config_keys, extra_keys]:
             simplecado_opt.optics_manager.add_effect(eff)

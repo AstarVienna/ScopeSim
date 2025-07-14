@@ -4,13 +4,9 @@ on:
   push:
     branches:
       - main
-      - master
-      - dev_master
   pull_request:
     branches:
       - main
-      - master
-      - dev_master
 
   # Allows you to run this workflow manually from the Actions tab.
   workflow_dispatch:
@@ -21,4 +17,4 @@ on:
 
 jobs:
   markdown-link-check:
-    uses: AstarVienna/DevOps/.github/workflows/markdown_link_check.yml@master
+    uses: AstarVienna/DevOps/.github/workflows/markdown_link_check.yml@main

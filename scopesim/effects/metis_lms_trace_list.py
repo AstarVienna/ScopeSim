@@ -1,5 +1,7 @@
+# -*- coding: utf-8 -*-
 """SpectralTraceList and SpectralTrace for the METIS LM spectrograph."""
 
+import copy
 import warnings
 
 import numpy as np
@@ -18,8 +20,8 @@ from .spectral_trace_list_utils import Transform2D
 from .spectral_trace_list_utils import make_image_interpolations
 from .apertures import ApertureMask
 from .ter_curves import TERCurve
-from ..base_classes import FieldOfViewBase, FOVSetupBase
 from ..optics.fov import FieldOfView
+from ..optics.fov_volume_list import FovVolumeList
 
 
 logger = get_logger(__name__)
@@ -67,7 +69,7 @@ class MetisLMSSpectralTraceList(SpectralTraceList):
 
     def apply_to(self, obj, **kwargs):
         """See parent docstring."""
-        if isinstance(obj, FOVSetupBase):
+        if isinstance(obj, FovVolumeList):
             # Create a single volume that covers the aperture and
             # the maximum wavelength range of LMS
             volumes = [spectral_trace.fov_grid()
@@ -79,7 +81,7 @@ class MetisLMSSpectralTraceList(SpectralTraceList):
                                          edges=([[wave_min, wave_max]]))
             obj.volumes = extracted_vols
 
-        if isinstance(obj, FieldOfViewBase):
+        if isinstance(obj, FieldOfView):
             # Application to field of view
             if obj.hdu is not None and obj.hdu.header["NAXIS"] == 3:
                 obj.cube = obj.hdu
@@ -139,12 +141,12 @@ class MetisLMSSpectralTraceList(SpectralTraceList):
                                               data=slicecube)
                 # slicefov.cube.writeto(f"slicefov_{sptid}.fits", overwrite=True)
                 slicefov.hdu = spt.map_spectra_to_focal_plane(slicefov)
-
-                sxmin = slicefov.hdu.header["XMIN"]
-                sxmax = slicefov.hdu.header["XMAX"]
-                symin = slicefov.hdu.header["YMIN"]
-                symax = slicefov.hdu.header["YMAX"]
-                fovimage[symin:symax, sxmin:sxmax] += slicefov.hdu.data
+                if slicefov.hdu is not None:
+                    sxmin = slicefov.hdu.header["XMIN"]
+                    sxmax = slicefov.hdu.header["XMAX"]
+                    symin = slicefov.hdu.header["YMIN"]
+                    symax = slicefov.hdu.header["YMAX"]
+                    fovimage[symin:symax, sxmin:sxmax] += slicefov.hdu.data
 
             obj.hdu = fits.ImageHDU(data=fovimage, header=obj.detector_header)
 
@@ -307,7 +309,8 @@ class MetisLMSSpectralTrace(SpectralTrace):
         y_min = aperture["bottom"]
         y_max = aperture["top"]
 
-        layout = ioascii.read(find_file("!DET.layout.filename"))
+        filename_det_layout = from_currsys("!DET.layout.file_name", cmds=self.cmds)
+        layout = ioascii.read(find_file(filename_det_layout))
         det_lims = {}
         xhw = layout["pixel_size"] * layout["x_size"] / 2
         yhw = layout["pixel_size"] * layout["y_size"] / 2
@@ -561,8 +564,11 @@ class MetisLMSEfficiency(TERCurve):
     }
 
     def __init__(self, **kwargs):
-        self.meta = self._class_params
-        self.meta.update(kwargs)
+        # TODO: Refactor these _class_params?
+        self.meta = copy.copy(self._class_params)
+        assert "grat_spacing" in self.meta, "grat_spacing is missing from self.meta 1"
+        super().__init__(**(kwargs | self.meta))
+        assert "grat_spacing" in self.meta, "grat_spacing is missing from self.meta 2"
 
         filename = find_file(self.meta["filename"])
         wcal = fits.getdata(filename, extname="WCAL")

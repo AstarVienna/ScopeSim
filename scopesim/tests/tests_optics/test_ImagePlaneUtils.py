@@ -228,29 +228,29 @@ class TestOverlayImage:
 
 
 class TestRescaleImageHDU:
-    @pytest.mark.parametrize("scale_factor", [0.3, 0.5, 1, 2, 3])
-    def test_rescales_a_2D_imagehdu(self, scale_factor):
+    @pytest.mark.parametrize("pixel_scale", [0.3, 0.5, 1, 2, 3])
+    def test_rescales_a_2D_imagehdu(self, pixel_scale):
         hdu0 = imo._image_hdu_rect()
-        hdu1 = imp_utils.rescale_imagehdu(deepcopy(hdu0), scale_factor)#/3600)
+        hdu1 = imp_utils.rescale_imagehdu(deepcopy(hdu0), pixel_scale)#/3600)
 
         hdr0 = hdu0.header
         hdr1 = hdu1.header
 
-        assert hdr1["NAXIS1"] == np.ceil(hdr0["NAXIS1"] / scale_factor)
-        assert hdr1["NAXIS2"] == np.ceil(hdr0["NAXIS2"] / scale_factor)
+        assert hdr1["NAXIS1"] == np.ceil(hdr0["NAXIS1"] / pixel_scale)
+        assert hdr1["NAXIS2"] == np.ceil(hdr0["NAXIS2"] / pixel_scale)
 
-    @pytest.mark.parametrize("scale_factor", [0.3, 0.5, 1, 2, 3])
-    def test_rescales_a_3D_imagehdu(self, scale_factor):
+    @pytest.mark.parametrize("pixel_scale", [0.3, 0.5, 1, 2, 3])
+    def test_rescales_a_3D_imagehdu(self, pixel_scale):
         hdu0 = imo._image_hdu_rect()
         hdu0.data = hdu0.data[None, :, :] * np.ones(5)[:, None, None]
-        hdu1 = imp_utils.rescale_imagehdu(deepcopy(hdu0), scale_factor)#/3600)
+        hdu1 = imp_utils.rescale_imagehdu(deepcopy(hdu0), pixel_scale)#/3600)
 
         hdr0 = hdu0.header
         hdr1 = hdu1.header
 
         assert np.sum(hdu0.data) == approx(np.sum(hdu1.data))
-        assert hdr1["NAXIS1"] == np.ceil(hdr0["NAXIS1"] / scale_factor)
-        assert hdr1["NAXIS2"] == np.ceil(hdr0["NAXIS2"] / scale_factor)
+        assert hdr1["NAXIS1"] == np.ceil(hdr0["NAXIS1"] / pixel_scale)
+        assert hdr1["NAXIS2"] == np.ceil(hdr0["NAXIS2"] / pixel_scale)
         assert hdr1["NAXIS3"] == hdr0["NAXIS3"]
 
 
@@ -349,38 +349,24 @@ class TestSkyDetWCS:
         assert all(nax == (hdu.header["NAXIS1"], hdu.header["NAXIS2"]))
 
 
-# These come from kl/mos_branch. Are these tests useful?
-class TestExtractRegionFromHdu:
-    @pytest.mark.parametrize("x_cen, y_cen", [(0, 0), (-15, 0), (-15, 95)])
-    def test_returns_sub_section_inside_2d_imagehdu(self, x_cen, y_cen):
-        # [w,h] = [50, 200], [dx, dy] = 1"
-        x_edges = (np.array([-10, 10]) + x_cen)     # / 3600
-        y_edges = (np.array([-3, 3]) + y_cen)       # / 3600
-        hdu = imo._image_hdu_rect()
-        new_hdu = imp_utils.extract_region_from_imagehdu(hdu, x_edges, y_edges)
+class TestWCSFromMinimalPoints:
+    def test_all_zero_points(self):
+        pnts = np.array([[0, 0]])
+        wcs, naxis = imp_utils.create_wcs_from_points(pnts, 5)
+        np.testing.assert_array_equal(naxis, [1, 1])
+        np.testing.assert_array_equal(wcs.wcs.crpix, [1, 1])
+        np.testing.assert_array_equal(wcs.wcs.crval, [0, 0])
 
-        assert isinstance(new_hdu, fits.ImageHDU)
-        assert new_hdu.data.shape[1] == 21
-        assert new_hdu.data.shape[0] == 7
+    def test_all_within_one_pixel(self):
+        pnts = np.array([[-1, -1], [-1, 1], [1, -1], [1, 1]])
+        wcs, naxis = imp_utils.create_wcs_from_points(pnts, 5)
+        np.testing.assert_array_equal(naxis, [1, 1])
+        np.testing.assert_array_equal(wcs.wcs.crpix, [1, 1])
+        np.testing.assert_array_equal(wcs.wcs.crval, [0, 0])
 
-    def test_errors_for_sub_section_outside_2d_imagehdu(self):
-        # [w,h] = [50, 200], [dx, dy] = 1"
-        x_edges = (np.array([-10, 10]) + 25)    # / 3600
-        y_edges = np.array([-3, 3])             # / 3600
-        hdu = imo._image_hdu_rect()
-
-        with pytest.raises(AssertionError):
-            imp_utils.extract_region_from_imagehdu(hdu, x_edges, y_edges)
-
-    def test_returns_sub_section_inside_3d_imagehdu(self):
-        # [w,h] = [50, 200], [dx, dy] = 1"
-        x_edges = np.array([-10, 10])       # / 3600
-        y_edges = np.array([-3, 3])         # / 3600
-        hdu = imo._image_hdu_rect()
-        hdu.data = hdu.data[None, :, :] * np.arange(3)[:, None, None]
-        new_hdu = imp_utils.extract_region_from_imagehdu(hdu, x_edges, y_edges)
-
-        assert isinstance(new_hdu, fits.ImageHDU)
-        assert new_hdu.data.shape[2] == 21
-        assert new_hdu.data.shape[1] == 7
-        assert new_hdu.data.shape[0] == 3
+    def test_all_within_one_pixel_along_one_axis(self):
+        pnts = np.array([[-3, 0], [-2, 0], [0, 0], [2, 0]])
+        wcs, naxis = imp_utils.create_wcs_from_points(pnts, 1)
+        np.testing.assert_array_equal(naxis, [5, 1])
+        np.testing.assert_array_equal(wcs.wcs.crpix, [3, 1])
+        np.testing.assert_array_equal(wcs.wcs.crval, [-0.5, 0])
