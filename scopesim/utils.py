@@ -795,8 +795,8 @@ def _cube_spec_plotter(
     axes.set_ylabel(_get_bunit_label(cube_hdu.header))
 
 
-def _get_bunit_label(header: fits.Header) -> str:
-    if bunit := header.get("BUNIT") is not None:
+def _get_bunit_label(header: fits.Header) -> u.Unit | str:
+    if (bunit := header.get("BUNIT")) is not None:
         try:
             flux_unit = u.Unit(bunit)
         except ValueError:
@@ -811,9 +811,13 @@ def image_plotter(
 ) -> tuple[mpl.figure.Figure, tuple[mpl.axes.Axes, mpl.axes.Axes]]:
     """Plot HDU image and add colorbar."""
     fig, ax = figure_factory()
-    cdelt = WCS(image_hdu).wcs.cdelt
+    try:
+        cdelt = WCS(image_hdu).wcs.cdelt
+    except KeyError:
+        # Retry with WCSD if no sky WCS is found.
+        cdelt = WCS(image_hdu, key="D").wcs.cdelt
     aspect = cdelt[1] / cdelt[0]
-    img_map = image_plotter(ax, image_hdu.data, aspect=aspect)
+    img_map = _image_plotter(ax, image_hdu.data, aspect=aspect)
     _colorbar_plotter(
         fig, img_map,
         label=_get_bunit_label(image_hdu.header),
