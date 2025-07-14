@@ -7,7 +7,6 @@ properties:
     computing:
         chunk_size: 4096
         max_segment_size: 16777216
-        bg_cell_width: 17          # arcsec
 
 ---
 

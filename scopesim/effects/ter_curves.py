@@ -90,7 +90,6 @@ class TERCurve(Effect):
             "wave_max": "!SIM.spectral.wave_max",
             "wave_unit": "!SIM.spectral.wave_unit",
             "wave_bin": "!SIM.spectral.spectral_bin_width",
-            "bg_cell_width": "!SIM.computing.bg_cell_width",
         }
         self.meta.update(params)
         self.meta.update(kwargs)

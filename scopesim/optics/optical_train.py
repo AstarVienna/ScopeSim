@@ -271,9 +271,6 @@ class OpticalTrain:
             fovs = self.fov_manager.fovs
             nobar = len(fovs) <= 1
             for fov in tqdm(fovs, desc=" FOVs", position=0, disable=nobar):
-                # print("FOV", fov_i+1, "of", n_fovs, flush=True)
-                # .. todo: possible bug with bg flux not using plate_scale
-                #          see fov_utils.combine_imagehdu_fields
                 fov.extract_from(source)
 
                 hdu_type = "cube" if self.fov_manager.is_spectroscope else "image"
