@@ -91,6 +91,12 @@ def patch_mock_path_micado(mock_path_micado):
         yield
 
 
+@pytest.fixture(scope="package")
+def mock_path_basic_instrument():
+    """Path to MICADO mock files."""
+    return MOCK_DIR / "basic_instrument"
+
+
 @pytest.fixture(scope="function")
 def no_file_error():
     """Patch currsys to avoid missing file error."""
