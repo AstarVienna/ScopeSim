@@ -6,6 +6,7 @@ from typing import ClassVar
 import numpy as np
 from astropy import units as u
 from astropy.convolution import Gaussian2DKernel
+from scipy.interpolate import interp1d
 
 from ...optics import ImagePlane
 from ...optics.fov import FieldOfView
@@ -200,6 +201,106 @@ class GaussianDiffractionPSF(AnalyticalPSF):
         pixel_scale = from_currsys("!INST.pixel_scale", self.cmds)
         spec_dict = from_currsys("!SIM.spectral", self.cmds)
         return super().plot(PoorMansFOV(pixel_scale, spec_dict))
+
+
+class RadialProfilePSF(AnalyticalPSF):
+    """Creates a wavelength independent kernel image.
+
+    .. versionadded:: PLACEHOLDER_NEXT_RELEASE_VERSION
+
+    """
+
+    z_order: ClassVar[tuple[int, ...]] = (244, 744)
+    required_keys = {"r", "z", "unit"}
+
+    def __init__(self, **kwargs):
+        params = {
+            "unit": "pixel",
+            "pixel_scale": "!INST.pixel_scale",
+            "plate_scale": "!INST.plate_scale",
+        }
+        params.update(kwargs)
+        super().__init__(**params)
+
+        self.convolution_classes = ImagePlane
+
+        if self.meta["unit"] == "mm":
+            self.required_keys.update({"pixel_scale", "plate_scale"})
+        check_keys(self.meta, self.required_keys, action="error")
+
+        self.kernel = None
+
+    def get_kernel(self, obj):
+        if self.kernel is None:
+            dr = 1
+            if self.meta["unit"] == "mm":
+                dr = (from_currsys(self.meta["pixel_scale"], self.cmds) /
+                      from_currsys(self.meta["plate_scale"], self.cmds))
+
+            rpix = np.array(self.meta["r"]) / dr
+            z = np.array(self.meta["z"])
+            fn = interp1d(rpix, z, "linear", fill_value=0, bounds_error=False)
+            rmax = np.ceil(max(rpix))
+            xx, yy = np.mgrid[-rmax:rmax+1, -rmax:rmax+1]
+            rr = (xx**2 + yy**2)**0.5
+            kernel = fn(rr)
+            kernel = kernel.clip(min=0)
+            kernel /= np.sum(kernel)
+            self.kernel = kernel
+
+        return self.kernel.astype(float)
+
+
+class MosaicBundleTracePSF(RadialProfilePSF):
+    """
+    Hack to get the mosaic bundle traces onto the detector, assuming full ADC.
+
+    Basically it creates a 5x5 RadialProfilePSF (defined by r and z) and then
+    copies and pastes the kernel side-by-side for each fibre in the mosaic
+    bundle. Each fibre PSF kernel can be weighted by the filling factor of the
+    PSF in said fibre.
+
+    The main problem here is that it doesn't take into account any wavelength
+    dependent effects on the PSF. This could be an issue down the line.
+
+    .. versionadded:: PLACEHOLDER_NEXT_RELEASE_VERSION
+
+    """
+
+    def __init__(self, **kwargs):
+        params = {
+            "unit": "pixel",
+            "pixel_scale": "!INST.pixel_scale",
+            "plate_scale": "!INST.plate_scale",
+            "r": [0, 1, 2],      # distance from centre of trace in [unit]
+            "z": [0.6, 0.2, 0],  # relative flux of PSF for values in "r"
+            "trace_spacing": 2,  # [unit]
+            "trace_flux_weights": [0.7] + [0.05] * 6,  # Number of traces taken from the length of this list
+        }
+        params.update(kwargs)
+        super().__init__(**params)
+
+        self.kernel = None
+        self.single_kernel = None
+
+    def get_kernel(self, obj):
+        self.single_kernel = super().get_kernel(obj)
+        kernel_list = [self.single_kernel * weight
+                       for weight in self.meta["trace_flux_weights"]]
+
+        dr = 1
+        if self.meta["unit"] == "mm":
+            dr = (from_currsys(self.meta["pixel_scale"], self.cmds) /
+                  from_currsys(self.meta["plate_scale"], self.cmds))
+        pad_arr = np.zeros([self.single_kernel.shape[0],
+                            int(dr * self.meta["trace_spacing"])])
+        pad_list = [pad_arr] * len(kernel_list)
+
+        # this zips together the psf and pad lists
+        zipped_list = [j for i in zip(kernel_list, pad_list) for j in i][:-1]
+        self.kernel = np.concatenate(zipped_list, axis=1)
+
+        return self.kernel.astype(float)
 
 
 def wfe2gauss(wfe, wave, width=None):
