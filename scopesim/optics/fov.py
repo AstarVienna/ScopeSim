@@ -5,7 +5,6 @@ from warnings import warn
 from copy import deepcopy
 from itertools import chain
 from collections.abc import Iterable, Generator
-from typing import Literal
 
 import numpy as np
 from scipy.interpolate import interp1d
@@ -234,6 +233,11 @@ class FieldOfView:
         Returns
         -------
         self.hdu : fits.ImageHDU, synphot.SourceSpectrum
+
+        .. versionchanged:: PLACEHOLDER_NEXT_RELEASE_VERSION
+
+           Removed `hdu_type` and `use_photlam` arguments, this is now handled
+           by the subclasses.
 
         """
         if sub_pixel is not None:
@@ -600,7 +604,13 @@ class FieldOfView:
 
 
 class FieldOfView1D(FieldOfView):
-    """For inkoherent MOS instruments, output 1D spectrum."""
+    """For inkoherent MOS instruments, output 1D spectrum.
+
+    .. versionadded:: PLACEHOLDER_NEXT_RELEASE_VERSION
+
+       Split ``FieldOfView`` into nD-subclasses.
+
+    """
 
     def _make_cubefields(self):
         """
@@ -681,7 +691,11 @@ class FieldOfView1D(FieldOfView):
         return spectrum
 
     def plot_data(self):
-        """Plot spectrum data if already exists."""
+        """Plot spectrum data if already exists.
+
+        .. versionadded:: PLACEHOLDER_NEXT_RELEASE_VERSION
+
+        """
         if self.hdu is None:
             raise ValueError("FOV HDU is empty.")
         fig, ax = figure_factory()
@@ -692,7 +706,13 @@ class FieldOfView1D(FieldOfView):
 
 
 class FieldOfView2D(FieldOfView):
-    """For imaging, output 2D image."""
+    """For imaging, output 2D image.
+
+    .. versionadded:: PLACEHOLDER_NEXT_RELEASE_VERSION
+
+       Split ``FieldOfView`` into nD-subclasses.
+
+    """
 
     def _make_cubefields(self):
         """
@@ -851,14 +871,24 @@ class FieldOfView2D(FieldOfView):
         return canvas_image_hdu  # [ph s-1]
 
     def plot_data(self):
-        """Plot HDU data if already exists."""
+        """Plot HDU data if already exists.
+
+        .. versionadded:: PLACEHOLDER_NEXT_RELEASE_VERSION
+
+        """
         if self.hdu is None:
             raise ValueError("FOV HDU is empty.")
         return image_plotter(self.hdu)
 
 
 class FieldOfView3D(FieldOfView):
-    """For spectroscopy, output 3D datacube (wave, x, y)."""
+    """For spectroscopy, output 3D datacube (wave, x, y).
+
+    .. versionadded:: PLACEHOLDER_NEXT_RELEASE_VERSION
+
+       Split ``FieldOfView`` into nD-subclasses.
+
+    """
 
     def _make_cubefields(self, fov_waveset):
         """
@@ -1077,7 +1107,11 @@ class FieldOfView3D(FieldOfView):
         return canvas_cube_hdu  # [ph s-1 um-1 (arcsec-2)]
 
     def plot_data(self):
-        """Plot HDU data if already exists."""
+        """Plot HDU data if already exists.
+
+        .. versionadded:: PLACEHOLDER_NEXT_RELEASE_VERSION
+
+        """
         if self.hdu is None:
             raise ValueError("FOV HDU is empty.")
         return cube_plotter(self.hdu)
