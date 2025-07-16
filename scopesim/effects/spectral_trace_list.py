@@ -384,9 +384,9 @@ class SpectralTraceList(Effect):
 
         """
         if wave_min is None:
-            wave_min = from_currsys("!SIM.spectral.wave_min", self.cmds)
+            wave_min = from_currsys(self.meta["wave_min"], self.cmds)
         if wave_max is None:
-            wave_max = from_currsys("!SIM.spectral.wave_max", self.cmds)
+            wave_max = from_currsys(self.meta["wave_max"], self.cmds)
 
         if axes is None:
             fig, axes = figure_factory()
