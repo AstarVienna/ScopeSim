@@ -8,6 +8,7 @@ from .obs_strategies import *
 from .spectral_trace_list import *
 from .spectral_efficiency import *
 from .metis_lms_trace_list import *
+from .mosaic_trace_list import *
 from .surface_list import *
 from .ter_curves import *
 from . import ter_curves_utils
