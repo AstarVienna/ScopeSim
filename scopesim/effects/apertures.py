@@ -131,17 +131,21 @@ class ApertureMask(Effect):
         return obj
 
     @property
-    def hdu(self):
+    def hdu(self) -> fits.ImageHDU:
+        """Return ``ImageHDU`` with mask and header."""
         return fits.ImageHDU(data=self.mask, header=self.header)
 
     @property
-    def header(self):
-        if not isinstance(self._header, fits.Header) \
-                and "x" in self.table.colnames and "y" in self.table.colnames:
+    def header(self) -> fits.Header:
+        """Return header and create if not exists."""
+        if (not isinstance(self._header, fits.Header)
+                and "x" in self.table.colnames
+                and "y" in self.table.colnames):
             self._header = self.get_header()
         return self._header
 
-    def get_header(self):
+    def get_header(self) -> fits.Header:
+        """Create header from table."""
         self.meta = from_currsys(self.meta, self.cmds)
         x = quantity_from_table("x", self.table, u.arcsec).to_value(u.deg)
         y = quantity_from_table("y", self.table, u.arcsec).to_value(u.deg)
@@ -154,29 +158,33 @@ class ApertureMask(Effect):
         return header
 
     @property
-    def mask(self):
-        if not isinstance(self._header, fits.Header) \
-                and "x" in self.table.colnames and "y" in self.table.colnames:
+    def mask(self) -> np.ndarray | None:
+        """Return mask and create if header (?) doesn't exists yet."""
+        if (not isinstance(self._header, fits.Header)
+                and "x" in self.table.colnames
+                and "y" in self.table.colnames):
             self._mask = self.get_mask()
         return self._mask
 
-    def get_mask(self):
-        """
+    def get_mask(self) -> np.ndarray | None:
+        """Create mask from table.
+
         For placing over FOVs if the Aperture is rotated w.r.t. the field.
         """
         self.meta = from_currsys(self.meta, self.cmds)
 
-        if self.meta["no_mask"] is False:
-            x = quantity_from_table("x", self.table, u.arcsec).to_value(u.deg)
-            y = quantity_from_table("y", self.table, u.arcsec).to_value(u.deg)
-            pixel_scale_deg = self.meta["pixel_scale"] / 3600.
-            mask = mask_from_coords(x, y, pixel_scale_deg)
-        else:
-            mask = None
+        if self.meta["no_mask"]:
+            return None
+
+        x = quantity_from_table("x", self.table, u.arcsec).to_value(u.deg)
+        y = quantity_from_table("y", self.table, u.arcsec).to_value(u.deg)
+        pixel_scale_deg = self.meta["pixel_scale"] / 3600.
+        mask = mask_from_coords(x, y, pixel_scale_deg)
 
         return mask
 
     def plot(self, axes=None):
+        """Plot x and y data from table."""
         if axes is None:
             fig, ax = figure_factory()
         else:
