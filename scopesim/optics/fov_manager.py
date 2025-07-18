@@ -54,7 +54,7 @@ from ..effects import DetectorList
 from ..effects import effects_utils as eu
 from ..utils import from_currsys, get_logger
 
-from .fov import FieldOfView
+from .fov import FieldOfView, FieldOfView1D, FieldOfView2D, FieldOfView3D
 from .fov_volume_list import FovVolumeList
 
 
@@ -106,6 +106,7 @@ class FOVManager:
         self.effects = effects or []
         self._fovs_list = []
         self.is_spectroscope = eu.is_spectroscope(self.effects)
+        self.is_coherent = True  # incoherent MOS not yet implemented
 
         if from_currsys(self.meta["preload_fovs"], self.cmds):
             logger.debug("Generating initial fovs_list.")
@@ -133,7 +134,7 @@ class FOVManager:
 
         Yields
         ------
-        Iterator[FieldOfView]
+        new_fov : Iterator[FieldOfView]
             Generator-Iterator of FieldOfView objects.
 
         """
@@ -176,11 +177,23 @@ class FOVManager:
                 # TODO: Why is this .image_plane_header and not
                 #       .detector_headers()[0] or something?
 
-            yield FieldOfView(skyhdr,
-                              waverange,
-                              detector_header=dethdr,
-                              cmds=self.cmds,
-                              **vol["meta"])
+            if not self.is_spectroscope:
+                fovcls = FieldOfView2D
+            else:
+                if self.is_coherent:
+                    fovcls = FieldOfView3D
+                else:
+                    fovcls = FieldOfView1D
+
+            new_fov = fovcls(
+                skyhdr,
+                waverange,
+                detector_header=dethdr,
+                cmds=self.cmds,
+                **vol["meta"],
+            )
+
+            yield new_fov
 
     @property
     def fovs(self):

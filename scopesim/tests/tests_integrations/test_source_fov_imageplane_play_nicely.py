@@ -8,7 +8,7 @@ from pytest import approx
 
 from astropy import units as u
 
-from scopesim.optics.fov import FieldOfView
+from scopesim.optics.fov import FieldOfView2D
 from scopesim.optics.image_plane import ImagePlane
 
 from scopesim.tests.mocks.py_objects import source_objects as src
@@ -45,7 +45,7 @@ class TestInteractionBetweenSourceFOVImagePlane:
     def test_can_extract_the_source_in_a_fov(self, fov_hdr, comb_src,
                                              implane_hdr):
 
-        fov = FieldOfView(fov_hdr, waverange=[0.5, 2.5]*u.um, area=1*u.m**2)
+        fov = FieldOfView2D(fov_hdr, waverange=[0.5, 2.5]*u.um, area=1*u.m**2)
         imp = ImagePlane(implane_hdr)
 
         fov.extract_from(comb_src)

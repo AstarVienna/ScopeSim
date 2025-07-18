@@ -4,7 +4,7 @@ import numpy as np
 from astropy import units as u
 
 from scopesim.effects import Vibration
-from scopesim.optics.fov import FieldOfView
+from scopesim.optics.fov import FieldOfView2D
 from scopesim.optics.image_plane import ImagePlane
 from scopesim.tests.mocks.py_objects.header_objects import _fov_header, \
                                                            _implane_header
@@ -43,7 +43,7 @@ class TestInit:
 
 class TestApplyTo:
     def test_nothing_happens_if_apply_to_fov(self, fov_hdr):
-        fov = FieldOfView(header=fov_hdr, waverange=[0.5, 2.5], area=1*u.m**2)
+        fov = FieldOfView2D(header=fov_hdr, waverange=[0.5, 2.5], area=1*u.m**2)
         fov.view()
         fov.hdu.data = np.zeros((11, 11))
         fov.hdu.data[5, 5] = 1

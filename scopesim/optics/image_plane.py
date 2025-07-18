@@ -189,7 +189,11 @@ class ImagePlane:
         return wcs
 
     def plot(self):
-        """Plot data in image plane."""
+        """Plot data in image plane.
+
+        .. versionadded:: PLACEHOLDER_NEXT_RELEASE_VERSION
+
+        """
         if self.header["NAXIS"] == 3:
             return cube_plotter(self.hdu)
         return image_plotter(self.hdu)
