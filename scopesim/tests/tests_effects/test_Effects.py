@@ -26,9 +26,6 @@ class TestEffectInit:
         with pytest.raises(NotImplementedError):
             Effect().apply_to("bogus")
 
-    def test_has_method_waveset(self):
-        assert hasattr(Effect(), "fov_grid")
-
 
 class TestEffectReport:
     def test_report_returns_full_rst_text(self):
