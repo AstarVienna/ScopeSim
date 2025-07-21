@@ -46,7 +46,6 @@ class MosaicSpectralTrace(SpectralTrace):
         super().__init__(trace_tbl, **kwargs)
 
     def compute_interpolation_functions(self):
-        print(self.table)
         x_arr = self.table[self.meta["x_colname"]]
         y_arr = self.table[self.meta["y_colname"]]
         xi_arr = self.table[self.meta["s_colname"]]
