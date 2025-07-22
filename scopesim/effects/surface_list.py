@@ -9,10 +9,9 @@ from typing import ClassVar
 import numpy as np
 from astropy import units as u
 
-from .ter_curves import TERCurve, FilterWheelBase
-from ..optics import radiometry_utils as rad_utils
+from .ter_curves import TERCurve
 from ..optics.surface import PoorMansSurface, SpectralSurface
-from ..utils import quantify, from_currsys, figure_factory
+from ..utils import quantify, from_currsys, figure_factory, real_colname
 
 
 class SurfaceList(TERCurve):
@@ -105,11 +104,11 @@ class SurfaceList(TERCurve):
         if rows is None:
             rows = np.arange(start, end)
 
-        return rad_utils.combine_throughputs(self.table, self.surfaces, rows)
+        return self.combine_throughputs(rows)
 
     def get_emission(self, etendue, start=0, end=None, rows=None,
                      use_area=False):
-        # ..todo:: work out what this use_area flag means!
+        # TODO: deprecate use_area flag
 
         if self.table is None:
             return None
@@ -117,8 +116,80 @@ class SurfaceList(TERCurve):
         end = end + len(self.table) if end < 0 else end
         rows = np.arange(start, end) if rows is None else rows
 
-        emission = rad_utils.combine_emissions(self.table, self.surfaces, rows,
-                                               etendue, use_area)
+        emission = self.combine_emissions(rows)
+
+        return emission
+
+    def combine_throughputs(self, rows_indexes):
+        if len(self.table) == 0:
+            return None
+
+        r_name = real_colname("name", self.table.colnames)
+        r_action = real_colname("action", self.table.colnames)
+
+        throughput = None
+        for ii, row_num in enumerate(rows_indexes):
+
+            row = self.table[row_num]
+            surf = self.surfaces[row[r_name]]
+            action_attr = row[r_action]
+            if action_attr == "":
+                raise ValueError(f"No action in surf.meta: {surf.meta}")
+
+            if isinstance(surf, SpectralSurface):
+                surf_throughput = getattr(surf, action_attr)
+
+                if ii == 0:
+                    throughput = deepcopy(surf_throughput)
+                else:
+                    throughput = throughput * surf_throughput
+
+        return throughput
+
+    def combine_emissions(self, row_indexes):
+        """
+        Combine thermal emission from a series of surfaces.
+
+        The function traces thermal emission through an optical system, taking
+        into account the finite reflectivities/transmissivities and emissivities
+        of the surfaces. The function assumes that etendue is conserved through
+        the system, i.e. surfaces are neither over- nor undersized.
+
+        Parameters
+        ----------
+        tbl : astropy Table
+            Required columns are `name` and `action` (reflection or transmission)
+        surfaces: OrderedDict of SpectralSurface
+            Keys are the names from tbl, values are of type `SpectralSurface`
+        row_indexes : list of int
+            Rows of tbl (i.e. surfaces) to combine
+
+        Returns
+        -------
+        SourceSpectrum
+
+        """
+        if len(self.table) == 0:
+            return None
+
+        r_name = real_colname("name", self.table.colnames)
+        r_action = real_colname("action", self.table.colnames)
+
+        emission = None
+        for row_num in row_indexes:
+            row = self.table[row_num]
+            surf = self.surfaces[row[r_name]]
+            action_attr = row[r_action]
+
+            if isinstance(surf, SpectralSurface):
+                surf_throughput = getattr(surf, action_attr)
+                if emission is not None:
+                    emission = emission * surf_throughput
+
+                if emission is None:
+                    emission = deepcopy(surf.emission)
+                else:
+                    emission = emission + surf.emission
 
         return emission
 
