@@ -1,7 +1,6 @@
 """TBA."""
 
 import inspect
-from copy import deepcopy, copy
 from collections.abc import Iterable
 
 from astropy.table import Table
@@ -11,31 +10,6 @@ from ..utils import get_logger
 
 
 logger = get_logger(__name__)
-
-
-# TODO: is this ever used anywhere??
-def combine_surface_effects(surface_effects):
-    surflist_list = [eff for eff in surface_effects
-                     if isinstance(eff, efs.SurfaceList)]
-    surf_list = [eff for eff in surface_effects
-                 if isinstance(eff, (efs.TERCurve, efs.FilterWheelBase))
-                 and not isinstance(eff, efs.SurfaceList)]
-
-    if not surflist_list:
-        surflist_list = [empty_surface_list(name="combined_surface_list")]
-
-    new_surflist = copy(surflist_list[0])
-    new_surflist.data_container = copy(surflist_list[0].data_container)
-
-    for surflist in surflist_list[1:]:
-        new_surflist.add_surface_list(surflist)
-
-    # ..todo:: should read position from the list positions in surface_effects
-    for surf in surf_list:
-        position = surf.meta.get("position", -1)
-        new_surflist.add_surface(surf, surf.meta["name"], position=position)
-
-    return new_surflist
 
 
 def get_all_effects(effects, effect_class):
