@@ -1,13 +1,7 @@
-from collections import OrderedDict
 from copy import deepcopy
 
-from astropy import units as u
-from astropy.io import ascii as ioascii
-from astropy.table import Table, vstack
-
 from .surface import SpectralSurface
-from ..utils import (real_colname, change_table_entry,
-                     convert_table_comments_to_dict, get_logger)
+from ..utils import real_colname, get_logger
 
 
 logger = get_logger(__name__)
@@ -87,59 +81,3 @@ def combine_throughputs(tbl, surfaces, rows_indexes):
                 throughput = throughput * surf_throughput
 
     return throughput
-
-
-def combine_tables(new_tables, old_table=None, prepend=False):
-    if isinstance(old_table, str):
-        old_table = string_to_table(old_table)
-
-    if isinstance(new_tables, (str, Table)):
-        new_tables = [new_tables]
-
-    for new_table in new_tables:
-        if isinstance(new_table, str):
-            new_table = string_to_table(new_table)
-        if old_table is None:
-            old_table = new_table
-        else:
-            if prepend:
-                old_table = vstack([new_table, old_table])
-            else:
-                old_table = vstack([old_table, new_table])
-
-    return old_table
-
-
-def string_to_table(tbl):
-    tbl = ioascii.read(tbl, fast_reader=False)
-    meta_dict = convert_table_comments_to_dict(tbl)
-    tbl.meta.update(meta_dict)
-
-    return tbl
-
-
-def add_surface_to_table(tbl, surf, name, position, silent=True):
-    if position < 0:
-        position += len(tbl) + 1
-
-    # here is why we need a deepcopy of the first table
-    # no idea why the False works, but it does. Don't screw with working code!
-    new_tbl = tbl.copy(False)
-    new_tbl.insert_row(position)
-    for colname in new_tbl.colnames:
-        surf_col = real_colname(colname, surf.meta)
-        if surf_col is not None:
-            surf_val = surf.meta[surf_col]
-            if isinstance(surf_val, u.Quantity):
-                surf_val = surf_val.value
-            new_tbl = change_table_entry(new_tbl, colname, surf_val,
-                                         position=position)
-        else:
-            if not silent:
-                logger.warning(("%s was not found in the meta dictionary of %s. "
-                                "This could cause problems"), colname, name)
-
-    colname = real_colname("name", new_tbl.colnames)
-    new_tbl = change_table_entry(new_tbl, colname, name, position=position)
-
-    return new_tbl
