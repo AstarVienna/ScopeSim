@@ -133,26 +133,6 @@ class SurfaceList(TERCurve):
     def is_empty(self):
         return len(self.table) == 0
 
-    # .. todo:: remove: Relic of the old SurfaceList
-    def add_surface(self, surface, name=None, position=-1, add_to_table=True):
-        if name is None:
-            name = surface.meta.get("name", "<unknown surface>")
-        if isinstance(surface, (TERCurve, FilterWheelBase)):
-            ter_meta = surface.meta
-            surface = surface.surface
-            surface.meta.update(ter_meta)
-
-        self.surfaces.update({name: surface})
-        self.table = rad_utils.add_surface_to_table(self.table, surface,
-                                                    name, position)
-
-    # .. todo:: remove: Relic of the old SurfaceList
-    def add_surface_list(self, surface_list, prepend=False):
-        if isinstance(surface_list, SurfaceList):
-            self.surfaces.update(surface_list.surfaces)
-            # new_tbl = from_currsys(surface_list.table, self.cmds),
-            self.table = rad_utils.combine_tables(surface_list.table, self.table, prepend)
-
     def plot(self, which="x", wavelength=None, *, axes=None, **kwargs):
         """Plot TER curves.
 
