@@ -14,7 +14,6 @@ from synphot import SpectralElement, Empirical1D
 from .optical_element import OpticalElement
 from .. import effects as efs
 from ..effects.effects_utils import is_spectroscope
-from ..effects.effects_utils import combine_surface_effects
 from ..utils import write_report, from_currsys, get_logger
 from ..reports.rst_utils import table_to_rst
 from .. import rc
@@ -248,25 +247,6 @@ class OpticsManager:
         """Get effects with z_order = 200...299."""
         # Working out where to set wave_min, wave_max
         return self.get_z_order_effects(200)
-
-    # TODO: is this ever used anywhere??
-    @property
-    def surfaces_table(self):
-        """Get combined surface table from effects with z_order = 100...199."""
-        from copy import deepcopy
-        sle_list = self.get_z_order_effects(100)
-        sle_list_copy = []
-        for eff in sle_list:
-            if isinstance(eff, efs.SurfaceList):
-                eff_copy = deepcopy(eff)
-                eff_copy.table = from_currsys(eff.table, self.cmds)
-            else:
-                # Avoid infinite recursion in Wheel effects (filter, adc)
-                eff_copy = eff
-            sle_list_copy.append(eff_copy)
-
-        comb_table = combine_surface_effects(sle_list_copy)
-        return comb_table
 
     @property
     def all_effects(self) -> list[efs.Effect]:
