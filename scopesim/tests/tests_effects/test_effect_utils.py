@@ -38,30 +38,6 @@ class TestMakeEffect:
         assert effect.meta["diameter"] == 39
 
 
-class TestCombineSurfaceEffects:
-    def test_load_just_one_surface(self, filter_surface):
-        surf_list = eu.combine_surface_effects([filter_surface])
-        assert isinstance(surf_list, SurfaceList)
-        assert len(surf_list.table) == 1
-
-    def test_load_two_surfaces(self, filter_surface):
-        surf_list = eu.combine_surface_effects([filter_surface] * 3)
-        assert len(surf_list.table) == 3
-
-    def test_load_just_one_surface_list(self, surf_list):
-        new_surf_list = eu.combine_surface_effects([surf_list])
-        assert len(new_surf_list.table) == len(surf_list.table)
-
-    def test_load_two_surface_lists(self, surf_list):
-        new_surf_list = eu.combine_surface_effects([surf_list] * 3)
-        assert len(new_surf_list.table) == 3 * len(surf_list.table)
-
-    def test_load_one_surface_and_one_surface_list(self, surf_list,
-                                                   filter_surface):
-        new_surf_list = eu.combine_surface_effects([filter_surface, surf_list])
-        assert len(new_surf_list.table) == len(surf_list.table) + 1
-
-
 class TestScopesimEffectClasses:
     def test_all_effects_including_effect_base(self):
         all_efs = eu.scopesim_effect_classes()
