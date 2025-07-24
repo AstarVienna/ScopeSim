@@ -1,3 +1,10 @@
+# -*- coding: utf-8 -*-
+"""Currently unused but might still be useful.
+
+Maybe turn into actual fixtures?
+Maybe integrate better with the basic instrument?
+"""
+
 import numpy as np
 from astropy.io import fits
 from astropy.io.fits import table_to_hdu
