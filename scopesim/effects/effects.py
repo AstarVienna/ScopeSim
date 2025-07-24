@@ -59,44 +59,6 @@ class Effect:
         """Apply the effect to the corresponding object."""
         raise NotImplementedError("Subclasses should implement this.")
 
-    def fov_grid(self, which="", **kwargs):
-        """
-        Return the edges needed to generate FieldOfViews for an observation.
-
-        Parameters
-        ----------
-        which : str
-            ["waveset", "edges", "shifts"] where:
-            * waveset - wavelength bin extremes
-            * edges - on sky coordinate edges for each FOV box
-            * shifts - wavelength dependent FOV position offsets
-
-        kwargs
-        ------
-        wave_min, wave_max : float
-            [um] list of wavelength
-
-        wave_mid : float
-            [um] wavelength what will be centred on optical axis
-
-
-        Returns
-        -------
-        waveset : list
-            [um] N+1 wavelengths that set edges of N spectral bins
-
-        edges : list of lists
-            [arcsec] Contains a list of footprint lists
-
-        shifts : list of 3 lists
-            [wave, dx, dy] Contains lists corresponding to the (dx, dy) offset
-            from the optical axis (0, 0) induced for each wavelength in (wave)
-            [um, arcsec, arcsec]
-
-        """
-        # self.update(**kwargs)
-        return []
-
     # *******************************************************************
     # ported from DataContainer, previous base class
     # *******************************************************************

@@ -27,9 +27,6 @@ class TestADCWheel:
     def test_current_adc_is_ter_curve(self, adcwheel):
         assert isinstance(adcwheel.current_adc, TERCurve)
 
-    def test_current_adc_has_fov_grid_method(self, adcwheel):
-        assert hasattr(adcwheel.current_adc, "fov_grid")
-
     def test_change_to_known_adc(self, adcwheel):
         adcwheel.change_adc('const_10')
         assert adcwheel.current_adc.meta['name'] == 'const_10'
