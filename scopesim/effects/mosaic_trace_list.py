@@ -5,6 +5,7 @@ from tqdm.auto import tqdm
 import numpy as np
 from astropy.table import Table
 from astropy import units as u
+from astropy.io import fits
 from astropy.wcs import WCS
 from astropy.modeling import fitting
 from astropy.modeling.models import Polynomial1D
@@ -61,6 +62,10 @@ class MosaicSpectralTraceList(SpectralTraceList):
             # Make this linear to avoid jump at RA 0 deg
             fovwcs.wcs.ctype = ["LINEAR", "LINEAR", fovwcs.wcs.ctype[2]]
             fovwcs_spat = fovwcs.sub(2)
+            fovwcs_spec = fovwcs.spectral
+
+            det_header = obj.detector_header
+            naxis1d, naxis2d = det_header["NAXIS1"], det_header["NAXIS2"]
 
             ## This is the place where we need to look at the apertures
             ## - collapse each aperture to 1D spectrum by integrating spatially
@@ -68,40 +73,46 @@ class MosaicSpectralTraceList(SpectralTraceList):
             fovimage = np.zeros((obj.detector_header["NAXIS2"],
                                  obj.detector_header["NAXIS1"]),
                                 dtype=np.float32)
+            pixscale = self.meta['pixel_scale']
 
+            image = np.zeros((naxis2d, naxis1d), dtype=np.float32)
+            imgwcs = WCS(naxis=2)
+            imgwcs.wcs.crpix = [fovwcs_spec.wcs.crpix[0], 5]
+            imgwcs.wcs.crval = [fovwcs_spec.wcs.crval[0], 1]
+            imgwcs.wcs.cdelt = [fovwcs_spec.wcs.cdelt[0], 1/5]
+            imgwcs.wcs.ctype = [fovwcs_spec.wcs.ctype[0], "LINEAR"]
+            imgwcs.wcs.cunit = [fovwcs_spec.wcs.cunit[0], ""]
+
+            ifib = 1
             for sptid, spt in tqdm(self.spectral_traces.items(),
                                    desc="Fiber traces", position=2):
-                nx_slice = (self.aplist[sptid]["right"] - self.aplist[sptid]["left"])/pixscale
-                nx_slice = (self.aplist[sptid]["top"] - self.aplist[sptid]["bottom"])/pixscale
+                theap = self.aplist[self.aplist['id'] == sptid]
+                nx_slice = (theap["right"] - theap["left"]  ) / pixscale
+                ny_slice = (theap["top"]   - theap["bottom"]) / pixscale
 
-                ymin = spt.meta["fov"]["y_min"]
-                ymax = spt.meta["fov"]["y_max"]
+                print("SLICE:", theap["left"], theap["right"], theap["bottom"], theap["top"])
+                # apertures are defined in arcsec. fovwcs is in degrees
+                xmin, xmax, ymin, ymax = (theap["left"]/3600, theap["right"]/3600,
+                                          theap["bottom"]/3600, theap["top"]/3600)
 
-                slicewcs = fovwcs.deepcopy()
-                slicewcs.wcs.ctype = ["LINEAR", "LINEAR",
-                                      slicewcs.wcs.ctype[2]]
-                slicewcs.wcs.crpix[0] = (nx_slice + 1) / 2
-                slicewcs.wcs.crpix[1] = (ny_slice + 1) / 2
-                slicewcs.wcs.crval[0] = (xmin + xmax) / 2 / 3600
-                slicewcs.wcs.crval[1] = (ymin + ymax) / 2 / 3600
-                slicewcs.wcs.cdelt[0] = (ymax - ymin) / ny_slice / 3600
-                slicewcs.wcs.cdelt[1] = (ymax - ymin) / ny_slice / 3600
-                slicewcs_spat = slicewcs.sub(2)
+                imin = max(0, int(np.round(fovwcs_spat.all_world2pix(xmin, 0, 0)[0][0])))
+                imax = int(np.round(fovwcs_spat.all_world2pix(xmax, 0, 0)[0][0]))
+                jmin = max(0, int(np.round(fovwcs_spat.all_world2pix(0, ymin, 0)[1][0])))
+                jmax = int(np.round(fovwcs_spat.all_world2pix(0, ymax, 0)[1][0]))
+                print("SLICE:", imin, imax, jmin, jmax)
 
-                # World coordinates for the slice
-                xworld, yworld = slicewcs_spat.app_pix2world(xslice, yslice, 0)
-                # FOV pixel coordinates for the slice
-                xfov, yfov = fovwcs_spat.all_world2pix(xworld, yworld, 0)
+                # Sum over the spatial dimensions of the aperture
+                spec = fovcube[:, jmin:jmax, imin:imax].sum(axis=(1,2))
+                nlam = len(spec)
+                # Need to interpolate this to the output wavelength grid
+                jfib = int(imgwcs.all_world2pix(fovwcs_spec.wcs.crval[0], ifib, 1)[1])
+                print(sptid, ":   Row ", jfib, ",   Flux ", spec.sum())
+                image[jfib,:nlam] += spec
+                ifib += 1
 
-                for islice in range(n_z):
-                    # this should not be necessary
-                    ifov = RectBivariateSpline(np.arange(n_y),
-                                               np.arange(n_x),
-                                               fovcube[islice], kx=1, ky=1)
-                    fovcube[islice, yfov, xfov].sum()
-                # build slicefov = FieldOfView1D(...)
-                # fovimage[] += slicefov.hdu.data (better integer row = slicefov...)
-
+            image_hdr = imgwcs.to_header()
+            image_hdr.extend(det_header)
+            obj.hdu = fits.ImageHDU(data=image, header=image_hdr)
         return obj
 
 
@@ -133,13 +144,18 @@ class MosaicSpectralTrace(SpectralTrace):
     def compute_interpolation_functions(self):
         x_arr = self.table[self.meta["x_colname"]]
         y_arr = self.table[self.meta["y_colname"]]
-        xi_arr = self.table[self.meta["s_colname"]]
+        #xi_arr = self.table[self.meta["s_colname"]]
         lam_arr = self.table[self.meta["wave_colname"]]
 
         self.wave_min = quantify(np.min(lam_arr), u.um).value
         self.wave_max = quantify(np.max(lam_arr), u.um).value
 
+        print("WAVEMIN:", self.wave_min)
+        print("WAVEMAX:", self.wave_max)
 
+        self.lam2x = Transform1D.fit(lam_arr, x_arr, degree=2)
+        self.x2lam = Transform1D.fit(x_arr, lam_arr, degree=2)
+        self.lam2y = Transform1D.fit(lam_arr, y_arr, degree=2)
 
 class Transform1D():
     """
