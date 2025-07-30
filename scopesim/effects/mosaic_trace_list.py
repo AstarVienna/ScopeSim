@@ -9,7 +9,7 @@ from astropy.io import fits
 from astropy.wcs import WCS
 from astropy.modeling import fitting
 from astropy.modeling.models import Polynomial1D
-
+from synphot import SourceSpectrum, Empirical1D
 from .spectral_trace_list import SpectralTraceList
 from .spectral_trace_list_utils import SpectralTrace
 
@@ -45,7 +45,6 @@ class MosaicSpectralTraceList(SpectralTraceList):
             extracted_vols = obj.extract(axes=["wave"],
                                          edges=([[wave_min, wave_max]]))
             obj.volumes = extracted_vols
-            print("Mosaic Spectral Trace List:", obj)
 
         if isinstance(obj, FieldOfView):
             # Application to field of view
@@ -53,7 +52,6 @@ class MosaicSpectralTraceList(SpectralTraceList):
             if obj.hdu is not None and obj.hdu.header["NAXIS"] == 3:
                 obj.cube = obj.hdu
             elif obj.hdu is None and obj.cube is None:
-                print("MosSpTrL: Making cube")
                 obj.cube = obj.make_cube_hdu()
 
             fovcube = obj.cube.data
@@ -63,8 +61,11 @@ class MosaicSpectralTraceList(SpectralTraceList):
             fovwcs.wcs.ctype = ["LINEAR", "LINEAR", fovwcs.wcs.ctype[2]]
             fovwcs_spat = fovwcs.sub(2)
             fovwcs_spec = fovwcs.spectral
+            fovlam = fovwcs_spec.all_pix2world(np.arange(n_z), 0)[0]
+            fovlam <<= u.Unit(fovwcs_spec.wcs.cunit[0])
 
             det_header = obj.detector_header
+            detwcs = WCS(det_header, key='D')
             naxis1d, naxis2d = det_header["NAXIS1"], det_header["NAXIS2"]
 
             ## This is the place where we need to look at the apertures
@@ -90,7 +91,6 @@ class MosaicSpectralTraceList(SpectralTraceList):
                 nx_slice = (theap["right"] - theap["left"]  ) / pixscale
                 ny_slice = (theap["top"]   - theap["bottom"]) / pixscale
 
-                print("SLICE:", theap["left"], theap["right"], theap["bottom"], theap["top"])
                 # apertures are defined in arcsec. fovwcs is in degrees
                 xmin, xmax, ymin, ymax = (theap["left"]/3600, theap["right"]/3600,
                                           theap["bottom"]/3600, theap["top"]/3600)
@@ -99,15 +99,19 @@ class MosaicSpectralTraceList(SpectralTraceList):
                 imax = int(np.round(fovwcs_spat.all_world2pix(xmax, 0, 0)[0][0]))
                 jmin = max(0, int(np.round(fovwcs_spat.all_world2pix(0, ymin, 0)[1][0])))
                 jmax = int(np.round(fovwcs_spat.all_world2pix(0, ymax, 0)[1][0]))
-                print("SLICE:", imin, imax, jmin, jmax)
 
-                # Sum over the spatial dimensions of the aperture
-                spec = fovcube[:, jmin:jmax, imin:imax].sum(axis=(1,2))
-                nlam = len(spec)
+                # Average over the spatial dimensions of the aperture (still per arcsec2)
+                fovflux = fovcube[:, jmin:jmax, imin:imax].mean(axis=(1,2))
+                spec = SourceSpectrum(Empirical1D, points=fovlam.to(u.um),
+                                      lookup_table=fovflux)
+
                 # Need to interpolate this to the output wavelength grid
+                detlam = spt.x2lam(detwcs.all_pix2world(np.arange(naxis1d), 0, 0)[0])
+                detlam <<= u.um
                 jfib = int(imgwcs.all_world2pix(fovwcs_spec.wcs.crval[0], ifib, 1)[1])
-                print(sptid, ":   Row ", jfib, ",   Flux ", spec.sum())
-                image[jfib,:nlam] += spec
+                logger.debug("Flux from %s: %.4g", spt.trace_id, spec(detlam).value.sum())
+                ### TODO: WHAT ABOUT THEM UNITS?
+                image[jfib,] += spec(detlam).value
                 ifib += 1
 
             image_hdr = imgwcs.to_header()
@@ -149,9 +153,6 @@ class MosaicSpectralTrace(SpectralTrace):
 
         self.wave_min = quantify(np.min(lam_arr), u.um).value
         self.wave_max = quantify(np.max(lam_arr), u.um).value
-
-        print("WAVEMIN:", self.wave_min)
-        print("WAVEMAX:", self.wave_max)
 
         self.lam2x = Transform1D.fit(lam_arr, x_arr, degree=2)
         self.x2lam = Transform1D.fit(x_arr, lam_arr, degree=2)
