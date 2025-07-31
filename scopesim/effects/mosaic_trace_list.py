@@ -26,6 +26,7 @@ class MosaicSpectralTraceList(SpectralTraceList):
         super().__init__(**kwargs)
 
         self.aplist = self._file["Aperture List"].data
+        # TODO: check units or normalise to arcsec
         self.view = np.array([(self.aplist["right"].max() -
                                self.aplist["left"].min()),
                               (self.aplist["top"].max() -
@@ -88,6 +89,9 @@ class MosaicSpectralTraceList(SpectralTraceList):
             for sptid, spt in tqdm(self.spectral_traces.items(),
                                    desc="Fiber traces", position=2):
                 theap = self.aplist[self.aplist['id'] == sptid]
+                # solid angle in arcsec**2
+                solid_angle  = ((theap["right"] - theap["left"]) *
+                                (theap["top"] - theap["bottom"]))
                 nx_slice = (theap["right"] - theap["left"]  ) / pixscale
                 ny_slice = (theap["top"]   - theap["bottom"]) / pixscale
 
@@ -101,7 +105,7 @@ class MosaicSpectralTraceList(SpectralTraceList):
                 jmax = int(np.round(fovwcs_spat.all_world2pix(0, ymax, 0)[1][0]))
 
                 # Average over the spatial dimensions of the aperture (still per arcsec2)
-                fovflux = fovcube[:, jmin:jmax, imin:imax].mean(axis=(1,2))
+                fovflux = fovcube[:, jmin:jmax, imin:imax].mean(axis=(1,2)) * solid_angle
                 spec = SourceSpectrum(Empirical1D, points=fovlam.to(u.um),
                                       lookup_table=fovflux)
 
@@ -111,10 +115,12 @@ class MosaicSpectralTraceList(SpectralTraceList):
                 jfib = int(imgwcs.all_world2pix(fovwcs_spec.wcs.crval[0], ifib, 1)[1])
                 logger.debug("Flux from %s: %.4g", spt.trace_id, spec(detlam).value.sum())
                 ### TODO: WHAT ABOUT THEM UNITS?
-                image[jfib,] += spec(detlam).value
+                detdisp = np.diff(detlam, prepend=detlam[0])
+                image[jfib,] += (spec(detlam) * detdisp).value
                 ifib += 1
 
             image_hdr = imgwcs.to_header()
+            image_hdr["BUNIT"] = "ph s-1"
             image_hdr.extend(det_header)
             obj.hdu = fits.ImageHDU(data=image, header=image_hdr)
         return obj
