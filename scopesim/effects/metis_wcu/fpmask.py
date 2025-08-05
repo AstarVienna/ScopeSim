@@ -118,7 +118,7 @@ class FPMask:
             holearea = (d/2)**2 * np.pi
             xint, yint, fracs = sub_pixel_fractions(x, y)
             holehdu.data[yint, xint] = np.array(fracs) * holearea
-            opaquehdu.data[yint, xint] = 0
+            opaquehdu.data[yint, xint] *= 1 - np.array(fracs) * holearea/self.pixarea.value
 
         self.xpix = xpix
         self.ypix = ypix
