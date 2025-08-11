@@ -72,10 +72,6 @@ class MosaicSpectralTraceList(SpectralTraceList):
             ## This is the place where we need to look at the apertures
             ## - collapse each aperture to 1D spectrum by integrating spatially
             ## - map each 1D spectrum to detector/fov
-            fovimage = np.zeros((obj.detector_header["NAXIS2"],
-                                 obj.detector_header["NAXIS1"]),
-                                dtype=np.float32)
-            pixscale = self.meta['pixel_scale']
 
             image = np.zeros((naxis2d, naxis1d), dtype=np.float32)
             imgwcs = WCS(naxis=2)
@@ -89,11 +85,10 @@ class MosaicSpectralTraceList(SpectralTraceList):
             for sptid, spt in tqdm(self.spectral_traces.items(),
                                    desc="Fiber traces", position=2):
                 theap = self.aplist[self.aplist['id'] == sptid]
+
                 # solid angle in arcsec**2
                 solid_angle  = ((theap["right"] - theap["left"]) *
                                 (theap["top"] - theap["bottom"]))
-                nx_slice = (theap["right"] - theap["left"]  ) / pixscale
-                ny_slice = (theap["top"]   - theap["bottom"]) / pixscale
 
                 # apertures are defined in arcsec. fovwcs is in degrees
                 xmin, xmax, ymin, ymax = (theap["left"]/3600, theap["right"]/3600,
