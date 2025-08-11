@@ -67,7 +67,7 @@ jobs:
         run: echo "## Publishing $(poetry version) to PyPI" >> $GITHUB_STEP_SUMMARY
 
       - name: Retrieve distribution files
-        uses: actions/download-artifact@v4.3.0
+        uses: actions/download-artifact@v5.0.0
         with:
           name: distribution
           path: dist/
