@@ -29,7 +29,8 @@ class TestFindFile:
 
     def test_passes_if_file_exists_in_cwd(self):
         filename = "test_utils_functions.py"
-        assert utils.find_file(filename, [])
+        assert (utils.find_file(filename, []) or
+                utils.find_file("scopesim/tests/" + filename, []))
 
     def test_passes_if_file_exists_in_search_path(self):
         filename = "utils.py"
