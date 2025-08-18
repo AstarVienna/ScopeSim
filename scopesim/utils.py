@@ -232,6 +232,11 @@ def log_bug_report(level=logging.DEBUG) -> None:
 def find_file(filename, path=None, silent=False):
     """Find a file in search path.
 
+    First check whether `filename` exists as (relative) path. In
+    particular, this finds files that are present in the user's current
+    working directory. If `filename` is not found in this way it is looked
+    for in the search path, `rc.__search_path__`.
+
     Parameters
     ----------
     filename : str
@@ -258,13 +263,13 @@ def find_file(filename, path=None, silent=False):
     if path is None:
         path = rc.__search_path__
 
-    if filename.is_absolute():
-        # absolute path: only path to try
-        trynames = [filename]
-    else:
-        # try to find the file in a search path
-        trynames = [Path(trydir, filename)
-                    for trydir in path if trydir is not None]
+    if filename.exists():
+        # file exists; assume user wants to override search path
+        return str(filename)
+
+    # try to find the file in a search path
+    trynames = [Path(trydir, filename)
+                for trydir in path if trydir is not None]
 
     for fname in trynames:
         if fname.exists():  # success
