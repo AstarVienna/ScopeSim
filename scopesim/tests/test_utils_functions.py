@@ -1,5 +1,5 @@
 """Unit tests for module scopesim.utils"""
-
+import os
 from unittest.mock import patch
 from pathlib import Path
 
@@ -29,8 +29,11 @@ class TestFindFile:
             utils.find_file(1.2, rc.__search_path__)
 
     def test_passes_if_file_exists_in_cwd(self):
-        filename = "lkjlj"
-        Path.touch(filename)
+        #filename = "lkjlj"
+        #Path.touch(filename)
+        for filename in os.listdir():
+            if os.path.isfile(filename):
+                break
         assert utils.find_file(filename, [])
 
     def test_passes_if_file_exists_in_search_path(self):
