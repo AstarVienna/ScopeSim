@@ -29,12 +29,10 @@ class TestFindFile:
             utils.find_file(1.2, rc.__search_path__)
 
     def test_passes_if_file_exists_in_cwd(self):
-        #filename = "lkjlj"
-        #Path.touch(filename)
-        for filename in os.listdir():
-            if os.path.isfile(filename):
-                break
+        filename = "th1s_is_an_impossibly_named-temporaaree_fi1111e.dingens"
+        Path(filename).touch()
         assert utils.find_file(filename, [])
+        Path(filename).unlink()
 
     def test_passes_if_file_exists_in_search_path(self):
         filename = "utils.py"
