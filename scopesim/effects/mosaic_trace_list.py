@@ -74,12 +74,6 @@ class MosaicSpectralTraceList(SpectralTraceList):
             ## - map each 1D spectrum to detector/fov
 
             image = np.zeros((naxis2d, naxis1d), dtype=np.float32)
-            imgwcs = WCS(naxis=2)
-            imgwcs.wcs.crpix = [fovwcs_spec.wcs.crpix[0], 5]
-            imgwcs.wcs.crval = [fovwcs_spec.wcs.crval[0], 1]
-            imgwcs.wcs.cdelt = [fovwcs_spec.wcs.cdelt[0], 1/5]
-            imgwcs.wcs.ctype = [fovwcs_spec.wcs.ctype[0], "LINEAR"]
-            imgwcs.wcs.cunit = [fovwcs_spec.wcs.cunit[0], ""]
 
             ifib = 1
             for sptid, spt in tqdm(self.spectral_traces.items(),
@@ -107,14 +101,15 @@ class MosaicSpectralTraceList(SpectralTraceList):
                 # Need to interpolate this to the output wavelength grid
                 detlam = spt.x2lam(detwcs.all_pix2world(np.arange(naxis1d), 0, 0)[0])
                 detlam <<= u.um
-                jfib = int(imgwcs.all_world2pix(fovwcs_spec.wcs.crval[0], ifib, 1)[1])
+                yvals = spt.lam2y(detlam.value)
+                jfib = detwcs.all_world2pix(0, yvals.mean(), 0)[1].astype(int)
                 logger.debug("Flux from %s: %.4g", spt.trace_id, spec(detlam).value.sum())
-                ### TODO: WHAT ABOUT THEM UNITS?
+
                 detdisp = np.diff(detlam, prepend=detlam[0])
                 image[jfib,] += (spec(detlam) * detdisp).value
                 ifib += 1
 
-            image_hdr = imgwcs.to_header()
+            image_hdr = detwcs.to_header()
             image_hdr["BUNIT"] = "ph s-1"
             image_hdr.extend(det_header)
             obj.hdu = fits.ImageHDU(data=image, header=image_hdr)
