@@ -1,6 +1,7 @@
 #  -*- coding: utf-8 -*-
 """SpectralTraceList and SpectralTrace for MOSAIC"""
 from tqdm.auto import tqdm
+from typing import ClassVar
 
 import numpy as np
 from astropy.table import Table
@@ -16,8 +17,12 @@ from .spectral_trace_list_utils import SpectralTrace
 from ..utils import get_logger, quantify, power_vector
 from ..optics.fov import FieldOfView
 from ..optics.fov_volume_list import FovVolumeList
+from ..detector import Detector
 
 logger = get_logger(__name__)
+
+
+
 
 class MosaicSpectralTraceList(SpectralTraceList):
     """SpectralTraceList for MOSAIC"""
@@ -56,7 +61,7 @@ class MosaicSpectralTraceList(SpectralTraceList):
                 obj.cube = obj.make_cube_hdu()
 
             fovcube = obj.cube.data
-            n_z, n_y, n_x = fovcube.shape
+            n_z = fovcube.shape[0]
             fovwcs = WCS(obj.cube.header)
             # Make this linear to avoid jump at RA 0 deg
             fovwcs.wcs.ctype = ["LINEAR", "LINEAR", fovwcs.wcs.ctype[2]]
@@ -75,7 +80,6 @@ class MosaicSpectralTraceList(SpectralTraceList):
 
             image = np.zeros((naxis2d, naxis1d), dtype=np.float32)
 
-            ifib = 1
             for sptid, spt in tqdm(self.spectral_traces.items(),
                                    desc="Fiber traces", position=2):
                 theap = self.aplist[self.aplist['id'] == sptid]
@@ -107,7 +111,6 @@ class MosaicSpectralTraceList(SpectralTraceList):
 
                 detdisp = np.diff(detlam, prepend=detlam[0])
                 image[jfib,] += (spec(detlam) * detdisp).value
-                ifib += 1
 
             image_hdr = detwcs.to_header()
             image_hdr["BUNIT"] = "ph s-1"
@@ -135,11 +138,10 @@ class MosaicSpectralTraceList(SpectralTraceList):
 
 
 class MosaicSpectralTrace(SpectralTrace):
+    """A single spectral trace for MOSAIC"""
 
     def __init__(self, trace_tbl, **kwargs):
         super().__init__(trace_tbl, **kwargs)
-
-
 
     def compute_interpolation_functions(self):
         x_arr = self.table[self.meta["x_colname"]]
@@ -214,3 +216,34 @@ class Transform1D():
 
         dcoeffs = (coeffs * np.arange(self.nx))[1:]
         return Transform1D(dcoeffs)
+
+
+class MosaicCollapseSpectralTraces(MosaicSpectralTraceList):
+    """Collapse SpectralTraces to 1D spectrum"""
+    required_keys = {"filename"}
+    z_order: ClassVar[tuple[int, ...]] = (899,)
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+    def apply_to(self, det, **kwargs):
+        """Apply to detector readout"""
+        if not isinstance(det, Detector):
+            print("Type of det:", type(det))
+            return det
+
+        image = det._hdu.data
+        detwcs = WCS(det._hdu.header, key='D')
+        spec = np.zeros(image.shape[1], dtype=np.float32)
+        for sptid, spt in tqdm(self.spectral_traces.items(),
+                               desc="Fiber traces", position=2):
+            y_mm = spt.table['y'][0]
+            jfib = int(detwcs.all_world2pix(0, y_mm, 0)[1])
+            spec += image[jfib,]
+
+        x_mm = detwcs.all_pix2world(np.arange(image.shape[1]), 1, 0)[0]
+        lam = spt.x2lam(x_mm)
+        det._hdu = fits.BinTableHDU.from_columns([
+            fits.Column(name='wavelength', format='D', array=lam, unit='um'),
+            fits.Column(name='spectrum', format='D', array=spec, unit='ADU')])
+        return det
