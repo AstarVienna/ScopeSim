@@ -259,12 +259,12 @@ def find_file(filename, path=None, silent=False):
     # Turn into pathlib.Path object for better manipulation afterwards
     filename = Path(filename)
 
-    if path is None:
-        path = rc.__search_path__
-
     if filename.exists():
         # file exists; assume user wants to override search path
         return str(filename)
+
+    if path is None:
+        path = rc.__search_path__
 
     # try to find the file in a search path
     trynames = [Path(trydir, filename)
