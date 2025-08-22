@@ -44,29 +44,21 @@ def _get_package_name(package: str) -> str:
     return package.split(".", maxsplit=1)[0]
 
 
-def _parse_raw_version(raw_version: str) -> str:
-    """Catch initial package version which has no date info.
-
-    Set initial package version to basically "minus infinity".
-    """
-    if raw_version in ("", "zip"):
-        return str(date(1, 1, 1))
-    return raw_version.strip(".zip")
-
-
-def _unparse_raw_version(raw_version: str, package_name: str) -> str:
-    """Turn version string back into full zip folder name.
-
-    If initial version was set with `_parse_raw_version`, revert that.
-    """
-    if raw_version == str(date(1, 1, 1)):
-        return f"{package_name}.zip"
-    return f"{package_name}.{raw_version}.zip"
-
-
 def _parse_package_version(package: str) -> tuple[str, str]:
+    """Split zip folder name into package name and version."""
     p_name, p_version = package.split(".", maxsplit=1)
-    return p_name, _parse_raw_version(p_version)
+    return p_name, p_version.strip(".zip")
+
+
+def _unparse_package_version(
+    package_name: str,
+    version: str,
+    suffix: str | None = None,
+) -> str:
+    """Turn version string back into full zip folder name."""
+    if suffix is None:
+        return f"{package_name}.{version}.zip"
+    return f"{package_name}.{version}.{suffix}.zip"
 
 
 def _is_stable(package_version: str) -> bool:
@@ -123,10 +115,9 @@ def get_all_latest(version_groups: _GrpVerType) -> Iterator[tuple[str, str]]:
 
 def group_package_versions(all_packages: Iterable[tuple[str, str]]) -> _GrpItrType:
     """Group different versions of packages by package name."""
-    version_groups = groupby_transform(sorted(all_packages),
-                                       keyfunc=first,
-                                       valuefunc=last,
-                                       reducefunc=list)
+    version_groups = groupby_transform(
+        sorted(all_packages), keyfunc=first, valuefunc=last, reducefunc=list,
+    )
     return version_groups
 
 
@@ -269,7 +260,7 @@ def list_packages(pkg_name: str | None = None) -> list[str]:
     if pkg_name not in all_grouped:
         raise ValueError(f"Package name {pkg_name} not found on server.")
 
-    p_versions = [_unparse_raw_version(version, pkg_name)
+    p_versions = [_unparse_package_version(pkg_name, version)
                   for version in all_grouped[pkg_name]]
     return p_versions
 
@@ -280,14 +271,14 @@ def _get_zipname(pkg_name: str, release: str, all_versions) -> str:
     elif release == "latest":
         zip_name = get_latest(all_versions[pkg_name])
     else:
-        release = _parse_raw_version(release)
+        release = release.strip(".zip")
         if release not in all_versions[pkg_name]:
             msg = (f"Requested version '{release}' of '{pkg_name}' package"
                    " could not be found on the server. Available versions "
                    f"are: {all_versions[pkg_name]}")
             raise ValueError(msg)
         zip_name = release
-    return _unparse_raw_version(zip_name, pkg_name)
+    return _unparse_package_version(pkg_name, zip_name)
 
 
 def _download_single_package(
