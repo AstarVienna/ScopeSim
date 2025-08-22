@@ -256,7 +256,6 @@ def find_file(filename, path=None, silent=False):
     if filename.startswith("!"):
         raise ValueError(f"!-string filename should be resolved upstream: "
                          f"{filename}")
-        # filename = from_currsys(filename)
     # Turn into pathlib.Path object for better manipulation afterwards
     filename = Path(filename)
 
@@ -273,12 +272,6 @@ def find_file(filename, path=None, silent=False):
 
     for fname in trynames:
         if fname.exists():  # success
-            # strip leading ./
-            # Path should take care of this automatically!
-            # while fname[:2] == './':
-            #     fname = fname[2:]
-            # Nevertheless, make sure this is actually the case...
-            assert not str(fname).startswith("./")
             # HACK: Turn Path object back into string, because not everything
             #       that depends on this function can handle Path objects (yet)
             return str(fname)
