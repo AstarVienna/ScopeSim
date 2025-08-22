@@ -44,7 +44,7 @@ class TestFindFile:
         with patch.dict("scopesim.rc.__currsys__", patched):
             filename = "utils987654.pz"
             if throw_error:
-                with pytest.raises(ValueError):
+                with pytest.raises(FileNotFoundError):
                     utils.find_file(filename, rc.__search_path__)
             else:
                 assert utils.find_file(filename, rc.__search_path__) is None

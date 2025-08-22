@@ -280,10 +280,8 @@ def find_file(filename, path=None, silent=False):
     msg = f"File cannot be found: {filename}"
     if not silent:
         logger.error(msg)
-
-    # TODO: Not sure what to do here
     if from_currsys("!SIM.file.error_on_missing_file"):
-        raise ValueError(msg)
+        raise FileNotFoundError(msg)
 
     return None
 
