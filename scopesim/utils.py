@@ -229,7 +229,11 @@ def log_bug_report(level=logging.DEBUG) -> None:
         bug_logger.log(level, str_stream.getvalue())
 
 
-def find_file(filename, path=None, silent=False):
+def find_file(
+    filename: str,
+    path: Iterable[Path | str] | None = None,
+    silent: bool = False,
+) -> str | None:
     """Find a file in search path.
 
     First check whether `filename` exists as (relative) path. In
@@ -242,20 +246,21 @@ def find_file(filename, path=None, silent=False):
     filename : str
         name of a file to look for
     path : list
-        list of directories to search (default: ['./'])
+        list of directories to search (default: `rc.__search_path__`)
     silent : bool
         if True, remain silent when file is not found
 
     Returns
     -------
-    Absolute path of the file
+    Absolute path of the file (str) or None
     """
     if filename is None or filename.lower() == "none":
         return None
 
     if filename.startswith("!"):
-        raise ValueError(f"!-string filename should be resolved upstream: "
+        raise ValueError("!-string filename should be resolved upstream: "
                          f"{filename}")
+
     # Turn into pathlib.Path object for better manipulation afterwards
     filename = Path(filename)
 
