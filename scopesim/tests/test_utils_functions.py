@@ -1,5 +1,5 @@
 """Unit tests for module scopesim.utils"""
-import os
+
 from unittest.mock import patch
 from pathlib import Path
 
@@ -17,7 +17,16 @@ from scopesim import rc
 from scopesim import load_example_optical_train, OpticalTrain
 from scopesim.utils import from_currsys
 
-# pylint: disable=missing-function-docstring
+# pylint: disable=missing-function-docstring, missing-class-docstring
+
+
+@pytest.fixture(name="temp_file")
+def fixture_temp_file():
+    filename = "th1s_is_an_impossibly_named-temporaaree_fi1111e.dingens"
+    Path(filename).touch()
+    yield filename
+    Path(filename).unlink()
+
 
 class TestFindFile:
     """Tests of function scopesim.utils.find_file"""
@@ -28,11 +37,8 @@ class TestFindFile:
         with pytest.raises((TypeError, AttributeError)):
             utils.find_file(1.2, rc.__search_path__)
 
-    def test_passes_if_file_exists_in_cwd(self):
-        filename = "th1s_is_an_impossibly_named-temporaaree_fi1111e.dingens"
-        Path(filename).touch()
-        assert utils.find_file(filename, [])
-        Path(filename).unlink()
+    def test_passes_if_file_exists_in_cwd(self, temp_file):
+        assert utils.find_file(temp_file, [])
 
     def test_passes_if_file_exists_in_search_path(self):
         filename = "utils.py"
