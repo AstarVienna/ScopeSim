@@ -229,51 +229,54 @@ def log_bug_report(level=logging.DEBUG) -> None:
         bug_logger.log(level, str_stream.getvalue())
 
 
-def find_file(filename, path=None, silent=False):
+def find_file(
+    filename: str,
+    path: Iterable[Path | str] | None = None,
+    silent: bool = False,
+) -> str | None:
     """Find a file in search path.
+
+    First check whether `filename` exists as (relative) path. In
+    particular, this finds files that are present in the user's current
+    working directory. If `filename` is not found in this way it is looked
+    for in the search path, `rc.__search_path__`.
 
     Parameters
     ----------
     filename : str
         name of a file to look for
     path : list
-        list of directories to search (default: ['./'])
+        list of directories to search (default: `rc.__search_path__`)
     silent : bool
         if True, remain silent when file is not found
 
     Returns
     -------
-    Absolute path of the file
+    Absolute path of the file (str) or None
     """
     if filename is None or filename.lower() == "none":
         return None
 
     if filename.startswith("!"):
-        raise ValueError(f"!-string filename should be resolved upstream: "
+        raise ValueError("!-string filename should be resolved upstream: "
                          f"{filename}")
-        # filename = from_currsys(filename)
+
     # Turn into pathlib.Path object for better manipulation afterwards
     filename = Path(filename)
+
+    if filename.exists():
+        # file exists; assume user wants to override search path
+        return str(filename)
 
     if path is None:
         path = rc.__search_path__
 
-    if filename.is_absolute():
-        # absolute path: only path to try
-        trynames = [filename]
-    else:
-        # try to find the file in a search path
-        trynames = [Path(trydir, filename)
-                    for trydir in path if trydir is not None]
+    # try to find the file in a search path
+    trynames = [Path(trydir, filename)
+                for trydir in path if trydir is not None]
 
     for fname in trynames:
         if fname.exists():  # success
-            # strip leading ./
-            # Path should take care of this automatically!
-            # while fname[:2] == './':
-            #     fname = fname[2:]
-            # Nevertheless, make sure this is actually the case...
-            assert not str(fname).startswith("./")
             # HACK: Turn Path object back into string, because not everything
             #       that depends on this function can handle Path objects (yet)
             return str(fname)
@@ -282,10 +285,8 @@ def find_file(filename, path=None, silent=False):
     msg = f"File cannot be found: {filename}"
     if not silent:
         logger.error(msg)
-
-    # TODO: Not sure what to do here
     if from_currsys("!SIM.file.error_on_missing_file"):
-        raise ValueError(msg)
+        raise FileNotFoundError(msg)
 
     return None
 
