@@ -120,3 +120,9 @@ filterwarnings = [
 
 [tool.coverage.report]
 omit = ["scopesim/tests/*", "docs/*"]
+
+[tool.pylint.main]
+ignored-classes = "astropy.units"
+fail-under = 8
+output-format = "colorized"
+ignore-paths = "scopesim.tests"
