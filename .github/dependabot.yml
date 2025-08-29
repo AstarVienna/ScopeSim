@@ -33,6 +33,14 @@ updates:
       semver-minor-days: 14
       semver-patch-days: 7
     groups:
+      internal-dependencies:
+        applies-to: version-updates
+        patterns:
+          - "astar*"
+          - "scopesim*"
+          - "spextra"
+          - "skycalc-ipy"
+          - "anisocado*"
       main-dependencies:
         # Applies to all dependencies defined in the main section of pyproject.toml
         applies-to: version-updates
@@ -47,28 +55,3 @@ updates:
         update-types:
           - "major"
           - "minor"
-
-  # Separate setup for internal dependencies
-  - package-ecosystem: "pip"
-    directory: "/"
-    schedule:
-      interval: "daily"
-    labels:
-      - "dependencies"
-    allow:
-      # Allow both direct and indirect updates for all packages.
-      - dependency-type: "production"
-    cooldown:
-      # Don't include too new versions
-      semver-major-days: 14
-      semver-minor-days: 7
-      semver-patch-days: 2
-    groups:
-      internal-dependencies:
-        applies-to: version-updates
-        patterns:
-          - "astar*"
-          - "scopesim*"
-          - "spextra"
-          - "skycalc-ipy"
-          - "anisocado*"
