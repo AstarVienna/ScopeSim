@@ -14,6 +14,27 @@ updates:
       - dependency-name: "*"
         update-types: ["version-update:semver-patch"]
 
+  # Hacky workaround to get internal updates sooner, see also https://github.com/dependabot/dependabot-core/issues/1778#issuecomment-2354999641
+  - package-ecosystem: "pip"
+    target-branch: main  # This is the hacky part...
+    directory: "/"
+    schedule:
+      interval: "daily"
+    labels:
+      - "dependencies"
+    allow:
+      # Only match internal dependencies
+      - dependency-name: "astar*"
+      - dependency-name: "scopesim*"
+      - dependency-name: "spextra"
+      - dependency-name: "skycalc-ipy"
+      - dependency-name: "anisocado*"
+    cooldown:
+      # Don't include too new versions
+      semver-major-days: 14
+      semver-minor-days: 7
+      semver-patch-days: 2
+
   - package-ecosystem: "pip"
     directory: "/"
     schedule:
@@ -22,7 +43,7 @@ updates:
       - "dependencies"
     allow:
       # Allow both direct and indirect updates for all packages.
-      - dependency-type: "all"
+      - dependency-type: "direct"
     ignore:
       # For all packages, ignore all patch updates, the "version-update" only targets non-security related updates
       - dependency-name: "*"
@@ -45,26 +66,4 @@ updates:
         applies-to: version-updates
         dependency-type: "development"
         update-types:
-          - "major"
           - "minor"
-
-  # Hacky workaround to get internal updates sooner, see also https://github.com/dependabot/dependabot-core/issues/1778#issuecomment-2354999641
-  - package-ecosystem: "pip"
-    target-branch: main  # This is the hacky part...
-    directory: "/"
-    schedule:
-      interval: "daily"
-    labels:
-      - "dependencies"
-    allow:
-      # Only match internal dependencies
-      - dependency-name: "astar*"
-      - dependency-name: "scopesim*"
-      - dependency-name: "spextra"
-      - dependency-name: "skycalc-ipy"
-      - dependency-name: "anisocado*"
-    cooldown:
-      # Don't include too new versions
-      semver-major-days: 14
-      semver-minor-days: 7
-      semver-patch-days: 2
