@@ -57,19 +57,14 @@ updates:
     labels:
       - "dependencies"
     allow:
-      # Allow both direct and indirect updates for all packages.
-      - dependency-type: "production"
+      # Only match internal dependencies
+      - dependency-name: "astar*"
+      - dependency-name: "scopesim*"
+      - dependency-name: "spextra"
+      - dependency-name: "skycalc-ipy"
+      - dependency-name: "anisocado*"
     cooldown:
       # Don't include too new versions
       semver-major-days: 14
       semver-minor-days: 7
       semver-patch-days: 2
-    groups:
-      internal-dependencies:
-        applies-to: version-updates
-        patterns:
-          - "astar*"
-          - "scopesim*"
-          - "spextra"
-          - "skycalc-ipy"
-          - "anisocado*"
