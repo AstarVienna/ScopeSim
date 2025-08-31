@@ -66,8 +66,8 @@ updates:
       - dependency-name: "packaging"
     cooldown:
       # Don't include too new versions
-      semver-major-days: 100
-      semver-minor-days: 50
+      semver-major-days: 90
+      semver-minor-days: 40
       semver-patch-days: 10
     groups:
       main-dependencies:
