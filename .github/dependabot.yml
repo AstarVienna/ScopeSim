@@ -20,6 +20,10 @@ updates:
     directory: "/"
     schedule:
       interval: "daily"
+      time: "11:00"
+      timezone: "Europe/Vienna"
+    open-pull-requests-limit: 10
+    versioning-strategy: increase  # always bump lower bound
     labels:
       - "dependencies"
     allow:
@@ -31,39 +35,51 @@ updates:
       - dependency-name: "anisocado*"
     cooldown:
       # Don't include too new versions
-      semver-major-days: 14
-      semver-minor-days: 7
+      default-days: 7
       semver-patch-days: 2
 
   - package-ecosystem: "pip"
     directory: "/"
     schedule:
       interval: "monthly"
+    open-pull-requests-limit: 10
+    versioning-strategy: increase  # always bump lower bound
     labels:
       - "dependencies"
     allow:
       # Allow both direct and indirect updates for all packages.
       - dependency-type: "direct"
     ignore:
-      # For all packages, ignore all patch updates, the "version-update" only targets non-security related updates
-      - dependency-name: "*"
+      # Specific to this project
+      # Don't need every minor update of those
+      - dependency-name: "astropy"
+        update-types: ["version-update:semver-minor"]
+      - dependency-name: "more-itertools"
+        update-types: ["version-update:semver-minor", "version-update:semver-patch"]
+      # Usually don't need patches here
+      - dependency-name: "matplotlib"
         update-types: ["version-update:semver-patch"]
+      # Those are less important generally
+      - dependency-name: "docutils"
+      - dependency-name: "beautifulsoup4"
+      - dependency-name: "lxml"
+      - dependency-name: "packaging"
     cooldown:
       # Don't include too new versions
-      semver-major-days: 50
-      semver-minor-days: 14
-      semver-patch-days: 7
+      semver-major-days: 100
+      semver-minor-days: 50
+      semver-patch-days: 10
     groups:
       main-dependencies:
         # Applies to all dependencies defined in the main section of pyproject.toml
         applies-to: version-updates
         dependency-type: "production"
         update-types:
-          - "major"
-          - "minor"
+          - "patch"
       dev-dependencies:
-        # Applies to all dependencies defined in the main section of pyproject.toml
+        # Applies to all dependencies defined in the dev section of pyproject.toml
         applies-to: version-updates
         dependency-type: "development"
         update-types:
           - "minor"
+          - "patch"
