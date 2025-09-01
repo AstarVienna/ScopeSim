@@ -73,8 +73,14 @@ from synphot import SourceSpectrum
 
 
 from ..optics import image_plane_utils as imp_utils
-from ..utils import (quantify, quantity_from_table, close_loop, get_logger,
-                     convert_table_comments_to_dict)
+from ..utils import (
+    quantify,
+    quantity_from_table,
+    close_loop,
+    get_logger,
+    convert_table_comments_to_dict,
+    unit_includes_per_physical_type,
+)
 
 
 logger = get_logger(__name__)
@@ -289,6 +295,21 @@ class HDUSourceField(SourceField):
         if self.data is None:
             return "<empty>"
         return str(self.data.shape)
+
+    @property
+    def bunit(self) -> u.Unit:
+        """Extract BUNIT from header and parse into astropy Unit.
+
+        If the BUNIT keyword is not present in the header, this will return the
+        dimensionless unit, which should result in consistent behavior.
+        """
+        return u.Unit(self.header.get("BUNIT", ""))
+
+    # TODO: Better name suggestions??
+    @property
+    def bunit_is_spatially_differential(self) -> bool:
+        """Return True if BUNIT includes any "per solid angle" parts."""
+        return unit_includes_per_physical_type(self.bunit, "solid angle")
 
     def _write_stream(self, stream: TextIO) -> None:
         stream.write(f"ImageHDU with size {self.img_size}, referencing "
