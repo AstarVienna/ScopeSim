@@ -1,44 +1,52 @@
-[tool.poetry]
+[project]
 name = "ScopeSim"
 version = "0.10.1a4"
 description = "Generalised telescope observation simulator"
-license = "GPL-3.0-or-later"
-authors = ["Kieran Leschinski <kieran.leschinski@unive.ac.at>"]
+license = {text = "GPL-3.0-or-later"}
+authors = [
+    {name = "Kieran Leschinski", email = "kieran.leschinski@unive.ac.at"}
+]
 maintainers = [
-    "Kieran Leschinski <kieran.leschinski@unive.ac.at>",
-    "Hugo Buddelmeijer <hugo@buddelmeijer.nl>",
-    "Fabian Haberhauer <fabian.haberhauer@univie.ac.at>",
+    {name = "Kieran Leschinski", email = "kieran.leschinski@unive.ac.at"},
+    {name = "Hugo Buddelmeijer", email = "hugo@buddelmeijer.nl"},
+    {name = "Fabian Haberhauer", email = "fabian.haberhauer@univie.ac.at"},
 ]
 readme = "README.md"
-repository = "https://github.com/AstarVienna/ScopeSim"
-documentation = "https://scopesim.readthedocs.io/en/latest/"
 classifiers = [
     "Intended Audience :: Science/Research",
     "Operating System :: OS Independent",
     "Topic :: Scientific/Engineering :: Astronomy",
 ]
+requires-python = ">=3.10, <3.13"
+dependencies = [
+    "numpy (>=1.26.4,<2.0.0)",
+    "scipy (>=1.15.3,<2.0.0)",
+    "astropy (>=6.1.7,<7.0.0)",
+    "matplotlib (>=3.10.1,<4.0.0)",
+    "pooch (>=1.8.2,<2.0.0)",
 
-[tool.poetry.dependencies]
-python = ">=3.10, <3.13"
-numpy = "^1.26.4"
-scipy = "^1.15.3"
-astropy = "^6.1.7"
-matplotlib = "^3.10.1"
-pooch = "^1.8.2"
+    "docutils (>=0.19,<1.0)",
+    "httpx (>=0.28.1,<1.0)",
+    "beautifulsoup4 (>=4.13.3,<5.0.0)",
+    "lxml (>=5.4.0,<6.0.0)",
+    "pyyaml (>=6.0.2,<7.0.0)",
+    "more-itertools (>=10.2.0,<11.0.0)",
+    "tqdm (>=4.66.6,<5.0.0)",
+    "packaging (>=23.2,<24.0)",
 
-docutils = "^0.19"
-httpx = ">=0.28.1"
-beautifulsoup4 = "^4.13.3"
-lxml = "^5.2.2"
-pyyaml = "^6.0.1"
-more-itertools = "^10.2.0"
-tqdm = "^4.66.5"
-packaging = ">=23.2"
+    "synphot (>=1.5.0,<2.0.0)",
+    "skycalc-ipy (>=0.5.3,<1.0)",
+    "anisocado (>=0.3.0,<1.0)",
+    "astar-utils (>=0.3.3,<1.0)"
+]
 
-synphot = "^1.6.0"
-skycalc-ipy = ">=0.5.3"
-anisocado = ">=0.3.0"
-astar-utils = ">=0.3.3"
+[project.urls]
+repository = "https://github.com/AstarVienna/ScopeSim"
+documentation = "https://scopesim.readthedocs.io/en/latest/"
+"Bug Tracker" = "https://github.com/AstarVienna/ScopeSim/issues"
+
+
+[tool.poetry]
 
 [tool.poetry.group.dev]
 optional = true
@@ -72,11 +80,9 @@ scopesim_templates = ">=0.6.2"
 ipykernel = "^6.30.0"
 ipympl = "^0.9.7"
 
-[tool.poetry.urls]
-"Bug Tracker" = "https://github.com/AstarVienna/ScopeSim/issues"
 
 [build-system]
-requires = ["poetry-core"]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.pytest.ini_options]
