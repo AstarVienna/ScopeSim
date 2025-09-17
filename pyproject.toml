@@ -12,11 +12,8 @@ maintainers = [
     {name = "Fabian Haberhauer", email = "fabian.haberhauer@univie.ac.at"},
 ]
 readme = "README.md"
-classifiers = [
-    "Intended Audience :: Science/Research",
-    "Operating System :: OS Independent",
-    "Topic :: Scientific/Engineering :: Astronomy",
-]
+keywords = [ "astronomy" ]
+dynamic = [ "classifiers" ]
 requires-python = ">=3.10, <3.13"
 dependencies = [
     "numpy (>=1.26.4,<2.0.0)",
@@ -41,12 +38,18 @@ dependencies = [
 ]
 
 [project.urls]
-repository = "https://github.com/AstarVienna/ScopeSim"
-documentation = "https://scopesim.readthedocs.io/en/latest/"
+Repository = "https://github.com/AstarVienna/ScopeSim"
+Documentation = "https://scopesim.readthedocs.io/en/latest/"
 "Bug Tracker" = "https://github.com/AstarVienna/ScopeSim/issues"
+Changelog = "https://github.com/AstarVienna/ScopeSim/blob/main/CHANGELOG.md"
 
 
 [tool.poetry]
+classifiers = [
+    "Intended Audience :: Science/Research",
+    "Operating System :: OS Independent",
+    "Topic :: Scientific/Engineering :: Astronomy",
+]
 
 [tool.poetry.group.dev]
 optional = true
