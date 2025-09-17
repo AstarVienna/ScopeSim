@@ -127,6 +127,10 @@ class MosaicSpectralTraceList(SpectralTraceList):
         self.catalog = Table(self._file[self.ext_cat].data)
         spec_traces = {}
         for row in self.catalog:
+            # image_plane_id = -1 marks rows that should not be read,
+            # e.g. the aperture list. Although not necessary if the catalogue
+            # is formatted in a way that only traces are listed, this provides
+            # a possibility to "mask" traces.
             if row["image_plane_id"] == -1:
                 continue
             params = {col: row[col] for col in row.colnames}
@@ -229,7 +233,6 @@ class MosaicCollapseSpectralTraces(MosaicSpectralTraceList):
     def apply_to(self, det, **kwargs):
         """Apply to detector readout"""
         if not isinstance(det, Detector):
-            print("Type of det:", type(det))
             return det
 
         image = det._hdu.data
