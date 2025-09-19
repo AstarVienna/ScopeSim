@@ -99,6 +99,7 @@ filterwarnings = [
     "ignore::ResourceWarning",
     "ignore:The fit may be poorly conditioned:astropy.utils.exceptions.AstropyUserWarning",
     "ignore::astropy.units.core.UnitsWarning",
+    "default:`trapz` is deprecated.*:DeprecationWarning",
     # Perhaps fix?
     "ignore:divide by zero encountered in scalar divide:RuntimeWarning",
     "ignore:divide by zero encountered in double_scalars:RuntimeWarning",
