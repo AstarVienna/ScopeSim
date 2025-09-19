@@ -258,7 +258,8 @@ class TestSourceDescriptionFitsKeywordsApplyTo:
         hdul = eff.apply_to(comb_hdul, optical_train=simplecado_opt)
         pri_hdr = hdul[0].header
 
-        assert len(pri_hdr["FNSRC0"]) == 120
+        # String includes numpy reprs, which differ in numpy 1.x and 2.x
+        assert 120 <= len(pri_hdr["FNSRC0"]) <= 180
 
         # save to disk, what happens to cards longer than 80 characters
         with TemporaryDirectory() as tmpdir:
@@ -266,7 +267,8 @@ class TestSourceDescriptionFitsKeywordsApplyTo:
             hdul.writeto(fname)
             tmp_hdr = fits.getheader(fname)
 
-        assert len(tmp_hdr["FNSRC0"]) == 120
+        # String includes numpy reprs, which differ in numpy 1.x and 2.x
+        assert 120 <= len(tmp_hdr["FNSRC0"]) <= 180
 
 
 class TestSimulationConfigFitsKeywordsApplyTo:
