@@ -151,11 +151,6 @@ class FieldConstantPSF(DiscretePSF):
         if not self.cmds.get("!OBS.interp_psf", True):
             lam = np.array([lam[len(lam)//2]])
 
-        # adapt the size of the output cube to the FOV's spatial shape
-        # TODO: Replace 512 by something else
-        nxpsf = min(512, 2 * nxfov + 1)
-        nypsf = min(512, 2 * nyfov + 1)
-
         # Some data from the psf file
         ext = self.current_layer_id
         hdr = self._file[ext].header
@@ -170,7 +165,7 @@ class FieldConstantPSF(DiscretePSF):
 
         psfwcs = WCS(hdr)
         psf = self._file[ext].data
-        psf = psf/psf.sum()         # normalisation of the input psf
+        psf = psf / psf.sum()         # normalisation of the input psf
         nxin, nyin = psf.shape
 
         # We need linear interpolation to preserve positivity. Might think of
@@ -180,6 +175,12 @@ class FieldConstantPSF(DiscretePSF):
         ipsf = RegularGridInterpolator((np.arange(nyin), np.arange(nxin)),
                                        psf, method='linear', bounds_error=False,
                                        fill_value=0)
+
+        # adapt the size of the output cube to the FOV's spatial shape
+        psf_maxsize = self.cmds.get("!SIM.computing.psf_maxsize", np.nan)
+
+        nxpsf = min(nxin, 2 * nxfov + 1, psf_maxsize)
+        nypsf = min(nyin, 2 * nyfov + 1, psf_maxsize)
 
         xcube, ycube = np.meshgrid(np.arange(nxpsf), np.arange(nypsf))
         cubewcs = WCS(naxis=2)
