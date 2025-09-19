@@ -31,3 +31,6 @@ https://scopesim.readthedocs.io/en/latest/
 
 A basic Jupyter Notebook can be found here:
 [scopesim_basic_intro.ipynb](docs/source/examples/1_scopesim_intro.ipynb)
+
+### Feature roadmap
+Take a look at the [ScopeSim Feature Roadmap](https://github.com/orgs/AstarVienna/projects/21) to see what we're currently working on.
