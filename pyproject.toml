@@ -1,6 +1,6 @@
 [project]
 name = "ScopeSim"
-version = "0.10.1a5"
+version = "0.10.1a6"
 description = "Generalised telescope observation simulator"
 license = {text = "GPL-3.0-or-later"}
 authors = [
@@ -16,7 +16,7 @@ keywords = [ "astronomy" ]
 dynamic = [ "classifiers" ]
 requires-python = ">=3.10, <3.13"
 dependencies = [
-    "numpy (>=1.26.4,<2.0.0)",
+    "numpy (>=1.26.4,<2.3.0)",
     "scipy (>=1.15.3,<2.0.0)",
     "astropy (>=6.1.7,<7.0.0)",
     "matplotlib (>=3.10.1,<4.0.0)",
@@ -99,6 +99,7 @@ filterwarnings = [
     "ignore::ResourceWarning",
     "ignore:The fit may be poorly conditioned:astropy.utils.exceptions.AstropyUserWarning",
     "ignore::astropy.units.core.UnitsWarning",
+    "default:`trapz` is deprecated.*:DeprecationWarning",
     # Perhaps fix?
     "ignore:divide by zero encountered in scalar divide:RuntimeWarning",
     "ignore:divide by zero encountered in double_scalars:RuntimeWarning",
