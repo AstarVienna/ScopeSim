@@ -7,7 +7,8 @@ import numpy as np
 from tqdm.auto import tqdm
 from scipy.signal import convolve
 from scipy.ndimage import zoom
-from scipy.interpolate import RectBivariateSpline, griddata
+from scipy.interpolate import (RectBivariateSpline, griddata,
+                               RegularGridInterpolator)
 
 from astropy import units as u
 from astropy.io import fits
@@ -150,10 +151,6 @@ class FieldConstantPSF(DiscretePSF):
         if not self.cmds.get("!OBS.interp_psf", True):
             lam = np.array([lam[len(lam)//2]])
 
-        # adapt the size of the output cube to the FOV's spatial shape
-        nxpsf = min(512, 2 * nxfov + 1)
-        nypsf = min(512, 2 * nyfov + 1)
-
         # Some data from the psf file
         ext = self.current_layer_id
         hdr = self._file[ext].header
@@ -168,15 +165,22 @@ class FieldConstantPSF(DiscretePSF):
 
         psfwcs = WCS(hdr)
         psf = self._file[ext].data
-        psf = psf/psf.sum()         # normalisation of the input psf
+        psf = psf / psf.sum()         # normalisation of the input psf
         nxin, nyin = psf.shape
 
         # We need linear interpolation to preserve positivity. Might think of
         # more elaborate positivity-preserving schemes.
-        # Note: According to some basic profiling, this line is one of the
-        #       single largest hits on performance.
-        ipsf = RectBivariateSpline(np.arange(nyin), np.arange(nxin), psf,
-                                   kx=1, ky=1)
+        # An alternative would be to use method 'pchip', which uses monotonic
+        # splines to prevent overshooting (including to negative values)
+        ipsf = RegularGridInterpolator((np.arange(nyin), np.arange(nxin)),
+                                       psf, method='linear', bounds_error=False,
+                                       fill_value=0)
+
+        # adapt the size of the output cube to the FOV's spatial shape
+        psf_maxsize = self.cmds.get("!SIM.computing.psf_maxsize", np.nan)
+
+        nxpsf = min(nxin, 2 * nxfov + 1, psf_maxsize)
+        nypsf = min(nyin, 2 * nyfov + 1, psf_maxsize)
 
         xcube, ycube = np.meshgrid(np.arange(nxpsf), np.arange(nypsf))
         cubewcs = WCS(naxis=2)
@@ -197,7 +201,7 @@ class FieldConstantPSF(DiscretePSF):
             psfwcs.wcs.cdelt = [psf_wave_pixscale,
                                 psf_wave_pixscale]
             xpsf, ypsf = psfwcs.all_world2pix(xworld, yworld, 0)
-            outcube[i,] = (ipsf(ypsf, xpsf, grid=False)
+            outcube[i,] = (ipsf( (ypsf.ravel(), xpsf.ravel()) ).reshape(outcube[i,].shape)
                            * fov_pixel_scale**2 / psf_wave_pixscale**2)
 
         # .squeeze() gets rid of any axes with length one
