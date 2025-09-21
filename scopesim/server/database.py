@@ -348,7 +348,7 @@ def download_packages(
     The downloaded version may be specified as stable, latest (dev) or fixed to
     a specific release.
 
-    .. versionchanged:: PLACEHOLDER_NEXT_RELEASE_VERSION
+    .. versionchanged:: 0.11.0
 
        Downloading from the GitHub repository is deprecated and will be
        removed in a future version. If you need to use an unreleased dev

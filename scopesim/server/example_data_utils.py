@@ -103,7 +103,7 @@ def download_example_data(
        Passing a list to ``download_example_data`` is deprecated since version
        0.8.4, this function now accepts multiple file names in *args-style.
 
-    .. versionchanged:: PLACEHOLDER_NEXT_RELEASE_VERSION
+    .. versionchanged:: 0.11.0
 
        Passing a list to ``download_example_data`` as the first argument will
        now throw a TypeError. This is to catch any remaining uses of the old

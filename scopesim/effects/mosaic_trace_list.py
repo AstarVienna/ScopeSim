@@ -26,7 +26,7 @@ logger = get_logger(__name__)
 class MosaicSpectralTraceList(SpectralTraceList):
     """SpectralTraceList for MOSAIC.
 
-    .. versionadded:: PLACEHOLDER_NEXT_RELEASE_VERSION
+    .. versionadded:: 0.11.0
 
     """
 
@@ -145,7 +145,7 @@ class MosaicSpectralTraceList(SpectralTraceList):
 class MosaicSpectralTrace(SpectralTrace):
     """A single spectral trace for MOSAIC.
 
-    .. versionadded:: PLACEHOLDER_NEXT_RELEASE_VERSION
+    .. versionadded:: 0.11.0
     """
 
     def compute_interpolation_functions(self):
@@ -165,7 +165,7 @@ class MosaicSpectralTrace(SpectralTrace):
 class Transform1D:
     """1-dimensional polynomial transform.
 
-    .. versionadded:: PLACEHOLDER_NEXT_RELEASE_VERSION
+    .. versionadded:: 0.11.0
     """
 
     def __init__(self, coeffs, pretransform=None,
@@ -227,7 +227,7 @@ class Transform1D:
 class MosaicCollapseSpectralTraces(MosaicSpectralTraceList):
     """Collapse SpectralTraces to 1D spectrum.
 
-    .. versionadded:: PLACEHOLDER_NEXT_RELEASE_VERSION
+    .. versionadded:: 0.11.0
     """
 
     required_keys = {"filename"}
