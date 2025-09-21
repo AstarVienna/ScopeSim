@@ -1,3 +1,92 @@
+# Version 0.11.0
+**2025-09-21**
+
+Large release in preparation of the ScopeSim Workshop happening next week. See below for important changes and deprecations.
+
+## Highlights
+* Finally add support for Python 3.13 and Numpy 2.
+* Partially resolve circular dependency between ScopeSim and ScopeSim_Templates
+* Several new effects in preparation for MOSAIC simulations (#796).
+* New and improved plotting methods on some classes for easier and nicer visualisation of results.
+
+## What's Changed
+### Deprecations
+#### Download functionality
+* Deprecate downloading IRDB packages directly from GitHub by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/727
+
+Installing IRDB packages directly from GitHub using `download_packages()` is deprecated.
+We're not aware that this functionality saw any significant use by the community.
+If you do need to install unreleased IRDB packages from the GitHub repository (and you know _why_ you need that!), the same result can be achieved by cloning the repository (or your own fork) and then use `sim.link_irdb(<path_to_clone>)` to point ScopeSim there.
+That solution has the added benefit that you can keep thing in sync through git alone, which is more reliable anyway.
+The relevant functionality will be removed in version 0.12.0, at which point attempting to use `download_packages()` with a GitHub ref will result in an error.
+
+Passing a list as the first argument to `download_example_data()` has been deprecated since version 0.8.4 and will now result in a `TypeError` being raised.
+This is to catch any remaining uses of the old call signature of this function.
+From version 0.12.0 onwards, arguments will be silently forwarded to the file retriever, meaning if a list is still passed at that point, it will result in an error further downstream.
+
+#### Source Fields
+* Deprecate direct attribute access in `SourceField` by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/733
+
+After the `SourceField` refactor in version 0.9.0, it was still possible to access any item of the underlying data structur (`Table` or `ImageHDU`) directly through the `SourceField` via a standard dict-like syntax.
+This was retained for backwards compatibility, because some code still relied on this functionality.
+It does however have the potential to leade to some hard-to-track bugs and is generally an unclean solution, which is why we have been working behind the scenes to slowly remove all internal code that still uses this feature.
+Now because this is related to how the `Source` object might be put together in user code, we're using a more carefuly approach in deprecating this, to avoid breaking existing code for no urgent reason.
+We're thus activating a `PendingDeprecationWarning` now, which should give users an advanced warning that we will probably fully deprecate this in the future.
+If you do encounter this warning, please try to use the `.field` attribute to explicitly access the underlying data structur before using dict-like lookup on it.
+
+### API Changes
+* Improve handling of DeprecationWarnings by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/730
+* Remove obsolete code by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/737
+* Accept filename and relative path as well as absolute path by @oczoske in https://github.com/AstarVienna/ScopeSim/pull/758
+### Bugs fixed
+* Fix creation of cube source from file name by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/559
+* Fix WCU radiometry by @oczoske in https://github.com/AstarVienna/ScopeSim/pull/754
+* Use `RegularGridInterpolator` for proper extrapolation of small PSF images by @oczoske in https://github.com/AstarVienna/ScopeSim/pull/798
+### Changes to or addition of Effects
+* Functionality for MOSAIC minimum viable product by @oczoske in https://github.com/AstarVienna/ScopeSim/pull/796
+### New Features or Improvements
+* Add plotter utils functions by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/734
+* Add `.plot()` method to `ImagePlane` by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/735
+* Improve cube plotter by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/736
+### Dependency Changes
+* Bump synphot from 1.5.0 to 1.6.0 by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/713
+* Minor bumps on a few dependencies by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/718
+* Bump actions/checkout from 4 to 5 by @dependabot[bot] in https://github.com/AstarVienna/ScopeSim/pull/756
+* Update internal dependencies more often by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/769
+* Bump pyyaml from 6.0.1 to 6.0.2 by @dependabot[bot] in https://github.com/AstarVienna/ScopeSim/pull/771
+* Bump lxml from 5.2.2 to 5.4.0 by @dependabot[bot] in https://github.com/AstarVienna/ScopeSim/pull/772
+* Refine dependabot configuration by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/780
+* Bump the dev-dependencies group with 8 updates by @dependabot[bot] in https://github.com/AstarVienna/ScopeSim/pull/782
+* Update to Poetry 2 based pyproject.toml, update workflows by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/783
+* Bump actions/setup-python from 5 to 6 by @dependabot[bot] in https://github.com/AstarVienna/ScopeSim/pull/786
+* Bump packaging from 23.2 to 25.0 by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/794
+* Bump astar-utils from 0.3.3 to 0.3.4 by @dependabot[bot] in https://github.com/AstarVienna/ScopeSim/pull/791
+* Remove semicircular dependency on ScopeSim_Templates by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/799
+* Allow numpy 2.x by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/784
+* Add support for Python 3.13 by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/800
+### Documentation Improvements
+* Remove mention of deprecated GitHub download from docs by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/745
+* Fix toml classifiers and URLs by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/795
+* Docstrings, formatting, linting by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/802
+### Other Changes
+* Ignore a random DeprecationWarning from Pillow by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/715
+* Various typing fixes by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/728
+* Fix locally failing mock path test by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/729
+* Refactor `flatten_dict()` by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/725
+* Remove empty `spectrograph.py` by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/738
+* Split `FieldOfView` into subclasses by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/739
+* Remove obsolete `fov_manager_utils.py` and tests by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/740
+* Remove obsolete `PoorMansHeader` by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/741
+* Remove some unused code by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/744
+* Remove unused spectroscopy integration tests by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/746
+* Remove `Effect.fov_grid()` in base class by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/747
+* Fix CI comments by @hugobuddel in https://github.com/AstarVienna/ScopeSim/pull/748
+* Add basic pylint config in pyproject.toml by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/760
+* Update workflows by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/801
+
+**Full Changelog**: https://github.com/AstarVienna/ScopeSim/compare/v0.10.0...v0.11.0
+
+
 # Version 0.10.0
 **2025-06-27**
 
