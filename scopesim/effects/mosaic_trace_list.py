@@ -1,8 +1,9 @@
 #  -*- coding: utf-8 -*-
-"""SpectralTraceList and SpectralTrace for MOSAIC"""
-from tqdm.auto import tqdm
+"""SpectralTraceList and SpectralTrace for MOSAIC."""
+
 from typing import ClassVar
 
+from tqdm.auto import tqdm
 import numpy as np
 from astropy.table import Table
 from astropy import units as u
@@ -11,9 +12,9 @@ from astropy.wcs import WCS
 from astropy.modeling import fitting
 from astropy.modeling.models import Polynomial1D
 from synphot import SourceSpectrum, Empirical1D
+
 from .spectral_trace_list import SpectralTraceList
 from .spectral_trace_list_utils import SpectralTrace
-
 from ..utils import get_logger, quantify, power_vector
 from ..optics.fov import FieldOfView
 from ..optics.fov_volume_list import FovVolumeList
@@ -22,10 +23,12 @@ from ..detector import Detector
 logger = get_logger(__name__)
 
 
-
-
 class MosaicSpectralTraceList(SpectralTraceList):
-    """SpectralTraceList for MOSAIC"""
+    """SpectralTraceList for MOSAIC.
+
+    .. versionadded:: PLACEHOLDER_NEXT_RELEASE_VERSION
+
+    """
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -39,9 +42,9 @@ class MosaicSpectralTraceList(SpectralTraceList):
 
     def apply_to(self, obj, **kwargs):
         """See parent docstring."""
-        ### This is copied from MetisSpectralTraceList, make less redundant?
+        # This is copied from MetisSpectralTraceList, make less redundant?
         if isinstance(obj, FovVolumeList):
-            logger.debug("Executing %s, FoV setup", self.meta['name'])
+            logger.debug("Executing %s, FoV setup", self.meta["name"])
             # Create a single volume that covers the aperture and
             # the maximum wavelength range of the grating
             volumes = [spectral_trace.fov_grid()
@@ -54,7 +57,7 @@ class MosaicSpectralTraceList(SpectralTraceList):
 
         if isinstance(obj, FieldOfView):
             # Application to field of view
-            logger.debug("Executing %s, FoV", self.meta['name'])
+            logger.debug("Executing %s, FoV", self.meta["name"])
             if obj.hdu is not None and obj.hdu.header["NAXIS"] == 3:
                 obj.cube = obj.hdu
             elif obj.hdu is None and obj.cube is None:
@@ -71,22 +74,22 @@ class MosaicSpectralTraceList(SpectralTraceList):
             fovlam <<= u.Unit(fovwcs_spec.wcs.cunit[0])
 
             det_header = obj.detector_header
-            detwcs = WCS(det_header, key='D')
+            detwcs = WCS(det_header, key="D")
             naxis1d, naxis2d = det_header["NAXIS1"], det_header["NAXIS2"]
 
-            ## This is the place where we need to look at the apertures
-            ## - collapse each aperture to 1D spectrum by integrating spatially
-            ## - map each 1D spectrum to detector/fov
+            # This is the place where we need to look at the apertures
+            # - collapse each aperture to 1D spectrum by integrating spatially
+            # - map each 1D spectrum to detector/fov
 
             image = np.zeros((naxis2d, naxis1d), dtype=np.float32)
 
             for sptid, spt in tqdm(self.spectral_traces.items(),
                                    desc="Fiber traces", position=2):
-                theap = self.aplist[self.aplist['id'] == sptid]
+                theap = self.aplist[self.aplist["id"] == sptid]
 
                 # solid angle in arcsec**2
-                solid_angle  = ((theap["right"] - theap["left"]) *
-                                (theap["top"] - theap["bottom"]))
+                solid_angle = ((theap["right"] - theap["left"]) *
+                               (theap["top"] - theap["bottom"]))
 
                 # apertures are defined in arcsec. fovwcs is in degrees
                 xmin, xmax, ymin, ymax = (theap["left"]/3600, theap["right"]/3600,
@@ -118,8 +121,6 @@ class MosaicSpectralTraceList(SpectralTraceList):
             obj.hdu = fits.ImageHDU(data=image, header=image_hdr)
         return obj
 
-
-
     def make_spectral_traces(self):
         """Return a dictionary of spectral traces read in from a file."""
         self.ext_data = self._file[0].header["EDATA"]
@@ -142,15 +143,15 @@ class MosaicSpectralTraceList(SpectralTraceList):
 
 
 class MosaicSpectralTrace(SpectralTrace):
-    """A single spectral trace for MOSAIC"""
+    """A single spectral trace for MOSAIC.
 
-    def __init__(self, trace_tbl, **kwargs):
-        super().__init__(trace_tbl, **kwargs)
+    .. versionadded:: PLACEHOLDER_NEXT_RELEASE_VERSION
+    """
 
     def compute_interpolation_functions(self):
         x_arr = self.table[self.meta["x_colname"]]
         y_arr = self.table[self.meta["y_colname"]]
-        #xi_arr = self.table[self.meta["s_colname"]]
+        # xi_arr = self.table[self.meta["s_colname"]]
         lam_arr = self.table[self.meta["wave_colname"]]
 
         self.wave_min = quantify(np.min(lam_arr), u.um).value
@@ -160,9 +161,11 @@ class MosaicSpectralTrace(SpectralTrace):
         self.x2lam = Transform1D.fit(x_arr, lam_arr, degree=2)
         self.lam2y = Transform1D.fit(lam_arr, y_arr, degree=2)
 
-class Transform1D():
-    """
-    1-dimensional polynomial transform.
+
+class Transform1D:
+    """1-dimensional polynomial transform.
+
+    .. versionadded:: PLACEHOLDER_NEXT_RELEASE_VERSION
     """
 
     def __init__(self, coeffs, pretransform=None,
@@ -184,7 +187,6 @@ class Transform1D():
 
         The transformation is a polynomial based on the simple monomials x^i.
         """
-
         if "pretransform" in kwargs:
             self.pretransform = self._repackage(kwargs["pretransform"])
         if "postransform" in kwargs:
@@ -207,15 +209,15 @@ class Transform1D():
         return result
 
     @classmethod
-    def fit(cls, xin, xout, degree=4):
-        """Determine polynomial fit"""
+    def fit(cls, xin, xout, degree: int = 4):
+        """Determine polynomial fit."""
         pinit = Polynomial1D(degree=degree)
         fitter = fitting.LinearLSQFitter()
         fit = fitter(pinit, xin, xout)
         return Transform1D(fit.parameters)
 
     def gradient(self):
-        """Compute the gradient of a 1d polynomial transformation"""
+        """Compute the gradient of a 1d polynomial transformation."""
         coeffs = self.coeffs
 
         dcoeffs = (coeffs * np.arange(self.nx))[1:]
@@ -223,30 +225,33 @@ class Transform1D():
 
 
 class MosaicCollapseSpectralTraces(MosaicSpectralTraceList):
-    """Collapse SpectralTraces to 1D spectrum"""
+    """Collapse SpectralTraces to 1D spectrum.
+
+    .. versionadded:: PLACEHOLDER_NEXT_RELEASE_VERSION
+    """
+
     required_keys = {"filename"}
     z_order: ClassVar[tuple[int, ...]] = (899,)
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-
     def apply_to(self, det, **kwargs):
-        """Apply to detector readout"""
+        """Apply to detector readout."""
         if not isinstance(det, Detector):
             return det
 
         image = det._hdu.data
-        detwcs = WCS(det._hdu.header, key='D')
+        detwcs = WCS(det._hdu.header, key="D")
         spec = np.zeros(image.shape[1], dtype=np.float32)
         for sptid, spt in tqdm(self.spectral_traces.items(),
                                desc="Fiber traces", position=2):
-            y_mm = spt.table['y'][0]
+            y_mm = spt.table["y"][0]
             jfib = int(detwcs.all_world2pix(0, y_mm, 0)[1])
             spec += image[jfib,]
 
         x_mm = detwcs.all_pix2world(np.arange(image.shape[1]), 1, 0)[0]
         lam = spt.x2lam(x_mm)
         det._hdu = fits.BinTableHDU.from_columns([
-            fits.Column(name='wavelength', format='D', array=lam, unit='um'),
-            fits.Column(name='spectrum', format='D', array=spec, unit='ADU')])
+            fits.Column(name="wavelength", format="D", array=lam, unit="um"),
+            fits.Column(name="spectrum", format="D", array=spec, unit="ADU"),
+        ])
+
         return det
