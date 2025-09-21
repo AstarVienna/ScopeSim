@@ -262,6 +262,79 @@ class AtmosphericTERCurve(TERCurve):
         self.surface.meta.update(self.meta)
 
 
+class AtmoLibraryTERCurve(AtmosphericTERCurve):
+    """
+    Retrieve an atmospheric spectrum from a local library file
+
+    The library file is a multi-extension FITS file with the following
+    structure:
+    - extension 1: Catalogue - a table listing all extensions and parameters
+                   to identify the one to use
+    - extension 2: Wavelength - the common wavelength grid on which all
+                   atmospheric spectra are sampled
+    - extension 3 etc.: tables with columns `transmission` and `emission`
+
+    Currently the curves are distinguished by a single parameter (PWV).
+
+    Examples
+    --------
+    ::
+
+        - name: atmosphere
+          class: AtmoLibraryTERCurve
+          kwargs:
+             filename: "!ATMO.spectrum.filename
+             pwv: 10.
+
+    """
+
+    z_order: ClassVar[tuple[int, ...]] = (112, 512)
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.meta.update(kwargs)
+
+        self.load_table_from_library()
+
+    def load_table_from_library(self):
+        """Load the appropriate library extension based on parameter value"""
+        param = 'pwv'
+        value  = self.meta['pwv']
+        self.ext_data= self._file[0].header["EDATA"]
+        self.ext_cat = self._file[0].header["ECAT"]
+        self.catalog = Table.read(self._file[self.ext_cat])
+
+        # Look for wavelength extension
+        cond = self.catalog["extension_name"] == "WAVELENGTH"
+        if any(cond):
+            extid = self.catalog["extension_id"][cond][0]
+            print("Extension:", extid)
+            wavehdu = self._file[extid]
+            wavelength = Table.read(wavehdu)['wavelength']
+        else:
+            wavelength = None
+
+        # select the row corresponding to param
+        idx = np.argmin(np.abs(self.catalog[param] - value))
+        if idx < self.ext_data:
+            idx = self.ext_data
+            logger.warning("PWV value (%f) outside range, picking default value (%f)",
+                           value, self.catalog['pwv'][idx])
+        extid = self.catalog["extension_id"][idx]
+        terhdu = self._file[extid]
+
+        tbl = Table.read(terhdu)
+        if not "wavelength" in tbl.colnames and wavelength is not None:
+            tbl.add_column(wavelength, index=0)
+        else:
+            raise ValueError("No wavelength vector found")
+        tbl.meta['wavelength_unit'] = tbl['wavelength'].unit
+        tbl.meta['emission_unit'] = tbl['emission'].unit
+
+        self.surface.table = tbl
+        self.surface.meta.update(tbl.meta)
+
+
 class SkycalcTERCurve(AtmosphericTERCurve):
     """
     Retrieve an atmospheric spectrum from ESO's skycalc server.
