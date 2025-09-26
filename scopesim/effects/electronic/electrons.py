@@ -103,10 +103,10 @@ class InterPixelCapacitance(Effect):
     The effect is usually instantiated in a yaml file.
 
     The first example uses the three-parameter model in Eq.9 of Kannawadi+2016.
-    The three parameters are `alpha_edge` (corresponding to $\alpha$) for the
+    The three parameters are `alpha_edge` (corresponding to $\\alpha$) for the
     effect of neighbouring pixels sharing an edge with the pixel under
-    consideration, `alpha_corner` (corresponding to $\alpha^\prime$) for pixels
-    sharing a corner, and `alpha_cross` (corresponding to $\alpha_{+}$) to allow
+    consideration, `alpha_corner` (corresponding to $\\alpha^\\prime$) for pixels
+    sharing a corner, and `alpha_cross` (corresponding to $\\alpha_{+}$) to allow
     for different capacitive coupling along rows and columns. The simpler one-
     and two-parameters models are recovered by setting `alpha_cross` and/or
     `alpha_corner` to zero.
