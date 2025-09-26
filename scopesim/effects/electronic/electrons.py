@@ -11,6 +11,7 @@ Related effects:
 from typing import ClassVar
 
 import numpy as np
+from scipy.signal import convolve
 
 from .. import Effect
 from ...detector import Detector
@@ -89,6 +90,75 @@ class LinearityCurve(Effect):
         ax.set_ylabel("Measured [e- s$^-1$]")
 
         return fig
+
+
+class InterPixelCapacitance(Effect):
+    """Inter-pixel capacitance effect.
+
+    The effect models cross-talk due to inter-pixel capacitance with
+    a convolution kernel following Kannawadi et al., PASP 128, 095001 (2016).
+
+    Example
+    -------
+    The effect is usually instantiated in a yaml file.
+
+    The first example uses the three-parameter model in Eq.9 of Kannawadi+2016.
+    The three parameters are `alpha_edge` (corresponding to $\alpha$) for the
+    effect of neighbouring pixels sharing an edge with the pixel under
+    consideration, `alpha_corner` (corresponding to $\alpha^\prime$) for pixels
+    sharing a corner, and `alpha_cross` (corresponding to $\alpha_{+}$) to allow
+    for different capacitive coupling along rows and columns. The simpler one-
+    and two-parameters models are recovered by setting `alpha_cross` and/or
+    `alpha_corner` to zero.
+    - name: ipc
+      description: Apply inter-pixel capacitance
+      class: InterPixelCapacitance
+      kwargs:
+         alpha_edge: 0.02
+         alpha_corner: 0.002
+         alpha_cross: 0
+
+    Alternatively, a convolution kernel can be provided explicitely:
+    - name: ipc
+      kwargs:
+         kernel:
+            - [0.0011, 0.0127, 0.0011]
+            - [0.0163, 0.9360, 0.0164]
+            - [0.0011, 0.0127, 0.0011]
+    """
+    z_order: ClassVar[tuple[int, ...]] = (810,)
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+        self.meta.update(kwargs)
+
+        if "kernel" in kwargs:
+            self.kernel = np.asarray(kwargs['kernel'])
+        else:
+            self.kernel = self._build_kernel(kwargs)
+
+
+    def _build_kernel(self, params):
+        """Build a 3x3 kernel"""
+        a_corner = params.get("alpha_corner", 0)
+        a_cross = params.get("alpha_cross", 0)
+        a_edge = params.get("alpha_edge", 0)
+
+        kernel = np.array([
+            [a_corner, a_edge - a_cross, a_corner],
+            [a_edge + a_cross, 1 - 4 * (a_edge + a_corner), a_edge + a_cross],
+            [a_corner, a_edge - a_cross, a_corner]
+        ])
+        return kernel
+
+    def apply_to(self, det, **kwargs):
+        if not isinstance(det, Detector):
+            return det
+
+        det._hdu.data = convolve(det._hdu.data, kernel, mode="same")
+
+        return det
 
 
 class ADConversion(Effect):
