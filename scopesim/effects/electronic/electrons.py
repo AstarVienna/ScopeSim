@@ -16,9 +16,10 @@ from scipy.signal import convolve
 from .. import Effect
 from ...detector import Detector
 from ...utils import figure_factory, check_keys
-from ...utils import from_currsys, real_colname
+from ...utils import from_currsys, real_colname, get_logger
 from . import logger
 
+logger = get_logger(__name__)
 
 class LinearityCurve(Effect):
     """
@@ -140,6 +141,12 @@ class InterPixelCapacitance(Effect):
             self.kernel = np.asarray(kwargs['kernel'])
         else:
             self.kernel = self._build_kernel(kwargs)
+        kernsum = np.sum(self.kernel)
+        if kernsum > 1:
+            logger.warning("Kernel is larger than one, normalising")
+            self.kernel /= kernsum
+        if kernsum <= 0:
+            raise ValueError("Kernel has negative normalisation")
 
 
     def _build_kernel(self, params):
@@ -157,11 +164,23 @@ class InterPixelCapacitance(Effect):
 
     def apply_to(self, det, **kwargs):
         if not isinstance(det, Detector):
+            logger.debug("%s applied to %s", self.display_name,
+                         det.__class__.__name__)
             return det
 
-        det._hdu.data = convolve(det._hdu.data, kernel, mode="same")
-
+        newdata = convolve(det._hdu.data, self.kernel, mode="same")
+        det._hdu.data = newdata
         return det
+
+    def __str__(self):
+        msg = (f"""<{self.__class__.__name__}> \"{self.meta['description']}\" :
+   alpha_edge   = {self.meta.get('alpha_edge', 'NA')}
+   alpha_corner = {self.meta.get('alpha_corner', 'NA')}
+   alpha_cross  = {self.meta.get('alpha_cross', 'NA')}
+   kernel = {np.array2string(self.kernel, precision=2, floatmode='fixed',
+        prefix="   kernel = ")}""")
+
+        return msg
 
 
 class ADConversion(Effect):
