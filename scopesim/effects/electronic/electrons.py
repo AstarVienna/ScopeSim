@@ -122,10 +122,11 @@ class InterPixelCapacitance(Effect):
     Alternatively, a convolution kernel can be provided explicitely:
     - name: ipc
       kwargs:
-         kernel:
-            - [0.0011, 0.0127, 0.0011]
-            - [0.0163, 0.9360, 0.0164]
-            - [0.0011, 0.0127, 0.0011]
+         kernel: [
+            [0.0011, 0.0127, 0.0011],
+            [0.0163, 0.9360, 0.0164],
+            [0.0011, 0.0127, 0.0011],
+          ]
 
     .. [1] Kannawadi et al., "The Impact of Interpixel Capacitance in CMOS Detectors on PSF
        Shapes and Implications for WFIRST", PASP 128, 095001 (2016).
