@@ -96,13 +96,13 @@ class InterPixelCapacitance(Effect):
     """Inter-pixel capacitance effect.
 
     The effect models cross-talk due to inter-pixel capacitance with
-    a convolution kernel following Kannawadi et al., PASP 128, 095001 (2016).
+    a convolution kernel following [1]_.
 
     Example
     -------
     The effect is usually instantiated in a yaml file.
 
-    The first example uses the three-parameter model in Eq.9 of Kannawadi+2016.
+    The first example uses the three-parameter model in Eq. (9) of [1].
     The three parameters are `alpha_edge` (corresponding to $\\alpha$) for the
     effect of neighbouring pixels sharing an edge with the pixel under
     consideration, `alpha_corner` (corresponding to $\\alpha^\\prime$) for pixels
@@ -125,6 +125,9 @@ class InterPixelCapacitance(Effect):
             - [0.0011, 0.0127, 0.0011]
             - [0.0163, 0.9360, 0.0164]
             - [0.0011, 0.0127, 0.0011]
+
+    .. [1] Kannawadi et al., "The Impact of Interpixel Capacitance in CMOS Detectors on PSF
+       Shapes and Implications for WFIRST", PASP 128, 095001 (2016).
     """
     z_order: ClassVar[tuple[int, ...]] = (810,)
 
