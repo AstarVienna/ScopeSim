@@ -11,13 +11,15 @@ Related effects:
 from typing import ClassVar
 
 import numpy as np
+from scipy.signal import convolve
 
 from .. import Effect
 from ...detector import Detector
 from ...utils import figure_factory, check_keys
-from ...utils import from_currsys, real_colname
+from ...utils import from_currsys, real_colname, get_logger
 from . import logger
 
+logger = get_logger(__name__)
 
 class LinearityCurve(Effect):
     """
@@ -89,6 +91,97 @@ class LinearityCurve(Effect):
         ax.set_ylabel("Measured [e- s$^-1$]")
 
         return fig
+
+
+class InterPixelCapacitance(Effect):
+    """Inter-pixel capacitance effect.
+
+    The effect models cross-talk due to inter-pixel capacitance with
+    a convolution kernel following [1]_.
+
+    Example
+    -------
+    The effect is usually instantiated in a yaml file.
+
+    The first example uses the three-parameter model in Eq. (9) of [1].
+    The three parameters are `alpha_edge` (corresponding to $\\alpha$) for the
+    effect of neighbouring pixels sharing an edge with the pixel under
+    consideration, `alpha_corner` (corresponding to $\\alpha^\\prime$) for pixels
+    sharing a corner, and `alpha_cross` (corresponding to $\\alpha_{+}$) to allow
+    for different capacitive coupling along rows and columns. The simpler one-
+    and two-parameters models are recovered by setting `alpha_cross` and/or
+    `alpha_corner` to zero.
+    - name: ipc
+      description: Apply inter-pixel capacitance
+      class: InterPixelCapacitance
+      kwargs:
+         alpha_edge: 0.02
+         alpha_corner: 0.002
+         alpha_cross: 0
+
+    Alternatively, a convolution kernel can be provided explicitely:
+    - name: ipc
+      kwargs:
+         kernel: [
+            [0.0011, 0.0127, 0.0011],
+            [0.0163, 0.9360, 0.0164],
+            [0.0011, 0.0127, 0.0011],
+          ]
+
+    .. [1] Kannawadi et al., "The Impact of Interpixel Capacitance in CMOS Detectors on PSF
+       Shapes and Implications for WFIRST", PASP 128, 095001 (2016).
+    """
+    z_order: ClassVar[tuple[int, ...]] = (810,)
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+        self.meta.update(kwargs)
+
+        if "kernel" in kwargs:
+            self.kernel = np.asarray(kwargs['kernel'])
+        else:
+            self.kernel = self._build_kernel(kwargs)
+        kernsum = np.sum(self.kernel)
+        if kernsum > 1:
+            logger.warning("Kernel is larger than one, normalising")
+            self.kernel /= kernsum
+        if kernsum <= 0:
+            raise ValueError("Kernel has negative normalisation")
+
+
+    def _build_kernel(self, params):
+        """Build a 3x3 kernel"""
+        a_corner = params.get("alpha_corner", 0)
+        a_cross = params.get("alpha_cross", 0)
+        a_edge = params.get("alpha_edge", 0)
+
+        kernel = np.array([
+            [a_corner, a_edge - a_cross, a_corner],
+            [a_edge + a_cross, 1 - 4 * (a_edge + a_corner), a_edge + a_cross],
+            [a_corner, a_edge - a_cross, a_corner]
+        ])
+        return kernel
+
+    def apply_to(self, det, **kwargs):
+        if not isinstance(det, Detector):
+            logger.debug("%s applied to %s", self.display_name,
+                         det.__class__.__name__)
+            return det
+
+        newdata = convolve(det._hdu.data, self.kernel, mode="same")
+        det._hdu.data = newdata
+        return det
+
+    def __str__(self):
+        msg = (f"""<{self.__class__.__name__}> \"{self.meta['description']}\" :
+   alpha_edge   = {self.meta.get('alpha_edge', 'NA')}
+   alpha_corner = {self.meta.get('alpha_corner', 'NA')}
+   alpha_cross  = {self.meta.get('alpha_cross', 'NA')}
+   kernel = {np.array2string(self.kernel, precision=2, floatmode='fixed',
+        prefix="   kernel = ")}""")
+
+        return msg
 
 
 class ADConversion(Effect):
