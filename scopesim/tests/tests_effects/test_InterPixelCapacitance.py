@@ -9,12 +9,6 @@ from astropy.io import fits
 from scopesim.effects.electronic import InterPixelCapacitance as IPC
 from scopesim.detector import Detector
 
-@pytest.fixture(scope="module", name="yaml_dict")
-def fixture_yaml_dict():
-    return yaml.full_load("""
-    kernel: [[0., 0.02, 0.], [0.02, 0.92, 0.02], [0., 0.02, 0.]]
-    """)
-
 
 # pylint: disable=missing-class-docstring,missing-function-docstring
 class TestInit:
@@ -50,7 +44,10 @@ class TestInit:
         ipc = IPC(alpha_edge=a_edge, alpha_corner=a_corner, alpha_cross=a_cross)
         assert np.allclose(ipc.kernel, np.asarray(kern))
 
-    def test_initialises_from_yaml(self, yaml_dict):
+    def test_initialises_from_yaml(self):
+        yaml_dict = yaml.full_load("""
+    kernel: [[0., 0.02, 0.], [0.02, 0.92, 0.02], [0., 0.02, 0.]]
+    """)
         ipc = IPC(**yaml_dict)
         assert np.all(ipc.kernel == np.asarray(yaml_dict['kernel']))
 
