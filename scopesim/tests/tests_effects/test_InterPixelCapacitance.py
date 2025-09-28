@@ -22,6 +22,7 @@ class TestInit:
 
     def test_initialises_with_kernel(self):
         kern = np.random.rand(3, 3)
+        kern /= kern.sum()
         ipc = IPC(kernel=kern)
         assert np.all(ipc.kernel == kern)
 
@@ -46,7 +47,7 @@ class TestInit:
             _ = IPC(kernel=[[0, 0, 0], [0, -1, 0], [0, 0, 0]])
 
     def test_normalise_kernel_if_necessary(self):
-        ipc = IPC(kernel = [[1., 1, 1], [1, 1, 1], [1, 1, 1]])
+        ipc = IPC(kernel = [[1, 1, 1], [1, 1, 1], [1, 1, 1]])
         assert np.allclose(ipc.kernel.sum(), 1)
 
     def test_str_shows_parameter_value(self):

@@ -139,15 +139,15 @@ class InterPixelCapacitance(Effect):
         self.meta.update(kwargs)
 
         if "kernel" in kwargs:
-            self.kernel = np.asarray(kwargs['kernel'])
+            self.kernel = np.asarray(kwargs['kernel']).astype(float)
         else:
             self.kernel = self._build_kernel(kwargs)
         kernsum = np.sum(self.kernel)
         if kernsum > 1:
-            logger.warning("Kernel is larger than one, normalising")
+            logger.warning("IPC kernel is larger than one, normalising")
             self.kernel /= kernsum
         if kernsum <= 0:
-            raise ValueError("Kernel has negative normalisation")
+            raise ValueError("IPC kernel has negative normalisation")
 
 
     def _build_kernel(self, params):
@@ -174,14 +174,18 @@ class InterPixelCapacitance(Effect):
         return det
 
     def update(self, **kwargs):
-        self.__init__(**kwargs)
+        if "kernel" in kwargs:
+            for key in ["alpha_edge", "alpha_corner", "alpha_aniso"]:
+                self.meta.pop(key, None)
+        self.meta.update(kwargs)
+        self.__init__(**self.meta)
 
     def __str__(self):
         msg = (f"""<{self.__class__.__name__}> \"{self.meta['description']}\" :
    alpha_edge   = {self.meta.get('alpha_edge', 'NA')}
    alpha_corner = {self.meta.get('alpha_corner', 'NA')}
    alpha_aniso  = {self.meta.get('alpha_aniso', 'NA')}
-   kernel = {np.array2string(self.kernel, precision=2, floatmode='fixed',
+   kernel = {np.array2string(self.kernel, precision=4, floatmode='fixed',
         prefix="   kernel = ")}""")
 
         return msg
