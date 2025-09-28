@@ -173,6 +173,9 @@ class InterPixelCapacitance(Effect):
         det._hdu.data = newdata
         return det
 
+    def update(self, **kwargs):
+        self.__init__(**kwargs)
+
     def __str__(self):
         msg = (f"""<{self.__class__.__name__}> \"{self.meta['description']}\" :
    alpha_edge   = {self.meta.get('alpha_edge', 'NA')}

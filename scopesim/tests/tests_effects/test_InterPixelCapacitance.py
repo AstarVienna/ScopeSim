@@ -25,24 +25,14 @@ class TestInit:
         ipc = IPC(kernel=kern)
         assert np.all(ipc.kernel == kern)
 
-    @pytest.mark.parametrize(
-        "a_edge, a_corner, a_aniso, kern",
-        [(0, 0, 0, [[0, 0, 0],
-                    [0, 1, 0],
-                    [0, 0, 0]]),
-         (0.02, 0, 0, [[0, 0.02, 0],
-                       [0.02, 0.92, 0.02],
-                       [0, 0.02, 0]]),
-         (0.02, 0.002, 0, [[0.002, 0.02, 0.002],
-                           [0.02, 0.912, 0.02],
-                           [0.002, 0.02, 0.002]]),
-         (0.0145, 0.0011, 0.0018, [[0.0011, 0.0127, 0.0011],
-                                   [0.0163, 0.9376, 0.0163],
-                                   [0.0011, 0.0127, 0.0011]])
-         ])
-    def test_initialises_with_params(self, a_edge, a_corner, a_aniso, kern):
-        ipc = IPC(alpha_edge=a_edge, alpha_corner=a_corner, alpha_aniso=a_aniso)
-        assert np.allclose(ipc.kernel, np.asarray(kern))
+    def test_updates_with_kernel(self):
+        ipc = IPC()
+        kern = np.random.rand(5, 5)  # try 5x5 for a change
+        kern /= kern.sum()
+        ipc.update(kernel=kern)
+        assert ipc.kernel.shape == (5, 5)
+        assert np.all(ipc.kernel == kern)
+
 
     def test_initialises_from_yaml(self):
         yaml_dict = yaml.full_load("""
@@ -63,6 +53,33 @@ class TestInit:
         ipc = IPC(alpha_edge=0.02)
         assert "alpha_edge   = 0.02" in str(ipc)
         assert "alpha_corner = NA" in str(ipc)
+
+
+@pytest.mark.parametrize(
+    "a_edge, a_corner, a_aniso, kern",
+    [(0, 0, 0, [[0, 0, 0],
+                [0, 1, 0],
+                [0, 0, 0]]),
+     (0.02, 0, 0, [[0, 0.02, 0],
+                   [0.02, 0.92, 0.02],
+                   [0, 0.02, 0]]),
+     (0.02, 0.002, 0, [[0.002, 0.02, 0.002],
+                       [0.02, 0.912, 0.02],
+                       [0.002, 0.02, 0.002]]),
+     (0.0145, 0.0011, 0.0018, [[0.0011, 0.0127, 0.0011],
+                               [0.0163, 0.9376, 0.0163],
+                               [0.0011, 0.0127, 0.0011]])
+     ])
+class TestParameters():
+    def test_initialises_with_params(self, a_edge, a_corner, a_aniso, kern):
+        ipc = IPC(alpha_edge=a_edge, alpha_corner=a_corner, alpha_aniso=a_aniso)
+        assert np.allclose(ipc.kernel, np.asarray(kern))
+
+    def test_update2_with_params(self, a_edge, a_corner, a_aniso, kern):
+        ipc = IPC()
+        ipc.update(alpha_edge=a_edge, alpha_corner=a_corner, alpha_aniso=a_aniso)
+        assert np.allclose(ipc.kernel, np.asarray(kern))
+
 
 @pytest.fixture(name="detector", scope="class")
 def fixture_detector():
