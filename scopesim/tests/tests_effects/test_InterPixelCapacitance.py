@@ -26,7 +26,7 @@ class TestInit:
         assert np.all(ipc.kernel == kern)
 
     @pytest.mark.parametrize(
-        "a_edge, a_corner, a_cross, kern",
+        "a_edge, a_corner, a_aniso, kern",
         [(0, 0, 0, [[0, 0, 0],
                     [0, 1, 0],
                     [0, 0, 0]]),
@@ -40,8 +40,8 @@ class TestInit:
                                    [0.0163, 0.9376, 0.0163],
                                    [0.0011, 0.0127, 0.0011]])
          ])
-    def test_initialises_with_params(self, a_edge, a_corner, a_cross, kern):
-        ipc = IPC(alpha_edge=a_edge, alpha_corner=a_corner, alpha_cross=a_cross)
+    def test_initialises_with_params(self, a_edge, a_corner, a_aniso, kern):
+        ipc = IPC(alpha_edge=a_edge, alpha_corner=a_corner, alpha_aniso=a_aniso)
         assert np.allclose(ipc.kernel, np.asarray(kern))
 
     def test_initialises_from_yaml(self):
@@ -98,9 +98,9 @@ class TestApply:
 
     def test_correlates_noise(self, detector):
         # IPC correlates pixel noise and reduces rms
-        oldrms = np.std(detector.hdu.data - detector.hdu.data.mean())
+        oldrms = np.std(detector.hdu.data[1:-1, 1:-1])
         ipc = IPC(kernel=np.random.rand(3, 3))
         ipc.kernel /= np.sum(ipc.kernel)  # need to normalise for this test
         newdet = ipc.apply_to(detector)
-        newrms = np.std(newdet.hdu.data - newdet.hdu.data.mean())
+        newrms = np.std(newdet.hdu.data[1:-1, 1:-1])
         assert newrms < oldrms

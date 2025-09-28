@@ -107,9 +107,9 @@ class InterPixelCapacitance(Effect):
     The three parameters are `alpha_edge` (corresponding to $\\alpha$) for the
     effect of neighbouring pixels sharing an edge with the pixel under
     consideration, `alpha_corner` (corresponding to $\\alpha^\\prime$) for pixels
-    sharing a corner, and `alpha_cross` (corresponding to $\\alpha_{+}$) to allow
+    sharing a corner, and `alpha_aniso` (corresponding to $\\alpha_{+}$) to allow
     for different capacitive coupling along rows and columns. The simpler one-
-    and two-parameters models are recovered by setting `alpha_cross` and/or
+    and two-parameters models are recovered by setting `alpha_aniso` and/or
     `alpha_corner` to zero.
     - name: ipc
       description: Apply inter-pixel capacitance
@@ -117,7 +117,7 @@ class InterPixelCapacitance(Effect):
       kwargs:
          alpha_edge: 0.02
          alpha_corner: 0.002
-         alpha_cross: 0
+         alpha_aniso: 0
 
     Alternatively, a convolution kernel can be provided explicitely:
     - name: ipc
@@ -153,13 +153,13 @@ class InterPixelCapacitance(Effect):
     def _build_kernel(self, params):
         """Build a 3x3 kernel"""
         a_corner = params.get("alpha_corner", 0)
-        a_cross = params.get("alpha_cross", 0)
+        a_aniso = params.get("alpha_aniso", 0)
         a_edge = params.get("alpha_edge", 0)
 
         kernel = np.array([
-            [a_corner, a_edge - a_cross, a_corner],
-            [a_edge + a_cross, 1 - 4 * (a_edge + a_corner), a_edge + a_cross],
-            [a_corner, a_edge - a_cross, a_corner]
+            [a_corner, a_edge - a_aniso, a_corner],
+            [a_edge + a_aniso, 1 - 4 * (a_edge + a_corner), a_edge + a_aniso],
+            [a_corner, a_edge - a_aniso, a_corner]
         ])
         return kernel
 
@@ -177,7 +177,7 @@ class InterPixelCapacitance(Effect):
         msg = (f"""<{self.__class__.__name__}> \"{self.meta['description']}\" :
    alpha_edge   = {self.meta.get('alpha_edge', 'NA')}
    alpha_corner = {self.meta.get('alpha_corner', 'NA')}
-   alpha_cross  = {self.meta.get('alpha_cross', 'NA')}
+   alpha_aniso  = {self.meta.get('alpha_aniso', 'NA')}
    kernel = {np.array2string(self.kernel, precision=2, floatmode='fixed',
         prefix="   kernel = ")}""")
 
