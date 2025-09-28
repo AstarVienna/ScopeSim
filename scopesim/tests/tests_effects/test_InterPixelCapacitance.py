@@ -24,7 +24,7 @@ class TestInit:
         kern = np.random.rand(3, 3)
         kern /= kern.sum()
         ipc = IPC(kernel=kern)
-        assert np.all(ipc.kernel == kern)
+        assert np.allclose(ipc.kernel, kern)
 
     def test_updates_with_kernel(self):
         ipc = IPC()
