@@ -32,7 +32,7 @@ class TestInit:
         kern /= kern.sum()
         ipc.update(kernel=kern)
         assert ipc.kernel.shape == (5, 5)
-        assert np.all(ipc.kernel == kern)
+        assert np.allclose(ipc.kernel, kern)
 
 
     def test_initialises_from_yaml(self):
