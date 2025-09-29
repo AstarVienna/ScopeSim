@@ -137,21 +137,20 @@ class InterPixelCapacitance(Effect):
         super().__init__(**kwargs)
 
         self.meta.update(kwargs)
-
-        if "kernel" in kwargs:
-            self.kernel = np.asarray(kwargs['kernel']).astype(float)
-        else:
-            self.kernel = self._build_kernel(kwargs)
-        kernsum = np.sum(self.kernel)
-        if kernsum > 1:
-            logger.warning("IPC kernel is larger than one, normalising")
-            self.kernel /= kernsum
-        if kernsum <= 0:
-            raise ValueError("IPC kernel has negative normalisation")
-
+        self.kernel = self._build_kernel(kwargs)
 
     def _build_kernel(self, params):
         """Build a 3x3 kernel"""
+        if "kernel" in params:
+            kernel = np.asarray(params['kernel']).astype(float)
+            kernsum = np.sum(kernel)
+            if kernsum > 1:
+                logger.warning("IPC kernel is larger than one, normalising")
+                kernel /= kernsum
+            if kernsum <= 0:
+                raise ValueError("IPC kernel has negative normalisation")
+            return kernel
+
         a_corner = params.get("alpha_corner", 0)
         a_aniso = params.get("alpha_aniso", 0)
         a_edge = params.get("alpha_edge", 0)
@@ -174,11 +173,21 @@ class InterPixelCapacitance(Effect):
         return det
 
     def update(self, **kwargs):
+        """Update the IPC kernel
+
+        An instance `ipc` of `InterPixelCapacitance` can be updated by
+        specifying either a new `kernel`:
+        ```ipc.update(kernel=[[0., 0.02, 0], [0, 0.92, 0], [0, 0.02, 0]])```
+        or by specifying one or more of the `alpha` parameters:
+        ```ipc.update(alpha_edge=0.02, alpha_corner=0.002)```
+        Note that unspecified `alpha` parameters (here `alpha_aniso`) default
+        to zero.
+        """
         if "kernel" in kwargs:
             for key in ["alpha_edge", "alpha_corner", "alpha_aniso"]:
                 self.meta.pop(key, None)
         self.meta.update(kwargs)
-        self.__init__(**self.meta)
+        self.kernel = self._build_kernel(kwargs)
 
     def __str__(self):
         msg = (f"""<{self.__class__.__name__}> \"{self.meta['description']}\" :
