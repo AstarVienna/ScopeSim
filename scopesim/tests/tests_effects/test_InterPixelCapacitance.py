@@ -18,13 +18,13 @@ class TestInit:
 
     def test_initialised_with_nothing(self):
         ipc = IPC()
-        assert np.all(ipc.kernel == np.array([[0, 0, 0], [0, 1, 0], [0, 0, 0]]))
+        np.testing.assert_array_equal(ipc.kernel, [[0, 0, 0], [0, 1, 0], [0, 0, 0]])
 
     def test_initialises_with_kernel(self):
         kern = np.random.rand(3, 3)
         kern /= kern.sum()
         ipc = IPC(kernel=kern)
-        assert np.allclose(ipc.kernel, kern)
+        np.testing.assert_allclose(ipc.kernel, kern)
 
     def test_updates_with_kernel(self):
         ipc = IPC()
@@ -32,7 +32,7 @@ class TestInit:
         kern /= kern.sum()
         ipc.update(kernel=kern)
         assert ipc.kernel.shape == (5, 5)
-        assert np.allclose(ipc.kernel, kern)
+        np.testing.assert_allclose(ipc.kernel, kern)
 
 
     def test_initialises_from_yaml(self):
@@ -40,7 +40,7 @@ class TestInit:
     kernel: [[0., 0.02, 0.], [0.02, 0.92, 0.02], [0., 0.02, 0.]]
     """)
         ipc = IPC(**yaml_dict)
-        assert np.all(ipc.kernel == np.asarray(yaml_dict['kernel']))
+        np.testing.assert_array_equal(ipc.kernel, yaml_dict["kernel"])
 
     def test_refuse_negative_kernel(self):
         with pytest.raises(ValueError):
@@ -48,7 +48,7 @@ class TestInit:
 
     def test_normalise_kernel_if_necessary(self):
         ipc = IPC(kernel = [[1, 1, 1], [1, 1, 1], [1, 1, 1]])
-        assert np.allclose(ipc.kernel.sum(), 1)
+        np.testing.assert_allclose(ipc.kernel.sum(), 1)
 
     def test_str_shows_parameter_value(self):
         ipc = IPC(alpha_edge=0.02)
@@ -74,12 +74,12 @@ class TestInit:
 class TestParameters():
     def test_initialises_with_params(self, a_edge, a_corner, a_aniso, kern):
         ipc = IPC(alpha_edge=a_edge, alpha_corner=a_corner, alpha_aniso=a_aniso)
-        assert np.allclose(ipc.kernel, np.asarray(kern))
+        np.testing.assert_allclose(ipc.kernel, kern)
 
     def test_update2_with_params(self, a_edge, a_corner, a_aniso, kern):
         ipc = IPC()
         ipc.update(alpha_edge=a_edge, alpha_corner=a_corner, alpha_aniso=a_aniso)
-        assert np.allclose(ipc.kernel, np.asarray(kern))
+        np.testing.assert_allclose(ipc.kernel, kern)
 
 
 @pytest.fixture(name="detector", scope="class")
@@ -105,7 +105,7 @@ class TestApply:
         det._hdu.data = hdu.data
         ipc = IPC(kernel=np.random.rand(3, 3))
         newdet = ipc.apply_to(det)
-        assert np.all(newdet.hdu.data == ipc.kernel)
+        np.testing.assert_array_equal(newdet.hdu.data, ipc.kernel)
 
     def test_preserves_shape(self, detector):
         oldshape = detector.hdu.data.shape
