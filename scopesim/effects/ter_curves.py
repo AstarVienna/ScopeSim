@@ -4,7 +4,7 @@
 import warnings
 from typing import ClassVar
 from collections.abc import Collection, Iterable
-
+from pooch import retrieve
 import numpy as np
 import skycalc_ipy
 from astropy import units as u
@@ -264,7 +264,11 @@ class AtmosphericTERCurve(TERCurve):
 
 class AtmoLibraryTERCurve(AtmosphericTERCurve):
     """
-    Retrieve an atmospheric spectrum from a local library file
+    Retrieve an atmospheric spectrum from a library file
+
+    A local file is used if the `kwargs` include the parameter `filename`.
+    To use a remote file, a `url` and a `hash` (to ensure that the
+    file is the correct one) need to be specified.
 
     The library file is a multi-extension FITS file with the following
     structure:
@@ -274,7 +278,7 @@ class AtmoLibraryTERCurve(AtmosphericTERCurve):
                    atmospheric spectra are sampled
     - extension 3 etc.: tables with columns `transmission` and `emission`
 
-    Currently the curves are distinguished by a single parameter (PWV).
+    Currently the curves are distinguished by a single parameter (`pwv`).
 
     Examples
     --------
@@ -286,11 +290,25 @@ class AtmoLibraryTERCurve(AtmosphericTERCurve):
              filename: "!ATMO.spectrum.filename
              pwv: 10.
 
+        - name: atmosphere
+          class: AtmoLibraryTERCurve
+          kwargs:
+             pwv: 25.
+             url: "https://scopesim.univie.ac.at/InstPkgSvr/atmo/Leiden_atmo_ter.fits"
+             hash: "16b5faa1bc4e75ba2d34cad02f302223b8a788306cd34b9809c3e895b46132b0"
+
+    The location of a downloaded file is provided by `.meta['filename']`.
     """
 
     z_order: ClassVar[tuple[int, ...]] = (112, 512)
 
     def __init__(self, **kwargs):
+        if "filename" not in kwargs:
+            kwargs['filename'] = retrieve(
+                kwargs['url'],
+                known_hash=kwargs['hash'],
+                progressbar=True)
+
         super().__init__(**kwargs)
         self.meta.update(kwargs)
 
