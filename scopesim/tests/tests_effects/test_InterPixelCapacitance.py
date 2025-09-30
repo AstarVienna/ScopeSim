@@ -105,7 +105,7 @@ class TestApply:
         det._hdu.data = hdu.data
         ipc = IPC(kernel=np.random.rand(3, 3))
         newdet = ipc.apply_to(det)
-        np.testing.assert_array_equal(newdet.hdu.data, ipc.kernel)
+        np.testing.assert_allclose(newdet.hdu.data, ipc.kernel)
 
     def test_preserves_shape(self, detector):
         oldshape = detector.hdu.data.shape

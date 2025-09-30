@@ -11,7 +11,7 @@ Related effects:
 from typing import ClassVar
 
 import numpy as np
-from scipy.signal import convolve
+from scipy.signal import oaconvolve
 
 from .. import Effect
 from ...detector import Detector
@@ -168,7 +168,7 @@ class InterPixelCapacitance(Effect):
                          det.__class__.__name__)
             return det
 
-        newdata = convolve(det._hdu.data, self.kernel, mode="same")
+        newdata = oaconvolve(det._hdu.data, self.kernel, mode="same")
         det._hdu.data = newdata
         return det
 
