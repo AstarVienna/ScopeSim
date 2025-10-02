@@ -919,7 +919,7 @@ def set_console_log_level(level="INFO"):
 
     .. versionadded:: 0.8.0
     """
-    rc.__logging_config__["handlers"]["console"]["level"] = level
+    rc.__logging_config__["handlers"]["console"]["level"] = level.upper()
     update_logging()
 
 
