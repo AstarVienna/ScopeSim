@@ -311,35 +311,29 @@ class AtmoLibraryTERCurve(AtmosphericTERCurve):
 
         super().__init__(**kwargs)
         self.meta.update(kwargs)
-
         self.load_table_from_library()
 
     def load_table_from_library(self):
         """Load the appropriate library extension based on parameter value"""
         param = 'pwv'
-        value  = self.meta['pwv']
+        self.value  = from_currsys(self.meta['pwv'], self.cmds)
         self.ext_data= self._file[0].header["EDATA"]
         self.ext_cat = self._file[0].header["ECAT"]
         self.catalog = Table.read(self._file[self.ext_cat])
 
         # Look for wavelength extension
-        cond = self.catalog["extension_name"] == "WAVELENGTH"
-        if any(cond):
-            extid = self.catalog["extension_id"][cond][0]
-            print("Extension:", extid)
-            wavehdu = self._file[extid]
-            wavelength = Table.read(wavehdu)['wavelength']
+        if "WAVELENGTH" in self._file:
+            wavelength = Table.read(self._file["WAVELENGTH"])['wavelength']
         else:
             wavelength = None
 
         # select the row corresponding to param
-        idx = np.argmin(np.abs(self.catalog[param] - value))
-        if idx < self.ext_data:
-            idx = self.ext_data
-            logger.warning("PWV value (%f) outside range, picking default value (%f)",
-                           value, self.catalog['pwv'][idx])
-        extid = self.catalog["extension_id"][idx]
-        terhdu = self._file[extid]
+        idx = np.argmin(np.abs(self.catalog[param] - self.value)).astype(int)
+        extname = self.catalog["extension_name"][idx]
+        terhdu = self._file[extname]
+        self.meta["extname"] = extname
+        logger.debug("%s: Loading extension %s", self.__class__.__name__,
+                     self.meta["extname"])
 
         tbl = Table.read(terhdu)
         if not "wavelength" in tbl.colnames and wavelength is not None:
