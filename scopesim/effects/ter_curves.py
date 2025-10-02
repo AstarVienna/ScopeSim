@@ -313,10 +313,21 @@ class AtmoLibraryTERCurve(AtmosphericTERCurve):
         self.meta.update(kwargs)
         self.load_table_from_library()
 
+
+    def update(self, **kwargs):
+        param = 'pwv'
+        if param not in kwargs:
+            logger.warning("Can only update with parameter %s", param)
+            return
+
+        self.meta[param] = kwargs[param]
+        self.load_table_from_library()
+
     def load_table_from_library(self):
         """Load the appropriate library extension based on parameter value"""
         param = 'pwv'
-        self.value  = from_currsys(self.meta['pwv'], self.cmds)
+
+        self.value  = from_currsys(self.meta[param], self.cmds)
         self.ext_data= self._file[0].header["EDATA"]
         self.ext_cat = self._file[0].header["ECAT"]
         self.catalog = Table.read(self._file[self.ext_cat])
