@@ -58,3 +58,5 @@ def test_set_console_log_level():
     assert base_logger.handlers[0].level == logging.ERROR
     sim.set_console_log_level()
     assert base_logger.handlers[0].level == logging.INFO
+    sim.set_console_log_level("debug")
+    assert base_logger.handlers[0].level == logging.DEBUG
