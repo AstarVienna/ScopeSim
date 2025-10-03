@@ -10,10 +10,15 @@ import yaml
 import httpx
 from more_itertools import first, last, groupby_transform
 
-from scopesim import rc
 from .github_utils import download_github_folder
-from .download_utils import (get_server_folder_contents, handle_download,
-                             handle_unzipping, create_client)
+from .download_utils import (
+    get_server_folder_contents,
+    handle_download,
+    handle_unzipping,
+    create_client,
+    get_base_url,
+    get_local_packages_path,
+)
 from ..utils import get_logger
 from ..commands.user_commands import patch_fake_symlinks
 
@@ -26,11 +31,6 @@ _GrpItrType = Iterator[tuple[str, list[str]]]
 
 class PkgNotFoundError(Exception):
     """Unable to find given package or given release of that package."""
-
-
-def get_base_url():
-    """Get instrument package server URL from rc.__config__."""
-    return rc.__config__["!SIM.file.server_base_url"]
 
 
 def get_server_package_list():
@@ -310,7 +310,7 @@ def _download_single_package(
             f"server {client.base_url!s}.{maybe}")
 
     if save_dir is None:
-        save_dir = rc.__config__["!SIM.file.local_packages_path"]
+        save_dir = get_local_packages_path()
     save_dir = Path(save_dir)
     save_dir.mkdir(parents=True, exist_ok=True)
 
@@ -448,7 +448,7 @@ def download_missing_pkgs(instrument: str) -> None:
 
 def check_packages(instrument: str, download_missing: bool) -> None:
     """Check if required package is in CWD, download if needed."""
-    pkgdir = Path(rc.__config__["!SIM.file.local_packages_path"])
+    pkgdir = get_local_packages_path()
     if not pkgdir.exists():
         pkgdir.mkdir()
     pkgdir = patch_fake_symlinks(pkgdir)

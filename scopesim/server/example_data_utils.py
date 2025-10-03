@@ -1,32 +1,9 @@
 # -*- coding: utf-8 -*-
-"""Store the example data functions here instead of polluting database.py."""
+"""Convenienve functions for listing and downloading example datasets."""
 
 from pathlib import Path
 
-import pooch
-
-from scopesim import rc
-
-
-def _create_retriever(
-    save_dir: Path | str | None = None,
-    url: str | None = None,
-) -> pooch.Pooch:
-    """Create Pooch retriever and load example data registry."""
-    svrconf = rc.__config__["!SIM.file"]
-
-    url = url or (svrconf["server_base_url"] + svrconf["example_data_suburl"])
-    save_dir = save_dir or (Path.home() / ".astar/scopesim")
-    save_dir = Path(save_dir)
-
-    retriever = pooch.create(
-        path=save_dir,
-        base_url=url,
-        retry_if_failed=3)
-    registry_file = Path(__file__).parent / svrconf["example_data_hash_file"]
-    retriever.load_registry(registry_file)
-
-    return retriever
+from .download_utils import create_retriever
 
 
 def list_example_data(
@@ -55,7 +32,7 @@ def list_example_data(
         A list of paths to the example files relative to ``url``.
         The full string should be passed to ``download_example_data``.
     """
-    retriever = _create_retriever(url=url)
+    retriever = create_retriever("example_data", url=url)
     server_files = retriever.registry_files
 
     if not silent:
@@ -118,7 +95,7 @@ def download_example_data(
             "download_example_data(\"foo.fits\", \"bar.fits\")."
         )
 
-    retriever = _create_retriever(save_dir, url)
+    retriever = create_retriever("example_data", save_dir, url)
 
     save_paths = []
     for fname in files:
