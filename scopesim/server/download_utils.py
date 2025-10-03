@@ -242,6 +242,20 @@ def create_retriever(
     """
     Create Pooch retriever and load example data registry.
 
+    This functions is meant for internal use. Currently supported values for
+    `collection` are "example_data" (used by the example data download
+    functions, which *are* part of the user-facing API), "atmo" (for
+    atmospheric libraries) and "psfs" (not yet implemented). The main purpose
+    of this download infrastructure is to be able to store (relatively) large
+    static files in a remote location, instead of having to bundle them in the
+    package (or in IRDB packages).
+
+    The ``Pooch`` instance returned by this function can then download any file
+    listed in the respective registry via ``retriever.fetch(<filename>,
+    progressbar=True)``, which returns the full path to the locally cached file.
+    Use ``retriever.registry_files`` to display which files are available for
+    download in each instance.
+
     Parameters
     ----------
     collection : str

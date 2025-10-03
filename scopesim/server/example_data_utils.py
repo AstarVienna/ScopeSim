@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Store the example data functions here instead of polluting database.py."""
+"""Convenienve functions for listing and downloading example datasets."""
 
 from pathlib import Path
 
