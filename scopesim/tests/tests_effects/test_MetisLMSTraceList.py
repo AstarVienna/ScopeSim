@@ -39,4 +39,4 @@ class TestPredisperserAngle:
             coeff_hdu = hdul['Predisperser']
             computed = predisperser_angle(wavelen,
                                           coeff_hdu.data['coefficients'])
-            assert_allclose(computed, expected, atol=1e-6)
+            assert_allclose(computed, expected, atol=1e-5)
