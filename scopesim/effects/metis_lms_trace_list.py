@@ -485,8 +485,8 @@ def predisperser_angle(wavelength, predisp_coeff):
     -----
       The function implements a polynomial as in Fig.3-15 of E-REP-ATC-MET-1003_3-0.
     """
-    angle = 0
-    lam = 1
+    angle = 0.
+    lam = 1.
     for coeff in predisp_coeff:
         angle += coeff * lam
         lam *= wavelength
