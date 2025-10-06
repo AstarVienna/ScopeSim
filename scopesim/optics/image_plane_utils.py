@@ -185,7 +185,7 @@ def create_wcs_from_points(points: np.ndarray,
 
     # TODO: test whether abs(pixel_scale) breaks anything
     pixel_scale = abs(pixel_scale)
-    extent = points.ptp(axis=0) / pixel_scale
+    extent = np.ptp(points, axis=0) / pixel_scale
     naxis = extent.round().astype(int)
     ndims = len(naxis)
     offset = (extent - naxis) * pixel_scale  # compensate rounding

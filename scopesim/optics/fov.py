@@ -234,7 +234,7 @@ class FieldOfView:
         -------
         self.hdu : fits.ImageHDU, synphot.SourceSpectrum
 
-        .. versionchanged:: PLACEHOLDER_NEXT_RELEASE_VERSION
+        .. versionchanged:: 0.11.0
 
            Removed `hdu_type` and `use_photlam` arguments, this is now handled
            by the subclasses.
@@ -606,7 +606,7 @@ class FieldOfView:
 class FieldOfView1D(FieldOfView):
     """For inkoherent MOS instruments, output 1D spectrum.
 
-    .. versionadded:: PLACEHOLDER_NEXT_RELEASE_VERSION
+    .. versionadded:: 0.11.0
 
        Split ``FieldOfView`` into nD-subclasses.
 
@@ -693,7 +693,7 @@ class FieldOfView1D(FieldOfView):
     def plot_data(self):
         """Plot spectrum data if already exists.
 
-        .. versionadded:: PLACEHOLDER_NEXT_RELEASE_VERSION
+        .. versionadded:: 0.11.0
 
         """
         if self.hdu is None:
@@ -708,7 +708,7 @@ class FieldOfView1D(FieldOfView):
 class FieldOfView2D(FieldOfView):
     """For imaging, output 2D image.
 
-    .. versionadded:: PLACEHOLDER_NEXT_RELEASE_VERSION
+    .. versionadded:: 0.11.0
 
        Split ``FieldOfView`` into nD-subclasses.
 
@@ -873,7 +873,7 @@ class FieldOfView2D(FieldOfView):
     def plot_data(self):
         """Plot HDU data if already exists.
 
-        .. versionadded:: PLACEHOLDER_NEXT_RELEASE_VERSION
+        .. versionadded:: 0.11.0
 
         """
         if self.hdu is None:
@@ -884,7 +884,7 @@ class FieldOfView2D(FieldOfView):
 class FieldOfView3D(FieldOfView):
     """For spectroscopy, output 3D datacube (wave, x, y).
 
-    .. versionadded:: PLACEHOLDER_NEXT_RELEASE_VERSION
+    .. versionadded:: 0.11.0
 
        Split ``FieldOfView`` into nD-subclasses.
 
@@ -1109,7 +1109,7 @@ class FieldOfView3D(FieldOfView):
     def plot_data(self):
         """Plot HDU data if already exists.
 
-        .. versionadded:: PLACEHOLDER_NEXT_RELEASE_VERSION
+        .. versionadded:: 0.11.0
 
         """
         if self.hdu is None:

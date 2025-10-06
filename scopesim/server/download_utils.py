@@ -8,12 +8,14 @@ from pathlib import Path
 
 import httpx
 import bs4
+import pooch
 
 from tqdm.auto import tqdm
 # from tqdm.contrib.logging import logging_redirect_tqdm
 # put with logging_redirect_tqdm(loggers=all_loggers): around tqdm
 # Note: seems to work without that so far...
 
+from .. rc import __config__
 from ..utils import get_logger
 
 
@@ -22,6 +24,20 @@ logger = get_logger(__name__)
 
 class ServerError(Exception):
     """Some error with the server or connection to the server."""
+
+
+def _get_svr_conf():
+    return __config__["!SIM.file"]
+
+
+def get_base_url():
+    """Get instrument package server URL from rc.__config__."""
+    return _get_svr_conf()["server_base_url"]
+
+
+def get_local_packages_path():
+    """Get local instrument package save directory from rc.__config__."""
+    return Path(_get_svr_conf()["local_packages_path"])
 
 
 def _make_tqdm_kwargs(desc: str = ""):
@@ -216,3 +232,59 @@ def get_server_folder_contents(client, dir_name: str,
     pkgs = (href.string for href in hrefs)
 
     return pkgs
+
+
+def create_retriever(
+    collection: str,
+    save_dir: Path | str | None = None,
+    url: str | None = None,
+) -> pooch.Pooch:
+    """
+    Create Pooch retriever and load example data registry.
+
+    This functions is meant for internal use. Currently supported values for
+    `collection` are "example_data" (used by the example data download
+    functions, which *are* part of the user-facing API), "atmo" (for
+    atmospheric libraries) and "psfs" (not yet implemented). The main purpose
+    of this download infrastructure is to be able to store (relatively) large
+    static files in a remote location, instead of having to bundle them in the
+    package (or in IRDB packages).
+
+    The ``Pooch`` instance returned by this function can then download any file
+    listed in the respective registry via ``retriever.fetch(<filename>,
+    progressbar=True)``, which returns the full path to the locally cached file.
+    Use ``retriever.registry_files`` to display which files are available for
+    download in each instance.
+
+    Parameters
+    ----------
+    collection : str
+        "Server folder" containing data to be retrieved.
+    save_dir : Path | str | None, optional
+        Local cache location. If None (the default), use the one specified in
+        the global configuration file.
+    url : str | None, optional
+        Server base URL. If None (the default), use the one specified in
+        the global configuration file.
+
+    Returns
+    -------
+    retriever : pooch.Pooch
+        Pooch retriever instance.
+
+    """
+    svrconf = _get_svr_conf()
+
+    url = url or (get_base_url() + svrconf[collection]["suburl"])
+    save_dir = save_dir or (Path.home() / ".astar/scopesim" / collection)
+    save_dir = Path(save_dir)
+
+    retriever = pooch.create(
+        path=save_dir,
+        base_url=url,
+        retry_if_failed=svrconf["retries"],
+    )
+    registry_file = Path(__file__).parent / svrconf[collection]["hash_file"]
+    retriever.load_registry(registry_file)
+
+    return retriever

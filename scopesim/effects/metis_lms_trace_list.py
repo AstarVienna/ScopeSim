@@ -84,6 +84,7 @@ class MetisLMSSpectralTraceList(SpectralTraceList):
 
         if isinstance(obj, FieldOfView):
             # Application to field of view
+            logger.debug("Executing %s, FoV", self.meta['name'])
             if obj.hdu is not None and obj.hdu.header["NAXIS"] == 3:
                 obj.cube = obj.hdu
             elif obj.hdu is None and obj.cube is None:

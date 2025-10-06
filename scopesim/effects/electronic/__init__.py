@@ -15,12 +15,13 @@ Classes:
 - BinnedImage
 - UnequalBinnedImage
 - Bias - adds constant bias level to readout
+- InterPixelCapacitance - apply IPC kernel to detector readout
 """
 
 from ...utils import get_logger
 logger = get_logger(__name__)
 
-from .electrons import LinearityCurve, ADConversion
+from .electrons import LinearityCurve, ADConversion, InterPixelCapacitance
 from .noise import (Bias, PoorMansHxRGReadoutNoise, BasicReadoutNoise,
                     ShotNoise, DarkCurrent)
 from .exposure import AutoExposure, ExposureIntegration, ExposureOutput

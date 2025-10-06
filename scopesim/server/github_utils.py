@@ -27,7 +27,7 @@ def create_github_url(url: str) -> None:
 
     Can handle blob or tree paths.
 
-    .. deprecated:: PLACEHOLDER_NEXT_RELEASE_VERSION
+    .. deprecated:: 0.11.0
 
        This function is deprecated and will be removed in version 0.12.
     """
@@ -61,7 +61,7 @@ def download_github_folder(repo_url: str,
     Re-written based on the on the download function
     `here <https://github.com/sdushantha/gitdir/blob/f47ce9d85ee29f8612ce5ae804560a12b803ddf3/gitdir/gitdir.py#L55>`_
 
-    .. deprecated:: PLACEHOLDER_NEXT_RELEASE_VERSION
+    .. deprecated:: 0.11.0
 
        This function is deprecated and will be removed in version 0.12.
     """

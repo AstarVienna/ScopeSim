@@ -191,7 +191,7 @@ class ImagePlane:
     def plot(self):
         """Plot data in image plane.
 
-        .. versionadded:: PLACEHOLDER_NEXT_RELEASE_VERSION
+        .. versionadded:: 0.11.0
 
         """
         if self.header["NAXIS"] == 3:

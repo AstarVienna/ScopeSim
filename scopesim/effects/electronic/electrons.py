@@ -11,13 +11,15 @@ Related effects:
 from typing import ClassVar
 
 import numpy as np
+from scipy.signal import oaconvolve
 
 from .. import Effect
 from ...detector import Detector
 from ...utils import figure_factory, check_keys
-from ...utils import from_currsys, real_colname
+from ...utils import from_currsys, real_colname, get_logger
 from . import logger
 
+logger = get_logger(__name__)
 
 class LinearityCurve(Effect):
     """
@@ -89,6 +91,113 @@ class LinearityCurve(Effect):
         ax.set_ylabel("Measured [e- s$^-1$]")
 
         return fig
+
+
+class InterPixelCapacitance(Effect):
+    """Inter-pixel capacitance effect.
+
+    The effect models cross-talk due to inter-pixel capacitance with
+    a convolution kernel following [1]_.
+
+    Example
+    -------
+    The effect is usually instantiated in a yaml file.
+
+    The first example uses the three-parameter model in Eq. (9) of [1].
+    The three parameters are `alpha_edge` (corresponding to $\\alpha$) for the
+    effect of neighbouring pixels sharing an edge with the pixel under
+    consideration, `alpha_corner` (corresponding to $\\alpha^\\prime$) for pixels
+    sharing a corner, and `alpha_aniso` (corresponding to $\\alpha_{+}$) to allow
+    for different capacitive coupling along rows and columns. The simpler one-
+    and two-parameters models are recovered by setting `alpha_aniso` and/or
+    `alpha_corner` to zero.
+    - name: ipc
+      description: Apply inter-pixel capacitance
+      class: InterPixelCapacitance
+      kwargs:
+         alpha_edge: 0.02
+         alpha_corner: 0.002
+         alpha_aniso: 0
+
+    Alternatively, a convolution kernel can be provided explicitely:
+    - name: ipc
+      kwargs:
+         kernel: [
+            [0.0011, 0.0127, 0.0011],
+            [0.0163, 0.9360, 0.0164],
+            [0.0011, 0.0127, 0.0011],
+          ]
+
+    .. [1] Kannawadi et al., "The Impact of Interpixel Capacitance in CMOS Detectors on PSF
+       Shapes and Implications for WFIRST", PASP 128, 095001 (2016).
+    """
+    z_order: ClassVar[tuple[int, ...]] = (810,)
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+        self.meta.update(kwargs)
+        self.kernel = self._build_kernel(kwargs)
+
+    def _build_kernel(self, params):
+        """Build a 3x3 kernel"""
+        if "kernel" in params:
+            kernel = np.asarray(params['kernel']).astype(float)
+            kernsum = np.sum(kernel)
+            if kernsum > 1:
+                logger.warning("IPC kernel is larger than one, normalising")
+                kernel /= kernsum
+            if kernsum <= 0:
+                raise ValueError("IPC kernel has negative normalisation")
+            return kernel
+
+        a_corner = params.get("alpha_corner", 0)
+        a_aniso = params.get("alpha_aniso", 0)
+        a_edge = params.get("alpha_edge", 0)
+
+        kernel = np.array([
+            [a_corner, a_edge - a_aniso, a_corner],
+            [a_edge + a_aniso, 1 - 4 * (a_edge + a_corner), a_edge + a_aniso],
+            [a_corner, a_edge - a_aniso, a_corner]
+        ])
+        return kernel
+
+    def apply_to(self, det, **kwargs):
+        if not isinstance(det, Detector):
+            logger.debug("%s applied to %s", self.display_name,
+                         det.__class__.__name__)
+            return det
+
+        newdata = oaconvolve(det._hdu.data, self.kernel, mode="same")
+        det._hdu.data = newdata
+        return det
+
+    def update(self, **kwargs):
+        """Update the IPC kernel
+
+        An instance `ipc` of `InterPixelCapacitance` can be updated by
+        specifying either a new `kernel`:
+        ```ipc.update(kernel=[[0., 0.02, 0], [0, 0.92, 0], [0, 0.02, 0]])```
+        or by specifying one or more of the `alpha` parameters:
+        ```ipc.update(alpha_edge=0.02, alpha_corner=0.002)```
+        Note that unspecified `alpha` parameters (here `alpha_aniso`) default
+        to zero.
+        """
+        if "kernel" in kwargs:
+            for key in ["alpha_edge", "alpha_corner", "alpha_aniso"]:
+                self.meta.pop(key, None)
+        self.meta.update(kwargs)
+        self.kernel = self._build_kernel(kwargs)
+
+    def __str__(self):
+        msg = (f"""<{self.__class__.__name__}> \"{self.meta['description']}\" :
+   alpha_edge   = {self.meta.get('alpha_edge', 'NA')}
+   alpha_corner = {self.meta.get('alpha_corner', 'NA')}
+   alpha_aniso  = {self.meta.get('alpha_aniso', 'NA')}
+   kernel = {np.array2string(self.kernel, precision=4, floatmode='fixed',
+        prefix="   kernel = ")}""")
+
+        return msg
 
 
 class ADConversion(Effect):
