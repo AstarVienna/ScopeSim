@@ -470,13 +470,37 @@ class MetisLMSSpectralTrace(SpectralTrace):
         return msg
 
 
+def predisperser_angle(wavelength, predisp_coeff):
+    """
+    Compute the predisperser angle needed for central `wavelength`
+
+    Parameters
+    ----------
+    wavelength : float
+            central wavelength in microns
+    predisp_coeff : ndarray, list
+            array of coefficients to compute the predisperser angle. Element `i`
+            multiplies the monomial `wavelength^i`, hence the length of
+            the array determines the order of the polynomial.
+
+    Notes
+    -----
+      The function implements a polynomial as in Fig.3-15 of E-REP-ATC-MET-1003_3-0.
+    """
+    angle = 0
+    lam = 1
+    for coeff in predisp_coeff:
+        angle += coeff * lam
+        lam *= wavelength
+    return angle
+
 def echelle_setting(wavelength, grat_spacing, wcal_def):
     """
     Determine optimal echelle rotation angle for wavelength.
 
     Parameters
     ----------
-    lambda : float
+    wavelength : float
             central wavelength in microns
     grat_spacing : float
             grating rule spacing in microns
