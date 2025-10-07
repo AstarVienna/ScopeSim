@@ -302,23 +302,29 @@ Meta-data
         else:
             p.text(str(self))
 
-    def __getitem__(self, item):
-        if isinstance(item, str) and item.startswith("#"):
-            if len(item) > 1:
-                if item.endswith("!"):
-                    key = item.removeprefix("#").removesuffix("!")
-                    if len(key) > 0:
-                        value = from_currsys(self.meta[key], self.cmds)
-                    else:
-                        value = from_currsys(self.meta, self.cmds)
-                else:
-                    value = self.meta[item.removeprefix("#")]
-            else:
-                value = self.meta
-        else:
-            raise ValueError(f"__getitem__ calls must start with '#': {item}")
+    def get_from_meta(self, item: str):
+        if not isinstance(item, str):
+            raise TypeError("Effect.resolve_meta() needs a string.")
 
-        return value
+        if not item.startswith("#"):
+            raise ValueError(f"resolve_meta calls must start with '#': {item}")
+
+        if len(item) == 1:
+            return self.meta  # When do we actually need/want this??
+
+        key = item.removeprefix("#")
+
+        if not key.endswith("!"):
+            return self.meta[key]
+
+        key = key.removesuffix("!")
+        if key == "":
+            return from_currsys(self.meta, self.cmds)
+
+        return from_currsys(self.meta[key], self.cmds)
+
+    def __getitem__(self, item):
+        return self.get_from_meta(item)
 
     def _get_path(self):
         if any(key not in self.meta for key in ("path", "filename_format")):

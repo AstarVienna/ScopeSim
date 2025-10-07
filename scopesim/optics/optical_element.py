@@ -180,7 +180,7 @@ class OpticalElement:
     def __add__(self, other) -> None:
         self.add_effect(other)
 
-    def __getitem__(self, item):
+    def get_from_meta(self, item):
         """
         Return Effects of Effect meta properties.
 
@@ -218,7 +218,7 @@ class OpticalElement:
         elif isinstance(item, str):
             if item.startswith("#") and "." in item:
                 eff, meta = item.replace("#", "").split(".")
-                obj = self[eff][f"#{meta}"]
+                obj = self[eff].get_from_meta(f"#{meta}")
             else:
                 obj = [eff for eff in self.effects
                        if eff.meta["name"] == item]
@@ -230,6 +230,9 @@ class OpticalElement:
         #         "No result for key: '%s'. Did you mean '#%s'?", item, item)
 
         return obj
+
+    def __getitem__(self, item):
+        return self.get_from_meta(item)
 
     def write_string(self, stream: TextIO, list_effects: bool = True) -> None:
         """Write formatted string representation to I/O stream."""

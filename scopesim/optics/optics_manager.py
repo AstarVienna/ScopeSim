@@ -341,7 +341,7 @@ Summary of Effects in Optical Elements:
             if item.startswith("#") and "." in item:
                 opt_el_name = item.replace("#", "").split(".")[0]
                 new_item = item.replace(f"{opt_el_name}.", "")
-                obj = self[opt_el_name][new_item]
+                obj = self[opt_el_name].get_from_meta(new_item)
             else:
                 # get all optical elements that match "item"
                 obj = [opt_el for opt_el in self.optical_elements
