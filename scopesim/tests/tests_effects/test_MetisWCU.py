@@ -78,16 +78,26 @@ class TestWCUSource:
         new_temp = 1.5 * old_temp
         bbsource.set_temperature(new_temp)
         assert bbsource.meta['bb_temp'] == new_temp
+        assert (bbsource.meta['bb_temp_c'] ==
+                np.round((new_temp - 273.15 * u.K).value, 7))
 
     def test_can_set_wcu_temperature(self, bbsource):
         old_temp = bbsource.meta['wcu_temp']
         new_temp = old_temp + 12 * u.K
         bbsource.set_temperature(wcu_temp=new_temp)
         assert bbsource.meta['wcu_temp'] == new_temp
+        assert (bbsource.meta['wcu_temp_c'] ==
+                np.round((new_temp - 273.15 * u.K).value, 7))
 
     def test_can_set_temperature_in_celsius(self, bbsource):
         bbsource.set_temperature(bb_temp=30*u.deg_C)
         assert bbsource.meta['bb_temp'] == 303.15 * u.K
+        assert bbsource.meta['bb_temp_c'] == 30
+
+    def test_can_change_temperature_units_with_float(self, bbsource):
+        bbsource.meta['is_temp'] = 293.15
+        bbsource._kelvin2celsius()
+        assert bbsource.meta['is_temp_c'] == 20.
 
     def test_ignore_incompatible_units_bb(self, bbsource):
         old_temp = bbsource.meta['bb_temp']

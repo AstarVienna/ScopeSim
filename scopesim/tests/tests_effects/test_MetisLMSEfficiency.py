@@ -1,8 +1,8 @@
 """Tests for MetisLMSEfficiency effect"""
 
+from unittest.mock import patch
 import pytest
 from pytest import approx
-from unittest.mock import patch
 
 from scopesim.effects.ter_curves import TERCurve
 from scopesim.effects.metis_lms_trace_list import MetisLMSEfficiency

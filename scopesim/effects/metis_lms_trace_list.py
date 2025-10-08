@@ -43,30 +43,16 @@ class MetisLMSSpectralTraceList(SpectralTraceList):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
-        # self.params = {"wavelen": "!OBS.wavelen"}
-        # self.params.update(kwargs)
-
         self.wavelen = self.meta["wavelen"]
 
         # field of view of the instrument
         self.slicelist = self._file["Aperture List"].data
-
-        # self.view = np.array([self.meta["naxis1"] * self.meta["pixscale"],
-        #                       self.meta["nslice"] * self.meta["slicewidth"]])
 
         self.view = np.array([self.slicelist["right"].max() -
                               self.slicelist["left"].min(),
                               self.slicelist["top"].max() -
                               self.slicelist["bottom"].min()])
 
-        # for sli, spt in enumerate(self.spectral_traces.values()):
-        #     spt.meta["xmin"] = self.slicelist["left"][sli]
-        #     spt.meta["xmax"] = self.slicelist["right"][sli]
-        #     spt.meta["ymin"] = self.slicelist["bottom"][sli]
-        #     spt.meta["ymax"] = self.slicelist["top"][sli]
-
-        # if self._file is not None:
-        #     self.make_spectral_traces()
 
     def apply_to(self, obj, **kwargs):
         """See parent docstring."""
@@ -161,7 +147,8 @@ class MetisLMSSpectralTraceList(SpectralTraceList):
         # determine echelle order and angle from specified wavelength
         tempres = self._angle_from_lambda()
         self.meta["order"] = tempres["Ord"]
-        self.meta["angle"] = tempres["Angle"]
+        self.meta["echelle"] = tempres["Echelle"]
+        self.meta["predisperser"] = tempres["Predisperser"]
 
         spec_traces = {}
         for sli in np.arange(self.meta["nslice"]):
@@ -262,7 +249,18 @@ class MetisLMSSpectralTraceList(SpectralTraceList):
         lam = from_currsys(self.meta["wavelen"], self.cmds)
         grat_spacing = self.meta["grat_spacing"]
         wcal = self._file["WCAL"].data
-        return echelle_setting(lam, grat_spacing, wcal)
+        angles = echelle_setting(lam, grat_spacing, wcal)
+        predispcoeff = self._file["Predisperser"].data["coefficients"]
+        angles["Predisperser"] = predisperser_angle(lam, predispcoeff)
+        return angles
+
+    def __str__(self):
+        msg = f"""{self.__class__.__name__} \"{self.display_name}\" : {len(self.spectral_traces)} traces
+   - Central wavelength: {from_currsys(self.meta['wavelen'], self.cmds)} um
+   - Order:              {self.meta['order']}
+   - Predisperser angle: {self.meta['predisperser']:.3f} deg
+   - Echelle angle:      {self.meta['echelle']:.3f} deg"""
+        return msg
 
 
 class MetisLMSSpectralTrace(SpectralTrace):
@@ -390,7 +388,7 @@ class MetisLMSSpectralTrace(SpectralTrace):
         """
         spslice = self.meta["slice"]
         order = self.meta["order"]
-        angle = self.meta["angle"]
+        angle = self.meta["echelle"]
         matnames = ["A", "B", "AI", "BI"]
         matrices = {}
 
@@ -466,9 +464,33 @@ class MetisLMSSpectralTrace(SpectralTrace):
     def __str__(self):
         msg = (f"<MetisLMSSpectralTrace> \"{self.meta['description']}\" : "
                f"{from_currsys(self.meta['wavelen'], self.cmds)} um : "
-               f"Order {self.meta['order']} : Angle {self.meta['angle']}")
+               f"Order {self.meta['order']} : Predisperser {self.meta['predisperser']:.3f}, Echelle {self.meta['echelle']:.3f}")
         return msg
 
+
+def predisperser_angle(wavelength, predisp_coeff):
+    """
+    Compute the predisperser angle needed for central `wavelength`
+
+    Parameters
+    ----------
+    wavelength : float
+            central wavelength in microns
+    predisp_coeff : ndarray, list
+            array of coefficients to compute the predisperser angle. Element `i`
+            multiplies the monomial `wavelength^i`, hence the length of
+            the array determines the order of the polynomial.
+
+    Notes
+    -----
+      The function implements a polynomial as in Fig.3-15 of E-REP-ATC-MET-1003_3-0.
+    """
+    angle = 0.
+    lam = 1.
+    for coeff in predisp_coeff:
+        angle += coeff * lam
+        lam *= wavelength
+    return angle
 
 def echelle_setting(wavelength, grat_spacing, wcal_def):
     """
@@ -476,7 +498,7 @@ def echelle_setting(wavelength, grat_spacing, wcal_def):
 
     Parameters
     ----------
-    lambda : float
+    wavelength : float
             central wavelength in microns
     grat_spacing : float
             grating rule spacing in microns
@@ -489,7 +511,7 @@ def echelle_setting(wavelength, grat_spacing, wcal_def):
     -------
     a `dict` with entries
     - `Ord`: echelle order
-    - `Angle`: grism angle
+    - `Echelle`: echelle angle
     - `Phase`: phase
     """
     if isinstance(wcal_def, fits.FITS_rec):
@@ -518,7 +540,7 @@ def echelle_setting(wavelength, grat_spacing, wcal_def):
     # Compute the phase corresponding to the wavelength
     phase = wavelength * order / (2 * grat_spacing)
 
-    return {"Ord": order, "Angle": angle, "Phase": phase}
+    return {"Ord": order, "Echelle": angle, "Phase": phase}
 
 
 class MetisLMSImageSlicer(ApertureMask):

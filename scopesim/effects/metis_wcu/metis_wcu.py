@@ -28,6 +28,7 @@ from ...optics.surface import SpectralSurface
 logger = get_logger(__name__)
 
 
+
 class WCUSource(TERCurve):
     """
     Warm Calibration Unit Source.
@@ -95,6 +96,8 @@ class WCUSource(TERCurve):
                 self.meta.update(config)
 
         self.meta.update(kwargs)
+        # We need to keep temperatures in Celsius for FITS headers
+        self._kelvin2celsius()
 
         # Check on the presence of one vital parameter
         if "rho_tube" not in self.meta:
@@ -263,8 +266,25 @@ class WCUSource(TERCurve):
             else:
                 raise ValueError("is_temp below absolute zero, not changed")
 
+        self._kelvin2celsius()
+
         self.compute_lamp_emission()
         self.compute_fp_emission()
+
+    def _kelvin2celsius(self):
+        """Convert Kelvin to Celsius
+
+        Temperatures in Celsius are needed for FITS headers only. astropy.units
+        produces ugly floating point numbers."""
+        temp0 = 273.15
+        for param in ["bb_temp", "is_temp", "wcu_temp"]:
+            if param in self.meta:
+                if isinstance(self.meta[param], u.Quantity):
+                    self.meta[param+"_c"] = np.round(self.meta[param].value - temp0, 7)
+                else:
+                    self.meta[param+"_c"] = np.round(self.meta[param] - temp0, 7)
+
+
 
     def set_bb_aperture(self, value: float) -> None:
         """
@@ -279,6 +299,7 @@ class WCUSource(TERCurve):
             logger.warning("bb_aperture value out of range [0, 1], clipping to %f",
                            value)
         self.bb_aperture = value
+        self.meta['bb_aperture'] = value
         self.compute_lamp_emission()
 
     def set_fpmask(
