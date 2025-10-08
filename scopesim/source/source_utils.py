@@ -4,6 +4,7 @@ from collections.abc import Iterable
 from pathlib import Path
 
 import numpy as np
+from scipy import integrate
 from astropy import wcs, units as u
 from astropy.io import fits
 from astropy.table import Table
@@ -159,9 +160,9 @@ def photons_in_range(
         # flux [ph s-1 cm-2] == flux [ph s-1 cm-2 AA-1] * wave [AA]
         if isinstance(bandpass, SpectralElement):
             bandpass.model.bounds_error = True
-            counts.append(np.trapz(bandpass(wave).value * flux, wave))
+            counts.append(integrate.trapezoid(bandpass(wave).value * flux, wave))
         else:
-            counts.append(np.trapz(flux, wave))
+            counts.append(integrate.trapezoid(flux, wave))
 
     # counts = flux [ph s-1 cm-2]
     counts = (counts * u.ph * u.s**-1 * u.cm**-2).to(u.ph * u.s**-1 * u.m**-2)

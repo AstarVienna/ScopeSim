@@ -1,5 +1,5 @@
 import numpy as np
-import matplotlib.pyplot as plt
+from scipy import integrate
 from astropy import units as u
 from astropy.table import Table
 from astropy.io import fits
@@ -50,7 +50,7 @@ def skycalc_plus_eso_filter_gives_similar_photons_flux_to_ohio():
         flux = src.spectra[1](wave)
 
         # report normalised flux ratio in ph s-1 cm-2 angstrom-1 arcsec-2
-        ph = np.trapz(flux, wave) / filt_ter.fwhm.to(u.AA)
+        ph = integrate.trapezoid(flux, wave) / filt_ter.fwhm.to(u.AA)
         ph = ph.to("ph s-1 cm-2 angstrom-1")
         ph_zero_mag = ph / 10 ** (-0.4 * paranal_bg_mags[filt_name])
         ohio_ph = ohio_zero_ph[filt_name]
@@ -61,7 +61,7 @@ def skycalc_plus_eso_filter_gives_similar_photons_flux_to_ohio():
         print("Ratio:", ph_zero_mag.value / ohio_ph)
 
         # report absolute flux ratio in ph s-1 cm-2 arcsec-2 (per filter bandpass)
-        ph = np.trapz(flux, wave)
+        ph = integrate.trapezoid(flux, wave)
         ph = ph.to("ph s-1 cm-2")
         ph_zero_mag = ph / 10 ** (-0.4 * paranal_bg_mags[filt_name])
         ohio_ph = ohio_zero_ph[filt_name] * ohio_fwhm[filt_name] * 1e4
@@ -81,5 +81,3 @@ def convert_skycalc_fits_to_ascii(filename):
 # convert_skycalc_fits_to_ascii("eso_skycalc_r_6000_wave_0.3_15nm_airmass_1_pwv_2.5.fits")
 
 # skycalc_plus_eso_filter_gives_similar_photons_flux_to_ohio()
-
-
