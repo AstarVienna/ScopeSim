@@ -6,10 +6,12 @@ from typing import ClassVar
 from collections.abc import Collection, Iterable
 
 import numpy as np
-import skycalc_ipy
+from scipy import integrate
 from astropy import units as u
 from astropy.io import fits
 from astropy.table import Table
+
+import skycalc_ipy
 
 from .effects import Effect
 from .ter_curves_utils import (add_edge_zeros, combine_two_spectra,
@@ -488,8 +490,8 @@ class FilterCurve(TERCurve):
         wave = self.surface.wavelength
         # noinspection PyProtectedMember
         thru = self.surface._get_ter_property("transmission", fmt="array")
-        num = np.trapz(thru * wave**2, x=wave)
-        den = np.trapz(thru * wave, x=wave)
+        num = integrate.trapezoid(thru * wave**2, x=wave)
+        den = integrate.trapezoid(thru * wave, x=wave)
 
         return num / den
 
