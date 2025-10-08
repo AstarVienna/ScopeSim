@@ -279,6 +279,7 @@ class WCUSource(TERCurve):
             logger.warning("bb_aperture value out of range [0, 1], clipping to %f",
                            value)
         self.bb_aperture = value
+        self.meta['bb_aperture'] = value
         self.compute_lamp_emission()
 
     def set_fpmask(
