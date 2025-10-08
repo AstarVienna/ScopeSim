@@ -94,6 +94,11 @@ class TestWCUSource:
         assert bbsource.meta['bb_temp'] == 303.15 * u.K
         assert bbsource.meta['bb_temp_c'] == 30
 
+    def test_can_change_temperature_units_with_float(self, bbsource):
+        bbsource.meta['is_temp'] = 293.15
+        bbsource._kelvin2celsius()
+        assert bbsource.meta['is_temp_c'] == 20.
+
     def test_ignore_incompatible_units_bb(self, bbsource):
         old_temp = bbsource.meta['bb_temp']
         with pytest.raises(u.UnitConversionError):

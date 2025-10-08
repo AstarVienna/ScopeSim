@@ -282,7 +282,7 @@ class WCUSource(TERCurve):
                 if isinstance(self.meta[param], u.Quantity):
                     self.meta[param+"_c"] = np.round(self.meta[param].value - temp0, 7)
                 else:
-                    self.meta[param+"_c"] = np.round(self.meta[param] - temp0, 8)
+                    self.meta[param+"_c"] = np.round(self.meta[param] - temp0, 7)
 
 
 
