@@ -933,9 +933,12 @@ class FieldOfView3D(FieldOfView):
                 header=self.header)
 
             # Note: Do not scale source data - make a copy first.
-            bunit = u.Unit(field.header.get("BUNIT", ""))
             field_data = deepcopy(field.data)
-            if unit_includes_per_physical_type(bunit, "solid angle"):
+
+            # TODO: Check if this scaling is actually correct. How does this
+            #       work with the add_imagehdu_to_imagehdu below? Isn't that
+            #       supposed to conserve flux? Test carefully!!
+            if field.bunit_is_spatially_differential:
                 # Field is in (PHOTLAM) / arcsec**2, need to scale by pixarea
                 field_data *= self._pixarea(field.header).value
             field_data /= self.pixel_area
