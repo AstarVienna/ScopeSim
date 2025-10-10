@@ -727,7 +727,6 @@ class FieldOfView2D(FieldOfView):
             # cube_fields come in with units of photlam/arcsec2,
             # need to convert to ph/s
             # We need to the voxel volume (spectral and solid angle) for that.
-            # ..todo: implement branch for use_photlam is True
             spectral_bin_width = (field.header["CDELT3"] *
                                   u.Unit(field.header["CUNIT3"])
                                   ).to(u.Angstrom)
@@ -735,6 +734,7 @@ class FieldOfView2D(FieldOfView):
             image = np.sum(field.data, axis=0) * PHOTLAM/u.arcsec**2
             image = (image * self._pixarea(field.header) * self.area *
                      spectral_bin_width).to(u.ph/u.s)
+            # FIXME: This might create a 2D ImageHDU with a 3D header, not ideal...
             yield fits.ImageHDU(data=image, header=field.header)
 
     def _make_imagefields(self, fov_waveset, bin_widths, use_photlam=False):
@@ -903,7 +903,7 @@ class FieldOfView3D(FieldOfView):
             # Cube should be in PHOTLAM arcsec-2 for SpectralTrace mapping
             # Assumption is that ImageHDUs have units of PHOTLAM arcsec-2
 
-            # ..todo: Deal with this bounds_error in a more elegant way
+            # TODO: Deal with this bounds_error in a more elegant way
             field_interp = interp1d(field.waveset.to(u.um).value,
                                     field.data, axis=0, kind="linear",
                                     bounds_error=False, fill_value=0)
@@ -931,7 +931,8 @@ class FieldOfView3D(FieldOfView):
             canvas_image_hdu = fits.ImageHDU(
                 data=zeros_from_header(self.header, ndims=2),
                 header=self.header)
-            # FIX: Do not scale source data - make a copy first.
+
+            # Note: Do not scale source data - make a copy first.
             bunit = u.Unit(field.header.get("BUNIT", ""))
             field_data = deepcopy(field.data)
             if unit_includes_per_physical_type(bunit, "solid angle"):
