@@ -109,18 +109,8 @@ filterwarnings = [
     "default:The fov_grid*:DeprecationWarning",
     # Raised when saving fits files, not so important to fix:
     "ignore:.*a HIERARCH card will be created.*:astropy.io.fits.verify.VerifyWarning",
-    # Web-related issues, fix at some point
-    "ignore:'urllib3.contrib.pyopenssl'*:DeprecationWarning",
-    "ignore:Blowfish*:UserWarning",
-    "ignore:TripleDES*:UserWarning",
-    # Not sure what that is but it's everywhere...
-    "ignore:'cgi'*:DeprecationWarning",
-    "ignore:The py23*:DeprecationWarning",
-    "ignore:datetime.datetime.utcfromtimestamp()*:DeprecationWarning",
     # Pytest Notebook stuff
     "ignore:Proactor*:RuntimeWarning",
-    # lxml warning introduced by beautifulsoup
-    "ignore:The 'strip_cdata' option of HTMLParser*:DeprecationWarning",
     # Suddenly appears from Pillow in a few tests
     "ignore:'mode' parameter is deprecated and will be removed*:DeprecationWarning"
 ]
