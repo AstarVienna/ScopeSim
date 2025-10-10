@@ -36,6 +36,7 @@ from ..utils import (
     figure_factory,
     image_plotter,
     cube_plotter,
+    zeros_from_header,
 )
 from ..source.source import Source
 
@@ -928,7 +929,7 @@ class FieldOfView3D(FieldOfView):
             # Assumption is that ImageHDUs have units of PHOTLAM arcsec-2
             # ImageHDUs have photons/second/pixel.
             canvas_image_hdu = fits.ImageHDU(
-                data=np.zeros((self.header["NAXIS2"], self.header["NAXIS1"])),
+                data=zeros_from_header(self.header, ndims=2),
                 header=self.header)
             # FIX: Do not scale source data - make a copy first.
             bunit = u.Unit(field.header.get("BUNIT", ""))
