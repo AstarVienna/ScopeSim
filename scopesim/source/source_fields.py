@@ -80,6 +80,7 @@ from ..utils import (
     get_logger,
     convert_table_comments_to_dict,
     unit_includes_per_physical_type,
+    pixel_area,
 )
 
 
@@ -310,6 +311,11 @@ class HDUSourceField(SourceField):
     def bunit_is_spatially_differential(self) -> bool:
         """Return True if BUNIT includes any "per solid angle" parts."""
         return unit_includes_per_physical_type(self.bunit, "solid angle")
+
+    @property
+    def pixel_area(self) -> u.Quantity[u.arcsec**2]:
+        """Area covered by one pixel in arcsec**2."""
+        return pixel_area(self.header)
 
     def _write_stream(self, stream: TextIO) -> None:
         stream.write(f"ImageHDU with size {self.img_size}, referencing "

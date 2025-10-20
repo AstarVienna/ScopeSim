@@ -544,6 +544,23 @@ def unit_includes_per_physical_type(unit, physical_type):
                for base, power in zip(unit.bases, unit.powers))
 
 
+def pixel_area(header: fits.Header) -> u.Quantity[u.arcsec**2]:
+    """Calculate area covered by one pixel in arcsec**2 from header."""
+    if header["NAXIS"] == 1:
+        raise ValueError("Cannot calculate pixel area of 1D header.")
+
+    if header["NAXIS"] > 2:
+        logger.warning(
+            "Calculating pixel area of header with more than 2 dimensions, "
+            "assuming first two are spatial without additional checks."
+        )
+
+    area = (header["CDELT1"] * u.Unit(header["CUNIT1"]) *
+            header["CDELT2"] * u.Unit(header["CUNIT2"]))
+
+    return area.to(u.arcsec**2)
+
+
 def has_needed_keywords(header, suffix=""):
     """Check to see if the WCS keywords are in the header."""
     keys = {"CDELT1", "CRVAL1", "CRPIX1"}

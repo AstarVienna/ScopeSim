@@ -37,6 +37,7 @@ from ..utils import (
     image_plotter,
     cube_plotter,
     zeros_from_header,
+    pixel_area,
 )
 from ..source.source import Source
 
@@ -119,11 +120,6 @@ class FieldOfView:
         self._wavelength = None
         self._volume = None
 
-    @staticmethod
-    def _pixarea(hdr):
-        return (hdr["CDELT1"] * u.Unit(hdr["CUNIT1"]) *
-                hdr["CDELT2"] * u.Unit(hdr["CUNIT2"])).to(u.arcsec ** 2)
-
     @property
     def trace_id(self):
         """Return the name of the trace."""
@@ -134,7 +130,7 @@ class FieldOfView:
         """Return the area in arcsec**2 covered by one pixel."""
         if self.meta["pixel_area"] is None:
             # [arcsec] (really?)
-            self.meta["pixel_area"] = self._pixarea(self.header).value
+            self.meta["pixel_area"] = pixel_area(self.header)
         return self.meta["pixel_area"]
 
     def extract_from(self, src) -> None:
@@ -732,7 +728,7 @@ class FieldOfView2D(FieldOfView):
                                   ).to(u.Angstrom)
             # First collapse to image, then convert units
             image = np.sum(field.data, axis=0) * PHOTLAM/u.arcsec**2
-            image = (image * self._pixarea(field.header) * self.area *
+            image = (image * field.pixel_area * self.area *
                      spectral_bin_width).to(u.ph/u.s)
             # FIXME: This might create a 2D ImageHDU with a 3D header, not ideal...
             yield fits.ImageHDU(data=image, header=field.header)
@@ -911,7 +907,7 @@ class FieldOfView3D(FieldOfView):
             field_data = field_interp(fov_waveset.value)
 
             # Pixel scale conversion
-            field_data *= self._pixarea(field.header).value / self.pixel_area
+            field_data *= field.pixel_area / self.pixel_area
             field_hdu = fits.ImageHDU(data=field_data, header=field.header)
             yield field_hdu
 
@@ -933,16 +929,19 @@ class FieldOfView3D(FieldOfView):
                 header=self.header)
 
             # Note: Do not scale source data - make a copy first.
-            field_data = deepcopy(field.data)
+            field_hdu = field.field.copy()  # .field is the HDU (yeah...)
+            field_hdu.data /= self.pixel_area.value
 
             # TODO: Check if this scaling is actually correct. How does this
             #       work with the add_imagehdu_to_imagehdu below? Isn't that
             #       supposed to conserve flux? Test carefully!!
             if field.bunit_is_spatially_differential:
                 # Field is in (PHOTLAM) / arcsec**2, need to scale by pixarea
-                field_data *= self._pixarea(field.header).value
-            field_data /= self.pixel_area
-            field_hdu = fits.ImageHDU(data=field_data, header=field.header)
+                field_hdu.data *= field.pixel_area.value
+            else:
+                # Pixel area doesn't cancel out, need to convert
+                new_bunit = field.bunit / u.arcsec**2
+                field_hdu.header["BUNIT"] = new_bunit.to_string("fits")
 
             canvas_image_hdu = imp_utils.add_imagehdu_to_imagehdu(
                 field_hdu,
@@ -971,7 +970,7 @@ class FieldOfView3D(FieldOfView):
                 # TODO: Change this to some proper WCS function!
                 xpix, ypix = imp_utils.val2pix(self.header, xsky, ysky)
                 flux = field.spectra[row["ref"]](fov_waveset)
-                flux_vector = flux.value * row["weight"] / self.pixel_area
+                flux_vector = flux * row["weight"] / self.pixel_area
 
                 if self.sub_pixel:
                     xs, ys, fracs = imp_utils.sub_pixel_fractions(xpix, ypix)
