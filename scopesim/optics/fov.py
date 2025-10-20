@@ -599,6 +599,25 @@ class FieldOfView:
                f"Wavelength range: {self.waverange!s}\n")
         return msg
 
+    def _make_scaled_hdu(self, field: ImageSourceField) -> fits.ImageHDU:
+        """Deal with BUNIT and pixel area."""
+        # Note: Do not scale source data - make a copy first.
+        field_hdu = field.field.copy()  # .field is the HDU (yeah...)
+        field_hdu.data /= self.pixel_area.value
+
+        # TODO: Check if this scaling is actually correct. How does this
+        #       work with the add_imagehdu_to_imagehdu below? Isn't that
+        #       supposed to conserve flux? Test carefully!!
+        if field.bunit_is_spatially_differential:
+            # Field is in (PHOTLAM) arcsec-2, need to scale by pixarea
+            field_hdu.data *= field.pixel_area.value
+        else:
+            # Pixel area doesn't cancel out, need to convert
+            new_bunit = field.bunit / u.arcsec**2
+            field_hdu.header["BUNIT"] = new_bunit.to_string("fits")
+
+        return field_hdu
+
 
 class FieldOfView1D(FieldOfView):
     """For inkoherent MOS instruments, output 1D spectrum.
@@ -733,7 +752,7 @@ class FieldOfView2D(FieldOfView):
             # FIXME: This might create a 2D ImageHDU with a 3D header, not ideal...
             yield fits.ImageHDU(data=image, header=field.header)
 
-    def _make_imagefields(self, fov_waveset, bin_widths, use_photlam=False):
+    def _make_imagefields(self, fov_waveset, bin_widths):
         """
         Find Image fields.
 
@@ -742,16 +761,17 @@ class FieldOfView2D(FieldOfView):
         * yield image  to be added to canvas image
         """
         for field in self._get_image_fields():
-            image = deepcopy(field.data)
+            field_hdu = self._make_scaled_hdu(field)
 
-            # TODO: Improve this...
-            spec = (field.spectrum(fov_waveset) if use_photlam
-                    else (field.spectrum(fov_waveset) *
-                          bin_widths * self.area).to(u.ph / u.s))
+            # Reevaluate spectrum onto FOV waveset
+            spec = field.spectrum(fov_waveset)  # PHOTLAM
 
-            flux = spec.value.sum()
-            image *= flux  # ph / s
-            yield fits.ImageHDU(data=image, header=field.header)
+            # Bin spectrally and spatially to eliminate differential subunits
+            flux = (spec * bin_widths * self.area).to_value(u.ph / u.s).sum()
+
+            # Rescale 2D flux weight map by integrated flux from spectrum
+            field_hdu.data *= flux  # ph / s
+            yield field_hdu
 
     def _make_tablefields(self, fov_waveset, bin_widths, use_photlam=False):
         """
@@ -924,29 +944,16 @@ class FieldOfView3D(FieldOfView):
             # Cube should be in PHOTLAM arcsec-2 for SpectralTrace mapping
             # Assumption is that ImageHDUs have units of PHOTLAM arcsec-2
             # ImageHDUs have photons/second/pixel.
+            field_hdu = self._make_scaled_hdu(field)
+
             canvas_image_hdu = fits.ImageHDU(
                 data=zeros_from_header(self.header, ndims=2),
                 header=self.header)
-
-            # Note: Do not scale source data - make a copy first.
-            field_hdu = field.field.copy()  # .field is the HDU (yeah...)
-            field_hdu.data /= self.pixel_area.value
-
-            # TODO: Check if this scaling is actually correct. How does this
-            #       work with the add_imagehdu_to_imagehdu below? Isn't that
-            #       supposed to conserve flux? Test carefully!!
-            if field.bunit_is_spatially_differential:
-                # Field is in (PHOTLAM) arcsec-2, need to scale by pixarea
-                field_hdu.data *= field.pixel_area.value
-            else:
-                # Pixel area doesn't cancel out, need to convert
-                new_bunit = field.bunit / u.arcsec**2
-                field_hdu.header["BUNIT"] = new_bunit.to_string("fits")
-
             canvas_image_hdu = imp_utils.add_imagehdu_to_imagehdu(
                 field_hdu,
                 canvas_image_hdu,
                 spline_order=spline_order)
+
             spec = field.spectrum(fov_waveset)
 
             # 2D * 1D -> 3D
