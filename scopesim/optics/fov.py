@@ -964,13 +964,25 @@ class FieldOfView3D(FieldOfView):
             # Cube should be in PHOTLAM arcsec-2 for SpectralTrace mapping
             # Point sources are in PHOTLAM per pixel
             # Point sources need to be scaled up by inverse pixel_area
+
+            # TODO: The "if ref in..." check would be redundant if the
+            #       extraction of the FOV field from the input source also clips
+            #       the field's spectra to those that are actually needed. Check
+            #       if this is the case and if yes, remove the condition here!!
+            # Fluxes (yes that's the correct plural) in PHOTLAM
+            fluxes = {
+                ref: spec(fov_waveset)
+                for ref, spec in field.spectra.items
+                if ref in field.field["ref"]
+            }
+
             for row in field.field:
                 xsky, ysky = row["x"] / 3600, row["y"] / 3600
                 # x, y are ALWAYS in arcsec - crval is in deg
                 # TODO: Change this to some proper WCS function!
                 xpix, ypix = imp_utils.val2pix(self.header, xsky, ysky)
-                flux = field.spectra[row["ref"]](fov_waveset)
-                flux_vector = flux * row["weight"] / self.pixel_area
+                flux = fluxes[row["ref"]] * row["weight"]  # still PHOTLAM
+                flux_vector = (flux / self.pixel_area).value  # PHOTLAM arcsec-2
 
                 if self.sub_pixel:
                     xs, ys, fracs = imp_utils.sub_pixel_fractions(xpix, ypix)
