@@ -47,6 +47,7 @@ class TestApplyTo:
     def test_size_of_fov_increases_when_convolved_if_convolve_mode_set_to_full(self, basic_fov):
         effect = efs.GaussianDiffractionPSF(1, convolve_mode="full")
         basic_fov.view()
+        # FIXME: The effect is never used? Is this test testing the right thing?
         #basic_fov = effect.apply_to(basic_fov)
 
         orig_size = np.prod(basic_fov.fields[0].data.shape)

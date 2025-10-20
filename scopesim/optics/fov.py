@@ -936,7 +936,7 @@ class FieldOfView3D(FieldOfView):
             #       work with the add_imagehdu_to_imagehdu below? Isn't that
             #       supposed to conserve flux? Test carefully!!
             if field.bunit_is_spatially_differential:
-                # Field is in (PHOTLAM) / arcsec**2, need to scale by pixarea
+                # Field is in (PHOTLAM) arcsec-2, need to scale by pixarea
                 field_hdu.data *= field.pixel_area.value
             else:
                 # Pixel area doesn't cancel out, need to convert
@@ -983,7 +983,7 @@ class FieldOfView3D(FieldOfView):
         for field in self._get_background_fields():
             # FIXME: This assumes that SOLIDANG == arcsec-2, which is usually
             #        True, but doesn't have to be. Maybe solve via BUNIT?
-            #        Remember, cube output needs PHOTLAM / arcsec**2 !
+            #        Remember, cube output needs PHOTLAM arcsec-2 !
             #        So if SOLIDANG or BUNIT or whatever is not in arcsec-2,
             #        the spectrum shoule be scaled accordingly!
             spec = field.spectrum(fov_waveset)
