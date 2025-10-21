@@ -376,6 +376,9 @@ class FieldOfView:
         if not data.size:
             logger.warning("Empty image HDU.")
 
+        if "BUNIT" in hdr:
+            new_hdr["BUNIT"] = hdr["BUNIT"]
+
         return fits.ImageHDU(header=new_hdr, data=data)
 
     def _extract_volume_from_cube(self, cubehdu, new_hdr, xy0p, xy1p):
@@ -442,8 +445,7 @@ class FieldOfView:
         return new_hdr, data
 
     def _calc_area_factor(self, field):
-        bg_solid_angle = u.Unit(field.header["SOLIDANG"]).to(u.arcsec**-2)
-        # arcsec**2 * arcsec**-2
+        bg_solid_angle = u.Unit(field.header["SOLIDANG"])
         area_factor = self.pixel_area * bg_solid_angle
         return area_factor
 
@@ -747,8 +749,8 @@ class FieldOfView2D(FieldOfView):
                                   ).to(u.Angstrom)
             # First collapse to image, then convert units
             image = np.sum(field.data, axis=0) * PHOTLAM/u.arcsec**2
-            image = (image * field.pixel_area * self.area *
-                     spectral_bin_width).to(u.ph/u.s)
+            image = (image * self.area *
+                     spectral_bin_width).to(u.ph/u.s/u.arcsec**2)
             # FIXME: This might create a 2D ImageHDU with a 3D header, not ideal...
             yield fits.ImageHDU(data=image, header=field.header)
 
@@ -770,7 +772,7 @@ class FieldOfView2D(FieldOfView):
             flux = (spec * bin_widths * self.area).to_value(u.ph / u.s).sum()
 
             # Rescale 2D flux weight map by integrated flux from spectrum
-            field_hdu.data *= flux  # ph / s
+            field_hdu.data *= flux  # ph s-1 arcsec-2
             yield field_hdu
 
     def _make_tablefields(self, fov_waveset, bin_widths, use_photlam=False):
@@ -851,6 +853,9 @@ class FieldOfView2D(FieldOfView):
                 canvas_image_hdu,
                 conserve_flux=True,
                 spline_order=self.spline_order)
+
+        # TODO: Move this further along at some point...
+        canvas_image_hdu.data *= self.pixel_area.value  # eliminate arcsec-2
 
         for flux, weight, x, y in self._make_tablefields(
                 fov_waveset, bin_widths):
@@ -979,7 +984,7 @@ class FieldOfView3D(FieldOfView):
             # Fluxes (yes that's the correct plural) in PHOTLAM
             fluxes = {
                 ref: spec(fov_waveset)
-                for ref, spec in field.spectra.items
+                for ref, spec in field.spectra.items()
                 if ref in field.field["ref"]
             }
 
