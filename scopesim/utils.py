@@ -540,8 +540,13 @@ def unit_includes_per_physical_type(unit, physical_type):
     """Check if one of the `unit`'s bases is of 1/`physical_type`."""
     # TODO: Check again if there isn't any builtin functionality in astropy
     #       for the same operation!
+    try:
+        bases, powers = unit.bases, unit.powers
+    except AttributeError:  # Happens for e.g. ABmag
+        return False
+
     return any(1 / (base**power).physical_type == physical_type
-               for base, power in zip(unit.bases, unit.powers))
+               for base, power in zip(bases, powers))
 
 
 def pixel_area(header: fits.Header) -> u.Quantity[u.arcsec**2]:
