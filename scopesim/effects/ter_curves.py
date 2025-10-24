@@ -301,13 +301,14 @@ class AtmoLibraryTERCurve(AtmosphericTERCurve):
 
     z_order: ClassVar[tuple[int, ...]] = (112, 512)
 
-    def __init__(self, **kwargs):
+    def __init__(self, cmds=None, **kwargs):
         if "filename" not in kwargs:
             if "remote_filename" not in kwargs:
                 raise ValueError("Neither filename nor remote_filename provided")
-            kwargs['filename'] = self._download_library(kwargs["remote_filename"])
+            remote_filename = from_currsys(kwargs["remote_filename"], cmds)
+            kwargs['filename'] = self._download_library(remote_filename)
 
-        super().__init__(**kwargs)
+        super().__init__(cmds=cmds, **kwargs)
         self.meta.update(kwargs)
         self.load_table_from_library()
 
