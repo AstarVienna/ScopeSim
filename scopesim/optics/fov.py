@@ -610,7 +610,7 @@ class FieldOfView:
         # TODO: Check if this scaling is actually correct. How does this
         #       work with the add_imagehdu_to_imagehdu below? Isn't that
         #       supposed to conserve flux? Test carefully!!
-        if field.bunit_is_spatially_differential:
+        if field.is_bunit_spatially_differential:
             # Field is in (PHOTLAM) arcsec-2, need to scale by pixarea
             field_hdu.data *= field.pixel_area.value
         else:

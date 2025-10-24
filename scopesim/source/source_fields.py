@@ -309,9 +309,8 @@ class HDUSourceField(SourceField):
         """
         return u.Unit(self.header.get("BUNIT", ""))
 
-    # TODO: Better name suggestions??
     @property
-    def bunit_is_spatially_differential(self) -> bool:
+    def is_bunit_spatially_differential(self) -> bool:
         """Return True if BUNIT includes any "per solid angle" parts.
 
         .. versionadded:: PLACEHOLDER_NEXT_RELEASE_VERSION
