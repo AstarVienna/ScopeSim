@@ -4,7 +4,7 @@
 import warnings
 from typing import ClassVar
 from collections.abc import Collection, Iterable
-
+from pooch import retrieve
 import numpy as np
 from scipy import integrate
 from astropy import units as u
@@ -24,7 +24,7 @@ from ..source.source_fields import (CubeSourceField, SpectrumSourceField,
                                     BackgroundSourceField)
 from ..utils import (from_currsys, quantify, check_keys, find_file,
                      figure_factory, get_logger)
-
+from ..server.download_utils import create_retriever
 
 logger = get_logger(__name__)
 
@@ -262,6 +262,108 @@ class AtmosphericTERCurve(TERCurve):
         self.meta["position"] = 0       # position in surface table
         self.meta.update(kwargs)
         self.surface.meta.update(self.meta)
+
+
+class AtmoLibraryTERCurve(AtmosphericTERCurve):
+    """
+    Retrieve an atmospheric spectrum from a library file
+
+    A local file is used if the `kwargs` include the parameter `filename`.
+    To use a remote file, a `url` and a `hash` (to ensure that the
+    file is the correct one) need to be specified.
+
+    The library file is a multi-extension FITS file with the following
+    structure:
+    - extension 1: Catalogue - a table listing all extensions and parameters
+                   to identify the one to use
+    - extension 2: Wavelength - the common wavelength grid on which all
+                   atmospheric spectra are sampled
+    - extension 3 etc.: tables with columns `transmission` and `emission`
+
+    Currently the curves are distinguished by a single parameter (`pwv`).
+
+    Examples
+    --------
+    ::
+
+        - name: atmosphere
+          class: AtmoLibraryTERCurve
+          kwargs:
+             filename: "!ATMO.spectrum.filename
+             pwv: 10.
+
+        - name: atmosphere
+          class: AtmoLibraryTERCurve
+          kwargs:
+             pwv: 25.
+             remote_filename: "!ATMO.spectrum.filename"
+
+    The location of a downloaded file is provided by `.meta['filename']`.
+    """
+
+    z_order: ClassVar[tuple[int, ...]] = (112, 512)
+
+    def __init__(self, cmds=None, **kwargs):
+        if "filename" not in kwargs:
+            if "remote_filename" not in kwargs:
+                raise ValueError("Neither filename nor remote_filename provided")
+            remote_filename = from_currsys(kwargs["remote_filename"], cmds)
+            kwargs['filename'] = self._download_library(remote_filename)
+
+        super().__init__(cmds=cmds, **kwargs)
+        self.meta.update(kwargs)
+        self.load_table_from_library()
+
+    def update(self, **kwargs):
+        """Update the atmo library."""
+        param = 'pwv'
+        if param not in kwargs:
+            logger.warning("Can only update with parameter %s", param)
+            return
+
+        if "remote_filename" in kwargs:
+            kwargs["filename"] = self._download_library(kwargs["remote_filename"])
+
+        self.meta[param] = kwargs[param]
+        self.load_table_from_library()
+
+    @staticmethod
+    def _download_library(fname: str) -> str:
+        """Download an atmo library from the server"""
+        retriever = create_retriever("atmo")
+        return retriever.fetch(fname, progressbar=True)
+
+    def load_table_from_library(self):
+        """Load the appropriate library extension based on parameter value"""
+        param = 'pwv'
+
+        self.value  = from_currsys(self.meta[param], self.cmds)
+        self.ext_data= self._file[0].header["EDATA"]
+        self.ext_cat = self._file[0].header["ECAT"]
+        self.catalog = Table.read(self._file[self.ext_cat])
+
+
+        # select the row corresponding to param
+        idx = np.argmin(np.abs(self.catalog[param] - self.value)).astype(int)
+        extname = self.catalog["extension_name"][idx]
+        terhdu = self._file[extname]
+        self.meta["extname"] = extname
+        logger.debug("%s: Loading extension %s", self.__class__.__name__,
+                     self.meta["extname"])
+
+        tbl = Table.read(terhdu)
+        if "wavelength" not in tbl.colnames:
+            # Look for wavelength extension
+            if "WAVELENGTH" not in self._file:
+                raise ValueError("No wavelength vector found")
+            wavelength = Table.read(self._file["WAVELENGTH"])['wavelength']
+            tbl.add_column(wavelength, index=0)
+
+        tbl.meta['wavelength_unit'] = tbl['wavelength'].unit
+        tbl.meta['emission_unit'] = tbl['emission'].unit
+
+        self.surface.table = tbl
+        self.surface.meta.update(tbl.meta)
 
 
 class SkycalcTERCurve(AtmosphericTERCurve):
