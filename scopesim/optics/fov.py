@@ -36,6 +36,8 @@ from ..utils import (
     figure_factory,
     image_plotter,
     cube_plotter,
+    zeros_from_header,
+    pixel_area,
 )
 from ..source.source import Source
 
@@ -118,11 +120,6 @@ class FieldOfView:
         self._wavelength = None
         self._volume = None
 
-    @staticmethod
-    def _pixarea(hdr):
-        return (hdr["CDELT1"] * u.Unit(hdr["CUNIT1"]) *
-                hdr["CDELT2"] * u.Unit(hdr["CUNIT2"])).to(u.arcsec ** 2)
-
     @property
     def trace_id(self):
         """Return the name of the trace."""
@@ -133,7 +130,7 @@ class FieldOfView:
         """Return the area in arcsec**2 covered by one pixel."""
         if self.meta["pixel_area"] is None:
             # [arcsec] (really?)
-            self.meta["pixel_area"] = self._pixarea(self.header).value
+            self.meta["pixel_area"] = pixel_area(self.header)
         return self.meta["pixel_area"]
 
     def extract_from(self, src) -> None:
@@ -379,6 +376,9 @@ class FieldOfView:
         if not data.size:
             logger.warning("Empty image HDU.")
 
+        if "BUNIT" in hdr:
+            new_hdr["BUNIT"] = hdr["BUNIT"]
+
         return fits.ImageHDU(header=new_hdr, data=data)
 
     def _extract_volume_from_cube(self, cubehdu, new_hdr, xy0p, xy1p):
@@ -445,8 +445,7 @@ class FieldOfView:
         return new_hdr, data
 
     def _calc_area_factor(self, field):
-        bg_solid_angle = u.Unit(field.header["SOLIDANG"]).to(u.arcsec**-2)
-        # arcsec**2 * arcsec**-2
+        bg_solid_angle = u.Unit(field.header["SOLIDANG"])
         area_factor = self.pixel_area * bg_solid_angle
         return area_factor
 
@@ -602,6 +601,25 @@ class FieldOfView:
                f"Wavelength range: {self.waverange!s}\n")
         return msg
 
+    def _make_scaled_hdu(self, field: ImageSourceField) -> fits.ImageHDU:
+        """Deal with BUNIT and pixel area."""
+        # Note: Do not scale source data - make a copy first.
+        field_hdu = field.field.copy()  # .field is the HDU (yeah...)
+        field_hdu.data /= self.pixel_area.value
+
+        # TODO: Check if this scaling is actually correct. How does this
+        #       work with the add_imagehdu_to_imagehdu below? Isn't that
+        #       supposed to conserve flux? Test carefully!!
+        if field.is_bunit_spatially_differential:
+            # Field is in (PHOTLAM) arcsec-2, need to scale by pixarea
+            field_hdu.data *= field.pixel_area.value
+        else:
+            # Pixel area doesn't cancel out, need to convert
+            new_bunit = field.bunit / u.arcsec**2
+            field_hdu.header["BUNIT"] = new_bunit.to_string("fits")
+
+        return field_hdu
+
 
 class FieldOfView1D(FieldOfView):
     """For inkoherent MOS instruments, output 1D spectrum.
@@ -726,17 +744,17 @@ class FieldOfView2D(FieldOfView):
             # cube_fields come in with units of photlam/arcsec2,
             # need to convert to ph/s
             # We need to the voxel volume (spectral and solid angle) for that.
-            # ..todo: implement branch for use_photlam is True
             spectral_bin_width = (field.header["CDELT3"] *
                                   u.Unit(field.header["CUNIT3"])
                                   ).to(u.Angstrom)
             # First collapse to image, then convert units
             image = np.sum(field.data, axis=0) * PHOTLAM/u.arcsec**2
-            image = (image * self._pixarea(field.header) * self.area *
-                     spectral_bin_width).to(u.ph/u.s)
+            image = (image * self.area *
+                     spectral_bin_width).to(u.ph/u.s/u.arcsec**2)
+            # FIXME: This might create a 2D ImageHDU with a 3D header, not ideal...
             yield fits.ImageHDU(data=image, header=field.header)
 
-    def _make_imagefields(self, fov_waveset, bin_widths, use_photlam=False):
+    def _make_imagefields(self, fov_waveset, bin_widths):
         """
         Find Image fields.
 
@@ -745,16 +763,17 @@ class FieldOfView2D(FieldOfView):
         * yield image  to be added to canvas image
         """
         for field in self._get_image_fields():
-            image = deepcopy(field.data)
+            field_hdu = self._make_scaled_hdu(field)
 
-            # TODO: Improve this...
-            spec = (field.spectrum(fov_waveset) if use_photlam
-                    else (field.spectrum(fov_waveset) *
-                          bin_widths * self.area).to(u.ph / u.s))
+            # Reevaluate spectrum onto FOV waveset
+            spec = field.spectrum(fov_waveset)  # PHOTLAM
 
-            flux = spec.value.sum()
-            image *= flux  # ph / s
-            yield fits.ImageHDU(data=image, header=field.header)
+            # Bin spectrally and spatially to eliminate differential subunits
+            flux = (spec * bin_widths * self.area).to_value(u.ph / u.s).sum()
+
+            # Rescale 2D flux weight map by integrated flux from spectrum
+            field_hdu.data *= flux  # ph s-1 arcsec-2
+            yield field_hdu
 
     def _make_tablefields(self, fov_waveset, bin_widths, use_photlam=False):
         """
@@ -835,6 +854,9 @@ class FieldOfView2D(FieldOfView):
                 conserve_flux=True,
                 spline_order=self.spline_order)
 
+        # TODO: Move this further along at some point...
+        canvas_image_hdu.data *= self.pixel_area.value  # eliminate arcsec-2
+
         for flux, weight, x, y in self._make_tablefields(
                 fov_waveset, bin_widths):
             if self.sub_pixel:
@@ -902,7 +924,7 @@ class FieldOfView3D(FieldOfView):
             # Cube should be in PHOTLAM arcsec-2 for SpectralTrace mapping
             # Assumption is that ImageHDUs have units of PHOTLAM arcsec-2
 
-            # ..todo: Deal with this bounds_error in a more elegant way
+            # TODO: Deal with this bounds_error in a more elegant way
             field_interp = interp1d(field.waveset.to(u.um).value,
                                     field.data, axis=0, kind="linear",
                                     bounds_error=False, fill_value=0)
@@ -910,7 +932,7 @@ class FieldOfView3D(FieldOfView):
             field_data = field_interp(fov_waveset.value)
 
             # Pixel scale conversion
-            field_data *= self._pixarea(field.header).value / self.pixel_area
+            field_data *= field.pixel_area / self.pixel_area
             field_hdu = fits.ImageHDU(data=field_data, header=field.header)
             yield field_hdu
 
@@ -927,22 +949,16 @@ class FieldOfView3D(FieldOfView):
             # Cube should be in PHOTLAM arcsec-2 for SpectralTrace mapping
             # Assumption is that ImageHDUs have units of PHOTLAM arcsec-2
             # ImageHDUs have photons/second/pixel.
-            canvas_image_hdu = fits.ImageHDU(
-                data=np.zeros((self.header["NAXIS2"], self.header["NAXIS1"])),
-                header=self.header)
-            # FIX: Do not scale source data - make a copy first.
-            bunit = u.Unit(field.header.get("BUNIT", ""))
-            field_data = deepcopy(field.data)
-            if unit_includes_per_physical_type(bunit, "solid angle"):
-                # Field is in (PHOTLAM) / arcsec**2, need to scale by pixarea
-                field_data *= self._pixarea(field.header).value
-            field_data /= self.pixel_area
-            field_hdu = fits.ImageHDU(data=field_data, header=field.header)
+            field_hdu = self._make_scaled_hdu(field)
 
+            canvas_image_hdu = fits.ImageHDU(
+                data=zeros_from_header(self.header, ndims=2),
+                header=self.header)
             canvas_image_hdu = imp_utils.add_imagehdu_to_imagehdu(
                 field_hdu,
                 canvas_image_hdu,
                 spline_order=spline_order)
+
             spec = field.spectrum(fov_waveset)
 
             # 2D * 1D -> 3D
@@ -960,13 +976,25 @@ class FieldOfView3D(FieldOfView):
             # Cube should be in PHOTLAM arcsec-2 for SpectralTrace mapping
             # Point sources are in PHOTLAM per pixel
             # Point sources need to be scaled up by inverse pixel_area
+
+            # TODO: The "if ref in..." check would be redundant if the
+            #       extraction of the FOV field from the input source also clips
+            #       the field's spectra to those that are actually needed. Check
+            #       if this is the case and if yes, remove the condition here!!
+            # Fluxes (yes that's the correct plural) in PHOTLAM
+            fluxes = {
+                ref: spec(fov_waveset)
+                for ref, spec in field.spectra.items()
+                if ref in field.field["ref"]
+            }
+
             for row in field.field:
                 xsky, ysky = row["x"] / 3600, row["y"] / 3600
                 # x, y are ALWAYS in arcsec - crval is in deg
                 # TODO: Change this to some proper WCS function!
                 xpix, ypix = imp_utils.val2pix(self.header, xsky, ysky)
-                flux = field.spectra[row["ref"]](fov_waveset)
-                flux_vector = flux.value * row["weight"] / self.pixel_area
+                flux = fluxes[row["ref"]] * row["weight"]  # still PHOTLAM
+                flux_vector = (flux / self.pixel_area).value  # PHOTLAM arcsec-2
 
                 if self.sub_pixel:
                     xs, ys, fracs = imp_utils.sub_pixel_fractions(xpix, ypix)
@@ -979,7 +1007,7 @@ class FieldOfView3D(FieldOfView):
         for field in self._get_background_fields():
             # FIXME: This assumes that SOLIDANG == arcsec-2, which is usually
             #        True, but doesn't have to be. Maybe solve via BUNIT?
-            #        Remember, cube output needs PHOTLAM / arcsec**2 !
+            #        Remember, cube output needs PHOTLAM arcsec-2 !
             #        So if SOLIDANG or BUNIT or whatever is not in arcsec-2,
             #        the spectrum shoule be scaled accordingly!
             spec = field.spectrum(fov_waveset)
