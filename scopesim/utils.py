@@ -545,7 +545,11 @@ def unit_includes_per_physical_type(unit, physical_type):
 
 
 def pixel_area(header: fits.Header) -> u.Quantity[u.arcsec**2]:
-    """Calculate area covered by one pixel in arcsec**2 from header."""
+    """Calculate area covered by one pixel in arcsec**2 from header.
+
+    .. versionadded:: PLACEHOLDER_NEXT_RELEASE_VERSION
+
+    """
     if header["NAXIS"] == 1:
         raise ValueError("Cannot calculate pixel area of 1D header.")
 

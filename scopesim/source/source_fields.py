@@ -303,18 +303,29 @@ class HDUSourceField(SourceField):
 
         If the BUNIT keyword is not present in the header, this will return the
         dimensionless unit, which should result in consistent behavior.
+
+        .. versionadded:: PLACEHOLDER_NEXT_RELEASE_VERSION
+
         """
         return u.Unit(self.header.get("BUNIT", ""))
 
     # TODO: Better name suggestions??
     @property
     def bunit_is_spatially_differential(self) -> bool:
-        """Return True if BUNIT includes any "per solid angle" parts."""
+        """Return True if BUNIT includes any "per solid angle" parts.
+
+        .. versionadded:: PLACEHOLDER_NEXT_RELEASE_VERSION
+
+        """
         return unit_includes_per_physical_type(self.bunit, "solid angle")
 
     @property
     def pixel_area(self) -> u.Quantity[u.arcsec**2]:
-        """Area covered by one pixel in arcsec**2."""
+        """Area covered by one pixel in arcsec**2.
+
+        .. versionadded:: PLACEHOLDER_NEXT_RELEASE_VERSION
+
+        """
         return pixel_area(self.header)
 
     def _write_stream(self, stream: TextIO) -> None:
