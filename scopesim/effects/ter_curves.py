@@ -22,7 +22,7 @@ from ..source.source_fields import (CubeSourceField, SpectrumSourceField,
                                     BackgroundSourceField)
 from ..utils import (from_currsys, quantify, check_keys, find_file,
                      figure_factory, get_logger)
-
+from ..server.download_utils import create_retriever
 
 logger = get_logger(__name__)
 
@@ -294,8 +294,7 @@ class AtmoLibraryTERCurve(AtmosphericTERCurve):
           class: AtmoLibraryTERCurve
           kwargs:
              pwv: 25.
-             url: "https://scopesim.univie.ac.at/InstPkgSvr/atmo/Leiden_atmo_ter.fits"
-             hash: "16b5faa1bc4e75ba2d34cad02f302223b8a788306cd34b9809c3e895b46132b0"
+             remote_filename: "!ATMO.spectrum.filename"
 
     The location of a downloaded file is provided by `.meta['filename']`.
     """
@@ -304,24 +303,32 @@ class AtmoLibraryTERCurve(AtmosphericTERCurve):
 
     def __init__(self, **kwargs):
         if "filename" not in kwargs:
-            kwargs['filename'] = retrieve(
-                kwargs['url'],
-                known_hash=kwargs['hash'],
-                progressbar=True)
+            if "remote_filename" not in kwargs:
+                raise ValueError("Neither filename nor remote_filename provided")
+            kwargs['filename'] = self._download_library(kwargs["remote_filename"])
 
         super().__init__(**kwargs)
         self.meta.update(kwargs)
         self.load_table_from_library()
 
-
     def update(self, **kwargs):
+        """Update the atmo library."""
         param = 'pwv'
         if param not in kwargs:
             logger.warning("Can only update with parameter %s", param)
             return
 
+        if "remote_filename" in kwargs:
+            kwargs["filename"] = self._download_library(kwargs["remote_filename"])
+
         self.meta[param] = kwargs[param]
         self.load_table_from_library()
+
+    @staticmethod
+    def _download_library(fname: str) -> str:
+        """Download an atmo library from the server"""
+        retriever = create_retriever("atmo")
+        return retriever.fetch(fname, progressbar=True)
 
     def load_table_from_library(self):
         """Load the appropriate library extension based on parameter value"""
@@ -342,13 +349,13 @@ class AtmoLibraryTERCurve(AtmosphericTERCurve):
                      self.meta["extname"])
 
         tbl = Table.read(terhdu)
-        if not "wavelength" in tbl.colnames:
+        if "wavelength" not in tbl.colnames:
             # Look for wavelength extension
-            if "WAVELENGTH" in self._file:
-                wavelength = Table.read(self._file["WAVELENGTH"])['wavelength']
-                tbl.add_column(wavelength, index=0)
-            else:
+            if "WAVELENGTH" not in self._file:
                 raise ValueError("No wavelength vector found")
+            wavelength = Table.read(self._file["WAVELENGTH"])['wavelength']
+            tbl.add_column(wavelength, index=0)
+
         tbl.meta['wavelength_unit'] = tbl['wavelength'].unit
         tbl.meta['emission_unit'] = tbl['emission'].unit
 
