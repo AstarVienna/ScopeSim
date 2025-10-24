@@ -332,11 +332,6 @@ class AtmoLibraryTERCurve(AtmosphericTERCurve):
         self.ext_cat = self._file[0].header["ECAT"]
         self.catalog = Table.read(self._file[self.ext_cat])
 
-        # Look for wavelength extension
-        if "WAVELENGTH" in self._file:
-            wavelength = Table.read(self._file["WAVELENGTH"])['wavelength']
-        else:
-            wavelength = None
 
         # select the row corresponding to param
         idx = np.argmin(np.abs(self.catalog[param] - self.value)).astype(int)
@@ -347,10 +342,13 @@ class AtmoLibraryTERCurve(AtmosphericTERCurve):
                      self.meta["extname"])
 
         tbl = Table.read(terhdu)
-        if not "wavelength" in tbl.colnames and wavelength is not None:
-            tbl.add_column(wavelength, index=0)
-        else:
-            raise ValueError("No wavelength vector found")
+        if not "wavelength" in tbl.colnames:
+            # Look for wavelength extension
+            if "WAVELENGTH" in self._file:
+                wavelength = Table.read(self._file["WAVELENGTH"])['wavelength']
+                tbl.add_column(wavelength, index=0)
+            else:
+                raise ValueError("No wavelength vector found")
         tbl.meta['wavelength_unit'] = tbl['wavelength'].unit
         tbl.meta['emission_unit'] = tbl['emission'].unit
 
