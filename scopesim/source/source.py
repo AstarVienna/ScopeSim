@@ -300,11 +300,7 @@ class Source:
             raise TypeError("flux must be quantity or unit")
 
         spectra = {0: spec_template(flux.value)}
-
-        try:
-            image_hdu.header["BUNIT"] = flux.unit.to_string("fits")
-        except ValueError:  # occurs for mag units
-            image_hdu.header["BUNIT"] = flux.unit.to_string()
+        image_hdu.header["BUNIT"] = "photlam"  # spectrum gets evaluated
 
         self._from_imagehdu_and_spectra(image_hdu, spectra, **kwargs)
 
