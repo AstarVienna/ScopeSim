@@ -94,43 +94,55 @@ class LinearityCurve(Effect):
 
 
 class InterPixelCapacitance(Effect):
-    """Inter-pixel capacitance effect.
+    r"""Inter-pixel capacitance effect.
 
     The effect models cross-talk due to inter-pixel capacitance with
     a convolution kernel following [1]_.
+
+    .. versionadded:: PLACEHOLDER_NEXT_RELEASE_VERSION
 
     Example
     -------
     The effect is usually instantiated in a yaml file.
 
     The first example uses the three-parameter model in Eq. (9) of [1].
-    The three parameters are `alpha_edge` (corresponding to $\\alpha$) for the
-    effect of neighbouring pixels sharing an edge with the pixel under
-    consideration, `alpha_corner` (corresponding to $\\alpha^\\prime$) for pixels
-    sharing a corner, and `alpha_aniso` (corresponding to $\\alpha_{+}$) to allow
-    for different capacitive coupling along rows and columns. The simpler one-
-    and two-parameters models are recovered by setting `alpha_aniso` and/or
-    `alpha_corner` to zero.
-    - name: ipc
-      description: Apply inter-pixel capacitance
-      class: InterPixelCapacitance
-      kwargs:
-         alpha_edge: 0.02
-         alpha_corner: 0.002
-         alpha_aniso: 0
+    The three parameters are `alpha_edge` (corresponding to :math:`\alpha`) for
+    the effect of neighbouring pixels sharing an edge with the pixel under
+    consideration, `alpha_corner` (corresponding to :math:`\alpha^\prime`) for
+    pixels sharing a corner, and `alpha_aniso` (corresponding to
+    :math:`\alpha_{+}`) to allow for different capacitive coupling along rows
+    and columns. The simpler one- and two-parameters models are recovered by
+    setting `alpha_aniso` and/or `alpha_corner` to zero.
+
+    ::
+
+      - name: ipc
+        description: Apply inter-pixel capacitance
+        class: InterPixelCapacitance
+        kwargs:
+           alpha_edge: 0.02
+           alpha_corner: 0.002
+           alpha_aniso: 0
 
     Alternatively, a convolution kernel can be provided explicitely:
-    - name: ipc
-      kwargs:
-         kernel: [
-            [0.0011, 0.0127, 0.0011],
-            [0.0163, 0.9360, 0.0164],
-            [0.0011, 0.0127, 0.0011],
-          ]
 
-    .. [1] Kannawadi et al., "The Impact of Interpixel Capacitance in CMOS Detectors on PSF
-       Shapes and Implications for WFIRST", PASP 128, 095001 (2016).
+    ::
+
+      - name: ipc
+        description: Apply inter-pixel capacitance
+        class: InterPixelCapacitance
+        kwargs:
+           kernel: [
+              [0.0011, 0.0127, 0.0011],
+              [0.0163, 0.9360, 0.0164],
+              [0.0011, 0.0127, 0.0011],
+            ]
+
+    .. [1] Kannawadi et al., "The Impact of Interpixel Capacitance in CMOS
+       Detectors on PSF Shapes and Implications for WFIRST",
+       PASP 128, 095001 (2016).
     """
+
     z_order: ClassVar[tuple[int, ...]] = (810,)
 
     def __init__(self, **kwargs):
@@ -140,7 +152,7 @@ class InterPixelCapacitance(Effect):
         self.kernel = self._build_kernel(kwargs)
 
     def _build_kernel(self, params):
-        """Build a 3x3 kernel"""
+        """Build a 3x3 kernel."""
         if "kernel" in params:
             kernel = np.asarray(params['kernel']).astype(float)
             kernsum = np.sum(kernel)
@@ -173,15 +185,17 @@ class InterPixelCapacitance(Effect):
         return det
 
     def update(self, **kwargs):
-        """Update the IPC kernel
+        """Update the IPC kernel.
 
         An instance `ipc` of `InterPixelCapacitance` can be updated by
         specifying either a new `kernel`:
-        ```ipc.update(kernel=[[0., 0.02, 0], [0, 0.92, 0], [0, 0.02, 0]])```
+        ``ipc.update(kernel=[[0., 0.02, 0], [0, 0.92, 0], [0, 0.02, 0]])``
         or by specifying one or more of the `alpha` parameters:
-        ```ipc.update(alpha_edge=0.02, alpha_corner=0.002)```
-        Note that unspecified `alpha` parameters (here `alpha_aniso`) default
-        to zero.
+        ``ipc.update(alpha_edge=0.02, alpha_corner=0.002)``
+
+        Notes
+        -----
+        Unspecified `alpha` parameters (here `alpha_aniso`) default to zero.
         """
         if "kernel" in kwargs:
             for key in ["alpha_edge", "alpha_corner", "alpha_aniso"]:
@@ -190,13 +204,19 @@ class InterPixelCapacitance(Effect):
         self.kernel = self._build_kernel(kwargs)
 
     def __str__(self):
-        msg = (f"""<{self.__class__.__name__}> \"{self.meta['description']}\" :
-   alpha_edge   = {self.meta.get('alpha_edge', 'NA')}
-   alpha_corner = {self.meta.get('alpha_corner', 'NA')}
-   alpha_aniso  = {self.meta.get('alpha_aniso', 'NA')}
-   kernel = {np.array2string(self.kernel, precision=4, floatmode='fixed',
-        prefix="   kernel = ")}""")
-
+        kernel_str = np.array2string(
+            self.kernel,
+            precision=4,
+            floatmode="fixed",
+            prefix="   kernel = ",
+        )
+        msg = (
+            f"<{self.__class__.__name__}> \"{self.meta['description']}\" :"
+            f"alpha_edge   = {self.meta.get('alpha_edge', 'NA')}"
+            f"alpha_corner = {self.meta.get('alpha_corner', 'NA')}"
+            f"alpha_aniso  = {self.meta.get('alpha_aniso', 'NA')}"
+            f"kernel = {kernel_str}"
+        )
         return msg
 
 
@@ -211,24 +231,30 @@ class ADConversion(Effect):
     The effect is usually instantiated in a yaml file.
 
     For a single-detector instrument:
-    - name: ad_conversion
-      description: Apply gain and convert electron count into integers
-      class: ADConversion
-      kwargs:
-         dtype: uint16
-         gain: "!DET.gain"       # or a number if !DET.gain has not been set yet
+
+    ::
+
+      - name: ad_conversion
+        description: Apply gain and convert electron count into integers
+        class: ADConversion
+        kwargs:
+           dtype: uint16
+           gain: "!DET.gain"  # or a number if !DET.gain has not been set yet
 
     For a multi-detector instrument the detector ids need to be identical to
     those used to instantiate the DetectorList effect.
-    - name: ad_conversion
-      description: Apply gain and convert electron count into integers
-      class: ADConversion
-      kwargs:
-         dtype: uint16
-         gain:
-           id1:  2.2
-           id2:  2.1
-           id3   2.3
+
+    ::
+
+      - name: ad_conversion
+        description: Apply gain and convert electron count into integers
+        class: ADConversion
+        kwargs:
+           dtype: uint16
+           gain:
+             id1:  2.2
+             id2:  2.1
+             id3   2.3
 
     Again, `!DET.gain` can be used here. This can be useful when the
     `DetectorModePropertiesSetter` effect is used to switch between different
@@ -251,7 +277,7 @@ class ADConversion(Effect):
         self.meta.update(kwargs)
 
     def _should_apply(self) -> bool:
-        """Check cases where the effect should not be applied
+        """Check cases where the effect should not be applied.
 
         This does not do anything right now.
         """

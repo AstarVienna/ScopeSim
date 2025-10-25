@@ -53,7 +53,6 @@ class MetisLMSSpectralTraceList(SpectralTraceList):
                               self.slicelist["top"].max() -
                               self.slicelist["bottom"].min()])
 
-
     def apply_to(self, obj, **kwargs):
         """See parent docstring."""
         if isinstance(obj, FovVolumeList):
@@ -255,11 +254,14 @@ class MetisLMSSpectralTraceList(SpectralTraceList):
         return angles
 
     def __str__(self):
-        msg = f"""{self.__class__.__name__} \"{self.display_name}\" : {len(self.spectral_traces)} traces
-   - Central wavelength: {from_currsys(self.meta['wavelen'], self.cmds)} um
-   - Order:              {self.meta['order']}
-   - Predisperser angle: {self.meta['predisperser']:.3f} deg
-   - Echelle angle:      {self.meta['echelle']:.3f} deg"""
+        msg = (
+            f"{self.__class__.__name__} \"{self.display_name}\" : "
+            f"{len(self.spectral_traces)} traces"
+            f"   - Central wavelength: {from_currsys(self.meta['wavelen'], self.cmds)} um"
+            f"   - Order:              {self.meta['order']}"
+            f"   - Predisperser angle: {self.meta['predisperser']:.3f} deg"
+            f"   - Echelle angle:      {self.meta['echelle']:.3f} deg"
+        )
         return msg
 
 
@@ -462,28 +464,40 @@ class MetisLMSSpectralTrace(SpectralTrace):
         return msg
 
     def __str__(self):
-        msg = (f"<MetisLMSSpectralTrace> \"{self.meta['description']}\" : "
-               f"{from_currsys(self.meta['wavelen'], self.cmds)} um : "
-               f"Order {self.meta['order']} : Predisperser {self.meta['predisperser']:.3f}, Echelle {self.meta['echelle']:.3f}")
+        msg = (
+            f"<{self.__class__.__name__}> \"{self.meta['description']}\" : "
+            f"{from_currsys(self.meta['wavelen'], self.cmds)} um : "
+            f"Order {self.meta['order']} : "
+            f"Predisperser {self.meta['predisperser']:.3f}, "
+            f"Echelle {self.meta['echelle']:.3f}"
+        )
         return msg
 
 
 def predisperser_angle(wavelength, predisp_coeff):
     """
-    Compute the predisperser angle needed for central `wavelength`
+    Compute the predisperser angle needed for central `wavelength`.
+
+    .. versionadded:: PLACEHOLDER_NEXT_RELEASE_VERSION
 
     Parameters
     ----------
     wavelength : float
-            central wavelength in microns
-    predisp_coeff : ndarray, list
-            array of coefficients to compute the predisperser angle. Element `i`
-            multiplies the monomial `wavelength^i`, hence the length of
-            the array determines the order of the polynomial.
+        Central wavelength in microns.
+    predisp_coeff : array-like
+        Array of coefficients to compute the predisperser angle. Element `i`
+        multiplies the monomial `wavelength^i`, hence the length of
+        the array determines the order of the polynomial.
+
+    Returns
+    -------
+    angle : float
+        Predisperser angle.
 
     Notes
     -----
-      The function implements a polynomial as in Fig.3-15 of E-REP-ATC-MET-1003_3-0.
+    The function implements a polynomial as in Fig.3-15 of E-REP-ATC-MET-1003_3-0.
+
     """
     angle = 0.
     lam = 1.
@@ -491,6 +505,7 @@ def predisperser_angle(wavelength, predisp_coeff):
         angle += coeff * lam
         lam *= wavelength
     return angle
+
 
 def echelle_setting(wavelength, grat_spacing, wcal_def):
     """
