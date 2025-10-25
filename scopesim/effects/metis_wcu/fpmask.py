@@ -43,7 +43,7 @@ class FPMask:
         "CUNIT2": "arcsec",
         "CDELT1": 0.00547,
         "CDELT2": 0.00547,
-        "BUNIT": "PHOTLAM arcsec-2",
+        "BUNIT": "photlam arcsec-2",
         "SOLIDANG": "arcsec-2",
     }
 

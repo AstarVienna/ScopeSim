@@ -307,7 +307,8 @@ class HDUSourceField(SourceField):
         .. versionadded:: PLACEHOLDER_NEXT_RELEASE_VERSION
 
         """
-        return u.Unit(self.header.get("BUNIT", ""))
+        value = self.header.get("BUNIT", "").replace("PHOTLAM", "photlam")
+        return u.Unit(value)
 
     @property
     def is_bunit_spatially_differential(self) -> bool:

@@ -174,7 +174,7 @@ class TERCurve(Effect):
                 # "CUNIT2": "ARCSEC",
                 # "CDELT1": 0,
                 # "CDELT2": 0,
-                "BUNIT": "PHOTLAM arcsec-2",
+                "BUNIT": "photlam arcsec-2",
                 "SOLIDANG": "arcsec-2",
             })
             bkg_fld = BackgroundSourceField(field=None, spectra=bkg_spec, header=bkg_hdr)

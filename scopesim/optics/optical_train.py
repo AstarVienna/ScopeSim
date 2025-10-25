@@ -362,7 +362,7 @@ class OpticalTrain:
 
             data = (data * factor).value
 
-            cube.header["BUNIT"] = "PHOTLAM/arcsec2"    # ..todo: make this more explicit?
+            cube.header["BUNIT"] = "photlam/arcsec2"    # ..todo: make this more explicit?
 
             # The imageplane_utils like to have the spatial WCS in units of "deg". Ensure
             # that the cube is passed on accordingly

@@ -219,7 +219,7 @@ def uniform_illumination(xs, ys, pixel_scale, flux=None, spectrum=None):
         scale_factor = pixel_scale ** 2 * 10 ** (-0.4 * flux)
     elif spectrum is not None:
         spec = spectrum
-        mag_unit = "PHOTLAM"
+        mag_unit = "photlam"
         scale_factor = pixel_scale ** 2
     else:
         raise ValueError(f"Either flux or spectrum must be passed: {flux}, {spectrum}")
