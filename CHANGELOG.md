@@ -1,3 +1,33 @@
+# Version 0.11.1
+**2025-10-26**
+
+## What's Changed
+### API Changes
+* Allow log level to be lower case by @oczoske in https://github.com/AstarVienna/ScopeSim/pull/811
+### Bugs fixed
+* Rename `Effect.__getitem__()` ➡️ `.get_from_meta()` by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/815
+* Improve handling of BUNIT in FOV by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/822
+* Fix BUNIT not added for Source from image + flux by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/823
+* Catch extra special units by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/824
+* No ABmag in BUNIT by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/826
+* Use lower case photlam for headers by @oczoske in https://github.com/AstarVienna/ScopeSim/pull/827
+### Changes to or addition of Effects
+* Inter-pixel capacitance effect by @oczoske in https://github.com/AstarVienna/ScopeSim/pull/806
+* Compute METIS/LMS predisperser angle for given central wavelength  by @oczoske in https://github.com/AstarVienna/ScopeSim/pull/812
+* Local TER library by @oczoske in https://github.com/AstarVienna/ScopeSim/pull/765
+### Dependency Changes
+* Bump jupyterlab from 4.2.5 to 4.4.8 by @dependabot[bot] in https://github.com/AstarVienna/ScopeSim/pull/805
+* Bump sphinx from 7.3.7 to 8.1.3 by @dependabot[bot] in https://github.com/AstarVienna/ScopeSim/pull/809
+### Documentation Improvements
+* Fix some docstring formatting, add version info by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/828
+### Other Changes
+* Refactor data collections download by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/810
+* Replace `np.trapz` with `scipy.integrate.trapezoid` by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/813
+* No longer ignore some warnings by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/814
+
+**Full Changelog**: https://github.com/AstarVienna/ScopeSim/compare/v0.11.0...v0.11.1
+
+
 # Version 0.11.0
 **2025-09-21**
 
