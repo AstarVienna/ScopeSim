@@ -288,7 +288,7 @@ class AtmoLibraryTERCurve(AtmosphericTERCurve):
 
     Currently the curves are distinguished by a single parameter (`pwv`).
 
-    .. versionadded:: PLACEHOLDER_NEXT_RELEASE_VERSION
+    .. versionadded:: 0.11.1
 
     Examples
     --------

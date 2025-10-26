@@ -478,7 +478,7 @@ def predisperser_angle(wavelength, predisp_coeff):
     """
     Compute the predisperser angle needed for central `wavelength`.
 
-    .. versionadded:: PLACEHOLDER_NEXT_RELEASE_VERSION
+    .. versionadded:: 0.11.1
 
     Parameters
     ----------

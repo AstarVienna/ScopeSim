@@ -99,7 +99,7 @@ class InterPixelCapacitance(Effect):
     The effect models cross-talk due to inter-pixel capacitance with
     a convolution kernel following [1]_.
 
-    .. versionadded:: PLACEHOLDER_NEXT_RELEASE_VERSION
+    .. versionadded:: 0.11.1
 
     Example
     -------
