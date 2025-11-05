@@ -19,6 +19,7 @@ from ...optics.image_plane_utils import (create_wcs_from_points,
 from ...optics.fov import FieldOfView
 from ...utils import from_currsys, check_keys, quantify
 from . import PSF, PoorMansFOV, logger
+from .psf_base import get_bkg_level
 
 
 class DiscretePSF(PSF):
@@ -269,19 +270,31 @@ class FieldVaryingPSF(DiscretePSF):
             if abs(sum_kernel - 1) > self.meta["flux_accuracy"]:
                 kernel /= sum_kernel
 
-            # image convolution
+            ## image convolution
             image = fov.hdu.data.astype(float)
+
+            # subtract background level before convolving, re-add afterwards
+            bkg_level = get_bkg_level(image, self.meta["bkg_width"])
+
+            # do the convolution
+            mode = from_currsys(self.meta["convolve_mode"], self.cmds)
+
             kernel = kernel.astype(float)
-            new_image = convolve(image, kernel, mode="same")
+            # Round the edges of kernels so that the silly square stars
+            # don't appear anymore
+            if self.meta.get("rounded_edges", False) and kernel.ndim == 2:
+                kernel = self._round_kernel_edges(kernel)
+
+            new_image = convolve(image - bkg_level, kernel, mode=mode)
             if canvas is None:
                 canvas = np.zeros(new_image.shape)
 
             # mask convolution + combine with convolved image
             if mask is not None:
-                new_mask = convolve(mask, kernel, mode="same")
-                canvas += new_image * new_mask
+                #new_mask = convolve(mask, kernel, mode="same")
+                canvas += (new_image + bkg_level) * mask
             else:
-                canvas = new_image
+                canvas = new_image + bkg_level
 
         # reset WCS header info
         new_shape = canvas.shape
