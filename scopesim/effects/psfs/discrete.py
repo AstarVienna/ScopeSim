@@ -290,10 +290,9 @@ class FieldVaryingPSF(DiscretePSF):
                 canvas = np.zeros(new_image.shape)
 
             # mask convolution + combine with convolved image
-            mask = None    # TODO: remove
             if mask is not None:
-                new_mask = convolve(mask, kernel, mode="same")
-                canvas += (new_image + bkg_level) * new_mask
+                #new_mask = convolve(mask, kernel, mode="same")
+                canvas += (new_image + bkg_level) * mask
             else:
                 canvas = new_image + bkg_level
 
