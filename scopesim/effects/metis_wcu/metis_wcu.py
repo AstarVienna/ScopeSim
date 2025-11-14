@@ -392,7 +392,7 @@ class WCUSource(TERCurve):
                                 * mult_is / (np.pi * u.sr))
         elif self.current_lamp == "laser":
             self.intens_lamp = self._laser_intensity()
-        elif self.current_lamp == "none":
+        elif self.current_lamp == "off":
             self.intens_lamp = np.zeros(len(lam)) * self.bb_scale
         else:
             raise ValueError(f"Unknown lamp: {self.current_lamp}")
