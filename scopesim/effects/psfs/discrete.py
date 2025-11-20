@@ -27,7 +27,18 @@ class DiscretePSF(PSF):
 
     z_order: ClassVar[tuple[int, ...]] = (43,)
 
-    def __init__(self, **kwargs):
+    def __init__(self, cmds=None, **kwargs):
+        if ("filename" not in kwargs or
+            from_currsys(kwargs["filename"], cmds) is None):
+            if "psf_name" in kwargs and "filename_format" in kwargs:
+                psf_name = from_currsys(kwargs["psf_name"], cmds)
+                print("DiscretePSF: build filename from psfname =", psf_name)
+                file_format = from_currsys(kwargs["filename_format"], cmds)
+                kwargs["filename"] = file_format.format(psf_name)
+            else:
+                raise ValueError("PSF must be passed either `filename` or both "
+                                 f"(`psf_name`, `filename_format`): {kwargs}")
+        print("DiscretePSF:", kwargs["filename"])
         super().__init__(**kwargs)
         self.convolution_classes = FieldOfView
         # self.convolution_classes = ImagePlane
@@ -89,6 +100,7 @@ class FieldConstantPSF(DiscretePSF):
         check_keys(self.meta, self.required_keys, action="error")
 
         self._waveset, self.kernel_indices = self._get_psf_wave_exts()
+        print("FieldConstantPSF:", self._waveset)
         self.current_layer_id = None
         self.current_ext = None
         self.current_data = None
