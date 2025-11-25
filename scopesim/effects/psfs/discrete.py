@@ -2,6 +2,7 @@
 """Contains field-constant and field-varying PSFs constructed from a file."""
 
 from typing import ClassVar
+from pathlib import Path
 
 import numpy as np
 from tqdm.auto import tqdm
@@ -14,10 +15,13 @@ from astropy import units as u
 from astropy.io import fits
 from astropy.wcs import WCS
 
+from .. import DataContainer
 from ...optics.image_plane_utils import (create_wcs_from_points,
                                          add_imagehdu_to_imagehdu)
 from ...optics.fov import FieldOfView
-from ...utils import from_currsys, check_keys, quantify
+from ...utils import from_currsys, check_keys, quantify, find_file
+from ...rc import __search_path__
+from ...server.download_utils import create_retriever
 from . import PSF, PoorMansFOV, logger
 from .psf_base import get_bkg_level
 
@@ -27,21 +31,64 @@ class DiscretePSF(PSF):
 
     z_order: ClassVar[tuple[int, ...]] = (43,)
 
-    def __init__(self, cmds=None, **kwargs):
+    def __init__(self, **kwargs):
+        kwargs["filename"] = self._find_psf_file(**kwargs)
+
+        super().__init__(**kwargs)
+        self.convolution_classes = FieldOfView
+        # self.convolution_classes = ImagePlane
+
+    def _find_psf_file(self, cmds=None, **kwargs):
+        """Find the PSF file locally or on the server
+
+        If a full filename is provided, the file is assumed to be in the
+        standard search path locally.
+        If a short-cut `psf_name` and a filename format are provided then the full
+        filename is constructed and searched first locally, then on the server.
+        The `psf_name` typically comes from a `PupilMaskWheel` and the server has
+        one file for each available pupil mask.
+        """
         if ("filename" not in kwargs or
             from_currsys(kwargs["filename"], cmds) is None):
             if "psf_name" in kwargs and "filename_format" in kwargs:
                 psf_name = from_currsys(kwargs["psf_name"], cmds)
-                print("DiscretePSF: build filename from psfname =", psf_name)
+                kwargs['psf_name'] = psf_name
                 file_format = from_currsys(kwargs["filename_format"], cmds)
-                kwargs["filename"] = file_format.format(psf_name)
-            else:
-                raise ValueError("PSF must be passed either `filename` or both "
-                                 f"(`psf_name`, `filename_format`): {kwargs}")
-        print("DiscretePSF:", kwargs["filename"])
-        super().__init__(**kwargs)
-        self.convolution_classes = FieldOfView
-        # self.convolution_classes = ImagePlane
+                filename = file_format.format(psf_name)
+                # Try to find file locally or on server
+                search_path = list(__search_path__)
+                if "psf_path" in kwargs:
+                    search_path.insert(0, Path(kwargs["psf_path"]))
+                if ((tmpfile := find_file(Path(filename).name, path=search_path,
+                                          silent=True))
+                    or
+                    (tmpfile := self._download_psf(filename))):
+                    return tmpfile
+                raise FileNotFoundError(f"{filename} could not be found locally or remotely")
+
+            raise ValueError("PSF must be passed either `filename` or both "
+                             f"(`psf_name`, `filename_format`): {kwargs}")
+        return kwargs["filename"]
+
+    def update(self, pupil_mask=None, filename=None):
+        """Update the PSF
+
+        When `filename` is given, this serves as the source for the new PSF.
+        When `filename` is `None`, inspect `!OBS.pupil_mask` and set the PSF
+        accordingly.
+        """
+        self._file.close()
+        if pupil_mask is not None:
+            self.meta['psf_name'] = pupil_mask
+            self.meta["filename"] = self._find_psf_file(
+                psf_name=pupil_mask,
+                filename_format=self.meta["filename_format"])
+        elif filename is not None:
+            self.meta["psf_name"] = filename
+            self.meta["filename"] = filename
+
+        self.data_container = DataContainer(**self.meta)
+        self.meta.update(self.data_container.meta)
 
     def _get_psf_wave_exts(self):
         """
@@ -77,6 +124,11 @@ class DiscretePSF(PSF):
 
         return wave_set, wave_ext
 
+    def _download_psf(self, fname: str) -> str:
+        """Download a PSF file from the server"""
+        retriever = create_retriever("psfs")
+        return retriever.fetch(fname, progressbar=True)
+
 
 class FieldConstantPSF(DiscretePSF):
     """A PSF that is constant across the field.
@@ -100,7 +152,6 @@ class FieldConstantPSF(DiscretePSF):
         check_keys(self.meta, self.required_keys, action="error")
 
         self._waveset, self.kernel_indices = self._get_psf_wave_exts()
-        print("FieldConstantPSF:", self._waveset)
         self.current_layer_id = None
         self.current_ext = None
         self.current_data = None
