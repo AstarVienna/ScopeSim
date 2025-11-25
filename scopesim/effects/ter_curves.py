@@ -1005,18 +1005,21 @@ class PupilTransmission(TERCurve):
         self.params = {"wave_min": "!SIM.spectral.wave_min",
                        "wave_max": "!SIM.spectral.wave_max"}
         self.params.update(kwargs)
-        self.cmds = cmds
-        wave_min = from_currsys(self.params["wave_min"], self.cmds) * u.um
-        wave_max = from_currsys(self.params["wave_max"], self.cmds) * u.um
-        transmission = from_currsys(transmission, cmds=self.cmds)
+        wave_min = from_currsys(self.params["wave_min"], cmds) * u.um
+        wave_max = from_currsys(self.params["wave_max"], cmds) * u.um
+        transmission = from_currsys(transmission, cmds=cmds)
 
         super().__init__(wavelength=[wave_min, wave_max],
                          transmission=[transmission, transmission],
                          emissivity=[0., 0.], **self.params)
+        self.cmds = cmds
 
     def update_transmission(self, transmission, **kwargs):
         """Set a new transmission value"""
-        self.__init__(transmission, **kwargs)
+        self.surface = SpectralSurface(wavelength=self.meta['wavelength'],
+                                       transmission=[transmission, transmission],
+                                       emission=[0, 0])
+        self.meta.update(self.surface.meta)
 
 
 class PupilMaskWheel(Effect):
@@ -1056,7 +1059,7 @@ class PupilMaskWheel(Effect):
         for name, trans in zip(names, transmissions):
             kwargs["name"] = name
             self.masks[name] = PupilTransmission(transmission=trans,
-                                                 cmds=cmds,
+                                                 cmds=self.cmds,
                                                  **kwargs)
         self.table = self.get_table(mask_dict)
 
@@ -1069,6 +1072,8 @@ class PupilMaskWheel(Effect):
         if not maskname or maskname in self.masks:
             self.meta["current_mask"] = maskname
             self.include = maskname
+            if "message" in self.meta:
+                logger.warning(self.meta["message"], maskname)
         else:
             raise ValueError(f"Unknown pupil mask requested: {maskname}")
 
