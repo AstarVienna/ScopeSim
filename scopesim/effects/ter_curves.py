@@ -1053,6 +1053,7 @@ class PupilMaskWheel(Effect):
 
         self.meta.update(kwargs)
         mask_dict = from_currsys(self.meta["pupil_masks"], cmds=self.cmds)
+        self.meta = from_currsys(self.meta, cmds=self.cmds)
         names = mask_dict['names']
         transmissions = mask_dict['transmissions']
         self.masks = {}
@@ -1080,10 +1081,15 @@ class PupilMaskWheel(Effect):
     @property
     def current_mask(self):
         """Return the currently used pupil mask."""
-        currmask = from_currsys(self.meta['current_mask'], cmds=self.cmds)
+        currmask = self.current_mask_name
         if not currmask:
             return False
         return self.masks[currmask]
+
+    @property
+    def current_mask_name(self):
+        """Return the name of the currently used pupil mask."""
+        return from_currsys(self.meta['current_mask'], cmds=self.cmds)
 
     def __getattr__(self, item):
         return getattr(self.current_mask, item)
