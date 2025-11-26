@@ -151,7 +151,7 @@ class TestWCUSource:
         lamc=3.9
         bbsource.cmds = _patched_cmds(mode="wcu_lms",  wavelen=lamc, bin_width=binw)
         bbsource.get_wavelength()
-        lam = 3.6 + (np.arange(6001) * binw)
+        lam = 3.58 + (np.arange(6401) * binw)
         assert len(bbsource.wavelength) == len(lam)
         assert np.all(bbsource.wavelength.value == lam)
 
