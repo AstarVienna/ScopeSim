@@ -60,8 +60,9 @@ class TestInit:
     def test_initialised_with_psf_name_and_file_format(self, mock_path):
         # actually tests code in parent class DiscretePSF
         psf_name = "ConstPSF"
-        file_format = str(mock_path / "test_{}_WAVELENG.fits")
+        file_format = "test_{}_WAVELENG.fits"
         constpsf = FieldConstantPSF(psf_name=psf_name,
+                                    psf_path=mock_path,
                                     filename_format=file_format)
         assert isinstance(constpsf, FieldConstantPSF)
 

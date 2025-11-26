@@ -73,9 +73,14 @@ class DiscretePSF(PSF):
     def update(self, pupil_mask=None, filename=None):
         """Update the PSF
 
-        When `filename` is given, this serves as the source for the new PSF.
-        When `filename` is `None`, inspect `!OBS.pupil_mask` and set the PSF
-        accordingly.
+        Parameters
+        ----------
+        pupil_mask : str
+             Name of the pupil mask. The filename is constructed from this and
+             the existing `self.meta["filename_format"]`.
+        filename : str
+             Full name of the file with the new PSF. Ignored if `pupil_mask` is
+             not `None`.
         """
         self._file.close()
         if pupil_mask is not None:
