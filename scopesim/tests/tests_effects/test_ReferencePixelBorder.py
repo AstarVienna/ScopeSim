@@ -13,20 +13,11 @@ class TestInit:
     def test_initialised_with_nothing(self):
         rpb = ReferencePixelBorder()
         assert isinstance(rpb, ReferencePixelBorder)
-        assert all(rpb.meta[key] == 0
-                   for key in ["top", "bottom", "right", "left"])
+        assert rpb.meta["border"] == [0, 0, 0, 0]
 
     def test_initialised_with_border(self):
         rpb = ReferencePixelBorder(border=[4, 5, 6, 7])
-        assert rpb.meta["bottom"] == 4
-        assert rpb.meta["left"] == 5
-        assert rpb.meta["top"] == 6
-        assert rpb.meta["right"]  == 7
-
-    def test_border_set_differently(self):
-        rpb = ReferencePixelBorder(top=5, right=3)
-        borders = {"top": 5, "bottom": 0, "right": 3, "left": 0}
-        assert all(rpb.meta[key] == val for (key, val) in borders.items())
+        assert rpb.meta["border"] == [4, 5, 6, 7]
 
     def test_error_with_short_border(self):
         with pytest.raises(ValueError):
@@ -65,6 +56,6 @@ class TestApplyTo:
     def test_all_zero_when_border_exeeds_image_limits(self):
         det = _basic_detector(width=128)
         det.hdu.data = np.ones(det.data.shape, dtype=np.float32)
-        rpb = ReferencePixelBorder(right=1000)
+        rpb = ReferencePixelBorder(border=[0, 400, 1000, 0])
         rpb.apply_to(det)
         assert np.all(det.data == 0)

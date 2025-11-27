@@ -5,7 +5,7 @@ from typing import ClassVar
 
 from .. import Effect
 from ...detector import Detector
-from ...utils import from_currsys, figure_factory, check_keys
+from ...utils import from_currsys, figure_factory, check_keys, real_colname
 from .. import logger
 
 class ReferencePixelBorder(Effect):
@@ -22,38 +22,47 @@ class ReferencePixelBorder(Effect):
        a list with the number of rows and columns to be masked. The sequence
        should be [bottom, left, top, right]
     """
-    z_order: ClassVar[tuple[int, ...]] = (780,)
+    z_order: ClassVar[tuple[int, ...]] = (861,)
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.meta["bottom"] = 0
-        self.meta["left"] = 0
-        self.meta["top"] = 0
-        self.meta["right"] = 0
-        self.meta.update(kwargs)
-
-        if "border" in self.meta:
-            if len(self.meta["border"]) != 4:
-                raise ValueError("Parameter 'border' must have exactly four entries.")
-            self.meta['bottom'] = int(self.meta['border'][0])
-            self.meta['left'] = int(self.meta['border'][1])
-            self.meta['top'] = int(self.meta['border'][2])
-            self.meta['right'] = int(self.meta['border'][3])
+        self.meta['border_sequence'] = "bottom left top right"
+        if "border" not in self.meta:
+            self.meta["border"] = [0, 0, 0, 0]
+        else:
+            self.meta["border"] = from_currsys(self.meta["border"], self.cmds)
+        if isinstance(self.meta['border'], dict):
+            for val in self.meta['border'].values():
+                if len(val) != 4:
+                    raise ValueError("All entries for 'border' must have exactly four values.")
+        else:
+            if len(self.meta['border']) != 4:
+                raise ValueError("Parameter 'border' must have exactly four values.")
 
     def apply_to(self, obj, **kwargs):
         """Mask border pixels"""
         if not isinstance(obj, Detector):
-            logger.warning("ReferencePixelBorder: got non-detector object")
+            logger.warning("ReferencePixelBorder: got non-detector object: %s", type(obj))
             return obj
 
-        if self.meta['bottom'] > 0:
-            obj.data[:self.meta['bottom'], :] = 0
-        if self.meta['left'] > 0:
-            obj.data[:, :self.meta['left']] = 0
-        if self.meta['top'] > 0:
-            obj.data[-self.meta['top']:, :] = 0
-        if self.meta['right'] > 0:
-            obj.data[:, -self.meta['right']:] = 0
+        logger.info(f"Applying border {from_currsys(self.meta['border'])}")
+        if hasattr(self.meta['border'], "dic"):
+            dtcr_id = obj.meta[real_colname("id", obj.meta)]
+            border = self.meta['border'].dic[dtcr_id]
+        elif isinstance(self.meta['border'], list):
+            border = self.meta['border']
+        else:
+            raise ValueError("<ReferenceBorderPixel>.meta['border'] must be either "
+                             f"dict or list, but is {self.meta['border']}")
+
+        if border[0] > 0:
+            obj.data[:border[0], :] = 0
+        if border[1] > 0:
+            obj.data[:, :border[1]] = 0
+        if border[2] > 0:
+            obj.data[-border[2]:, :] = 0
+        if border[3] > 0:
+            obj.data[:, -border[3]:] = 0
         return obj
 
     def plot(self, det, **kwargs):
@@ -66,10 +75,7 @@ class ReferencePixelBorder(Effect):
         """Return str(self)."""
         msg = (
             f"{self.__class__.__name__}: \"{self.display_name}\"\n"
-            f"   bottom:    {self.meta['bottom']}\n"
-            f"   left:      {self.meta['left']}\n"
-            f"   top:       {self.meta['top']}\n"
-            f"   right:     {self.meta['right']}\n"
+            f"    {from_currsys(self.meta['border'], self.cmds)}   ({self.meta['border_sequence']})\n"
         )
         return msg
 
