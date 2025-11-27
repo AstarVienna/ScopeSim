@@ -4,40 +4,75 @@
 from typing import ClassVar
 
 from .. import Effect
-from ...optics import ImagePlane
 from ...detector import Detector
 from ...utils import from_currsys, figure_factory, check_keys
-
+from .. import logger
 
 class ReferencePixelBorder(Effect):
+    """Remove signal from reference pixels
+
+    Detectors often have a number of rows and columns around the edges masked.
+    These pixels serve as reference pixels for various purposes. They do not
+    get any signal, but have all the detector effects, such as dark current
+    and readout noise.
+
+    Parameters
+    ----------
+    border : list(4)
+       a list with the number of rows and columns to be masked. The sequence
+       should be [bottom, left, top, right]
+    """
     z_order: ClassVar[tuple[int, ...]] = (780,)
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        val = int(kwargs.get("all", 0))
-        widths = {key: val for key in ["top", "bottom", "left", "right"]}
-        self.meta.update(widths)
+        self.meta["bottom"] = 0
+        self.meta["left"] = 0
+        self.meta["top"] = 0
+        self.meta["right"] = 0
         self.meta.update(kwargs)
 
-    def apply_to(self, implane, **kwargs):
-        # .. todo: should this be ImagePlane here?
-        if isinstance(implane, ImagePlane):
-            if self.meta["top"] > 0:
-                implane.hdu.data[:, -self.meta["top"]:] = 0
-            if self.meta["bottom"] > 0:
-                implane.hdu.data[:, :self.meta["bottom"]] = 0
-            if self.meta["right"] > 0:
-                implane.hdu.data[-self.meta["right"]:, :] = 0
-            if self.meta["left"] > 0:
-                implane.hdu.data[:self.meta["left"], :] = 0
+        if "border" in self.meta:
+            if len(self.meta["border"]) != 4:
+                raise ValueError("Parameter 'border' must have exactly four entries.")
+            self.meta['bottom'] = int(self.meta['border'][0])
+            self.meta['left'] = int(self.meta['border'][1])
+            self.meta['top'] = int(self.meta['border'][2])
+            self.meta['right'] = int(self.meta['border'][3])
 
-        return implane
+    def apply_to(self, obj, **kwargs):
+        """Mask border pixels"""
+        if not isinstance(obj, Detector):
+            logger.warning("ReferencePixelBorder: got non-detector object")
+            return obj
 
-    def plot(self, implane, **kwargs):
-        implane = self.apply_to(implane)
-        fig, ax = figure_factory()
-        ax.imshow(implane.data, origin="bottom", **kwargs)
-        # fig.show()
+        if self.meta['bottom'] > 0:
+            obj.data[:self.meta['bottom'], :] = 0
+        if self.meta['left'] > 0:
+            obj.data[:, :self.meta['left']] = 0
+        if self.meta['top'] > 0:
+            obj.data[-self.meta['top']:, :] = 0
+        if self.meta['right'] > 0:
+            obj.data[:, -self.meta['right']:] = 0
+        return obj
+
+    def plot(self, det, **kwargs):
+        """Show the masked detector image"""
+        det = self.apply_to(det)
+        _, ax = figure_factory()
+        ax.imshow(det.data, origin="bottom", **kwargs)
+
+    def __str__(self) -> str:
+        """Return str(self)."""
+        msg = (
+            f"{self.__class__.__name__}: \"{self.display_name}\"\n"
+            f"   bottom:    {self.meta['bottom']}\n"
+            f"   left:      {self.meta['left']}\n"
+            f"   top:       {self.meta['top']}\n"
+            f"   right:     {self.meta['right']}\n"
+        )
+        return msg
+
 
 
 class BinnedImage(Effect):
