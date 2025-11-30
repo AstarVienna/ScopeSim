@@ -407,10 +407,10 @@ class MetisLMSSpectralTrace(SpectralTrace):
             for i in range(4):
                 for j in range(4):
                     sel_ij = (subpoly["Row"] == i) * (subpoly["Col"] == j)
-                    thematrix[i, j] = (subpoly["P3"][sel_ij] * angle**3 +
-                                       subpoly["P2"][sel_ij] * angle**2 +
-                                       subpoly["P1"][sel_ij] * angle +
-                                       subpoly["P0"][sel_ij])
+                    thematrix[i, j] = (subpoly["P3"][sel_ij][0] * angle**3 +
+                                       subpoly["P2"][sel_ij][0] * angle**2 +
+                                       subpoly["P1"][sel_ij][0] * angle +
+                                       subpoly["P0"][sel_ij][0])
 
             matrices[matnames[matid]] = thematrix
 
