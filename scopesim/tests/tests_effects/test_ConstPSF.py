@@ -21,15 +21,18 @@ from pytest import approx
 
 import numpy as np
 
+import matplotlib.pyplot as plt
+
 from scopesim.effects import FieldConstantPSF
 
 from scopesim.tests.mocks.py_objects.fov_objects import _centre_fov
 
-import matplotlib.pyplot as plt
 
 
 PLOTS = False
 
+# pylint: disable=missing-class-docstring,
+# pylint: disable=missing-function-docstring
 
 @pytest.fixture(scope="function")
 def centre_fov():
@@ -53,6 +56,15 @@ class TestInit:
             wave_key="WAVELENG")
         assert isinstance(constpsf, FieldConstantPSF)
         assert len(constpsf._waveset) == 2
+
+    def test_initialised_with_psf_name_and_file_format(self, mock_path):
+        # actually tests code in parent class DiscretePSF
+        psf_name = "ConstPSF"
+        file_format = "test_{}_WAVELENG.fits"
+        constpsf = FieldConstantPSF(psf_name=psf_name,
+                                    psf_path=mock_path,
+                                    filename_format=file_format)
+        assert isinstance(constpsf, FieldConstantPSF)
 
 
 class TestGetKernel:
@@ -133,12 +145,12 @@ class TestApplyTo:
 
         if PLOTS:
             fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(7,3))
-            plot_A = ax1.imshow(centre_fov.hdu.data)
+            plot_a = ax1.imshow(centre_fov.hdu.data)
             ax1.set_title("before convolution")
-            fig.colorbar(plot_A, ax=ax1)
-            plot_B = ax2.imshow(fov_returned.hdu.data)
+            fig.colorbar(plot_a, ax=ax1)
+            plot_a = ax2.imshow(fov_returned.hdu.data)
             ax2.set_title("after convolution")
-            fig.colorbar(plot_B, ax=ax2)
+            fig.colorbar(plot_a, ax=ax2)
             plt.show()
 
         assert np.all(np.equal(fov_returned.hdu.data,

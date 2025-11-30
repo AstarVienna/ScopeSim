@@ -205,7 +205,7 @@ class WCUSource(TERCurve):
         if "wcu_lms" in self.cmds["!OBS.modes"]:
             lamc = self.cmds["!OBS.wavelen"]
             dlam = self.cmds["!SIM.spectral.spectral_bin_width"]
-            lam = seq(lamc - 3000 * dlam, lamc + 3000 * dlam, dlam) * u.um
+            lam = seq(lamc - 3200 * dlam, lamc + 3200 * dlam, dlam) * u.um
         else:
             filter_name = self.cmds["!OBS.filter_name"]
             filename_format = self.cmds["!INST.filter_file_format"]

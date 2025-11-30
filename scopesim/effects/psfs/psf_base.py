@@ -53,6 +53,7 @@ class PSF(Effect):
         }
         self.meta.update(params)
         self.meta.update(kwargs)
+
         self.meta = from_currsys(self.meta, self.cmds)
         self.convolution_classes = (FieldOfView, ImagePlane)
 
