@@ -1,53 +1,61 @@
+"""Tests for ReferencePixelBorder"""
+# pylint: disable=missing-function-docstring
+# pylint: disable=missing-class-docstring
+import pytest
 import numpy as np
-from matplotlib import pyplot as plt
 
-from scopesim.effects import electronic as ee
-from scopesim.optics.image_plane import ImagePlane
+from scopesim.effects import ReferencePixelBorder
 
-from scopesim.tests.mocks.py_objects.imagehdu_objects import _image_hdu_square
-
-PLOTS = False
+from scopesim.tests.mocks.py_objects.detector_objects import _basic_detector
 
 
 class TestInit:
     def test_initialised_with_nothing(self):
-        rpb = ee.ReferencePixelBorder()
-        assert isinstance(rpb, ee.ReferencePixelBorder)
-        assert all(rpb.meta[key] == 0
-                   for key in ["top", "bottom", "right", "left"])
+        rpb = ReferencePixelBorder()
+        assert isinstance(rpb, ReferencePixelBorder)
+        assert rpb.meta["border"] == [0, 0, 0, 0]
 
-    def test_borders_all_set_to_5_for_keyword_all(self):
-        rpb = ee.ReferencePixelBorder(all=5)
-        assert all(rpb.meta[key] == 5
-                   for key in ["top", "bottom", "right", "left"])
+    def test_initialised_with_border(self):
+        rpb = ReferencePixelBorder(border=[4, 5, 6, 7])
+        assert rpb.meta["border"] == [4, 5, 6, 7]
 
-    def test_border_set_differently(self):
-        rpb = ee.ReferencePixelBorder(top=5, right=3)
-        borders = {"top": 5, "bottom": 0, "right": 3, "left": 0}
-        assert all(rpb.meta[key] == borders[key] for key in borders)
+    def test_error_with_short_border(self):
+        with pytest.raises(ValueError):
+            _ = ReferencePixelBorder(border=[1,3])
+
+    def test_error_with_long_border(self):
+        with pytest.raises(ValueError):
+            _ = ReferencePixelBorder(border=[2, 3, 4, 5, 6])
 
 
 class TestApplyTo:
     def test_no_border_if_nothing_passed(self):
-        implane = ImagePlane(_image_hdu_square().header)
-        implane.hdu.data = np.ones(implane.hdu.data.shape)
-        rpb = ee.ReferencePixelBorder()
-        implane = rpb.apply_to(implane)
-
-        # Note: this used to be 10201, I don't know where that number came
-        #       from, but the current number makes more sense anyway...
-        assert np.sum(implane.data) == 10000
+        det = _basic_detector(width=128)
+        det.hdu.data = np.ones(det.data.shape)
+        rpb = ReferencePixelBorder()
+        rpb.apply_to(det)
+        assert np.sum(det.data) == 128**2
 
     def test_sets_border_to_zero(self):
-        implane = ImagePlane(_image_hdu_square().header)
-        implane.hdu.data = np.ones(implane.hdu.data.shape)
-        rpb = ee.ReferencePixelBorder(all=5, top=15)
-        implane = rpb.apply_to(implane)
+        det = _basic_detector(width=128)
+        det.hdu.data = np.ones(det.data.shape)
+        rpb = ReferencePixelBorder(border=[32, 32, 32, 32])
+        rpb.apply_to(det)
+        assert np.sum(det.data) == 64**2
 
-        if PLOTS:
-            plt.imshow(implane.data, origin="bottom")
-            plt.show()
+    def test_order_of_parameters_is_correct(self):
+        det = _basic_detector(width=128)
+        det.hdu.data = np.ones(det.data.shape)
+        rpb = ReferencePixelBorder(border=[10, 20, 30, 0])
+        rpb.apply_to(det)
+        assert np.all(det.data[:10, ] == 0)
+        assert np.all(det.data[10:(128-30), 20:] == 1)
+        assert np.all(det.data[128-30+1:, :] == 0)
+        assert np.all(det.data[:, :20] == 0)
 
-        # Note: this used to be 7371, I don't know where that number came
-        #       from, but the current number makes more sense anyway...
-        assert np.sum(implane.data) == 7200
+    def test_all_zero_when_border_exeeds_image_limits(self):
+        det = _basic_detector(width=128)
+        det.hdu.data = np.ones(det.data.shape, dtype=np.float32)
+        rpb = ReferencePixelBorder(border=[0, 400, 1000, 0])
+        rpb.apply_to(det)
+        assert np.all(det.data == 0)

@@ -4,40 +4,81 @@
 from typing import ClassVar
 
 from .. import Effect
-from ...optics import ImagePlane
 from ...detector import Detector
-from ...utils import from_currsys, figure_factory, check_keys
-
+from ...utils import from_currsys, figure_factory, check_keys, real_colname
+from .. import logger
 
 class ReferencePixelBorder(Effect):
-    z_order: ClassVar[tuple[int, ...]] = (780,)
+    """Remove signal from reference pixels
+
+    Detectors often have a number of rows and columns around the edges masked.
+    These pixels serve as reference pixels for various purposes. They do not
+    get any signal, but have all the detector effects, such as dark current
+    and readout noise.
+
+    Parameters
+    ----------
+    border : list(4)
+       a list with the number of rows and columns to be masked. The sequence
+       should be [bottom, left, top, right]
+    """
+    z_order: ClassVar[tuple[int, ...]] = (861,)
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        val = int(kwargs.get("all", 0))
-        widths = {key: val for key in ["top", "bottom", "left", "right"]}
-        self.meta.update(widths)
-        self.meta.update(kwargs)
+        self.meta['border_sequence'] = "bottom left top right"
+        if "border" not in self.meta:
+            self.meta["border"] = [0, 0, 0, 0]
+        else:
+            self.meta["border"] = from_currsys(self.meta["border"], self.cmds)
+        if isinstance(self.meta['border'], dict):
+            for val in self.meta['border'].values():
+                if len(val) != 4:
+                    raise ValueError("All entries for 'border' must have exactly four values.")
+        else:
+            if len(self.meta['border']) != 4:
+                raise ValueError("Parameter 'border' must have exactly four values.")
 
-    def apply_to(self, implane, **kwargs):
-        # .. todo: should this be ImagePlane here?
-        if isinstance(implane, ImagePlane):
-            if self.meta["top"] > 0:
-                implane.hdu.data[:, -self.meta["top"]:] = 0
-            if self.meta["bottom"] > 0:
-                implane.hdu.data[:, :self.meta["bottom"]] = 0
-            if self.meta["right"] > 0:
-                implane.hdu.data[-self.meta["right"]:, :] = 0
-            if self.meta["left"] > 0:
-                implane.hdu.data[:self.meta["left"], :] = 0
+    def apply_to(self, obj, **kwargs):
+        """Mask border pixels"""
+        if not isinstance(obj, Detector):
+            logger.warning("ReferencePixelBorder: got non-detector object: %s", type(obj))
+            return obj
 
-        return implane
+        logger.info(f"Applying border {from_currsys(self.meta['border'])}")
+        if hasattr(self.meta['border'], "dic"):
+            dtcr_id = obj.meta[real_colname("id", obj.meta)]
+            border = self.meta['border'].dic[dtcr_id]
+        elif isinstance(self.meta['border'], list):
+            border = self.meta['border']
+        else:
+            raise ValueError("<ReferenceBorderPixel>.meta['border'] must be either "
+                             f"dict or list, but is {self.meta['border']}")
 
-    def plot(self, implane, **kwargs):
-        implane = self.apply_to(implane)
-        fig, ax = figure_factory()
-        ax.imshow(implane.data, origin="bottom", **kwargs)
-        # fig.show()
+        if border[0] > 0:
+            obj.data[:border[0], :] = 0
+        if border[1] > 0:
+            obj.data[:, :border[1]] = 0
+        if border[2] > 0:
+            obj.data[-border[2]:, :] = 0
+        if border[3] > 0:
+            obj.data[:, -border[3]:] = 0
+        return obj
+
+    def plot(self, det, **kwargs):
+        """Show the masked detector image"""
+        det = self.apply_to(det)
+        _, ax = figure_factory()
+        ax.imshow(det.data, origin="bottom", **kwargs)
+
+    def __str__(self) -> str:
+        """Return str(self)."""
+        msg = (
+            f"{self.__class__.__name__}: \"{self.display_name}\"\n"
+            f"    {from_currsys(self.meta['border'], self.cmds)}   ({self.meta['border_sequence']})\n"
+        )
+        return msg
+
 
 
 class BinnedImage(Effect):
