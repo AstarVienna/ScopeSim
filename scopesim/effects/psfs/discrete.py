@@ -137,7 +137,7 @@ class DiscretePSF(PSF):
     def __str__(self) -> str:
         """Return str(self)."""
         msg = f"{self.__class__.__name__}: \"{self.display_name}\"\n"
-        if self.meta["psf_name"] is not None:
+        if "psf_name" in self.meta and self.meta["psf_name"] is not None:
             msg += f"- Pupil mask: {self.meta['psf_name']}\n"
         msg += f"- PSF file:   {self.meta['filename']}"
         return msg
