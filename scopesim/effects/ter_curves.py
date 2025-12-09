@@ -318,21 +318,21 @@ class AtmoLibraryTERCurve(AtmosphericTERCurve):
             remote_filename = from_currsys(kwargs["remote_filename"], cmds)
             kwargs["filename"] = self._download_library(remote_filename)
 
+        self.param = 'pwv'
         super().__init__(cmds=cmds, **kwargs)
         self.meta.update(kwargs)
         self.load_table_from_library()
 
     def update(self, **kwargs):
         """Update the atmo library."""
-        param = 'pwv'
-        if param not in kwargs:
-            logger.warning("Can only update with parameter %s", param)
+        if self.param not in kwargs:
+            logger.warning("Can only update with parameter %s", self.param)
             return
 
         if "remote_filename" in kwargs:
             kwargs["filename"] = self._download_library(kwargs["remote_filename"])
 
-        self.meta[param] = kwargs[param]
+        self.meta[self.param] = kwargs[self.param]
         self.load_table_from_library()
 
     @staticmethod
@@ -371,6 +371,13 @@ class AtmoLibraryTERCurve(AtmosphericTERCurve):
 
         self.surface.table = tbl
         self.surface.meta.update(tbl.meta)
+
+    def __str__(self) -> str:
+        """Return str(self)."""
+        msg = (f"{self.__class__.__name__}: \"{self.display_name}\"\n"
+               f"  - Parameter: {self.param} = {self.value}\n"
+               )
+        return msg
 
 
 class SkycalcTERCurve(AtmosphericTERCurve):
