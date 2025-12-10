@@ -405,8 +405,9 @@ class FieldVaryingPSF(DiscretePSF):
             self.current_data = self._file[ext].data
 
         # compare the fov and psf pixel scales
-        kernel_pixel_scale = self._file[ext].header["CDELT1"]
-        fov_pixel_scale = fov.header["CDELT1"]
+        kernel_pixel_unit = u.Unit(self._file[ext].header.get("CUNIT1", "deg"))
+        kernel_pixel_scale = self._file[ext].header["CDELT1"] * kernel_pixel_unit
+        fov_pixel_scale = fov.header["CDELT1"] * u.Unit(fov.header["CUNIT1"])
 
         # get the spatial map of the kernel cube layers
         strl_hdu = self.strehl_imagehdu
@@ -426,6 +427,7 @@ class FieldVaryingPSF(DiscretePSF):
         # TODO: should the mask also be rescaled?
         # rescale the pixel scale of the kernel to match the fov images
         pix_ratio = fov_pixel_scale / kernel_pixel_scale
+        pix_ratio = pix_ratio.to_value(1).round(5)
         if abs(pix_ratio - 1) > self.meta["flux_accuracy"]:
             spline_order = from_currsys(
                 "!SIM.computing.spline_order", cmds=self.cmds)
