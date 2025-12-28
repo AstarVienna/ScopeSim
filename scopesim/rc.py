@@ -34,3 +34,9 @@ __search_path__ = UniqueList([
     Path(__pkg_dir__).absolute(),
     *[Path(pth).absolute() for pth in __config__["!SIM.file.search_path"]],
 ])
+
+# Needed by kl/mos_branch
+# Can refactor this later to remove it once things work again
+import os
+__basic_inst_path__ = os.path.abspath(os.path.join(__pkg_dir__,
+                                      "tests/mocks/basic_instrument/"))
