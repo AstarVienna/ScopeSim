@@ -64,6 +64,7 @@ class FPMask:
         if maskname == "open":
             self.holehdu = fits.ImageHDU()
             self.holehdu.header.update(self.hdr)
+            self.holehdu.header['BG_SURF'] = "WCU FP mask open"
             self.opaquehdu = None
         else:
             # Try to find the file as a path
@@ -88,11 +89,13 @@ class FPMask:
         """
         holehdu = fits.ImageHDU()
         holehdu.header.update(header)
+        holehdu.header['BG_SURF'] = f"WCU FP mask {self.name} holes"
         holehdu.data = np.zeros((2047, 2047))
 
         opaquehdu = fits.ImageHDU()
         opaquehdu.header.update(header)
-        opaquehdu.data = np.ones((2047, 2047)) * self.pixarea.value
+        opaquehdu.header['BG_SURF'] = f"WCU FP mask {self.name} opaque"
+        opaquehdu.data = np.ones((2047, 2047)) #* self.pixarea.value
 
         # Hole locations
         tab = self.data_container.table
@@ -118,7 +121,7 @@ class FPMask:
             holearea = (d/2)**2 * np.pi
             xint, yint, fracs = sub_pixel_fractions(x, y)
             holehdu.data[yint, xint] = np.array(fracs) * holearea
-            opaquehdu.data[yint, xint] *= 1 - np.array(fracs) * holearea/self.pixarea.value
+            opaquehdu.data[yint, xint] *= 1 - np.array(fracs) * holearea#/self.pixarea.value
 
         self.xpix = xpix
         self.ypix = ypix
