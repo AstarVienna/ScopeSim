@@ -3,7 +3,7 @@
 # pylint: disable=missing-function-docstring
 
 # 1 read in a table
-# 2 compliment the table based on columns in file
+# 2 complement the table based on columns in file
 # 3 have @property methods for: transmission, ermission, reflection
 
 import pytest
@@ -142,7 +142,7 @@ class TestSpectralSurfaceEmissionProperty:
                            srf.emission(wave))
 
 
-class TestSpectralSurfaceComplimentArray:
+class TestSpectralSurfaceComplementArray:
     @pytest.mark.parametrize("colname1, colname2, col1, col2, expected",
                              [("A", "B", [0.8]*u.um, [0.1]*u.um, [0.1]*u.um),
                               ("A", "B", [0.8]*u.um, None,       [0.2]*u.um),
@@ -152,7 +152,7 @@ class TestSpectralSurfaceComplimentArray:
         srf = opt_surf.SpectralSurface()
         srf.meta[colname1] = col1
         srf.meta[colname2] = col2
-        col3 = srf._compliment_array(colname1, colname2)
+        col3 = srf._complement_array(colname1, colname2)
         assert np.allclose(col3.data, expected.data)
         assert col3.unit == expected.unit
 
@@ -163,7 +163,7 @@ class TestSpectralSurfaceComplimentArray:
         srf = opt_surf.SpectralSurface()
         srf.meta[colname1] = col1
         srf.meta[colname2] = col2
-        col3 = srf._compliment_array(colname1, colname2)
+        col3 = srf._complement_array(colname1, colname2)
         assert col3 is None
 
     @pytest.mark.parametrize("col2_arr, expected",
@@ -177,7 +177,7 @@ class TestSpectralSurfaceComplimentArray:
         if col2_arr:
             srf.table.add_column(Column(name="col2", data=col2_arr))
 
-        col3 = srf._compliment_array("col1", "col2")
+        col3 = srf._complement_array("col1", "col2")
         assert col3.data == pytest.approx(expected)
         assert len(col3.data) == len(expected)
 
