@@ -440,6 +440,14 @@ class SkycalcTERCurve(AtmosphericTERCurve):
         if item is True and self.skycalc_table is None:
             self.load_skycalc_table()
 
+    ## Nice to have, but would need a setter
+    ##        self.parameters['pwv'] = 20.
+    ## This would have to set self.meta['pwv'] at the same time,
+    ## otherwise meta would always override.
+    #@property
+    #def parameters(self):
+    #    return self.skycalc_conn.values
+
     def load_skycalc_table(self):
         """Download skycalc table based on the current parameters"""
         use_local_file = from_currsys(self.meta["use_local_skycalc_file"],
@@ -502,7 +510,9 @@ class SkycalcTERCurve(AtmosphericTERCurve):
 
     def update(self, **kwargs):
         """Update the skycalc table with new parameter values"""
+        # Needed to update the source field
         self._background_source = None
+
         # Validate parameters
         for key in kwargs:
             if key not in self.skycalc_conn.keys:
