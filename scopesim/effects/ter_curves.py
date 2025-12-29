@@ -420,6 +420,11 @@ class SkycalcTERCurve(AtmosphericTERCurve):
         self.skycalc_table = None
         self.skycalc_conn = None
 
+        use_local_file = from_currsys(self.meta["use_local_skycalc_file"],
+                                      self.cmds)
+        if not use_local_file:
+            self.skycalc_conn = skycalc_ipy.SkyCalc()
+
         if self.include is True:
             # Only query the database if the effect is actually included.
             # Sets skycalc_conn and skycalc_table.
@@ -436,10 +441,10 @@ class SkycalcTERCurve(AtmosphericTERCurve):
             self.load_skycalc_table()
 
     def load_skycalc_table(self):
+        """Download skycalc table based on the current parameters"""
         use_local_file = from_currsys(self.meta["use_local_skycalc_file"],
                                       self.cmds)
         if not use_local_file:
-            self.skycalc_conn = skycalc_ipy.SkyCalc()
             tbl = self.query_server()
 
             if "name" not in self.meta:
@@ -469,6 +474,7 @@ class SkycalcTERCurve(AtmosphericTERCurve):
         self.skycalc_table = tbl
 
     def query_server(self, **kwargs):
+        """Get table from the skycalc server"""
         self.meta.update(kwargs)
 
         if "wunit" in self.meta:
@@ -478,6 +484,7 @@ class SkycalcTERCurve(AtmosphericTERCurve):
                 if key in self.meta:
                     self.meta[key] = from_currsys(self.meta[key],
                                                   self.cmds) * scale_factor
+            self.meta["wunit"] = "nm"
 
         conn_kwargs = {key: self.meta[key] for key in self.meta
                        if key in self.skycalc_conn.defaults}
@@ -486,12 +493,32 @@ class SkycalcTERCurve(AtmosphericTERCurve):
 
         try:
             tbl = self.skycalc_conn.get_sky_spectrum(return_type="table")
-        except ConnectionError:
+        except ConnectionError as exc:
             msg = "Could not connect to skycalc server"
             logger.exception(msg)
-            raise ValueError(msg)
+            raise ValueError(msg) from exc
 
         return tbl
+
+    def update(self, **kwargs):
+        """Update the skycalc table with new parameter values"""
+        self._background_source = None
+        # Validate parameters
+        for key in kwargs:
+            if key not in self.skycalc_conn.keys:
+                logger.warning("Parameter %s not recognised. Ignored." % key)
+                kwargs.pop(key, None)
+        self.meta.update(kwargs)
+        self.load_skycalc_table()
+
+    def __str__(self):
+        """Return str(self)."""
+        msg = f"{self.__class__.__name__}: \"{self.display_name}\"\n"
+        for key, val in self.skycalc_conn.values.items():
+            comment = self.skycalc_conn.comments[key]
+            msg += f"\x1b[32m{'# ' + comment}'\x1b[0m\n"
+            msg += f"{key:15s}: {str(val):24s}\n"
+        return msg
 
 
 class QuantumEfficiencyCurve(TERCurve):

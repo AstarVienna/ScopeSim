@@ -449,4 +449,4 @@ class BackgroundSourceField(SpectrumSourceField):
         return np.array([-np.inf, np.inf])
 
     def _write_stream(self, stream: TextIO) -> None:
-        stream.write(f"Background field ref. spectrum {self.spectrum[0]}")
+        stream.write(f"Background field ref. spectrum {self.spectrum}")
