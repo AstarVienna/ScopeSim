@@ -185,14 +185,14 @@ class SpectralSurface:
             response_curve : ``synphot.SpectralElement``
 
         """
-        compliment_names = ["transmission", "emissivity", "reflection"]
-        ii = np.where([ter_property == name for name in compliment_names])[0][0]
-        compliment_names.pop(ii)
+        complement_names = ["transmission", "emissivity", "reflection"]
+        ii = np.where([ter_property == name for name in complement_names])[0][0]
+        complement_names.pop(ii)
 
         wave = self._get_array("wavelength")
         value_arr = self._get_array(ter_property)
         if value_arr is None:
-            value_arr = self._compliment_array(*compliment_names)
+            value_arr = self._complement_array(*complement_names)
 
         if value_arr is not None and wave is not None and fmt == "synphot":
             response_curve = SpectralElement(Empirical1D, points=wave,
@@ -205,9 +205,9 @@ class SpectralSurface:
 
         return response_curve
 
-    def _compliment_array(self, colname_a, colname_b):
+    def _complement_array(self, colname_a, colname_b):
         """
-        Return an complimentary array using: ``a + b + c = 1``.
+        Return an complementary array using: ``a + b + c = 1``.
 
         E.g. ``Emissivity = 1 - (Transmission + Reflection)``
 
@@ -221,20 +221,18 @@ class SpectralSurface:
         Returns
         -------
         actual : ``synphot.SpectralElement``
-            Complimentary spectrum to those given
+            Complementary spectrum to those given
 
         """
-        compliment_a = self._get_array(colname_a)
-        compliment_b = self._get_array(colname_b)
-
-        if compliment_a is not None and compliment_b is not None:
-            actual = 1 * compliment_a.unit - (compliment_a + compliment_b)
-        elif compliment_a is not None and compliment_b is None:
-            actual = 1 * compliment_a.unit - compliment_a
-        elif compliment_b is not None and compliment_a is None:
-            actual = 1 * compliment_b.unit - compliment_b
-        elif compliment_b is None and compliment_a is None:
-            actual = None
+        complement_a = self._get_array(colname_a)
+        complement_b = self._get_array(colname_b)
+        actual = None
+        if complement_a is not None and complement_b is not None:
+            actual = 1 * complement_a.unit - (complement_a + complement_b)
+        elif complement_a is not None and complement_b is None:
+            actual = 1 * complement_a.unit - complement_a
+        elif complement_b is not None and complement_a is None:
+            actual = 1 * complement_b.unit - complement_b
 
         return actual
 
