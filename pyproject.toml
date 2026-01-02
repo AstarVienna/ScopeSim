@@ -62,7 +62,7 @@ ipympl = "^0.9.8"
 
 [tool.poetry.group.test.dependencies]
 pytest = "^8.3.5"
-pytest-cov = "^6.3.0"
+pytest-cov = "^7.0.0"
 ipykernel = "^6.31.0"
 
 [tool.poetry.group.docs]
