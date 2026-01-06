@@ -1,7 +1,13 @@
+"""Unit tests for SkycalcTERCurve"""
+# pylint: disable=missing-function-docstring
+# pylint: disable=invalid-name
+# pylint: disable=too-few-public-methods
 from pathlib import Path
 
-import pytest
 from unittest.mock import patch
+import pytest
+
+from astropy import units as u
 from synphot import SpectralElement, SourceSpectrum
 
 from scopesim.effects import SkycalcTERCurve
@@ -22,6 +28,7 @@ def setup_and_teardown():
 
 @pytest.mark.filterwarnings("ignore::astropy.units.core.UnitsWarning")
 class TestInit:
+    """Test initialisation of the effect"""
     @pytest.mark.webtest
     def test_initialises_with_nothing(self):
         assert isinstance(SkycalcTERCurve(), SkycalcTERCurve)
@@ -54,3 +61,30 @@ class TestInit:
         sky_ter = SkycalcTERCurve(
             use_local_skycalc_file=str(mock_path / "skycalc_override.fits"))
         assert sky_ter.skycalc_table is not None
+
+
+class TestUpdate:
+    """Test updating of the effect"""
+    @pytest.mark.webtest
+    def test_changes_meta_parameter(self):
+        sky_ter = SkycalcTERCurve(observatory="paranal")
+        assert sky_ter.meta["observatory"] == "paranal"
+        sky_ter.update(observatory="armazones")
+        assert sky_ter.meta["observatory"] == "armazones"
+        assert sky_ter.skycalc_conn.values["observatory"] == "armazones"
+
+    @pytest.mark.webtest
+    def test_increasing_pwv_increases_emission(self):
+        sky_ter = SkycalcTERCurve(pwv=1.0)
+        val1 = sky_ter.surface.emission(10 * u.um)
+        sky_ter.update(pwv=20.)
+        val2 = sky_ter.surface.emission(10 * u.um)
+        assert val2 > val1
+
+    @pytest.mark.webtest
+    def test_increasing_pwv_decreases_transmission(self):
+        sky_ter = SkycalcTERCurve(pwv=1.0)
+        val1 = sky_ter.surface.throughput(10 * u.um)
+        sky_ter.update(pwv=20.)
+        val2 = sky_ter.surface.throughput(10 * u.um)
+        assert val2 < val1
