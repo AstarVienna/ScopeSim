@@ -4,10 +4,10 @@ version = "0.11.2a2"
 description = "Generalised telescope observation simulator"
 license = {text = "GPL-3.0-or-later"}
 authors = [
-    {name = "Kieran Leschinski", email = "kieran.leschinski@unive.ac.at"}
+    {name = "Kieran Leschinski", email = "kieran.leschinski@univie.ac.at"}
 ]
 maintainers = [
-    {name = "Kieran Leschinski", email = "kieran.leschinski@unive.ac.at"},
+    {name = "Kieran Leschinski", email = "kieran.leschinski@univie.ac.at"},
     {name = "Hugo Buddelmeijer", email = "hugo@buddelmeijer.nl"},
     {name = "Fabian Haberhauer", email = "fabian.haberhauer@univie.ac.at"},
 ]
