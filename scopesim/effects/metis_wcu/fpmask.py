@@ -118,7 +118,7 @@ class FPMask:
         in_field = (xpix > 0) * (xpix < 2047) * (ypix > 0) * (ypix < 2047)
 
         for x, y, d in zip(xpix[in_field], ypix[in_field], diam[in_field]):
-            holearea = (d/2)**2 * np.pi
+            holearea = (d/2)**2 * np.pi / self.pixarea.value  # effective no. of pixels
             xint, yint, fracs = sub_pixel_fractions(x, y)
             holehdu.data[yint, xint] = np.array(fracs) * holearea
             opaquehdu.data[yint, xint] *= 1 - np.array(fracs) * holearea#/self.pixarea.value
