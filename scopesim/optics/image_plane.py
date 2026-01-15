@@ -77,38 +77,23 @@ class ImagePlane:
         self._sky_wcs = self._get_wcs(header, " ")
         logger.debug("sky %s", self._sky_wcs)
 
-    def add(self, hdus_or_tables, sub_pixel=None, spline_order=None,
+    def add(self, hdus, sub_pixel=None, spline_order=None,
             wcs_suffix=""):
         """
-        Add a projection of an image or table files to the canvas.
-
-        .. note::
-            If a Table is provided, it must include the following columns:
-            `x_mm`, `y_mm`, and `flux`.
-
-            Units for the columns should be provided in the
-            <Table>.unit attribute or as an entry in the table's meta
-            dictionary using this syntax:
-            <Table>.meta["<colname>_unit"] = <unit>.
-
-            For example::
-
-              tbl["x"].unit = u.arcsec   # or
-              tbl.meta[x_unit"] = "deg"
-
-            If no units are given, default units will be assumed. These are:
-
-            - `x`, `y`: `arcsec`
-            - `flux` : `ph / s / pix`
+        Add a projection of an image to the canvas.
 
         .. versionchanged:: 0.10.0
 
            Adding a table directly to the ImagePlane is deprecated. Use FOV to
            add tables and image HDUs together before adding them to here.
 
+        .. versionchanged:: 0.12.0
+
+           Support for adding tables fully removed. See note above.
+
         Parameters
         ----------
-        hdus_or_tables : `fits.ImageHDU` or `astropy.Table`
+        hdus : `fits.ImageHDU` or list thereof
             The input to be projected onto the image plane. See above.
 
         sub_pixel : bool, optional
@@ -129,30 +114,24 @@ class ImagePlane:
         if spline_order is None:
             spline_order = from_currsys("!SIM.computing.spline_order", self.cmds)
 
-        if isinstance(hdus_or_tables, (list, tuple)):
+        if isinstance(hdus, (list, tuple)):
             logger.debug("Adding multiple HDUs to ImagePlane.")
-            for hdu_or_table in hdus_or_tables:
-                self.add(hdu_or_table, sub_pixel, spline_order, wcs_suffix)
+            for hdu in hdus:
+                self.add(hdu, sub_pixel, spline_order, wcs_suffix)
         else:
-            if isinstance(hdus_or_tables, Table):
-                warn("Adding a table directly to the ImagePlane is deprecated "
-                     "since v0.10.0. Passing a table to ImagePlane.add() will "
-                     "raise an error from version 0.12 onwards. Use FOV to "
-                     "add tables and image HDUs together before.",
-                     DeprecationWarning, stacklevel=2)
-                self.hdu = add_table_to_imagehdu(hdus_or_tables, self.hdu,
-                                                 sub_pixel, wcs_suffix)
-            elif isinstance(hdus_or_tables, fits.ImageHDU):
-                logger.debug("Adding HDU with shape %d to ImagePlane.",
-                             hdus_or_tables.data.shape)
-                self.hdu = add_imagehdu_to_imagehdu(hdus_or_tables, self.hdu,
-                                                    spline_order, wcs_suffix)
-                if (img_bunit := hdus_or_tables.header.get("BUNIT")) is not None:
-                    if img_bunit != (imp_bunit := self.hdu.header["BUNIT"]):
-                        logger.warning("Added mismatched BUNIT %s to %s.",
-                                       img_bunit, imp_bunit)
-                else:
-                    logger.warning("No BUNIT found in added HDU.")
+            if not isinstance(hdus, fits.ImageHDU):
+                raise TypeError("Only ImageHDUs may be added to ImagePlane.")
+
+            logger.debug("Adding HDU with shape %d to ImagePlane.",
+                         hdus.data.shape)
+            self.hdu = add_imagehdu_to_imagehdu(
+                hdus, self.hdu, spline_order, wcs_suffix)
+            if (img_bunit := hdus.header.get("BUNIT")) is not None:
+                if img_bunit != (imp_bunit := self.hdu.header["BUNIT"]):
+                    logger.warning("Added mismatched BUNIT %s to %s.",
+                                   img_bunit, imp_bunit)
+            else:
+                logger.info("No BUNIT found in added HDU.")
 
     @property
     def header(self):

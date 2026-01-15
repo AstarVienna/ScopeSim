@@ -564,39 +564,52 @@ class TestAddImageHDUToImageHDU:
 
 
 class TestImagePlaneAdd:
-    def test_add_many_tables_and_imagehdus(self, input_table, image_hdu_rect,
-                                           image_hdu_square):
-        tbl1 = deepcopy(input_table)
-        tbl2 = deepcopy(input_table)
+    def test_simple_add_imagehdu_conserves_flux(self, image_hdu_square,
+                                                image_hdu_rect):
+        fields = [image_hdu_rect, image_hdu_square]
+        hdr = imp_utils.get_canvas_header(pixel_scale=1 * u.arcsec,
+                                          hdu_or_table_list=fields)
 
-        tbl1["y"] -= 50
-        tbl2["x"] += 50
-        tbl2["y"] += 50
+        orig_sum = image_hdu_rect.data.sum()
 
+        print(wcs.WCS(image_hdu_rect))
+        print(wcs.WCS(hdr))
+
+        implane = opt_imp.ImagePlane(hdr)
+        implane.add(image_hdu_rect)
+
+        if PLOTS:
+            plt.imshow(image_hdu_rect.data)
+            x, y = wcs.WCS(image_hdu_rect).wcs_world2pix(0, 0, 1)
+            print(x, y)
+            plt.plot(x, y, "ro")
+            plt.show()
+
+            plt.imshow(implane.data)
+            x, y = wcs.WCS(image_hdu_rect).wcs_world2pix(0, 0, 1)
+            print(x, y)
+            plt.plot(x, y, "ro")
+            plt.show()
+
+        assert np.sum(implane.data) == approx(orig_sum, rel=1e-2)
+
+    def test_add_many_tables_and_imagehdus(self, image_hdu_rect, image_hdu_square):
         im_hdu = image_hdu_rect
         im_hdu.header["CRVAL1"] -= 150*u.arcsec.to(u.deg)
         im_hdu.header["CRVAL2"] += 20*u.arcsec.to(u.deg)
 
-        fields = [im_hdu, tbl1, tbl2, image_hdu_square]
+        fields = [im_hdu, image_hdu_square]
         hdr = imp_utils.get_canvas_header(fields, pixel_scale=1 * u.arcsec)
 
         implane = opt_imp.ImagePlane(hdr)
         implane.add(fields)
 
-        total_flux = np.sum(tbl1["flux"]) + np.sum(tbl2["flux"]) + \
-                     np.sum(im_hdu.data) + np.sum(image_hdu_square.data)
+        total_flux = np.sum(im_hdu.data) + np.sum(image_hdu_square.data)
         assert np.sum(implane.data) == approx(total_flux)
 
         if PLOTS:
             for im in [im_hdu, image_hdu_square]:
                 xy = imp_utils.calc_footprint(im.header)
-                x, y = xy[:, 0], xy[:, 1]
-                x, y = imp_utils.val2pix(implane.header, x, y)
-                plt.plot(x, y, "r-")
-
-            for tbl in [tbl1, tbl2]:
-                hdr = imp_utils._make_bounding_header_for_tables(tbl)
-                xy = imp_utils.calc_footprint(hdr)
                 x, y = xy[:, 0], xy[:, 1]
                 x, y = imp_utils.val2pix(implane.header, x, y)
                 plt.plot(x, y, "r-")
@@ -608,42 +621,26 @@ class TestImagePlaneAdd:
             plt.imshow(implane.data, origin="lower", norm=LogNorm())
             plt.show()
 
-    def test_add_many_mm_tables_and_imagehdus(self, input_table_mm,
-                                              image_hdu_rect_mm,
-                                              image_hdu_square_mm):
+    def test_add_many_mm_tables_and_imagehdus(
+            self, image_hdu_rect_mm, image_hdu_square_mm):
         image_hdu_rect = image_hdu_rect_mm
         image_hdu_square = image_hdu_square_mm
-        tbl1 = deepcopy(input_table_mm)
-        tbl2 = deepcopy(input_table_mm)
-
-        tbl1["y_mm"] -= 50
-        tbl2["x_mm"] += 50
-        tbl2["y_mm"] += 50
 
         im_hdu = image_hdu_rect
         im_hdu.header["CRVAL1D"] -= 150 # mm
         im_hdu.header["CRVAL2D"] += 20
 
-        fields = [im_hdu, tbl1, tbl2, image_hdu_square]
+        fields = [im_hdu, image_hdu_square]
         hdr = imp_utils.get_canvas_header(fields, pixel_scale=1*u.mm)
         implane = opt_imp.ImagePlane(hdr)
         implane.add(fields, wcs_suffix="D")
 
-        total_flux = np.sum(tbl1["flux"]) + np.sum(tbl2["flux"]) + \
-                     np.sum(im_hdu.data) + np.sum(image_hdu_square.data)
+        total_flux = np.sum(im_hdu.data) + np.sum(image_hdu_square.data)
         assert np.sum(implane.data) == approx(total_flux)
 
         if PLOTS:
             for im in [im_hdu, image_hdu_square]:
                 xy = imp_utils.calc_footprint(im.header, "D")
-                x, y = xy[:, 0], xy[:, 1]
-                x, y = imp_utils.val2pix(implane.header, x, y, "D")
-                plt.plot(x, y, "r-")
-
-            for tbl in [tbl1, tbl2]:
-                hdr = imp_utils._make_bounding_header_for_tables(tbl,
-                                                                 pixel_scale=1*u.mm)
-                xy = imp_utils.calc_footprint(hdr, "D")
                 x, y = xy[:, 0], xy[:, 1]
                 x, y = imp_utils.val2pix(implane.header, x, y, "D")
                 plt.plot(x, y, "r-")
@@ -828,7 +825,7 @@ class TestMakeImagePlaneHeader:
 #
 
 
-class TestAddTableToImageHDU:
+class TestAddTableToImageHDU2:
     @pytest.mark.parametrize("xpix, ypix, value",
                              [(51, 51, 2),
                               (48, 51, 3),
@@ -930,69 +927,3 @@ class TestImagePlaneInit:
     def test_throws_error_if_header_does_not_have_valid_wcs(self):
         with pytest.raises(ValueError):
             opt_imp.ImagePlane(fits.Header())
-
-
-class TestImagePlaneAdd:
-    def test_simple_add_imagehdu_conserves_flux(self, image_hdu_square,
-                                                image_hdu_rect):
-        fields = [image_hdu_rect, image_hdu_square]
-        hdr = imp_utils.get_canvas_header(pixel_scale=1 * u.arcsec,
-                                          hdu_or_table_list=fields)
-
-        orig_sum = image_hdu_rect.data.sum()
-
-        print(wcs.WCS(image_hdu_rect))
-        print(wcs.WCS(hdr))
-
-        implane = opt_imp.ImagePlane(hdr)
-        implane.add(image_hdu_rect)
-
-        if PLOTS:
-            plt.imshow(image_hdu_rect.data)
-            x, y = wcs.WCS(image_hdu_rect).wcs_world2pix(0, 0, 1)
-            print(x, y)
-            plt.plot(x, y, "ro")
-            plt.show()
-
-            plt.imshow(implane.data)
-            x, y = wcs.WCS(image_hdu_rect).wcs_world2pix(0, 0, 1)
-            print(x, y)
-            plt.plot(x, y, "ro")
-            plt.show()
-
-        assert np.sum(implane.data) == approx(orig_sum, rel=1e-2)
-
-    # TODO: rm this test once deprecation is complete
-    @pytest.mark.filterwarnings("ignore:Adding a table directly*:DeprecationWarning")
-    def test_simple_add_table_conserves_flux(self, image_hdu_rect):
-        x = [75, -75]*u.arcsec
-        y = [0, 0]*u.arcsec
-        flux = [30, 20] * u.Unit("ph s-1")
-        tbl = Table(names=["x", "y", "flux"], data=[x, y, flux])
-
-        hdr = imp_utils.get_canvas_header(pixel_scale=0.1 * u.arcsec,
-                                          hdu_or_table_list=[image_hdu_rect,
-                                                             tbl])
-        implane = opt_imp.ImagePlane(hdr)
-        implane.add(tbl)
-        assert np.isclose(np.sum(implane.data), np.sum(flux.value))
-
-    # TODO: rm this test once deprecation is complete
-    @pytest.mark.filterwarnings("ignore:Adding a table directly*:DeprecationWarning")
-    def test_compound_add_image_and_table_conserves_flux(self, image_hdu_rect):
-        x = [75, -75]*u.arcsec
-        y = [0, 0]*u.arcsec
-        flux = [30, 20] * u.Unit("ph s-1")
-        tbl = Table(names=["x", "y", "flux"], data=[x, y, flux])
-
-        hdr = imp_utils.get_canvas_header(pixel_scale=0.1 * u.arcsec,
-                                          hdu_or_table_list=[image_hdu_rect,
-                                                             tbl])
-        in_sum = np.sum(flux.value) + np.sum(image_hdu_rect.data)
-
-        implane = opt_imp.ImagePlane(hdr)
-        implane.add(tbl)
-        implane.add(image_hdu_rect)
-        out_sum = np.sum(implane.data)
-
-        assert out_sum == approx(in_sum, rel=5e-3)

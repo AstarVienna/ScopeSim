@@ -8,7 +8,6 @@ import yaml
 from scopesim.server import ServerError
 from scopesim.server import database as db
 from scopesim.server import example_data_utils as dbex
-from scopesim.server import github_utils as dbgh
 
 
 @pytest.fixture(scope="class")
@@ -159,33 +158,6 @@ class TestDownloadPackages:
             filename = Path(tmpdir, "ELT", "EC_sky_25.tbl")
 
             assert filename.exists()
-
-
-@pytest.mark.webtest(github=True)
-@pytest.mark.filterwarnings("ignore:The function*:DeprecationWarning")
-class TestDownloadGithubFolder:
-    def test_downloads_current_package(self):
-        with TemporaryDirectory() as tmpdir:
-            # tmpdir = "."
-            url = "https://github.com/AstarVienna/irdb/tree/dev_master/MICADO"
-            dbgh.download_github_folder(url, output_dir=tmpdir)
-            filename = Path(tmpdir, "MICADO", "default.yaml")
-
-            assert filename.exists()
-
-    def test_downloads_with_old_commit_hash(self):
-        with TemporaryDirectory() as tmpdir:
-            url = "https://github.com/AstarVienna/irdb/tree/728761fc76adb548696205139e4e9a4260401dfc/ELT"
-            dbgh.download_github_folder(url, output_dir=tmpdir)
-            filename = Path(tmpdir, "ELT", "EC_sky_25.tbl")
-
-            assert filename.exists()
-
-    def test_throws_for_bad_url(self):
-        with TemporaryDirectory() as tmpdir:
-            url = "https://github.com/AstarVienna/irdb/tree/bogus/MICADO"
-            with pytest.raises(ServerError):
-                dbgh.download_github_folder(url, output_dir=tmpdir)
 
 
 def test_registry_files():
