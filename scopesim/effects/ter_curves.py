@@ -449,7 +449,7 @@ class SkycalcTERCurve(AtmosphericTERCurve):
     #    return self.skycalc_conn.values
 
     def load_skycalc_table(self):
-        """Download skycalc table based on the current parameters"""
+        """Download skycalc table based on the current parameters."""
         use_local_file = from_currsys(self.meta["use_local_skycalc_file"],
                                       self.cmds)
         if not use_local_file:
@@ -482,7 +482,7 @@ class SkycalcTERCurve(AtmosphericTERCurve):
         self.skycalc_table = tbl
 
     def query_server(self, **kwargs):
-        """Get table from the skycalc server"""
+        """Get table from the skycalc server."""
         self.meta.update(kwargs)
 
         if "wunit" in self.meta:
@@ -502,14 +502,17 @@ class SkycalcTERCurve(AtmosphericTERCurve):
         try:
             tbl = self.skycalc_conn.get_sky_spectrum(return_type="table")
         except ConnectionError as exc:
-            msg = "Could not connect to skycalc server"
+            msg = "Could not connect to skycalc server."
             logger.exception(msg)
             raise ValueError(msg) from exc
 
         return tbl
 
     def update(self, **kwargs):
-        """Update the skycalc table with new parameter values"""
+        """Update the skycalc table with new parameter values.
+
+        .. versionadded:: PLACEHOLDER_NEXT_RELEASE_VERSION
+        """
         # Needed to update the source field
         self._background_source = None
 

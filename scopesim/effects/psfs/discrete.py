@@ -8,8 +8,7 @@ import numpy as np
 from tqdm.auto import tqdm
 from scipy.signal import convolve
 from scipy.ndimage import zoom
-from scipy.interpolate import (RectBivariateSpline, griddata,
-                               RegularGridInterpolator)
+from scipy.interpolate import griddata, RegularGridInterpolator
 
 from astropy import units as u
 from astropy.io import fits
@@ -27,7 +26,13 @@ from .psf_base import get_bkg_level
 
 
 class DiscretePSF(PSF):
-    """Base class for discrete PSFs."""
+    """Base class for discrete PSFs.
+
+    .. versionchanged:: PLACEHOLDER_NEXT_RELEASE_VERSION
+
+       Added support for remote PSF files.
+
+    """
 
     z_order: ClassVar[tuple[int, ...]] = (43,)
 
@@ -39,39 +44,43 @@ class DiscretePSF(PSF):
         # self.convolution_classes = ImagePlane
 
     def _find_psf_file(self, cmds=None, **kwargs):
-        """Find the PSF file locally or on the server
+        """Find the PSF file locally or on the server.
 
         If a full filename is provided, the file is assumed to be in the
         standard search path locally.
-        If a short-cut `psf_name` and a filename format are provided then the full
-        filename is constructed and searched first locally, then on the server.
-        The `psf_name` typically comes from a `PupilMaskWheel` and the server has
-        one file for each available pupil mask.
+        If a short-cut `psf_name` and a filename format are provided then the
+        full filename is constructed and searched first locally, then on the
+        server. The `psf_name` typically comes from a `PupilMaskWheel` and the
+        server has one file for each available pupil mask.
+
+        .. versionadded:: PLACEHOLDER_NEXT_RELEASE_VERSION
         """
-        if ("filename" not in kwargs or
-            from_currsys(kwargs["filename"], cmds) is None):
+        if (
+            "filename" not in kwargs
+            or from_currsys(kwargs["filename"], cmds) is None
+        ):
             if "psf_name" in kwargs and "filename_format" in kwargs:
                 psf_name = from_currsys(kwargs["psf_name"], cmds)
-                kwargs['psf_name'] = psf_name
+                kwargs["psf_name"] = psf_name
                 file_format = from_currsys(kwargs["filename_format"], cmds)
                 filename = file_format.format(psf_name)
                 # Try to find file locally or on server
                 search_path = list(__search_path__)
                 if "psf_path" in kwargs:
                     search_path.insert(0, Path(kwargs["psf_path"]))
-                if ((tmpfile := find_file(Path(filename).name, path=search_path,
-                                          silent=True))
-                    or
-                    (tmpfile := self._download_psf(filename))):
+                if ((tmpfile := find_file(
+                        Path(filename).name, path=search_path, silent=True))
+                        or (tmpfile := self._download_psf(filename))):
                     return tmpfile
-                raise FileNotFoundError(f"{filename} could not be found locally or remotely")
+                raise FileNotFoundError(
+                    f"{filename} could not be found locally or remotely")
 
             raise ValueError("PSF must be passed either `filename` or both "
                              f"(`psf_name`, `filename_format`): {kwargs}")
         return kwargs["filename"]
 
     def update(self, pupil_mask=None, filename=None):
-        """Update the PSF
+        """Update the PSF.
 
         Parameters
         ----------
@@ -81,6 +90,8 @@ class DiscretePSF(PSF):
         filename : str
              Full name of the file with the new PSF. Ignored if `pupil_mask` is
              not `None`.
+
+        .. versionadded:: PLACEHOLDER_NEXT_RELEASE_VERSION
         """
         self._file.close()
         if pupil_mask is not None:
@@ -130,7 +141,10 @@ class DiscretePSF(PSF):
         return wave_set, wave_ext
 
     def _download_psf(self, fname: str) -> str:
-        """Download a PSF file from the server"""
+        """Download a PSF file from the server.
+
+        .. versionadded:: PLACEHOLDER_NEXT_RELEASE_VERSION
+        """
         retriever = create_retriever("psfs")
         return retriever.fetch(fname, progressbar=True)
 
@@ -142,6 +156,7 @@ class DiscretePSF(PSF):
         msg += f"- PSF file:   {self.meta['filename']}"
         return msg
 
+
 class FieldConstantPSF(DiscretePSF):
     """A PSF that is constant across the field.
 
@@ -149,8 +164,14 @@ class FieldConstantPSF(DiscretePSF):
     wavelength the reference PSF is scaled proportional to wavelength.
 
     .. versionchanged:: 0.10.0
+
        PSF interpolation can now be limited to the central wavelength by
        setting the "!OBS.interp_psf" keyword to False.
+
+    .. versionchanged:: PLACEHOLDER_NEXT_RELEASE_VERSION
+
+       Fixed handling of background level and rounded edges to avoid visible
+       "squares" in the image.
 
     """
 
@@ -170,7 +191,7 @@ class FieldConstantPSF(DiscretePSF):
         self.kernel = None
 
     def get_kernel(self, fov):
-        """Find nearest wavelength and build PSF kernel from file"""
+        """Find nearest wavelength and build PSF kernel from file."""
         idx = _nearest_index(fov.wavelength, self._waveset)
         ext = self.kernel_indices[idx]
         if ext == self.current_layer_id:
@@ -211,8 +232,7 @@ class FieldConstantPSF(DiscretePSF):
         return self.kernel
 
     def make_psf_cube(self, fov):
-        """Create a wavelength-dependent psf cube"""
-
+        """Create a wavelength-dependent psf cube."""
         # Some data from the fov
         nxfov, nyfov = fov.hdu.header["NAXIS1"], fov.hdu.header["NAXIS2"]
         fov_pixel_scale = fov.hdu.header["CDELT1"]
