@@ -86,11 +86,16 @@ def _handle_svo_download(filename: str, params: dict) -> Path:
 
     return path
 
+
 def download_svo_filter(filter_name, return_style="synphot"):
     """
     Query the SVO service for the true transmittance for a given filter.
 
     Adapted from tynt by Brett Morris.
+
+    .. versionchanged:: PLACEHOLDER_NEXT_RELEASE_VERSION
+
+       Added ``fill_value=0.`` to synphot return mode to fix extrapolation.
 
     Parameters
     ----------
