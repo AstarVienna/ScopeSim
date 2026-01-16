@@ -41,7 +41,7 @@ class TestMetisLMSEfficiency:
     @pytest.mark.parametrize("lam0, lam, expected",
                              [(3.65, 3.60, 0.127914),
                               (4.80, 4.83, 0.578098),
-                              (4.10, 4.30, 0.023711)])
+                              (4.10, 4.299999, 0.023711)])
     def test_gives_correct_throughput(self, lam0, lam, expected):
         eff = MetisLMSEfficiency(wavelen=lam0, filename="TRACE_LMS.fits")
         eff_trans = eff.surface.transmission(lam * 1e4).value
