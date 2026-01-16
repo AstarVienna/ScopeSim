@@ -194,7 +194,7 @@ class SpectralSurface:
         if value_arr is None:
             value_arr = self._complement_array(*complement_names)
 
-        fill_value = 0. if ter_property == "transmission" else None
+        fill_value = 0. if ter_property == "transmission" else np.nan
 
         if value_arr is not None and wave is not None and fmt == "synphot":
             response_curve = SpectralElement(Empirical1D, points=wave,
