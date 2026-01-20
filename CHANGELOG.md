@@ -1,3 +1,44 @@
+# Version 0.11.2
+**2026-01-20**
+
+Maintenance and bugfix release containing some important fixes regarding flux values.
+
+## What's Changed
+### Bugs fixed
+* Clean up FieldVaryingPSF by @oczoske in https://github.com/AstarVienna/ScopeSim/pull/833
+* Rename lamp off state from 'none' to 'off' by @oczoske in https://github.com/AstarVienna/ScopeSim/pull/835
+* Remove numpy deprecation warning by @oczoske in https://github.com/AstarVienna/ScopeSim/pull/841
+* Fix CUNIT not respected in FVPSF effect by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/851
+* Transmission curves to extrapolate with value 0 by @oczoske in https://github.com/AstarVienna/ScopeSim/pull/859
+* Extrapolate all transmissions with 0 by @oczoske in https://github.com/AstarVienna/ScopeSim/pull/863
+* Fix Astropy warning about HIERARCH keywords by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/864
+* Fix WCU flux mismatch by @oczoske in https://github.com/AstarVienna/ScopeSim/pull/860
+### Changes to or addition of Effects
+* PSFs associated to PupilMaskWheel, download from server by @oczoske in https://github.com/AstarVienna/ScopeSim/pull/838
+* `ReferencePixelBorder` newly implemented by @oczoske in https://github.com/AstarVienna/ScopeSim/pull/840
+* Interactive updating of SkycalcTERCurve by @oczoske in https://github.com/AstarVienna/ScopeSim/pull/853
+### Dependency Changes
+* Bump the dev-dependencies group with 2 updates by @dependabot[bot] in https://github.com/AstarVienna/ScopeSim/pull/831
+* Bump pyyaml from 6.0.2 to 6.0.3 in the main-dependencies group by @dependabot[bot] in https://github.com/AstarVienna/ScopeSim/pull/830
+* Bump actions/checkout from 5 to 6 by @dependabot[bot] in https://github.com/AstarVienna/ScopeSim/pull/837
+* Bump the dev-dependencies group with 2 updates by @dependabot[bot] in https://github.com/AstarVienna/ScopeSim/pull/843
+* Bump fonttools from 4.58.4 to 4.61.0 by @dependabot[bot] in https://github.com/AstarVienna/ScopeSim/pull/844
+* Bump urllib3 from 2.5.0 to 2.6.0 by @dependabot[bot] in https://github.com/AstarVienna/ScopeSim/pull/849
+* Bump synphot from 1.6.0 to 1.6.1 in the main-dependencies group by @dependabot[bot] in https://github.com/AstarVienna/ScopeSim/pull/854
+* Bump the dev-dependencies group with 2 updates by @dependabot[bot] in https://github.com/AstarVienna/ScopeSim/pull/855
+* Bump pytest-cov from 6.3.0 to 7.0.0 by @dependabot[bot] in https://github.com/AstarVienna/ScopeSim/pull/856
+* Bump urllib3 from 2.6.0 to 2.6.3 by @dependabot[bot] in https://github.com/AstarVienna/ScopeSim/pull/858
+* Sync dependencies with ecosystem by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/861
+* Allow Python 3.14, sync dependencies by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/865
+### Documentation Improvements
+* Fix email domain for Kieran Leschinski by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/857
+* Fix formatting and docstrings, add change messages by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/862
+### Other Changes
+* Uppercase HIERARCH keywords by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/866
+
+**Full Changelog**: https://github.com/AstarVienna/ScopeSim/compare/v0.11.1...v0.11.2
+
+
 # Version 0.11.1
 **2025-10-26**
 
