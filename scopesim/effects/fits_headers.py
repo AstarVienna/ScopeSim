@@ -353,7 +353,7 @@ def _resolve_counters(dic, i_ext):
     for key, value in dic.items():
         # Avoid astropy warning
         if len(key) > 8 and not key.startswith("HIERARCH"):
-            key = f"HIERARCH {key}"
+            key = f"HIERARCH {key.upper()}"
         # Catch any value+comments lists/tuples
         match value:
             case [value, comment]:
