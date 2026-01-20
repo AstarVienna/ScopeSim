@@ -1,6 +1,6 @@
 [project]
 name = "ScopeSim"
-version = "0.11.2b1"
+version = "0.11.2rc0"
 description = "Generalised telescope observation simulator"
 license = {text = "GPL-3.0-or-later"}
 authors = [
