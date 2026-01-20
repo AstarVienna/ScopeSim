@@ -14,7 +14,7 @@ maintainers = [
 readme = "README.md"
 keywords = [ "astronomy" ]
 dynamic = [ "classifiers" ]
-requires-python = ">=3.10,<3.14"
+requires-python = ">=3.10,<3.15"
 dependencies = [
     "numpy (>=1.26.4,<2.3.0) ; python_version >= '3.10' and python_version < '3.13'",
     "numpy (>=2.2.6,<3.0.0) ; python_version >= '3.13'",
@@ -24,21 +24,21 @@ dependencies = [
     "scipy (>=1.17.0,<1.18.0) ; python_version >= '3.11'",
 
     "astropy (>=6.1.7,<8.0.0)",
-    "matplotlib (>=3.10.1,<4.0.0)",
+    "matplotlib (>=3.10.5,<4.0.0)",
     "pooch (>=1.8.2,<2.0.0)",
 
     "docutils (>=0.19,<1.0)",
     "httpx (>=0.28.1,<1.0)",
     "beautifulsoup4 (>=4.13.3,<5.0.0)",
-    "lxml (>=5.4.0,<6.0.0)",
+    "lxml (>=6.0.2,<7.0.0)",
     "pyyaml (>=6.0.3,<7.0.0)",
     "more-itertools (>=10.2.0,<11.0.0)",
     "tqdm (>=4.66.6,<5.0.0)",
-    "packaging (>=24.2,<26.0)",
+    "packaging (>=25.0,<26.0)",
 
     "synphot (>=1.5.0,<2.0.0)",
-    "skycalc-ipy (>=0.6.0,<1.0)",
-    "anisocado (>=0.4.0,<1.0)",
+    "skycalc-ipy (>=0.7.0,<1.0)",
+    "anisocado (>=0.5.0,<1.0)",
     "astar-utils (>=0.5.0,<1.0)"
 ]
 
@@ -66,7 +66,7 @@ ipykernel = "^6.31.0"
 ipympl = "^0.9.8"
 
 [tool.poetry.group.test.dependencies]
-pytest = "^8.3.5"
+pytest = "^9.0.2"
 pytest-cov = "^7.0.0"
 ipykernel = "^6.31.0"
 
@@ -114,8 +114,6 @@ filterwarnings = [
     "default:The fov_grid*:DeprecationWarning",
     # Pytest Notebook stuff
     "ignore:Proactor*:RuntimeWarning",
-    # Suddenly appears from Pillow in a few tests
-    "ignore:'mode' parameter is deprecated and will be removed*:DeprecationWarning"
 ]
 
 [tool.coverage.report]
