@@ -360,7 +360,7 @@ class DetectorList(Effect):
                 hdr["EXTNAME"] = f"DET_{row['id']}"
 
             row_dict = {
-                f"HIERARCH {col}" if len(col) > 8 else col: row[col]
+                f"HIERARCH {col.upper()}" if len(col) > 8 else col: row[col]
                 for col in row.colnames
             }
             hdr.update(row_dict)

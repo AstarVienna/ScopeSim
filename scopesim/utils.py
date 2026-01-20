@@ -582,7 +582,7 @@ def stringify_dict(dic, ignore_types=(str, int, float, bool), fits_safe=False):
     """Turn a dict entries into strings for addition to FITS headers."""
     for key, value in dic.items():
         if fits_safe and len(key) > 8:
-            key = f"HIERARCH {key}"
+            key = f"HIERARCH {key.upper()}"
         if isinstance(value, ignore_types):
             yield key, value
         else:
