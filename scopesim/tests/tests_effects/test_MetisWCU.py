@@ -3,8 +3,8 @@
 # pylint: disable=missing-class-docstring
 # pylint: disable=missing-function-docstring
 
-import pytest
 from unittest.mock import patch
+import pytest
 
 import numpy as np
 from astropy import units as u
@@ -240,8 +240,9 @@ class TestFPMask:
 
     def test_data_correct(self, fpmask):
         assert fpmask.holehdu.data[241, 1943] == 0
-        assert fpmask.holehdu.data[1023, 1023] < np.pi * (0.007532**2) / 4
-        assert fpmask.holehdu.data[1021:1025, 1021:1025].sum() == np.pi * (0.007532**2) / 4
+        assert fpmask.holehdu.data[1023, 1023] < 1
+        assert fpmask.holehdu.data[1021:1025, 1021:1025].sum() == pytest.approx(
+            np.pi * (0.007532**2) / 4 / fpmask.pixarea.value)
         assert (fpmask.opaquehdu.data[1023, 1023] + fpmask.holehdu.data[1023, 1023]
-                == fpmask.pixarea.value)
-        assert fpmask.opaquehdu.data[748, 1308] == fpmask.pixarea.value
+                == 1)
+        assert fpmask.opaquehdu.data[748, 1308] == 1.
