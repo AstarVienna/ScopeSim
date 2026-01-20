@@ -28,7 +28,7 @@ from .psf_base import get_bkg_level
 class DiscretePSF(PSF):
     """Base class for discrete PSFs.
 
-    .. versionchanged:: PLACEHOLDER_NEXT_RELEASE_VERSION
+    .. versionchanged:: 0.11.2
 
        Added support for remote PSF files.
 
@@ -53,7 +53,7 @@ class DiscretePSF(PSF):
         server. The `psf_name` typically comes from a `PupilMaskWheel` and the
         server has one file for each available pupil mask.
 
-        .. versionadded:: PLACEHOLDER_NEXT_RELEASE_VERSION
+        .. versionadded:: 0.11.2
         """
         if (
             "filename" not in kwargs
@@ -91,7 +91,7 @@ class DiscretePSF(PSF):
              Full name of the file with the new PSF. Ignored if `pupil_mask` is
              not `None`.
 
-        .. versionadded:: PLACEHOLDER_NEXT_RELEASE_VERSION
+        .. versionadded:: 0.11.2
         """
         self._file.close()
         if pupil_mask is not None:
@@ -143,7 +143,7 @@ class DiscretePSF(PSF):
     def _download_psf(self, fname: str) -> str:
         """Download a PSF file from the server.
 
-        .. versionadded:: PLACEHOLDER_NEXT_RELEASE_VERSION
+        .. versionadded:: 0.11.2
         """
         retriever = create_retriever("psfs")
         return retriever.fetch(fname, progressbar=True)
@@ -168,7 +168,7 @@ class FieldConstantPSF(DiscretePSF):
        PSF interpolation can now be limited to the central wavelength by
        setting the "!OBS.interp_psf" keyword to False.
 
-    .. versionchanged:: PLACEHOLDER_NEXT_RELEASE_VERSION
+    .. versionchanged:: 0.11.2
 
        Fixed handling of background level and rounded edges to avoid visible
        "squares" in the image.

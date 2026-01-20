@@ -17,7 +17,7 @@ class ReferencePixelBorder(Effect):
     get any signal, but have all the detector effects, such as dark current
     and readout noise.
 
-    .. versionchanged:: PLACEHOLDER_NEXT_RELEASE_VERSION
+    .. versionchanged:: 0.11.2
 
        Re-implemented the effect with a new YAML syntax, see #840 for details.
 

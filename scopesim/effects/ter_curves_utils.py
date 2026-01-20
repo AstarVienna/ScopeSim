@@ -93,7 +93,7 @@ def download_svo_filter(filter_name, return_style="synphot"):
 
     Adapted from tynt by Brett Morris.
 
-    .. versionchanged:: PLACEHOLDER_NEXT_RELEASE_VERSION
+    .. versionchanged:: 0.11.2
 
        Added ``fill_value=0.`` to synphot return mode to fix extrapolation.
 

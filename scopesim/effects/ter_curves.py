@@ -511,7 +511,7 @@ class SkycalcTERCurve(AtmosphericTERCurve):
     def update(self, **kwargs):
         """Update the skycalc table with new parameter values.
 
-        .. versionadded:: PLACEHOLDER_NEXT_RELEASE_VERSION
+        .. versionadded:: 0.11.2
         """
         # Needed to update the source field
         self._background_source = None
