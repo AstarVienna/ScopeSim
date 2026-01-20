@@ -48,7 +48,7 @@ class Detector:
     @property
     def hdu(self):
         """Return internal HDU."""
-        self._hdu.header.update(stringify_dict(self.meta))
+        self._hdu.header.update(stringify_dict(self.meta, fits_safe=True))
 
         pixel_scale = from_currsys("!INST.pixel_scale", self.cmds)
         plate_scale = from_currsys("!INST.plate_scale", self.cmds)

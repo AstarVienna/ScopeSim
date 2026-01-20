@@ -7,7 +7,6 @@ from typing import ClassVar
 from collections.abc import Iterable, Mapping, MutableMapping
 
 import yaml
-import numpy as np
 from more_itertools import always_iterable
 
 from astropy.io import fits
@@ -18,8 +17,7 @@ from astar_utils.nested_mapping import recursive_update
 
 from . import Effect
 from ..source.source_fields import HDUSourceField, TableSourceField
-from ..utils import from_currsys, find_file
-from ..utils import get_logger
+from ..utils import from_currsys, find_file, get_logger
 
 logger = get_logger(__name__)
 
@@ -291,8 +289,8 @@ class ExtraFitsKeywords(Effect):
                                     optics_manager=opt_train)
             unresolved = flatten_dict(dic.get("unresolved_keywords", {}))
             for i in _get_relevant_extensions(dic, hdul):
-                hdul[i].header.update(dict(_resolve_counters(resolved, i)))
-                hdul[i].header.update(unresolved)
+                hdul[i].header.update(_resolve_counters(resolved, i))
+                hdul[i].header.update(_resolve_counters(unresolved, i))
 
         return hdul
 
@@ -353,10 +351,13 @@ def _resolve_paragraph_strings(value, i_ext):
 def _resolve_counters(dic, i_ext):
     """Deal with (key, value) and (key, (value, comment)) cases."""
     for key, value in dic.items():
+        # Avoid astropy warning
+        if len(key) > 8 and not key.startswith("HIERARCH"):
+            key = f"HIERARCH {key}"
         # Catch any value+comments lists/tuples
         match value:
             case [value, comment]:
-                yield key, (_resolve_paragraph_strings(value, i_ext), comment)
+                yield key, _resolve_paragraph_strings(value, i_ext), comment
             case value:
                 yield key, _resolve_paragraph_strings(value, i_ext)
 

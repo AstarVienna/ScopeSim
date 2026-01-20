@@ -578,9 +578,11 @@ def has_needed_keywords(header, suffix=""):
     return all(key in header.keys() for key in keys)
 
 
-def stringify_dict(dic, ignore_types=(str, int, float, bool)):
+def stringify_dict(dic, ignore_types=(str, int, float, bool), fits_safe=False):
     """Turn a dict entries into strings for addition to FITS headers."""
     for key, value in dic.items():
+        if fits_safe and len(key) > 8:
+            key = f"HIERARCH {key}"
         if isinstance(value, ignore_types):
             yield key, value
         else:

@@ -8,7 +8,6 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from astropy.io import fits
 from astropy import units as u
-import numpy as np
 
 from scopesim.effects import fits_headers as fh
 from scopesim.source.source_templates import star
