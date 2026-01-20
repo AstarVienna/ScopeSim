@@ -14,7 +14,7 @@ maintainers = [
 readme = "README.md"
 keywords = [ "astronomy" ]
 dynamic = [ "classifiers" ]
-requires-python = ">=3.10,<3.14"
+requires-python = ">=3.10,<3.15"
 dependencies = [
     "numpy (>=1.26.4,<2.3.0) ; python_version >= '3.10' and python_version < '3.13'",
     "numpy (>=2.2.6,<3.0.0) ; python_version >= '3.13'",
@@ -34,11 +34,11 @@ dependencies = [
     "pyyaml (>=6.0.3,<7.0.0)",
     "more-itertools (>=10.2.0,<11.0.0)",
     "tqdm (>=4.66.6,<5.0.0)",
-    "packaging (>=24.2,<26.0)",
+    "packaging (>=25.0,<26.0)",
 
     "synphot (>=1.5.0,<2.0.0)",
-    "skycalc-ipy (>=0.6.0,<1.0)",
-    "anisocado (>=0.4.0,<1.0)",
+    "skycalc-ipy (>=0.7.0,<1.0)",
+    "anisocado (>=0.5.0,<1.0)",
     "astar-utils (>=0.5.0,<1.0)"
 ]
 
@@ -66,7 +66,7 @@ ipykernel = "^6.31.0"
 ipympl = "^0.9.8"
 
 [tool.poetry.group.test.dependencies]
-pytest = "^8.3.5"
+pytest = "^9.0.2"
 pytest-cov = "^7.0.0"
 ipykernel = "^6.31.0"
 
@@ -116,8 +116,6 @@ filterwarnings = [
     "ignore:.*a HIERARCH card will be created.*:astropy.io.fits.verify.VerifyWarning",
     # Pytest Notebook stuff
     "ignore:Proactor*:RuntimeWarning",
-    # Suddenly appears from Pillow in a few tests
-    "ignore:'mode' parameter is deprecated and will be removed*:DeprecationWarning"
 ]
 
 [tool.coverage.report]
