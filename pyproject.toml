@@ -112,8 +112,6 @@ filterwarnings = [
     "ignore:Cannot merge meta key.*:astropy.utils.metadata.MergeConflictWarning",
     "ignore::astropy.wcs.wcs.FITSFixedWarning",
     "default:The fov_grid*:DeprecationWarning",
-    # Raised when saving fits files, not so important to fix:
-    "ignore:.*a HIERARCH card will be created.*:astropy.io.fits.verify.VerifyWarning",
     # Pytest Notebook stuff
     "ignore:Proactor*:RuntimeWarning",
     # Suddenly appears from Pillow in a few tests
