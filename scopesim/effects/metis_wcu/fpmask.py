@@ -52,7 +52,7 @@ class FPMask:
         maskname: Path | str | None = None,
         fpmask_filename_format: str | None = None,
         angle: float = 0,
-        shift: tuple[float, float] = (0, 0),
+        shift: tuple[float, float] = (0., 0.),
         **kwargs
     ):
         logger.debug("Initialising FPMask with %s", maskname)
@@ -99,9 +99,9 @@ class FPMask:
 
         # Hole locations
         tab = self.data_container.table
-        xhole = tab["x"].data
-        yhole = tab["y"].data
-        diam = tab["diam"].data
+        xhole = tab["x"].data.astype(float)
+        yhole = tab["y"].data.astype(float)
+        diam = tab["diam"].data.astype(float)
 
         if self.angle != 0:
             rangle = np.deg2rad(self.angle)
