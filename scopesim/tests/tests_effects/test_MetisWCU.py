@@ -209,6 +209,12 @@ def fixture_pinholemask(mock_path):
     return FPMask(maskname="pinhole",
                   fpmask_filename_format=str(mock_path / "fp_mask_{}.dat"))
 
+@pytest.fixture(name="pinholemask_int", scope="function")
+def fixture_pinholemask_int(mock_path):
+    return FPMask(
+        maskname=str(mock_path / "fp_mask_pinhole_int.dat"),
+        shift=(0.4,-0.3))
+
 class TestFPMask:
     def test_fpmask_initialises_correctly(self, fpmask):
         assert isinstance(fpmask, FPMask)
@@ -246,3 +252,7 @@ class TestFPMask:
         assert (fpmask.opaquehdu.data[1023, 1023] + fpmask.holehdu.data[1023, 1023]
                 == 1)
         assert fpmask.opaquehdu.data[748, 1308] == 1.
+
+    def test_no_error_with_integer_positions(self, pinholemask_int):
+        """Tests that the bug in Scopesim#868 does not occur"""
+        assert isinstance(pinholemask_int, FPMask)
