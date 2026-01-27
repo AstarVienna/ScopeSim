@@ -36,7 +36,7 @@ dependencies = [
     "tqdm (>=4.66.6,<5.0.0)",
     "packaging (>=25.0,<26.0)",
 
-    "synphot (>=1.5.0,<2.0.0)",
+    "synphot (>=1.6.1,<2.0.0)",
     "skycalc-ipy (>=0.7.0,<1.0)",
     "anisocado (>=0.5.0,<1.0)",
     "astar-utils (>=0.5.0,<1.0)"
