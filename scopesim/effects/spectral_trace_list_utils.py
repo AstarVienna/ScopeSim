@@ -15,7 +15,9 @@ import warnings
 import numpy as np
 
 from scipy.interpolate import RectBivariateSpline
-from scipy.interpolate import interp1d
+from scipy.interpolate import InterpolatedUnivariateSpline, interp1d
+from scipy.ndimage import zoom
+from matplotlib import pyplot as plt
 
 from astropy.table import Table, vstack
 from astropy.modeling import fitting
@@ -24,8 +26,11 @@ from astropy import units as u
 from astropy.wcs import WCS
 from astropy.modeling.models import Polynomial2D
 
-from ..utils import (power_vector, quantify, from_currsys, close_loop,
-                     figure_factory, get_logger)
+import pandas as pd
+
+from ..optics import image_plane_utils as imp_utils
+from ..utils import (deriv_polynomial2d, power_vector, interp2, check_keys,
+                     from_currsys, quantify, close_loop, figure_factory, get_logger)
 
 
 logger = get_logger(__name__)
@@ -132,7 +137,10 @@ class SpectralTrace:
         self.xy2lam = Transform2D.fit(x_arr, y_arr, lam_arr)
         self.xilam2x = Transform2D.fit(xi_arr, lam_arr, x_arr)
         self.xilam2y = Transform2D.fit(xi_arr, lam_arr, y_arr)
+
+        self._xix2y = Transform2D.fit(xi_arr, x_arr, y_arr)
         self._xiy2x = Transform2D.fit(xi_arr, y_arr, x_arr)
+        self._xix2lam = Transform2D.fit(xi_arr, x_arr, lam_arr)
         self._xiy2lam = Transform2D.fit(xi_arr, y_arr, lam_arr)
 
         if self.dispersion_axis == "unknown":
@@ -423,6 +431,12 @@ class SpectralTrace:
             Minimum and maximum slit position on the sky.
             If `None`, use the full range that spectral trace is defined on.
             Float values are interpreted as arcsec.
+
+        Returns
+        -------
+        xy_edges : tuple of lists
+            (x_edges, y_edges) in [mm]
+
         """
         # Define the wavelength range of the footprint. This is a compromise
         # between the requested range (by method args) and the definition
@@ -673,8 +687,12 @@ class XiLamImage():
         # dimensions are set by the slit aperture
         (n_lam, n_eta, n_xi) = fov.cube.data.shape
 
+        m_xi = int(np.round((fov.meta['xi_max'].to(u.arcsec).value -
+                             fov.meta['xi_min'].to(u.arcsec).value) / d_xi))
+        assert abs(m_xi - n_xi) <= 1
+
         # arrays of cube coordinates
-        cube_xi = d_xi * np.arange(n_xi) + fov.meta["xi_min"].value
+        cube_xi = d_xi * np.arange(n_xi) + fov.meta["xi_min"].to(u.arcsec).value
         cube_eta = d_eta * (np.arange(n_eta) - (n_eta - 1) / 2)
         cube_lam = wcs_lam.all_pix2world(np.arange(n_lam), 1)[0]
         cube_lam *= u.Unit(wcs_lam.wcs.cunit[0]).to(u.um)
@@ -983,8 +1001,6 @@ def make_image_interpolations(hdulist, **kwargs):
     return interps
 
 # ..todo: Check whether the following functions are actually used
-
-
 def rolling_median(x, n):
     """Calculate the rolling median of a sequence for +/- n entries."""
     y = [np.median(x[max(0, i-n):min(len(x), i+n+1)]) for i in range(len(x))]
@@ -1038,3 +1054,152 @@ def get_affine_parameters(coords):
     shears = (np.average(shears, axis=0) * rad2deg) - (90 + rotations)
 
     return rotations, shears
+
+
+class TracesHDUListGenerator:
+    def __init__(self, trace_hdus, aperture_ids, image_plane_ids):
+        """
+
+        Parameters
+        ----------
+        trace_hdus
+        aperture_ids
+        image_plane_ids
+        """
+        self.trace_hdus = trace_hdus
+        self.aperture_ids = aperture_ids
+        self.image_plane_ids = image_plane_ids
+
+    def make_hdulist(self, filename=None, overwrite=False):
+        trace_hdulist = fits.HDUList([self.pri_hdu, self.cat_hdu] +
+                                     self.trace_hdus)
+
+        if filename:
+            trace_hdulist.writeto(filename, overwrite=overwrite)
+
+        return trace_hdulist
+
+    @property
+    def hdulist(self):
+        return self.make_hdulist()
+
+    @property
+    def pri_hdu(self):
+        pri_hdu = fits.PrimaryHDU()
+        pri_hdu.header["ECAT"] = 1
+        pri_hdu.header["EDATA"] = 2
+
+        meta = {"author": "",
+                "source": "",
+                "descript": "Spectral Trace List",
+                "date-cre": "",
+                "date-mod": "",
+                }
+        pri_hdu.header.update(meta)
+
+        return pri_hdu
+
+    @property
+    def cat_hdu(self):
+        trace_names = [f"TRACE_{i}" for i in range(len(self.trace_hdus))]
+        cat_table = Table(names=["description", "extension_id",
+                                 "aperture_id", "image_plane_id"],
+                          data=[trace_names,
+                                2 + np.arange(len(self.trace_hdus)),
+                                self.aperture_ids,
+                                self.image_plane_ids
+                                ])
+        cat_hdu = fits.table_to_hdu(cat_table)
+        cat_hdu.header["EXTNAME"] = "TOC"
+
+        return cat_hdu
+
+
+def make_trace_hdu(const_wave_coords_dicts: list[dict],
+                   n_extra_points: int = 0,
+                   spline_order: int = 1):
+    """
+    Creates the BinTableHDU objects needed to make a spectral trace HDUList
+
+    Parameters
+    ----------
+    const_wave_coords_dicts : list of dicts
+        A list containing dictionaries for every line of constant wavelength
+        [{"wave": w [um], "x": list(xs) [mm],"y": list(ys) [mm]},
+         {..}, ..]
+    n_extra_points : int, 2-tuple
+        Default = 0. How many extra points to put in the spectral table
+        If a 2-tuple is passed, then n extra points will be added such:
+        (wavelength, spatial)
+    spline_order : int
+        Default = 1
+
+    Examples
+    --------
+    ::
+        dict_list = [{"wave": 1.9, "x": [0, 1], "y": [-2, -2]},
+                     {"wave": 2.4, "x": [0, 1], "y": [2, 2]}]
+        tg = TraceHDUGenerator(dict_list, n_extra_points=3)
+        tg.trace_hdu
+
+    """
+    wave, x, y = coords_from_lines_of_const_wavelength(const_wave_coords_dicts,
+                                                       n_extra_points,
+                                                       spline_order)
+    tbl = Table(names=["wavelength", "x", "y"],
+                units=[u.um, u.mm, u.mm],
+                data=[wave, x, y])
+
+    hdu = fits.table_to_hdu(tbl)
+    hdu.header[""]
+    return
+
+
+def coords_from_lines_of_const_wavelength(const_wave_coords_dicts,
+                                          n_extra_points=0, spline_order=1):
+    """
+    Returns expanded coordinates for constant wavelength in a spectral trace
+
+    Parameters
+    ----------
+    const_wave_coords_dicts : list of dicts
+        A list containing dictionaries for every line of constant wavelength
+        [{"wave": w [um], "x": list(xs) [mm],"y": list(ys) [mm]},
+         {..}, ..]
+    n_extra_points : int, 2-tuple
+        Default = 0. How many extra points to put in the spectral table
+        If a 2-tuple is passed, then n extra points will be added such:
+        (wavelength, spatial)
+    spline_order : int
+        Default = 1
+
+    Examples
+    --------
+    The following code creates a vertically bent trace with horizontal lines of
+    constant wavelength, with 20 additional points along the wavelength
+    direction, but 0 additional points along the slit direction
+    ::
+        dict_list = [{"wave": 1.9, "x": [0, 1, 2], "y": [-2.5, -2, -1.5]},
+                     {"wave": 2.15, "x": [1, 2, 3], "y": [0., 0, 0.]},
+                     {"wave": 2.4, "x": [0, 1, 2], "y": [1.5, 2, 2.5]}]
+        w, x, y = coords_from_lines_of_const_wavelength(dict_list,
+                                                        n_extra_points=(20, 0),
+                                                        spline_order=2)
+
+    """
+    # assert spline_order < len(const_wave_coords_dicts)
+    # assert spline_order < len(const_wave_coords_dicts[0]["x"])
+
+    x_im = np.array([dic["x"] for dic in const_wave_coords_dicts])
+    y_im = np.array([dic["y"] for dic in const_wave_coords_dicts])
+    w_im = np.array([[dic["wave"]]*len(dic["x"]) for dic in const_wave_coords_dicts])
+
+    cube = np.dstack([w_im, x_im, y_im])
+
+    xy_scale = 1 + np.array(n_extra_points) / np.array(x_im.shape)
+    if any(s != 1. for s in xy_scale):
+        cube = zoom(cube.astype(float), zoom=(*xy_scale, 1),
+                         order=spline_order)
+
+    ws, xs, ys = cube.reshape(-1, cube.shape[-1]).T
+    return ws, xs, ys
