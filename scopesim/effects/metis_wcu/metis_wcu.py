@@ -207,13 +207,15 @@ class WCUSource(TERCurve):
             dlam = self.cmds["!SIM.spectral.spectral_bin_width"]
             lam = seq(lamc - 3200 * dlam, lamc + 3200 * dlam, dlam) * u.um
         else:
-            filter_name = self.cmds["!OBS.filter_name"]
-            filename_format = self.cmds["!INST.filter_file_format"]
-            tempfilter = FilterCurve(filter_name=filter_name,
-                                     filename_format=filename_format)
-            lammin, lammax = tempfilter.throughput.waverange << u.um
+            #filter_name = self.cmds["!OBS.filter_name"]
+            #filename_format = self.cmds["!INST.filter_file_format"]
+            #tempfilter = FilterCurve(filter_name=filter_name,
+            #                         filename_format=filename_format)
+            #lammin, lammax = tempfilter.throughput.waverange << u.um
+            lammin = self.cmds["!SIM.spectral.wave_min"]
+            lammax = self.cmds["!SIM.spectral.wave_max"]
             dlam = self.cmds["!SIM.spectral.spectral_bin_width"]
-            lam = seq(lammin.value, lammax.value, dlam) * u.um
+            lam = seq(lammin, lammax, dlam) * u.um
         self.wavelength = lam
 
 

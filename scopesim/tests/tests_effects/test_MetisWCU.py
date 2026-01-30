@@ -156,13 +156,18 @@ class TestWCUSource:
         assert np.all(bbsource.wavelength.value == lam)
 
     def test_get_wavelength_for_lss(self, bbsource):
+        wave_min = 2.85
+        wave_max = 14.0
+        dlam = 0.002
         bbsource.cmds.update(properties={"!OBS.modes": "wcu_lss",
-                                         "!SIM.spectral.spectral_bin_width": 0.002,
+                                         "!SIM.spectral.spectral_bin_width": dlam,
+                                         "!SIM.spectral.wave_min": wave_min,
+                                         "!SIM.spectral.wave_max": wave_max,
                                          "!OBS.filter_name": "J",
                                          "!INST.filter_file_format": "filters/TC_filter_{}.dat"})
         print(bbsource.cmds["!OBS.modes"])
         bbsource.get_wavelength()
-        lam = seq(1.15, 1.37, 0.002)
+        lam = seq(wave_min, wave_max, dlam)
         assert np.all(bbsource.wavelength.value == lam)
 
     def test_bb_aperture_initialises_correctly(self, bbsource):
