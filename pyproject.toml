@@ -62,13 +62,13 @@ optional = true
 [tool.poetry.group.dev.dependencies]
 jupyter = "^1.1.1"
 jupytext = "^1.18.1"
-ipykernel = "^6.31.0"
+ipykernel = "^7.1.0"
 ipympl = "^0.9.8"
 
 [tool.poetry.group.test.dependencies]
 pytest = "^9.0.2"
 pytest-cov = "^7.0.0"
-ipykernel = "^6.31.0"
+ipykernel = "^7.1.0"
 
 [tool.poetry.group.docs]
 optional = true
@@ -83,7 +83,7 @@ sphinxcontrib-apidoc = ">=0.6.0,<1.0"
 sphinxcontrib-mermaid = "^2.0"
 nbsphinx = "^0.9.8"
 numpydoc = "^1.10.0"
-ipykernel = "^6.31.0"
+ipykernel = "^7.1.0"
 ipympl = "^0.9.8"
 
 
