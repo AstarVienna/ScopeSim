@@ -7,6 +7,7 @@ from unittest.mock import patch
 import pytest
 
 import numpy as np
+from numpy import testing as npt
 from astropy import units as u
 
 from scopesim import UserCommands
@@ -59,69 +60,69 @@ class TestWCUSource:
         assert isinstance(bbsource, WCUSource)
 
     def test_bbsource_has_temperatures(self, bbsource):
-        assert bbsource.meta['bb_temp'] == 1000 * u.K
-        assert bbsource.meta['wcu_temp'] == 300 * u.K
+        npt.assert_equal(bbsource.meta['bb_temp'], 1000 * u.K)
+        npt.assert_equal(bbsource.meta['wcu_temp'], 300 * u.K)
 
     def test_bbsource_has_table(self, bbsource):
         assert bbsource.surface.table
 
     def test_bbsource_table_has_correct_columns(self, bbsource):
-        assert (bbsource.surface.table.colnames ==
-                ['wavelength', 'transmission', 'emission'])
+        npt.assert_equal(bbsource.surface.table.colnames,
+                         ['wavelength', 'transmission', 'emission'])
 
     def test_bbsource_has_correct_emission_units(self, bbsource):
-        assert (bbsource.surface.table['emission'].unit ==
-                u.ph / (u.s * u.arcsec**2 * u.um * u.m**2))
+        npt.assert_equal(bbsource.surface.table['emission'].unit,
+                         u.ph / (u.s * u.arcsec**2 * u.um * u.m**2))
 
     def test_can_set_bb_temperature(self, bbsource):
         old_temp = bbsource.meta['bb_temp']
         new_temp = 1.5 * old_temp
         bbsource.set_temperature(new_temp)
-        assert bbsource.meta['bb_temp'] == new_temp
-        assert (bbsource.meta['bb_temp_c'] ==
-                np.round((new_temp - 273.15 * u.K).value, 7))
+        npt.assert_equal(bbsource.meta['bb_temp'], new_temp)
+        npt.assert_equal(bbsource.meta['bb_temp_c'],
+                         np.round((new_temp - 273.15 * u.K).value, 7))
 
     def test_can_set_wcu_temperature(self, bbsource):
         old_temp = bbsource.meta['wcu_temp']
         new_temp = old_temp + 12 * u.K
         bbsource.set_temperature(wcu_temp=new_temp)
-        assert bbsource.meta['wcu_temp'] == new_temp
-        assert (bbsource.meta['wcu_temp_c'] ==
-                np.round((new_temp - 273.15 * u.K).value, 7))
+        npt.assert_equal(bbsource.meta['wcu_temp'], new_temp)
+        npt.assert_equal(bbsource.meta['wcu_temp_c'],
+                         np.round((new_temp - 273.15 * u.K).value, 7))
 
     def test_can_set_temperature_in_celsius(self, bbsource):
         bbsource.set_temperature(bb_temp=30*u.deg_C)
-        assert bbsource.meta['bb_temp'] == 303.15 * u.K
-        assert bbsource.meta['bb_temp_c'] == 30
+        npt.assert_equal(bbsource.meta['bb_temp'], 303.15 * u.K)
+        npt.assert_equal(bbsource.meta['bb_temp_c'], 30)
 
     def test_can_change_temperature_units_with_float(self, bbsource):
         bbsource.meta['is_temp'] = 293.15
         bbsource._kelvin2celsius()
-        assert bbsource.meta['is_temp_c'] == 20.
+        npt.assert_equal(bbsource.meta['is_temp_c'], 20.)
 
     def test_ignore_incompatible_units_bb(self, bbsource):
         old_temp = bbsource.meta['bb_temp']
         with pytest.raises(u.UnitConversionError):
             bbsource.set_temperature(bb_temp=2*u.Jy)
-        assert bbsource.meta['bb_temp'] == old_temp
+        npt.assert_equal(bbsource.meta['bb_temp'], old_temp)
 
     def test_ignore_incompatible_units_wcu(self, bbsource):
         old_temp = bbsource.meta['wcu_temp']
         with pytest.raises(u.UnitConversionError):
             bbsource.set_temperature(wcu_temp=2*u.Tesla)
-        assert bbsource.meta['wcu_temp'] == old_temp
+        npt.assert_equal(bbsource.meta['wcu_temp'], old_temp)
 
     def test_ignore_negative_bb_temperature(self, bbsource):
         old_temp = bbsource.meta['bb_temp']
         with pytest.raises(ValueError):
             bbsource.set_temperature(bb_temp=-1000 * u.K)
-        assert bbsource.meta['bb_temp'] == old_temp
+        npt.assert_equal(bbsource.meta['bb_temp'], old_temp)
 
     def test_ignore_negative_wcu_temperature(self, bbsource):
         old_temp = bbsource.meta['wcu_temp']
         with pytest.raises(ValueError):
             bbsource.set_temperature(wcu_temp=-1000 * u.K)
-        assert bbsource.meta['wcu_temp'] == old_temp
+        npt.assert_equal(bbsource.meta['wcu_temp'], old_temp)
 
     def test_emission_increases_with_temperature(self, bbsource):
         """
@@ -137,8 +138,7 @@ class TestWCUSource:
         bbsource.set_temperature(bb_temp=new_temp)
         new_emission = bbsource.surface.emission
         lam_ref = seq(2.2, 15, 0.1) * u.um
-        assert all(new_emission(lam_ref) > old_emission(lam_ref))
-
+        npt.assert_array_less(old_emission(lam_ref), new_emission(lam_ref))
 
     def test_black_body_source_fails_without_parameters(self):
         with pytest.raises(ValueError):
@@ -152,40 +152,45 @@ class TestWCUSource:
         bbsource.cmds = _patched_cmds(mode="wcu_lms",  wavelen=lamc, bin_width=binw)
         bbsource.get_wavelength()
         lam = 3.58 + (np.arange(6401) * binw)
-        assert len(bbsource.wavelength) == len(lam)
-        assert np.all(bbsource.wavelength.value == lam)
+        npt.assert_equal(len(bbsource.wavelength), len(lam))
+        npt.assert_array_equal(bbsource.wavelength.value, lam)
 
     def test_get_wavelength_for_lss(self, bbsource):
+        wave_min = 2.85
+        wave_max = 14.0
+        dlam = 0.002
         bbsource.cmds.update(properties={"!OBS.modes": "wcu_lss",
-                                         "!SIM.spectral.spectral_bin_width": 0.002,
+                                         "!SIM.spectral.spectral_bin_width": dlam,
+                                         "!SIM.spectral.wave_min": wave_min,
+                                         "!SIM.spectral.wave_max": wave_max,
                                          "!OBS.filter_name": "J",
                                          "!INST.filter_file_format": "filters/TC_filter_{}.dat"})
         print(bbsource.cmds["!OBS.modes"])
         bbsource.get_wavelength()
-        lam = seq(1.15, 1.37, 0.002)
-        assert np.all(bbsource.wavelength.value == lam)
+        lam = seq(wave_min, wave_max, dlam)
+        npt.assert_array_equal(bbsource.wavelength.value, lam)
 
     def test_bb_aperture_initialises_correctly(self, bbsource):
-        assert bbsource.bb_aperture == 1.
+        npt.assert_equal(bbsource.bb_aperture, 1.)
 
     def test_bb_aperture_set_good_value(self, bbsource):
         bbsource.set_bb_aperture(0.3)
-        assert bbsource.bb_aperture == 0.3
+        npt.assert_equal(bbsource.bb_aperture, 0.3)
 
     def test_bb_aperture_set_clip_negative_value(self, bbsource):
         bbsource.set_bb_aperture(-3)
-        assert bbsource.bb_aperture == 0
+        npt.assert_equal(bbsource.bb_aperture, 0)
 
     def test_bb_aperture_set_clip_large_value(self, bbsource):
         bbsource.set_bb_aperture(13)
-        assert bbsource.bb_aperture == 1
+        npt.assert_equal(bbsource.bb_aperture, 1)
 
     @pytest.mark.parametrize("newvalue", [1., 0.6, 0.])
     def test_bb_aperture_changes_lamp_emission(self, bbsource, newvalue):
         bbsource.set_bb_aperture(1.)
         ref_lamp = bbsource.intens_lamp
         bbsource.set_bb_aperture(newvalue)
-        assert np.allclose(bbsource.intens_lamp, newvalue * ref_lamp)
+        npt.assert_allclose(bbsource.intens_lamp, newvalue * ref_lamp)
 
     @pytest.mark.parametrize("newvalue", [1., 0.6, 0.])
     def test_bb_aperture_does_not_change_background_emission(self, bbsource,
@@ -193,7 +198,7 @@ class TestWCUSource:
         bbsource.set_bb_aperture(1.)
         ref_bg = bbsource.intens_bg
         bbsource.set_bb_aperture(newvalue)
-        assert np.all(bbsource.intens_bg == ref_bg)
+        npt.assert_equal(bbsource.intens_bg, ref_bg)
 
 
 @pytest.fixture(name="fpmask", scope="function")
@@ -225,10 +230,10 @@ class TestFPMask:
 
     @pytest.mark.usefixtures("no_file_error")
     def test_fpmask_uses_file_format(self, fpmask, pinholemask):
-        assert fpmask.data_container.meta['filename'] == \
-            pinholemask.data_container.meta['filename']
-        assert np.all(fpmask.holehdu.data == pinholemask.holehdu.data)
-        assert np.all(fpmask.opaquehdu.data == pinholemask.opaquehdu.data)
+        npt.assert_equal(fpmask.data_container.meta['filename'],
+                         pinholemask.data_container.meta['filename'])
+        npt.assert_equal(fpmask.holehdu.data, pinholemask.holehdu.data)
+        npt.assert_equal(fpmask.opaquehdu.data, pinholemask.opaquehdu.data)
 
     def test_has_table(self, fpmask):
         assert fpmask.data_container.table is not None
@@ -242,16 +247,16 @@ class TestFPMask:
     def test_pixarea_correct(self, fpmask):
         hdr = fpmask.holehdu.header
         pixarea = hdr['CDELT1'] * hdr['CDELT2'] * u.arcsec**2
-        assert fpmask.pixarea == pixarea
+        npt.assert_equal(fpmask.pixarea, pixarea)
 
     def test_data_correct(self, fpmask):
-        assert fpmask.holehdu.data[241, 1943] == 0
-        assert fpmask.holehdu.data[1023, 1023] < 1
-        assert fpmask.holehdu.data[1021:1025, 1021:1025].sum() == pytest.approx(
-            np.pi * (0.007532**2) / 4 / fpmask.pixarea.value)
-        assert (fpmask.opaquehdu.data[1023, 1023] + fpmask.holehdu.data[1023, 1023]
-                == 1)
-        assert fpmask.opaquehdu.data[748, 1308] == 1.
+        npt.assert_equal(fpmask.holehdu.data[241, 1943], 0)
+        npt.assert_array_less(fpmask.holehdu.data[1023, 1023], 1)
+        npt.assert_allclose(fpmask.holehdu.data[1021:1025, 1021:1025].sum(),
+                            np.pi * (0.007532**2) / 4 / fpmask.pixarea.value)
+        npt.assert_equal (fpmask.opaquehdu.data[1023, 1023] + fpmask.holehdu.data[1023, 1023],
+                          1)
+        npt.assert_equal(fpmask.opaquehdu.data[748, 1308], 1.)
 
     def test_no_error_with_integer_positions(self, pinholemask_int):
         """Tests that the bug in Scopesim#868 does not occur"""
