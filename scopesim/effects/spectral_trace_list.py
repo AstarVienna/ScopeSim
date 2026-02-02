@@ -244,6 +244,7 @@ class SpectralTraceList(Effect):
 
             spt = self.spectral_traces[obj.trace_id]
             obj.hdu = spt.map_spectra_to_focal_plane(obj)
+            obj.image_plane_id = spt.meta["image_plane_id"]
 
         logger.debug("%s done", self.display_name)
         return obj

@@ -1316,9 +1316,10 @@ class DichroicTreeEffect(Effect):
                 arm_id = row["id"]
                 vols = deepcopy(obj)
 
-                for dichroic_name in row.colnames:
+                dichroic_cols = [col for col in row.colnames if col != "id"]
+                for dichroic_name in dichroic_cols:
                     if dichroic_name not in self.dichroics.keys():
-                        continue
+                        raise ValueError(f"Dichroic name {dichroic_name} not found in saved dichroics.")
                     dichroic = self.dichroics[dichroic_name]
                     action = action_lookup.get(row[dichroic_name], None)
                     if action is not None:
@@ -1344,7 +1345,8 @@ class DichroicTreeEffect(Effect):
                 raise ValueError(f"This FoV does not have the correct id to match "
                                  f"a row in the dichroic tree table: {obj_id}")
 
-            for dichroic_name in row.colnames:
+            dichroic_cols = [col for col in row.colnames if col != "id"]
+            for dichroic_name in dichroic_cols:
                 if dichroic_name not in self.dichroics.keys():
                     raise ValueError(f"Dichroic name {dichroic_name} not found in saved dichroics.")
                 dichroic = self.dichroics[dichroic_name]

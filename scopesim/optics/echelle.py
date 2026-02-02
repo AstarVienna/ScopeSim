@@ -514,11 +514,11 @@ class SpectrographSetup:
 #     x['l'] * u.nm) for x in GRATING_CATALOG}
 
 
-ss = SpectrographSetup((18,29),
-                  515*u.nm,
-                  4.7,
-                  225*u.mm,
-                  GratingSetup(alpha=np.deg2rad(64.2), beta_center=np.deg2rad(64.2), delta=np.deg2rad(64.2), groove_length=u.mm/200),
-                  Detector(4096,4096,15*u.micron),
-                  cross_disperser=GratingSetup(groove_length=u.mm/1000, guess_littrow=(310*u.nm, 515*u.nm, (4096-20)*0.015*u.mm, 225*u.mm)),
-                  )
+# ss = SpectrographSetup((18,29),
+#                   515*u.nm,
+#                   4.7,
+#                   225*u.mm,
+#                   GratingSetup(alpha=np.deg2rad(64.2), beta_center=np.deg2rad(64.2), delta=np.deg2rad(64.2), groove_length=u.mm/200),
+#                   Detector(4096,4096,15*u.micron),
+#                   cross_disperser=GratingSetup(groove_length=u.mm/1000, guess_littrow=(310*u.nm, 515*u.nm, (4096-20)*0.015*u.mm, 225*u.mm)),
+#                   )
