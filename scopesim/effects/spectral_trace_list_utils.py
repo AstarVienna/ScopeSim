@@ -49,6 +49,8 @@ class SpectralTrace:
         "x_colname": "x",
         "y_colname": "y",
         "s_colname": "s",
+        "offset_x": 0,
+        "offset_y": 0,
         "wave_colname": "wavelength",
         "dwave": 0.002,
         "aperture_id": 0,
@@ -119,9 +121,12 @@ class SpectralTrace:
         Focal plane coordinates are `x` and `y`, in mm. Slit coordinates are
         `xi` (spatial coordinate along the slit, in arcsec) and `lam`
         (wavelength, in um).
+
+        The interpolation functions include a shift in the focal-plane
+        coordinates, determined from the CRVAL of the source FOV.
         """
-        x_arr = self.table[self.meta["x_colname"]]
-        y_arr = self.table[self.meta["y_colname"]]
+        x_arr = self.table[self.meta["x_colname"]] + self.meta["offset_x"]
+        y_arr = self.table[self.meta["y_colname"]] + self.meta["offset_y"]
         xi_arr = self.table[self.meta["s_colname"]]
         lam_arr = self.table[self.meta["wave_colname"]]
 
