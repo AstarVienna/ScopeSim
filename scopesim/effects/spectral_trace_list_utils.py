@@ -49,6 +49,8 @@ class SpectralTrace:
         "x_colname": "x",
         "y_colname": "y",
         "s_colname": "s",
+        "offset_x": 0,
+        "offset_y": 0,
         "wave_colname": "wavelength",
         "dwave": 0.002,
         "aperture_id": 0,
