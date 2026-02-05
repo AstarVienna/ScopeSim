@@ -97,6 +97,9 @@ class SelectorWheel(Effect):
                     new_volumes.extend(vols_with_val)
                     continue
 
+                #TODO: If effect_to_apply is a dichroic which reassigns selector_key values, we need to add a check here
+                #TODO: i.e. dichroic.arm_action.keys() should not include items in unique_selector_values other than val
+
                 newvollist = FovVolumeList()
                 newvollist.volumes = vols_with_val
                 newvollist = effect_to_apply.apply_to(newvollist, **kwargs)

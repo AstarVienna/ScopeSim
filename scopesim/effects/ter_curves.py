@@ -1247,9 +1247,75 @@ def _guard_plot_axes(which, axes):
                              "contains only one element"))
 
 
-class DichroicTreeEffect(Effect):
+class Dichroic(TERCurve):
     """
-    An effect that holds and applies a tree of dichroic TERCurves.
+    An effect that holds and applies a single dichroic TERCurve.
+    The effect splits each input FoV into two FoVs, one for the transmission arm
+    and one for the reflection arm. "arm_key" kwarg indicates which id key to assign value to (for e.g. aperture_id).
+    "arm_action" kwarg indicates which arm_key value to assign for transmission and reflection arms respectively.
+
+    Example config definition:
+    ```
+    name: dichroic1
+    class: Dichroic
+    kwargs:
+        filename: "TER_dichroic1.dat"
+        arm_key: "aperture_id"
+        arm_actions:
+          0: "transmission"
+          1: "reflection"
+
+    ```
+    """
+
+    z_order: ClassVar[tuple[int, ...]] = (116, 216, 616)
+    required_keys = {"arm_key", "arm_actions"}
+
+    def __init__(self, cmds=None, **kwargs):
+        check_keys(kwargs, self.required_keys, action="error")
+        self.arm_key = kwargs.pop("arm_key")
+        self.arm_actions = kwargs.pop("arm_actions")
+
+        super().__init__(cmds=cmds, **kwargs)
+
+    def apply_to(self, obj, **kwargs):
+        """
+        For FoV volume list, create two FoVs per input FoV for transmission and reflection arms, assign
+        corresponding arm_key values.
+        For single FoV, apply the throughput based on its arm_key value to determine transmission or reflection.
+        """
+        if isinstance(obj, FovVolumeList):
+            logger.debug("Executing %s, FoV setup", self.meta['name'])
+            new_vols = []
+            for idval, action in zip(self.arm_actions):
+                vols = deepcopy(obj)
+                params = {"action": action}
+                self.surface.meta.update(params)
+                vols = super().apply_to(vols, **kwargs)
+                for vol in vols.volumes:
+                    vol["meta"][self.arm_key] = idval
+                new_vols.extend(vols.volumes)
+            obj.volumes = new_vols
+
+        if isinstance(obj, FieldOfView):
+            logger.debug("Executing %s, observe", self.meta['name'])
+            idval = obj.meta.get(self.arm_key, None)
+            if idval is None:
+                raise ValueError(f"This FoV does not have the correct {self.arm_key} to determine "
+                                 f"transmission or reflection arm.")
+            if idval not in self.arm_actions.keys():
+                raise ValueError(f"{self.arm_key} value {idval} not found in arm_action mapping.")
+            action = self.arm_actions[idval]
+            params = {"action": action}
+            self.surface.meta.update(params)
+            super().apply_to(obj, **kwargs)
+
+        return obj
+
+
+class DichroicTree(Effect):
+    """
+    An effect that holds and applies a tree of dichroics.
 
     The tree is defined in a table in a txt file where each row is a tree branch and each column is a dichroic.
     The column names should match the names of the TERCurve file names.
