@@ -10,10 +10,11 @@ This module implements a SelectorWheel effect that allows the user to define mul
 ( e.g. different aperture masks for different arms) in the wheel dictionary where each effect corresponds to a
 "selector_id" value. The user can set which id to use as the "selector", for e.g. aperture_id or id of the FoV object.
 """
-from ..utils import (check_keys, get_logger)
+from ..utils import (check_keys, get_logger, real_colname)
 from .effects import Effect
 from ..optics.fov_volume_list import FovVolumeList
 from ..optics.fov import FieldOfView
+from ..detector.detector import Detector
 import importlib
 
 logger = get_logger(__name__)
@@ -48,7 +49,7 @@ class SelectorWheel(Effect):
 
     """
 
-    z_order = (290, 690)
+    z_order = (290, 690, 890)
     required_keys = {"selector_key", "wheel"}
 
     def __init__(self, **kwargs):
@@ -59,7 +60,7 @@ class SelectorWheel(Effect):
 
         self.wheel_effects = {}
         for wheel_entry in self.meta["wheel"]:
-            selector_value = wheel_entry["selector_value"]
+            selector_value = wheel_entry["selector_value"] # can be single value or list of values
             effect_class_name = wheel_entry["effect_class"]
             effect_kwargs = wheel_entry.get("effect_kwargs", {})
 
@@ -67,7 +68,11 @@ class SelectorWheel(Effect):
             effect_module = importlib.import_module("scopesim.effects")
             effect_class = getattr(effect_module, effect_class_name)
             # Instantiate the effect and store it in the wheel_effects dictionary
-            self.wheel_effects[selector_value] = effect_class(**effect_kwargs)
+            if isinstance(selector_value, list):
+                for val in selector_value:
+                    self.wheel_effects[val] = effect_class(**effect_kwargs)
+            else:
+                self.wheel_effects[selector_value] = effect_class(**effect_kwargs)
 
 
     def apply_to(self, obj, **kwargs):
@@ -82,7 +87,7 @@ class SelectorWheel(Effect):
                 logger.warning(f"No effect found for selector value: {selector_value}, skipping effect application.")
                 return obj
 
-            return effect_to_apply.apply_to(obj, **kwargs)
+            obj = effect_to_apply.apply_to(obj, **kwargs)
 
         if isinstance(obj, FovVolumeList):
             unique_selector_values = set([vol["meta"].get(self.meta["selector_key"], None) for vol in obj.volumes])
@@ -91,7 +96,7 @@ class SelectorWheel(Effect):
             for val in unique_selector_values:
                 vols_with_val = [vol for vol in obj.volumes if vol["meta"].get(self.meta["selector_key"], None) == val]
                 effect_to_apply = self.get_effect(val)
-                print(f"Applying effect for selector value: {val} -> {effect_to_apply}, volumes: {len(vols_with_val)}")
+                logger.info(f"Applying effect for selector value: {val} -> {effect_to_apply}, volumes: {len(vols_with_val)}")
 
                 if val is None or effect_to_apply is None:
                     new_volumes.extend(vols_with_val)
@@ -106,7 +111,19 @@ class SelectorWheel(Effect):
                 new_volumes.extend(newvollist.volumes)
 
             obj.volumes = new_volumes
-            return obj
+
+        if isinstance(obj, Detector):
+            logger.info("Since passed object is a Detector, selector_key by default is the ID of the Detector object.")
+            selector_value = obj.meta[real_colname("id", obj.meta)] # Assuming detector ID is the selector
+
+            effect_to_apply = self.get_effect(selector_value)
+            if effect_to_apply is None:
+                logger.warning(f"No effect found for detector ID: {selector_value}, skipping effect application.")
+                return obj
+
+            obj = effect_to_apply.apply_to(obj, **kwargs)
+
+        return obj
 
 
     def get_effect(self, selector_value):
