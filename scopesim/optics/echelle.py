@@ -136,7 +136,7 @@ class SpectrographSetup:
     def __init__(
             self,
             order_range: tuple,
-            final_wave: u.Quantity,
+            design_res: u.Quantity,
             pixels_per_res_elem: float,
             focal_length: u.Quantity,
             grating: GratingSetup,
@@ -150,7 +150,7 @@ class SpectrographSetup:
         (and that the slit image is gaussian)
 
         :param tuple order_range: order range of the spectrograph
-        :param u.Quantity final_wave: longest wavelength at the edge of detector
+        # :param u.Quantity final_wave: longest wavelength at the edge of detector
         :param float pixels_per_res_elem: number of pixels per resolution element of spectrometer
         :param u.Quantity focal_length: the focal length of the detector
         :param GratingSetup grating: configured grating
@@ -162,7 +162,8 @@ class SpectrographSetup:
             order_range = order_range[::-1]
         self.m0 = order_range[0]
         self.m_max = order_range[1]
-        self.l0 = final_wave
+        self.l0 = grating.wave(grating.beta_center, order_range[0])*(1/order_range[0]/2+1)
+        self.design_res = design_res
         self.grating = grating
         self.detector = detector
         self.focal_length = focal_length
@@ -444,14 +445,14 @@ class SpectrographSetup:
         beta = self.beta_for_x_pixel(np.arange(self.detector.n_pix_x) + .5)
         return self.grating.angular_dispersion(self.orders[:, None], beta)
 
-    @property
-    def design_res(self):
-        """
-        :return: design resolution for spectrometer
-        Assumes that m0 (the longest wavelength order) FSR fills detector with some sampling
-        """
-        dlambda = self.fsr(self.m0) / self.detector.n_pix_x * self.nominal_pixels_per_res_elem
-        return self.l0 / dlambda
+    # @property
+    # def design_res(self):
+    #     """
+    #     :return: design resolution for spectrometer
+    #     Assumes that m0 (the longest wavelength order) FSR fills detector with some sampling
+    #     """
+    #     dlambda = self.fsr(self.m0) / self.detector.n_pix_x * self.nominal_pixels_per_res_elem
+    #     return self.l0 / dlambda
 
     @property
     def average_res(self):
@@ -489,7 +490,7 @@ class SpectrographSetup:
             oset = waves[1] if center_orders else 0
             plt.plot(waves - oset, [i] * 3, '*', color=f'C{ii}')
             plt.plot(fsr_edges[ii] - oset, [i] * 2, '.', color=f'C{ii}',
-                     label=f'$\lambda=${waves[1]:.0f}')
+                     label=f'$\\lambda=${waves[1]:.0f}')
         plt.legend()
         plt.xlabel('Center relative wavelength (nm)')
         plt.ylabel('Order')
