@@ -77,7 +77,7 @@ def create_client(
     if cached:
         raise NotImplementedError("Caching not yet implemented with httpx.")
     transport = httpx.HTTPTransport(retries=5)
-    client = httpx.Client(base_url=base_url, timeout=2, transport=transport)
+    client = httpx.Client(base_url=base_url, timeout=10, transport=transport)
     return client
 
 
