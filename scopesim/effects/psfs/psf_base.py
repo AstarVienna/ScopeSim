@@ -101,6 +101,10 @@ class PSF(Effect):
                 logger.debug("PSF convolution start")
                 if image.ndim == 2 and kernel.ndim == 2:
                     new_image = convolve(image - bkg_level, kernel, mode=mode)
+                    #from astropy.io import fits
+                    #fits.writeto(f"image_{obj.meta['wave_min'].value}.fits", data=image.value, overwrite=True)
+                    #fits.writeto(f"kernel_{obj.meta['wave_min'].value}.fits", kernel, overwrite=True)
+                    #fits.writeto(f"newimage_{obj.meta['wave_min'].value}.fits", new_image, overwrite=True)
                 elif image.ndim == 3 and kernel.ndim == 2:
                     kernel = kernel[None, :, :]
                     bkg_level = bkg_level[:, None, None]
