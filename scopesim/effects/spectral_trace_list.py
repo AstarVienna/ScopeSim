@@ -539,10 +539,10 @@ class EchelleSpectralTraceList(SpectralTraceList):
     # xdisp_freq_unit : mm
     # slitwidth_unit : arcsec
 
-    prefix    aperture_id    image_plane_id    m0    n    min_wave    max_wave    echelle_blaze    focal_length    fwhm    detector_pad    pixel_size    n_disp    n_xdisp     disp_freq    xdisp_freq    slitwidth    dispdir    plate_scale
-    nIR        0              0                40    24    970         2500        64.2             225             4.7     10              0.015         4096      4096        45           175           10           x          0.159574468085
-    gri        1              1                36    18    490         1020        64.2             225             4.7     10              0.015         4096      4096        100          500           10           x          0.159574468085
-    ub         2              2                29    11    315         515         64.2             225             4.7     10              0.015         4096      4096        200          1000          10           x          0.159574468085
+    prefix    aperture_id    image_plane_id    m0    n    min_wave    max_wave   design_res    echelle_blaze    focal_length    fwhm    detector_pad    pixel_size    n_disp    n_xdisp     disp_freq    xdisp_freq    slitwidth    dispdir    plate_scale
+    ub         2              2                29    11    315         515          20000        64.2             225             4.7     10              0.015         4096      4096        200          1000          10           x          0.159574468085
+    nIR        0              0                40    24    970         2500         20000        64.2             225             4.7     10              0.015         4096      4096        45           175           10           x          0.159574468085
+    gri        1              1                36    18    490         1020         20000        64.2             225             4.7     10              0.015         4096      4096        100          500           10           x          0.159574468085
     ----------------------------------------------------------------
 
     The calculated traces are stored in the same HDUList format as required by SpectralTraceList,
@@ -588,6 +588,7 @@ class EchelleSpectralTraceList(SpectralTraceList):
             max_order = row['m0']
             min_wave = row['min_wave'] * u.Unit(trace_params.meta["min_wave_unit"])
             max_wave = row['max_wave'] * u.Unit(trace_params.meta["max_wave_unit"])
+            design_res = row['design_res']
             focal_len = row['focal_length'] * u.Unit(trace_params.meta["focal_length_unit"])
             xdisp_npix = row['n_xdisp']
             pix_size = row['pixel_size'] * u.Unit(trace_params.meta["pixel_size_unit"])
@@ -599,18 +600,18 @@ class EchelleSpectralTraceList(SpectralTraceList):
             #     groove_length=u.Unit(trace_params.meta["xdisp_freq_unit"]) / row['xdisp_freq'],
             #     guess_littrow=(min_wave, max_wave,
             #                    x_disp_len, focal_len))
-            cross_disperser = echelle.GratingSetup(alpha=alpha, beta_center=beta_center,
-                                                   delta=beta_center,
-                                                   groove_length=u.Unit(trace_params.meta["xdisp_freq_unit"]) / row['xdisp_freq'])
+            cross_disperser = echelle.GratingSetup(alpha=alpha, beta_center=beta_center, delta=beta_center,
+                                        groove_length=u.Unit(trace_params.meta["xdisp_freq_unit"]) / row['xdisp_freq'])
 
-            ss = echelle.SpectrographSetup((min_order, max_order),
-                                           max_wave,
-                                           row['fwhm'] * u.Unit(trace_params.meta["fwhm_unit"]),
-                                           focal_len,
-                                           echelle.GratingSetup(alpha=echelle_angle, beta_center=echelle_angle,
-                                                                delta=echelle_angle,
-                                                                groove_length=u.Unit(trace_params.meta["disp_freq_unit"]) / row['disp_freq']),
-                                           echelle.Detector(row['n_disp'], xdisp_npix, pix_size),
+            echelle_grating = echelle.GratingSetup(alpha=echelle_angle, beta_center=echelle_angle, delta=echelle_angle,
+                                        groove_length=u.Unit(trace_params.meta["disp_freq_unit"]) / row['disp_freq'])
+
+            ss = echelle.SpectrographSetup(order_range=(min_order, max_order),
+                                           design_res=design_res,
+                                           pixels_per_res_elem=row['fwhm'] * u.Unit(trace_params.meta["fwhm_unit"]),
+                                           focal_length=focal_len,
+                                           grating=echelle_grating,
+                                           detector=echelle.Detector(row['n_disp'], xdisp_npix, pix_size),
                                            cross_disperser=cross_disperser
                                            )
 

@@ -7,10 +7,10 @@ import logging
 class GratingSetup:
     def __init__(
             self, *,
-            groove_length:u.Quantity=None,
             alpha:float=None,
             delta:float = None,
             beta_center:float = None,
+            groove_length: u.Quantity = None,
             empiric_blaze_factor: float = 1.0,
             guess_littrow: tuple = None,
     ):
