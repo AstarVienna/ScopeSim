@@ -121,13 +121,14 @@ class SpectralTraceList(Effect):
             "x_colname": "x",
             "y_colname": "y",
             "s_colname": "s",
+            "offset_x": 0,     # [mm] in detector plane
+            "offset_y": 0,     # [mm] in detector plane
             "wave_colname": "wavelength",
             "center_on_wave_mid": False,
             "dwave": 0.002,  # [um] for finding the best fit dispersion
             "invalid_value": None,  # for dodgy trace file values
         }
         self.meta.update(params)
-
         # Parameters that are specific to the subclass
         self.meta.update(self._class_params)
         self.meta.update(kwargs)
@@ -238,6 +239,18 @@ class SpectralTraceList(Effect):
             elif obj.hdu is None and obj.cube is None:
                 logger.info("Making cube")
                 obj.cube = obj.make_hdu()
+
+            # Check whether an offset slit is used. If so, recompute spectral traces.
+            offset_x = obj.cube.header["CRVAL1D"]
+            offset_y = obj.cube.header["CRVAL2D"]
+            if (offset_x != self.meta["offset_x"] or
+                offset_y != self.meta["offset_y"]):
+                logger.debug("Recomputing spectral traces for offset (%.1g, %.1g)",
+                             offset_x, offset_y)
+                self.meta["offset_x"] = offset_x
+                self.meta["offset_y"] = offset_y
+                self.make_spectral_traces()
+                self.update_meta()
 
             spt = self.spectral_traces[obj.trace_id]
             obj.hdu = spt.map_spectra_to_focal_plane(obj)
