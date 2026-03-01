@@ -59,7 +59,7 @@ optional = true
 
 [tool.poetry.group.dev.dependencies]
 jupyter = "^1.1.1"
-jupytext = "^1.18.1"
+jupytext = "^1.19.0"
 ipykernel = "^7.1.0"
 ipympl = "^0.9.8"
 
