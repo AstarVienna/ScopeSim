@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Spectral grating efficiencies."""
 
-from typing import ClassVar
+from typing import ClassVar, Callable
 
 import numpy as np
 from astropy.io import fits
@@ -12,7 +12,9 @@ from astropy.table import Table
 from .effects import Effect
 from .ter_curves import TERCurve
 from .ter_curves_utils import apply_throughput_to_cube
-from ..utils import figure_factory, get_logger
+from ..utils import figure_factory, get_logger, check_keys
+from .data_container import DataContainer
+from ..optics import echelle
 
 
 logger = get_logger(__name__)
@@ -112,6 +114,61 @@ class SpectralEfficiency(Effect):
         with u.set_enabled_equivalencies(u.spectral()):
             wave = swcs.pixel_to_world(np.arange(swcs.pixel_shape[0])) << u.um
         obj.hdu = apply_throughput_to_cube(obj.hdu, effic.throughput, wave)
+        return obj
+
+    def plot(self):
+        """Plot the grating efficiencies."""
+        fig, axes = figure_factory()
+        for name, effic in self.efficiencies.items():
+            wave = effic.throughput.waveset
+            axes.plot(wave.to(u.um), effic.throughput(wave), label=name)
+
+        axes.set_xlabel("Wavelength [um]")
+        axes.set_ylabel("Grating efficiency")
+        axes.set_title(f"Grating efficiencies {self.display_name}")
+        axes.legend()
+
+        return fig
+
+
+class EchelletteSpectralEfficiency(Effect):
+    """
+    Spectral efficiency list from analytical calculations of the blaze function for ZShooter gratings.
+    Requires same input trace parameter table as EchelleSpectralTraceList, supply as kwarg "filename"
+    """
+    z_order: ClassVar[tuple[int, ...]] = (630,)
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.efficiency_generator = self._generate_efficiency_curve_func()
+        self.efficiencies = {}
+
+    def _generate_efficiency_curve_func(self) -> Callable:
+        trace_params_table = self.table
+        # TODO: Call spectrograph and grating setup, return a callable? that takes wavelength as input and returns trace efficiency array? Or return a TERCurve object directly?
+        # For now, just return a dummy function that returns 1 for all wavelengths
+        def dummy_efficiency_curve(trace_id, wavelength):
+            return np.ones_like(wavelength)
+        return dummy_efficiency_curve
+
+    def apply_to(self, obj, **kwargs):
+        """Interface between FieldOfView and SpectralEfficiency."""
+        trace_id = obj.trace_id
+
+        swcs = WCS(obj.hdu.header).spectral
+        with u.set_enabled_equivalencies(u.spectral()):
+            wave = swcs.pixel_to_world(np.arange(swcs.pixel_shape[0])) << u.um
+
+        try:
+            efficiency = self.efficiency_generator(trace_id, wave)
+            params = {"description": trace_id}
+            params.update(self.meta)
+            effic_curve = TERCurve(array_dict={"wavelength": wave, "transmission": efficiency}, **params)
+            self.efficiencies[trace_id] = effic_curve
+        except:
+            raise ValueError(f"Error generating efficiency curve for trace {trace_id} with wavelength range {wave.min()} - {wave.max()}")
+
+        obj.hdu = apply_throughput_to_cube(obj.hdu, effic_curve.throughput, wave)
         return obj
 
     def plot(self):

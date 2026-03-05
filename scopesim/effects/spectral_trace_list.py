@@ -524,7 +524,7 @@ class EchelleSpectralTraceList(SpectralTraceList):
     instead of loading them from FITS file. The arguments required to define the echelle traces are supplied through
     a txt file containing a table of parameters using the filename kwarg.
 
-    Below is an example of how to define the echelle trace parameters (see irdb/ZShooter/traces/echelle_trace_parameters.txt):
+    Below is an example of how to define the echelle trace parameters (see irdb/ZShooter_v1/traces/echelle_trace_parameters.txt):
     ----------------------------------------------------------------
     # min_wave_unit : nm
     # max_wave_unit : nm
@@ -555,7 +555,7 @@ class EchelleSpectralTraceList(SpectralTraceList):
     def __init__(self, **kwargs):
         check_keys(kwargs, self.required_keys, action="error")
 
-        trace_params = DataContainer(filename=kwargs['filename'])
+        trace_params = DataContainer(filename=kwargs.pop['filename'])
         hdulist = self._generate_trace_hdulist(trace_params)
         kwargs["hdulist"] = hdulist
         super().__init__(**kwargs)
