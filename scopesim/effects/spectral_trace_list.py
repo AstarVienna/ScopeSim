@@ -555,7 +555,7 @@ class EchelleSpectralTraceList(SpectralTraceList):
     def __init__(self, **kwargs):
         check_keys(kwargs, self.required_keys, action="error")
 
-        trace_params = DataContainer(filename=kwargs.pop['filename'])
+        trace_params = DataContainer(filename=kwargs.pop('filename'))
         hdulist = self._generate_trace_hdulist(trace_params)
         kwargs["hdulist"] = hdulist
         super().__init__(**kwargs)
