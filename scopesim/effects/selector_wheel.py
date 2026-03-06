@@ -129,7 +129,8 @@ class SelectorWheel(Effect):
     def get_effect(self, selector_value):
         eff = None
         if (selector_value is None) or (selector_value not in self.wheel_effects.keys()):
-            logger.warning(f"Either None or Missing value of {self.meta["selector_key"]} requested: {selector_value}, returning None.")
+            logger.warning(f"Either None or Missing value of {self.meta['selector_key']} "
+                           f"requested: {selector_value}, returning None.")
         else:
             eff = self.wheel_effects[selector_value]
         return eff
