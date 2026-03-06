@@ -137,7 +137,6 @@ class SpectralTraceList(Effect):
 
         if self._file is not None:
             self.make_spectral_traces()
-
             self.update_meta()
 
     def make_spectral_traces(self):
@@ -539,7 +538,7 @@ class EchelleSpectralTraceList(SpectralTraceList):
     # xdisp_freq_unit : mm
     # slitwidth_unit : arcsec
 
-    prefix    aperture_id    image_plane_id    m0    n    min_wave    max_wave   design_res    echelle_blaze    focal_length    fwhm    detector_pad    pixel_size    n_disp    n_xdisp     disp_freq    xdisp_freq    slitwidth    dispdir    plate_scale
+    prefix    aperture_id    image_plane_id    m0    n    min_wave    max_wave   design_res    echelle_blaze    focal_length    fwhm    detector_pad    pixel_size    n_disp    n_xdisp     disp_freq    xdisp_freq    slitwidth    dispdir    plate_scale      xbeta_center
     ub         2              2                29    11    315         515          20000        64.2             225             4.7     10              0.015         4096      4096        200          1000          10           x          0.159574468085
     nIR        0              0                40    24    970         2500         20000        64.2             225             4.7     10              0.015         4096      4096        45           175           10           x          0.159574468085
     gri        1              1                36    18    490         1020         20000        64.2             225             4.7     10              0.015         4096      4096        100          500           10           x          0.159574468085
@@ -590,34 +589,25 @@ class EchelleSpectralTraceList(SpectralTraceList):
             max_wave = row['max_wave'] * u.Unit(trace_params.meta["max_wave_unit"])
             design_res = row['design_res']
             focal_len = row['focal_length'] * u.Unit(trace_params.meta["focal_length_unit"])
-            xdisp_npix = row['n_xdisp']
+            disp_npix = row['n_disp'] - 2 * row['detector_pad']
+            xdisp_npix = row['n_xdisp'] - 2 * row['detector_pad']
             pix_size = row['pixel_size'] * u.Unit(trace_params.meta["pixel_size_unit"])
-            x_disp_len = (xdisp_npix - 2 * row['detector_pad']) * pix_size
-            echelle_angle = np.deg2rad(row['echelle_blaze'])
-            alpha = np.deg2rad(row['alpha'])
-            beta_center = np.deg2rad(row['beta_center'])
-            # cross_disperser = echelle.GratingSetup(
-            #     groove_length=u.Unit(trace_params.meta["xdisp_freq_unit"]) / row['xdisp_freq'],
-            #     guess_littrow=(min_wave, max_wave,
-            #                    x_disp_len, focal_len))
-            cross_disperser = echelle.GratingSetup(alpha=alpha, beta_center=beta_center, delta=beta_center,
-                                        groove_length=u.Unit(trace_params.meta["xdisp_freq_unit"]) / row['xdisp_freq'])
+            echelle_angle = np.deg2rad(row['echelle_blaze'])*u.rad
+            xdisp_beta_center = np.deg2rad(row['xbeta_center'])*u.rad
 
-            echelle_grating = echelle.GratingSetup(alpha=echelle_angle, beta_center=echelle_angle, delta=echelle_angle,
-                                        groove_length=u.Unit(trace_params.meta["disp_freq_unit"]) / row['disp_freq'])
+            xdisp_groove_length = u.Unit(trace_params.meta["xdisp_freq_unit"]) / row['xdisp_freq']
+            echelle_groove_length = u.Unit(trace_params.meta["disp_freq_unit"]) / row['disp_freq']
+            pix_per_res_elem = row['fwhm']
 
-            ss = echelle.SpectrographSetup(order_range=(min_order, max_order),
-                                           design_res=design_res,
-                                           pixels_per_res_elem=row['fwhm'] * u.Unit(trace_params.meta["fwhm_unit"]),
-                                           focal_length=focal_len,
-                                           grating=echelle_grating,
-                                           detector=echelle.Detector(row['n_disp'], xdisp_npix, pix_size),
-                                           cross_disperser=cross_disperser
-                                           )
+            ss = echelle.spectrograph_factory(min_wave, max_wave, focal_len,
+                                              design_res, echelle_angle, min_order, max_order,
+                                              echelle_groove_length, pix_per_res_elem, disp_npix, xdisp_npix,
+                                              pix_size, xdisp_groove_length=xdisp_groove_length,
+                                              xdisp_beta_center=xdisp_beta_center)
 
             fsr_edges = ss.edge_wave(fsr=True)
 
-            slit_edge = (row['slitwidth'] / 2) * u.Unit(trace_params.meta["slitwidth_unit"])
+            slit_edge = (row['slitlength'] / 2) * u.Unit(trace_params.meta["slitlength_unit"])
             slit_pos = np.linspace(-slit_edge, slit_edge, num=3)
             slit_offset_pix = slit_pos / (row['plate_scale'] * u.arcsec)
 
