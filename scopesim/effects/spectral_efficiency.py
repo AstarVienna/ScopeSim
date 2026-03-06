@@ -131,7 +131,7 @@ class SpectralEfficiency(Effect):
         return fig
 
 
-class EchelletteSpectralEfficiency(Effect):
+class EchelleSpectralEfficiency(Effect):
     """
     Spectral efficiency list from analytical calculations of the blaze function for ZShooter gratings.
     Requires same input trace parameter table as EchelleSpectralTraceList, supply as kwarg "filename"
@@ -140,16 +140,48 @@ class EchelletteSpectralEfficiency(Effect):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.efficiency_generator = self._generate_efficiency_curve_func()
+        self.efficiency_generator = self._generate_efficiency_curve_func(DataContainer(filename=kwargs.pop('filename')))
         self.efficiencies = {}
 
-    def _generate_efficiency_curve_func(self) -> Callable:
-        trace_params_table = self.table
-        # TODO: Call spectrograph and grating setup, return a callable? that takes wavelength as input and returns trace efficiency array? Or return a TERCurve object directly?
-        # For now, just return a dummy function that returns 1 for all wavelengths
-        def dummy_efficiency_curve(trace_id, wavelength):
-            return np.ones_like(wavelength)
-        return dummy_efficiency_curve
+    def _generate_efficiency_curve_func(self, trace_params) -> Callable:
+        spectrographs = {}
+        for row in trace_params.table:
+            prefix = row["prefix"]  # note trance ids are assumed to be prefix_{order}
+            min_order = row['m0'] - row['n']
+            max_order = row['m0']
+            min_wave = row['min_wave'] * u.Unit(trace_params.meta["min_wave_unit"])
+            max_wave = row['max_wave'] * u.Unit(trace_params.meta["max_wave_unit"])
+            design_res = row['design_res']
+            focal_len = row['focal_length'] * u.Unit(trace_params.meta["focal_length_unit"])
+            disp_npix = row['n_disp'] - 2 * row['detector_pad']
+            xdisp_npix = row['n_xdisp']- 2 * row['detector_pad']
+            pix_size = row['pixel_size'] * u.Unit(trace_params.meta["pixel_size_unit"])
+            echelle_angle = np.deg2rad(row['echelle_blaze'])*u.rad
+            xdisp_beta_center = np.deg2rad(row['xbeta_center'])*u.rad
+
+            xdisp_groove_length = u.Unit(trace_params.meta["xdisp_freq_unit"]) / row['xdisp_freq']
+            echelle_groove_length = u.Unit(trace_params.meta["disp_freq_unit"]) / row['disp_freq']
+            pix_per_res_elem = row['fwhm']
+
+            spectrograph = echelle.spectrograph_factory(min_wave, max_wave, focal_len,
+                                                        design_res, echelle_angle, min_order, max_order,
+                                                        echelle_groove_length, pix_per_res_elem, disp_npix, xdisp_npix,
+                                                        pix_size, xdisp_groove_length=xdisp_groove_length,
+                                                        xdisp_beta_center=xdisp_beta_center)
+
+            spectrographs[prefix] = spectrograph
+
+        def efficiency_curve(trace_id, wavelength):
+            """Trace ID MUST be in the form prefix_{order}"""
+            prefix, _, order = trace_id.partition('_')
+            order = int(order)
+            spec = spectrograph[prefix]
+            # blaze = spec.blaze(wavelength)[trace_id]  # compute all of them and then subscript
+            blaze = spec.grating.blaze(spec.grating.beta(wavelength, order), order)
+            xdisp = spec.xdisp_efficiency(wavelength)
+            return blaze*xdisp
+
+        return efficiency_curve
 
     def apply_to(self, obj, **kwargs):
         """Interface between FieldOfView and SpectralEfficiency."""
