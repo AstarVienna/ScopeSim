@@ -142,14 +142,14 @@ class PixelResponseNonUniformity(Effect):
     ``prnu_std`` may be a float or a dict keyed by detector ID.
     """
 
-    required_keys: ClassVar[set] = {"prnu_std"}
+    required_keys: ClassVar[set] = set()
     z_order: ClassVar[tuple[int, ...]] = (805,)
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.meta["random_seed"] = "!SIM.random.seed"
+        self.meta.setdefault("prnu_std", 0.01)
         self.meta.update(kwargs)
-        check_keys(self.meta, self.required_keys, action="error")
         self._gain_maps = {}  # keyed by dtcr_id
 
     def apply_to(self, obj, **kwargs):
