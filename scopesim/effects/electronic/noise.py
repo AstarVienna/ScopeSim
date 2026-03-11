@@ -147,8 +147,6 @@ class PixelResponseNonUniformity(Effect):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.meta["random_seed"] = "!SIM.random.seed"
-        self.meta.setdefault("prnu_std", 0.01)
         self.meta.update(kwargs)
         self._gain_maps = {}  # keyed by dtcr_id
 
@@ -156,7 +154,7 @@ class PixelResponseNonUniformity(Effect):
         if not isinstance(obj, Detector):
             return obj
 
-        random_seed = from_currsys(self.meta["random_seed"], self.cmds)
+        random_seed = from_currsys(self.meta.get("prnu_seed"), self.cmds)
         id_key = real_colname("id", obj.meta)
         dtcr_id = obj.meta[id_key] if id_key is not None else None
 
@@ -173,9 +171,7 @@ class PixelResponseNonUniformity(Effect):
 
         shape = obj._hdu.data.shape
         if dtcr_id not in self._gain_maps or self._gain_maps[dtcr_id].shape != shape:
-            seed = (int(abs(hash((int(random_seed), str(dtcr_id))))) % (2**31)
-                    if random_seed is not None else None)
-            self._gain_maps[dtcr_id] = np.random.default_rng(seed).normal(
+            self._gain_maps[dtcr_id] = np.random.default_rng(random_seed).normal(
                 loc=1.0, scale=prnu_std, size=shape)
 
         obj._hdu.data = obj._hdu.data * self._gain_maps[dtcr_id]
@@ -185,8 +181,12 @@ class PixelResponseNonUniformity(Effect):
         if not self._gain_maps:
             raise RuntimeError("No gain map yet — run a simulation first.")
         key = det_id if det_id in self._gain_maps else next(iter(self._gain_maps))
+        gain_map = self._gain_maps[key]
+        dev = np.max(np.abs(gain_map - 1.0))
         fig, ax = figure_factory()
-        ax.imshow(self._gain_maps[key], origin="lower", aspect="auto")
+        im = ax.imshow(gain_map, origin="lower", aspect="auto",
+                       vmin=1 - dev, vmax=1 + dev)
+        fig.colorbar(im, ax=ax, label="per-pixel gain")
         return fig
 
 
