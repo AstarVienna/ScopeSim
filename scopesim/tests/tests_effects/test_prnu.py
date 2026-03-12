@@ -1,4 +1,6 @@
+import matplotlib.pyplot as plt
 import numpy as np
+import pytest
 
 from scopesim.detector import Detector
 from scopesim.effects.electronic import PixelResponseNonUniformity
@@ -52,3 +54,18 @@ class TestApplyTo:
         prnu = PixelResponseNonUniformity(prnu_std=0.01)
         result = prnu.apply_to("not a detector")
         assert result == "not a detector"
+
+    def test_invalid_prnu_std_raises(self):
+        prnu = PixelResponseNonUniformity(prnu_std="not a number nor a dict")
+        with pytest.raises(TypeError):
+            prnu.apply_to(make_detector())
+
+    def test_plot_raises_before_simulation(self):
+        prnu = PixelResponseNonUniformity(prnu_std=0.01)
+        with pytest.raises(RuntimeError):
+            prnu.plot()
+
+    def test_plot_returns_figure(self):
+        prnu = PixelResponseNonUniformity(prnu_std=0.01, prnu_seed=42)
+        prnu.apply_to(make_detector())
+        assert isinstance(prnu.plot(), plt.Figure)

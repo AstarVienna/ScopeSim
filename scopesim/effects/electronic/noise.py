@@ -164,7 +164,7 @@ class PixelResponseNonUniformity(Effect):
         elif isinstance(prnu_std_meta, (int, float)):
             prnu_std = float(prnu_std_meta)
         else:
-            raise ValueError(
+            raise TypeError(
                 "<PixelResponseNonUniformity>.meta['prnu_std'] must be a float "
                 f"or a dict keyed by detector ID, got {type(prnu_std_meta)}"
             )
