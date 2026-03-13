@@ -611,7 +611,7 @@ class EchelleSpectralTraceList(SpectralTraceList):
                                               pix_size, xdisp_groove_length=xdisp_groove_length,
                                               xdisp_beta_center=xdisp_beta_center)
 
-            fsr_edges = ss.edge_wave(fsr=True)
+            edges = ss.edge_wave(fsr=False)
 
             slit_edge = (row['slitlength'] / 2) * u.Unit(trace_params.meta["slitlength_unit"])
             slit_pos = np.linspace(-slit_edge, slit_edge, num=3)
@@ -619,20 +619,23 @@ class EchelleSpectralTraceList(SpectralTraceList):
 
             xvals, yvals = [], []
             for i, order in enumerate(ss.orders):
-                wave = fsr_edges[i]
+                wave = edges[i]
+                wave = np.linspace(wave[0], wave[-1], num=max(int(disp_npix*.1), 2))
                 x = ss.wavelength_to_x_pixel(wave, order)
                 y = ss.wavelength_to_y_pixel(wave)
-                pix_y = y + row['detector_pad'] + slit_offset_pix[:, None]
+                pix_y = y + slit_offset_pix[:, None] + row['detector_pad']
                 xval = np.tile(x, slit_offset_pix.size)*pix_size.to('mm')
                 yval = pix_y.ravel()*pix_size.to('mm')
                 xvals.append(xval)
                 yvals.append(yval)
 
+            # echelle above has 0,0 at detector corner, Scopesim uses 0,0 at detector center
             xcent = (np.min(xvals) + (np.max(xvals) - np.min(xvals))/2) * u.mm
             ycent = (np.min(yvals) + (np.max(yvals) - np.min(yvals))/2) * u.mm
 
             for i, order in enumerate(ss.orders):
-                wave = fsr_edges[i]
+                wave = edges[i]
+                wave = np.linspace(wave[0], wave[-1], num=max(int(disp_npix*.1), 2))
                 s = np.tile(slit_pos, wave.size).reshape(wave.size, slit_pos.size).T.ravel()
                 w = np.tile(wave, slit_offset_pix.size)
                 xval = xvals[i] - xcent   # Centering on 0,0 at detector center
