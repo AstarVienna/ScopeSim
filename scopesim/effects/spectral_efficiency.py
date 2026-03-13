@@ -140,8 +140,9 @@ class EchelleSpectralEfficiency(Effect):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.efficiency_generator = self._generate_efficiency_curve_func()
+        self._spectrographs = None
         self.efficiencies = {}
+        self.efficiency_generator = self._generate_efficiency_curve_func()
 
     def _generate_efficiency_curve_func(self) -> Callable:
         trace_params = self.table
@@ -164,13 +165,12 @@ class EchelleSpectralEfficiency(Effect):
             echelle_groove_length = u.Unit(trace_params.meta["disp_freq_unit"]) / row['disp_freq']
             pix_per_res_elem = row['fwhm']
 
-            spectrograph = echelle.spectrograph_factory(min_wave, max_wave, focal_len,
+            spectrographs[prefix] = echelle.spectrograph_factory(min_wave, max_wave, focal_len,
                                                         design_res, echelle_angle, min_order, max_order,
                                                         echelle_groove_length, pix_per_res_elem, disp_npix, xdisp_npix,
                                                         pix_size, xdisp_groove_length=xdisp_groove_length,
                                                         xdisp_beta_center=xdisp_beta_center)
-
-            spectrographs[prefix] = spectrograph
+        self._spectrographs = spectrographs
 
         def efficiency_curve(trace_id, wavelength):
             """Trace ID MUST be in the form prefix_{order}"""
