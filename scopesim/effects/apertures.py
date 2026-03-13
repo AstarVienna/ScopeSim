@@ -128,6 +128,7 @@ class ApertureMask(Effect):
             for vol in obj.volumes:
                 vol["meta"]["xi_min"] = min(x) * u.arcsec
                 vol["meta"]["xi_max"] = max(x) * u.arcsec
+                vol["meta"]["slit_name"] = self.meta["name"]
 
         return obj
 

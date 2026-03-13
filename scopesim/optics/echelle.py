@@ -2,8 +2,9 @@ import dataclasses
 
 import numpy as np
 import astropy.units as u
-import logging
 
+from ..utils import get_logger
+logger = get_logger(__name__)
 
 def spectrograph_factory(min_wave: float|u.Quantity, max_wave: float|u.Quantity, focal_len: float|u.Quantity,
                          design_res: float, echelle_angle: float|u.Quantity, min_order: int, max_order: int,
@@ -284,7 +285,7 @@ class GratingSetup:
         if self.grating_type != 'vph':
             raise ValueError('Cannot calculate vph_effiency for echelle.')
 
-        return self.empiric_efficiency_factor * np.sin(self.vph_constant/wavelength)**2
+        return self.empiric_efficiency_factor * np.sin((self.vph_constant/wavelength).decompose().value)**2
 
     def beta(self, wave, m):
         """
@@ -386,7 +387,7 @@ class SpectrographSetup:
         self._orders = None
 
         self.nondimensional_lsf_width = 1 / self.design_res
-        logging.info(f'\nThe spectrograph has been setup with the following properties:'
+        logger.debug(f'\nThe spectrograph has been setup with the following properties:'
                      f'\n\tl0: {self.l0}'
                      # f'\n\tR0: {self.detector.design_R0}'
                      f'\n\tOrders: {self.orders}'
@@ -499,7 +500,7 @@ class SpectrographSetup:
         :param wave: wavelength
         :return: efficiency of the cross disperser
         """
-        return self.grating.vph_efficiency(wave)
+        return self.cross_disperser.vph_efficiency(wave)
 
     def mean_blaze_eff_est(self, n=10):
         """

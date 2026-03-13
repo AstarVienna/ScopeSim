@@ -49,14 +49,12 @@ class SelectorWheel(Effect):
 
     """
 
-    z_order = (290, 690, 890)
+    z_order = ()
     required_keys = {"selector_key", "wheel"}
 
     def __init__(self, **kwargs):
-        super().__init__(**kwargs)
         check_keys(kwargs, self.required_keys, action="error")
-
-        self.meta.update(kwargs)
+        super().__init__(**kwargs)
 
         self.wheel_effects = {}
         for wheel_entry in self.meta["wheel"]:
@@ -70,9 +68,12 @@ class SelectorWheel(Effect):
             # Instantiate the effect and store it in the wheel_effects dictionary
             if isinstance(selector_value, list):
                 for val in selector_value:
-                    self.wheel_effects[val] = effect_class(**effect_kwargs)
+                    self.wheel_effects[val] = effect_class(cmds=self.cmds, **effect_kwargs)
             else:
-                self.wheel_effects[selector_value] = effect_class(**effect_kwargs)
+                self.wheel_effects[selector_value] = effect_class(cmds=self.cmds, **effect_kwargs)
+
+        # Use the wheel effects' z_order as the z_order of the selector wheel
+        self.z_order = [eff.z_order for eff in self.wheel_effects.values()][0]
 
 
     def apply_to(self, obj, **kwargs):
@@ -95,15 +96,19 @@ class SelectorWheel(Effect):
 
             for val in unique_selector_values:
                 vols_with_val = [vol for vol in obj.volumes if vol["meta"].get(self.meta["selector_key"], None) == val]
-                effect_to_apply = self.get_effect(val)
-                logger.info(f"Applying effect for selector value: {val} -> {effect_to_apply}, volumes: {len(vols_with_val)}")
 
-                if val is None or effect_to_apply is None:
+                if val is None:
+                    logger.warning(f"Volume(s) with missing selector key {self.meta['selector_key']} value found, "
+                                   f"applying no effect to those volumes.")
                     new_volumes.extend(vols_with_val)
                     continue
 
-                #TODO: If effect_to_apply is a dichroic which reassigns selector_key values, we need to add a check here
-                #TODO: i.e. dichroic.arm_action.keys() should not include items in unique_selector_values other than val
+                effect_to_apply = self.get_effect(val)
+                logger.debug(f"Applying effect for {self.meta['selector_key']}: {val} -> {effect_to_apply}, volumes: {len(vols_with_val)}")
+
+                if effect_to_apply is None:
+                    new_volumes.extend(vols_with_val)
+                    continue
 
                 newvollist = FovVolumeList()
                 newvollist.volumes = vols_with_val
@@ -113,7 +118,7 @@ class SelectorWheel(Effect):
             obj.volumes = new_volumes
 
         if isinstance(obj, Detector):
-            logger.info("Since passed object is a Detector, selector_key by default is the ID of the Detector object.")
+            logger.debug("Since passed object is a Detector, selector_key by default is the ID of the Detector object.")
             selector_value = obj.meta[real_colname("id", obj.meta)] # Assuming detector ID is the selector
 
             effect_to_apply = self.get_effect(selector_value)
@@ -128,9 +133,9 @@ class SelectorWheel(Effect):
 
     def get_effect(self, selector_value):
         eff = None
-        if (selector_value is None) or (selector_value not in self.wheel_effects.keys()):
-            logger.warning(f"Either None or Missing value of {self.meta['selector_key']} "
-                           f"requested: {selector_value}, returning None.")
+        if selector_value not in self.wheel_effects.keys():
+            logger.warning(f"Entry for selector value {selector_value} not found in wheel effects. "
+                           f"Assuming no effect to apply for this selector value.")
         else:
             eff = self.wheel_effects[selector_value]
         return eff

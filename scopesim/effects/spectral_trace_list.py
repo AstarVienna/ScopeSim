@@ -5,7 +5,6 @@ Effect for mapping spectral cubes to the detector plane.
 The Effect is called `SpectralTraceList`, it applies a list of
 `spectral_trace_list_utils.SpectralTrace` objects to a `FieldOfView`.
 """
-
 from itertools import cycle
 from typing import ClassVar
 
@@ -15,6 +14,7 @@ import numpy as np
 from astropy.io import fits
 from astropy.table import Table
 import astropy.units as u
+import os
 
 from .effects import Effect
 from .ter_curves import FilterCurve
@@ -22,7 +22,7 @@ from .spectral_trace_list_utils import SpectralTrace, make_image_interpolations
 from ..optics.image_plane_utils import header_from_list_of_xy
 from ..optics.fov import FieldOfView
 from ..optics.fov_volume_list import FovVolumeList
-from ..utils import from_currsys, check_keys, figure_factory, get_logger
+from ..utils import from_currsys, check_keys, figure_factory, get_logger, from_rc_config
 from .data_container import DataContainer
 from ..optics import echelle
 
@@ -108,8 +108,8 @@ class SpectralTraceList(Effect):
     report_plot_include: ClassVar[bool] = True
     report_table_include: ClassVar[bool] = False
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, cmds=None, **kwargs):
+        super().__init__(cmds=cmds, **kwargs)
 
         if "hdulist" in kwargs and isinstance(kwargs["hdulist"], fits.HDUList):
             self._file = kwargs["hdulist"]
@@ -538,10 +538,10 @@ class EchelleSpectralTraceList(SpectralTraceList):
     # xdisp_freq_unit : mm
     # slitwidth_unit : arcsec
 
-    prefix    aperture_id    image_plane_id    m0    n    min_wave    max_wave   design_res    echelle_blaze    focal_length    fwhm    detector_pad    pixel_size    n_disp    n_xdisp     disp_freq    xdisp_freq    slitwidth    dispdir    plate_scale      xbeta_center
-    ub         2              2                29    11    315         515          20000        64.2             225             4.7     10              0.015         4096      4096        200          1000          10           x          0.159574468085
-    nIR        0              0                40    24    970         2500         20000        64.2             225             4.7     10              0.015         4096      4096        45           175           10           x          0.159574468085
-    gri        1              1                36    18    490         1020         20000        64.2             225             4.7     10              0.015         4096      4096        100          500           10           x          0.159574468085
+    prefix    aperture_id    image_plane_id    m0    n    min_wave    max_wave   design_res    echelle_blaze    focal_length    fwhm    detector_pad    pixel_size    n_disp    n_xdisp     disp_freq    xdisp_freq    slitwidth    dispdir
+    ub         0              2                29    11    315         515          20000        64.2             225             4.7     10              0.015         4096      4096        200          1000          10           x
+    gri        1              1                36    18    490         1020         20000        64.2             225             4.7     10              0.015         4096      4096        100          500           10           x
+    nIR        2              0                40    24    970         2500         20000        64.2             225             4.7     10              0.015         4096      4096        45           175           10           x
     ----------------------------------------------------------------
 
     The calculated traces are stored in the same HDUList format as required by SpectralTraceList,
@@ -551,13 +551,19 @@ class EchelleSpectralTraceList(SpectralTraceList):
     required_keys = {"filename"}
     z_order = (71, 271, 671)
 
-    def __init__(self, **kwargs):
+    def __init__(self, cmds=None, **kwargs):
         check_keys(kwargs, self.required_keys, action="error")
+        self.cmds = cmds
 
-        trace_params = DataContainer(filename=kwargs.pop('filename'))
+        trace_param_filename = kwargs.pop("filename")
+        trace_params = DataContainer(filename=trace_param_filename)
         hdulist = self._generate_trace_hdulist(trace_params)
+        hdulist.writeto(f"{from_rc_config('!SIM.file.local_packages_path')}/"
+                        f"{from_currsys('!OBS.instrument', self.cmds)}/"
+                        f"{os.path.dirname(trace_param_filename)}/"
+                        f"analytical_echelle_traces.fits", overwrite=True)
         kwargs["hdulist"] = hdulist
-        super().__init__(**kwargs)
+        super().__init__(cmds=cmds, **kwargs)
 
     def _generate_trace_hdulist(self, trace_params):
         hdul = fits.HDUList()
@@ -609,7 +615,7 @@ class EchelleSpectralTraceList(SpectralTraceList):
 
             slit_edge = (row['slitlength'] / 2) * u.Unit(trace_params.meta["slitlength_unit"])
             slit_pos = np.linspace(-slit_edge, slit_edge, num=3)
-            slit_offset_pix = slit_pos / (row['plate_scale'] * u.arcsec)
+            slit_offset_pix = slit_pos / (from_currsys('!INST.pixel_scale', self.cmds) * u.arcsec)
 
             xvals, yvals = [], []
             for i, order in enumerate(ss.orders):

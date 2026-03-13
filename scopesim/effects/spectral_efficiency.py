@@ -140,12 +140,13 @@ class EchelleSpectralEfficiency(Effect):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.efficiency_generator = self._generate_efficiency_curve_func(DataContainer(filename=kwargs.pop('filename')))
+        self.efficiency_generator = self._generate_efficiency_curve_func()
         self.efficiencies = {}
 
-    def _generate_efficiency_curve_func(self, trace_params) -> Callable:
+    def _generate_efficiency_curve_func(self) -> Callable:
+        trace_params = self.table
         spectrographs = {}
-        for row in trace_params.table:
+        for row in trace_params:
             prefix = row["prefix"]  # note trance ids are assumed to be prefix_{order}
             min_order = row['m0'] - row['n']
             max_order = row['m0']
@@ -175,8 +176,7 @@ class EchelleSpectralEfficiency(Effect):
             """Trace ID MUST be in the form prefix_{order}"""
             prefix, _, order = trace_id.partition('_')
             order = int(order)
-            spec = spectrograph[prefix]
-            # blaze = spec.blaze(wavelength)[trace_id]  # compute all of them and then subscript
+            spec = spectrographs[prefix]
             blaze = spec.grating.blaze(spec.grating.beta(wavelength, order), order)
             xdisp = spec.xdisp_efficiency(wavelength)
             return blaze*xdisp
@@ -191,14 +191,11 @@ class EchelleSpectralEfficiency(Effect):
         with u.set_enabled_equivalencies(u.spectral()):
             wave = swcs.pixel_to_world(np.arange(swcs.pixel_shape[0])) << u.um
 
-        try:
-            efficiency = self.efficiency_generator(trace_id, wave)
-            params = {"description": trace_id}
-            params.update(self.meta)
-            effic_curve = TERCurve(array_dict={"wavelength": wave, "transmission": efficiency}, **params)
-            self.efficiencies[trace_id] = effic_curve
-        except:
-            raise ValueError(f"Error generating efficiency curve for trace {trace_id} with wavelength range {wave.min()} - {wave.max()}")
+        efficiency = self.efficiency_generator(trace_id, wave)
+        params = {"description": trace_id}
+        params.update(self.meta)
+        effic_curve = TERCurve(array_dict={"wavelength": wave, "transmission": efficiency}, **params)
+        self.efficiencies[trace_id] = effic_curve
 
         obj.hdu = apply_throughput_to_cube(obj.hdu, effic_curve.throughput, wave)
         return obj
