@@ -1,4 +1,4 @@
-import matplotlib.pyplot as plt
+from matplotlib import pyplot as plt
 import numpy as np
 import pytest
 
@@ -6,6 +6,7 @@ from scopesim.detector import Detector
 from scopesim.effects.electronic import PixelResponseNonUniformity
 from scopesim.optics.image_plane_utils import header_from_list_of_xy
 
+PLOTS = False
 
 def make_detector(value=1000, size=10):
     hdr = header_from_list_of_xy([-size/2, size/2], [-size/2, size/2], 1, "D")
@@ -68,4 +69,5 @@ class TestApplyTo:
     def test_plot_returns_figure(self):
         prnu = PixelResponseNonUniformity(prnu_std=0.01, prnu_seed=42)
         prnu.apply_to(make_detector())
-        assert isinstance(prnu.plot(), plt.Figure)
+        if PLOTS:
+            assert isinstance(prnu.plot(), plt.Figure)

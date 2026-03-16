@@ -135,11 +135,34 @@ class BasicReadoutNoise(Effect):
 
 
 class PixelResponseNonUniformity(Effect):
-    """Per-pixel gain variation (PRNU).
+    """Pixel Response Non-Uniformity (PRNU).
 
-    Multiplies each pixel by a gain factor drawn from N(1, prnu_std).
-    The map is generated once per detector and reused across exposures.
-    ``prnu_std`` may be a float or a dict keyed by detector ID.
+    Models the fixed pattern of per-pixel gain variations across the detector
+    arising from manufacturing differences in quantum efficiency. Each pixel is
+    multiplied by a gain factor drawn from N(1, ``prnu_std``) keyed by detector ID.
+    The gain map is generated once per detector on first use and reused identically 
+    across all subsequent exposures.
+
+    Parameters
+    ----------
+    prnu_std : float or dict
+        Standard deviation of the per-pixel gain distribution. 
+
+    prnu_seed : int, fixed 
+
+    include:  "!DET.include_prnu" 
+
+    Example
+    --------
+
+      - name: prnu
+        description: Pixel response non-uniformity
+        class: PixelResponseNonUniformity
+        kwargs:
+          prnu_std: 0.001
+          prnu_seed: 42
+          include: "!DET.include_prnu" 
+
     """
 
     required_keys: ClassVar[set] = set()
