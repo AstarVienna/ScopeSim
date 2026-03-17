@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Spectral grating efficiencies."""
 
-from typing import ClassVar
+from typing import ClassVar, Callable
 
 import numpy as np
 from astropy.io import fits
@@ -12,7 +12,9 @@ from astropy.table import Table
 from .effects import Effect
 from .ter_curves import TERCurve
 from .ter_curves_utils import apply_throughput_to_cube
-from ..utils import figure_factory, get_logger
+from ..utils import figure_factory, get_logger, check_keys
+from .data_container import DataContainer
+from ..optics import echelle
 
 
 logger = get_logger(__name__)
@@ -112,6 +114,90 @@ class SpectralEfficiency(Effect):
         with u.set_enabled_equivalencies(u.spectral()):
             wave = swcs.pixel_to_world(np.arange(swcs.pixel_shape[0])) << u.um
         obj.hdu = apply_throughput_to_cube(obj.hdu, effic.throughput, wave)
+        return obj
+
+    def plot(self):
+        """Plot the grating efficiencies."""
+        fig, axes = figure_factory()
+        for name, effic in self.efficiencies.items():
+            wave = effic.throughput.waveset
+            axes.plot(wave.to(u.um), effic.throughput(wave), label=name)
+
+        axes.set_xlabel("Wavelength [um]")
+        axes.set_ylabel("Grating efficiency")
+        axes.set_title(f"Grating efficiencies {self.display_name}")
+        axes.legend()
+
+        return fig
+
+
+class EchelleSpectralEfficiency(Effect):
+    """
+    Spectral efficiency list from analytical calculations of the blaze function for ZShooter gratings.
+    Requires same input trace parameter table as EchelleSpectralTraceList, supply as kwarg "filename"
+    """
+    z_order: ClassVar[tuple[int, ...]] = (630,)
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self._spectrographs = None
+        self.efficiencies = {}
+        self.efficiency_generator = self._generate_efficiency_curve_func()
+
+    def _generate_efficiency_curve_func(self) -> Callable:
+        trace_params = self.table
+        spectrographs = {}
+        for row in trace_params:
+            prefix = row["prefix"]  # note trance ids are assumed to be prefix_{order}
+            min_order = row['m0'] - row['n']
+            max_order = row['m0']
+            min_wave = row['min_wave'] * u.Unit(trace_params.meta["min_wave_unit"])
+            max_wave = row['max_wave'] * u.Unit(trace_params.meta["max_wave_unit"])
+            design_res = row['design_res']
+            focal_len = row['focal_length'] * u.Unit(trace_params.meta["focal_length_unit"])
+            disp_npix = row['n_disp'] - 2 * row['detector_pad']
+            xdisp_npix = row['n_xdisp']- 2 * row['detector_pad']
+            pix_size = row['pixel_size'] * u.Unit(trace_params.meta["pixel_size_unit"])
+            echelle_angle = np.deg2rad(row['echelle_blaze'])*u.rad
+            xdisp_beta_center = np.deg2rad(row['xbeta_center'])*u.rad
+
+            xdisp_groove_length = u.Unit(trace_params.meta["xdisp_freq_unit"]) / row['xdisp_freq']
+            echelle_groove_length = u.Unit(trace_params.meta["disp_freq_unit"]) / row['disp_freq']
+            pix_per_res_elem = row['fwhm']
+
+            spectrographs[prefix] = echelle.spectrograph_factory(min_wave, max_wave, focal_len,
+                                                        design_res, echelle_angle, min_order, max_order,
+                                                        echelle_groove_length, pix_per_res_elem, disp_npix, xdisp_npix,
+                                                        pix_size, xdisp_groove_length=xdisp_groove_length,
+                                                        xdisp_beta_center=xdisp_beta_center)
+        self._spectrographs = spectrographs
+
+        def efficiency_curve(trace_id, wavelength):
+            """Trace ID MUST be in the form prefix_{order}"""
+            prefix, _, order = trace_id.partition('_')
+            order = int(order)
+            spec = spectrographs[prefix]
+            blaze = spec.grating.blaze(spec.grating.beta(wavelength, order), order)
+            xdisp = spec.xdisp_efficiency(wavelength)
+            return blaze*xdisp
+
+        return efficiency_curve
+
+    def apply_to(self, obj, **kwargs):
+        """Interface between FieldOfView and SpectralEfficiency."""
+        trace_id = obj.trace_id
+
+        swcs = WCS(obj.hdu.header).spectral
+        with u.set_enabled_equivalencies(u.spectral()):
+            wave = swcs.pixel_to_world(np.arange(swcs.pixel_shape[0])) << u.um
+
+        efficiency = self.efficiency_generator(trace_id, wave)
+        params = {"description": trace_id}
+        params.update(self.meta)
+        effic_curve = TERCurve(array_dict={"wavelength": wave, "transmission": efficiency}, **params)
+        self.efficiencies[trace_id] = effic_curve
+
+        obj.hdu = apply_throughput_to_cube(obj.hdu, effic_curve.throughput, wave)
         return obj
 
     def plot(self):

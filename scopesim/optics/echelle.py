@@ -2,17 +2,109 @@ import dataclasses
 
 import numpy as np
 import astropy.units as u
-import logging
+
+from ..utils import get_logger
+logger = get_logger(__name__)
+
+def spectrograph_factory(min_wave: float|u.Quantity, max_wave: float|u.Quantity, focal_len: float|u.Quantity,
+                         design_res: float, echelle_angle: float|u.Quantity, min_order: int, max_order: int,
+                         echelle_groove_length: float|u.Quantity,
+                         pix_per_res_elem: float, disp_npix: int, xdisp_npix: int, pix_size: float|u.Quantity,
+                         xdisp_groove_length: float|u.Quantity = 0.0, xdisp_beta_center: float|u.Quantity = 0.0):
+    """
+    
+    Parameters
+    ----------
+    min_wave: float|u.Quantity
+        Minimum wavelength. If float, assumed to be in nm.
+    max_wave: float|u.Quantity
+        Maximum wavelength. If float, assumed to be in nm.
+    focal_len: float|u.Quantity
+        Focal length. If float, assumed to be in mm.
+    design_res: float|int
+        Design resolution (dimensionless).
+    echelle_angle: float|u.Quantity
+        Echelle angle. If float, assumed to be in degrees.
+    min_order: int
+        Minimum order.
+    max_order: int
+        Maximum order.
+    echelle_groove_length: float|u.Quantity
+        Echelle groove length. If float, assumed to be in mm.
+    pix_per_res_elem: float|int
+        Pixels per resolution element.
+    disp_npix: int
+        Number of dispersion pixels.
+    xdisp_npix: int
+        Number of cross-dispersion pixels.
+    pix_size: float|u.Quantity
+        Pixel size. If float, assumed to be in um.
+    xdisp_groove_length: float|u.Quantity
+        Cross disperser groove length. If float, assumed to be in mm.
+    xdisp_beta_center: float|u.Quantity
+        Cross disperser beta center angle. If float, assumed to be in degrees.
+
+    Returns
+    -------
+
+    """
+    # Convert primitive types to quantities with appropriate units
+    if not isinstance(min_wave, u.Quantity):
+        min_wave = min_wave * u.nm
+    if not isinstance(max_wave, u.Quantity):
+        max_wave = max_wave * u.nm
+    if not isinstance(focal_len, u.Quantity):
+        focal_len = focal_len * u.mm
+    if not isinstance(echelle_angle, u.Quantity):
+        echelle_angle = echelle_angle * u.deg
+    if not isinstance(echelle_groove_length, u.Quantity):
+        echelle_groove_length = echelle_groove_length * u.mm
+    if not isinstance(pix_size, u.Quantity):
+        pix_size = pix_size * u.mm
+    if not isinstance(xdisp_groove_length, u.Quantity):
+        xdisp_groove_length = xdisp_groove_length * u.mm
+    if not isinstance(xdisp_beta_center, u.Quantity):
+        xdisp_beta_center = xdisp_beta_center * u.deg
+
+    x_disp_len = (xdisp_npix*pix_size).to(u.mm)
+
+    if not np.isfinite(xdisp_groove_length):
+        nu, xsdisp_angle = GratingSetup.estimate_xdisp_freq_and_angle(min_wave, max_wave, x_disp_len, focal_len)
+        cross_disperser = GratingSetup(alpha=xsdisp_angle, beta_center=xsdisp_angle, groove_length=1 / nu,
+                                       grating_type='vph', vph_center_wave=(min_wave + max_wave) / 2)
+    else:
+        if xdisp_beta_center != 0:  # TODO probably hsould be a nan, but use of 0 angle incidence isn't likely
+            cross_disperser = GratingSetup(alpha=xdisp_beta_center, beta_center=xdisp_beta_center,
+                                           groove_length=xdisp_groove_length, grating_type='vph',
+                                           vph_center_wave=xdisp_groove_length.to(u.nm) * 2 * np.sin(xdisp_beta_center))
+        else:
+            cross_disperser = GratingSetup(groove_length=xdisp_groove_length,
+                                           guess_littrow=(min_wave, max_wave, x_disp_len, focal_len),
+                                           grating_type='vph', vph_center_wave=(min_wave + max_wave) / 2)
+
+    echelle_grating = GratingSetup(alpha=echelle_angle, beta_center=echelle_angle, delta=echelle_angle,
+                                   groove_length=echelle_groove_length)
+
+    return SpectrographSetup(order_range=(min_order, max_order),
+                                   design_res=design_res,
+                                   pixels_per_res_elem=pix_per_res_elem,
+                                   focal_length=focal_len,
+                                   grating=echelle_grating,
+                                   detector=Detector(disp_npix, xdisp_npix, pix_size),
+                                   cross_disperser=cross_disperser)
+
 
 class GratingSetup:
     def __init__(
             self, *,
-            groove_length:u.Quantity=None,
-            alpha:float=None,
-            delta:float = None,
-            beta_center:float = None,
-            empiric_blaze_factor: float = 1.0,
-            guess_littrow: tuple = None,
+            alpha: u.Quantity = None,
+            delta: u.Quantity = None,
+            beta_center: u.Quantity = None,
+            groove_length: u.Quantity = None,
+            empiric_efficiency_factor: float = 1.0,
+            guess_littrow: tuple[u.Quantity,u.Quantity,u.Quantity,u.Quantity] = None,
+            grating_type: str = 'echelle',
+            vph_center_wave: u.Quantity = None
     ):
         """
         Simulation of an echelle/echellete grating for spectrometer.
@@ -21,34 +113,142 @@ class GratingSetup:
         :param float delta: blaze angle in radians
         :param float beta_center: reflectance angle in radians
         :param u.Quantity groove_length: d, length/groove in units of wavelength (same as schroeder sigma)
-        :param float empiric_blaze_factor: empirically determined blaze factor to correct for grating efficiency relative to ideal peak
-        :param bool guess_littrow: if not None, passed onto estimate_xdisp_angle
+        :param float empiric_efficiency_factor: empirically determined blaze factor to correct for grating efficiency relative to ideal peak
+        :param bool guess_littrow: if not None, passed onto estimate_xdisp_angle_with_groove_len
         """
+        self.grating_type = grating_type.lower()
+        assert self.grating_type in ('echelle', 'vph'), f'grating_type must be echelle or vph, not {self.grating_type}'
+
         if guess_littrow:
-            alpha, beta_center = self.estimate_xdisp_angle(guess_littrow[0], guess_littrow[1], guess_littrow[2],
+            alpha, beta_center = self.estimate_xdisp_angle_with_groove_len(guess_littrow[0], guess_littrow[1], guess_littrow[2],
                                               guess_littrow[3], groove_length)
             self.alpha = alpha
-            self.delta = beta_center
+            self.delta = None if self.grating_type == 'vph' else beta_center
             self.beta_center = beta_center
         else:
-            self.alpha = alpha*u.rad
-            self.delta = delta*u.rad
-            self.beta_center = beta_center*u.rad
-        self.d = groove_length
-        self.empiric_blaze_factor = empiric_blaze_factor
+            self.alpha = alpha.to(u.rad)
+            self.delta = delta.to(u.rad) if delta is not None else None
+            self.beta_center = beta_center.to(u.rad)
+        self.d = groove_length.to(u.mm)
+        self.empiric_efficiency_factor = empiric_efficiency_factor
+
+        # Approximate reality vph_constant = np.pi * deltan * d / bragg_angle
+        # Empircally we would use with peak efficiency near center of range
+        self.vph_constant = np.pi/2*vph_center_wave.to(u.nm) if self.grating_type == 'vph' else None
 
     @staticmethod
-    def estimate_xdisp_angle(l_min, l_max, detector_length, focal_length, d):
+    def estimate_xdisp_angle_with_groove_len(
+            l_min: float | u.Quantity,
+            l_max: float | u.Quantity,
+            detector_length: float | u.Quantity,
+            focal_length: float | u.Quantity,
+            d: u.Quantity) -> tuple[u.Quantity, u.Quantity]:
+        """
+        Estimate cross-disperser angle and beta center for a given groove length.
+        
+        This method calculates the optimal incident angle (alpha) and central reflection 
+        angle (beta) for a cross-disperser grating to match the wavelength range to the 
+        detector length at the focal plane.
+        
+        Parameters
+        ----------
+        l_min : float | u.Quantity
+            Minimum wavelength. If float, assumed to be in nm.
+        l_max : float | u.Quantity
+            Maximum wavelength. If float, assumed to be in nm.
+        detector_length : float | u.Quantity
+            Length of the detector. If float, assumed to be in mm.
+        focal_length : float | u.Quantity
+            Focal length of the system. If float, assumed to be in mm.
+        d : u.Quantity
+            Groove length (spacing) of the grating.
+            
+        Returns
+        -------
+        tuple[u.Quantity, u.Quantity]
+            A tuple containing:
+            - alpha: incident angle in radians
+            - beta_center: central reflection angle in radians
+        """
+        # Convert floats to quantities with appropriate units
+        if not isinstance(l_min, u.Quantity):
+            l_min = l_min * u.nm
+        if not isinstance(l_max, u.Quantity):
+            l_max = l_max * u.nm
+        if not isinstance(detector_length, u.Quantity):
+            detector_length = detector_length * u.mm
+        if not isinstance(focal_length, u.Quantity):
+            focal_length = focal_length * u.mm
+        if not isinstance(d, u.Quantity):
+            d = d * u.mm
+
         # assume we want a dispersion at the midpoint that matches the range to the detector length
-        t = detector_length/focal_length
-        k = (l_max-l_min)/d
-        x = k*(1+np.sqrt(1+t**2))/2/t
-        u=np.arccos(np.sqrt(x))
-        v=np.arcsin(k/2/np.sqrt(x))
+        t = detector_length / focal_length
+        k = (l_max - l_min) / d
+        x = k * (1 + np.sqrt(1 + t ** 2)) / 2 / t
+        u = np.arccos(np.sqrt(x))
+        v = np.arcsin(k / 2 / np.sqrt(x))
         beta_max = u+v
         beta_min = u-v
-        alpha = np.arcsin(l_max/d -np.sin(beta_max))
-        return alpha, (beta_min+beta_max)/2
+        alpha = np.arcsin(l_max / d - np.sin(beta_max))
+        return alpha.to(u.rad), ((beta_min + beta_max) / 2).to(u.rad)
+
+    @staticmethod
+    def estimate_xdisp_freq_and_angle(l_min: float | u.Quantity,
+                                     l_max: float | u.Quantity,
+                                     detector_length: float | u.Quantity,
+                                     focal_length: float | u.Quantity) -> tuple[u.Quantity, u.Quantity]:
+        """
+        Estimate cross-disperser littrow angle and groove frequency.
+
+        This method calculates the analytical solution to the system of equations
+
+        nu l_max == Sin(beta)+Sin(beta+deltabeta) nu l_min == Sin(beta)+Sin(beta-deltabeta)
+        cos[deltabeta] = f/sqrt(f^2 + (d/2)^)
+        sin[deltabeta] = (d/2)/sqrt(f^2 + (d/2)^)
+
+        to match the initial and final wavelengths to the extent of the detector length
+
+
+        Parameters
+        ----------
+        l_min : float | u.Quantity
+            Minimum wavelength. If float, assumed to be in nm.
+        l_max : float | u.Quantity
+            Maximum wavelength. If float, assumed to be in nm.
+        detector_length : float | u.Quantity
+            Length of the detector. If float, assumed to be in mm.
+        focal_length : float | u.Quantity
+            Focal length of the system. If float, assumed to be in mm.
+
+        Returns
+        -------
+        tuple[u.Quantity, u.Quantity]
+            A tuple containing:
+            - ruling frequency
+            - littrow angle
+        """
+        if not isinstance(l_min, u.Quantity):
+            l_min = l_min * u.nm
+        if not isinstance(l_max, u.Quantity):
+            l_max = l_max * u.nm
+        if not isinstance(detector_length, u.Quantity):
+            detector_length = detector_length * u.mm
+        if not isinstance(focal_length, u.Quantity):
+            focal_length = focal_length * u.mm
+
+        f = focal_length
+        p = detector_length
+        li, lf = l_min, l_max
+        a = 4*f**2 + p**2
+        rta = np.sqrt(a)
+        b = lf - li
+        bsq = b**2
+        c = lf**2 + li**2
+        d = 4 * f**2 * bsq + 2 * f * rta * bsq + p**2 * c
+        beta = np.arccos(((2 * f + rta) * b) / np.sqrt(2 * d))
+        nu = (np.sqrt(2) * p * (p**2 + 4 * f * (2 * f + rta))) / ((2 * f + rta) * np.sqrt(a * d))
+        return nu.to('mm-1'), beta.to('rad')
 
     def __str__(self) -> str:
         return (f"alpha={np.rad2deg(self.alpha):.2f}\n"
@@ -64,6 +264,8 @@ class GratingSetup:
         :param m: order
         :return: grating throughput out of 1
         """
+        if self.grating_type == 'vph':
+            raise ValueError('Cannot calculate blaze for vph gratings.')
         k = np.cos(beta) * np.cos(self.alpha - self.delta) / (np.cos(self.alpha) * np.cos(beta - self.delta))
         k[k > 1] = 1
         # q1 = np.cos(alpha) / np.cos(alpha - delta)
@@ -73,7 +275,17 @@ class GratingSetup:
         rho = np.cos(self.delta) if self.alpha < self.delta else np.cos(self.alpha) / np.cos(self.alpha - self.delta)
         # 2 different rho depending on whether alpha or delta is larger
         ret = k * np.sinc((m * rho * q4).value) ** 2  # omit np.pi as np.sinc includes it
-        return self.empiric_blaze_factor * ret
+        return self.empiric_efficiency_factor * ret
+
+    def vph_efficiency(self, wavelength):
+        """
+        :param wavelength: wavelength(s) as u.Quantity units of length
+        :return: efficiency of the grating
+        """
+        if self.grating_type != 'vph':
+            raise ValueError('Cannot calculate vph_effiency for echelle.')
+
+        return self.empiric_efficiency_factor * np.sin((self.vph_constant/wavelength).decompose().value)**2
 
     def beta(self, wave, m):
         """
@@ -136,7 +348,7 @@ class SpectrographSetup:
     def __init__(
             self,
             order_range: tuple,
-            final_wave: u.Quantity,
+            design_res: float,
             pixels_per_res_elem: float,
             focal_length: u.Quantity,
             grating: GratingSetup,
@@ -150,7 +362,7 @@ class SpectrographSetup:
         (and that the slit image is gaussian)
 
         :param tuple order_range: order range of the spectrograph
-        :param u.Quantity final_wave: longest wavelength at the edge of detector
+        # :param u.Quantity final_wave: longest wavelength at the edge of detector
         :param float pixels_per_res_elem: number of pixels per resolution element of spectrometer
         :param u.Quantity focal_length: the focal length of the detector
         :param GratingSetup grating: configured grating
@@ -162,10 +374,11 @@ class SpectrographSetup:
             order_range = order_range[::-1]
         self.m0 = order_range[0]
         self.m_max = order_range[1]
-        self.l0 = final_wave
+        self.l0 = grating.wave(grating.beta_center, order_range[0])*(1/order_range[0]/2+1)
+        self.design_res = design_res
         self.grating = grating
         self.detector = detector
-        self.focal_length = focal_length
+        self.focal_length = focal_length.to(u.mm)
         self.pixel_scale = np.arctan(self.detector.pixel_size / self.focal_length)
         self.beta_central_pixel = self.grating.beta_center
         self.nord = int(self.m_max - self.m0 + 1)
@@ -174,7 +387,7 @@ class SpectrographSetup:
         self._orders = None
 
         self.nondimensional_lsf_width = 1 / self.design_res
-        logging.info(f'\nThe spectrograph has been setup with the following properties:'
+        logger.debug(f'\nThe spectrograph has been setup with the following properties:'
                      f'\n\tl0: {self.l0}'
                      # f'\n\tR0: {self.detector.design_R0}'
                      f'\n\tOrders: {self.orders}'
@@ -281,6 +494,13 @@ class SpectrographSetup:
         :return: blaze throughput out of 1
         """
         return self.grating.blaze(self.grating.beta(wave, self.orders[:, None]), self.orders[:, None])
+
+    def xdisp_efficiency(self, wave):
+        """
+        :param wave: wavelength
+        :return: efficiency of the cross disperser
+        """
+        return self.cross_disperser.vph_efficiency(wave)
 
     def mean_blaze_eff_est(self, n=10):
         """
@@ -445,7 +665,7 @@ class SpectrographSetup:
         return self.grating.angular_dispersion(self.orders[:, None], beta)
 
     @property
-    def design_res(self):
+    def implied_design_res(self):
         """
         :return: design resolution for spectrometer
         Assumes that m0 (the longest wavelength order) FSR fills detector with some sampling
@@ -489,7 +709,7 @@ class SpectrographSetup:
             oset = waves[1] if center_orders else 0
             plt.plot(waves - oset, [i] * 3, '*', color=f'C{ii}')
             plt.plot(fsr_edges[ii] - oset, [i] * 2, '.', color=f'C{ii}',
-                     label=f'$\lambda=${waves[1]:.0f}')
+                     label=f'$\\lambda=${waves[1]:.0f}')
         plt.legend()
         plt.xlabel('Center relative wavelength (nm)')
         plt.ylabel('Order')
