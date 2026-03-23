@@ -205,7 +205,7 @@ class FieldConstantPSF(DiscretePSF):
         self.kernel = self._file[ext].data
         self.current_layer_id = ext
         hdr = self._file[ext].header
-        print(hdr['EXTNAME'])
+
         self.kernel /= np.sum(self.kernel)
 
         # compare kernel and fov pixel scales, rescale if needed
@@ -222,7 +222,8 @@ class FieldConstantPSF(DiscretePSF):
         if abs(pix_ratio - 1) > self.meta["flux_accuracy"]:
             spline_order = from_currsys(
                 "!SIM.computing.spline_order", cmds=self.cmds)
-            self.kernel = _rescale_kernel(self.kernel, pix_ratio, hdr)
+            self.kernel = _rescale_kernel(self.kernel, pix_ratio,
+                                          image_header=hdr)
 
         if ((fov.header["NAXIS1"] < hdr["NAXIS1"]) or
                 (fov.header["NAXIS2"] < hdr["NAXIS2"])):
@@ -452,8 +453,7 @@ class FieldVaryingPSF(DiscretePSF):
             spline_order = from_currsys(
                 "!SIM.computing.spline_order", cmds=self.cmds)
             for ii, kern in enumerate(self.kernel):
-                self.kernel[ii][0] = _rescale_kernel(
-                    kern[0], pix_ratio)
+                self.kernel[ii][0] = _rescale_kernel(kern[0], pix_ratio)
 
         for i, kern in enumerate(self.kernel):
             self.kernel[i][0] /= np.sum(kern[0])
@@ -510,12 +510,40 @@ def _make_strehl_map_from_table(tbl, pixel_scale=1*u.arcsec):
     return map_hdu
 
 
-def _rescale_kernel(image, scale_factor, image_header=None):
+def _rescale_kernel(image, scale_factor, method="linear", image_header=None):
+    """Rescale `image` by `scale_factor`
+
+    Parameters
+    ----------
+    image : array_like, 2D
+        the image to be rescaled
+
+    scale_factor : float
+        ratio of input pixel size to output pixel size. Values larger than 1
+        zoom the image.
+
+    method : str
+        interpolation method to be passed to ``RegularGridInterpolator``.
+        Default is "linear"
+
+    image_header : astropy.fits.Header
+        an optional image header with a WCS. If ``None``, a WCS is constructed
+        that counts image pixels.
+
+    Notes
+    -----
+    The function uses ``scipy.interpolate.RegularGridInterpolator``.
+    """
     sum_image = np.sum(image)
     nxin, nyin = image.shape
     iimg = RegularGridInterpolator((np.arange(nyin), np.arange(nxin)),
-                                   image, method='linear', bounds_error=False,
+                                   image, method=method, bounds_error=False,
                                    fill_value=0)
+    # Adjust the output size so that the image remains centred (important
+    # for PSF convolution).
+    # TODO: This assumes that the PSF is applied to an image with even size
+    #       The adjustment for odd sizes requires knowledge about that image
+    #       that this function does not have.
     nxout = int(nxin * scale_factor)
     if nxout % 2 != 0:
         nxout += 1
