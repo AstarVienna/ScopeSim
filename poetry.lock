@@ -167,14 +167,14 @@ test = ["dateparser (==1.*)", "pre-commit", "pytest", "pytest-cov", "pytest-mock
 
 [[package]]
 name = "astar-utils"
-version = "0.5.1"
+version = "0.5.2"
 description = "Contains commonly-used utilities for AstarVienna's projects."
 optional = false
 python-versions = "<3.15,>=3.10"
 groups = ["main"]
 files = [
-    {file = "astar_utils-0.5.1-py3-none-any.whl", hash = "sha256:295f520f24a636e92cdc916a9adc36724f7d2091283324881a2d18e083572c17"},
-    {file = "astar_utils-0.5.1.tar.gz", hash = "sha256:abc8bb7f9b4861925ea690da599ce400f1027335c085284bb414c53e650c3911"},
+    {file = "astar_utils-0.5.2-py3-none-any.whl", hash = "sha256:2d663a2b05b4426e5777be7664410bde5bb0d26ca6766288cbb6ddb020e43437"},
+    {file = "astar_utils-0.5.2.tar.gz", hash = "sha256:6a3768cd339b6927f2d2f8e75effe3934192bb8b9e6a48dbde09125212d9dcae"},
 ]
 
 [package.dependencies]
