@@ -7,6 +7,8 @@ from io import StringIO
 from collections.abc import Sequence
 
 import numpy as np
+from matplotlib import pyplot as plt
+
 from astropy import units as u
 from astropy.table import Table
 from synphot import SpectralElement, Empirical1D
@@ -253,19 +255,51 @@ class OpticsManager:
         """Get all effects in all optical elements."""
         return [eff for opt_eff in self.optical_elements for eff in opt_eff]
 
-    @property
-    def system_transmission(self):
+    def system_transmission(self, plot=False):
+        """Compute system transmission
+
+        The method computes the total system transmission and returns it as a
+        ``synphot.spectrum.SpectralElement``.
+
+        When ``plot`` is ``True``, it creates a plot of the transmission
+        curves of the indivdual elements in the system as well as the system
+        transmission.
+        """
         wave_unit = u.Unit(from_currsys("!SIM.spectral.wave_unit", self.cmds))
         dwave = from_currsys("!SIM.spectral.spectral_bin_width", self.cmds)
         wave_min = from_currsys("!SIM.spectral.wave_min", self.cmds)
         wave_max = from_currsys("!SIM.spectral.wave_max", self.cmds)
         wave = np.arange(wave_min, wave_max, dwave)
-        trans = np.ones_like(wave)
         sys_trans = SpectralElement(Empirical1D, points=wave*u.Unit(wave_unit),
-                                    lookup_table=trans)
+                                    lookup_table=np.ones_like(wave))
 
         for effect in self.get_z_order_effects(100):
             sys_trans *= effect.throughput
+
+        if plot:
+            # only plot range where sys_trans is larger than zero
+            wave <<= wave_unit
+            transval = sys_trans(wave).value
+            wmin = np.min(wave[transval > 0])
+            wmax = np.max(wave[transval > 0])
+            wmin = wmin - 0.1 * (wmax - wmin)
+            wmax = wmax + 0.1 * (wmax - wmin)
+            wave = wave[(wave > wmin) * (wave < wmax)]
+
+            _, ax = plt.subplots()
+            for effect in self.get_z_order_effects(100):
+                lw, alpha = 2, 1
+                if isinstance(effect, efs.SkycalcTERCurve):
+                    lw, alpha = 1, 0.5
+                ax.plot(wave, effect.throughput(wave), lw=lw, alpha=alpha,
+                        label=effect.display_name)
+            ax.plot(wave, sys_trans(wave), lw=2, color="black",
+                    label="System transmission")
+            ax.legend(bbox_to_anchor=(0.5, 1.02), fancybox=True,
+                      loc="lower center", ncol=2)
+            ax.set_xlabel("Wavelength [um]")
+            ax.set_ylabel("Transmission")
+            plt.show()
 
         return sys_trans
 
