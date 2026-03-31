@@ -280,8 +280,8 @@ class OpticsManager:
             # only plot range where sys_trans is larger than zero
             wave <<= wave_unit
             transval = sys_trans(wave).value
-            wmin = np.min(wave[transval > 0])
-            wmax = np.max(wave[transval > 0])
+            wmin = np.min(wave[transval > 0.01])
+            wmax = np.max(wave[transval > 0.01])
             wmin = wmin - 0.1 * (wmax - wmin)
             wmax = wmax + 0.1 * (wmax - wmin)
             wave = wave[(wave > wmin) * (wave < wmax)]
