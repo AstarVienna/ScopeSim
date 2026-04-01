@@ -510,7 +510,8 @@ def _make_strehl_map_from_table(tbl, pixel_scale=1*u.arcsec):
     return map_hdu
 
 
-def _rescale_kernel(image, scale_factor, method="linear", image_header=None):
+def _rescale_kernel(image, scale_factor, method="linear",
+                    image_header=None):
     """Rescale `image` by `scale_factor`
 
     Parameters
@@ -533,22 +534,24 @@ def _rescale_kernel(image, scale_factor, method="linear", image_header=None):
     Notes
     -----
     The function uses ``scipy.interpolate.RegularGridInterpolator``.
+    The output kernel size is always odd to avoid half-pixel shift when
+    convolved with an image with ``mode="same"``.
     """
-    sum_image = np.sum(image)
     nxin, nyin = image.shape
-    iimg = RegularGridInterpolator((np.arange(nyin), np.arange(nxin)),
-                                   image, method=method, bounds_error=False,
-                                   fill_value=0)
-    # Adjust the output size so that the image remains centred (important
+    interp_img = RegularGridInterpolator(
+        (np.arange(nyin), np.arange(nxin)),
+        image, method=method,
+        bounds_error=False,
+        fill_value=0,
+    )
+
+    # Make the output size odd so that the image remains centred (important
     # for PSF convolution).
-    # TODO: This assumes that the PSF is applied to an image with even size
-    #       The adjustment for odd sizes requires knowledge about that image
-    #       that this function does not have.
     nxout = int(nxin * scale_factor)
-    if nxout % 2 != 0:
+    if nxout % 2 == 0:
         nxout += 1
     nyout = int(nyin * scale_factor)
-    if nyout % 2 != 0:
+    if nyout % 2 == 0:
         nyout += 1
 
     if image_header is not None:
@@ -570,10 +573,10 @@ def _rescale_kernel(image, scale_factor, method="linear", image_header=None):
     xout, yout = np.meshgrid(np.arange(nxout), np.arange(nyout))
     xworld, yworld = outwcs.all_pix2world(xout, yout, 0)
     xin, yin = inwcs.all_world2pix(xworld, yworld, 0)
-    outimage = iimg( (yin.ravel(), xin.ravel()) ).reshape((nyout, nxout))
+    outimage = interp_img( (yin.ravel(), xin.ravel()) ).reshape((nyout, nxout))
     logger.info("Interpolating PSF onto %s image", outimage.shape)
 
-    outimage *= sum_image / outimage.sum()
+    outimage *= image.sum() / outimage.sum()
 
     return outimage
 
