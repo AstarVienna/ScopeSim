@@ -74,11 +74,22 @@ class Illumination(Effect):
         Keyword arguments forwarded to ``model``. If omitted, the model's
         own defaults are used.
 
+    include : str
+        Bang-string reference to toggle the effect on/off from the IRDB
+        default.yaml.  Defaults to ``"!DET.include_illumination"``.
+
     Examples
     --------
-    Default Gaussian illumination::
+    IRDB default.yaml entry::
 
-        eff = Illumination()
+        - name: illumination
+          description: Large-scale illumination variation
+          class: Illumination
+          kwargs:
+            model: gaussian2d
+            modelargs:
+              sigma: [2000, 2000]
+            include: "!DET.include_illumination"
 
     Polynomial vignetting with <1 % falloff (auto r_ref from image shape)::
 
@@ -96,7 +107,7 @@ class Illumination(Effect):
 
     def __init__(self, model: Callable = gaussian2d, modelargs: dict = None, **kwargs):
         super().__init__(**kwargs)
-        self.meta.setdefault("include", False)
+        self.meta.setdefault("include", "!DET.include_illumination")
         self._model = model
         self._modelargs = modelargs or {}
         self._map = None
