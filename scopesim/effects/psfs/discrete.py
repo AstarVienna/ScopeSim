@@ -582,7 +582,7 @@ def _rescale_kernel(image, scale_factor, method="linear",
 
 
 def _cutout_kernel(image, fov_header, kernel_header=None):
-    logger.info("Going into _cutout_kernel")
+    logger.debug("Going into _cutout_kernel")
     wk = WCS(kernel_header)
     h, w = image.shape
     xcen, ycen = 0.5 * w, 0.5 * h
