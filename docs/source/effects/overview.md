@@ -48,23 +48,30 @@ The pipeline has three main phases:
 
 ```{mermaid}
 %%{init: {"theme": "dark"} }%%
-flowchart TB
+flowchart LR
     subgraph Setup ["Setup Phase"]
-        S1["FOV Setup\nz = 200..299"]
-        S2["Image Plane Setup\nz = 300..399"]
-        S3["Detector Setup\nz = 400..499"]
+        direction TB
+        S1["FOV Setup<br/>z = 200..299"]
+        S2["Image Plane Setup<br/>z = 300..399"]
+        S3["Detector Setup<br/>z = 400..499"]
+        S1 --> S2 --> S3
     end
     subgraph Observe ["observe() Phase"]
-        O1["Source Effects\nz = 500..599\n<i>TER curves, filters</i>"]
-        O2["FOV Effects\nz = 600..699\n<i>PSFs, spectral traces, shifts</i>"]
-        O3["Image Plane Effects\nz = 700..799\n<i>Vibration, flat fields</i>"]
+        direction TB
+        O1["Source Effects<br/>z = 500..599<br/><i>TER curves, filters</i>"]
+        O2["FOV Effects<br/>z = 600..699<br/><i>PSFs, spectral traces, shifts</i>"]
+        O3["Image Plane Effects<br/>z = 700..799<br/><i>Vibration, flat fields</i>"]
+        O1 --> O2 --> O3
     end
     subgraph Readout ["readout() Phase"]
-        R1["Detector Effects\nz = 800..899\n<i>Noise, dark current, QE</i>"]
-        R2["Detector Array Effects\nz = 900..999\n<i>Exposure integration</i>"]
-        R3["FITS Header Effects\nz = 1000+"]
+        direction TB
+        R1["Detector Effects<br/>z = 800..899<br/><i>Noise, dark current, QE</i>"]
+        R2["Detector Array Effects<br/>z = 900..999<br/><i>Exposure integration</i>"]
+        R3["FITS Header Effects<br/>z = 1000+"]
+        R1 --> R2 --> R3
     end
-    S1 --> S2 --> S3 --> O1 --> O2 --> O3 --> R1 --> R2 --> R3
+    S3 --> O1
+    O3 --> R1
 ```
 
 ### Z-Order Reference
@@ -80,6 +87,77 @@ flowchart TB
 | 800–899 | Detector effects | `Detector` | `detector_effects` |
 | 900–999 | Detector array effects | `Detector` | `detector_array_effects` |
 | 1000+ | FITS header effects | `HDUList` | `fits_header_effects` |
+
+## YAML Configuration
+
+Effects are typically defined in YAML instrument packages. Each effect entry
+specifies the class name and configuration parameters:
+
+```yaml
+effects:
+  - name: detector_qe_curve
+    description: Quantum efficiency of the battery of detectors
+    class: QuantumEfficiencyCurve
+    kwargs:
+      filename: QE_detector_H2RG.dat
+
+  - name: dark_current
+    description: Detector dark current
+    class: DarkCurrent
+    kwargs:
+      value: 0.1       # electrons/s/pixel
+
+  - name: filter_wheel
+    class: FilterWheel
+    kwargs:
+      current_filter: "!OBS.filter_name"
+      filter_names: [J, H, Ks]
+      filename_format: "filters/TC_filter_{}.dat"
+```
+
+Parameters prefixed with `!` (called **bang strings**) are resolved dynamically
+from the simulation configuration at runtime. For example, `!OBS.filter_name`
+reads the current filter selection from the observation commands.
+
+```{note}
+For real-world examples of YAML effect configurations, browse the instrument
+packages in the [Instrument Reference Database (IRDB)](https://github.com/AstarVienna/irdb).
+If you have instrument packages installed locally, you can also look inside the
+`inst_pkgs/` folder in your ScopeSim data directory (see `scopesim.rc.__config__["!SIM.file.local_packages_path"]`).
+```
+
+## Interacting with Effects at Runtime
+
+Effects can be accessed, toggled, and modified after the optical train is loaded.
+
+### Enabling and disabling effects
+
+```{code-cell} ipython3
+# Turn off an effect
+opt["detector_linearity"].include = False
+print("detector_linearity included:", opt["detector_linearity"].include)
+
+# Turn it back on
+opt["detector_linearity"].include = True
+```
+
+### Inspecting effect metadata
+
+```{code-cell} ipython3
+opt["dark_current"].meta
+```
+
+### Modifying parameters
+
+```{code-cell} ipython3
+# Change the dark current value
+opt["dark_current"].meta["value"] = 0.5
+print("New dark current:", opt["dark_current"].meta["value"])
+```
+
+For more tips on interacting with effects, see:
+- [Turning Effects on or off](../5_liners/effects_include.md)
+- [Using bang strings and hash strings](../5_liners/bang_strings.md)
 
 ## Effect Categories
 
@@ -224,70 +302,6 @@ Exposure effects handle integration time, auto-exposure, and readout formatting.
 | Class | Description |
 |---|---|
 | `Shutter` | Simulates a closed shutter (zeros all pixels) |
-
-## YAML Configuration
-
-Effects are typically defined in YAML instrument packages. Each effect entry
-specifies the class name and configuration parameters:
-
-```yaml
-effects:
-  - name: detector_qe_curve
-    description: Quantum efficiency of the battery of detectors
-    class: QuantumEfficiencyCurve
-    kwargs:
-      filename: QE_detector_H2RG.dat
-
-  - name: dark_current
-    description: Detector dark current
-    class: DarkCurrent
-    kwargs:
-      value: 0.1       # electrons/s/pixel
-
-  - name: filter_wheel
-    class: FilterWheel
-    kwargs:
-      current_filter: "!OBS.filter_name"
-      filter_names: [J, H, Ks]
-      filename_format: "filters/TC_filter_{}.dat"
-```
-
-Parameters prefixed with `!` (called **bang strings**) are resolved dynamically
-from the simulation configuration at runtime. For example, `!OBS.filter_name`
-reads the current filter selection from the observation commands.
-
-## Interacting with Effects at Runtime
-
-Effects can be accessed, toggled, and modified after the optical train is loaded.
-
-### Enabling and disabling effects
-
-```{code-cell} ipython3
-# Turn off an effect
-opt["detector_linearity"].include = False
-print("detector_linearity included:", opt["detector_linearity"].include)
-
-# Turn it back on
-opt["detector_linearity"].include = True
-```
-
-### Inspecting effect metadata
-
-```{code-cell} ipython3
-opt["dark_current"].meta
-```
-
-### Modifying parameters
-
-```{code-cell} ipython3
-# Change the dark current value
-opt["dark_current"].meta["value"] = 0.5
-print("New dark current:", opt["dark_current"].meta["value"])
-```
-
-For more tips on interacting with effects, see:
-- [Turning Effects on or off](../5_liners/effects_include.md)
-- [Using bang strings and hash strings](../5_liners/bang_strings.md)
 
 ## See Also
 
