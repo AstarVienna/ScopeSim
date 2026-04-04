@@ -21,23 +21,23 @@ arbitrary transformations into the simulation pipeline.
 For a worked example that creates a `PointSourceJitter` effect and adds it to
 a full MICADO simulation, see the
 [Custom Effects Example Notebook](../examples/3_custom_effects.ipynb).
-This page focuses on a complementary example — a non-symmetric vignetting flat
+This page focuses on a complementary example – a non-symmetric vignetting flat
 field applied at the image plane level.
 
 ## Anatomy of an Effect Subclass
 
 Every custom effect needs three things:
 
-1. **`z_order`** — a class variable (tuple of ints) that tells ScopeSim *when*
+1. **`z_order`** – a class variable (tuple of ints) that tells ScopeSim *when*
    in the pipeline to apply the effect.
-2. **`__init__`** — calls `super().__init__()` and sets default parameters in
+2. **`__init__`** – calls `super().__init__()` and sets default parameters in
    `self.meta`.
-3. **`apply_to(self, obj)`** — the method that does the work. It receives an
+3. **`apply_to(self, obj)`** – the method that does the work. It receives an
    object, optionally modifies it, and **must return it**.
 
 The `apply_to` method should use `isinstance` checks to determine whether to
 act on the given object. During a simulation run, ScopeSim passes different
-object types at different stages — your effect will only modify the types it
+object types at different stages – your effect will only modify the types it
 knows how to handle, and pass everything else through unchanged.
 
 ## Choosing the Right Z-Order
@@ -60,7 +60,7 @@ usually sufficient.
 
 This example creates an effect that applies a spatially-varying throughput
 pattern to the image plane, simulating optical vignetting that is not radially
-symmetric — for instance, caused by an off-axis obstruction or asymmetric optics.
+symmetric – for instance, caused by an off-axis obstruction or asymmetric optics.
 
 The vignetting is modelled as an elliptical Gaussian decay with configurable
 center offset, semi-axes, rotation angle, and throughput range.
@@ -215,7 +215,7 @@ plt.show()
 
 - **Always return `obj`** from `apply_to`, even when your `isinstance` check
   doesn't match. ScopeSim passes many object types through the same list of
-  effects — returning `None` will break the pipeline.
+  effects – returning `None` will break the pipeline.
 
 - **Use `isinstance` guards** to decide whether to act. Your `apply_to` will
   be called with `Source`, `FieldOfView`, `ImagePlane`, and `Detector` objects
@@ -223,11 +223,11 @@ plt.show()
 
 - **Choose the right pipeline stage** carefully:
   - `FieldOfView` (z=600–699): your effect is applied per wavelength bin and
-    per spatial chunk — appropriate for wavelength-dependent effects.
+    per spatial chunk – appropriate for wavelength-dependent effects.
   - `ImagePlane` (z=700–799): your effect sees the wavelength-integrated focal
-    plane image — appropriate for achromatic spatial effects like vignetting.
+    plane image – appropriate for achromatic spatial effects like vignetting.
   - `Detector` (z=800–899): your effect sees the detector readout after
-    extraction — appropriate for electronic effects like noise.
+    extraction – appropriate for electronic effects like noise.
 
 - **Look at built-in effects for patterns.** For example,
   `PixelResponseNonUniformity` in `scopesim/effects/electronic/noise.py` is a
@@ -260,7 +260,7 @@ currently need to be added programmatically as shown above.
 ## Sharing Your Custom Effect
 
 Once you've written and tested a custom effect, there are several ways to make
-it available for use — either for yourself or for the wider community.
+it available for use – either for yourself or for the wider community.
 
 ### Option 1: Add it directly to the ScopeSim effects module (local)
 
@@ -327,8 +327,8 @@ welcome contributions! You can:
 
 ## See Also
 
-- [Effects Overview](overview.md) — reference for all built-in effect types
+- [Effects Overview](overview.md) – reference for all built-in effect types
   and the simulation pipeline
-- [Custom Effects Example Notebook](../examples/3_custom_effects.ipynb) — a
+- [Custom Effects Example Notebook](../examples/3_custom_effects.ipynb) – a
   worked example with `PointSourceJitter` and MICADO
 - The auto-generated [API Reference for scopesim.effects.Effect](../_autosummary/scopesim.effects.html)

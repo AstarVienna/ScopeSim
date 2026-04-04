@@ -14,7 +14,7 @@ kernelspec:
 # Effects Overview
 
 In ScopeSim, **Effects** are the building blocks of an optical system simulation.
-Each `Effect` object represents a single physical phenomenon — atmospheric
+Each `Effect` object represents a single physical phenomenon – atmospheric
 seeing, mirror reflectivity, filter transmission, detector noise, and so on.
 An `OpticalTrain` collects all the effects from an instrument package and
 applies them in sequence to transform a `Source` (the on-sky light distribution)
