@@ -152,7 +152,7 @@ class ImagePlane:
                         logger.warning("Added mismatched BUNIT %s to %s.",
                                        img_bunit, imp_bunit)
                 else:
-                    logger.info("No BUNIT found in added HDU.")
+                    logger.warning("No BUNIT found in added HDU.")
 
     @property
     def header(self):

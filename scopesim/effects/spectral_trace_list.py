@@ -346,7 +346,7 @@ class SpectralTraceList(Effect):
         bin_width = kwargs.get("bin_width", None)
 
         if interps is None:
-            logger.info("Computing interpolation functions")
+            logger.debug("Computing interpolation functions")
             interps = make_image_interpolations(hdulist)
 
         pdu = fits.PrimaryHDU()

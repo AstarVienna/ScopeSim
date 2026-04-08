@@ -322,18 +322,17 @@ class SpectralTrace:
            Spatial limits of the slit on the sky. This should be taken from
            the header of the hdulist, but this is not yet provided by scopesim
         """
-        logger.info("Rectifying %s", self.trace_id)
-
         wave_min = kwargs.get("wave_min",
                               self.wave_min)
         wave_max = kwargs.get("wave_max",
                               self.wave_max)
         if wave_max < self.wave_min or wave_min > self.wave_max:
-            logger.info("   Outside filter range")
+            logger.debug("   Outside filter range")
             return None
         wave_min = max(wave_min, self.wave_min)
         wave_max = min(wave_max, self.wave_max)
-        logger.info("   %.02f .. %.02f um", wave_min, wave_max)
+        logger.info("Rectifying %s (%.02f .. %.02f um)",
+                    self.trace_id, wave_min, wave_max)
 
         # bin_width is taken as the minimum dispersion of the trace
         # ..todo: if wcs is given take bin width from cdelt1
@@ -341,7 +340,7 @@ class SpectralTrace:
         if bin_width is None:
             self._set_dispersion(wave_min, wave_max)
             bin_width = np.abs(self.dlam_per_pix.y).min()
-        logger.info("   Bin width %.02g um", bin_width)
+        logger.debug("   Bin width %.02g um", bin_width)
 
         pixscale = from_currsys(self.meta["pixel_scale"], self.cmds)
 
