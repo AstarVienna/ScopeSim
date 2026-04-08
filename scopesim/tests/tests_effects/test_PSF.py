@@ -6,6 +6,7 @@ from matplotlib import pyplot as plt
 
 from scopesim.effects import PSF
 from scopesim.effects.psfs.psf_base import get_bkg_level
+from scopesim.effects.psfs.discrete import _rescale_kernel
 from scopesim.optics import ImagePlane
 from scopesim.tests.mocks.py_objects.header_objects import _implane_header
 
@@ -42,6 +43,17 @@ class TestGetKernel:
 
         assert np.sum(psf.kernel) == approx(np.sum(psf.get_kernel(None)))
 
+    @pytest.mark.parametrize("nkern, scale_factor", [(128, 1.3),
+                                                     (129, 1.3),
+                                                     (512, 2.41),
+                                                     (511, 2.41)])
+    def test_rescale_produces_odd_size_kernel(self, nkern, scale_factor):
+        psf = PSF()
+        psf.kernel = basic_kernel(n=nkern)
+        outkern = _rescale_kernel(psf.kernel, scale_factor)
+        n_y, n_x = outkern.shape
+        assert n_y % 2 == 1
+        assert n_x % 2 == 1
 
 class TestRotationBlur:
     @pytest.mark.parametrize("angle", ([1, 5, 15, 60]))

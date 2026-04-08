@@ -134,6 +134,85 @@ class BasicReadoutNoise(Effect):
         ax.hist(dtcr.data.flatten())
 
 
+class PixelResponseNonUniformity(Effect):
+    """Pixel Response Non-Uniformity (PRNU).
+
+    Models the fixed pattern of per-pixel gain variations across the detector
+    arising from manufacturing differences in quantum efficiency. Each pixel is
+    multiplied by a gain factor drawn from N(1, ``prnu_std``) keyed by detector ID.
+    The gain map is generated once per detector on first use and reused identically 
+    across all subsequent exposures.
+
+    Parameters
+    ----------
+    prnu_std : float or dict
+        Standard deviation of the per-pixel gain distribution. 
+
+    prnu_seed : int, fixed 
+
+    include:  "!DET.include_prnu" 
+
+    Example
+    --------
+
+      - name: prnu
+        description: Pixel response non-uniformity
+        class: PixelResponseNonUniformity
+        kwargs:
+          prnu_std: 0.001
+          prnu_seed: 42
+          include: "!DET.include_prnu" 
+
+    """
+
+    required_keys: ClassVar[set] = set()
+    z_order: ClassVar[tuple[int, ...]] = (805,)
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.meta.update(kwargs)
+        self._gain_maps = {}  # keyed by dtcr_id
+
+    def apply_to(self, obj, **kwargs):
+        if not isinstance(obj, Detector):
+            return obj
+
+        random_seed = from_currsys(self.meta.get("prnu_seed"), self.cmds)
+        id_key = real_colname("id", obj.meta)
+        dtcr_id = obj.meta[id_key] if id_key is not None else None
+
+        prnu_std_meta = from_currsys(self.meta["prnu_std"], self.cmds)
+        if isinstance(prnu_std_meta, dict):
+            prnu_std = float(from_currsys(prnu_std_meta[dtcr_id], self.cmds))
+        elif isinstance(prnu_std_meta, (int, float)):
+            prnu_std = float(prnu_std_meta)
+        else:
+            raise TypeError(
+                "<PixelResponseNonUniformity>.meta['prnu_std'] must be a float "
+                f"or a dict keyed by detector ID, got {type(prnu_std_meta)}"
+            )
+
+        shape = obj._hdu.data.shape
+        if dtcr_id not in self._gain_maps or self._gain_maps[dtcr_id].shape != shape:
+            self._gain_maps[dtcr_id] = np.random.default_rng(random_seed).normal(
+                loc=1.0, scale=prnu_std, size=shape)
+
+        obj._hdu.data = obj._hdu.data * self._gain_maps[dtcr_id]
+        return obj
+
+    def plot(self, det_id=None):
+        if not self._gain_maps:
+            raise RuntimeError("No gain map yet — run a simulation first.")
+        key = det_id if det_id in self._gain_maps else next(iter(self._gain_maps))
+        gain_map = self._gain_maps[key]
+        dev = np.max(np.abs(gain_map - 1.0))
+        fig, ax = figure_factory()
+        im = ax.imshow(gain_map, origin="lower", aspect="auto",
+                       vmin=1 - dev, vmax=1 + dev)
+        fig.colorbar(im, ax=ax, label="per-pixel gain")
+        return fig
+
+
 class ShotNoise(Effect):
     z_order: ClassVar[tuple[int, ...]] = (820,)
 

@@ -358,6 +358,7 @@ class OpticalTrain:
                 # ..todo: lower needed because "DEG" is not understood, this is ugly
                 pixarea = (header["CDELT1"] * u.Unit(header["CUNIT1"].lower()) *
                            header["CDELT2"] * u.Unit(header["CUNIT2"].lower())).to(u.arcsec**2)
+                pixarea = np.abs(pixarea)     # CDELTi can be negative, pixarea cannot
                 data = data / pixarea.value    # cube is per arcsec2
 
             data = (data * factor).value

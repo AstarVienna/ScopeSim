@@ -222,7 +222,8 @@ class FieldConstantPSF(DiscretePSF):
         if abs(pix_ratio - 1) > self.meta["flux_accuracy"]:
             spline_order = from_currsys(
                 "!SIM.computing.spline_order", cmds=self.cmds)
-            self.kernel = _rescale_kernel(self.kernel, pix_ratio, spline_order)
+            self.kernel = _rescale_kernel(self.kernel, pix_ratio,
+                                          image_header=hdr)
 
         if ((fov.header["NAXIS1"] < hdr["NAXIS1"]) or
                 (fov.header["NAXIS2"] < hdr["NAXIS2"])):
@@ -452,8 +453,7 @@ class FieldVaryingPSF(DiscretePSF):
             spline_order = from_currsys(
                 "!SIM.computing.spline_order", cmds=self.cmds)
             for ii, kern in enumerate(self.kernel):
-                self.kernel[ii][0] = _rescale_kernel(
-                    kern[0], pix_ratio, spline_order)
+                self.kernel[ii][0] = _rescale_kernel(kern[0], pix_ratio)
 
         for i, kern in enumerate(self.kernel):
             self.kernel[i][0] /= np.sum(kern[0])
@@ -510,31 +510,79 @@ def _make_strehl_map_from_table(tbl, pixel_scale=1*u.arcsec):
     return map_hdu
 
 
-def _rescale_kernel(image, scale_factor, spline_order):
-    sum_image = np.sum(image)
-    image = zoom(image, scale_factor, order=spline_order)
-    image = np.nan_to_num(image, copy=False)        # numpy version >=1.13
+def _rescale_kernel(image, scale_factor, method="linear",
+                    image_header=None):
+    """Rescale `image` by `scale_factor`
 
-    # Re-centre kernel
-    im_shape = image.shape
-    # TODO: this might be another off-by-something
-    dy, dx = np.divmod(np.argmax(image), im_shape[1]) - np.array(im_shape) // 2
-    if dy > 0:
-        image = image[2*dy:, :]
-    elif dy < 0:
-        image = image[:2*dy, :]
-    if dx > 0:
-        image = image[:, 2*dx:]
-    elif dx < 0:
-        image = image[:, :2*dx]
+    Parameters
+    ----------
+    image : array_like, 2D
+        the image to be rescaled
 
-    sum_new_image = np.sum(image)
-    image *= sum_image / sum_new_image
+    scale_factor : float
+        ratio of input pixel size to output pixel size. Values larger than 1
+        zoom the image.
 
-    return image
+    method : str
+        interpolation method to be passed to ``RegularGridInterpolator``.
+        Default is "linear"
+
+    image_header : astropy.fits.Header
+        an optional image header with a WCS. If ``None``, a WCS is constructed
+        that counts image pixels.
+
+    Notes
+    -----
+    The function uses ``scipy.interpolate.RegularGridInterpolator``.
+    The output kernel size is always odd to avoid half-pixel shift when
+    convolved with an image with ``mode="same"``.
+    """
+    nxin, nyin = image.shape
+    interp_img = RegularGridInterpolator(
+        (np.arange(nyin), np.arange(nxin)),
+        image, method=method,
+        bounds_error=False,
+        fill_value=0,
+    )
+
+    # Make the output size odd so that the image remains centred (important
+    # for PSF convolution).
+    nxout = int(nxin * scale_factor)
+    if nxout % 2 == 0:
+        nxout += 1
+    nyout = int(nyin * scale_factor)
+    if nyout % 2 == 0:
+        nyout += 1
+
+    if image_header is not None:
+        inwcs = WCS(image_header)
+        outwcs = WCS(image_header)
+        outwcs.wcs.crpix = [(nxout + 1)/2, (nyout + 1)/2]
+        outwcs.wcs.cdelt = inwcs.wcs.cdelt / scale_factor
+    else:
+        inwcs = WCS(naxis=2)
+        inwcs.wcs.ctype = ["LINEAR", "LINEAR"]
+        inwcs.wcs.crpix = [(nxin + 1)/2, (nyin + 1)/2]
+        inwcs.wcs.crval = [0., 0.]
+        inwcs.wcs.cdelt = [1, 1]
+        outwcs = WCS(naxis=2)
+        outwcs.wcs.ctype = ["LINEAR", "LINEAR"]
+        outwcs.wcs.crpix = [(nxout + 1)/2, (nyout + 1)/2]
+        outwcs.wcs.crval = [0., 0.]
+        outwcs.wcs.cdelt = inwcs.wcs.cdelt / scale_factor
+    xout, yout = np.meshgrid(np.arange(nxout), np.arange(nyout))
+    xworld, yworld = outwcs.all_pix2world(xout, yout, 0)
+    xin, yin = inwcs.all_world2pix(xworld, yworld, 0)
+    outimage = interp_img( (yin.ravel(), xin.ravel()) ).reshape((nyout, nxout))
+    logger.info("Interpolating PSF onto %s image", outimage.shape)
+
+    outimage *= image.sum() / outimage.sum()
+
+    return outimage
 
 
 def _cutout_kernel(image, fov_header, kernel_header=None):
+    logger.debug("Going into _cutout_kernel")
     wk = WCS(kernel_header)
     h, w = image.shape
     xcen, ycen = 0.5 * w, 0.5 * h
