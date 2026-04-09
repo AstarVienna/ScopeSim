@@ -49,6 +49,8 @@ class SpectralTrace:
         "x_colname": "x",
         "y_colname": "y",
         "s_colname": "s",
+        "offset_x": 0,
+        "offset_y": 0,
         "wave_colname": "wavelength",
         "dwave": 0.002,
         "aperture_id": 0,
@@ -119,9 +121,12 @@ class SpectralTrace:
         Focal plane coordinates are `x` and `y`, in mm. Slit coordinates are
         `xi` (spatial coordinate along the slit, in arcsec) and `lam`
         (wavelength, in um).
+
+        The interpolation functions include a shift in the focal-plane
+        coordinates, determined from the CRVAL of the source FOV.
         """
-        x_arr = self.table[self.meta["x_colname"]]
-        y_arr = self.table[self.meta["y_colname"]]
+        x_arr = self.table[self.meta["x_colname"]] + self.meta["offset_x"]
+        y_arr = self.table[self.meta["y_colname"]] + self.meta["offset_y"]
         xi_arr = self.table[self.meta["s_colname"]]
         lam_arr = self.table[self.meta["wave_colname"]]
 
@@ -317,18 +322,17 @@ class SpectralTrace:
            Spatial limits of the slit on the sky. This should be taken from
            the header of the hdulist, but this is not yet provided by scopesim
         """
-        logger.info("Rectifying %s", self.trace_id)
-
         wave_min = kwargs.get("wave_min",
                               self.wave_min)
         wave_max = kwargs.get("wave_max",
                               self.wave_max)
         if wave_max < self.wave_min or wave_min > self.wave_max:
-            logger.info("   Outside filter range")
+            logger.debug("   Outside filter range")
             return None
         wave_min = max(wave_min, self.wave_min)
         wave_max = min(wave_max, self.wave_max)
-        logger.info("   %.02f .. %.02f um", wave_min, wave_max)
+        logger.info("Rectifying %s (%.02f .. %.02f um)",
+                    self.trace_id, wave_min, wave_max)
 
         # bin_width is taken as the minimum dispersion of the trace
         # ..todo: if wcs is given take bin width from cdelt1
@@ -336,7 +340,7 @@ class SpectralTrace:
         if bin_width is None:
             self._set_dispersion(wave_min, wave_max)
             bin_width = np.abs(self.dlam_per_pix.y).min()
-        logger.info("   Bin width %.02g um", bin_width)
+        logger.debug("   Bin width %.02g um", bin_width)
 
         pixscale = from_currsys(self.meta["pixel_scale"], self.cmds)
 

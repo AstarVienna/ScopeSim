@@ -307,12 +307,13 @@ class ADConversion(Effect):
         # Apply the gain value (copy from DarkCurrent)
         # Note that this does not cater for the case where the gain is given
         # as a plain dictionary. Should we implement that?
-        logger.info(f"Applying gain {from_currsys(self.cmds['!DET.gain'])}")
         if hasattr(self.cmds["!DET.gain"], "dic"):
             dtcr_id = obj.meta[real_colname("id", obj.meta)]
             gain = self.cmds["!DET.gain"].dic[dtcr_id]
+            logger.info(f"Detector {dtcr_id}: applying gain {gain}")
         elif isinstance(self.cmds["!DET.gain"], (float, int)):
             gain = self.cmds["!DET.gain"]
+            logger.info(f"Applying gain {gain}")
         else:
             raise ValueError("<ADConversion>.meta['gain'] must be either "
                              f"dict or float, but is {self.cmds['!DET.gain']}")
@@ -341,7 +342,7 @@ class ADConversion(Effect):
         # This used to create a new ImageHDU with the same header but the data
         # set to the modified data. It should be fine to simply re-assign the
         # data attribute, but just in case it's not...
-        logger.info("Applying digitization to dtype %s.", new_dtype)
+        logger.debug("Applying digitization to dtype %s.", new_dtype)
         obj._hdu.data = obj._hdu.data.astype(new_dtype)
 
         return obj
