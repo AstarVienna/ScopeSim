@@ -36,6 +36,7 @@ def _patched_cmds_lss(mode="wcu_lss", filtername="J", bin_width=0.002):
 @pytest.fixture(name="bbsource", scope="function")
 def fixture_bbsource():
     return WCUSource(current_lamp="bb",
+                     lamps=["bb", "laser", "off"],
                      bb_temp=1000*u.K,
                      is_temp=300*u.K,
                      wcu_temp=300*u.K,
@@ -48,6 +49,7 @@ def fixture_bbsource():
                      diam_is_in=25.4,
                      diam_is_out=100.,
                      emiss_bb=0.98,
+                     fibre_transmission=0.1,
                      current_fpmask="open",
                      fpmask_angle=0,
                      fpmask_shift=(0, 0),
@@ -199,6 +201,17 @@ class TestWCUSource:
         ref_bg = bbsource.intens_bg
         bbsource.set_bb_aperture(newvalue)
         npt.assert_equal(bbsource.intens_bg, ref_bg)
+
+    def test_laser_brighter_with_fibre_transmission(self, bbsource):
+        bbsource.set_lamp("laser")
+        ft_1 = bbsource.fibre_trans
+        intens_1 = np.sum(bbsource.intens_lamp)
+        bbsource.fibre_trans = 0.853
+        ft_2 = bbsource.fibre_trans
+        bbsource.set_lamp("laser")
+        intens_2 = np.sum(bbsource.intens_lamp)
+
+        assert intens_2 / intens_1 == ft_2 / ft_1
 
 
 @pytest.fixture(name="fpmask", scope="function")
