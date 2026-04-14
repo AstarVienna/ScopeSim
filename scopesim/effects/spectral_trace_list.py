@@ -89,6 +89,10 @@ class SpectralTraceList(Effect):
     - x : float : [mm] : x position of aperture image on focal plane
     - y : float : [mm] : y position of aperture image on focal plane
 
+    .. versionchanged:: PLACEHOLDER_NEXT_RELEASE_VERSION
+
+       Added support for slit offset.
+
     """
 
     _class_params = {

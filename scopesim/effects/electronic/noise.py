@@ -134,34 +134,38 @@ class BasicReadoutNoise(Effect):
         ax.hist(dtcr.data.flatten())
 
 
+# TODO: Is this really a "noise" effect? Sounds more like "electrons" tbh.
 class PixelResponseNonUniformity(Effect):
     """Pixel Response Non-Uniformity (PRNU).
 
     Models the fixed pattern of per-pixel gain variations across the detector
     arising from manufacturing differences in quantum efficiency. Each pixel is
-    multiplied by a gain factor drawn from N(1, ``prnu_std``) keyed by detector ID.
-    The gain map is generated once per detector on first use and reused identically 
-    across all subsequent exposures.
+    multiplied by a gain factor drawn from N(1, ``prnu_std``) keyed by detector
+    ID. The gain map is generated once per detector on first use and reused
+    identically across all subsequent exposures.
+
+    .. versionadded:: PLACEHOLDER_NEXT_RELEASE_VERSION
 
     Parameters
     ----------
     prnu_std : float or dict
-        Standard deviation of the per-pixel gain distribution. 
+        Standard deviation of the per-pixel gain distribution.
 
-    prnu_seed : int, fixed 
+    prnu_seed : int, fixed
 
-    include:  "!DET.include_prnu" 
+    include:  "!DET.include_prnu"
 
     Example
-    --------
+    -------
+    ::
 
-      - name: prnu
-        description: Pixel response non-uniformity
-        class: PixelResponseNonUniformity
-        kwargs:
-          prnu_std: 0.001
-          prnu_seed: 42
-          include: "!DET.include_prnu" 
+       - name: pixel_response
+         description: Pixel response non-uniformity
+         class: PixelResponseNonUniformity
+         kwargs:
+           prnu_std: 0.001
+           prnu_seed: 42
+           include: "!DET.include_prnu"
 
     """
 
@@ -202,7 +206,7 @@ class PixelResponseNonUniformity(Effect):
 
     def plot(self, det_id=None):
         if not self._gain_maps:
-            raise RuntimeError("No gain map yet — run a simulation first.")
+            raise RuntimeError("No gain map yet - run a simulation first.")
         key = det_id if det_id in self._gain_maps else next(iter(self._gain_maps))
         gain_map = self._gain_maps[key]
         dev = np.max(np.abs(gain_map - 1.0))
