@@ -4,42 +4,49 @@
 from typing import Callable, ClassVar
 
 import numpy as np
+from astropy.modeling.functional_models import Gaussian2D
 
 from . import Effect
 from ..optics.image_plane import ImagePlane
 from ..utils import figure_factory
 
 
-__all__ = ["Illumination", "gaussian2d", "poly_vignetting"]
+__all__ = ["Illumination", "gaussian2d", "quadratic_vignetting"]
 
 
-def gaussian2d(xx, yy, amp=1.0, mu=(0.0, 0.0), sigma=(2000.0, 2000.0)):
+def gaussian2d(shape, amp=1.0, mu=(0.0, 0.0), sigma=(2000.0, 2000.0), theta=0.0):
     """Normalised 2D elliptical Gaussian.
 
     Parameters
     ----------
-    xx, yy : ndarray
-        2D coordinate grids in pixels relative to the image centre.
+    shape : tuple of int
+        (ny, nx) image shape in pixels.
     amp : float
         Peak amplitude (normalised to 1 by default).
     mu : tuple of float
         (x, y) centre offset in pixels from image centre.
     sigma : tuple of float
         (sx, sy) Gaussian widths in pixels.
+    theta : float
+        Rotation angle in radians, counterclockwise.
     """
-    dx = xx - mu[0]
-    dy = yy - mu[1]
-    return amp * np.exp(-(dx**2 / (2 * sigma[0]**2) + dy**2 / (2 * sigma[1]**2)))
+    ny, nx = shape[-2], shape[-1]
+    y, x = np.ogrid[:ny, :nx]
+    x = x - nx / 2
+    y = y - ny / 2
+    model = Gaussian2D(amplitude=amp, x_mean=mu[0], y_mean=mu[1],
+                       x_stddev=sigma[0], y_stddev=sigma[1], theta=theta)
+    return model(x, y)
 
 
-def poly_vignetting(xx, yy, max_falloff=0.01, r_ref=None, mu=(0.0, 0.0),
+def quadratic_vignetting(shape, falloff=0.01, r_ref=None, mu=(0.0, 0.0),
                     stretch=(1.0, 1.0, 1.0, 1.0)):
-    """Asymmetric polynomial vignetting with direct falloff control.
+    """Quadratic vignetting pattern with independent stretch factors.
 
     Parameters
     ----------
-    xx, yy : ndarray
-        2D coordinate grids in pixels relative to the image centre.
+    shape : tuple of int
+        (ny, nx) image shape in pixels.
     max_falloff : float
         Fractional illumination drop at ``r_ref`` (e.g. 0.01 = 1 %).
     r_ref : float or None
@@ -47,19 +54,28 @@ def poly_vignetting(xx, yy, max_falloff=0.01, r_ref=None, mu=(0.0, 0.0),
     mu : tuple of float
         (x, y) offset of the vignetting centre in pixels from the image centre.
     stretch : tuple of float
-        ``(sx_pos, sx_neg, sy_pos, sy_neg)`` — independent scale factors for
-        the +x, -x, +y, and -y half-planes respectively.  All 1.0 gives a
+        ``(+x, -x, +y, -y)`` independent scale factors for
+        half-planes respectively.  All 1.0 gives a
         circular pattern.  A value > 1 widens the falloff in that direction
         (shallower); < 1 narrows it (steeper).
     """
-    dx = xx - mu[0]
-    dy = yy - mu[1]
+    ny, nx = shape[-2], shape[-1]
+    
+    yy, xx = np.ogrid[:ny, :nx]
+    dx = xx - (nx / 2 + mu[0])
+    dy = yy - (ny / 2 + mu[1])
+
     sx = np.where(dx >= 0, stretch[0], stretch[1])
     sy = np.where(dy >= 0, stretch[2], stretch[3])
+
     r2 = (dx / sx)**2 + (dy / sy)**2
+
     if r_ref is None:
-        r_ref = np.sqrt(r2.max())
-    return np.clip(1.0 - max_falloff * r2 / r_ref**2, 0.0, 1.0)
+        r2_ref = r2.max()
+    else:
+        r2_ref = r_ref**2
+
+    return np.clip(1.0 - falloff * r2 / r2_ref, 0.0, 1.0)
 
 
 class Illumination(Effect):
@@ -68,28 +84,18 @@ class Illumination(Effect):
     Parameters
     ----------
     model : callable, optional
-        Function ``f(xx, yy, **kwargs) -> ndarray`` returning the
+        Function ``f(shape, **kwargs) -> ndarray`` returning the
         illumination map. Defaults to :func:`gaussian2d`.
     modelargs : dict, optional
         Keyword arguments forwarded to ``model``. If omitted, the model's
         own defaults are used.
 
     include : str
-        Bang-string reference to toggle the effect on/off from the IRDB
+        Turn effect on/off from the IRDB
         default.yaml.  Defaults to ``"!DET.include_illumination"``.
 
     Examples
     --------
-    IRDB default.yaml entry::
-
-        - name: illumination
-          description: Large-scale illumination variation
-          class: Illumination
-          kwargs:
-            model: gaussian2d
-            modelargs:
-              sigma: [2000, 2000]
-            include: "!DET.include_illumination"
 
     Polynomial vignetting with <1 % falloff (auto r_ref from image shape)::
 
@@ -97,8 +103,11 @@ class Illumination(Effect):
 
     Custom model::
 
-        def my_model(xx, yy, slope=-0.001):
-            return np.clip(1 + slope * np.sqrt(xx**2 + yy**2), 0, None)
+        def my_model(shape, slope=-0.001):
+            ny, nx = shape[-2], shape[-1]
+            y, x = np.ogrid[:ny, :nx]
+            r = np.sqrt((x - nx / 2)**2 + (y - ny / 2)**2)
+            return np.clip(1 + slope * r, 0, None)
 
         eff = Illumination(model=my_model, modelargs={"slope": -0.0005})
     """
@@ -126,9 +135,7 @@ class Illumination(Effect):
         return obj
 
     def _make_map(self, shape):
-        ny, nx = shape[-2], shape[-1]
-        xx, yy = np.meshgrid(np.arange(nx) - nx / 2, np.arange(ny) - ny / 2)
-        illumination_map = self._model(xx, yy, **self._modelargs)
+        illumination_map = self._model(shape, **self._modelargs)
         return illumination_map.astype(np.float32)
 
     def plot(self):

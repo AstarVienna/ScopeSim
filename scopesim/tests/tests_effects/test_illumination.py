@@ -2,7 +2,7 @@
 import pytest
 import numpy as np
 
-from scopesim.effects.illumination import Illumination, gaussian2d, poly_vignetting
+from scopesim.effects.illumination import Illumination, gaussian2d, quadratic_vignetting
 from scopesim.optics.image_plane import ImagePlane
 from scopesim.tests.mocks.py_objects.imagehdu_objects import _image_hdu_square
 
@@ -19,23 +19,22 @@ def imageplane():
 # --- gaussian2d ---
 
 def test_gaussian2d_peak_at_centre():
-    assert gaussian2d(0.0, 0.0) == pytest.approx(1.0)
+    result = gaussian2d((101, 101))
+    assert result[50, 50] == pytest.approx(1.0)
 
 def test_gaussian2d_values_leq_amp():
-    x = np.linspace(-50, 50, 101)
-    xx, yy = np.meshgrid(x, x)
-    assert gaussian2d(xx, yy).max() <= 1.0 + 1e-12
+    result = gaussian2d((101, 101))
+    assert result.max() <= 1.0 + 1e-12
 
 
-# --- poly_vignetting ---
+# --- quadratic_vignetting ---
 
-def test_poly_vignetting_centre_is_one():
-    assert poly_vignetting(0.0, 0.0, r_ref=10.0) == pytest.approx(1.0)
+def test_quadratic_vignetting_centre_is_one():
+    result = quadratic_vignetting((101, 101))
+    assert result[50, 50] == pytest.approx(1.0)
 
-def test_poly_vignetting_values_in_range():
-    x = np.linspace(-50, 50, 101)
-    xx, yy = np.meshgrid(x, x)
-    result = poly_vignetting(xx, yy)
+def test_quadratic_vignetting_values_in_range():
+    result = quadratic_vignetting((101, 101))
     assert np.all(result >= 0.0) and np.all(result <= 1.0)
 
 
