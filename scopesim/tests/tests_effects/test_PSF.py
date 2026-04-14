@@ -3,6 +3,7 @@ import pytest
 from pytest import approx
 import numpy as np
 from matplotlib import pyplot as plt
+from astropy import units as u
 
 from scopesim.effects import PSF
 from scopesim.effects.psfs.psf_base import get_bkg_level
@@ -56,7 +57,7 @@ class TestGetKernel:
         assert n_x % 2 == 1
 
 class TestRotationBlur:
-    @pytest.mark.parametrize("angle", ([1, 5, 15, 60]))
+    @pytest.mark.parametrize("angle", ([1, 5, 15, 60]*u.deg))
     def test_returns_rotated_kernel_array_has_same_sum(self, angle):
         # Without blur
         implane = basic_image_plane()
@@ -169,7 +170,7 @@ class TestApplyTo:
             plt.subplot(231)
             plt.imshow(implane.data[1, :, :])
 
-        psf = PSF(rotational_blur_angle=15, bkg_width=5, rounded_edges=False)
+        psf = PSF(rotational_blur_angle=15*u.deg, bkg_width=5, rounded_edges=False)
         psf.kernel = basic_kernel(n=63)
         implane = psf.apply_to(implane)
 
