@@ -18,7 +18,7 @@ from scipy.interpolate import interp1d
 import yaml
 
 from .fpmask import FPMask
-from ..ter_curves import TERCurve, FilterCurve
+from ..ter_curves import TERCurve
 from ...utils import get_logger, seq, find_file, from_currsys
 from ...source.source import Source
 from ...source.source_fields import BackgroundSourceField
@@ -124,6 +124,7 @@ class WCUSource(TERCurve):
         self.rho_tube = get_reflectivity(self.meta["rho_tube"])
         self.rho_is = get_reflectivity(self.meta["rho_is"])
         self.emiss_mask = self.meta["emiss_mask"]
+        self.fibre_trans = self.meta["fibre_transmission"]
 
         # Compute the emission components
         self.compute_lamp_emission()
@@ -419,9 +420,10 @@ class WCUSource(TERCurve):
         """
         Compute the intensity for the single-line lasers.
 
-        The function computes both lasers at once. This is possible because the
-        lines are so far apart that there is no band that sees them both.
+        The function computes all three lasers at once. This is possible because
+        the lines are so far apart that there is no band that sees them both.
         """
+        print("Computing laser intensity")
         lam = self.wavelength
         dlam = lam[1] - lam[0]
 
@@ -440,6 +442,11 @@ class WCUSource(TERCurve):
         lamc_m = 5.26 * u.um
         power_m = 20e-3 * u.W / (c.c * c.h / lamc_m) * u.ph
 
+        # Apply fibre transmission
+        power_l *= self.fibre_trans
+        power_t *= self.fibre_trans
+        power_m *= self.fibre_trans
+
         sigma = 2 * dlam
         amp = 1/(sigma * np.sqrt(2 * np.pi))
 
@@ -449,8 +456,9 @@ class WCUSource(TERCurve):
         line_t = sum(list_t[1:], start=list_t[0])
 
         flux = ((power_l * line_l(lam) + power_m * line_m(lam) + power_t
-                 * line_t(lam)) / (np.pi * self.d_is**2 / 4))
+                 * line_t(lam)) / (np.pi * self.d_is**2))
 
+        # emergent intensity from the IS output port
         intens = mult_is * flux / (np.pi * u.sr)
 
         return intens.to(self.bb_scale)
