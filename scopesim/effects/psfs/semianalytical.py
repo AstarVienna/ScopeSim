@@ -11,9 +11,17 @@ import anisocado as aniso
 
 from .. import ter_curves_utils as tu
 from ...optics.fov import FieldOfView
-from ...utils import (figure_factory, figure_grid_factory, from_currsys,
-                      quantify, check_keys)
+from ...utils import (
+    figure_factory,
+    figure_grid_factory,
+    from_currsys,
+    quantify,
+    check_keys,
+    get_logger,
+)
 from . import PSF
+
+logger = get_logger(__name__)
 
 
 class SemiAnalyticalPSF(PSF):
@@ -115,9 +123,11 @@ class AnisocadoConstPSF(SemiAnalyticalPSF):
 
         n = self.meta["psf_side_length"]
         wave = self.wavelength
+        logger.debug("    start AnisoCADO")
         self._psf_object = aniso.AnalyticalScaoPsf(pixelSize=pixel_scale,
                                                    N=n, wavelength=wave,
                                                    nmRms=self.nmRms)
+        logger.debug("    done AnisoCADO")
         if np.any(self.meta["offset"]):
             self._psf_object.shift_off_axis(self.meta["offset"][0],
                                             self.meta["offset"][1])
