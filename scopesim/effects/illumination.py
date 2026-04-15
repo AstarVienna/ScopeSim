@@ -28,15 +28,14 @@ def gaussian2d(shape, amp=1.0, mu=(0.0, 0.0), sigma=(2000.0, 2000.0), theta=0.0)
     sigma : tuple of float
         (sx, sy) Gaussian widths in pixels.
     theta : float or Quantity
-        Rotation angle, counterclockwise.
+        Rotation angle (if float, the angle is interpreted in degrees), counterclockwise.
     """
     ny, nx = shape[-2], shape[-1]
     y, x = np.ogrid[:ny, :nx]
     x = x - nx / 2
     y = y - ny / 2
 
-    if isinstance(theta, float):
-        theta<<=u.deg
+    theta <<= u.deg 
 
     model = Gaussian2D(amplitude=amp, x_mean=mu[0], y_mean=mu[1],
                        x_stddev=sigma[0], y_stddev=sigma[1], theta=theta)
@@ -97,7 +96,6 @@ class Illumination(Effect):
     include : str
         Turn effect on/off from the IRDB
         default.yaml.  Defaults to ``"!DET.include_illumination"``.
-
     Examples
     --------
 
