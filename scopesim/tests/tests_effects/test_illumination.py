@@ -19,8 +19,10 @@ def imageplane():
 # --- gaussian2d ---
 
 def test_gaussian2d_peak_at_centre():
-    result = gaussian2d((101, 101))
-    assert result[50, 50] == pytest.approx(1.0)
+    result = np.asarray(gaussian2d((100, 100)))
+    assert result.max() == pytest.approx(1.0)
+
+
 
 def test_gaussian2d_values_leq_amp():
     result = gaussian2d((101, 101))

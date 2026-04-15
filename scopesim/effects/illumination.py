@@ -5,7 +5,7 @@ from typing import Callable, ClassVar
 
 import numpy as np
 from astropy.modeling.functional_models import Gaussian2D
-
+from astropy import units as u
 from . import Effect
 from ..optics.image_plane import ImagePlane
 from ..utils import figure_factory
@@ -27,13 +27,17 @@ def gaussian2d(shape, amp=1.0, mu=(0.0, 0.0), sigma=(2000.0, 2000.0), theta=0.0)
         (x, y) centre offset in pixels from image centre.
     sigma : tuple of float
         (sx, sy) Gaussian widths in pixels.
-    theta : float
-        Rotation angle in radians, counterclockwise.
+    theta : float or Quantity
+        Rotation angle, counterclockwise.
     """
     ny, nx = shape[-2], shape[-1]
     y, x = np.ogrid[:ny, :nx]
     x = x - nx / 2
     y = y - ny / 2
+
+    if isinstance(theta, float):
+        theta<<=u.deg
+
     model = Gaussian2D(amplitude=amp, x_mean=mu[0], y_mean=mu[1],
                        x_stddev=sigma[0], y_stddev=sigma[1], theta=theta)
     return model(x, y)
@@ -99,7 +103,7 @@ class Illumination(Effect):
 
     Polynomial vignetting with <1 % falloff (auto r_ref from image shape)::
 
-        eff = Illumination(model=poly_vignetting, modelargs={"max_falloff": 0.01})
+        eff = Illumination(model=poly_vignetting, modelargs={"falloff": 0.01})
 
     Custom model::
 
