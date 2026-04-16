@@ -83,11 +83,13 @@ class PoorMansHxRGReadoutNoise(Effect):
         return det
 
     def plot(self, det, **kwargs):
+        """Plot effect image."""
         dtcr = self.apply_to(det)
         fig, ax = figure_factory()
         ax.imshow(dtcr.data, origin="lower")
 
     def plot_hist(self, det, **kwargs):
+        """Plot effect histogram."""
         dtcr = self.apply_to(det)
         fig, ax = figure_factory()
         ax.hist(dtcr.data.flatten())
@@ -124,11 +126,13 @@ class BasicReadoutNoise(Effect):
         return det
 
     def plot(self, det):
+        """Plot effect image."""
         dtcr = self.apply_to(det)
         fig, ax = figure_factory()
         ax.imshow(dtcr.data)
 
     def plot_hist(self, det, **kwargs):
+        """Plot effect histogram."""
         dtcr = self.apply_to(det)
         fig, ax = figure_factory()
         ax.hist(dtcr.data.flatten())
@@ -205,6 +209,7 @@ class PixelResponseNonUniformity(Effect):
         return obj
 
     def plot(self, det_id=None):
+        """Plot effect."""
         if not self._gain_maps:
             raise RuntimeError("No gain map yet - run a simulation first.")
         key = det_id if det_id in self._gain_maps else next(iter(self._gain_maps))
@@ -279,11 +284,13 @@ class ShotNoise(Effect):
         return det
 
     def plot(self, det):
+        """Plot effect image."""
         dtcr = self.apply_to(det)
         fig, ax = figure_factory()
         ax.imshow(dtcr.data)
 
     def plot_hist(self, det, **kwargs):
+        """Plot effect histogram."""
         dtcr = self.apply_to(det)
         fig, ax = figure_factory()
         ax.hist(dtcr.data.flatten())
@@ -323,6 +330,7 @@ class DarkCurrent(Effect):
         return obj
 
     def plot(self, det, **kwargs):
+        """Plot effect."""
         dit = from_currsys(self.meta["dit"], self.cmds)
         ndit = from_currsys(self.meta["ndit"], self.cmds)
         total_time = dit * ndit
