@@ -201,14 +201,14 @@ class PixelResponseNonUniformity(Effect):
             )
 
         shape = obj._hdu.data.shape
-        # TODO: Do we really need that shape mismatch check? Under what
-        #       circumstances would that occur? Just to make sure this does not
-        #       create the risk of creating silent bugs...
-        if dtcr_id not in self._gain_maps or self._gain_maps[dtcr_id].shape != shape:
+        if dtcr_id not in self._gain_maps:
             rng = np.random.default_rng(random_seed)
             self._gain_maps[dtcr_id] = rng.normal(
                 loc=1.0, scale=prnu_std, size=shape,
             )
+
+        if self._gain_maps[dtcr_id].shape != shape:
+            raise ValueError("gain map shape mismatch")
 
         obj._hdu.data = obj._hdu.data * self._gain_maps[dtcr_id]
         return obj
