@@ -1,3 +1,50 @@
+# Version 0.11.3
+**2026-04-16**
+
+Some new effects and a lot of bugfixing.
+
+## What's Changed
+### API Changes
+* Plot system transmission components by @oczoske in https://github.com/AstarVienna/ScopeSim/pull/894
+### Bugs fixed
+* Read fp_mask_{}.dat explicitely as float by @oczoske in https://github.com/AstarVienna/ScopeSim/pull/869
+* Extend Blackbody wavelength range to cover all filters by @oczoske in https://github.com/AstarVienna/ScopeSim/pull/872
+* Pixel area must be positive by @oczoske in https://github.com/AstarVienna/ScopeSim/pull/878
+* Use NumPy 2.3.5 for Python 3.13+ by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/882
+* Fixes off-by-a-half in FOVs by @oczoske in https://github.com/AstarVienna/ScopeSim/pull/880
+* Fix PupilTransmission emission after update by @oczoske in https://github.com/AstarVienna/ScopeSim/pull/900
+### Changes to or addition of Effects
+* Add `PixelResponseNonUniformity` effect for fixed per-pixel gain variation (PRNU) by @ShannonS00 in https://github.com/AstarVienna/ScopeSim/pull/886
+* Add offset to spectral transformations to enable shifted slits by @oczoske in https://github.com/AstarVienna/ScopeSim/pull/875
+* Minor PSF refactor and more logs by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/901
+* Fibre transmission for WCU lasers by @oczoske in https://github.com/AstarVienna/ScopeSim/pull/904
+* Add a large scale illumination effect   by @ShannonS00 in https://github.com/AstarVienna/ScopeSim/pull/898
+### Dependency Changes
+* Bump synphot, allow packaging 26 by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/870
+* Bump numpydoc from 1.9.0 to 1.10.0 in the dev-dependencies group by @dependabot[bot] in https://github.com/AstarVienna/ScopeSim/pull/873
+* Bump ipykernel from 6.31.0 to 7.1.0 by @dependabot[bot] in https://github.com/AstarVienna/ScopeSim/pull/874
+* Bump nbconvert from 7.16.4 to 7.17.0 by @dependabot[bot] in https://github.com/AstarVienna/ScopeSim/pull/876
+* Bump pillow from 12.1.0 to 12.1.1 by @dependabot[bot] in https://github.com/AstarVienna/ScopeSim/pull/877
+* Bump astar-utils from 0.5.0 to 0.5.1 by @dependabot[bot] in https://github.com/AstarVienna/ScopeSim/pull/881
+* Bump jupytext from 1.18.1 to 1.19.0 in the dev-dependencies group by @dependabot[bot] in https://github.com/AstarVienna/ScopeSim/pull/884
+* Bump tqdm from 4.67.1 to 4.67.3 in the main-dependencies group by @dependabot[bot] in https://github.com/AstarVienna/ScopeSim/pull/883
+* Bump tornado from 6.5 to 6.5.5 by @dependabot[bot] in https://github.com/AstarVienna/ScopeSim/pull/888
+* Bump requests from 2.32.4 to 2.33.0 by @dependabot[bot] in https://github.com/AstarVienna/ScopeSim/pull/891
+* Bump pygments from 2.17.2 to 2.20.0 by @dependabot[bot] in https://github.com/AstarVienna/ScopeSim/pull/892
+* Bump astar-utils from 0.5.1 to 0.5.2 by @dependabot[bot] in https://github.com/AstarVienna/ScopeSim/pull/890
+* Bump the dev-dependencies group with 3 updates by @dependabot[bot] in https://github.com/AstarVienna/ScopeSim/pull/896
+* Bump pooch from 1.8.2 to 1.9.0 by @dependabot[bot] in https://github.com/AstarVienna/ScopeSim/pull/897
+* Bump pillow from 12.1.1 to 12.2.0 by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/903
+### Documentation Improvements
+* Document system transmission plot in getting_started by @oczoske in https://github.com/AstarVienna/ScopeSim/pull/895
+* Docstring and typing fixes in preparation for release by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/902
+
+## New Contributors
+* @ShannonS00 made their first contribution in https://github.com/AstarVienna/ScopeSim/pull/886
+
+**Full Changelog**: https://github.com/AstarVienna/ScopeSim/compare/v0.11.2...v0.11.3
+
+
 # Version 0.11.2
 **2026-01-20**
 
