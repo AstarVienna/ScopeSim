@@ -159,7 +159,7 @@ class PixelResponseNonUniformity(Effect):
     -------
     ::
 
-       - name: pixel_response
+       - name: prnu
          description: Pixel response non-uniformity
          class: PixelResponseNonUniformity
          kwargs:
