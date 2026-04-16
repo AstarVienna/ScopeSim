@@ -24,7 +24,7 @@ def gaussian2d(
     theta: u.Quantity[u.deg] | float = 0.0 * u.deg,
 ) -> np.ndarray:
     """
-    Normalised 2D elliptical Gaussian to be used for vignetting map.
+    2D elliptical Gaussian to be used for vignetting map.
 
     .. versionadded:: PLACEHOLDER_NEXT_RELEASE_VERSION
 
@@ -33,7 +33,7 @@ def gaussian2d(
     shape : tuple[int, int]
         Image shape in pixels (ny, nx).
     amp : float, optional
-        Peak amplitude. The default is 1.0 (normalized).
+        Peak throughput. The default is 1.0.
     mu : tuple[float, float], optional
         Offset of the peak center in pixels (x, y) from the image center.
         The default is (0.0, 0.0), i.e. no offset.
@@ -142,7 +142,10 @@ class Illumination(Effect):
     --------
     Polynomial vignetting with <1 % falloff (auto r_ref from image shape)
 
-    >>> eff = Illumination(model=poly_vignetting, modelargs={"falloff": 0.01})
+    >>> eff = Illumination(
+    ...     model=quadratic_vignetting,
+    ...     modelargs={"falloff": 0.01},
+    ... )
 
     Custom model
 
