@@ -83,11 +83,13 @@ class PoorMansHxRGReadoutNoise(Effect):
         return det
 
     def plot(self, det, **kwargs):
+        """Plot effect image."""
         dtcr = self.apply_to(det)
         fig, ax = figure_factory()
         ax.imshow(dtcr.data, origin="lower")
 
     def plot_hist(self, det, **kwargs):
+        """Plot effect histogram."""
         dtcr = self.apply_to(det)
         fig, ax = figure_factory()
         ax.hist(dtcr.data.flatten())
@@ -124,44 +126,50 @@ class BasicReadoutNoise(Effect):
         return det
 
     def plot(self, det):
+        """Plot effect image."""
         dtcr = self.apply_to(det)
         fig, ax = figure_factory()
         ax.imshow(dtcr.data)
 
     def plot_hist(self, det, **kwargs):
+        """Plot effect histogram."""
         dtcr = self.apply_to(det)
         fig, ax = figure_factory()
         ax.hist(dtcr.data.flatten())
 
 
+# TODO: Is this really a "noise" effect? Sounds more like "electrons" tbh.
 class PixelResponseNonUniformity(Effect):
     """Pixel Response Non-Uniformity (PRNU).
 
     Models the fixed pattern of per-pixel gain variations across the detector
     arising from manufacturing differences in quantum efficiency. Each pixel is
-    multiplied by a gain factor drawn from N(1, ``prnu_std``) keyed by detector ID.
-    The gain map is generated once per detector on first use and reused identically 
-    across all subsequent exposures.
+    multiplied by a gain factor drawn from N(1, ``prnu_std``) keyed by detector
+    ID. The gain map is generated once per detector on first use and reused
+    identically across all subsequent exposures.
+
+    .. versionadded:: PLACEHOLDER_NEXT_RELEASE_VERSION
 
     Parameters
     ----------
     prnu_std : float or dict
-        Standard deviation of the per-pixel gain distribution. 
+        Standard deviation of the per-pixel gain distribution.
 
-    prnu_seed : int, fixed 
+    prnu_seed : int, fixed
 
-    include:  "!DET.include_prnu" 
+    include:  "!DET.include_prnu"
 
     Example
-    --------
+    -------
+    ::
 
-      - name: prnu
-        description: Pixel response non-uniformity
-        class: PixelResponseNonUniformity
-        kwargs:
-          prnu_std: 0.001
-          prnu_seed: 42
-          include: "!DET.include_prnu" 
+       - name: prnu
+         description: Pixel response non-uniformity
+         class: PixelResponseNonUniformity
+         kwargs:
+           prnu_std: 0.001
+           prnu_seed: 42
+           include: "!DET.include_prnu"
 
     """
 
@@ -193,16 +201,22 @@ class PixelResponseNonUniformity(Effect):
             )
 
         shape = obj._hdu.data.shape
-        if dtcr_id not in self._gain_maps or self._gain_maps[dtcr_id].shape != shape:
-            self._gain_maps[dtcr_id] = np.random.default_rng(random_seed).normal(
-                loc=1.0, scale=prnu_std, size=shape)
+        if dtcr_id not in self._gain_maps:
+            rng = np.random.default_rng(random_seed)
+            self._gain_maps[dtcr_id] = rng.normal(
+                loc=1.0, scale=prnu_std, size=shape,
+            )
+
+        if self._gain_maps[dtcr_id].shape != shape:
+            raise ValueError("gain map shape mismatch")
 
         obj._hdu.data = obj._hdu.data * self._gain_maps[dtcr_id]
         return obj
 
     def plot(self, det_id=None):
+        """Plot effect."""
         if not self._gain_maps:
-            raise RuntimeError("No gain map yet — run a simulation first.")
+            raise RuntimeError("No gain map yet - run a simulation first.")
         key = det_id if det_id in self._gain_maps else next(iter(self._gain_maps))
         gain_map = self._gain_maps[key]
         dev = np.max(np.abs(gain_map - 1.0))
@@ -275,11 +289,13 @@ class ShotNoise(Effect):
         return det
 
     def plot(self, det):
+        """Plot effect image."""
         dtcr = self.apply_to(det)
         fig, ax = figure_factory()
         ax.imshow(dtcr.data)
 
     def plot_hist(self, det, **kwargs):
+        """Plot effect histogram."""
         dtcr = self.apply_to(det)
         fig, ax = figure_factory()
         ax.hist(dtcr.data.flatten())
@@ -319,6 +335,7 @@ class DarkCurrent(Effect):
         return obj
 
     def plot(self, det, **kwargs):
+        """Plot effect."""
         dit = from_currsys(self.meta["dit"], self.cmds)
         ndit = from_currsys(self.meta["ndit"], self.cmds)
         total_time = dit * ndit
