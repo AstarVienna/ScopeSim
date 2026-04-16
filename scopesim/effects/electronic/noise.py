@@ -148,7 +148,7 @@ class PixelResponseNonUniformity(Effect):
     ID. The gain map is generated once per detector on first use and reused
     identically across all subsequent exposures.
 
-    .. versionadded:: PLACEHOLDER_NEXT_RELEASE_VERSION
+    .. versionadded:: 0.11.3
 
     Parameters
     ----------

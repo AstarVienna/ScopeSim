@@ -26,7 +26,7 @@ def gaussian2d(
     """
     2D elliptical Gaussian to be used for vignetting map.
 
-    .. versionadded:: PLACEHOLDER_NEXT_RELEASE_VERSION
+    .. versionadded:: 0.11.3
 
     Parameters
     ----------
@@ -75,7 +75,7 @@ def quadratic_vignetting(
     """
     Quadratic vignetting pattern with independent stretch factors.
 
-    .. versionadded:: PLACEHOLDER_NEXT_RELEASE_VERSION
+    .. versionadded:: 0.11.3
 
     Parameters
     ----------
@@ -123,7 +123,7 @@ def quadratic_vignetting(
 class Illumination(Effect):
     """Large-scale illumination variation across the image plane.
 
-    .. versionadded:: PLACEHOLDER_NEXT_RELEASE_VERSION
+    .. versionadded:: 0.11.3
 
     Parameters
     ----------

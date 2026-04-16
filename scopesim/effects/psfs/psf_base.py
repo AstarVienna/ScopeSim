@@ -162,7 +162,7 @@ def rotational_blur(image, angle: u.Quantity[u.deg]):
     angle : u.Quantity["angle"]
         Angle over which the image should be rotationally blurred.
 
-    .. versionchanged:: PLACEHOLDER_NEXT_RELEASE_VERSION
+    .. versionchanged:: 0.11.3
 
        Require `angle` to be a Quantity.
 
