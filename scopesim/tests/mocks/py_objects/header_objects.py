@@ -5,19 +5,18 @@ from scopesim.optics import image_plane_utils as imp_utils
 from scopesim.optics.image_plane_utils import header_from_list_of_xy
 
 
-def _basic_fov_header():
-    w, h = 150, 150
+def _basic_fov_header(w=150, h=150, cdelt=0.1, cdelt_d=1):
     skywcs = wcs.WCS(naxis=2)
     # skywcs.wcs.ctype = ["RA---TAN", "DEC--TAN"]
     skywcs.wcs.ctype = ["LINEAR", "LINEAR"]
-    skywcs.wcs.cdelt = [0.1, 0.1]
+    skywcs.wcs.cdelt = [cdelt, cdelt]
     skywcs.wcs.cunit = ["arcsec", "arcsec"]
     skywcs.wcs.crval = [0, 0]
     skywcs.wcs.crpix = [(w + 1) / 2, (h + 1) / 2]
 
     detwcs = wcs.WCS(naxis=2, key="D")
     detwcs.wcs.ctype = ["LINEAR", "LINEAR"]
-    detwcs.wcs.cdelt = [1, 1]
+    detwcs.wcs.cdelt = [cdelt_d, cdelt_d]
     detwcs.wcs.cunit = ["mm", "mm"]
     detwcs.wcs.crval = [0, 0]
     detwcs.wcs.crpix = [(w + 1) / 2, (h + 1) / 2]
