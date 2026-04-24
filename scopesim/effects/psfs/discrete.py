@@ -230,7 +230,7 @@ class FieldConstantPSF(DiscretePSF):
             self.kernel = _cutout_kernel(
                 self.kernel, fov.header, kernel_header=hdr)
 
-        return self.kernel
+        return self.kernel.squeeze()
 
     def make_psf_cube(self, fov):
         """Create a wavelength-dependent psf cube."""
