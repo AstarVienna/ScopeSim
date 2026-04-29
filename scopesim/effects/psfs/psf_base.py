@@ -74,6 +74,10 @@ class PSF(Effect):
                     (obj.hdu is not None)):
                 kernel = self.get_kernel(obj).astype(float)
 
+                # This doesn't work because of a "Delta PSF" in some mocks...
+                # if kernel.size == 1:  # only 1 pixel
+                #     raise ValueError("Cannot convolve single pixel PSF.")
+
                 # apply rotational blur for field-tracking observations
                 rot_blur_angle = self.meta["rotational_blur_angle"]
                 if abs(rot_blur_angle << u.deg) > 0*u.deg:

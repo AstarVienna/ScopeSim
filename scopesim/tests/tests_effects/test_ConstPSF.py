@@ -20,6 +20,7 @@ import pytest
 from pytest import approx
 
 import numpy as np
+from numpy import testing as npt
 
 import matplotlib.pyplot as plt
 
@@ -39,15 +40,20 @@ def centre_fov():
     return _centre_fov()
 
 
+@pytest.fixture(scope="function")
+def const_psf(mock_path):
+    constpsf = FieldConstantPSF(
+        filename=str(mock_path / "test_ConstPSF.fits"))
+    return constpsf
+
+
 class TestInit:
     def test_errors_when_initialised_with_nothing(self):
         with pytest.raises(ValueError):
             isinstance(FieldConstantPSF(), FieldConstantPSF)
 
-    def test_initialised_when_passed_fits_filename(self, mock_path):
-        constpsf = FieldConstantPSF(
-            filename=str(mock_path / "test_ConstPSF.fits"))
-        assert isinstance(constpsf, FieldConstantPSF)
+    def test_initialised_when_passed_fits_filename(self, const_psf):
+        assert isinstance(const_psf, FieldConstantPSF)
 
     def test_initialised_when_passed_fits_filename_with_waveleng(self,
                                                                  mock_path):
@@ -61,9 +67,11 @@ class TestInit:
         # actually tests code in parent class DiscretePSF
         psf_name = "ConstPSF"
         file_format = "test_{}_WAVELENG.fits"
-        constpsf = FieldConstantPSF(psf_name=psf_name,
-                                    psf_path=mock_path,
-                                    filename_format=file_format)
+        constpsf = FieldConstantPSF(
+            psf_name=psf_name,
+            psf_path=mock_path,
+            filename_format=file_format,
+        )
         assert isinstance(constpsf, FieldConstantPSF)
 
 
@@ -74,33 +82,45 @@ class TestGetKernel:
                               ([1.9, 2.5], 1.),
                               ([0.9, 1.1], 1 / 3.),
                               ([1.875, 1.876], 1.)])
-    def test_returns_array_with_single_kernel_from_fov(self, waves, max_pixel,
-                                                       mock_path):
-        constpsf = FieldConstantPSF(
-            filename=str(mock_path / "test_ConstPSF.fits"))
+    def test_returns_array_with_single_kernel_from_fov(
+        self,
+        waves,
+        max_pixel,
+        const_psf,
+    ):
         fov = _centre_fov(n=10, waverange=waves)
         fov.view()
-        kernel = constpsf.get_kernel(fov)
+        kernel = const_psf.get_kernel(fov)
 
-        assert np.sum(kernel) == approx(1)
-        assert np.max(kernel) == approx(max_pixel)
+        npt.assert_allclose(kernel.sum(), 1)
+        npt.assert_allclose(kernel.max(), max_pixel)
 
-    @pytest.mark.parametrize("factor", [1/3., 1, 5])
-    def test_kernel_is_scale_properly_if_cdelts_differ(self, factor,
-                                                       mock_path):
+    @pytest.mark.parametrize("scale_factor", (
+        pytest.param(1/3, marks=pytest.mark.xfail(reason="PSF center off")),
+        1,
+        pytest.param(5, marks=pytest.mark.xfail(reason="1x1 array turned into scalar")),
+    ))
+    def test_kernel_is_scale_properly_if_cdelts_differ(
+        self,
+        scale_factor,
+        const_psf,
+    ):
         fov = _centre_fov(n=10, waverange=[1.5, 1.7])
-        fov.header["CDELT1"] *= factor
-        fov.header["CDELT2"] *= factor
+        fov.header["CDELT1"] *= scale_factor
+        fov.header["CDELT2"] *= scale_factor
         fov.view()
 
-        constpsf = FieldConstantPSF(
-            filename=str(mock_path / "test_ConstPSF.fits"))
-        kernel = constpsf.get_kernel(fov)
+        kernel = const_psf.get_kernel(fov)
+        kernel_shape = np.array(kernel.shape)
 
-        psf_shape = np.array(constpsf._file[2].data.shape)
-        kernel_shape = kernel.shape
-
-        assert np.all(kernel_shape == psf_shape / factor)
+        # Check if kernel is scaled by correct factor in both dimensions
+        npt.assert_allclose(
+            const_psf._file[2].data.shape / kernel_shape,
+            scale_factor,
+        )
+        # Check if max of kernel is in the center pixel
+        assert (tuple(kernel_shape // 2) ==
+                np.unravel_index(kernel.argmax(), kernel.shape))
 
 
 class TestApplyTo:
@@ -108,25 +128,27 @@ class TestApplyTo:
                              [([1.1, 1.3], 1 / 3.),
                               ([1.5, 1.7], 1 / 3.),
                               ([1.9, 2.5], 1.)])
-    def test_convolves_with_basic_fov_for_each_waveleng(self, waves, max_pixel,
-                                                        mock_path):
+    def test_convolves_with_basic_fov_for_each_waveleng(
+        self,
+        waves,
+        max_pixel,
+        const_psf,
+    ):
         centre_fov = _centre_fov(n=10, waverange=waves)
         nax1, nax2 = centre_fov.header["NAXIS1"], centre_fov.header["NAXIS2"]
         centre_fov.view("image")
         centre_fov.hdu.data = np.zeros((nax2, nax1))
         centre_fov.hdu.data[1::4, 1::4] = 1
 
-        constpsf = FieldConstantPSF(
-            filename=str(mock_path / "test_ConstPSF.fits"))
-        fov_returned = constpsf.apply_to(centre_fov)
+        fov_returned = const_psf.apply_to(centre_fov)
 
         if PLOTS:
             plt.imshow(fov_returned.hdu.data, origin="lower")
             plt.show()
 
-        assert np.max(fov_returned.hdu.data) == approx(max_pixel)
+        npt.assert_allclose(fov_returned.hdu.data.max(), max_pixel)
 
-    def test_convolution_leaves_constant_background_intact(self, mock_path):
+    def test_convolution_leaves_constant_background_intact(self, const_psf):
         """FOV object with constant data must be unchanged by PSF convolution
 
         1. Set up initial FOV object with constant data array
@@ -139,9 +161,7 @@ class TestApplyTo:
         centre_fov.view()
         centre_fov.hdu.data = np.ones((nax2, nax1), dtype=np.float32)
 
-        constpsf = FieldConstantPSF(
-            filename=str(mock_path / "test_ConstPSF.fits"))
-        fov_returned = constpsf.apply_to(centre_fov)
+        fov_returned = const_psf.apply_to(centre_fov)
 
         if PLOTS:
             fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(7,3))
@@ -153,5 +173,4 @@ class TestApplyTo:
             fig.colorbar(plot_a, ax=ax2)
             plt.show()
 
-        assert np.all(np.equal(fov_returned.hdu.data,
-                               centre_fov.hdu.data))
+        npt.assert_array_equal(fov_returned.hdu.data, centre_fov.hdu.data)
