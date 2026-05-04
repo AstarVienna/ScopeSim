@@ -81,8 +81,8 @@ from ..utils import (
     convert_table_comments_to_dict,
     unit_includes_per_physical_type,
     pixel_area,
+    ScopesimPendingDeprecationWarning,
 )
-from ..warnings import ScopesimPendingDeprecationWarning
 
 
 logger = get_logger(__name__)
