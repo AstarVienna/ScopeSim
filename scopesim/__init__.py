@@ -21,6 +21,8 @@ import warnings
 import yaml
 from astropy.utils.exceptions import AstropyWarning
 
+from .utils import ScopesimPendingDeprecationWarning
+
 warnings.simplefilter('ignore', UserWarning)
 warnings.simplefilter('ignore', RuntimeWarning)  # warnings for the developer
 
@@ -28,7 +30,7 @@ try:
     if __version__.is_prerelease or __version__.is_devrelease:
         # Those are usually ignored, but in development we should see them.
         warnings.simplefilter("default", DeprecationWarning)
-        warnings.simplefilter("default", PendingDeprecationWarning)
+        warnings.simplefilter("default", ScopesimPendingDeprecationWarning)
 except AttributeError:  # catch __version__ = "undetermined"
     pass
 
