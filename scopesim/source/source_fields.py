@@ -82,6 +82,7 @@ from ..utils import (
     unit_includes_per_physical_type,
     pixel_area,
 )
+from ..warnings import ScopesimPendingDeprecationWarning
 
 
 logger = get_logger(__name__)
@@ -109,7 +110,7 @@ class SourceField:
         # this and force the use of .field...
         warn("Direct item access for source fields may become deprecated "
              "in the future. Use the .field attribute instead.",
-             PendingDeprecationWarning, stacklevel=2)
+             ScopesimPendingDeprecationWarning, stacklevel=2)
         return self.field.__getitem__(key)
 
     def __setitem__(self, key, value):
@@ -118,7 +119,7 @@ class SourceField:
         # this and force the use of .field...
         warn("Direct item assignment for source fields may become deprecated "
              "in the future. Use the .field attribute instead.",
-             PendingDeprecationWarning, stacklevel=2)
+             ScopesimPendingDeprecationWarning, stacklevel=2)
         self.field.__setitem__(key, value)
 
     @property
