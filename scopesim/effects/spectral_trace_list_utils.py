@@ -122,17 +122,20 @@ class SpectralTrace:
         `xi` (spatial coordinate along the slit, in arcsec) and `lam`
         (wavelength, in um).
 
-        The interpolation functions include a shift in the focal-plane
-        coordinates, determined from the CRVAL of the source FOV.
+        #The interpolation functions include a shift in the focal-plane
+        #coordinates, determined from the CRVAL of the source FOV.
         """
-        x_arr = self.table[self.meta["x_colname"]] + self.meta["offset_x"]
-        y_arr = self.table[self.meta["y_colname"]] + self.meta["offset_y"]
+        x_arr = self.table[self.meta["x_colname"]]
+        y_arr = self.table[self.meta["y_colname"]]
+
         xi_arr = self.table[self.meta["s_colname"]]
         lam_arr = self.table[self.meta["wave_colname"]]
 
         self.wave_min = quantify(np.min(lam_arr), u.um).value
         self.wave_max = quantify(np.max(lam_arr), u.um).value
 
+        # TODO There should be an option to include pre- and
+        # posttransforms. But how should they be defined?
         self.xy2xi = Transform2D.fit(x_arr, y_arr, xi_arr)
         self.xy2lam = Transform2D.fit(x_arr, y_arr, lam_arr)
         self.xilam2x = Transform2D.fit(xi_arr, lam_arr, x_arr)

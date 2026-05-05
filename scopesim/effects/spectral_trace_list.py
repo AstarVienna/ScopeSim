@@ -245,16 +245,21 @@ class SpectralTraceList(Effect):
                 obj.cube = obj.make_hdu()
 
             # Check whether an offset slit is used. If so, recompute spectral traces.
-            offset_x = obj.cube.header["CRVAL1D"]
-            offset_y = obj.cube.header["CRVAL2D"]
-            if (offset_x != self.meta["offset_x"] or
-                offset_y != self.meta["offset_y"]):
-                logger.debug("Recomputing spectral traces for offset (%.1g, %.1g)",
-                             offset_x, offset_y)
-                self.meta["offset_x"] = offset_x
-                self.meta["offset_y"] = offset_y
-                self.make_spectral_traces()
-                self.update_meta()
+            # TODO: this needs to be removed. If transforms are available that
+            # can be applied to the actual slit position, they ought be used
+            # without modification. If they are not available but need to be
+            # hacked, then that hack needs to be defined via the yaml and only
+            # be used in a particular case, not in general.
+            #offset_x = obj.cube.header["CRVAL1D"]
+            #offset_y = obj.cube.header["CRVAL2D"]
+            #if (offset_x != self.meta["offset_x"] or
+            #    offset_y != self.meta["offset_y"]):
+            #    logger.debug("Recomputing spectral traces for offset (%.1g, %.1g)",
+            #                 offset_x, offset_y)
+            #    self.meta["offset_x"] = offset_x
+            #    self.meta["offset_y"] = offset_y
+            #    self.make_spectral_traces()
+            #    self.update_meta()
 
             spt = self.spectral_traces[obj.trace_id]
             obj.hdu = spt.map_spectra_to_focal_plane(obj)
