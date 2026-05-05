@@ -1,0 +1,152 @@
+name: Open PR for latest upstream ScopeSim tag
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Weekly on Monday at 09:17 UTC
+    - cron: "17 9 * * 1"
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: sync-upstream-scopesim-tag
+  cancel-in-progress: false
+
+env:
+  UPSTREAM_REPO: AstarVienna/ScopeSim
+  BASE_BRANCH: main
+  TAG_PATTERN: "v[0-9]*"
+
+jobs:
+  open-pr:
+    name: Open PR from latest upstream tag
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Caltech fork
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.BASE_BRANCH }}
+          fetch-depth: 0
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Find latest upstream stable tag
+        id: upstream
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          latest_tag="$(
+            git ls-remote --tags --refs "https://github.com/${UPSTREAM_REPO}.git" "${TAG_PATTERN}" \
+              | awk '{ sub("refs/tags/", "", $2); print $2 }' \
+              | grep -E '^v[0-9]+(\.[0-9]+)+$' \
+              | sort -V \
+              | tail -n 1
+          )"
+
+          if [[ -z "${latest_tag}" ]]; then
+            echo "No stable upstream tag found."
+            exit 1
+          fi
+
+          echo "Latest upstream tag: ${latest_tag}"
+          echo "tag=${latest_tag}" >> "$GITHUB_OUTPUT"
+
+      - name: Fetch upstream tag and branches
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          git remote add upstream "https://github.com/${UPSTREAM_REPO}.git" || \
+            git remote set-url upstream "https://github.com/${UPSTREAM_REPO}.git"
+
+          git fetch --quiet origin "${BASE_BRANCH}:refs/remotes/origin/${BASE_BRANCH}"
+          git fetch --quiet upstream "refs/tags/${{ steps.upstream.outputs.tag }}:refs/tags/${{ steps.upstream.outputs.tag }}"
+          git fetch --quiet upstream "${BASE_BRANCH}:refs/remotes/upstream/${BASE_BRANCH}"
+
+      - name: Check whether fork already contains latest upstream tag
+        id: check
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          tag="${{ steps.upstream.outputs.tag }}"
+
+          if git merge-base --is-ancestor "${tag}" "origin/${BASE_BRANCH}"; then
+            echo "Fork ${BASE_BRANCH} already contains upstream ${tag}."
+            echo "needs_pr=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "Fork ${BASE_BRANCH} does not contain upstream ${tag}."
+            echo "needs_pr=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Push sync branch at upstream tag
+        if: steps.check.outputs.needs_pr == 'true'
+        id: branch
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          tag="${{ steps.upstream.outputs.tag }}"
+          branch="sync/upstream-${tag}"
+
+          git checkout -B "${branch}" "${tag}"
+          git push --force-with-lease origin "${branch}"
+
+          echo "branch=${branch}" >> "$GITHUB_OUTPUT"
+
+      - name: Open or update PR
+        if: steps.check.outputs.needs_pr == 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          tag="${{ steps.upstream.outputs.tag }}"
+          branch="${{ steps.branch.outputs.branch }}"
+          title="Sync ScopeSim with upstream ${tag}"
+
+          body="$(cat <<EOF
+          This automated PR updates the Caltech ScopeSim fork to the latest stable upstream tag:
+
+          - Upstream repo: ${UPSTREAM_REPO}
+          - Upstream tag: ${tag}
+          - Base branch: ${BASE_BRANCH}
+          - Sync branch: ${branch}
+
+          This PR intentionally does not auto-merge. Please review CI results and any fork-specific changes before merging.
+          EOF
+          )"
+
+          existing_pr="$(
+            gh pr list \
+              --repo "${GITHUB_REPOSITORY}" \
+              --state open \
+              --base "${BASE_BRANCH}" \
+              --head "${branch}" \
+              --json number \
+              --jq '.[0].number // empty'
+          )"
+
+          if [[ -n "${existing_pr}" ]]; then
+            echo "Updating existing PR #${existing_pr}"
+            gh pr edit "${existing_pr}" \
+              --repo "${GITHUB_REPOSITORY}" \
+              --title "${title}" \
+              --body "${body}"
+          else
+            echo "Creating new PR for ${tag}"
+            gh pr create \
+              --repo "${GITHUB_REPOSITORY}" \
+              --base "${BASE_BRANCH}" \
+              --head "${branch}" \
+              --title "${title}" \
+              --body "${body}"
+          fi
