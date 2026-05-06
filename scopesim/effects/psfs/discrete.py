@@ -7,8 +7,7 @@ from pathlib import Path
 import numpy as np
 from tqdm.auto import tqdm
 from scipy.signal import convolve
-from scipy.ndimage import zoom
-from scipy.interpolate import griddata, RectBivariateSpline, RegularGridInterpolator
+from scipy.interpolate import RectBivariateSpline, griddata
 
 from astropy import units as u
 from astropy.io import fits
