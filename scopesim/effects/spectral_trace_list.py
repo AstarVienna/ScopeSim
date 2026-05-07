@@ -16,7 +16,8 @@ from astropy.table import Table
 
 from .effects import Effect
 from .ter_curves import FilterCurve
-from .spectral_trace_list_utils import SpectralTrace, make_image_interpolations
+from .spectral_trace_list_utils import (SpectralTrace, make_image_interpolations,
+                                        det_offset)
 from ..optics.image_plane_utils import header_from_list_of_xy
 from ..optics.fov import FieldOfView
 from ..optics.fov_volume_list import FovVolumeList
@@ -125,8 +126,6 @@ class SpectralTraceList(Effect):
             "x_colname": "x",
             "y_colname": "y",
             "s_colname": "s",
-            "offset_x": 0,     # [mm] in detector plane
-            "offset_y": 0,     # [mm] in detector plane
             "wave_colname": "wavelength",
             "center_on_wave_mid": False,
             "dwave": 0.002,  # [um] for finding the best fit dispersion
@@ -223,6 +222,7 @@ class SpectralTraceList(Effect):
                         aperture_id=vol["aperture_id"])
 
                 for ex_vol in extracted_vols:
+                    print("Extracted volume:", ex_vol["meta"]["offset_type"])
                     ex_vol["meta"].update(vol)
                     ex_vol["meta"].pop("wave_min")
                     ex_vol["meta"].pop("wave_max")
@@ -262,7 +262,20 @@ class SpectralTraceList(Effect):
             #    self.update_meta()
 
             spt = self.spectral_traces[obj.trace_id]
+            remove_pre = False
+            if ("offset_type" in obj.meta and
+                obj.meta["offset_type"] == "detector"):
+                spt.xy2lam.pretransform_x = (det_offset,
+                                             {"offset": obj.meta["offset_x"]})
+                spt.xy2lam.pretransform_y = (det_offset,
+                                             {"offset": obj.meta["offset_y"]})
+                remove_pre = True
+
             obj.hdu = spt.map_spectra_to_focal_plane(obj)
+
+            if remove_pre:
+                spt.xy2lam.pretransform_y = None
+                spt.xy2xi.pretransform_x = None
 
         logger.debug("%s done", self.display_name)
         return obj

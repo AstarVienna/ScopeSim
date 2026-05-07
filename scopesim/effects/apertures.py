@@ -129,6 +129,14 @@ class ApertureMask(Effect):
                 vol["meta"]["xi_min"] = min(x) * u.arcsec
                 vol["meta"]["xi_max"] = max(x) * u.arcsec
 
+                if "offset_type" in self.meta:
+                    print("Yes, got it: ", self.meta["offset_type"])
+                    vol["meta"]["offset_type"] = self.meta["offset_type"]
+                    vol["meta"]["offset_x"] = self.meta["offset_x"]
+                    vol["meta"]["offset_y"] = self.meta["offset_y"]
+                else:
+                    vol["meta"]["offset_type"] = "none"
+                    print("What is offset_type?")
         return obj
 
     # Outdated. Remove when removing all old FOVManager code from effects

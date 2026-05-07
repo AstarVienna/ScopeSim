@@ -49,8 +49,6 @@ class SpectralTrace:
         "x_colname": "x",
         "y_colname": "y",
         "s_colname": "s",
-        "offset_x": 0,
-        "offset_y": 0,
         "wave_colname": "wavelength",
         "dwave": 0.002,
         "aperture_id": 0,
@@ -114,6 +112,7 @@ class SpectralTrace:
         return {"wave_min": wave_min, "wave_max": wave_max,
                 "trace_id": self.trace_id, "aperture_id": aperture_id}
 
+
     def compute_interpolation_functions(self):
         """
         Compute various interpolation functions between slit and focal plane.
@@ -133,6 +132,7 @@ class SpectralTrace:
 
         self.wave_min = quantify(np.min(lam_arr), u.um).value
         self.wave_max = quantify(np.max(lam_arr), u.um).value
+
 
         # TODO There should be an option to include pre- and
         # posttransforms. But how should they be defined?
@@ -1045,3 +1045,7 @@ def get_affine_parameters(coords):
     shears = (np.average(shears, axis=0) * rad2deg) - (90 + rotations)
 
     return rotations, shears
+
+def det_offset(x, offset):
+    """Apply offset to x"""
+    return x + offset
