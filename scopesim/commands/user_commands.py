@@ -8,7 +8,7 @@ from collections.abc import Iterable, Collection, Mapping, MutableMapping
 from typing import Any
 
 import yaml
-import httpx
+import httpxyz as httpx
 from packaging.version import parse
 
 from astar_utils import NestedMapping, RecursiveNestedMapping, NestedChainMap
