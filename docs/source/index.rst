@@ -14,12 +14,9 @@ ScopeSim_ is on pip::
 
     pip install scopesim_templates
 
-.. warning:: July 2022: The downloadable content server was retired and the data migrated to a new server.
+.. note:: Looking for ELT specific user documentation?
 
-   ScopeSim v0.5.1 and above have been redirected to a new server URL.
-
-   For older verions, please either upgrade to the latest version (``pip install --upgrade scopesim``), or follow these `instructions to update the server URL <https://astarvienna.github.io/server_upgrade_instructions.html>`_ in the config file.
-
+   See the MICADO, METIS, and MOSAIC user guides on the `IRDB documentation page <https://irdb.readthedocs.io/en/latest/>`_
 
 .. _ScopeSim:    https://scopesim.readthedocs.io/en/latest/
 .. _`ScopeSim Templates`: https://scopesim-templates.readthedocs.io/en/latest/
@@ -32,6 +29,12 @@ ScopeSim_ is on pip::
     examples/index
     5_liners/index
     faqs/index
+
+.. warning:: July 2022: The downloadable content server was retired and the data migrated to a new server.
+
+   ScopeSim v0.5.1 and above have been redirected to a new server URL.
+
+   For older verions, please either upgrade to the latest version (``pip install --upgrade scopesim``), or follow these `instructions to update the server URL <https://astarvienna.github.io/server_upgrade_instructions.html>`_ in the config file.
 
 
 The ScopeSim python ecosystem
@@ -58,7 +61,7 @@ There are several packages in the ScopeSim_ ecosystem to be aware of:
 
 .. _ScopeSim:    https://scopesim.readthedocs.io/en/latest/
 .. _`ScopeSim Templates`: https://scopesim-templates.readthedocs.io/en/latest/
-.. _IRDB:        https://github.com/astronomyk/irdb
+.. _IRDB:        https://irdb.readthedocs.io/en/latest/
 .. _AnisoCADO:   https://anisocado.readthedocs.io/en/latest/
 .. _skycalc_ipy: https://skycalc-ipy.readthedocs.io/en/latest/
 .. _SpeXtra:     https://spextra.readthedocs.io/en/latest/
