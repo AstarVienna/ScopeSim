@@ -14,12 +14,40 @@ ScopeSim_ is on pip::
 
     pip install scopesim_templates
 
+.. _ScopeSim:    https://scopesim.readthedocs.io/en/latest/
+.. _`ScopeSim Templates`: https://scopesim-templates.readthedocs.io/en/latest/
+
+.. |metis_logo| image:: https://irdb.readthedocs.io/en/latest/_images/metis_scopesim_logo.png
+   :height: 100px
+   :target: https://irdb.readthedocs.io/en/latest/METIS/docs/readme.html
+
+.. |micado_logo| image:: https://irdb.readthedocs.io/en/latest/_images/micado_scopesim_logo.png
+   :height: 100px
+   :target: https://irdb.readthedocs.io/en/latest/MICADO/docs/readme.html
+
+.. |mosaic_logo| image:: https://irdb.readthedocs.io/en/latest/_images/mosaic_scopesim_logo.png
+   :height: 100px
+   :target: https://irdb.readthedocs.io/en/latest/MOSAIC/docs/readme.html
+
+.. |youtube_icon| image:: https://upload.wikimedia.org/wikipedia/commons/thumb/0/09/YouTube_full-color_icon_%282017%29.svg/960px-YouTube_full-color_icon_%282017%29.svg.png
+   :height: 30px
+   :target: https://www.youtube.com/@ScopeSimTutorials
+
+
 .. note:: Looking for ELT specific user documentation?
 
    See the MICADO, METIS, and MOSAIC user guides on the `IRDB documentation page <https://irdb.readthedocs.io/en/latest/>`_
 
-.. _ScopeSim:    https://scopesim.readthedocs.io/en/latest/
-.. _`ScopeSim Templates`: https://scopesim-templates.readthedocs.io/en/latest/
+   |micado_logo|  |metis_logo|  |mosaic_logo|
+
+.. note:: ScopeSim Tutorials on Youtube
+
+   A series of introductory tutorials are now available on youtube
+
+   |youtube_icon| @ScopeSimTutorials
+
+
+
 
 .. toctree::
     :maxdepth: 2
