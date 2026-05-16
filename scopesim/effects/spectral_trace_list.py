@@ -222,7 +222,6 @@ class SpectralTraceList(Effect):
                         aperture_id=vol["aperture_id"])
 
                 for ex_vol in extracted_vols:
-                    print("Extracted volume:", ex_vol["meta"]["offset_type"])
                     ex_vol["meta"].update(vol)
                     ex_vol["meta"].pop("wave_min")
                     ex_vol["meta"].pop("wave_max")
