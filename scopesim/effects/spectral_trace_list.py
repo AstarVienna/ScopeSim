@@ -148,6 +148,8 @@ class SpectralTraceList(Effect):
         self.catalog = Table(self._file[self.ext_cat].data)
         spec_traces = {}
         for row in self.catalog:
+            if row["image_plane_id"] == -99:
+                continue
             params = {col: row[col] for col in row.colnames}
             params.update(self.meta)
             hdu = self._file[row["extension_id"]]
