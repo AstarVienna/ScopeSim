@@ -365,14 +365,14 @@ css = ["tinycss2 (>=1.1.0,<1.3)"]
 
 [[package]]
 name = "certifi"
-version = "2025.6.15"
+version = "2026.4.22"
 description = "Python package for providing Mozilla's CA Bundle."
 optional = false
 python-versions = ">=3.7"
 groups = ["main", "dev", "docs"]
 files = [
-    {file = "certifi-2025.6.15-py3-none-any.whl", hash = "sha256:2e0c7ce7cb5d8f8634ca55d2ba7e6ec2689a2fd6537d8dec1296a477a4910057"},
-    {file = "certifi-2025.6.15.tar.gz", hash = "sha256:d747aa5a8b9bbbb1bb8c22bb13e22bd1f18e9796defa16bab421f7f7a317323b"},
+    {file = "certifi-2026.4.22-py3-none-any.whl", hash = "sha256:3cb2210c8f88ba2318d29b0388d1023c8492ff72ecdde4ebdaddbb13a31b1c4a"},
+    {file = "certifi-2026.4.22.tar.gz", hash = "sha256:8d455352a37b71bf76a79caa83a3d6c25afee4a385d632127b6afb3963f1c580"},
 ]
 
 [[package]]
@@ -1143,6 +1143,28 @@ socks = ["socksio (==1.*)"]
 trio = ["trio (>=0.22.0,<1.0)"]
 
 [[package]]
+name = "httpcorexyz"
+version = "1.1.1"
+description = "A minimal low-level HTTP client."
+optional = false
+python-versions = ">=3.9"
+groups = ["main"]
+files = [
+    {file = "httpcorexyz-1.1.1-py3-none-any.whl", hash = "sha256:58becd21f127c0a846813d0705f9e0c27c16c867bb436813667f569d4f0ba94e"},
+    {file = "httpcorexyz-1.1.1.tar.gz", hash = "sha256:0b8dbbe8ffaccd20b7c755d92129f9fb04a23f2ef22b32ff82e2d1c7fcfee803"},
+]
+
+[package.dependencies]
+certifi = ">=2026.2.25"
+h11 = ">=0.16"
+
+[package.extras]
+asyncio = ["anyio (>=4.5.0,<5.0)"]
+http2 = ["h2 (>=3,<5)"]
+socks = ["socksio (==1.*)"]
+trio = ["trio (>=0.22.0,<1.0)"]
+
+[[package]]
 name = "httpx"
 version = "0.28.1"
 description = "The next generation HTTP client."
@@ -1163,6 +1185,31 @@ idna = "*"
 [package.extras]
 brotli = ["brotli ; platform_python_implementation == \"CPython\"", "brotlicffi ; platform_python_implementation != \"CPython\""]
 cli = ["click (==8.*)", "pygments (==2.*)", "rich (>=10,<14)"]
+http2 = ["h2 (>=3,<5)"]
+socks = ["socksio (==1.*)"]
+zstd = ["zstandard (>=0.18.0)"]
+
+[[package]]
+name = "httpxyz"
+version = "0.31.2"
+description = "Friendly fork of the next generation HTTP client."
+optional = false
+python-versions = ">=3.9"
+groups = ["main"]
+files = [
+    {file = "httpxyz-0.31.2-py3-none-any.whl", hash = "sha256:1e8058b7324aaf875efb6b4cf5a5a423f4ac101fd4af515349fb4e1d3e4d4441"},
+    {file = "httpxyz-0.31.2.tar.gz", hash = "sha256:da96c2f35c724023b9395b1df718f7d52d049b8424a0c919ca0fe2b64dce73a0"},
+]
+
+[package.dependencies]
+anyio = "*"
+certifi = "*"
+httpcorexyz = ">=1.1.1"
+idna = "*"
+
+[package.extras]
+brotli = ["brotli ; platform_python_implementation == \"CPython\"", "brotlicffi ; platform_python_implementation != \"CPython\""]
+cli = ["click (==8.*)", "pygments (==2.*)", "rich (>=10,<15)"]
 http2 = ["h2 (>=3,<5)"]
 socks = ["socksio (==1.*)"]
 zstd = ["zstandard (>=0.18.0)"]
@@ -4581,4 +4628,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10,<3.15"
-content-hash = "b65171d430f786296ef022cf73d16468aff1d0327793b28cdb6f6a7304e82e45"
+content-hash = "0b1cf5c44318e7bfff2fc2516a5143babda1c3f4e3110675ae373ceaecbcf778"

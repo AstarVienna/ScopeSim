@@ -13,7 +13,7 @@ from scopesim.server import github_utils as dbgh
 
 @pytest.fixture(scope="class")
 def mock_client():
-    # TODO: investigate proper mocking via httpx
+    # TODO: investigate proper mocking via httpxyz
     with db.create_client(db.get_base_url()) as client:
         yield client
 
