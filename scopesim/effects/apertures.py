@@ -118,6 +118,7 @@ class ApertureMask(Effect):
         """See parent docstring."""
         if isinstance(obj, FovVolumeList):
             logger.debug("Executing %s, FoV setup", self.meta['name'])
+
             x = quantity_from_table("x", self.table,
                                     u.arcsec).to_value(u.arcsec)
             y = quantity_from_table("y", self.table,
@@ -130,13 +131,11 @@ class ApertureMask(Effect):
                 vol["meta"]["xi_max"] = max(x) * u.arcsec
 
                 if "offset_type" in self.meta:
-                    print("Yes, got it: ", self.meta["offset_type"])
                     vol["meta"]["offset_type"] = self.meta["offset_type"]
                     vol["meta"]["offset_x"] = self.meta["offset_x"]
                     vol["meta"]["offset_y"] = self.meta["offset_y"]
                 else:
                     vol["meta"]["offset_type"] = "none"
-                    print("What is offset_type?")
         return obj
 
     # Outdated. Remove when removing all old FOVManager code from effects
