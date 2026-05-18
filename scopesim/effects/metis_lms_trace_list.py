@@ -53,92 +53,97 @@ class MetisLMSSpectralTraceList(SpectralTraceList):
                               self.slicelist["top"].max() -
                               self.slicelist["bottom"].min()])
 
-    def apply_to(self, obj, **kwargs):
-        """See parent docstring."""
-        if isinstance(obj, FovVolumeList):
-            # Create a single volume that covers the aperture and
-            # the maximum wavelength range of LMS
-            volumes = [spectral_trace.fov_grid()
-                       for spectral_trace in self.spectral_traces.values()]
+    # Overrides for the two apply_to() methods
+    def apply_to_fovvolumelist(self, obj):
+        """Setup
 
-            wave_min = min(vol["wave_min"] for vol in volumes)
-            wave_max = max(vol["wave_max"] for vol in volumes)
-            extracted_vols = obj.extract(axes=["wave"],
-                                         edges=([[wave_min, wave_max]]))
-            obj.volumes = extracted_vols
+        Create a single volume that covers the aperture and
+        the maximum wavelength range of LMS.
+        """
+        logger.debug("Executing %s: Setup", self.meta['name'])
+        volumes = [spectral_trace.fov_grid()
+                   for spectral_trace in self.spectral_traces.values()]
 
-        if isinstance(obj, FieldOfView):
-            # Application to field of view
-            logger.debug("Executing %s, FoV", self.meta['name'])
-            if obj.hdu is not None and obj.hdu.header["NAXIS"] == 3:
-                obj.cube = obj.hdu
-            elif obj.hdu is None and obj.cube is None:
-                obj.cube = obj.make_hdu()
-
-            fovcube = obj.cube.data
-            n_z, n_y, n_x = fovcube.shape
-            fovwcs = WCS(obj.cube.header)
-            # Make this linear to avoid jump at RA 0 deg
-            fovwcs.wcs.ctype = ["LINEAR", "LINEAR", fovwcs.wcs.ctype[2]]
-            fovwcs_spat = fovwcs.sub(2)
-            ny_slice = self.meta["slice_samples"]
-
-            # Spatial pixel coordinates
-            xslice, yslice = np.meshgrid(np.arange(n_x),
-                                         np.arange(ny_slice))
-
-            fovimage = np.zeros((obj.detector_header["NAXIS2"],
-                                 obj.detector_header["NAXIS1"]),
-                                dtype=np.float32)
-
-            for sptid, spt in tqdm(self.spectral_traces.items(),
-                                   desc=" Spectral Traces", position=2):
-                ymin = spt.meta["fov"]["y_min"]
-                ymax = spt.meta["fov"]["y_max"]
-
-                slicewcs = fovwcs.deepcopy()
-
-                slicewcs.wcs.ctype = ["LINEAR", "LINEAR",
-                                      slicewcs.wcs.ctype[2]]
-                slicewcs.wcs.crpix[1] = (ny_slice + 1) / 2
-                slicewcs.wcs.crval[1] = (ymin + ymax) / 2 / 3600
-                slicewcs.wcs.cdelt[1] = (ymax - ymin) / ny_slice / 3600
-                slicewcs_spat = slicewcs.sub(2)
-
-                # World coordinates for the slice
-                xworld, yworld = slicewcs_spat.all_pix2world(xslice,
-                                                             yslice, 0)
-                # FOV pixel coordinates for the slice
-                xfov, yfov = fovwcs_spat.all_world2pix(xworld, yworld, 0)
-
-                slicecube = np.zeros((n_z, ny_slice, n_x))
-                for islice in range(n_z):
-                    ifov = RectBivariateSpline(np.arange(n_y),
-                                               np.arange(n_x),
-                                               fovcube[islice], kx=1, ky=1)
-                    slicecube[islice] = ifov(yfov, xfov, grid=False)
-
-                slicefov = FieldOfView3D(obj.header,
-                                         [obj.meta["wave_min"],
-                                          obj.meta["wave_max"]])
-                slicefov.detector_header = obj.detector_header
-                slicefov.meta["xi_min"] = obj.meta["xi_min"]
-                slicefov.meta["xi_max"] = obj.meta["xi_max"]
-                slicefov.meta["trace_id"] = sptid
-                slicefov.cube = fits.ImageHDU(header=slicewcs.to_header(),
-                                              data=slicecube)
-                # slicefov.cube.writeto(f"slicefov_{sptid}.fits", overwrite=True)
-                slicefov.hdu = spt.map_spectra_to_focal_plane(slicefov)
-                if slicefov.hdu is not None:
-                    sxmin = slicefov.hdu.header["XMIN"]
-                    sxmax = slicefov.hdu.header["XMAX"]
-                    symin = slicefov.hdu.header["YMIN"]
-                    symax = slicefov.hdu.header["YMAX"]
-                    fovimage[symin:symax, sxmin:sxmax] += slicefov.hdu.data
-
-            obj.hdu = fits.ImageHDU(data=fovimage, header=obj.detector_header)
-
+        wave_min = min(vol["wave_min"] for vol in volumes)
+        wave_max = max(vol["wave_max"] for vol in volumes)
+        extracted_vols = obj.extract(axes=["wave"],
+                                     edges=([[wave_min, wave_max]]))
+        obj.volumes = extracted_vols
         return obj
+
+    def apply_to_fov(self, obj):
+        """Application to field of view"""
+
+        logger.debug("Executing %s, FoV", self.meta['name'])
+        if obj.hdu is not None and obj.hdu.header["NAXIS"] == 3:
+            obj.cube = obj.hdu
+        elif obj.hdu is None and obj.cube is None:
+            obj.cube = obj.make_hdu()
+
+        fovcube = obj.cube.data
+        n_z, n_y, n_x = fovcube.shape
+        fovwcs = WCS(obj.cube.header)
+        # Make this linear to avoid jump at RA 0 deg
+        fovwcs.wcs.ctype = ["LINEAR", "LINEAR", fovwcs.wcs.ctype[2]]
+        fovwcs_spat = fovwcs.sub(2)
+        ny_slice = self.meta["slice_samples"]
+
+        # Spatial pixel coordinates
+        xslice, yslice = np.meshgrid(np.arange(n_x),
+                                     np.arange(ny_slice))
+
+        fovimage = np.zeros((obj.detector_header["NAXIS2"],
+                             obj.detector_header["NAXIS1"]),
+                            dtype=np.float32)
+
+        for sptid, spt in tqdm(self.spectral_traces.items(),
+                               desc=" Spectral Traces", position=2):
+            ymin = spt.meta["fov"]["y_min"]
+            ymax = spt.meta["fov"]["y_max"]
+
+            slicewcs = fovwcs.deepcopy()
+
+            slicewcs.wcs.ctype = ["LINEAR", "LINEAR",
+                                  slicewcs.wcs.ctype[2]]
+            slicewcs.wcs.crpix[1] = (ny_slice + 1) / 2
+            slicewcs.wcs.crval[1] = (ymin + ymax) / 2 / 3600
+            slicewcs.wcs.cdelt[1] = (ymax - ymin) / ny_slice / 3600
+            slicewcs_spat = slicewcs.sub(2)
+
+            # World coordinates for the slice
+            xworld, yworld = slicewcs_spat.all_pix2world(xslice,
+                                                         yslice, 0)
+            # FOV pixel coordinates for the slice
+            xfov, yfov = fovwcs_spat.all_world2pix(xworld, yworld, 0)
+
+            slicecube = np.zeros((n_z, ny_slice, n_x))
+            for islice in range(n_z):
+                ifov = RectBivariateSpline(np.arange(n_y),
+                                           np.arange(n_x),
+                                           fovcube[islice], kx=1, ky=1)
+                slicecube[islice] = ifov(yfov, xfov, grid=False)
+
+            slicefov = FieldOfView3D(obj.header,
+                                     [obj.meta["wave_min"],
+                                      obj.meta["wave_max"]])
+            slicefov.detector_header = obj.detector_header
+            slicefov.meta["xi_min"] = obj.meta["xi_min"]
+            slicefov.meta["xi_max"] = obj.meta["xi_max"]
+            slicefov.meta["trace_id"] = sptid
+            slicefov.cube = fits.ImageHDU(header=slicewcs.to_header(),
+                                          data=slicecube)
+            # slicefov.cube.writeto(f"slicefov_{sptid}.fits", overwrite=True)
+            slicefov.hdu = spt.map_spectra_to_focal_plane(slicefov)
+            if slicefov.hdu is not None:
+                sxmin = slicefov.hdu.header["XMIN"]
+                sxmax = slicefov.hdu.header["XMAX"]
+                symin = slicefov.hdu.header["YMIN"]
+                symax = slicefov.hdu.header["YMAX"]
+                fovimage[symin:symax, sxmin:sxmax] += slicefov.hdu.data
+
+        obj.hdu = fits.ImageHDU(data=fovimage, header=obj.detector_header)
+        return obj
+
 
     def make_spectral_traces(self):
         """Compute the transformations by interpolation."""
