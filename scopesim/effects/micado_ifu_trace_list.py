@@ -18,7 +18,7 @@ from ..utils import from_currsys, find_file, quantify, get_logger
 from .spectral_trace_list import SpectralTraceList
 from .spectral_trace_list_utils import SpectralTrace
 from .spectral_trace_list_utils import Transform2D
-from .spectral_trace_list_utils import make_image_interpolations
+from .spectral_trace_list_utils import make_image_interpolations, det_offset
 from .apertures import ApertureMask
 from .ter_curves import TERCurve
 from ..optics.fov import FieldOfView, FieldOfView3D
@@ -41,8 +41,6 @@ class MicadoIFUSpectralTraceList(SpectralTraceList):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-
-        # field of view of the instrument
 
 
     def apply_to_fovvolumelist(self, obj):
@@ -174,15 +172,25 @@ class MicadoIFUSpectralTrace(SpectralTrace):
         "naxis1": 112,
         "nslice": 32,
         "slicewidth": 0.012, # arcsec
+        "pixsize": 0.015,    # mm
     }
 
 
     def __init__(self, trace_tbl, aplist, spslice, cmds=None, **kwargs):
         super().__init__(trace_tbl, **kwargs)
+
+        self._set_dispersion(self.wave_min, self.wave_max)
         # Provisional
         self.aplist = aplist
         self.meta["slice"] = spslice
         self.meta["fov"] = self.fov_grid()
+
+        lam = np.linspace(self.wave_min, self.wave_max, 1001) * u.um
+        off_y = aplist['offset'][spslice]
+        dlam = np.median(self.dlam_per_pix(lam)) / self.meta["pixsize"] * off_y
+        self.xy2lam.posttransform = (det_offset, {"offset": dlam})
+        self.xilam2x.pretransform_y = (det_offset, {"offset": dlam})
+        self.xilam2y.pretransform_y = (det_offset, {"offset": dlam})
 
     def fov_grid(self):
         """
