@@ -19,15 +19,15 @@ ScopeSim_ is on pip::
 
 .. |metis_logo| image:: https://irdb.readthedocs.io/en/latest/_images/metis_scopesim_logo.png
    :height: 100px
-   :target: https://irdb.readthedocs.io/en/latest/METIS/docs/readme.html
+   :target: https://irdb.readthedocs.io/en/latest/METIS/docs/README.html
 
 .. |micado_logo| image:: https://irdb.readthedocs.io/en/latest/_images/micado_scopesim_logo.png
    :height: 100px
-   :target: https://irdb.readthedocs.io/en/latest/MICADO/docs/readme.html
+   :target: https://irdb.readthedocs.io/en/latest/MICADO/docs/README.html
 
 .. |mosaic_logo| image:: https://irdb.readthedocs.io/en/latest/_images/mosaic_scopesim_logo.png
    :height: 100px
-   :target: https://irdb.readthedocs.io/en/latest/MOSAIC/docs/readme.html
+   :target: https://irdb.readthedocs.io/en/latest/MOSAIC/docs/README.html
 
 .. |youtube_icon| image:: https://upload.wikimedia.org/wikipedia/commons/thumb/0/09/YouTube_full-color_icon_%282017%29.svg/960px-YouTube_full-color_icon_%282017%29.svg.png
    :height: 30px
