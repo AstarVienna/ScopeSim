@@ -41,7 +41,8 @@ class MicadoIFUSpectralTraceList(SpectralTraceList):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-
+        self.wave_min = self.meta["wave_min"]
+        self.wave_max = self.meta["wave_max"]
 
     def apply_to_fovvolumelist(self, obj):
         """
@@ -188,9 +189,9 @@ class MicadoIFUSpectralTrace(SpectralTrace):
         lam = np.linspace(self.wave_min, self.wave_max, 1001) * u.um
         off_y = aplist['offset'][spslice]
         dlam = np.median(self.dlam_per_pix(lam)) / self.meta["pixsize"] * off_y
-        self.xy2lam.posttransform = (det_offset, {"offset": dlam})
-        self.xilam2x.pretransform_y = (det_offset, {"offset": dlam})
-        self.xilam2y.pretransform_y = (det_offset, {"offset": dlam})
+        self.xy2lam.posttransform = (det_offset, {"offset": -dlam})
+        self.xilam2x.pretransform_y = (det_offset, {"offset": -dlam})
+        self.xilam2y.pretransform_y = (det_offset, {"offset": -dlam})
 
     def fov_grid(self):
         """
