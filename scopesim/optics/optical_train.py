@@ -163,6 +163,10 @@ class OpticalTrain:
         if all(len(m) == 0 for m in self.cmds.maps):
             raise ValueError("Empty cmds, cannot construct OpticalTrain.")
 
+        # Guard against empty yamls to avoid cryptical error downstream.
+        if not self.cmds.yaml_dicts:
+            raise ValueError("No YAMLS found, cannot construct OpticalTrain.")
+
         self.yaml_dicts = self.cmds.yaml_dicts
         self.optics_manager = OpticsManager(self.yaml_dicts, self.cmds)
         self.update()
