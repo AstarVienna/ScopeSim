@@ -288,10 +288,17 @@ class SpectralTraceList(Effect):
         remove_pre = False
         if ("offset_type" in obj.meta and
             obj.meta["offset_type"] == "detector"):
+            self.meta["offset_type"] = "detector"
+            self.meta["offset_x"] = obj.meta["offset_x"]
+            self.meta["offset_y"] = obj.meta["offset_y"]
             spt.xy2lam.pretransform_x = (det_offset,
                                          {"offset": obj.meta["offset_x"]})
             spt.xy2lam.pretransform_y = (det_offset,
                                          {"offset": obj.meta["offset_y"]})
+            spt.xilam2x.posttransform = (det_offset,
+                                         {"offset": -obj.meta["offset_x"]})
+            spt.xilam2y.posttransform = (det_offset,
+                                         {"offset": -obj.meta["offset_y"]})
             remove_pre = True
 
         obj.hdu = spt.map_spectra_to_focal_plane(obj)
@@ -299,6 +306,8 @@ class SpectralTraceList(Effect):
         if remove_pre:
             spt.xy2lam.pretransform_y = None
             spt.xy2xi.pretransform_x = None
+            spt.xilam2x.posttransform = None
+            spt.xilam2y.posttransform = None
 
         return obj
 
@@ -401,14 +410,35 @@ class SpectralTraceList(Effect):
 
         for i, trace_id in tqdm(enumerate(self.spectral_traces, start=1),
                                 desc=" Traces", total=len(self.spectral_traces)):
-            hdu = self[trace_id].rectify(hdulist,
-                                         interps=interps,
-                                         bin_width=bin_width,
-                                         xi_min=xi_min, xi_max=xi_max,
-                                         wave_min=wave_min, wave_max=wave_max)
+            spt = self[trace_id]
+            remove_pre = False
+            if ("offset_type" in self.meta and
+                self.meta["offset_type"] == "detector"):
+                spt.xy2lam.pretransform_x = (det_offset,
+                                             {"offset": self.meta["offset_x"]})
+                spt.xy2lam.pretransform_y = (det_offset,
+                                             {"offset": self.meta["offset_y"]})
+                spt.xilam2x.posttransform = (det_offset,
+                                             {"offset": -self.meta["offset_x"]})
+                spt.xilam2y.posttransform = (det_offset,
+                                             {"offset": -self.meta["offset_y"]})
+                remove_pre = True
+
+
+            hdu = spt.rectify(hdulist,
+                              interps=interps,
+                              bin_width=bin_width,
+                              xi_min=xi_min, xi_max=xi_max,
+                              wave_min=wave_min, wave_max=wave_max)
             if hdu is not None:   # ..todo: rectify does not do that yet
                 outhdul.append(hdu)
                 outhdul[0].header[f"EXTNAME{i}"] = trace_id
+
+            if remove_pre:
+                spt.xy2lam.pretransform_y = None
+                spt.xy2xi.pretransform_x = None
+                spt.xilam2x.posttransform = None
+                spt.xilam2y.posttransform = None
 
         outhdul[0].header.update(inhdul[0].header)
 
