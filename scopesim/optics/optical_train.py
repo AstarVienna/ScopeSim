@@ -340,7 +340,12 @@ class OpticalTrain:
                 wave_max = max(fov.meta["wave_max"] for fov in self.fov_manager.fovs)
                 wave_unit = u.Unit(from_currsys("!SIM.spectral.wave_unit", self.cmds))
                 dwave = from_currsys("!SIM.spectral.spectral_bin_width", self.cmds)  # Not a quantity
-                fov_waveset = np.arange(wave_min.value, wave_max.value, dwave) * wave_unit
+                # Include the last point by adding dwave, because arange excludes the last point.
+                fov_waveset = np.arange(wave_min.value, wave_max.value + dwave, dwave)
+                # Ensure the start and end values are exact.
+                fov_waveset[0] = wave_min.value
+                fov_waveset[-1] = wave_max.value
+                fov_waveset *= wave_unit
                 fov_waveset = fov_waveset.to(u.um)
 
                 field.spectra[ispec] = SourceSpectrum(Empirical1D,
