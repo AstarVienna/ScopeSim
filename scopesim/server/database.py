@@ -7,7 +7,7 @@ from pathlib import Path
 from collections.abc import Iterator, Iterable, Mapping
 
 import yaml
-import httpx
+import httpxyz as httpx
 from more_itertools import first, last, groupby_transform
 
 from .github_utils import download_github_folder
