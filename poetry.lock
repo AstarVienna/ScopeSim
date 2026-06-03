@@ -1800,14 +1800,14 @@ files = [
 
 [[package]]
 name = "jupytext"
-version = "1.19.1"
+version = "1.19.3"
 description = "Jupyter notebooks as Markdown documents, Julia, Python or R scripts"
 optional = false
 python-versions = ">=3.9"
 groups = ["dev"]
 files = [
-    {file = "jupytext-1.19.1-py3-none-any.whl", hash = "sha256:d8975035155d034bdfde5c0c37891425314b7ea8d3a6c4b5d18c294348714cd9"},
-    {file = "jupytext-1.19.1.tar.gz", hash = "sha256:82587c07e299173c70ed5e8ec7e75183edf1be289ed518bab49ad0d4e3d5f433"},
+    {file = "jupytext-1.19.3-py3-none-any.whl", hash = "sha256:acf75492f80895ad8e664fd8db1708b617008dd0e71c341a1abc3d0d07310ed0"},
+    {file = "jupytext-1.19.3.tar.gz", hash = "sha256:713c3ed4441afe0f31474d28ea2e6b61a268c04c40fd78e5ccfd7f7ac9e9f766"},
 ]
 
 [package.dependencies]
@@ -2355,14 +2355,14 @@ files = [
 
 [[package]]
 name = "myst-nb"
-version = "1.3.0"
+version = "1.4.0"
 description = "A Jupyter Notebook Sphinx reader built on top of the MyST markdown parser."
 optional = false
-python-versions = ">=3.9"
+python-versions = ">=3.10"
 groups = ["docs"]
 files = [
-    {file = "myst_nb-1.3.0-py3-none-any.whl", hash = "sha256:1f36af3c19964960ec4e51ac30949b6ed6df220356ffa8d60dd410885e132d7d"},
-    {file = "myst_nb-1.3.0.tar.gz", hash = "sha256:df3cd4680f51a5af673fd46b38b562be3559aef1475e906ed0f2e66e4587ce4b"},
+    {file = "myst_nb-1.4.0-py3-none-any.whl", hash = "sha256:0e2c86e7d3b82c3aa51383f82d6268f7714f3b772c23a796ab09538a8e68b4e4"},
+    {file = "myst_nb-1.4.0.tar.gz", hash = "sha256:c145598de62446a6fd009773dd071a40d3b76106ace780de1abdfc6961f614c2"},
 ]
 
 [package.dependencies]
@@ -2380,7 +2380,7 @@ typing-extensions = "*"
 [package.extras]
 code-style = ["pre-commit"]
 rtd = ["alabaster", "altair", "bokeh", "coconut (>=1.4.3)", "ipykernel (>=5.5)", "ipywidgets", "jupytext (>=1.11.2)", "matplotlib", "numpy", "pandas", "plotly", "sphinx-autodoc-typehints", "sphinx-book-theme (>=0.3)", "sphinx-copybutton", "sphinx-design", "sphinxcontrib-bibtex", "sympy"]
-testing = ["beautifulsoup4", "coverage (>=6.4)", "ipykernel (>=5.5)", "ipython (!=8.1.0)", "ipywidgets (>=8)", "jupytext (>=1.11.2)", "matplotlib (==3.7.*)", "nbdime", "numpy", "pandas", "pyarrow", "pytest", "pytest-cov (>=3)", "pytest-param-files", "pytest-regressions", "sympy (>=1.10.1)"]
+testing = ["beautifulsoup4", "coverage (>=6.4)", "ipykernel (>=5.5)", "ipython (!=8.1.0)", "ipywidgets (>=8)", "jupytext (>=1.11.2)", "matplotlib (==3.10.7)", "nbdime", "numpy", "pandas", "pyarrow", "pytest", "pytest-cov (>=3)", "pytest-param-files", "pytest-regressions", "sympy (>=1.10.1)"]
 
 [[package]]
 name = "myst-parser"
@@ -4115,14 +4115,14 @@ test = ["flake8", "mypy", "pytest"]
 
 [[package]]
 name = "sphinxcontrib-mermaid"
-version = "2.0.1"
+version = "2.0.2"
 description = "Mermaid diagrams in your Sphinx-powered docs"
 optional = false
 python-versions = ">=3.10"
 groups = ["docs"]
 files = [
-    {file = "sphinxcontrib_mermaid-2.0.1-py3-none-any.whl", hash = "sha256:9dca7fbe827bad5e7e2b97c4047682cfd26e3e07398cfdc96c7a8842ae7f06e7"},
-    {file = "sphinxcontrib_mermaid-2.0.1.tar.gz", hash = "sha256:a21a385a059a6cafd192aa3a586b14bf5c42721e229db67b459dc825d7f0a497"},
+    {file = "sphinxcontrib_mermaid-2.0.2-py3-none-any.whl", hash = "sha256:d862e514991279fb4816302c5cfe167d2557bf3ce7125ae0cb47dac80a0f46ce"},
+    {file = "sphinxcontrib_mermaid-2.0.2.tar.gz", hash = "sha256:f09576c78ca93fa0e3034fd9c45aaffa7c44ab449de9c43b8b8d262afe52bc66"},
 ]
 
 [package.dependencies]
@@ -4594,4 +4594,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10,<3.15"
-content-hash = "9dbfa064c3be3c271940357f413cea507848211d37d21c2cfe38e87fe5cb4763"
+content-hash = "b0f0e32e8915a61b3ba986247ee05e36989c31bde957818c586b6ec58d47b27e"
