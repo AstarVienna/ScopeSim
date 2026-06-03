@@ -14,15 +14,40 @@ ScopeSim_ is on pip::
 
     pip install scopesim_templates
 
-.. warning:: July 2022: The downloadable content server was retired and the data migrated to a new server.
-
-   ScopeSim v0.5.1 and above have been redirected to a new server URL.
-
-   For older verions, please either upgrade to the latest version (``pip install --upgrade scopesim``), or follow these `instructions to update the server URL <https://astarvienna.github.io/server_upgrade_instructions.html>`_ in the config file.
-
-
 .. _ScopeSim:    https://scopesim.readthedocs.io/en/latest/
 .. _`ScopeSim Templates`: https://scopesim-templates.readthedocs.io/en/latest/
+
+.. |metis_logo| image:: https://irdb.readthedocs.io/en/latest/_images/metis_scopesim_logo.png
+   :height: 100px
+   :target: https://irdb.readthedocs.io/en/latest/METIS/docs/README.html
+
+.. |micado_logo| image:: https://irdb.readthedocs.io/en/latest/_images/micado_scopesim_logo.png
+   :height: 100px
+   :target: https://irdb.readthedocs.io/en/latest/MICADO/docs/README.html
+
+.. |mosaic_logo| image:: https://irdb.readthedocs.io/en/latest/_images/mosaic_scopesim_logo.png
+   :height: 100px
+   :target: https://irdb.readthedocs.io/en/latest/MOSAIC/docs/README.html
+
+.. |youtube_icon| image:: https://upload.wikimedia.org/wikipedia/commons/thumb/0/09/YouTube_full-color_icon_%282017%29.svg/960px-YouTube_full-color_icon_%282017%29.svg.png
+   :height: 30px
+   :target: https://www.youtube.com/@ScopeSimTutorials
+
+
+.. note:: Looking for ELT specific user documentation?
+
+   See the MICADO, METIS, and MOSAIC user guides on the `IRDB documentation page <https://irdb.readthedocs.io/en/latest/>`_
+
+   |micado_logo|  |metis_logo|  |mosaic_logo|
+
+.. note:: ScopeSim Tutorials on Youtube
+
+   A series of introductory tutorials are now available on youtube
+
+   |youtube_icon| @ScopeSimTutorials
+
+
+
 
 .. toctree::
     :maxdepth: 2
@@ -32,6 +57,12 @@ ScopeSim_ is on pip::
     examples/index
     5_liners/index
     faqs/index
+
+.. warning:: July 2022: The downloadable content server was retired and the data migrated to a new server.
+
+   ScopeSim v0.5.1 and above have been redirected to a new server URL.
+
+   For older verions, please either upgrade to the latest version (``pip install --upgrade scopesim``), or follow these `instructions to update the server URL <https://astarvienna.github.io/server_upgrade_instructions.html>`_ in the config file.
 
 
 The ScopeSim python ecosystem
@@ -58,7 +89,7 @@ There are several packages in the ScopeSim_ ecosystem to be aware of:
 
 .. _ScopeSim:    https://scopesim.readthedocs.io/en/latest/
 .. _`ScopeSim Templates`: https://scopesim-templates.readthedocs.io/en/latest/
-.. _IRDB:        https://github.com/astronomyk/irdb
+.. _IRDB:        https://irdb.readthedocs.io/en/latest/
 .. _AnisoCADO:   https://anisocado.readthedocs.io/en/latest/
 .. _skycalc_ipy: https://skycalc-ipy.readthedocs.io/en/latest/
 .. _SpeXtra:     https://spextra.readthedocs.io/en/latest/

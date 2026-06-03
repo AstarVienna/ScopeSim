@@ -163,6 +163,11 @@ class UserCommands(NestedChainMap):
             # Don't add another layer when .new_child() is called.
             maps = [RecursiveNestedMapping(title="CurrSys"), *maps]
 
+        # Guard against wrong args to avoid cryptical error downstream.
+        if not all(isinstance(m, Mapping) for m in maps):
+                raise TypeError(
+                    "Non-keyword args to UserCommands must be dict-like.")
+
         super().__init__(*maps)
 
         self.yaml_dicts = []
