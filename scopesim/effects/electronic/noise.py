@@ -2,6 +2,7 @@
 """Any kinds of electronic or photonic noise."""
 
 from typing import ClassVar
+from numbers import Real
 
 import numpy as np
 from astropy.io import fits
@@ -192,7 +193,7 @@ class PixelResponseNonUniformity(Effect):
         prnu_std_meta = from_currsys(self.meta["prnu_std"], self.cmds)
         if isinstance(prnu_std_meta, dict):
             prnu_std = float(from_currsys(prnu_std_meta[dtcr_id], self.cmds))
-        elif isinstance(prnu_std_meta, (int, float)):
+        elif isinstance(prnu_std_meta, Real):
             prnu_std = float(prnu_std_meta)
         else:
             raise TypeError(
@@ -320,8 +321,8 @@ class DarkCurrent(Effect):
         if isinstance(from_currsys(self.meta["value"], self.cmds), dict):
             dtcr_id = obj.meta[real_colname("id", obj.meta)]
             dark = from_currsys(self.meta["value"][dtcr_id], self.cmds)
-        elif isinstance(from_currsys(self.meta["value"], self.cmds), float):
-            dark = from_currsys(self.meta["value"], self.cmds)
+        elif isinstance(from_currsys(self.meta["value"], self.cmds), Real):
+            dark = float(from_currsys(self.meta["value"], self.cmds))
         else:
             raise ValueError("<DarkCurrent>.meta['value'] must be either "
                              f"dict or float, but is {self.meta['value']}")
