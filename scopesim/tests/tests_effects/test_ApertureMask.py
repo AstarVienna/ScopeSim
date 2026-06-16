@@ -1,12 +1,13 @@
-
 import pytest
 from pytest import approx
 
 import numpy as np
 from astropy.io import fits
 
+from scopesim import rc
 from scopesim.effects import ApertureMask
 from scopesim.effects.apertures import points_on_a_circle, make_aperture_polygon
+from scopesim.optics.fov_manager import FovVolumeList
 
 import matplotlib.pyplot as plt
 
@@ -14,16 +15,20 @@ import matplotlib.pyplot as plt
 PLOTS = False
 
 
+def basic_aperture_mask(x=(-2, -1, 1, 2), y=(-1, -2, 2, 1), **kwargs):
+    params = {"array_dict": {"x": list(x), "y": list(y)},
+              "x_unit": "arcsec",
+              "y_unit": "arcsec"}
+    params.update(kwargs)
+    return ApertureMask(**params)
+
+
 class TestInit:
     def test_initialises_with_nothing(self):
         assert isinstance(ApertureMask(), ApertureMask)
 
     def test_initialises_with_x_y_array_dict(self):
-        kwargs = {"array_dict": {"x": [-2, -1, 1, 2],
-                                 "y": [-1, -2, 2, 1]},
-                  "x_unit": "arcsec",
-                  "y_unit": "arcsec"}
-        apm = ApertureMask(**kwargs)
+        apm = basic_aperture_mask()
         assert isinstance(apm, ApertureMask)
         assert "x" in apm.table.colnames
 
@@ -33,15 +38,28 @@ class TestInit:
         assert "y" in apm.table.colnames
 
 
+class TestApplyTo:
+    def test_shrinks_fov_volume_list_as_expected(self):
+        apm = basic_aperture_mask(x=[-2, 2, 2, -2], y=[-1, -1, 1, 1],
+                                  pixel_scale=0.1)
+        fvl = FovVolumeList()
+        fvl = apm.apply_to(fvl)
+        assert fvl.volumes[0]["x_min"] == -2
+
+    def test_shrinks_fov_volume_list_with_extended_region(self):
+        apm = basic_aperture_mask(x=[-2, 2, 2, -2], y=[-1, -1, 1, 1],
+                                  extend_fov_beyond_slit=2, pixel_scale=0.1)
+        fvl = FovVolumeList()
+        fvl = apm.apply_to(fvl)
+        assert fvl.volumes[0]["x_min"] == -4
+
+
 class TestHeader:
     def test_returns_header_surrounding_tilted_aperture(self):
         e = 1e-7
-        kwargs = {"array_dict": {"x": [-2, -1, 1+e, 2+e],
-                                 "y": [-1, -2, 2+e, 1+e]},
-                  "x_unit": "arcsec",
-                  "y_unit": "arcsec",
-                  "pixel_scale": 0.1}
-        apm = ApertureMask(**kwargs)
+        apm = basic_aperture_mask(x=[-2, -1, 1+e, 2+e],
+                                  y=[-1, -2, 2+e, 1+e],
+                                  pixel_scale=0.1)
         hdr = apm.header
         assert isinstance(hdr, fits.Header)
         assert hdr["NAXIS1"] == hdr["NAXIS2"] == 40
@@ -75,11 +93,6 @@ class TestMask:
         if PLOTS:
             plt.imshow(apm.mask.T)
             plt.show()
-
-
-class TestFovGrid:
-    # not needed because all it does is return the header
-    pass
 
 
 class TestMakeAperturePolygon:

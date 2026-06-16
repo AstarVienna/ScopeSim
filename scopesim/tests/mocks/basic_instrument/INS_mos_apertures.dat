@@ -1,0 +1,11 @@
+# x_unit : arcsec
+# y_unit : arcsec
+# r_unit : arcsec
+# angle_unit : deg
+
+id  x       y       r       angle   conserve_image  shape
+0   -5      -5      0.4     0       False           round
+1   5       -5      0.6     0       False           rect
+2   0       0       0.8     0       False           hex
+3   -5      5       1       0       False           oct
+4   5       5       1.2     0       False           3

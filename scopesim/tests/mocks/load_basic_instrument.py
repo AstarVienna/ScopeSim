@@ -8,6 +8,8 @@ def load_example_optical_train(**kwargs):
     """
     Return an basic example ``OpticalTrain`` object with IMG and SPEC modes.
 
+    Available modes: ["imaging", "spectroscopy", "ifu"]
+
     Parameters
     ----------
     Any of the additional parameters taken by UserCommands.
