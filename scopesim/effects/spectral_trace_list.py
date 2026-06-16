@@ -16,7 +16,8 @@ from astropy.table import Table
 
 from .effects import Effect
 from .ter_curves import FilterCurve
-from .spectral_trace_list_utils import SpectralTrace, make_image_interpolations
+from .spectral_trace_list_utils import (SpectralTrace, make_image_interpolations,
+                                        det_offset)
 from ..optics.image_plane_utils import header_from_list_of_xy
 from ..optics.fov import FieldOfView
 from ..optics.fov_volume_list import FovVolumeList
@@ -125,8 +126,6 @@ class SpectralTraceList(Effect):
             "x_colname": "x",
             "y_colname": "y",
             "s_colname": "s",
-            "offset_x": 0,     # [mm] in detector plane
-            "offset_y": 0,     # [mm] in detector plane
             "wave_colname": "wavelength",
             "center_on_wave_mid": False,
             "dwave": 0.002,  # [um] for finding the best fit dispersion
@@ -149,6 +148,8 @@ class SpectralTraceList(Effect):
         self.catalog = Table(self._file[self.ext_cat].data)
         spec_traces = {}
         for row in self.catalog:
+            if row["image_plane_id"] == -99:
+                continue
             params = {col: row[col] for col in row.colnames}
             params.update(self.meta)
             hdu = self._file[row["extension_id"]]
@@ -183,6 +184,7 @@ class SpectralTraceList(Effect):
             self.meta["y_min"] = min(ylim)
             self.meta["y_max"] = max(ylim)
 
+
     def apply_to(self, obj, **kwargs):
         """
         Interface between ``FieldOfView`` and ``SpectralTraceList``.
@@ -197,69 +199,116 @@ class SpectralTraceList(Effect):
         list, identified by meta["trace_id"].
         """
         if isinstance(obj, FovVolumeList):
-            logger.debug("%s applied to %s", self.display_name,
-                         obj.__class__.__name__)
-            # Setup of FieldOfView object
-            # volumes = [spectral_trace.fov_grid()
-            #            for spectral_trace in self.spectral_traces.values()]
-
-            new_vols_list = []
-
-            # for vol in volumes:
-            for spt in self.spectral_traces.values():
-                vol = spt.fov_grid()
-                wave_edges = [vol["wave_min"], vol["wave_max"]]
-                if "x_min" in vol:
-                    x_edges = [vol["x_min"], vol["x_max"]]
-                    y_edges = [vol["y_min"], vol["y_max"]]
-                    extracted_vols = obj.extract(
-                        axes=["wave", "x", "y"],
-                        edges=(wave_edges, x_edges, y_edges),
-                        aperture_id=vol["aperture_id"])
-                else:
-                    extracted_vols = obj.extract(
-                        axes=["wave"],
-                        edges=(wave_edges, ),
-                        aperture_id=vol["aperture_id"])
-
-                for ex_vol in extracted_vols:
-                    ex_vol["meta"].update(vol)
-                    ex_vol["meta"].pop("wave_min")
-                    ex_vol["meta"].pop("wave_max")
-                new_vols_list.extend(extracted_vols)
-
-            obj.volumes = new_vols_list
+            obj = self.apply_to_fovvolumelist(obj)
 
         if isinstance(obj, FieldOfView):
-            logger.debug("%s applied to %s", self.display_name,
-                         obj.__class__.__name__)
-            # Application to field of view
-            if obj.hdu is not None and obj.hdu.header["NAXIS"] == 3:
-                obj.cube = obj.hdu
-            elif obj.hdu is not None and obj.hdu.header["NAXIS"] == 2:
-                # todo: catch the case of obj.hdu.header["NAXIS"] == 2
-                # for MAAT
-                pass
-            elif obj.hdu is None and obj.cube is None:
-                logger.info("Making cube")
-                obj.cube = obj.make_hdu()
-
-            # Check whether an offset slit is used. If so, recompute spectral traces.
-            offset_x = obj.cube.header["CRVAL1D"]
-            offset_y = obj.cube.header["CRVAL2D"]
-            if (offset_x != self.meta["offset_x"] or
-                offset_y != self.meta["offset_y"]):
-                logger.debug("Recomputing spectral traces for offset (%.1g, %.1g)",
-                             offset_x, offset_y)
-                self.meta["offset_x"] = offset_x
-                self.meta["offset_y"] = offset_y
-                self.make_spectral_traces()
-                self.update_meta()
-
-            spt = self.spectral_traces[obj.trace_id]
-            obj.hdu = spt.map_spectra_to_focal_plane(obj)
+            obj = self.apply_to_fov(obj)
 
         logger.debug("%s done", self.display_name)
+        return obj
+
+    def apply_to_fovvolumelist(self, obj):
+        """
+        Setup of SpectralTraceList
+
+        During setup of the required FieldOfView objects, the
+        SpectralTraceList is asked for the source space volumes that
+        it requires (spatial limits and wavelength limits).
+        """
+        logger.debug("%s applied to %s", self.display_name,
+                     obj.__class__.__name__)
+
+        new_vols_list = []
+
+        for spt in self.spectral_traces.values():
+            vol = spt.fov_grid()
+            wave_edges = [vol["wave_min"], vol["wave_max"]]
+            if "x_min" in vol:
+                x_edges = [vol["x_min"], vol["x_max"]]
+                y_edges = [vol["y_min"], vol["y_max"]]
+                extracted_vols = obj.extract(
+                    axes=["wave", "x", "y"],
+                    edges=(wave_edges, x_edges, y_edges),
+                    aperture_id=vol["aperture_id"])
+            else:
+                extracted_vols = obj.extract(
+                    axes=["wave"],
+                    edges=(wave_edges, ),
+                    aperture_id=vol["aperture_id"])
+
+            for ex_vol in extracted_vols:
+                ex_vol["meta"].update(vol)
+                ex_vol["meta"].pop("wave_min")
+                ex_vol["meta"].pop("wave_max")
+            new_vols_list.extend(extracted_vols)
+
+        obj.volumes = new_vols_list
+        return obj
+
+
+    def apply_to_fov(self, obj):
+        """Apply to FieldOfView
+
+        During "observation" the method is passed a single FieldOfView
+        object and applies the mapping to the image plane to it.
+        The FieldOfView object is associated to one SpectralTrace from the
+        list, identified by meta["trace_id"].
+        """
+        logger.debug("%s applied to %s %s", self.display_name,
+                     obj.__class__.__name__, obj.trace_id)
+
+        if obj.hdu is not None and obj.hdu.header["NAXIS"] == 3:
+            obj.cube = obj.hdu
+        elif obj.hdu is not None and obj.hdu.header["NAXIS"] == 2:
+            # todo: catch the case of obj.hdu.header["NAXIS"] == 2
+            # for MAAT
+            pass
+        elif obj.hdu is None and obj.cube is None:
+            logger.info("Making cube")
+            obj.cube = obj.make_hdu()
+
+        # Check whether an offset slit is used. If so, recompute spectral traces.
+        # TODO: this needs to be removed. If transforms are available that
+        # can be applied to the actual slit position, they ought be used
+        # without modification. If they are not available but need to be
+        # hacked, then that hack needs to be defined via the yaml and only
+        # be used in a particular case, not in general.
+        #offset_x = obj.cube.header["CRVAL1D"]
+        #offset_y = obj.cube.header["CRVAL2D"]
+        #if (offset_x != self.meta["offset_x"] or
+        #    offset_y != self.meta["offset_y"]):
+        #    logger.debug("Recomputing spectral traces for offset (%.1g, %.1g)",
+        #                 offset_x, offset_y)
+        #    self.meta["offset_x"] = offset_x
+        #    self.meta["offset_y"] = offset_y
+        #    self.make_spectral_traces()
+        #    self.update_meta()
+
+        spt = self.spectral_traces[obj.trace_id]
+        remove_pre = False
+        if ("offset_type" in obj.meta and
+            obj.meta["offset_type"] == "detector"):
+            self.meta["offset_type"] = "detector"
+            self.meta["offset_x"] = obj.meta["offset_x"]
+            self.meta["offset_y"] = obj.meta["offset_y"]
+            spt.xy2lam.pretransform_x = (det_offset,
+                                         {"offset": obj.meta["offset_x"]})
+            spt.xy2lam.pretransform_y = (det_offset,
+                                         {"offset": obj.meta["offset_y"]})
+            spt.xilam2x.posttransform = (det_offset,
+                                         {"offset": -obj.meta["offset_x"]})
+            spt.xilam2y.posttransform = (det_offset,
+                                         {"offset": -obj.meta["offset_y"]})
+            remove_pre = True
+
+        obj.hdu = spt.map_spectra_to_focal_plane(obj)
+
+        if remove_pre:
+            spt.xy2lam.pretransform_y = None
+            spt.xy2xi.pretransform_x = None
+            spt.xilam2x.posttransform = None
+            spt.xilam2y.posttransform = None
+
         return obj
 
     @property
@@ -361,14 +410,35 @@ class SpectralTraceList(Effect):
 
         for i, trace_id in tqdm(enumerate(self.spectral_traces, start=1),
                                 desc=" Traces", total=len(self.spectral_traces)):
-            hdu = self[trace_id].rectify(hdulist,
-                                         interps=interps,
-                                         bin_width=bin_width,
-                                         xi_min=xi_min, xi_max=xi_max,
-                                         wave_min=wave_min, wave_max=wave_max)
+            spt = self[trace_id]
+            remove_pre = False
+            if ("offset_type" in self.meta and
+                self.meta["offset_type"] == "detector"):
+                spt.xy2lam.pretransform_x = (det_offset,
+                                             {"offset": self.meta["offset_x"]})
+                spt.xy2lam.pretransform_y = (det_offset,
+                                             {"offset": self.meta["offset_y"]})
+                spt.xilam2x.posttransform = (det_offset,
+                                             {"offset": -self.meta["offset_x"]})
+                spt.xilam2y.posttransform = (det_offset,
+                                             {"offset": -self.meta["offset_y"]})
+                remove_pre = True
+
+
+            hdu = spt.rectify(hdulist,
+                              interps=interps,
+                              bin_width=bin_width,
+                              xi_min=xi_min, xi_max=xi_max,
+                              wave_min=wave_min, wave_max=wave_max)
             if hdu is not None:   # ..todo: rectify does not do that yet
                 outhdul.append(hdu)
                 outhdul[0].header[f"EXTNAME{i}"] = trace_id
+
+            if remove_pre:
+                spt.xy2lam.pretransform_y = None
+                spt.xy2xi.pretransform_x = None
+                spt.xilam2x.posttransform = None
+                spt.xilam2y.posttransform = None
 
         outhdul[0].header.update(inhdul[0].header)
 
