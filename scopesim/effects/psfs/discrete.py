@@ -8,7 +8,7 @@ import numpy as np
 from tqdm.auto import tqdm
 from scipy.signal import convolve
 from scipy.ndimage import zoom
-from scipy.interpolate import griddata, RegularGridInterpolator
+from scipy.interpolate import griddata, RectBivariateSpline, RegularGridInterpolator
 
 from astropy import units as u
 from astropy.io import fits
@@ -221,8 +221,9 @@ class FieldConstantPSF(DiscretePSF):
         pix_ratio = kernel_pixel_scale / fov_pixel_scale
         if abs(pix_ratio - 1) > self.meta["flux_accuracy"]:
             spline_order = from_currsys(
-                "!SIM.computing.spline_order", cmds=self.cmds)
+                self.meta["interp_order"], cmds=self.cmds)
             self.kernel = _rescale_kernel(self.kernel, pix_ratio,
+                                          spline_order=spline_order,
                                           image_header=hdr)
 
         if ((fov.header["NAXIS1"] < hdr["NAXIS1"]) or
@@ -510,7 +511,7 @@ def _make_strehl_map_from_table(tbl, pixel_scale=1*u.arcsec):
     return map_hdu
 
 
-def _rescale_kernel(image, scale_factor, method="linear",
+def _rescale_kernel(image, scale_factor, spline_order=1,
                     image_header=None):
     """Rescale `image` by `scale_factor`
 
@@ -523,9 +524,10 @@ def _rescale_kernel(image, scale_factor, method="linear",
         ratio of input pixel size to output pixel size. Values larger than 1
         zoom the image.
 
-    method : str
-        interpolation method to be passed to ``RegularGridInterpolator``.
-        Default is "linear"
+    spline_order : int
+        spline order for interpolation by ``RectBivariateSpline``.
+        Default is 1 (linear interpolation). The method uses the same order in both
+        directions (i.e. `kx = ky = spline_order`).
 
     image_header : astropy.fits.Header
         an optional image header with a WCS. If ``None``, a WCS is constructed
@@ -537,13 +539,10 @@ def _rescale_kernel(image, scale_factor, method="linear",
     The output kernel size is always odd to avoid half-pixel shift when
     convolved with an image with ``mode="same"``.
     """
-    nxin, nyin = image.shape
-    interp_img = RegularGridInterpolator(
-        (np.arange(nyin), np.arange(nxin)),
-        image, method=method,
-        bounds_error=False,
-        fill_value=0,
-    )
+    nyin, nxin = image.shape
+    print("_rescale_kernel: spline_order = ", spline_order)
+    interp_img = RectBivariateSpline(
+        np.arange(nxin), np.arange(nyin), image, kx=spline_order, ky=spline_order)
 
     # Make the output size odd so that the image remains centred (important
     # for PSF convolution).
@@ -570,10 +569,10 @@ def _rescale_kernel(image, scale_factor, method="linear",
         outwcs.wcs.crpix = [(nxout + 1)/2, (nyout + 1)/2]
         outwcs.wcs.crval = [0., 0.]
         outwcs.wcs.cdelt = inwcs.wcs.cdelt / scale_factor
-    xout, yout = np.meshgrid(np.arange(nxout), np.arange(nyout))
+    xout, yout = np.meshgrid(np.arange(nxout), np.arange(nyout), indexing='ij')
     xworld, yworld = outwcs.all_pix2world(xout, yout, 0)
     xin, yin = inwcs.all_world2pix(xworld, yworld, 0)
-    outimage = interp_img( (yin.ravel(), xin.ravel()) ).reshape((nyout, nxout))
+    outimage = interp_img(xin.ravel(), yin.ravel(), grid=False).reshape((nyout, nxout))
     logger.info("Interpolating PSF onto %s image", outimage.shape)
 
     outimage *= image.sum() / outimage.sum()
