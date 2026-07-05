@@ -32,6 +32,10 @@ properties :
     preload_field_of_views : False
     nan_fill_value: 0.
 
+  psf:
+    inter_psf: True
+    interp_order: 1
+
   file :
     local_packages_path : "./inst_pkgs/"
     server_base_url : "https://scopesim.univie.ac.at/InstPkgSvr/"
