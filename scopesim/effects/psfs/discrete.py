@@ -173,6 +173,10 @@ class FieldConstantPSF(DiscretePSF):
        Fixed handling of background level and rounded edges to avoid visible
        "squares" in the image.
 
+    .. versionchanged:: PLACEHOLDER_NEXT_RELEASE_VERSION
+
+       Interpolation spline order can now be set via "!SIM.psf.interp_order".
+
     """
 
     required_keys = {"filename"}
@@ -197,7 +201,13 @@ class FieldConstantPSF(DiscretePSF):
         if ext == self.current_layer_id:
             return self.kernel
 
-        spline_order = from_currsys(self.meta["interp_order"], cmds=self.cmds)
+        try:
+            spline_order = from_currsys(self.meta["interp_order"], cmds=self.cmds)
+        except KeyError:
+            # Occurs in online notebook test, maybe temporary mismatch with irdb?
+            logger.warning("PSF parameter interp_order not found, using 1 (linear interpolation).")
+            spline_order = 1
+
 
         if fov.hdu.header["NAXIS"] == 3:
             self.current_layer_id = ext
