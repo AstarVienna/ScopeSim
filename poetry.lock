@@ -167,14 +167,14 @@ test = ["dateparser (==1.*)", "pre-commit", "pytest", "pytest-cov", "pytest-mock
 
 [[package]]
 name = "astar-utils"
-version = "0.5.3"
+version = "0.6.0"
 description = "Contains commonly-used utilities for AstarVienna's projects."
 optional = false
 python-versions = "<3.15,>=3.10"
 groups = ["main"]
 files = [
-    {file = "astar_utils-0.5.3-py3-none-any.whl", hash = "sha256:2b595b3c5acc20888e6beb8cffcbb5999d17311a358ba97c75d331883a6e0e8e"},
-    {file = "astar_utils-0.5.3.tar.gz", hash = "sha256:57423f4c5eeece04b7d92ca6d1f8923f1a25ccfa972f6ddb8194dbcd9197533b"},
+    {file = "astar_utils-0.6.0-py3-none-any.whl", hash = "sha256:be49459ad232e5fb49373dcb438524da4172da40317624befe19e80c0f2cc156"},
+    {file = "astar_utils-0.6.0.tar.gz", hash = "sha256:67df5126af37c76ed8f357ddc399f7264958148676f0cb7f61e617f440452326"},
 ]
 
 [package.dependencies]
@@ -4652,4 +4652,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10,<3.15"
-content-hash = "9d466fdf8137d22f15be3a77237a6a8bd2d3f344d34a7c95f18d02f3d56f0192"
+content-hash = "c0b084d2a2bfd7cc46d1650fe467a23f41e5a867fec94950a2c03d6515d52139"
