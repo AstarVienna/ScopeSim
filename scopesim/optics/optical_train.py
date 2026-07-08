@@ -505,93 +505,29 @@ class OpticalTrain:
         return copy.deepcopy(hduls)
 
     def write_header(self, hdulist):
-        """Write meaningful header to simulation product."""
-        # Primary hdu
+        """Write minimal header to output HDUL.
+
+        This method exists as a fallback of last resort, if no FITS header
+        effect is present in the optical train. It should not be expanded,
+        instead any other keywords required in the output should be included
+        via those effects. This should only be called for very minimal
+        instrument setups or during testing and debugging, where most effects
+        are switched off.
+        """
+        # Primary HDU
         pheader = hdulist[0].header
         pheader["DATE"] = datetime.now().isoformat(timespec="seconds")
         pheader["ORIGIN"] = f"Scopesim {__version__}"
+
+        # These are always present in cmds, so should be save
         pheader["INSTRUME"] = from_currsys("!OBS.instrument", self.cmds)
         pheader["INSTMODE"] = ", ".join(from_currsys("!OBS.modes", self.cmds))
-        pheader["TELESCOP"] = from_currsys("!TEL.telescope", self.cmds)
-        pheader["LOCATION"] = from_currsys("!ATMO.location", self.cmds)
 
-        # Source information taken from first only.
-        # ..todo: What if source is a composite?
-        srcfield = self._last_source.fields[0]
-        if type(srcfield).__name__ == "Table":
-            pheader["SOURCE"] = "Table"
-        elif type(srcfield).__name__ == "ImageHDU":
-            if "BG_SURF" in srcfield.header:
-                pheader["SOURCE"] = srcfield.header["BG_SURF"]
-            else:
-                try:
-                    pheader["SOURCE"] = srcfield.header["FILENAME"]
-                except KeyError:
-                    pheader["SOURCE"] = "ImageHDU"
-
-        # Image hdul
-        # ..todo: currently only one, update for detector arrays
-        # ..todo: normalise filenames - some need from_currsys, some need Path(...).name
-        #         this should go into a function so as to reduce clutter here.
-        iheader = hdulist[1].header
-        iheader["EXPTIME"] = from_currsys("!OBS.exptime", self.cmds), "[s]"
-        iheader["DIT"] = from_currsys("!OBS.dit", self.cmds), "[s]"
-        iheader["NDIT"] = from_currsys("!OBS.ndit", self.cmds)
-        iheader["BUNIT"] = "e", "per EXPTIME"
-        iheader["PIXSCALE"] = from_currsys("!INST.pixel_scale", self.cmds), "[arcsec]"
-
-        for eff in self.optics_manager.detector_setup_effects:
-            efftype = type(eff).__name__
-
-            if efftype == "DetectorList" and eff.include:
-                iheader["DETECTOR"] = eff.meta["detector"]
-
-        for eff in self.optics_manager.detector_array_effects:
-            efftype = type(eff).__name__
-
-            if (efftype == "DetectorModePropertiesSetter" and
-                eff.include):
-                # ..todo: can we write this into currsys?
-                iheader["DET_MODE"] = (eff.meta["detector_readout_mode"],
-                                       "detector readout mode")
-                iheader["MINDIT"] = from_currsys("!DET.mindit", self.cmds), "[s]"
-                iheader["FULLWELL"] = from_currsys("!DET.full_well", self.cmds), "[s]"
-                iheader["RON"] = from_currsys("!DET.readout_noise", self.cmds), "[e]"
-                iheader["DARK"] = from_currsys("!DET.dark_current", self.cmds), "[e/s]"
-
-        ifilter = 1   # Counts filter wheels
-        isurface = 1  # Counts surface lists
-        for eff in self.optics_manager.source_effects:
-            efftype = type(eff).__name__
-
-            if efftype == "ADCWheel" and eff.include:
-                iheader["ADC"] = eff.current_adc.meta["name"]
-
-            if efftype == "FilterWheel" and eff.include:
-                iheader[f"FILTER{ifilter}"] = (eff.current_filter.meta["name"],
-                                               eff.meta["name"])
-                ifilter += 1
-
-            if efftype == "SlitWheel" and eff.include:
-                iheader["SLIT"] = (eff.current_slit.meta["name"],
-                                   eff.meta["name"])
-
-            if efftype == "PupilTransmission" and eff.include:
-                iheader["PUPTRANS"] = (from_currsys("!OBS.pupil_transmission", self.cmds),
-                                       "cold stop, pupil transmission")
-
-            if efftype == "SkycalcTERCurve" and eff.include:
-                iheader["ATMOSPHE"] = "Skycalc", "atmosphere model"
-                iheader["LOCATION"] = eff.meta["location"]
-                iheader["AIRMASS"] = eff.meta["airmass"]
-                iheader["TEMPERAT"] = eff.meta["temperature"], "[degC]"
-                iheader["HUMIDITY"] = eff.meta["humidity"]
-                iheader["PRESSURE"] = eff.meta["pressure"], "[hPa]"
-                iheader["PWV"] = eff.meta["pwv"], "precipitable water vapour"
-
-            if efftype == "SurfaceList" and eff.include:
-                iheader[f"SURFACE{isurface}"] = eff.meta["name"]
-                isurface += 1
+        # Image HDUs
+        for hdu in hdulist[1:]:
+            hdu.header["EXPTIME"] = from_currsys("!OBS.exptime", self.cmds), "[s]"
+            hdu.header["DIT"] = from_currsys("!OBS.dit", self.cmds), "[s]"
+            hdu.header["NDIT"] = from_currsys("!OBS.ndit", self.cmds)
 
         return hdulist
 
