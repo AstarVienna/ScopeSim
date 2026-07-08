@@ -507,7 +507,7 @@ class OpticalTrain:
     def write_header(self, hdulist):
         """Write minimal header to output HDUL.
 
-        This methods exists as a fallback of last resort, if no FITS header
+        This method exists as a fallback of last resort, if no FITS header
         effect is present in the optical train. It should not be expanded,
         instead any other keywords required in the output should be included
         via those effects. This should only be called for very minimal
