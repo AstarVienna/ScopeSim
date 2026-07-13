@@ -17,7 +17,6 @@
 """
 
 import pytest
-from pytest import approx
 
 import numpy as np
 from numpy import testing as npt
@@ -35,15 +34,17 @@ PLOTS = False
 # pylint: disable=missing-class-docstring,
 # pylint: disable=missing-function-docstring
 
-@pytest.fixture(scope="function")
-def centre_fov():
+@pytest.fixture(name="centre_fov", scope="function")
+def fixture_centre_fov():
     return _centre_fov()
 
 
-@pytest.fixture(scope="function")
-def const_psf(mock_path):
+@pytest.fixture(name="const_psf", scope="function")
+def fixture_const_psf(mock_path):
+    """Instantiate a field constant psf with linear interpolation"""
     constpsf = FieldConstantPSF(
-        filename=str(mock_path / "test_ConstPSF.fits"))
+        filename=str(mock_path / "test_ConstPSF.fits"),
+        interp_order=1)
     return constpsf
 
 
@@ -98,9 +99,9 @@ class TestGetKernel:
     @pytest.mark.parametrize("scale_factor", (
         pytest.param(1/3, marks=pytest.mark.xfail(reason="PSF center off")),
         1,
-        pytest.param(5, marks=pytest.mark.xfail(reason="1x1 array turned into scalar")),
+        5
     ))
-    def test_kernel_is_scale_properly_if_cdelts_differ(
+    def test_kernel_is_scaled_properly_if_cdelts_differ(
         self,
         scale_factor,
         const_psf,

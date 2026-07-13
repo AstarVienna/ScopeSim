@@ -8,7 +8,7 @@ import numpy as np
 from tqdm.auto import tqdm
 from scipy.signal import convolve
 from scipy.ndimage import zoom
-from scipy.interpolate import griddata, RegularGridInterpolator
+from scipy.interpolate import griddata, RectBivariateSpline, RegularGridInterpolator
 
 from astropy import units as u
 from astropy.io import fits
@@ -166,12 +166,16 @@ class FieldConstantPSF(DiscretePSF):
     .. versionchanged:: 0.10.0
 
        PSF interpolation can now be limited to the central wavelength by
-       setting the "!OBS.interp_psf" keyword to False.
+       setting the "!SIM.psf.interp_psf" keyword to False.
 
     .. versionchanged:: 0.11.2
 
        Fixed handling of background level and rounded edges to avoid visible
        "squares" in the image.
+
+    .. versionchanged:: PLACEHOLDER_NEXT_RELEASE_VERSION
+
+       Interpolation spline order can now be set via "!SIM.psf.interp_order".
 
     """
 
@@ -197,9 +201,17 @@ class FieldConstantPSF(DiscretePSF):
         if ext == self.current_layer_id:
             return self.kernel
 
+        try:
+            spline_order = from_currsys(self.meta["interp_order"], cmds=self.cmds)
+        except KeyError:
+            # Occurs in online notebook test, maybe temporary mismatch with irdb?
+            logger.warning("PSF parameter interp_order not found, using 1 (linear interpolation).")
+            spline_order = 1
+
+
         if fov.hdu.header["NAXIS"] == 3:
             self.current_layer_id = ext
-            self.make_psf_cube(fov)
+            self.make_psf_cube(fov, spline_order)
             return self.kernel
 
         self.kernel = self._file[ext].data
@@ -220,9 +232,8 @@ class FieldConstantPSF(DiscretePSF):
         # rescaling kept inside loop to avoid rescaling for every fov
         pix_ratio = kernel_pixel_scale / fov_pixel_scale
         if abs(pix_ratio - 1) > self.meta["flux_accuracy"]:
-            spline_order = from_currsys(
-                "!SIM.computing.spline_order", cmds=self.cmds)
             self.kernel = _rescale_kernel(self.kernel, pix_ratio,
+                                          spline_order=spline_order,
                                           image_header=hdr)
 
         if ((fov.header["NAXIS1"] < hdr["NAXIS1"]) or
@@ -232,8 +243,19 @@ class FieldConstantPSF(DiscretePSF):
 
         return np.atleast_2d(self.kernel.squeeze())
 
-    def make_psf_cube(self, fov):
-        """Create a wavelength-dependent psf cube."""
+    def make_psf_cube(self, fov, spline_order=1):
+        """Create a wavelength-dependent psf cube.
+
+        Parameters
+        ----------
+        fov : FieldOfView
+
+        spline_order : int
+            spline order for interpolation by ``RectBivariateSpline``.
+            Default is 1 (linear interpolation). The method uses the same order in both
+            directions (i.e. `kx = ky = spline_order`).
+
+        """
         # Some data from the fov
         nxfov, nyfov = fov.hdu.header["NAXIS1"], fov.hdu.header["NAXIS2"]
         fov_pixel_scale = fov.hdu.header["CDELT1"]
@@ -245,7 +267,7 @@ class FieldConstantPSF(DiscretePSF):
             + fov.hdu.header["CRVAL3"]
         )
 
-        if not self.cmds.get("!OBS.interp_psf", True):
+        if not self.meta.get("interp_psf", True):
             lam = np.array([lam[len(lam)//2]])
 
         # Some data from the psf file
@@ -263,15 +285,10 @@ class FieldConstantPSF(DiscretePSF):
         psfwcs = WCS(hdr)
         psf = self._file[ext].data
         psf = psf / psf.sum()         # normalisation of the input psf
-        nxin, nyin = psf.shape
+        nyin, nxin = psf.shape
 
-        # We need linear interpolation to preserve positivity. Might think of
-        # more elaborate positivity-preserving schemes.
-        # An alternative would be to use method 'pchip', which uses monotonic
-        # splines to prevent overshooting (including to negative values)
-        ipsf = RegularGridInterpolator((np.arange(nyin), np.arange(nxin)),
-                                       psf, method='linear', bounds_error=False,
-                                       fill_value=0)
+        ipsf = RectBivariateSpline(
+            np.arange(nyin), np.arange(nxin), psf, kx=spline_order, ky=spline_order)
 
         # adapt the size of the output cube to the FOV's spatial shape
         psf_maxsize = self.cmds.get("!SIM.computing.psf_maxsize", np.nan)
@@ -279,7 +296,7 @@ class FieldConstantPSF(DiscretePSF):
         nxpsf = min(nxin, 2 * nxfov + 1, psf_maxsize)
         nypsf = min(nyin, 2 * nyfov + 1, psf_maxsize)
 
-        xcube, ycube = np.meshgrid(np.arange(nxpsf), np.arange(nypsf))
+        xcube, ycube = np.meshgrid(np.arange(nxpsf), np.arange(nypsf), sparse=True)
         cubewcs = WCS(naxis=2)
         cubewcs.wcs.ctype = ["LINEAR", "LINEAR"]
         cubewcs.wcs.crval = [0., 0.]
@@ -290,7 +307,7 @@ class FieldConstantPSF(DiscretePSF):
         xworld, yworld = cubewcs.all_pix2world(xcube, ycube, 1)
         outcube = np.zeros((lam.shape[0], nypsf, nxpsf), dtype=np.float32)
         logger.info("Interpolating PSF onto %s cube", outcube.shape)
-
+        logger.info("Interpolation order %d", spline_order)
         nlam = len(lam)
         for i, wave in tqdm(enumerate(lam), desc=" PSF slices", position=2,
                             total=nlam, disable=(nlam <= 1)):
@@ -298,11 +315,12 @@ class FieldConstantPSF(DiscretePSF):
             psfwcs.wcs.cdelt = [psf_wave_pixscale,
                                 psf_wave_pixscale]
             xpsf, ypsf = psfwcs.all_world2pix(xworld, yworld, 0)
-            outcube[i,] = (ipsf( (ypsf.ravel(), xpsf.ravel()) ).reshape(outcube[i,].shape)
+            outcube[i,] = (ipsf( ypsf, xpsf, grid=False ).reshape(outcube[i,].shape)
                            * fov_pixel_scale**2 / psf_wave_pixscale**2)
 
         # .squeeze() gets rid of any axes with length one
         self.kernel = outcube.reshape((lam.shape[0], nypsf, nxpsf)).squeeze()
+
         # fits.writeto("test_psfcube.fits", data=self.kernel, overwrite=True)
 
     def plot(self):
@@ -510,7 +528,7 @@ def _make_strehl_map_from_table(tbl, pixel_scale=1*u.arcsec):
     return map_hdu
 
 
-def _rescale_kernel(image, scale_factor, method="linear",
+def _rescale_kernel(image, scale_factor, spline_order=1,
                     image_header=None):
     """Rescale `image` by `scale_factor`
 
@@ -523,9 +541,10 @@ def _rescale_kernel(image, scale_factor, method="linear",
         ratio of input pixel size to output pixel size. Values larger than 1
         zoom the image.
 
-    method : str
-        interpolation method to be passed to ``RegularGridInterpolator``.
-        Default is "linear"
+    spline_order : int
+        spline order for interpolation by ``RectBivariateSpline``.
+        Default is 1 (linear interpolation). The method uses the same order in both
+        directions (i.e. `kx = ky = spline_order`).
 
     image_header : astropy.fits.Header
         an optional image header with a WCS. If ``None``, a WCS is constructed
@@ -537,13 +556,10 @@ def _rescale_kernel(image, scale_factor, method="linear",
     The output kernel size is always odd to avoid half-pixel shift when
     convolved with an image with ``mode="same"``.
     """
-    nxin, nyin = image.shape
-    interp_img = RegularGridInterpolator(
-        (np.arange(nyin), np.arange(nxin)),
-        image, method=method,
-        bounds_error=False,
-        fill_value=0,
-    )
+    nyin, nxin = image.shape
+
+    interp_img = RectBivariateSpline(
+        np.arange(nyin), np.arange(nxin), image, kx=spline_order, ky=spline_order)
 
     # Make the output size odd so that the image remains centred (important
     # for PSF convolution).
@@ -570,12 +586,13 @@ def _rescale_kernel(image, scale_factor, method="linear",
         outwcs.wcs.crpix = [(nxout + 1)/2, (nyout + 1)/2]
         outwcs.wcs.crval = [0., 0.]
         outwcs.wcs.cdelt = inwcs.wcs.cdelt / scale_factor
-    xout, yout = np.meshgrid(np.arange(nxout), np.arange(nyout))
+    xout, yout = np.meshgrid(np.arange(nxout), np.arange(nyout), sparse=True)
     xworld, yworld = outwcs.all_pix2world(xout, yout, 0)
     xin, yin = inwcs.all_world2pix(xworld, yworld, 0)
-    outimage = interp_img( (yin.ravel(), xin.ravel()) ).reshape((nyout, nxout))
-    logger.info("Interpolating PSF onto %s image", outimage.shape)
 
+    logger.info("Interpolating PSF onto %s image", (nyout, nxout))
+    logger.info("Interpolation order %d", spline_order)
+    outimage = interp_img(yin, xin, grid=False).reshape((nyout, nxout))
     outimage *= image.sum() / outimage.sum()
 
     return outimage
