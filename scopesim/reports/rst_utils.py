@@ -314,7 +314,7 @@ def latexify_rst_text(rst_text, filename=None, path=None, title_char="=",
     text = "Title\n<<<<<\nSubtitle\n>>>>>>>>\n\n"
     parts = publish_parts(
         text + rst_text,
-        writer_name="latex",
+        writer="latex",
         # Settings_overrides to placate FutureWarnings.
         # TODO: Decide whether the future defaults look better.
         settings_overrides={
@@ -362,7 +362,7 @@ def table_to_rst(tbl, indent=0, rounding=None):
         for col in tbl.itercols():
             if col.info.dtype.kind == "f":
                 col.info.format = f".{rounding}f"
-    
+
     tbl_fmtr = TableFormatter()
     lines, outs = tbl_fmtr._pformat_table(tbl, max_width=-1, max_lines=-1,
                                           show_unit=False)
