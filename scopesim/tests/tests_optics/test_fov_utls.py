@@ -112,7 +112,10 @@ class TestExtractRangeFromSpectrum:
         new_spec = extract_range_from_spectrum(spec, waverange)
 
         assert len(new_spec.waverange) == 2
-        assert new_spec.waverange[0] == 1.98 * u.um
+        # Cannot test for equality, because this does not hold in astropy.units:
+        # 1.98 * u.um == 19800.0 * u.AA
+        # assert new_spec.waverange[0] == 1.98 * u.um
+        assert abs(new_spec.waverange[0] == 1.98 * u.um) < 1e-10 * u.AA
         assert new_spec(1.98 * u.um).value == approx(12.8)
 
     @pytest.mark.parametrize(("endpoint", "msg"),
