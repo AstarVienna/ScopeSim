@@ -434,7 +434,12 @@ def overlay_image(small_im, big_im, coords, mask=None, sub_pixel=False):
         coords = np.array([*coords, (big_im.shape[0] - 1) / 2])
 
     # FIXME: this would not be necessary if we used WCS instead of manual 2pix
-    coords = np.ceil(np.asarray(coords).round(10)).astype(int)
+    # Round to 1e-4 pix before ceil: WCS deg-space round-trips leave
+    # float dust of order 1e-8..1e-6 pix on integer-valued coords, which
+    # ceil would amplify to a full-pixel shift; genuine sub-pixel intent
+    # cannot be finer than 0.5 pix here (sub_pixel is not implemented),
+    # and the half-integer even-shape convention is preserved exactly.
+    coords = np.ceil(np.asarray(coords).round(4)).astype(np.intp)
     idx = coords.astype(int)[::-1] - np.array(small_im.shape) // 2
 
     # Image ranges
