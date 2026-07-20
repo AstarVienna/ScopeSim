@@ -38,6 +38,7 @@ class MetisLMSSpectralTraceList(SpectralTraceList):
         "pixscale": 0.0082,    # arcsec
         "grat_spacing": 18.2,
         "fp2_platescale": 0.303,
+        "fit_inverse": True,
     }
 
     def __init__(self, **kwargs):
@@ -177,6 +178,10 @@ class MetisLMSSpectralTraceList(SpectralTraceList):
            If provided, there must be one for each image extension in `hdulist`.
            The functions go from pixels to the images and can be created with,
            e.g., RectBivariateSpline.
+        fit_inverse : bool [default True]
+           By default the method fits the inverse transform to be the optimal
+           inverse of the forward transform. Set `fit_inverse=False` to use the
+           predefined inverse matrix transform.
         """
         try:
             inhdul = fits.open(hdulist)
@@ -186,7 +191,11 @@ class MetisLMSSpectralTraceList(SpectralTraceList):
         # Create interpolation functions
         if interps is None:
             logger.info("Computing interpolation functions")
+            # TODO: Allow cubic interpolation?
             interps = make_image_interpolations(inhdul, kx=1, ky=1)
+
+        # Use fitted inverse or the matrices?
+        fit_inverse = kwargs.get("fit_inverse", True)
 
         # Create a common wcs for the rectification
         dwave = from_currsys("!SIM.spectral.spectral_bin_width", self.cmds)
@@ -217,7 +226,8 @@ class MetisLMSSpectralTraceList(SpectralTraceList):
             result = spt.rectify(hdulist, interps=interps,
                                  wave_min=wave_min, wave_max=wave_max,
                                  xi_min=xi_min, xi_max=xi_max,
-                                 bin_width=dwave)
+                                 bin_width=dwave,
+                                 fit_inverse=fit_inverse)
             cube[:, i, :] = result.data.T
 
         # FIXME: use wcs object here

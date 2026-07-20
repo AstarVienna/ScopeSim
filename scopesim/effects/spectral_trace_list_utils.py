@@ -87,6 +87,7 @@ class SpectralTrace:
         # Declaration of other attributes
         self._xilamimg = None
         self.dlam_per_pix = None
+        self.fit_inverse = True
 
     @property
     def trace_id(self):
@@ -322,6 +323,7 @@ class SpectralTrace:
            Spatial limits of the slit on the sky. This should be taken from
            the header of the hdulist, but this is not yet provided by scopesim
         """
+        self.fit_inverse = kwargs.get("fit_inverse", True)
         wave_min = kwargs.get("wave_min",
                               self.wave_min)
         wave_max = kwargs.get("wave_max",
@@ -386,9 +388,20 @@ class SpectralTrace:
         # Make sure that we do have microns
         Lam = Lam * u.Unit(wcs.wcs.cunit[0]).to(u.um)
 
+        ## TODO: Replace self.xilam2x and self.xilam2y by fitted
+        ##       functions fit_xilam2x and fit_xilam2y, which need
+        ##       to be determined by mapping a grid of (xi, lam) to (x,y)
+        ##       and back to (xip, lamp); then fit (x,y)(xip, lamp).
+        if self.fit_inverse:
+            fit_xilam2x, fit_xilam2y = self._fit_transform(xi_min, xi_max,
+                                                           wave_min, wave_max)
+        else:
+            logger.debug("Using matrix transform")
+            fit_xilam2x, fit_xilam2y = self.xilam2x, self.xilam2y
+
         # Convert Xi, Lam to focal plane units
-        Xarr = self.xilam2x(Xi, Lam)
-        Yarr = self.xilam2y(Xi, Lam)
+        Xarr = fit_xilam2x(Xi, Lam)
+        Yarr = fit_xilam2y(Xi, Lam)
 
         rect_spec = np.zeros_like(Xarr, dtype=np.float32)
 
@@ -412,6 +425,33 @@ class SpectralTrace:
         header = wcs.to_header()
         header["EXTNAME"] = self.trace_id
         return fits.ImageHDU(data=rect_spec, header=header)
+
+    def _fit_transform(self, ximin, ximax, wmin, wmax):
+        """Fit inverses to self.xy2xi and self.xy2lam
+
+        The method replaces self.xilam2x and self.xilam2y by fitted
+        functions fit_xilam2x and fit_xilam2y, determined by mapping a grid of
+        (xi, lam) to (x,y) and back to (xip, lamp); then fit (x,y)(xip, lamp).
+        """
+
+        # Build input (xi, lam) grid
+        xi = np.linspace(ximin, ximax, 51)
+        lam = np.linspace(wmin, wmax, 201)
+
+        # Do a full round using the matrix transforms
+        x2d = self.xilam2x(xi, lam, grid=True)
+        y2d = self.xilam2y(xi, lam, grid=True)
+        xip = self.xy2xi(x2d, y2d, grid=False)
+        lamp = self.xy2lam(x2d, y2d, grid=False)
+
+        # Determine the fits
+        pinit_x = Polynomial2D(degree=4)
+        pinit_y = Polynomial2D(degree=4)
+        fitter = fitting.LinearLSQFitter()
+        xilam2x = fitter(pinit_x, xip, lamp, x2d)
+        xilam2y = fitter(pinit_y, xip, lamp, y2d)
+
+        return xilam2x, xilam2y
 
     def footprint(self, wave_min=None, wave_max=None, xi_min=None, xi_max=None):
         """
