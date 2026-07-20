@@ -539,13 +539,62 @@ def rescale_imagehdu(imagehdu: fits.ImageHDU, pixel_scale: float | u.Quantity,
     sum_orig = np.sum(imagehdu.data)
 
     # Perform the rescaling. Axes need to be inverted because python.
-    new_im = ndi.zoom(imagehdu.data, zoom[::-1], order=spline_order)
+    zoom_np = zoom[::-1]
+    data = imagehdu.data
+    in_shape = np.array(data.shape)  # pre-zoom, for the realised-zoom CRPIX
+
+    # ndi.zoom point-samples the input on the output lattice; for zoom < 1 that
+    # DECIMATES rather than integrates, so a source narrower than the sample
+    # spacing can be aliased away partially or (on an unlucky grid phase)
+    # entirely -- silently, since the conserve_flux guard below skips a zeroed
+    # array. Downsample each such axis with an exact area-weighted rebin (the
+    # cumulative sum evaluated at the output bin edges) instead. Unlike a
+    # smoothing prefilter this integrates without SPREADING flux beyond the
+    # output cell, so a compact source cannot leak into wings that a smaller
+    # downstream FOV would clip (which would defeat conserve_flux). It conserves
+    # flux to machine precision by construction and handles non-integer ratios.
+    #
+    # Gated on spline_order > 0: order == 0 is nearest-neighbour resampling of
+    # categorical data (masks, strehl-region label maps), where integrating /
+    # averaging is meaningless and would synthesise phantom label values -- those
+    # keep the stock ndi.zoom path. Upsampled axes also use stock ndi.zoom.
+    if spline_order > 0 and (zoom_np < 1).any():
+        out = np.asarray(data, dtype=float)
+        for _ax in range(out.ndim):
+            _n_in = out.shape[_ax]
+            _n_out = max(int(round(_n_in * zoom_np[_ax])), 1)
+            if _n_out == _n_in:
+                continue
+            if _n_out < _n_in:
+                _a = np.moveaxis(out, _ax, 0)
+                _csum = np.empty((_n_in + 1,) + _a.shape[1:], dtype=float)
+                _csum[0] = 0.0
+                np.cumsum(_a, axis=0, out=_csum[1:])
+                _edges = np.linspace(0.0, _n_in, _n_out + 1)
+                _lo = np.floor(_edges).astype(np.intp)
+                _frac = _edges - _lo
+                _loc = np.clip(_lo, 0, _n_in)
+                _hic = np.clip(_lo + 1, 0, _n_in)
+                _fr = _frac[(...,) + (None,) * (_a.ndim - 1)]
+                _vals = _csum[_loc] + (_csum[_hic] - _csum[_loc]) * _fr
+                out = np.moveaxis(np.diff(_vals, axis=0), 0, _ax)
+            else:
+                _zf = np.ones(out.ndim)
+                _zf[_ax] = _n_out / _n_in
+                out = ndi.zoom(out, _zf, order=spline_order, mode="nearest")
+        new_im = out
+    else:
+        new_im = ndi.zoom(data, zoom_np, order=spline_order)
 
     if conserve_flux:
         new_im = np.nan_to_num(new_im, copy=False)
         sum_new = np.sum(new_im)
         if sum_new != 0:
             new_im *= sum_orig / sum_new
+        elif sum_orig != 0:
+            logger.warning(
+                "rescale_imagehdu: all input flux (%g) was lost in resampling; "
+                "flux cannot be conserved.", sum_orig)
 
     imagehdu.data = new_im
 
@@ -577,8 +626,16 @@ def rescale_imagehdu(imagehdu: fits.ImageHDU, pixel_scale: float | u.Quantity,
         #
         # The transformation only applies to spatial coordinates, which we
         # assume to be the first two in the WCS.
+        # CDELT keeps the nominal zoom (CDELT' == pixel_scale exactly). CRPIX
+        # uses the realised zoom n_out/n_in (ndi.zoom / the rebin both produce
+        # round(n_in*zoom) pixels), else the reference pixel -- and every source
+        # -- is misplaced by up to half an output pixel when n_in*zoom is not
+        # integer.
+        n_in_sp = in_shape[::-1][:2].astype(float)
+        n_out_sp = np.array(imagehdu.data.shape[::-1][:2], dtype=float)
+        zoom_real = n_out_sp / n_in_sp
         ww.wcs.cdelt[:2] /= zoom[:2]
-        ww.wcs.crpix[:2] = 0.5 + (ww.wcs.crpix[:2] - 0.5) * zoom[:2]
+        ww.wcs.crpix[:2] = 0.5 + (ww.wcs.crpix[:2] - 0.5) * zoom_real
         logger.debug("new crpix %s", ww.wcs.crpix)
 
         imagehdu.header.update(ww.to_header())
