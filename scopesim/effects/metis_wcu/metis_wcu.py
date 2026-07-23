@@ -402,7 +402,7 @@ class WCUSource(TERCurve):
 
         # background emission from integrating sphere
         self.is_bg = BlackBody(self.is_temp, scale=self.bb_scale)
-        self.intens_bg = self.rho_is(lam) * self.is_bg(lam)
+        self.intens_bg = self.is_bg(lam)
 
         self.intensity = self.intens_lamp + self.intens_bg
 
