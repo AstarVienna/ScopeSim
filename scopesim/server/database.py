@@ -10,7 +10,6 @@ import yaml
 import httpxyz as httpx
 from more_itertools import first, last, groupby_transform
 
-from .github_utils import download_github_folder
 from .download_utils import (
     get_server_folder_contents,
     handle_download,
@@ -31,13 +30,6 @@ _GrpItrType = Iterator[tuple[str, list[str]]]
 
 class PkgNotFoundError(Exception):
     """Unable to find given package or given release of that package."""
-
-
-def get_server_package_list():
-    """Deprecated since v0.6.0."""
-    raise AttributeError(
-        "The singular variant of this function has been deprecated since "
-        "version 0.6.0 of ScopeSim and will be completely removed in v0.12.")
 
 
 def _get_package_name(package: str) -> str:
@@ -315,17 +307,11 @@ def _download_single_package(
     save_dir.mkdir(parents=True, exist_ok=True)
 
     if "github" in release:
-        warn("Downloading IRDB packages directly from GitHub is deprecated "
-             "and will raise an error from ScopeSim version 0.12 onwards. "
-             "If you really need to use an unreleased version of an IRDB "
-             "package, please use a local clone of the IRDB repo instead.",
-             FutureWarning, stacklevel=3)
-
-        base_url = "https://github.com/AstarVienna/irdb/tree/"
-        github_hash = release.split(":")[-1].split("@")[-1]
-        pkg_url = f"{base_url}{github_hash}/{pkg_name}"
-        download_github_folder(repo_url=pkg_url, output_dir=save_dir)
-        return save_dir.absolute()
+        raise ValueError(
+            "Downloading IRDB packages directly from GitHub is deprecated. "
+            "If you really need to use an unreleased version of an IRDB "
+            "package, please use a local clone of the IRDB repo instead."
+        )
 
     zip_name = _get_zipname(pkg_name, release, all_versions)
     pkg_url = f"{folders_dict[pkg_name]}/{zip_name}"
@@ -460,15 +446,3 @@ def check_packages(instrument: str, download_missing: bool) -> None:
             raise ValueError(
                 f"IRDB package for {instrument} not found, auto-download is "
                 "disabled. Please set package directory or download package.")
-
-
-# ==============================================================================
-# Funtions below from from OLD_database.py
-# ==============================================================================
-
-def download_package(*args, **kwargs):
-    """Deprecated since v0.5.0."""
-    raise AttributeError(
-        "The singular variant of this function has been deprecated since "
-        "version 0.5.0 of ScopeSim. It will be completely removed in version "
-        "0.12. Please use ``download_packages`` (plural variant) instead!")

@@ -83,6 +83,5 @@ from .server import (
     list_example_data,
     download_example_data,
 )
-from .server.database import download_package  # remove in v0.12
 
 from .tests.mocks.load_basic_instrument import load_example_optical_train, example_simulation
