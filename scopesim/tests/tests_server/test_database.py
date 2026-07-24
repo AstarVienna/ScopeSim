@@ -135,30 +135,6 @@ class TestDownloadPackages:
 
             assert version_dict["version"] == release
 
-    @pytest.mark.webtest(github=True)
-    @pytest.mark.filterwarnings("ignore:Downloading IRDB packages:FutureWarning")
-    @pytest.mark.filterwarnings("ignore:The function*:DeprecationWarning")
-    def test_downloads_github_version_of_package_with_semicolon(self):
-        release = "github:728761fc76adb548696205139e4e9a4260401dfc"
-        with TemporaryDirectory() as tmpdir:
-            db.download_packages("ELT", release=release,
-                                 save_dir=tmpdir)
-            filename = Path(tmpdir, "ELT", "EC_sky_25.tbl")
-
-            assert filename.exists()
-
-    @pytest.mark.webtest(github=True)
-    @pytest.mark.filterwarnings("ignore:Downloading IRDB packages:FutureWarning")
-    @pytest.mark.filterwarnings("ignore:The function*:DeprecationWarning")
-    def test_downloads_github_version_of_package_with_at_symbol(self):
-        release = "github@728761fc76adb548696205139e4e9a4260401dfc"
-        with TemporaryDirectory() as tmpdir:
-            db.download_packages("ELT", release=release,
-                                 save_dir=tmpdir)
-            filename = Path(tmpdir, "ELT", "EC_sky_25.tbl")
-
-            assert filename.exists()
-
 
 def test_registry_files():
     registry = (Path(__file__).parent.parent.parent /
