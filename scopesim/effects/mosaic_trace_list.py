@@ -33,7 +33,7 @@ class MosaicSpectralTraceList(SpectralTraceList):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
-        self.aplist = self._file["Aperture List"].data
+        self.aplist = Table(self._file["Aperture List"].data)
         # TODO: check units or normalise to arcsec
         self.view = np.array([(self.aplist["right"].max() -
                                self.aplist["left"].min()),
@@ -82,7 +82,12 @@ class MosaicSpectralTraceList(SpectralTraceList):
             # - map each 1D spectrum to detector/fov
 
             image = np.zeros((naxis2d, naxis1d), dtype=np.float32)
+            image_hdr = detwcs.to_header()
+            image_hdr["BUNIT"] = "ph s-1"
+            image_hdr.extend(det_header)
 
+            jfibs = np.zeros(len(self.aplist), dtype=int)
+            apnum = 0
             for sptid, spt in tqdm(self.spectral_traces.items(),
                                    desc="Fiber traces", position=2):
                 theap = self.aplist[self.aplist["id"] == sptid]
@@ -114,11 +119,12 @@ class MosaicSpectralTraceList(SpectralTraceList):
 
                 detdisp = np.diff(detlam, prepend=detlam[0])
                 image[jfib,] += (spec(detlam) * detdisp).value
+                jfibs[apnum] = jfib
+                apnum += 1
 
-            image_hdr = detwcs.to_header()
-            image_hdr["BUNIT"] = "ph s-1"
-            image_hdr.extend(det_header)
             obj.hdu = fits.ImageHDU(data=image, header=image_hdr)
+            self.aplist.add_column(jfibs, name="jfib")
+
         return obj
 
     def make_spectral_traces(self):
