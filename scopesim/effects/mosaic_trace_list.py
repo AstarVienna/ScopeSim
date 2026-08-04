@@ -261,3 +261,47 @@ class MosaicCollapseSpectralTraces(MosaicSpectralTraceList):
         ])
 
         return det
+
+
+class MosaicConvertToTable(MosaicSpectralTraceList):
+    """Convert SpectralTrace readout to Table format
+
+    .. versionadded:: PLACEHOLDER_NEXT_RELEASE_VERSION
+    """
+
+    required_keys = {"filename"}
+    z_order: ClassVar[tuple[int, ...]] = (899,)
+
+    def apply_to(self, det, **kwargs):
+        """Apply to detector readout."""
+        if not isinstance(det, Detector):
+            return det
+
+        image = det._hdu.data
+        detwcs = WCS(det._hdu.header, key="D")
+
+        # Need wavelength vector
+        # Initialise Table
+        ntrace = len(self.spectral_traces)
+        idarr = []
+        xarr = np.zeros(ntrace, dtype=np.float32)
+        yarr = np.zeros(ntrace, dtype=np.float32)
+        specarr = []
+        lamarr = []
+        i = 0
+        x_mm = detwcs.all_pix2world(np.arange(image.shape[1]), 1, 0)[0]
+        for sptid, spt in tqdm(self.spectral_traces.items(),
+                               desc="Fiber traces", position=2):
+            y_mm = spt.table["y"][0]
+            jfib = int(detwcs.all_world2pix(0, y_mm, 0)[1])
+            idarr.append(sptid)
+            yarr[i] = (self.aplist['top'][i] + self.aplist['bottom'][i]) / 2
+            xarr[i] = (self.aplist['left'][i] + self.aplist['right'][i]) / 2
+            specarr.append(image[jfib,])
+            lamarr.append(spt.x2lam(x_mm))
+            i += 1
+
+        tab = Table(data=[idarr, xarr, yarr, lamarr, specarr],
+                    names=["id", "x", "y", "wavelength", "flux"])
+        det._hdu = fits.BinTableHDU(data=tab)
+        return det
