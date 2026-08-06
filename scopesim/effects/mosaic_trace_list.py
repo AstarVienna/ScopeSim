@@ -242,6 +242,9 @@ class MosaicCollapseSpectralTraces(MosaicSpectralTraceList):
     def apply_to(self, det, **kwargs):
         """Apply to detector readout."""
         if not isinstance(det, Detector):
+            logger.warning("%s applied to object of type %s",
+                           self.__class__.__name__,
+                           type(det))
             return det
 
         image = det._hdu.data
@@ -275,6 +278,9 @@ class MosaicConvertToTable(MosaicSpectralTraceList):
     def apply_to(self, det, **kwargs):
         """Apply to detector readout."""
         if not isinstance(det, Detector):
+            logger.warning("%s applied to object of type %s",
+                           self.__class__.__name__,
+                           type(det))
             return det
 
         image = det._hdu.data
@@ -302,6 +308,6 @@ class MosaicConvertToTable(MosaicSpectralTraceList):
             i += 1
 
         tab = Table(data=[idarr, xarr, yarr, lamarr, specarr],
-                    names=["id", "x", "y", "wavelength", "flux"])
+                    names=["id", "x", "y", "wavelength", "spectrum"])
         det._hdu = fits.BinTableHDU(data=tab)
         return det

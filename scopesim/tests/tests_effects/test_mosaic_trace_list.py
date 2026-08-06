@@ -16,6 +16,9 @@ from scopesim.effects.mosaic_trace_list import (Transform1D,
 from scopesim.optics.image_plane_utils import header_from_list_of_xy
 from scopesim.detector import Detector
 
+import logging
+LOGGER = logging.getLogger(__name__)
+
 @pytest.fixture(name="tf1d", scope="class")
 def fixture_tf1d():
     """Instantiate a Transform1D"""
@@ -67,6 +70,8 @@ class TestTransform1D:
 
         assert tf1d.coeffs == pytest.approx(coeffs)
 
+
+### Fixtures to test the classes
 @pytest.fixture(scope="class")
 def patch_mock_path_mosaic(mock_dir):
     mosaic_dir = mock_dir / "MOSAIC"
@@ -102,6 +107,11 @@ def fixture_detector():
 def fixture_apply_collapse1d(collapse1d, detector):
     return collapse1d.apply_to(detector)
 
+@pytest.fixture(name="apply_converttotable", scope="class")
+def fixture_apply_converttotable(convert2table, detector):
+    return convert2table.apply_to(detector)
+
+
 @pytest.mark.usefixtures("patch_mock_path_mosaic")
 class TestSpectralTraceList:
     """Tests for MosaicSpectralTraceList"""
@@ -123,10 +133,16 @@ class TestSpectralTraceList:
 
 
 @pytest.mark.usefixtures("patch_mock_path_mosaic")
-class TestOutputFormats:
-    """Tests for MOSAIC MOS/mIFU output formats"""
+class TestCollapse1D:
+    """Tests for MOSAIC MOS collapse to 1D spectrum"""
     def test_initialise_collapse1d(self, collapse1d):
         assert isinstance(collapse1d, MosaicCollapseSpectralTraces)
+
+    def test_collapse1d_returns_nondetector(self, collapse1d, caplog):
+        caplog.set_level(logging.WARNING)
+        obj = ["Not", "a", "detector"]
+        assert collapse1d.apply_to(obj) == obj
+        assert "MosaicCollapseSpectralTraces" in caplog.text
 
     def test_collapse1d_returns_detector(self, apply_collapse1d):
         assert isinstance(apply_collapse1d, Detector)
@@ -137,5 +153,25 @@ class TestOutputFormats:
     def test_collapse1d_gives_correct_result(self, apply_collapse1d):
         assert np.all(apply_collapse1d._hdu.data['spectrum'] == 7)
 
+
+@pytest.mark.usefixtures("patch_mock_path_mosaic")
+class TestConvertToTable:
+    """Tests for MOSAIC mIFU table output"""
     def test_initialise_table(self, convert2table):
         assert isinstance(convert2table, MosaicConvertToTable)
+
+    def test_converttotable_returns_nondetector(self, convert2table, caplog):
+        caplog.set_level(logging.WARNING)
+        obj = {"This": "is not", "a": "detector"}
+        assert convert2table.apply_to(obj) == obj
+        assert "MosaicConvertToTable" in caplog.text
+
+    def test_converttotable_returns_detector(self, apply_converttotable):
+        assert isinstance(apply_converttotable, Detector)
+
+    def test_converttotable_detector_has_bintable(self, apply_converttotable):
+        assert isinstance(apply_converttotable._hdu, fits.BinTableHDU)
+
+    def test_converttotable_gives_correct_result(self, apply_converttotable):
+        for row in apply_converttotable._hdu.data:
+            assert np.all(row['spectrum'] == 1)
