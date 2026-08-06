@@ -11,8 +11,7 @@ from astropy.io import fits
 from scopesim.effects.mosaic_trace_list import (Transform1D,
                                                 MosaicSpectralTraceList,
                                                 MosaicSpectralTrace,
-                                                MosaicCollapseSpectralTraces,
-                                                MosaicConvertToTable)
+                                                MosaicOutputFormat)
 from scopesim.optics.image_plane_utils import header_from_list_of_xy
 from scopesim.detector import Detector
 
@@ -86,12 +85,17 @@ def fixture_tracelist():
 @pytest.fixture(name="collapse1d", scope="class")
 def fixture_collapse1d():
     """Instantiate a CollapseSpectralTrace"""
-    return MosaicCollapseSpectralTraces(filename="TRACE_MOS-LR-J.fits")
+    return MosaicOutputFormat(filename="TRACE_MOS-LR-J.fits", format="collapse1d")
 
 @pytest.fixture(name="convert2table", scope="class")
 def fixture_convert2table():
     """Instantiate a ConvertToTable"""
-    return MosaicConvertToTable(filename="TRACE_MOS-LR-J.fits")
+    return MosaicOutputFormat(filename="TRACE_MOS-LR-J.fits", format="table")
+
+@pytest.fixture(name="image", scope="class")
+def fixture_image():
+    """Instantiate OutputFormat with "image". """
+    return MosaicOutputFormat(filename="TRACE_MOS-LR-J.fits", format="image")
 
 @pytest.fixture(name="detector", scope="class")
 def fixture_detector():
@@ -110,6 +114,10 @@ def fixture_apply_collapse1d(collapse1d, detector):
 @pytest.fixture(name="apply_converttotable", scope="class")
 def fixture_apply_converttotable(convert2table, detector):
     return convert2table.apply_to(detector)
+
+@pytest.fixture(name="apply_image", scope="class")
+def fixture_apply_image(image, detector):
+    return image.apply_to(detector)
 
 
 @pytest.mark.usefixtures("patch_mock_path_mosaic")
@@ -136,13 +144,13 @@ class TestSpectralTraceList:
 class TestCollapse1D:
     """Tests for MOSAIC MOS collapse to 1D spectrum"""
     def test_initialise_collapse1d(self, collapse1d):
-        assert isinstance(collapse1d, MosaicCollapseSpectralTraces)
+        assert isinstance(collapse1d, MosaicOutputFormat)
 
     def test_collapse1d_returns_nondetector(self, collapse1d, caplog):
         caplog.set_level(logging.WARNING)
         obj = ["Not", "a", "detector"]
         assert collapse1d.apply_to(obj) == obj
-        assert "MosaicCollapseSpectralTraces" in caplog.text
+        assert "MosaicOutputFormat" in caplog.text
 
     def test_collapse1d_returns_detector(self, apply_collapse1d):
         assert isinstance(apply_collapse1d, Detector)
@@ -158,13 +166,13 @@ class TestCollapse1D:
 class TestConvertToTable:
     """Tests for MOSAIC mIFU table output"""
     def test_initialise_table(self, convert2table):
-        assert isinstance(convert2table, MosaicConvertToTable)
+        assert isinstance(convert2table, MosaicOutputFormat)
 
     def test_converttotable_returns_nondetector(self, convert2table, caplog):
         caplog.set_level(logging.WARNING)
         obj = {"This": "is not", "a": "detector"}
         assert convert2table.apply_to(obj) == obj
-        assert "MosaicConvertToTable" in caplog.text
+        assert "MosaicOutputFormat" in caplog.text
 
     def test_converttotable_returns_detector(self, apply_converttotable):
         assert isinstance(apply_converttotable, Detector)
@@ -175,3 +183,21 @@ class TestConvertToTable:
     def test_converttotable_gives_correct_result(self, apply_converttotable):
         for row in apply_converttotable._hdu.data:
             assert np.all(row['spectrum'] == 1)
+
+@pytest.mark.usefixtures("patch_mock_path_mosaic")
+class TestImage:
+    """Tests for MOSAIC MOS leaving detector image"""
+    def test_initialise_image(self, image):
+        assert isinstance(image, MosaicOutputFormat)
+
+    def test_image_returns_nondetector(self, image, caplog):
+        caplog.set_level(logging.WARNING)
+        obj = ["Not", "a", "detector"]
+        assert image.apply_to(obj) == obj
+        assert "MosaicOutputFormat" in caplog.text
+
+    def test_image_returns_detector(self, apply_image):
+        assert isinstance(apply_image, Detector)
+
+    def test_image_detector_has_image(self, apply_image):
+        assert isinstance(apply_image._hdu, fits.ImageHDU)

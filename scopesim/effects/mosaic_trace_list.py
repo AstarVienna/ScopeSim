@@ -15,7 +15,7 @@ from synphot import SourceSpectrum, Empirical1D
 
 from .spectral_trace_list import SpectralTraceList
 from .spectral_trace_list_utils import SpectralTrace
-from ..utils import get_logger, quantify, power_vector
+from ..utils import get_logger, quantify, power_vector, from_currsys
 from ..optics.fov import FieldOfView
 from ..optics.fov_volume_list import FovVolumeList
 from ..detector import Detector
@@ -230,49 +230,24 @@ class Transform1D:
         return Transform1D(dcoeffs)
 
 
-class MosaicCollapseSpectralTraces(MosaicSpectralTraceList):
-    """Collapse SpectralTraces to 1D spectrum.
+class MosaicOutputFormat(MosaicSpectralTraceList):
+    """Determine output format for Mosaic MOS/mIFU data
 
-    .. versionadded:: 0.11.0
-    """
-
-    required_keys = {"filename"}
-    z_order: ClassVar[tuple[int, ...]] = (899,)
-
-    def apply_to(self, det, **kwargs):
-        """Apply to detector readout."""
-        if not isinstance(det, Detector):
-            logger.warning("%s applied to object of type %s",
-                           self.__class__.__name__,
-                           type(det))
-            return det
-
-        image = det._hdu.data
-        detwcs = WCS(det._hdu.header, key="D")
-        spec = np.zeros(image.shape[1], dtype=np.float32)
-        for sptid, spt in tqdm(self.spectral_traces.items(),
-                               desc="Fiber traces", position=2):
-            y_mm = spt.table["y"][0]
-            jfib = int(detwcs.all_world2pix(0, y_mm, 0)[1])
-            spec += image[jfib,]
-
-        x_mm = detwcs.all_pix2world(np.arange(image.shape[1]), 1, 0)[0]
-        lam = spt.x2lam(x_mm)
-        det._hdu = fits.BinTableHDU.from_columns([
-            fits.Column(name="wavelength", format="D", array=lam, unit="um"),
-            fits.Column(name="spectrum", format="D", array=spec, unit="ADU"),
-        ])
-
-        return det
-
-
-class MosaicConvertToTable(MosaicSpectralTraceList):
-    """Convert SpectralTrace readout to Table format
+    format: str
+       "collapse1d": all fibres are summed into a single spectrum.
+              The output is a fits table with columns `wavelength` and
+              `spectrum`. (default for MOS modes)
+       "table": The output is a fits table with a row for each fibre. The
+              columns are `id`, `x`, `y`, `wavelength`, `spectrum`.
+              `x` and `y` give the sky position of the fiber. `wavelength`
+              and `spectrum` are arrays. (default for mIFU modes)
+       "image": The output is a (pseudo-)detector image where the
+              spectrum for each fibre occupies a row.
 
     .. versionadded:: PLACEHOLDER_NEXT_RELEASE_VERSION
     """
 
-    required_keys = {"filename"}
+    required_keys = {"filename", "format"}
     z_order: ClassVar[tuple[int, ...]] = (899,)
 
     def apply_to(self, det, **kwargs):
@@ -286,28 +261,62 @@ class MosaicConvertToTable(MosaicSpectralTraceList):
         image = det._hdu.data
         detwcs = WCS(det._hdu.header, key="D")
 
-        # Need wavelength vector
-        # Initialise Table
-        ntrace = len(self.spectral_traces)
-        idarr = []
-        xarr = np.zeros(ntrace, dtype=np.float32)
-        yarr = np.zeros(ntrace, dtype=np.float32)
-        specarr = []
-        lamarr = []
-        i = 0
-        x_mm = detwcs.all_pix2world(np.arange(image.shape[1]), 1, 0)[0]
-        for sptid, spt in tqdm(self.spectral_traces.items(),
-                               desc="Fiber traces", position=2):
-            y_mm = spt.table["y"][0]
-            jfib = int(detwcs.all_world2pix(0, y_mm, 0)[1])
-            idarr.append(sptid)
-            yarr[i] = (self.aplist['top'][i] + self.aplist['bottom'][i]) / 2
-            xarr[i] = (self.aplist['left'][i] + self.aplist['right'][i]) / 2
-            specarr.append(image[jfib,])
-            lamarr.append(spt.x2lam(x_mm))
-            i += 1
+        output_format = from_currsys(self.meta["format"], self.cmds)
 
-        tab = Table(data=[idarr, xarr, yarr, lamarr, specarr],
-                    names=["id", "x", "y", "wavelength", "spectrum"])
-        det._hdu = fits.BinTableHDU(data=tab)
+        if output_format == "collapse1d":
+            spec = np.zeros(image.shape[1], dtype=np.float32)
+            for sptid, spt in tqdm(self.spectral_traces.items(),
+                                   desc="Fiber traces", position=2):
+                x_mm = detwcs.all_pix2world(np.arange(image.shape[1]), 1, 0)[0]
+                lam = spt.x2lam(x_mm)
+
+                y_mm = spt.table["y"][0]
+                jfib = int(detwcs.all_world2pix(0, y_mm, 0)[1])
+                spec += image[jfib,]
+
+            det._hdu = fits.BinTableHDU.from_columns([
+                fits.Column(name="wavelength", format="D", array=lam, unit="um"),
+                fits.Column(name="spectrum", format="D", array=spec, unit="ADU"),
+            ])
+
+        elif output_format == "table":
+            ntrace = len(self.spectral_traces)
+            idarr = []
+            xarr = np.zeros(ntrace, dtype=np.float32)
+            yarr = np.zeros(ntrace, dtype=np.float32)
+            specarr = []
+            lamarr = []
+            i = 0
+            for sptid, spt in tqdm(self.spectral_traces.items(),
+                                   desc="Fiber traces", position=2):
+                x_mm = detwcs.all_pix2world(np.arange(image.shape[1]), 1, 0)[0]
+                lam = spt.x2lam(x_mm)
+
+                y_mm = spt.table["y"][0]
+                jfib = int(detwcs.all_world2pix(0, y_mm, 0)[1])
+                idarr.append(sptid)
+                xarr[i] = (self.aplist['left'][i] + self.aplist['right'][i]) / 2
+                yarr[i] = (self.aplist['top'][i] + self.aplist['bottom'][i]) / 2
+                specarr.append(image[jfib,])
+                lamarr.append(lam)
+                i += 1
+
+            tab = Table(data=[idarr, xarr, yarr, lamarr, specarr],
+                        names=["id", "x", "y", "wavelength", "spectrum"],
+                        units=["", "arcsec", "arcsec", "um", "ADU"])
+            det._hdu = fits.BinTableHDU(data=tab)
+
+        elif output_format == "image":
+            pass
+
+        else:
+            logger.warning("Unknown output format: %s", output_format)
+
         return det
+
+
+    def __str__(self) -> str:
+        output_format = from_currsys(self.meta["format"], self.cmds)
+        msg = (f"{self.__class__.__name__} (\"{self.display_name}\"):"
+               f" \"{output_format}\"")
+        return msg
