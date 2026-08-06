@@ -7,12 +7,14 @@ from unittest.mock import patch
 import pytest
 
 import numpy as np
-
+from astropy.io import fits
 from scopesim.effects.mosaic_trace_list import (Transform1D,
                                                 MosaicSpectralTraceList,
                                                 MosaicSpectralTrace,
                                                 MosaicCollapseSpectralTraces,
                                                 MosaicConvertToTable)
+from scopesim.optics.image_plane_utils import header_from_list_of_xy
+from scopesim.detector import Detector
 
 @pytest.fixture(name="tf1d", scope="class")
 def fixture_tf1d():
@@ -86,7 +88,19 @@ def fixture_convert2table():
     """Instantiate a ConvertToTable"""
     return MosaicConvertToTable(filename="TRACE_MOS-LR-J.fits")
 
+@pytest.fixture(name="detector", scope="class")
+def fixture_detector():
+    """Instantiate a detector image"""
+    rows = np.array([2023, 2031, 2039, 2047, 2055, 2063, 2071])
+    xsize, ysize = 50, 4096
+    hdr = header_from_list_of_xy([-xsize/2, xsize/2], [-ysize/2, ysize/2], 1, "D")
+    dtcr = Detector(hdr)
+    dtcr._hdu.data[rows, :] = 1
+    return dtcr
 
+@pytest.fixture(name="apply_collapse1d", scope="class")
+def fixture_apply_collapse1d(collapse1d, detector):
+    return collapse1d.apply_to(detector)
 
 @pytest.mark.usefixtures("patch_mock_path_mosaic")
 class TestSpectralTraceList:
@@ -113,6 +127,15 @@ class TestOutputFormats:
     """Tests for MOSAIC MOS/mIFU output formats"""
     def test_initialise_collapse1d(self, collapse1d):
         assert isinstance(collapse1d, MosaicCollapseSpectralTraces)
+
+    def test_collapse1d_returns_detector(self, apply_collapse1d):
+        assert isinstance(apply_collapse1d, Detector)
+
+    def test_collapse1d_detector_has_bintable(self, apply_collapse1d):
+        assert isinstance(apply_collapse1d._hdu, fits.BinTableHDU)
+
+    def test_collapse1d_gives_correct_result(self, apply_collapse1d):
+        assert np.all(apply_collapse1d._hdu.data['spectrum'] == 7)
 
     def test_initialise_table(self, convert2table):
         assert isinstance(convert2table, MosaicConvertToTable)
