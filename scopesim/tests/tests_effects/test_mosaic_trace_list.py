@@ -3,14 +3,16 @@
 # pylint: disable=missing-function-docstring
 # pylint: disable=invalid-name
 # pylint: disable=too-few-public-methods
+from unittest.mock import patch
 import pytest
 
 import numpy as np
 
-from astropy.io import fits
-
-from scopesim.utils import power_vector
-from scopesim.effects.mosaic_trace_list import Transform1D
+from scopesim.effects.mosaic_trace_list import (Transform1D,
+                                                MosaicSpectralTraceList,
+                                                MosaicSpectralTrace,
+                                                MosaicCollapseSpectralTraces,
+                                                MosaicConvertToTable)
 
 @pytest.fixture(name="tf1d", scope="class")
 def fixture_tf1d():
@@ -62,3 +64,55 @@ class TestTransform1D:
         tf1d = Transform1D.fit(x, y, degree=3)
 
         assert tf1d.coeffs == pytest.approx(coeffs)
+
+@pytest.fixture(scope="class")
+def patch_mock_path_mosaic(mock_dir):
+    mosaic_dir = mock_dir / "MOSAIC"
+    with patch("scopesim.rc.__search_path__", [mosaic_dir]):
+        yield
+
+@pytest.fixture(name="tracelist", scope="class")
+def fixture_tracelist():
+    """Instantiate a MosaicSpectralTraceList"""
+    return MosaicSpectralTraceList(filename="TRACE_MOS-LR-J.fits")
+
+@pytest.fixture(name="collapse1d", scope="class")
+def fixture_collapse1d():
+    """Instantiate a CollapseSpectralTrace"""
+    return MosaicCollapseSpectralTraces(filename="TRACE_MOS-LR-J.fits")
+
+@pytest.fixture(name="convert2table", scope="class")
+def fixture_convert2table():
+    """Instantiate a ConvertToTable"""
+    return MosaicConvertToTable(filename="TRACE_MOS-LR-J.fits")
+
+
+
+@pytest.mark.usefixtures("patch_mock_path_mosaic")
+class TestSpectralTraceList:
+    """Tests for MosaicSpectralTraceList"""
+    def test_initialise_tracelist(self, tracelist):
+        assert isinstance(tracelist, MosaicSpectralTraceList)
+
+    def test_tracelist_loads_aperture_list(self, tracelist):
+        assert len(tracelist.aplist) == 7
+        assert "right" in tracelist.aplist.colnames
+
+    def test_tracelist_creates_traces(self, tracelist):
+        assert len(tracelist.spectral_traces) == 7
+
+    def test_trace_has_transforms(self, tracelist):
+        for trace in tracelist.spectral_traces.values():
+            assert isinstance(trace.lam2x, Transform1D)
+            assert isinstance(trace.lam2y, Transform1D)
+            assert isinstance(trace.x2lam, Transform1D)
+
+
+@pytest.mark.usefixtures("patch_mock_path_mosaic")
+class TestOutputFormats:
+    """Tests for MOSAIC MOS/mIFU output formats"""
+    def test_initialise_collapse1d(self, collapse1d):
+        assert isinstance(collapse1d, MosaicCollapseSpectralTraces)
+
+    def test_initialise_table(self, convert2table):
+        assert isinstance(convert2table, MosaicConvertToTable)
