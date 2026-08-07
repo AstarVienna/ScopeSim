@@ -286,9 +286,10 @@ class MosaicOutputFormat(MosaicSpectralTraceList):
             yarr = np.zeros(ntrace, dtype=np.float32)
             specarr = []
             lamarr = []
-            i = 0
-            for sptid, spt in tqdm(self.spectral_traces.items(),
-                                   desc="Fiber traces", position=2):
+            for i, (sptid, spt) in enumerate(tqdm(
+                    self.spectral_traces.items(),
+                    desc="Fiber traces",
+                    position=2)):
                 x_mm = detwcs.all_pix2world(np.arange(image.shape[1]), 1, 0)[0]
                 lam = spt.x2lam(x_mm)
 
@@ -299,7 +300,6 @@ class MosaicOutputFormat(MosaicSpectralTraceList):
                 yarr[i] = (self.aplist['top'][i] + self.aplist['bottom'][i]) / 2
                 specarr.append(image[jfib,])
                 lamarr.append(lam)
-                i += 1
 
             tab = Table(data=[idarr, xarr, yarr, lamarr, specarr],
                         names=["id", "x", "y", "wavelength", "spectrum"],
@@ -310,7 +310,7 @@ class MosaicOutputFormat(MosaicSpectralTraceList):
             pass
 
         else:
-            logger.warning("Unknown output format: %s", output_format)
+            logger.error("Unknown output format: %s", output_format)
 
         return det
 
