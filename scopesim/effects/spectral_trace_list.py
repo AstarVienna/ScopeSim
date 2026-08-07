@@ -291,9 +291,6 @@ class SpectralTraceList(Effect):
 
         This method creates an HDU list with one extension per spectral
         trace, i.e. it essentially treats all traces independently.
-        For the case of an IFU where the traces correspond to spatial
-        slices for the same wavelength range, use method `rectify_cube`
-        (not yet implemented).
 
         Parameters
         ----------
@@ -373,10 +370,6 @@ class SpectralTraceList(Effect):
         outhdul[0].header.update(inhdul[0].header)
 
         return outhdul
-
-    def rectify_cube(self, hdulist):
-        """Rectify traces and combine into a cube."""
-        raise NotImplementedError()
 
     def plot(self, wave_min=None, wave_max=None, axes=None, **kwargs):
         """Plot every spectral trace in the spectral trace list.

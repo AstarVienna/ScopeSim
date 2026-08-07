@@ -72,11 +72,7 @@ def fixture_spectral_trace_list():
     """Instantiate a SpectralTraceList"""
     return SpectralTraceList(hdulist=tlo.make_trace_hdulist())
 
-class TestRectification:
-    def test_rectify_cube_not_implemented(self, spectral_trace_list):
-        hdulist = fits.HDUList()
-        with pytest.raises(NotImplementedError):
-            spectral_trace_list.rectify_cube(hdulist)
+#class TestRectification:
 
     # def test_rectify_traces_needs_ximin_and_ximax(self, spectral_trace_list):
     #    hdulist = fits.HDUList([fits.PrimaryHDU()])

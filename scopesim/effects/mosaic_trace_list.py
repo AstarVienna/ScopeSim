@@ -86,8 +86,6 @@ class MosaicSpectralTraceList(SpectralTraceList):
             image_hdr["BUNIT"] = "ph s-1"
             image_hdr.extend(det_header)
 
-            jfibs = np.zeros(len(self.aplist), dtype=int)
-            apnum = 0
             for sptid, spt in tqdm(self.spectral_traces.items(),
                                    desc="Fiber traces", position=2):
                 theap = self.aplist[self.aplist["id"] == sptid]
@@ -119,11 +117,8 @@ class MosaicSpectralTraceList(SpectralTraceList):
 
                 detdisp = np.diff(detlam, prepend=detlam[0])
                 image[jfib,] += (spec(detlam) * detdisp).value
-                jfibs[apnum] = jfib
-                apnum += 1
 
             obj.hdu = fits.ImageHDU(data=image, header=image_hdr)
-            self.aplist.add_column(jfibs, name="jfib")
 
         return obj
 
