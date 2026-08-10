@@ -19,16 +19,24 @@ jobs:
     name: Offline tests
     uses: AstarVienna/DevOps/.github/workflows/tests.yml@main
     secrets: inherit
+    with:
+      python-versions: '["3.12", "3.13", "3.14"]'
+      python-min: "3.12"  # limited versions for macOS only
+      python-max: "3.14"  # limited versions for macOS only
 
   call-webtests:
     name: Network tests
     uses: AstarVienna/DevOps/.github/workflows/webtests.yml@main
     secrets: inherit
+    with:
+      python-versions: '["3.12", "3.14"]'
 
   call-updated-tests:
     name: Tests with updated dependencies
     uses: AstarVienna/DevOps/.github/workflows/updated_tests.yml@main
     secrets: inherit
+    with:
+      python-versions: '["3.12", "3.14"]'
 
   call-notebooks-with-clone:
     name: Notebook tests
