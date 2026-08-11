@@ -200,6 +200,50 @@ class WCUSource(TERCurve):
         self.compute_lamp_emission()
         self.compute_fp_emission()
 
+    def tune_laser(self, wavelength, force=False):
+        """Set the wavelength(s) of the tunable laser
+
+        Parameters
+        ==========
+        wavelength : float, list, array [um]
+            The wavelength(s) at which the laser emits
+        force: boolean [True] <- currently not used
+            If True bypass the validation for the lasers available
+            wavelength range.
+        """
+        if not hasattr(wavelength, "__len__"):
+            wavelength = [wavelength]
+        if not force:
+            wavelength = self._validate_tunable(wavelength)
+
+        # if nothing's there use a dummy value outside any range
+        # to prevent division by zero
+        if len(wavelength) == 0:
+            wavelength = [0.001]
+
+        self.meta["laser_t_wave"] = wavelength
+        self.compute_lamp_emission()
+        self.compute_fp_emission()
+
+    def _validate_tunable(self, wave):
+        """Validate wave against a wavelength range
+
+        This is currently not used as there is no reliable
+        information on the tuning range of the QCL.
+        """
+        reject = []
+        accept = []
+        lam_min = 1.
+        lam_max = 30.
+        for lam in wave:
+            if lam < lam_min or lam > lam_max:
+                reject.append(lam)
+            else:
+                accept.append(lam)
+        if len(reject) > 0:
+            logger.warning("Removed %d wavelengths outside allowed range (%f, %f) um", len(reject), lam_min, lam_max)
+        return accept
+
     def get_wavelength(self):
         """Try to set the appropriate wavelength vector for mode and filter."""
         # Need to provide for wcu_lms_extended
@@ -423,24 +467,26 @@ class WCUSource(TERCurve):
         The function computes all three lasers at once. This is possible because
         the lines are so far apart that there is no band that sees them both.
         """
-        print("Computing laser intensity")
+        logger.info("Computing laser intensity")
         lam = self.wavelength
         dlam = lam[1] - lam[0]
 
         mult_is = self.is_multiplication(lam)
 
         # Laser 1 (L band)  # TODO move to yaml
-        lamc_l = 3.39 * u.um
-        power_l = 5e-3 * u.W / (c.c * c.h / lamc_l) * u.ph
+        lamc_l = self.meta["laser_l_wave"] * u.um
+        power_l = self.meta["laser_l_power"] * u.W / (c.c * c.h / lamc_l) * u.ph
 
         # Laser 2 (tunable), power divided among multiple lines
-        lam_t = seq(4.68, 4.78, 0.01) * u.um
+        if not hasattr(self.meta['laser_t_wave'], "__len__"):
+            self.meta['laser_t_wave'] = [self.meta['laser_t_wave']]
+        lam_t = self.meta["laser_t_wave"] * u.um
         nline = len(lam_t)
-        power_t = 70e-3 * u.W / (c.c * c.h / lam) * u.ph / nline
+        power_t = self.meta["laser_t_power"] * u.W / (c.c * c.h / lam) * u.ph / nline
 
         # Laser 3 (M band)
-        lamc_m = 5.26 * u.um
-        power_m = 20e-3 * u.W / (c.c * c.h / lamc_m) * u.ph
+        lamc_m = self.meta["laser_m_wave"] * u.um
+        power_m = self.meta["laser_m_power"] * u.W / (c.c * c.h / lamc_m) * u.ph
 
         # Apply fibre transmission
         power_l *= self.fibre_trans
