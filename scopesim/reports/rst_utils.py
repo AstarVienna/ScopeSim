@@ -314,7 +314,7 @@ def latexify_rst_text(rst_text, filename=None, path=None, title_char="=",
     text = "Title\n<<<<<\nSubtitle\n>>>>>>>>\n\n"
     parts = publish_parts(
         text + rst_text,
-        writer_name="latex",
+        writer="latex",
         # Settings_overrides to placate FutureWarnings.
         # TODO: Decide whether the future defaults look better.
         settings_overrides={

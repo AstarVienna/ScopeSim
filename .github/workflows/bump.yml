@@ -8,17 +8,21 @@ on:
         required: false
       rule:
         type: choice
-        description: Version bump level
+        description: Version bump level (ignored if explicit version is given)
         required: true
         options:
-        - prerelease
-        - "prerelease --next-phase"
+        - dev
         - prepatch
         - preminor
         - premajor
         - patch
         - minor
         - major
+      version:
+        type: string
+        description: Explicit version (overrides rule), e.g. "X.Y.Zb0" to enter feature freeze.
+        required: false
+        default: ""
 
 jobs:
   Bump:
@@ -27,4 +31,4 @@ jobs:
     secrets: inherit
     with:
       dry-run: ${{ inputs.dry-run }}
-      rule: ${{ inputs.rule }}
+      rule: ${{ inputs.version != '' && inputs.version || inputs.rule }}

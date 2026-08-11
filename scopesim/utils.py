@@ -715,7 +715,7 @@ def write_report(text, filename=None, output=None):
         for fmt in output:
             out_text = deepcopy(text)
             if fmt.lower() == "latex":
-                out_text = publish_string(out_text, writer_name="latex")
+                out_text = publish_string(out_text, writer="latex")
                 out_text = out_text.decode("utf-8")
 
             suffix = {"rst": ".rst", "latex": ".tex"}[fmt]

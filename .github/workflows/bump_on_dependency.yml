@@ -5,7 +5,7 @@ on:
 
 jobs:
   Bump:
-    name: Bump prerelease version
+    name: Bump dev version
     if: >
       github.event.pull_request.merged == true &&
       github.event.pull_request.base.ref == 'main' &&
@@ -16,6 +16,5 @@ jobs:
     uses: AstarVienna/DevOps/.github/workflows/bump.yml@main
     secrets: inherit
     with:
-      rule: prerelease
+      rule: dev
       branch: main
-
