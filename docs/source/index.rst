@@ -55,6 +55,7 @@ ScopeSim_ is on pip::
 
     getting_started
     examples/index
+    effects/index
     5_liners/index
     faqs/index
 
