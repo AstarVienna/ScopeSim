@@ -1165,8 +1165,10 @@ def extract_range_from_spectrum(spectrum, waverange):
     assert isinstance(spectrum, SourceSpectrum), (
         f"spectrum must be of type synphot.SourceSpectrum: {type(spectrum)}")
 
-    wave_min, wave_max = quantify(waverange, u.um).to(u.AA).value
-    spec_waveset = spectrum.waveset.to(u.AA).value
+    # Round to 8 decimal places, because the conversion to u.AA will cause
+    # irrelevant floating point differences.
+    wave_min, wave_max = quantify(waverange, u.um).to(u.AA).value.round(8)
+    spec_waveset = spectrum.waveset.to(u.AA).value.round(8)
     mask = (spec_waveset > wave_min) * (spec_waveset < wave_max)
 
     # FIXME: Why did I comment this out in 2023? Seems useful to have...
