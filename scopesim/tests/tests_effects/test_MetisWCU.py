@@ -43,6 +43,7 @@ def fixture_bbsource():
                      laser_l_wave=3.39,    # [um]
                      laser_l_power=5e-3,   # [W]
                      laser_t_wave=[4.70],  # [um], array
+                     laser_t_wave_limits=[1., 30.],  # [um]
                      laser_t_power=70e-3,  # [W]
                      laser_m_wave=5.26,    # [um]
                      laser_m_power=20e-3,  # [W]

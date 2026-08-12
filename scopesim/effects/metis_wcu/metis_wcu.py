@@ -6,6 +6,7 @@
 """
 
 from typing import ClassVar
+from collections.abc import Iterable
 
 import numpy as np
 from astropy.table import Table
@@ -211,7 +212,7 @@ class WCUSource(TERCurve):
             If True bypass the validation for the lasers available
             wavelength range.
         """
-        if not hasattr(wavelength, "__len__"):
+        if not isinstance(wavelength, Iterable):
             wavelength = [wavelength]
         if not force:
             wavelength = self._validate_tunable(wavelength)
@@ -231,17 +232,13 @@ class WCUSource(TERCurve):
         This is currently not used as there is no reliable
         information on the tuning range of the QCL.
         """
-        reject = []
-        accept = []
-        lam_min = 1.
-        lam_max = 30.
-        for lam in wave:
-            if lam < lam_min or lam > lam_max:
-                reject.append(lam)
-            else:
-                accept.append(lam)
-        if len(reject) > 0:
-            logger.warning("Removed %d wavelengths outside allowed range (%f, %f) um", len(reject), lam_min, lam_max)
+        lam_min, lam_max = self.meta["laser_t_wave_limits"]
+
+        accept = [w for w in wave if (w >= lam_min) & (w <= lam_max)]
+        n_rejected = len(wave) - len(accept)
+        if n_rejected > 0:
+            logger.warning("Removed %d wavelengths outside allowed range (%.2f, %.2f) um",
+                           n_rejected, lam_min, lam_max)
         return accept
 
     def get_wavelength(self):
@@ -478,7 +475,7 @@ class WCUSource(TERCurve):
         power_l = self.meta["laser_l_power"] * u.W / (c.c * c.h / lamc_l) * u.ph
 
         # Laser 2 (tunable), power divided among multiple lines
-        if not hasattr(self.meta['laser_t_wave'], "__len__"):
+        if not isinstance(self.meta['laser_t_wave'], Iterable):
             self.meta['laser_t_wave'] = [self.meta['laser_t_wave']]
         lam_t = self.meta["laser_t_wave"] * u.um
         nline = len(lam_t)
