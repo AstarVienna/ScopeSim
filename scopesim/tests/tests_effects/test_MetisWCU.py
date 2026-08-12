@@ -218,7 +218,7 @@ class TestWCUSource:
         bbsource.set_lamp("laser")
         intens_2 = np.sum(bbsource.intens_lamp)
 
-        assert np.allclose(intens_2 / intens_1, ft_2 / ft_1)
+        npt.assert_allclose(intens_2 / intens_1, ft_2 / ft_1)
 
 
     def test_can_tune_laser(self, bbsource):
