@@ -286,7 +286,8 @@ class AtmoLibraryTERCurve(AtmosphericTERCurve):
     extension 3 etc.
       Tables with columns `transmission` and `emission`.
 
-    Currently the curves are distinguished by a single parameter (`pwv`).
+    Currently the curves are distinguished by a single parameter, whose name
+    is specified by `parameter` (cf. the examples below).
 
     .. versionadded:: 0.11.1
 
@@ -298,12 +299,14 @@ class AtmoLibraryTERCurve(AtmosphericTERCurve):
           class: AtmoLibraryTERCurve
           kwargs:
              filename: "!ATMO.spectrum.filename
+             parameter: "pwv"
              pwv: 10.
 
         - name: atmosphere
           class: AtmoLibraryTERCurve
           kwargs:
-             pwv: 25.
+             parameter: "relH"
+             relH: 25
              remote_filename: "!ATMO.spectrum.filename"
 
     The location of a downloaded file is provided by `.meta['filename']`.
@@ -318,9 +321,9 @@ class AtmoLibraryTERCurve(AtmosphericTERCurve):
             remote_filename = from_currsys(kwargs["remote_filename"], cmds)
             kwargs["filename"] = self._download_library(remote_filename)
 
-        self.param = 'pwv'
         super().__init__(cmds=cmds, **kwargs)
         self.meta.update(kwargs)
+        self.param = self.meta['parameter']
         self.load_table_from_library()
 
     def update(self, **kwargs):
@@ -343,8 +346,7 @@ class AtmoLibraryTERCurve(AtmosphericTERCurve):
 
     def load_table_from_library(self):
         """Load the appropriate library extension based on parameter value."""
-        param = 'pwv'
-
+        param = self.param
         self.value = from_currsys(self.meta[param], self.cmds)
         self.ext_data = self._file[0].header["EDATA"]
         self.ext_cat = self._file[0].header["ECAT"]
@@ -367,10 +369,12 @@ class AtmoLibraryTERCurve(AtmosphericTERCurve):
             tbl.add_column(wavelength, index=0)
 
         tbl.meta["wavelength_unit"] = tbl["wavelength"].unit
-        tbl.meta["emission_unit"] = tbl["emission"].unit
+        if "emission" in tbl.colnames:
+            tbl.meta["emission_unit"] = tbl["emission"].unit
 
         self.surface.table = tbl
         self.surface.meta.update(tbl.meta)
+        self.meta.update(tbl.meta)
 
     def __str__(self) -> str:
         """Return str(self)."""
