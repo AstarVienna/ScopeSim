@@ -72,6 +72,33 @@ class PSF(Effect):
             logger.debug("Executing %s, convolution", self.meta['name'])
             if ((hasattr(obj, "fields") and len(obj.fields) > 0) or
                     (obj.hdu is not None)):
+                image = obj.hdu.data.astype(float)
+
+                # subtract background level before convolving, re-add afterwards
+                bkg_level = get_bkg_level(image, self.meta["bkg_width"])
+
+                # Short-circuit for spatially uniform fields (e.g. darks and
+                # closed-shutter calibration frames): the background is
+                # subtracted before the convolution below and re-added after,
+                # so for a uniform image the convolution input is identically
+                # zero and the output is bit-for-bit the input. Skip the
+                # (expensive) kernel interpolation/rescale and FFT entirely.
+                # This is exact, not approximate: it only fires when the
+                # residual is exactly zero everywhere.
+                # np.asarray: the FOV data can be an astropy Quantity, whose
+                # truthiness/.any() raises TypeError; we only need the values
+                if image.ndim == 3:
+                    residual = np.asarray(
+                        image - np.asarray(bkg_level)[:, None, None])
+                else:
+                    residual = np.asarray(image - bkg_level)
+                if not residual.any():
+                    logger.debug(
+                        "%s: uniform field, convolution skipped",
+                        self.meta["name"])
+                    obj.hdu.data = image
+                    return obj
+
                 kernel = self.get_kernel(obj).astype(float)
 
                 # This doesn't work because of a "Delta PSF" in some mocks...
@@ -93,11 +120,6 @@ class PSF(Effect):
                 # if from_currsys(self.meta["normalise_kernel"], self.cmds):
                 #    kernel /= np.sum(kernel)
                 #    kernel[kernel < 0.] = 0.
-
-                image = obj.hdu.data.astype(float)
-
-                # subtract background level before convolving, re-add afterwards
-                bkg_level = get_bkg_level(image, self.meta["bkg_width"])
 
                 # do the convolution
                 mode = from_currsys(self.meta["convolve_mode"], self.cmds)
