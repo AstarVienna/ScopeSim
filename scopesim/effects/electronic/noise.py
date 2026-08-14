@@ -59,20 +59,23 @@ class PoorMansHxRGReadoutNoise(Effect):
         if not isinstance(det, Detector):
             return det
 
-        self.meta["random_seed"] = from_currsys(self.meta["random_seed"],
-                                                self.cmds)
-        if self.meta["random_seed"] is not None:
-            np.random.seed(self.meta["random_seed"])
+        # Resolve into locals rather than back into self.meta: writing the
+        # resolved value over the "!SIM.random.seed" reference froze the
+        # first frame's seed into the effect, so repeated readouts from a
+        # reused OpticalTrain could never be reseeded per exposure.
+        random_seed = from_currsys(self.meta["random_seed"], self.cmds)
+        if random_seed is not None:
+            np.random.seed(random_seed)
 
-        self.meta = from_currsys(self.meta, self.cmds)
         ron_keys = ["noise_std", "n_channels", "channel_fraction",
                     "line_fraction", "pedestal_fraction", "read_fraction"]
-        ron_kwargs = {key: self.meta[key] for key in ron_keys}
+        ron_kwargs = {key: from_currsys(self.meta[key], self.cmds)
+                      for key in ron_keys}
         ron_kwargs["image_shape"] = det._hdu.data.shape
 
         ron_frame = _make_ron_frame(**ron_kwargs)
         stacked_ron_frame = np.zeros_like(ron_frame)
-        for i in range(self.meta["ndit"]):
+        for i in range(from_currsys(self.meta["ndit"], self.cmds)):
             dx = np.random.randint(0, ron_frame.shape[1])
             dy = np.random.randint(0, ron_frame.shape[0])
             stacked_ron_frame += np.roll(ron_frame, (dy, dx), axis=(0, 1))
@@ -240,9 +243,10 @@ class ShotNoise(Effect):
         if not isinstance(det, Detector):
             return det
 
-        self.meta["random_seed"] = from_currsys(self.meta["random_seed"],
-                                                self.cmds)
-        rng = np.random.default_rng(self.meta["random_seed"])
+        # Local resolution (see PoorMansHxRGReadoutNoise.apply_to): keep the
+        # "!SIM.random.seed" reference intact so every readout re-resolves it.
+        random_seed = from_currsys(self.meta["random_seed"], self.cmds)
+        rng = np.random.default_rng(random_seed)
 
         # numpy has a problem with generating Poisson distributions above
         # certain values. E.g. on linux, numpy.random.poisson(1e20) raises
