@@ -64,6 +64,7 @@ ipympl = "^0.10.0"
 [tool.poetry.group.test.dependencies]
 pytest = "^9.0.3"
 pytest-cov = "^7.1.0"
+pytest-notebook = ">=0.11.0,<1.0"
 ipykernel = "^7.3.0"
 
 [tool.poetry.group.docs]
@@ -110,6 +111,12 @@ filterwarnings = [
     "default:The fov_grid*:DeprecationWarning",
     # Pytest Notebook stuff
     "ignore:Proactor*:RuntimeWarning",
+    "default:There is no current event loop:DeprecationWarning",
+]
+# nb_test_files = true
+nb_diff_ignore = [
+    "/cells",
+    "/metadata",
 ]
 
 [tool.coverage.report]
