@@ -306,7 +306,7 @@ class AtmoLibraryTERCurve(AtmosphericTERCurve):
           class: AtmoLibraryTERCurve
           kwargs:
              parameter: "relH"
-             relH: 25
+             relH: 0.25
              remote_filename: "!ATMO.spectrum.filename"
 
     The location of a downloaded file is provided by `.meta['filename']`.
