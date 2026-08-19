@@ -741,10 +741,19 @@ class XiLamImage():
             # lam0 is the target wavelength. We need to check that this
             # overlaps with the wavelength range covered by the cube
             if lam0.min() < cube_lam.max() and lam0.max() > cube_lam.min():
-                plane = fov.cube.data[:, i, :].T
-                plane_interp = RectBivariateSpline(cube_xi, cube_lam, plane,
-                                                   kx=1, ky=1)
-                self.image += plane_interp(cube_xi, lam0)
+                # Linear interpolation of the cube plane onto lam0 along
+                # the wavelength axis (the xi axis is not resampled).
+                # Values outside the cube's wavelength range are clamped
+                # to the boundary values, matching the behaviour of a
+                # degree-1 RectBivariateSpline.
+                plane = fov.cube.data[:, i, :]      # (n_lam, n_xi)
+                jlo = np.clip(np.searchsorted(cube_lam, lam0) - 1,
+                              0, n_lam - 2)
+                weight = np.clip((lam0 - cube_lam[jlo])
+                                 / (cube_lam[jlo + 1] - cube_lam[jlo]),
+                                 0.0, 1.0)
+                self.image += (plane[jlo, :] * (1 - weight[:, None])
+                               + plane[jlo + 1, :] * weight[:, None]).T
 
         self.image *= d_eta     # ph/s/um/arcsec2 --> ph/s/um/arcsec
 
