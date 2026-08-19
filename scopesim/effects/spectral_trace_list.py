@@ -348,7 +348,7 @@ class SpectralTraceList(Effect):
 
         if interps is None:
             logger.debug("Computing interpolation functions")
-            interps = make_image_interpolations(hdulist)
+            interps = make_image_interpolations(inhdul)
 
         pdu = fits.PrimaryHDU()
         pdu.header["FILETYPE"] = "Rectified spectra"
@@ -358,7 +358,7 @@ class SpectralTraceList(Effect):
 
         for i, trace_id in tqdm(enumerate(self.spectral_traces, start=1),
                                 desc=" Traces", total=len(self.spectral_traces)):
-            hdu = self[trace_id].rectify(hdulist,
+            hdu = self[trace_id].rectify(inhdul,
                                          interps=interps,
                                          bin_width=bin_width,
                                          xi_min=xi_min, xi_max=xi_max,
