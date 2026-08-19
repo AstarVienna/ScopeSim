@@ -16,6 +16,32 @@ def patch_mock_path_metis(mock_dir):
     with patch("scopesim.rc.__search_path__", [metis_dir]):
         yield
 
+class TestInterpolateCubePlanes:
+    def test_matches_spline_per_plane_reference(self):
+        """The one-shot bilinear gather must reproduce the previous
+        RectBivariateSpline-per-plane evaluation exactly."""
+        import numpy as np
+        from scipy.interpolate import RectBivariateSpline
+        from scopesim.effects.metis_lms_trace_list import (
+            interpolate_cube_planes)
+
+        rng = np.random.default_rng(5)
+        n_z, n_y, n_x = 20, 15, 17
+        cube = rng.random((n_z, n_y, n_x))
+        # sample coordinates deliberately extend beyond the plane edges
+        yfov = rng.uniform(-1, n_y, (4, 25))
+        xfov = rng.uniform(-1, n_x, (4, 25))
+
+        reference = np.zeros((n_z, 4, 25))
+        for k in range(n_z):
+            spline = RectBivariateSpline(np.arange(n_y), np.arange(n_x),
+                                         cube[k], kx=1, ky=1)
+            reference[k] = spline(yfov, xfov, grid=False)
+
+        result = interpolate_cube_planes(cube, yfov, xfov)
+        assert_allclose(result, reference, rtol=1e-12)
+
+
 class TestDetectorLayoutCache:
     def test_layout_file_is_read_only_once(self, mock_dir, monkeypatch):
         from scopesim.effects import metis_lms_trace_list as mlt
