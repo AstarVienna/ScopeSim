@@ -4,7 +4,9 @@ from unittest.mock import patch
 import pytest
 from numpy.testing import assert_allclose
 from astropy.io import fits
-from scopesim.effects.metis_lms_trace_list import predisperser_angle
+from scopesim.effects.metis_lms_trace_list import (predisperser_angle,
+                                                   echelle_setting,
+                                                   MetisLMSSpectralTrace)
 
 
 # pylint: disable=missing-class-docstring
@@ -38,6 +40,51 @@ class TestDetectorLayoutCache:
         assert first is second
         mlt._read_detector_layout.cache_clear()
 
+
+class TestGetMatrices:
+    def test_matches_elementwise_reference(self, mock_dir, monkeypatch):
+        """get_matrices must reproduce the element-by-element evaluation of
+        the angle polynomial exactly."""
+        import numpy as np
+
+        monkeypatch.setattr(MetisLMSSpectralTrace, "fov_grid",
+                            lambda self: {})
+
+        with fits.open(mock_dir / "METIS_LMS/TRACE_LMS.fits") as hdul:
+            ech = echelle_setting(4.2, 18.2, hdul["WCAL"].data)
+            order, angle = ech["Ord"], ech["Echelle"]
+
+            for spslice in (0, 13, 27):
+                trace = MetisLMSSpectralTrace(
+                    hdul, spslice=spslice,
+                    params={"order": order, "echelle": angle, "wavelen": 4.2})
+                matrices = trace.get_matrices()
+
+                poly = trace.table
+                for matid, name in enumerate(["A", "B", "AI", "BI"]):
+                    reference = np.zeros((4, 4))
+                    sel = ((poly["Ord"] == order) & (poly["Sli"] == spslice)
+                           & (poly["Mat"] == matid))
+                    sub = poly[sel]
+                    for i in range(4):
+                        for j in range(4):
+                            s_ij = (sub["Row"] == i) & (sub["Col"] == j)
+                            reference[i, j] = (
+                                sub["P3"][s_ij][0] * angle**3
+                                + sub["P2"][s_ij][0] * angle**2
+                                + sub["P1"][s_ij][0] * angle
+                                + sub["P0"][s_ij][0])
+                    assert_allclose(matrices[name], reference, rtol=0,
+                                    atol=0)
+
+    def test_raises_for_unknown_order(self, mock_dir, monkeypatch):
+        monkeypatch.setattr(MetisLMSSpectralTrace, "fov_grid",
+                            lambda self: {})
+        with fits.open(mock_dir / "METIS_LMS/TRACE_LMS.fits") as hdul:
+            with pytest.raises(KeyError):
+                MetisLMSSpectralTrace(
+                    hdul, spslice=0,
+                    params={"order": -1, "echelle": 0., "wavelen": 4.2})
 
 
 @pytest.mark.usefixtures("patch_mock_path_metis")
