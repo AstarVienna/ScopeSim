@@ -848,7 +848,8 @@ class Transform2D():
         this case, x and y must be of the same length).
 
         Functions `pretransform_x`, `pretransform_y` and `posttransform`
-        can be supplied to override the instance values.
+        can be supplied to override the instance values for this call only;
+        the instance itself is not modified.
 
         Parameters
         ----------
@@ -863,12 +864,16 @@ class Transform2D():
         in x and y. When grid=False, a vector. In this case, x and y must
         have the same length.
         """
+        # Per-call overrides must not modify the instance
+        pretransform_x = self.pretransform_x
+        pretransform_y = self.pretransform_y
+        posttransform = self.posttransform
         if "pretransform_x" in kwargs:
-            self.pretransform_x = self._repackage(kwargs["pretransform_x"])
+            pretransform_x = self._repackage(kwargs["pretransform_x"])
         if "pretransform_y" in kwargs:
-            self.pretransform_y = self._repackage(kwargs["pretransform_y"])
+            pretransform_y = self._repackage(kwargs["pretransform_y"])
         if "posttransform" in kwargs:
-            self.posttransform = self._repackage(kwargs["posttransform"])
+            posttransform = self._repackage(kwargs["posttransform"])
 
         x = np.array(x)
         y = np.array(y)
@@ -879,10 +884,10 @@ class Transform2D():
                              "is False")
 
         # Apply pre transforms
-        if self.pretransform_x is not None:
-            x = self.pretransform_x[0](x, **self.pretransform_x[1])
-        if self.pretransform_y is not None:
-            y = self.pretransform_y[0](y, **self.pretransform_y[1])
+        if pretransform_x is not None:
+            x = pretransform_x[0](x, **pretransform_x[1])
+        if pretransform_y is not None:
+            y = pretransform_y[0](y, **pretransform_y[1])
 
         xvec = power_vector(x.flatten(), self.nx - 1)
         yvec = power_vector(y.flatten(), self.ny - 1)
@@ -902,8 +907,8 @@ class Transform2D():
                 result = result.reshape(orig_shape)
 
         # Apply posttransform
-        if self.posttransform is not None:
-            result = self.posttransform[0](result, **self.posttransform[1])
+        if posttransform is not None:
+            result = posttransform[0](result, **posttransform[1])
 
         return result
 
