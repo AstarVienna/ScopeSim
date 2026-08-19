@@ -202,3 +202,13 @@ class TestImageInterpolations:
         interps = make_image_interpolations(hdul, kx=1, ky=1)
         imginterp = interps[0](yy, xx, grid=False)
         assert np.allclose(imginterp, img)
+
+    def test_works_with_non_square_image(self):
+        # The axes passed to RectBivariateSpline were transposed, which
+        # raised ValueError for any image with NAXIS1 != NAXIS2
+        xx, yy = np.meshgrid(np.arange(80), np.arange(50))
+        img = np.sin(xx/6) * np.cos(yy/7)      # shape (50, 80)
+        hdul = fits.HDUList(fits.ImageHDU(data=img))
+        interps = make_image_interpolations(hdul, kx=1, ky=1)
+        imginterp = interps[0](yy, xx, grid=False)
+        assert np.allclose(imginterp, img)
