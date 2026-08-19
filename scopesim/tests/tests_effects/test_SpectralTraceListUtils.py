@@ -203,6 +203,31 @@ class TestImageInterpolations:
         imginterp = interps[0](yy, xx, grid=False)
         assert np.allclose(imginterp, img)
 
+    def test_bilinear_matches_spline_evaluation(self):
+        """The kx=ky=1 fast path must reproduce RectBivariateSpline."""
+        from scipy.interpolate import RectBivariateSpline
+
+        rng = np.random.default_rng(3)
+        img = rng.random((50, 80))
+        hdul = fits.HDUList([fits.PrimaryHDU(), fits.ImageHDU(data=img)])
+        fast = make_image_interpolations(hdul, kx=1, ky=1)[0]
+        spline = RectBivariateSpline(np.arange(50), np.arange(80), img,
+                                     kx=1, ky=1)
+
+        # scattered points, deliberately extending beyond the image
+        jarr = rng.uniform(-2, 52, 1000)
+        iarr = rng.uniform(-2, 82, 1000)
+        np.testing.assert_allclose(fast(jarr, iarr, grid=False),
+                                   spline(jarr, iarr, grid=False),
+                                   rtol=1e-10)
+
+    def test_other_spline_degrees_fall_back_to_fitpack(self):
+        from scipy.interpolate import RectBivariateSpline
+        img = np.random.rand(20, 20)
+        hdul = fits.HDUList([fits.PrimaryHDU(), fits.ImageHDU(data=img)])
+        interps = make_image_interpolations(hdul)     # default: cubic
+        assert isinstance(interps[0], RectBivariateSpline)
+
     def test_works_with_non_square_image(self):
         # The axes passed to RectBivariateSpline were transposed, which
         # raised ValueError for any image with NAXIS1 != NAXIS2
