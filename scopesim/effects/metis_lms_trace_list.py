@@ -301,6 +301,7 @@ class MetisLMSSpectralTrace(SpectralTrace):
 
     def __init__(self, hdulist, spslice, params, **kwargs):
         polyhdu = hdulist["Polynomial coefficients"]
+        params = dict(params)   # do not modify the caller's dictionary
         params.update(kwargs)
         params["aperture_id"] = spslice
         params["slice"] = spslice
