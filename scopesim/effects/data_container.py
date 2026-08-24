@@ -64,6 +64,12 @@ class DataContainer:
         needed in order to save on memory usage. `._file` contains a pointer
         to the data open FITS file.
 
+
+    .. versionchanged:: 0.12.0
+
+       Passing the old-style `file_name` argument now raises a ValueError.
+       Please use the new-style `filename` instead.
+
     """
 
     meta = None
@@ -83,11 +89,9 @@ class DataContainer:
         #     from scopesim import UserCommands
         #     self.cmds = UserCommands()
 
-        if filename is None and "file_name" in kwargs:
-            warn("The 'file_name' kwarg is deprecated and will raise an error "
-                 "from version 0.12 onwards, please use 'filename' instead!",
-                 DeprecationWarning, stacklevel=2)
-            filename = kwargs["file_name"]
+        if "file_name" in kwargs:
+            raise ValueError("The 'file_name' kwarg is deprecated, please use "
+                             "'filename' instead!")
 
         # A !-string filename is immediately resolved, but the file is not yet
         # searched for. This makes sense, as the filename should end up in the
