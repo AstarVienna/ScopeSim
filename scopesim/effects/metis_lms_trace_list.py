@@ -3,6 +3,7 @@
 
 import copy
 import warnings
+from functools import lru_cache
 
 from tqdm.auto import tqdm
 import numpy as np
@@ -26,6 +27,17 @@ from ..optics.fov_volume_list import FovVolumeList
 
 
 logger = get_logger(__name__)
+
+
+@lru_cache(maxsize=8)
+def _read_detector_layout(filename):
+    """Read (and cache) a detector layout file.
+
+    The layout is required by ``MetisLMSSpectralTrace.fov_grid``, which is
+    called several times for each of the 28 slices; without the cache the
+    same file is read and parsed from disk on every call.
+    """
+    return ioascii.read(find_file(filename))
 
 
 class MetisLMSSpectralTraceList(SpectralTraceList):
@@ -323,7 +335,7 @@ class MetisLMSSpectralTrace(SpectralTrace):
         y_max = aperture["top"]
 
         filename_det_layout = from_currsys("!DET.layout.file_name", cmds=self.cmds)
-        layout = ioascii.read(find_file(filename_det_layout))
+        layout = _read_detector_layout(filename_det_layout)
         det_lims = {}
         xhw = layout["pixel_size"] * layout["x_size"] / 2
         yhw = layout["pixel_size"] * layout["y_size"] / 2
