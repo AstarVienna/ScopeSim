@@ -33,7 +33,7 @@ dependencies = [
     "packaging (>=26.0,<28.0)",
 
     "synphot (>=1.7.0,<2.0.0)",
-    "skycalc-ipy (>=0.7.1,<1.0)",
+    "skycalc-ipy (>=0.8.0,<1.0)",
     "anisocado (>=0.6.0,<1.0)",
     "astar-utils (>=0.7.0,<1.0)"
 ]
