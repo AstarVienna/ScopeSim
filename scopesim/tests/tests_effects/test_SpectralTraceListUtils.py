@@ -9,9 +9,12 @@ import numpy as np
 
 from astropy.io import fits
 
+from astropy import units as u
+
 from scopesim.effects.spectral_trace_list_utils import SpectralTrace
 from scopesim.effects.spectral_trace_list_utils import Transform2D, power_vector
 from scopesim.effects.spectral_trace_list_utils import make_image_interpolations
+from scopesim.effects.spectral_trace_list_utils import XiLamImage
 from scopesim.tests.mocks.py_objects import trace_list_objects as tlo
 
 class TestSpectralTrace:
@@ -143,6 +146,30 @@ class TestTransform2D:
         n_x, n_y = 4, 2
         res = tf2d(np.ones((n_y, n_x)), np.ones((n_y, n_x)), grid=False)
         assert res.shape == (n_y, n_x)
+
+
+class MockCubeFov:
+    """Minimal stand-in for a FieldOfView carrying a spectral cube."""
+    def __init__(self, n_lam=20, n_eta=3, n_xi=11):
+        hdr = fits.Header()
+        hdr["NAXIS"] = 3
+        hdr["NAXIS1"], hdr["NAXIS2"], hdr["NAXIS3"] = n_xi, n_eta, n_lam
+        hdr["CTYPE1"], hdr["CTYPE2"], hdr["CTYPE3"] = "LINEAR", "LINEAR", "WAVE"
+        hdr["CRPIX1"], hdr["CRPIX2"], hdr["CRPIX3"] = 1, 1, 1
+        hdr["CRVAL1"], hdr["CRVAL2"], hdr["CRVAL3"] = 0., 0., 2.0
+        hdr["CDELT1"], hdr["CDELT2"], hdr["CDELT3"] = 0.1, 0.1, 0.001
+        hdr["CUNIT1"], hdr["CUNIT2"], hdr["CUNIT3"] = "arcsec", "arcsec", "um"
+        self.cube = fits.ImageHDU(
+            data=np.ones((n_lam, n_eta, n_xi)), header=hdr)
+        self.meta = {"xi_min": -0.5 * u.arcsec, "xi_max": 0.5 * u.arcsec}
+
+
+class TestXiLamImage:
+    def test_primary_wcs_keeps_arcsec_cunit(self):
+        # The wcsa block previously overwrote self.wcs.wcs.cunit
+        xilam = XiLamImage(MockCubeFov(), dlam_per_pix=0.001)
+        assert list(xilam.wcs.wcs.cunit) == [u.um, u.arcsec]
+        assert list(xilam.wcsa.wcs.cunit) == [u.um, u.dimensionless_unscaled]
 
 
 class TestImageInterpolations:

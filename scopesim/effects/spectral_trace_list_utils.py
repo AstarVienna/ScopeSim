@@ -767,7 +767,7 @@ class XiLamImage():
         self.wcsa.wcs.cdelt = [d_lam, 1./n_xi]
         self.wcsa.wcs.ctype = ["LINEAR", "LINEAR"]
         self.wcsa.wcs.cname = ["WAVELEN", "SLITPOS"]
-        self.wcs.wcs.cunit = ["um", ""]
+        self.wcsa.wcs.cunit = ["um", ""]
 
         self.xi = self.wcs.all_pix2world(self.lam[0], np.arange(n_xi), 0)[1]
         self.npix_xi = n_xi
