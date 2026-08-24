@@ -133,3 +133,86 @@ class TestWaveDict:
                            filter_name=filter_name)
             psf.get_kernel(PIXEL_SCALE)
         assert sorted(mock_server) == [0.545, 0.641]
+
+
+class TestSvoFilterResolution:
+    """Filter names without a wave_dict resolve through the SVO service.
+
+    The SVO lookups are monkeypatched: no network access.
+    """
+
+    @pytest.fixture(name="mock_svo", autouse=True)
+    def fixture_mock_svo(self, monkeypatch):
+        import astropy.units as u
+        from scopesim.effects import ter_curves_utils as tu
+
+        def fake_eff_wave(filter_name):
+            assert filter_name in tu.FILTER_DEFAULTS
+            return 2.16 * u.um
+
+        def fake_download(filter_name, return_style="synphot"):
+            wave = np.array([3.5, 3.8, 4.1]) * u.um
+            trans = np.array([0.0, 1.0, 0.0]) * u.dimensionless_unscaled
+            return wave, trans
+
+        monkeypatch.setattr(tu, "get_filter_effective_wavelength",
+                            fake_eff_wave)
+        monkeypatch.setattr(tu, "download_svo_filter", fake_download)
+
+    def test_generic_band_name(self, tmp_path, mock_server):
+        psf = make_psf(tmp_path, instrument="MICADO_SCAO",
+                       wavelength=None, filter_name="Ks")
+        psf.get_kernel(PIXEL_SCALE)
+        assert mock_server == [pytest.approx(2.16)]
+
+    def test_svo_identifier(self, tmp_path, mock_server):
+        psf = make_psf(tmp_path, instrument="METIS",
+                       wavelength=None, filter_name="Paranal/METIS.Lp")
+        psf.get_kernel(PIXEL_SCALE)
+        assert mock_server == [pytest.approx(3.8)]
+
+    def test_wavelength_string_resolves_as_filter(self, tmp_path,
+                                                  mock_server):
+        psf = make_psf(tmp_path, instrument="MORFEO", wavelength="Ks")
+        psf.get_kernel(PIXEL_SCALE)
+        assert mock_server == [pytest.approx(2.16)]
+
+    def test_unresolvable_name_raises_with_guidance(self, tmp_path,
+                                                    mock_server):
+        psf = make_psf(tmp_path, instrument="METIS",
+                       wavelength=None, filter_name="Lp")
+        with pytest.raises(KeyError, match="wave_dict"):
+            psf.get_kernel(PIXEL_SCALE)
+
+    def test_wave_dict_beats_svo(self, tmp_path, mock_server):
+        psf = make_psf(tmp_path, instrument="METIS", wavelength=None,
+                       wave_dict={"Lp": 3.79}, filter_name="Lp")
+        psf.get_kernel(PIXEL_SCALE)
+        assert mock_server == [pytest.approx(3.79)]
+
+
+class TestOverrides:
+    """Overrides can set, remove keys, and remove whole sections.
+
+    Only the connection object is built -- no server contact.
+    """
+
+    def test_set_and_remove(self, tmp_path):
+        psf = make_psf(tmp_path, instrument="MORFEO", overrides={
+            "telescope": {"glFocusOnNGS": False, "extraErrorLoNm": None},
+            "sources_Focus": None,
+            "sensor_Focus": None,
+        })
+        conn = psf._make_connection(2.16, 512, PIXEL_SCALE)
+        assert conn["telescope", "glFocusOnNGS"] is False
+        assert "extraErrorLoNm" not in conn["telescope"]
+        assert "sources_Focus" not in conn.sections
+        assert "sensor_Focus" not in conn.sections
+
+    def test_overrides_change_the_cache_key(self, tmp_path):
+        psf1 = make_psf(tmp_path, instrument="MORFEO")
+        psf2 = make_psf(tmp_path, instrument="MORFEO",
+                        overrides={"telescope": {"ZenithAngle": 0.0}})
+        conn1 = psf1._make_connection(2.16, 512, PIXEL_SCALE)
+        conn2 = psf2._make_connection(2.16, 512, PIXEL_SCALE)
+        assert psf1._cache_path(conn1, 2.16) != psf2._cache_path(conn2, 2.16)
