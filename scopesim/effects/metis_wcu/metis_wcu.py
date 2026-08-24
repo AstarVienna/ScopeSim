@@ -477,29 +477,45 @@ class WCUSource(TERCurve):
         # Laser 2 (tunable), power divided among multiple lines
         if not isinstance(self.meta['laser_t_wave'], Iterable):
             self.meta['laser_t_wave'] = [self.meta['laser_t_wave']]
-        lam_t = self.meta["laser_t_wave"] * u.um
-        nline = len(lam_t)
-        power_t = self.meta["laser_t_power"] * u.W / (c.c * c.h / lam) * u.ph / nline
+        lamc_t = self.meta["laser_t_wave"] * u.um
+        nline_t = len(lamc_t)
+        power_t = self.meta["laser_t_power"] * u.W / (c.c * c.h / lam) * u.ph / nline_t
 
         # Laser 3 (M band)
         lamc_m = self.meta["laser_m_wave"] * u.um
         power_m = self.meta["laser_m_power"] * u.W / (c.c * c.h / lamc_m) * u.ph
 
+        # N-band lasers
+        if not isinstance(self.meta['laser_n_wave'], Iterable):
+            self.meta['laser_n_wave'] = [self.meta['laser_n_wave']]
+        if not isinstance(self.meta['laser_n_power'], Iterable):
+            self.meta['laser_n_power'] = [self.meta['laser_n_power']]
+        print(self.meta['laser_n_wave'])
+        lamc_n = self.meta["laser_n_wave"] * u.um
+        print(self.meta['laser_n_power'])
+        power_n = self.meta["laser_n_power"] * u.W / (c.c * c.h / lamc_n) * u.ph
+
+
         # Apply fibre transmission
         power_l *= self.fibre_trans
         power_t *= self.fibre_trans
         power_m *= self.fibre_trans
+        power_n *= self.fibre_trans
 
         sigma = 2 * dlam
+        print(sigma)
         amp = 1/(sigma * np.sqrt(2 * np.pi))
 
         line_l = Gaussian1D(amplitude=amp, mean=lamc_l, stddev=sigma)
         line_m = Gaussian1D(amplitude=amp, mean=lamc_m, stddev=sigma)
-        list_t = [Gaussian1D(amplitude=amp, mean=ll, stddev=sigma) for ll in lam_t]
+        list_t = [Gaussian1D(amplitude=amp, mean=ll, stddev=sigma) for ll in lamc_t]
         line_t = sum(list_t[1:], start=list_t[0])
+        list_n = [Gaussian1D(amplitude=pp*amp, mean=ll, stddev=sigma) for (ll,pp) in
+                  zip(lamc_n, power_n)]
+        line_n = sum(list_n[1:], start=list_n[0])
 
         flux = ((power_l * line_l(lam) + power_m * line_m(lam) + power_t
-                 * line_t(lam)) / (np.pi * self.d_is**2))
+                 * line_t(lam) + line_n(lam)) / (np.pi * self.d_is**2))
 
         # emergent intensity from the IS output port
         intens = mult_is * flux / (np.pi * u.sr)
