@@ -142,6 +142,17 @@ class TestTransform2D:
 
         assert tf2d.matrix == pytest.approx(matrix)
 
+    def test_call_kwargs_do_not_modify_instance(self, quadratic):
+        # pre/posttransform overrides passed to __call__ previously
+        # rewired the instance for all subsequent calls
+        tf2d = Transform2D(quadratic['matrix'])
+        x, y = 0.7, -0.3
+        plain = tf2d(x, y)
+        shifted = tf2d(x, y, posttransform=lambda z: z + 100)
+        assert shifted == pytest.approx(plain + 100)
+        assert tf2d.posttransform is None
+        assert tf2d(x, y) == pytest.approx(plain)
+
     def test_grid_false_shape_is_preserved(self, tf2d):
         n_x, n_y = 4, 2
         res = tf2d(np.ones((n_y, n_x)), np.ones((n_y, n_x)), grid=False)
