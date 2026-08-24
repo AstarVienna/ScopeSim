@@ -36,6 +36,17 @@ class TestSpectralTrace:
         spt = SpectralTrace(trace_tbl)
         assert spt.dispersion_axis == 'y'
 
+class TestSpectralTracePlot:
+    """Tests for SpectralTrace.plot()"""
+    @pytest.mark.parametrize("plot_outline", [True, False])
+    def test_plot_trace_id_works_without_outline(self, plot_outline):
+        # plot_trace_id previously relied on corners, which was only
+        # computed when plot_outline was True
+        spt = SpectralTrace(tlo.trace_1(), trace_id="TRACE_1")
+        axes = spt.plot(plot_trace_id=True, plot_outline=plot_outline)
+        assert any(txt.get_text() == spt.trace_id for txt in axes.texts)
+
+
 class TestPowerVec:
     """Test function power_vector()"""
     def test_gives_correct_result(self):

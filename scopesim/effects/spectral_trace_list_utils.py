@@ -626,7 +626,7 @@ class SpectralTrace:
         if plot_ctrlpnts:
             axes.plot(x, y, "o", c=c)
 
-        if plot_outline:
+        if plot_outline or plot_trace_id:
             blue_end = self.table[mask][w == w.min()]
             red_end = self.table[mask][w == w.max()]
             blue_end.sort(sname)
@@ -634,6 +634,8 @@ class SpectralTrace:
             corners = vstack([blue_end[[0, -1]][xname, yname],
                               red_end[[-1, 0]][xname, yname],
                               blue_end[0][xname, yname]])
+
+        if plot_outline:
             axes.plot(corners[xname], corners[yname], c=c)
 
         if plot_trace_id:
