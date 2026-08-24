@@ -1,1 +1,2 @@
 Leiden_atmo_ter.fits 16b5faa1bc4e75ba2d34cad02f302223b8a788306cd34b9809c3e895b46132b0
+MICADO_relay_air_trans.fits bea89caf7b6690790c409f7ed518b7e0783ce98098ac1b7343025b2d9173b04b
