@@ -7,7 +7,6 @@ from functools import lru_cache
 
 from tqdm.auto import tqdm
 import numpy as np
-from scipy.interpolate import RectBivariateSpline
 
 from astropy.io import fits
 from astropy.io import ascii as ioascii
@@ -27,6 +26,39 @@ from ..optics.fov_volume_list import FovVolumeList
 
 
 logger = get_logger(__name__)
+
+
+def interpolate_cube_planes(fovcube, yfov, xfov):
+    """
+    Bilinear resampling of every plane of a cube at the same (y, x) points.
+
+    Equivalent to building a ``RectBivariateSpline(kx=1, ky=1)`` over each
+    plane ``fovcube[k]`` and evaluating it at ``(yfov, xfov)`` -- but since
+    the sample coordinates are identical for every plane, the bilinear
+    indices and weights are computed once and applied to the whole cube.
+    Coordinates outside a plane are clamped to the edges, as
+    ``RectBivariateSpline`` does.
+
+    Parameters
+    ----------
+    fovcube : ndarray of shape (n_z, n_y, n_x)
+    yfov, xfov : ndarrays of identical shape, pixel coordinates
+
+    Returns
+    -------
+    ndarray of shape (n_z, *yfov.shape)
+    """
+    n_y, n_x = fovcube.shape[1:]
+    ycl = np.clip(yfov, 0, n_y - 1)
+    xcl = np.clip(xfov, 0, n_x - 1)
+    y_0 = np.clip(ycl.astype(int), 0, n_y - 2)
+    x_0 = np.clip(xcl.astype(int), 0, n_x - 2)
+    w_y = ycl - y_0
+    w_x = xcl - x_0
+    return ((1 - w_y) * (1 - w_x) * fovcube[:, y_0, x_0]
+            + (1 - w_y) * w_x * fovcube[:, y_0, x_0 + 1]
+            + w_y * (1 - w_x) * fovcube[:, y_0 + 1, x_0]
+            + w_y * w_x * fovcube[:, y_0 + 1, x_0 + 1])
 
 
 @lru_cache(maxsize=8)
@@ -124,12 +156,9 @@ class MetisLMSSpectralTraceList(SpectralTraceList):
                 # FOV pixel coordinates for the slice
                 xfov, yfov = fovwcs_spat.all_world2pix(xworld, yworld, 0)
 
-                slicecube = np.zeros((n_z, ny_slice, n_x))
-                for islice in range(n_z):
-                    ifov = RectBivariateSpline(np.arange(n_y),
-                                               np.arange(n_x),
-                                               fovcube[islice], kx=1, ky=1)
-                    slicecube[islice] = ifov(yfov, xfov, grid=False)
+                # Resample all wavelength planes at once; the (yfov, xfov)
+                # sample coordinates are the same for every plane
+                slicecube = interpolate_cube_planes(fovcube, yfov, xfov)
 
                 slicefov = FieldOfView3D(obj.header,
                                          [obj.meta["wave_min"],
