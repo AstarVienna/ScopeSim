@@ -159,6 +159,32 @@ class TestTransform2D:
         assert res.shape == (n_y, n_x)
 
 
+class TestMapSpectraErrorPath:
+    def test_returns_none_when_xilamimage_fails(self, monkeypatch):
+        """A ValueError from XiLamImage was logged but then the unbound
+        variable was used anyway, raising NameError instead."""
+        from scopesim.effects import spectral_trace_list_utils as stlu_mod
+        from scopesim.tests.mocks.py_objects import header_objects as ho
+
+        class FailingXiLamImage:
+            def __init__(self, *args, **kwargs):
+                raise ValueError("simulated failure")
+
+        monkeypatch.setattr(stlu_mod, "XiLamImage", FailingXiLamImage)
+
+        spt = SpectralTrace(tlo.trace_1(), trace_id="TRACE_1",
+                            pixel_scale=0.004, plate_scale=0.266)
+
+        class FakeFov:
+            header = ho._basic_fov_header()
+            detector_header = header
+            trace_id = "TRACE_1"
+            meta = {"wave_min": 1.2 * u.um, "wave_max": 2.4 * u.um,
+                    "xi_min": -1.5 * u.arcsec, "xi_max": 1.5 * u.arcsec}
+
+        assert spt.map_spectra_to_focal_plane(FakeFov()) is None
+
+
 class MockCubeFov:
     """Minimal stand-in for a FieldOfView carrying a spectral cube."""
     def __init__(self, n_lam=20, n_eta=3, n_xi=11):

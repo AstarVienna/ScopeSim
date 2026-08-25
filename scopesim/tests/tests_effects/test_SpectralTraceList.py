@@ -80,6 +80,49 @@ def fixture_spectral_trace_list():
     #        spectral_trace_list.rectify_traces(hdulist)
 
 
+class TestRectifyTracesInput:
+    def test_rectify_traces_opens_filename_before_use(
+            self, spectral_trace_list, tmp_path, monkeypatch):
+        """rectify_traces accepts a filename, but passed the raw string on
+        to make_image_interpolations and SpectralTrace.rectify instead of
+        the opened HDUList."""
+        import numpy as np
+        from astropy.table import Table
+        from scopesim.effects import spectral_trace_list as stl_mod
+
+        readout = tmp_path / "readout.fits"
+        fits.HDUList([fits.PrimaryHDU(),
+                      fits.ImageHDU(data=np.zeros((10, 10)))]
+                     ).writeto(readout)
+
+        # Stub the filter lookup; it needs a fully configured instrument
+        class FakeFilterCurve:
+            table = Table(data=[[1.0, 2.0], [1.0, 1.0]],
+                          names=["wavelength", "transmission"])
+
+        monkeypatch.setattr(stl_mod, "FilterCurve",
+                            lambda **kwargs: FakeFilterCurve())
+        monkeypatch.setattr(stl_mod, "from_currsys",
+                            lambda *args, **kwargs: "J")
+
+        # Record what object each trace's rectify() receives
+        received = []
+
+        def fake_rectify(self, hdulist, **kwargs):
+            received.append(hdulist)
+            return None
+
+        monkeypatch.setattr(SpectralTrace, "rectify", fake_rectify)
+
+        result = spectral_trace_list.rectify_traces(
+            str(readout), xi_min=-1, xi_max=1)
+
+        assert isinstance(result, fits.HDUList)
+        assert received, "rectify() was never called"
+        assert all(isinstance(hdul, fits.HDUList) for hdul in received), \
+            "traces received the filename string, not the opened HDUList"
+
+
 class TestSpectralTraceListWheel:
     @pytest.mark.usefixtures("no_file_error")
     def test_basic_init(self):

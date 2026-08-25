@@ -4,7 +4,9 @@ from unittest.mock import patch
 import pytest
 from numpy.testing import assert_allclose
 from astropy.io import fits
-from scopesim.effects.metis_lms_trace_list import predisperser_angle
+from scopesim.effects.metis_lms_trace_list import (predisperser_angle,
+                                                   echelle_setting,
+                                                   MetisLMSSpectralTrace)
 
 
 # pylint: disable=missing-class-docstring
@@ -38,6 +40,26 @@ class TestDetectorLayoutCache:
         assert first is second
         mlt._read_detector_layout.cache_clear()
 
+class TestMetisLMSSpectralTraceInit:
+    def test_does_not_mutate_caller_params(self, mock_dir, monkeypatch):
+        """The params dict is passed by reference from the trace list's
+        self.meta; the trace previously wrote its slice-specific values
+        (slice, aperture_id, ...) back into it."""
+        monkeypatch.setattr(MetisLMSSpectralTrace, "fov_grid",
+                            lambda self: {})
+
+        with fits.open(mock_dir / "METIS_LMS/TRACE_LMS.fits") as hdul:
+            ech = echelle_setting(4.2, 18.2, hdul["WCAL"].data)
+            params = {"order": ech["Ord"], "echelle": ech["Echelle"],
+                      "wavelen": 4.2}
+            snapshot = dict(params)
+
+            trace = MetisLMSSpectralTrace(hdul, spslice=0, params=params)
+
+            assert params == snapshot, \
+                "constructor modified the caller's params dict"
+            assert trace.meta["slice"] == 0
+            assert trace.meta["aperture_id"] == 0
 
 
 @pytest.mark.usefixtures("patch_mock_path_metis")

@@ -235,7 +235,7 @@ class MetisLMSSpectralTraceList(SpectralTraceList):
         for i, spt in enumerate(self.spectral_traces.values()):
             spt.wave_min = wave_min
             spt.wave_max = wave_max
-            result = spt.rectify(hdulist, interps=interps,
+            result = spt.rectify(inhdul, interps=interps,
                                  wave_min=wave_min, wave_max=wave_max,
                                  xi_min=xi_min, xi_max=xi_max,
                                  bin_width=dwave,
@@ -301,6 +301,7 @@ class MetisLMSSpectralTrace(SpectralTrace):
 
     def __init__(self, hdulist, spslice, params, **kwargs):
         polyhdu = hdulist["Polynomial coefficients"]
+        params = dict(params)   # do not modify the caller's dictionary
         params.update(kwargs)
         params["aperture_id"] = spslice
         params["slice"] = spslice

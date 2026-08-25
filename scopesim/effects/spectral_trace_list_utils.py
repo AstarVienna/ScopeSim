@@ -230,6 +230,7 @@ class SpectralTrace:
             self._xilamimg = xilam   # ..todo: remove or make available with a debug flag?
         except ValueError:
             logger.warning(" ---> %s gave ValueError", self.trace_id)
+            return None
 
         npix_xi, npix_lam = xilam.npix_xi, xilam.npix_lam
         xilam_wcs = xilam.wcs
