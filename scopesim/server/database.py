@@ -410,7 +410,11 @@ def download_packages(
 def download_missing_pkgs(instrument: str) -> None:
     """Download instrument package and required support packages."""
     # First download package itself
-    zip_file = download_packages([instrument])[0]
+    downloaded = download_packages([instrument])
+    if not downloaded:
+        raise RuntimeError(f"Could not download \"{instrument}\".")
+
+    zip_file = downloaded[0]
 
     # If package needs other packages, download them as well
     defyam = zip_file.with_suffix("") / "default.yaml"
