@@ -14,14 +14,17 @@ from tqdm.auto import tqdm
 from astropy.io import fits
 from astropy.table import Table
 
-from .effects import Effect
-from .ter_curves import FilterCurve
-from .spectral_trace_list_utils import SpectralTrace, make_image_interpolations
+from ..utils import from_currsys, check_keys, figure_factory, get_logger
 from ..optics.image_plane_utils import header_from_list_of_xy
 from ..optics.fov import FieldOfView
 from ..optics.fov_volume_list import FovVolumeList
-from ..utils import from_currsys, check_keys, figure_factory, get_logger
-
+from .effects import Effect
+from .ter_curves import FilterCurve
+from .spectral_trace_list_utils import (
+    SpectralTrace,
+    make_image_interpolations,
+    SpecTraceError,
+)
 
 logger = get_logger(__name__)
 
@@ -257,7 +260,15 @@ class SpectralTraceList(Effect):
                 self.update_meta()
 
             spt = self.spectral_traces[obj.trace_id]
-            obj.hdu = spt.map_spectra_to_focal_plane(obj)
+            try:
+                obj.hdu = spt.map_spectra_to_focal_plane(obj)
+            except ValueError as err:
+                # Should also match NoXlimError
+                logger.error(err)
+            except SpecTraceError as err:
+                # If we need specific behavior for any of these, we can
+                # import the subclass and deal with it separately.
+                logger.info(err)
 
         logger.debug("%s done", self.display_name)
         return obj
@@ -358,12 +369,26 @@ class SpectralTraceList(Effect):
 
         for i, trace_id in tqdm(enumerate(self.spectral_traces, start=1),
                                 desc=" Traces", total=len(self.spectral_traces)):
-            hdu = self[trace_id].rectify(hdulist,
-                                         interps=interps,
-                                         bin_width=bin_width,
-                                         xi_min=xi_min, xi_max=xi_max,
-                                         wave_min=wave_min, wave_max=wave_max)
-            if hdu is not None:   # ..todo: rectify does not do that yet
+            try:
+                hdu = self[trace_id].rectify(
+                    hdulist,
+                    interps=interps,
+                    bin_width=bin_width,
+                    xi_min=xi_min,
+                    xi_max=xi_max,
+                    wave_min=wave_min,
+                    wave_max=wave_max,
+                )
+            except (KeyError, ValueError) as err:
+                # Should also match NoXlimError, KwNotFound
+                logger.error(err)
+            except SpecTraceError as err:
+                # If we need specific behavior for any of these, we can
+                # import the subclass and deal with it separately.
+                logger.info(err)
+                continue
+
+            if hdu is not None:   # TODO: rectify does not do that yet
                 outhdul.append(hdu)
                 outhdul[0].header[f"EXTNAME{i}"] = trace_id
 
