@@ -389,55 +389,6 @@ def apply_throughput_to_cube(
     return cube
 
 
-def combine_two_spectra(spec_a, spec_b, action, wave_min, wave_max):
-    """
-    Combine transmission and/or emission spectrum with a common waverange.
-
-    Spec_A is the source spectrum
-    Spec_B is either the transmission or emission that should be applied
-
-    Parameters
-    ----------
-    spec_a : synphot.SourceSpectrum
-    spec_b : synphot.SpectralElement, synphot.SourceSpectrum
-    action: {"multiply", "add"}
-    wave_min, wave_max : quantity
-        [Angstrom]
-
-    Returns
-    -------
-    new_source : synphot.SourceSpectrum
-
-    """
-    if spec_a.waveset is None:
-        wave_val = spec_b.waveset.value
-    else:
-        wave_val = spec_a.waveset.value
-    mask = (wave_val > wave_min.value) * (wave_val < wave_max.value)
-
-    wave = ([wave_min.value] + list(wave_val[mask]) + [wave_max.value]) * u.AA
-    if "mult" in action.lower():
-        spec_c = spec_a(wave) * spec_b(wave)
-        # Diagnostic plots - not for general use
-        # from matplotlib import pyplot as plt
-        # plt.plot(wave, spec_a(wave), label="spec_a")
-        # plt.plot(wave, spec_b(wave), label="spec_b")
-        # plt.plot(wave, spec_c, label="spec_c")
-        # plt.xlim(2.9e4, 4.2e4)
-        # plt.legend()
-        # plt.show()
-    elif "add" in action.lower():
-        spec_c = spec_a(wave) + spec_b(wave)
-    else:
-        raise ValueError(f"action {action} unknown")
-
-    new_source = SourceSpectrum(Empirical1D, points=wave, lookup_table=spec_c)
-    new_source.meta.update(spec_b.meta)
-    new_source.meta.update(spec_a.meta)
-
-    return new_source
-
-
 def add_edge_zeros(tbl, wave_colname):
     if isinstance(tbl, Table):
         vals = np.zeros(len(tbl.colnames))

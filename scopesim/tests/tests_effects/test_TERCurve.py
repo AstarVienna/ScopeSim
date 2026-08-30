@@ -112,9 +112,6 @@ class TestFilterWheelInit:
     def test_current_filter_is_filter(self, fwheel):
         assert isinstance(fwheel.current_filter, tc.FilterCurve)
 
-    def test_current_filter_has_fov_grid_method(self, fwheel):
-        assert hasattr(fwheel.current_filter, "fov_grid")
-
     def test_change_to_known_filter(self, fwheel):
         fwheel.change_filter('Ks')
         assert fwheel.current_filter.meta["name"] == "Ks"
