@@ -171,7 +171,7 @@ class PSF(Effect):
         return self.kernel
 
     @staticmethod
-    def _round_kernel_edges(kernel: np.ndarray) -> np.ndarray:
+    def _round_kernel_edges(kernel: ArrayLike) -> NDArray:
         x, y = np.array(kernel.shape) // 2
         threshold = min(kernel[x, 0], kernel[x, -1],
                         kernel[0, y], kernel[-1, y])
@@ -206,7 +206,7 @@ def rotational_blur(image, angle: u.Quantity[u.deg]):
 
     Returns
     -------
-    image_rot : np.ndarray
+    image_rot : NDArray
         Blurred image
 
     """
