@@ -9,17 +9,18 @@ Related effects:
 """
 
 from typing import ClassVar
+from numbers import Real  # matches int, float and all the numpy scalars
 
 import numpy as np
+from numpy.typing import ArrayLike, NDArray
 from scipy.signal import oaconvolve
 
 from .. import Effect
 from ...detector import Detector
 from ...utils import figure_factory, check_keys
-from ...utils import from_currsys, real_colname, get_logger
+from ...utils import from_currsys, real_colname
 from . import logger
 
-logger = get_logger(__name__)
 
 class LinearityCurve(Effect):
     """
@@ -62,21 +63,29 @@ class LinearityCurve(Effect):
 
         check_keys(self.meta, self.required_keys, action="error")
 
+    def __call__(self, data: ArrayLike, ndit: int = 1) -> NDArray:
+        incident = self.incident * ndit
+        measured = self.measured * ndit
+        return np.interp(data, incident, measured)
+
+    @property
+    def incident(self) -> NDArray:
+        if self.table is not None:
+            return self.table["incident"]
+        return np.asarray(from_currsys(self.meta["incident"], self.cmds))
+
+    @property
+    def measured(self) -> NDArray:
+        if self.table is not None:
+            return self.table["measured"]
+        return np.asarray(from_currsys(self.meta["measured"], self.cmds))
+
     def apply_to(self, obj, **kwargs):
         if not isinstance(obj, Detector):
             return obj
 
         ndit = from_currsys(self.meta["ndit"], self.cmds)
-        if self.table is not None:
-            incident = self.table["incident"] * ndit
-            measured = self.table["measured"] * ndit
-        else:
-            incident = np.asarray(from_currsys(self.meta["incident"],
-                                               self.cmds)) * ndit
-            measured = np.asarray(from_currsys(self.meta["measured"],
-                                               self.cmds)) * ndit
-        obj._hdu.data = np.interp(obj._hdu.data, incident, measured)
-
+        obj.data = self(obj.data, ndit)
         return obj
 
     def plot(self, **kwargs):
@@ -298,28 +307,34 @@ class ADConversion(Effect):
 
         return True
 
+    def __call__(self, data: ArrayLike, gain: Real) -> NDArray:
+        return data / gain
+
+    def _get_gain(self, det_meta) -> Real:
+        # Apply the gain value (copy from DarkCurrent)
+        # Note that this does not cater for the case where the gain is given
+        # as a plain dictionary. Should we implement that?
+        if hasattr(self.cmds["!DET.gain"], "dic"):
+            dtcr_id = det_meta[real_colname("id", det_meta)]
+            gain = self.cmds["!DET.gain"].dic[dtcr_id]
+            logger.info(f"Detector {dtcr_id}: applying gain {gain}")
+            return gain
+        if isinstance(self.cmds["!DET.gain"], Real):
+            gain = self.cmds["!DET.gain"]
+            logger.info(f"Applying gain {gain}")
+            return gain
+        raise ValueError(
+            f"{self.__class__.__name__}.meta['gain'] must be either "
+            f"dict or float, but is {self.cmds['!DET.gain']}")
+
     def apply_to(self, obj, **kwargs):
         if not isinstance(obj, Detector):
             return obj
 
         new_dtype = self.meta["dtype"]
 
-        # Apply the gain value (copy from DarkCurrent)
-        # Note that this does not cater for the case where the gain is given
-        # as a plain dictionary. Should we implement that?
-        if hasattr(self.cmds["!DET.gain"], "dic"):
-            dtcr_id = obj.meta[real_colname("id", obj.meta)]
-            gain = self.cmds["!DET.gain"].dic[dtcr_id]
-            logger.info(f"Detector {dtcr_id}: applying gain {gain}")
-        elif isinstance(self.cmds["!DET.gain"], (float, int)):
-            gain = self.cmds["!DET.gain"]
-            logger.info(f"Applying gain {gain}")
-        else:
-            raise ValueError("<ADConversion>.meta['gain'] must be either "
-                             f"dict or float, but is {self.cmds['!DET.gain']}")
-
         # Apply gain
-        obj._hdu.data /= gain
+        obj.data = self(obj.data, self._get_gain(obj.meta))
 
         # Type-conversion wraps around input values that are higher or lower than
         # the respective maximum and minimum values of the new data type. Before
@@ -328,14 +343,14 @@ class ADConversion(Effect):
         if np.issubdtype(new_dtype, np.integer):
             minval = np.iinfo(new_dtype).min
             maxval = np.iinfo(new_dtype).max
-            minvals_mask = obj._hdu.data < minval
-            maxvals_mask = obj._hdu.data > maxval
+            minvals_mask = obj.data < minval
+            maxvals_mask = obj.data > maxval
             if minvals_mask.any():
-                obj._hdu.data[minvals_mask] = minval
+                obj.data[minvals_mask] = minval
                 logger.warning(
                     f"Effect ADConversion: {minvals_mask.sum()} negative pixels")
             if maxvals_mask.any():
-                obj._hdu.data[maxvals_mask] = maxval
+                obj.data[maxvals_mask] = maxval
                 logger.warning(
                     f"Effect ADConversion: {maxvals_mask.sum()} saturated pixels")
 
@@ -343,6 +358,6 @@ class ADConversion(Effect):
         # set to the modified data. It should be fine to simply re-assign the
         # data attribute, but just in case it's not...
         logger.debug("Applying digitization to dtype %s.", new_dtype)
-        obj._hdu.data = obj._hdu.data.astype(new_dtype)
+        obj.data = obj.data.astype(new_dtype)
 
         return obj
