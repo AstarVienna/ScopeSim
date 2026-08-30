@@ -4,6 +4,7 @@
 from typing import ClassVar
 
 import numpy as np
+from numpy.typing import ArrayLike, NDArray
 from scipy.signal import convolve
 from scipy.ndimage import rotate
 from astropy import units as u
@@ -57,7 +58,7 @@ class PSF(Effect):
         self.meta = from_currsys(self.meta, self.cmds)
         self.convolution_classes = (FieldOfView, ImagePlane)
 
-    def __call__(self, data: np.ndarray, kernel: np.ndarray) -> np.ndarray:
+    def __call__(self, data: ArrayLike, kernel: ArrayLike) -> NDArray:
         # subtract background level before convolving, re-add afterwards
         bkg_level = get_bkg_level(data, self.meta["bkg_width"])
 
@@ -69,7 +70,7 @@ class PSF(Effect):
         # Shortcut for flat images, which wouldn't change with convolution
         if image.sum() == 0.:
             logger.debug(
-                "%s: uniform field, convolution skipped", self.meta["name"])
+                "%s: uniform field, convolution skipped", self.display_name)
             return data  # return unchanged
 
         mode = from_currsys(self.meta["convolve_mode"], self.cmds)
@@ -101,50 +102,55 @@ class PSF(Effect):
                 raise ValueError("Image and Kernel shape mismatch.")
 
     def _apply_to_fvl(self, fvl: FovVolumeList) -> None:
-        logger.debug("Executing %s, FoV setup", self.meta["name"])
-        if len(self._waveset) != 0:
-            waveset_edges = 0.5 * (self._waveset[:-1] + self._waveset[1:])
-            fvl.split("wave", quantify(waveset_edges, u.um).value)
+        logger.debug("Apply %s, FoV setup", self.display_name)
+
+        if len(self._waveset) == 0:
+            return
+
+        waveset_edges = 0.5 * (self._waveset[:-1] + self._waveset[1:])
+        fvl.split("wave", quantify(waveset_edges, u.um).value)
 
     def _apply_convolution(self, obj) -> None:
-        logger.debug("Executing %s, convolution", self.meta["name"])
-        if ((hasattr(obj, "fields") and len(obj.fields) > 0) or
-                (obj.hdu is not None)):
-            kernel = self.get_kernel(obj).astype(float)
+        logger.debug("Apply %s, convolution", self.display_name)
 
-            # This doesn't work because of a "Delta PSF" in some mocks...
-            # if kernel.size == 1:  # only 1 pixel
-            #     raise ValueError("Cannot convolve single pixel PSF.")
+        if ((not hasattr(obj, "fields") or len(obj.fields) == 0)
+            and (obj.hdu is None)):
+            return
 
-            # apply rotational blur for field-tracking observations
-            rot_blur_angle = self.meta["rotational_blur_angle"]
-            if abs(rot_blur_angle << u.deg) > 0*u.deg:
-                # makes a copy of kernel
-                kernel = rotational_blur(kernel, rot_blur_angle)
+        kernel = self.get_kernel(obj).astype(float)
 
-            # Round the edges of kernels so that the silly square stars
-            # don't appear anymore
-            if self.meta.get("rounded_edges", False) and kernel.ndim == 2:
-                kernel = self._round_kernel_edges(kernel)
+        # This doesn't work because of a "Delta PSF" in some mocks...
+        # if kernel.size == 1:  # only 1 pixel
+        #     raise ValueError("Cannot convolve single pixel PSF.")
 
-            # normalise psf kernel      KERNEL SHOULD BE normalised within get_kernel()
-            # if from_currsys(self.meta["normalise_kernel"], self.cmds):
-            #    kernel /= np.sum(kernel)
-            #    kernel[kernel < 0.] = 0.
+        # apply rotational blur for field-tracking observations
+        rot_blur_angle = self.meta["rotational_blur_angle"]
+        if abs(rot_blur_angle << u.deg) > 0*u.deg:
+            # makes a copy of kernel
+            kernel = rotational_blur(kernel, rot_blur_angle)
 
-            orig_shape = obj.hdu.data.shape
+        # Round the edges of kernels to avoid square stars
+        if self.meta.get("rounded_edges", False) and kernel.ndim == 2:
+            kernel = self._round_kernel_edges(kernel)
 
-            logger.debug("PSF convolution start")
-            obj.hdu.data = self(obj.hdu.data.astype(float), kernel)
-            logger.debug("PSF convolution done")
+        # normalise psf kernel      KERNEL SHOULD BE normalised within get_kernel()
+        # if from_currsys(self.meta["normalise_kernel"], self.cmds):
+        #    kernel /= np.sum(kernel)
+        #    kernel[kernel < 0.] = 0.
 
-            # TODO: careful with which dimensions mean what
-            d_x = obj.hdu.data.shape[-1] - orig_shape[-1]
-            d_y = obj.hdu.data.shape[-2] - orig_shape[-2]
-            for wcsid in ["", "D"]:
-                if "CRPIX1" + wcsid in obj.hdu.header:
-                    obj.hdu.header["CRPIX1" + wcsid] += d_x / 2
-                    obj.hdu.header["CRPIX2" + wcsid] += d_y / 2
+        orig_shape = obj.hdu.data.shape
+
+        logger.debug("PSF convolution start")
+        obj.hdu.data = self(obj.hdu.data.astype(float), kernel)
+        logger.debug("PSF convolution done")
+
+        # TODO: careful with which dimensions mean what
+        d_x = obj.hdu.data.shape[-1] - orig_shape[-1]
+        d_y = obj.hdu.data.shape[-2] - orig_shape[-2]
+        for wcsid in ["", "D"]:
+            if "CRPIX1" + wcsid in obj.hdu.header:
+                obj.hdu.header["CRPIX1" + wcsid] += d_x / 2
+                obj.hdu.header["CRPIX2" + wcsid] += d_y / 2
 
     def apply_to(self, obj, **kwargs):
         """Apply the PSF."""
