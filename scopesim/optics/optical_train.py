@@ -289,6 +289,10 @@ class OpticalTrain:
                                    desc=" FOV effects", position=1):#, leave=False):
                     fov = effect.apply_to(fov)
 
+                if fov.hdu is None:
+                    logger.info("  Skipping empty FOV")
+                    continue
+
                 if self.cmds.get("!INST.flatten", True):
                     fov.flatten()
                     self.image_planes[fov.image_plane_id].add(fov.hdu, wcs_suffix="D")
