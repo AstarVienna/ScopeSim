@@ -359,36 +359,6 @@ def scale_spectrum(spectrum, filter_name, amplitude):
     return spectrum
 
 
-def apply_throughput_to_cube(
-    cube: fits.ImageHDU,
-    thru: SpectralElement | SourceSpectrum,
-    wave_cube: u.Quantity,
-) -> fits.ImageHDU:
-    """
-    Apply throughput curve to a spectroscopic cube.
-
-    Parameters
-    ----------
-    cube : fits.ImageHDU
-        Three-dimensional image, dimension 0 (in python convention) is the
-        spectral dimension.
-    thru : SpectralElement | SourceSpectrum
-        Throughput curve, spectrum or filter.
-    wave_cube : u.Quantity["length"]
-        Wavelength axis of the cube.
-
-    Returns
-    -------
-    cube : fits.ImageHDU
-        Header unchanged, data multiplied with wavelength-dependent throughput.
-
-    """
-    # Note: wave_cube used to be converted to AA, but synphot understands um
-    #       or whatever just as well...
-    cube.data *= thru(wave_cube).value[:, None, None]
-    return cube
-
-
 def add_edge_zeros(tbl, wave_colname):
     if isinstance(tbl, Table):
         vals = np.zeros(len(tbl.colnames))
