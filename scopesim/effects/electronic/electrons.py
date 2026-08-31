@@ -189,8 +189,7 @@ class InterPixelCapacitance(Effect):
                          det.__class__.__name__)
             return det
 
-        newdata = oaconvolve(det._hdu.data, self.kernel, mode="same")
-        det._hdu.data = newdata
+        det.data = oaconvolve(det.data, self.kernel, mode="same")
         return det
 
     def update(self, **kwargs):

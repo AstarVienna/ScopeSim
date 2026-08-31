@@ -112,7 +112,7 @@ class BinnedImageBase(Effect):
         if not isinstance(det, Detector):
             return det
 
-        det._hdu.data = self(det._hdu.data)
+        det.data = self(det.data)
         return det
 
 

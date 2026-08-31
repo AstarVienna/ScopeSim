@@ -143,7 +143,7 @@ class PoorMansHxRGReadoutNoise(Effect):
             return det
 
         ndit = from_currsys(self.meta["ndit"], self.cmds)
-        det._hdu.data = self(det._hdu.data, ndit)
+        det.data = self(det.data, ndit)
         return det
 
     def plot(self, det, **kwargs):
@@ -190,7 +190,7 @@ class BasicReadoutNoise(Effect):
             return det
 
         ndit = from_currsys(self.meta["ndit"], self.cmds)
-        det._hdu.data = self(det._hdu.data, ndit)
+        det.data = self(det.data, ndit)
         return det
 
     def plot(self, det):
@@ -354,12 +354,7 @@ class ShotNoise(Effect):
         # - numpy.nan are implicitly passed through the normal distribution;
         #   because the Poisson distribution cannot handle them.
 
-        new_imagehdu = fits.ImageHDU(
-            data=self(det._hdu.data),
-            header=det._hdu.header,
-        )
-
-        det._hdu = new_imagehdu
+        det._hdu = fits.ImageHDU(header=det.header, data=self(det.data))
         return det
 
     def plot(self, det):
