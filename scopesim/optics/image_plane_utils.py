@@ -590,7 +590,9 @@ def rescale_imagehdu(imagehdu: fits.ImageHDU, pixel_scale: float | u.Quantity,
         new_im = np.nan_to_num(new_im, copy=False)
         sum_new = np.sum(new_im)
         if sum_new != 0:
-            new_im *= sum_orig / sum_new
+            flux_factor = sum_orig / sum_new
+            logger.debug("flux factor = %f", flux_factor)
+            new_im *= flux_factor
         elif sum_orig != 0:
             logger.warning(
                 "rescale_imagehdu: all input flux (%g) was lost in resampling; "
@@ -835,7 +837,7 @@ def add_imagehdu_to_imagehdu(image_hdu: fits.ImageHDU,
                                spline_order=spline_order,
                                conserve_flux=conserve_flux)
     # TODO: Perhaps add separately formatted WCS logger?
-    # logger.debug("fromrescale %s", WCS(new_hdu.header, key=canvas_wcs.wcs.alt))
+    logger.debug("fromrescale %s", WCS(new_hdu.header, key=canvas_wcs.wcs.alt))
     new_hdu = reorient_imagehdu(new_hdu,
                                 wcs_suffix=canvas_wcs.wcs.alt,
                                 spline_order=spline_order,
