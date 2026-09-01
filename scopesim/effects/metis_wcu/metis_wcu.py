@@ -490,9 +490,7 @@ class WCUSource(TERCurve):
             self.meta['laser_n_wave'] = [self.meta['laser_n_wave']]
         if not isinstance(self.meta['laser_n_power'], Iterable):
             self.meta['laser_n_power'] = [self.meta['laser_n_power']]
-        print(self.meta['laser_n_wave'])
         lamc_n = self.meta["laser_n_wave"] * u.um
-        print(self.meta['laser_n_power'])
         power_n = self.meta["laser_n_power"] * u.W / (c.c * c.h / lamc_n) * u.ph
 
 
@@ -503,7 +501,6 @@ class WCUSource(TERCurve):
         power_n *= self.fibre_trans
 
         sigma = 2 * dlam
-        print(sigma)
         amp = 1/(sigma * np.sqrt(2 * np.pi))
 
         line_l = Gaussian1D(amplitude=amp, mean=lamc_l, stddev=sigma)
