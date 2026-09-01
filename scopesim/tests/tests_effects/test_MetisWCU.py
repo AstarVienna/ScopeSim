@@ -47,6 +47,8 @@ def fixture_bbsource():
                      laser_t_power=70e-3,  # [W]
                      laser_m_wave=5.26,    # [um]
                      laser_m_power=20e-3,  # [W]
+                     laser_n_wave=10.4,    # [um]
+                     laser_n_power=2.e-3,  # [W]
                      bb_aperture=1.,
                      bb_to_is=None,
                      rho_tube=0.95,
