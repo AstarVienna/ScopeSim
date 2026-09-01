@@ -605,15 +605,17 @@ class FieldOfView:
         """Deal with BUNIT and pixel area."""
         # Note: Do not scale source data - make a copy first.
         field_hdu = field.field.copy()  # .field is the HDU (yeah...)
-        field_hdu.data /= self.pixel_area.value
+        field_hdu.data /= field.pixel_area.value
 
         # TODO: Check if this scaling is actually correct. How does this
         #       work with the add_imagehdu_to_imagehdu below? Isn't that
         #       supposed to conserve flux? Test carefully!!
         if field.is_bunit_spatially_differential:
+            logger.debug("differential bunit...")
             # Field is in (PHOTLAM) arcsec-2, need to scale by pixarea
-            field_hdu.data *= field.pixel_area.value
+            field_hdu.data *= self.pixel_area.value
         else:
+            logger.debug("binned bunit...")
             # Pixel area doesn't cancel out, need to convert
             new_bunit = field.bunit / u.arcsec**2
             field_hdu.header["BUNIT"] = new_bunit.to_string("fits")
@@ -751,6 +753,7 @@ class FieldOfView2D(FieldOfView):
             image = np.sum(field.data, axis=0) * PHOTLAM/u.arcsec**2
             image = (image * self.area *
                      spectral_bin_width).to(u.ph/u.s/u.arcsec**2)
+            logger.debug("2D FOV make_cubefields: image.mean() = %f", image.mean().value)
             # FIXME: This might create a 2D ImageHDU with a 3D header, not ideal...
             yield fits.ImageHDU(data=image, header=field.header)
 
@@ -763,6 +766,7 @@ class FieldOfView2D(FieldOfView):
         * yield image  to be added to canvas image
         """
         for field in self._get_image_fields():
+            logger.debug("2D FOV make_imagefields: field.data.sum() = %f", field.data.sum())
             field_hdu = self._make_scaled_hdu(field)
 
             # Reevaluate spectrum onto FOV waveset
@@ -773,6 +777,7 @@ class FieldOfView2D(FieldOfView):
 
             # Rescale 2D flux weight map by integrated flux from spectrum
             field_hdu.data *= flux  # ph s-1 arcsec-2
+            logger.debug("2D FOV make_imagefields: field_hdu.data.mean() = %f ph s-1 arcsec-2", field_hdu.data.mean())
             yield field_hdu
 
     def _make_tablefields(self, fov_waveset, bin_widths, use_photlam=False):
@@ -851,11 +856,13 @@ class FieldOfView2D(FieldOfView):
             canvas_image_hdu = imp_utils.add_imagehdu_to_imagehdu(
                 tmp_hdu,
                 canvas_image_hdu,
-                conserve_flux=True,
+                conserve_flux=False,
                 spline_order=self.spline_order)
+            logger.debug("2D FOV make_hdu: canvas_image_hdu.data.mean() = %f ph s-1 arcsec-2", canvas_image_hdu.data.mean())
 
         # TODO: Move this further along at some point...
         canvas_image_hdu.data *= self.pixel_area.value  # eliminate arcsec-2
+        logger.debug("After scaling by pixel area: canvas_image_hdu.data.mean() = %f ph s-1 pix-1", canvas_image_hdu.data.mean())
 
         for flux, weight, x, y in self._make_tablefields(
                 fov_waveset, bin_widths):
@@ -932,7 +939,8 @@ class FieldOfView3D(FieldOfView):
             field_data = field_interp(fov_waveset.value)
 
             # Pixel scale conversion
-            field_data *= field.pixel_area / self.pixel_area
+            # field_data *= field.pixel_area / self.pixel_area ## not needed in flux density cubes??
+            logger.debug("3D FOV make_cubefields: field_data.mean() = %f PHOTLAM arcsec-2", field_data.mean())
             field_hdu = fits.ImageHDU(data=field_data, header=field.header)
             yield field_hdu
 
@@ -957,12 +965,14 @@ class FieldOfView3D(FieldOfView):
             canvas_image_hdu = imp_utils.add_imagehdu_to_imagehdu(
                 field_hdu,
                 canvas_image_hdu,
-                spline_order=spline_order)
+                spline_order=spline_order,
+                conserve_flux=False,
+            )
 
             spec = field.spectrum(fov_waveset)
-
             # 2D * 1D -> 3D
             field_cube = canvas_image_hdu.data[None, :, :] * spec[:, None, None]
+            logger.debug("3D FOV make_imagefields: field_cube.mean() = %f", field_cube.mean().value)
             yield field_cube.value
 
     def _make_tablefields(self, fov_waveset):
@@ -1113,7 +1123,9 @@ class FieldOfView3D(FieldOfView):
             canvas_cube_hdu = imp_utils.add_imagehdu_to_imagehdu(
                 field_hdu,
                 canvas_cube_hdu,
-                spline_order=self.spline_order)
+                spline_order=self.spline_order,
+                conserve_flux=False,
+            )
 
         canvas_cube_hdu.data = sum(self._make_imagefields(
             fov_waveset, self.spline_order),
@@ -1131,6 +1143,8 @@ class FieldOfView3D(FieldOfView):
         canvas_cube_hdu.data *= self.area.to(u.cm ** 2).value
         canvas_cube_hdu.data *= 1e4       # ph/s/AA/arcsec2 --> ph/s/um/arcsec2
         canvas_cube_hdu.header["BUNIT"] = "ph s-1 um-1 arcsec-2"
+
+        logger.debug("3D FOV make_hdu: canvas_cube_hdu.data.mean() = %f", canvas_cube_hdu.data.mean())
 
         return canvas_cube_hdu  # [ph s-1 um-1 (arcsec-2)]
 
