@@ -567,7 +567,7 @@ class FilterCurve(TERCurve):
     or by passing the combination of `filter_name` and `filename_format` as
     kwargs. Here all filter file names follow a pattern (e.g. see above) and
     the "{}" are replaced by `filter_name` at run time. `filter_name` can
-    also be a !-string for a ``__currsys__`` entry, e.g. "!INST.filter_name".
+    also be a !-string for a ``cmds`` entry, e.g. "!INST.filter_name".
 
     """
 

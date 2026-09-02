@@ -1,4 +1,3 @@
-import pytest
 
 from matplotlib import pyplot as plt
 from astropy import units as u
@@ -9,7 +8,6 @@ from scopesim import OpticalTrain, UserCommands
 PLOTS = False
 
 
-@pytest.mark.usefixtures("protect_currsys")
 def test_sub_pixels_integration():
     yaml = {"alias": "DET",
             "effects": [{"class": "DetectorWindow",

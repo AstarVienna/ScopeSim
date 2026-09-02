@@ -29,7 +29,7 @@ SWITCHOFF = [
 # pylint: disable=missing-function-docstring
 
 
-@pytest.mark.usefixtures("protect_currsys", "patch_all_mock_paths")
+@pytest.mark.usefixtures("patch_all_mock_paths")
 class TestLoadsUserCommands:
     def test_loads(self):
         cmd = sim.UserCommands(use_instrument="basic_instrument")
@@ -37,7 +37,7 @@ class TestLoadsUserCommands:
         assert cmd["!INST.pixel_scale"] == 0.2
 
 
-@pytest.mark.usefixtures("protect_currsys", "patch_all_mock_paths")
+@pytest.mark.usefixtures("patch_all_mock_paths")
 class TestLoadsOpticalTrain:
     def test_loads(self):
         cmd = sim.UserCommands(use_instrument="basic_instrument")
@@ -48,7 +48,7 @@ class TestLoadsOpticalTrain:
 
 
 @pytest.mark.slow
-@pytest.mark.usefixtures("protect_currsys", "patch_all_mock_paths")
+@pytest.mark.usefixtures("patch_all_mock_paths")
 class TestObserveImagingMode:
     def test_runs(self):
         src = st.star(flux=9)
@@ -72,7 +72,7 @@ class TestObserveImagingMode:
 
 
 @pytest.mark.slow
-@pytest.mark.usefixtures("protect_currsys", "patch_all_mock_paths")
+@pytest.mark.usefixtures("patch_all_mock_paths")
 class TestObserveSpectroscopyMode:
     """
     Test the number of spots along the three spectral traces.
@@ -122,7 +122,7 @@ class TestObserveSpectroscopyMode:
             assert round(trace_flux / spot_flux) == n
 
 
-@pytest.mark.usefixtures("protect_currsys", "patch_all_mock_paths")
+@pytest.mark.usefixtures("patch_all_mock_paths")
 class TestSourceImageNotAffected:
     """
     Test that an ImageHDU source object is not altered during a (spectroscopic) observation
@@ -151,7 +151,7 @@ class TestSourceImageNotAffected:
 
 
 @pytest.mark.slow
-@pytest.mark.usefixtures("protect_currsys", "patch_all_mock_paths")
+@pytest.mark.usefixtures("patch_all_mock_paths")
 class TestObserveIfuMode:
     def test_runs(self):
         wave = np.arange(0.7, 2.5, 0.001)
@@ -219,7 +219,7 @@ class TestObserveIfuMode:
 
 
 @pytest.mark.slow
-@pytest.mark.usefixtures("protect_currsys", "patch_all_mock_paths")
+@pytest.mark.usefixtures("patch_all_mock_paths")
 class TestObserveSimpleIfuMode:
     def test_runs(self):
         wave = np.arange(0.7, 2.5, 0.001)
@@ -247,7 +247,7 @@ class TestObserveSimpleIfuMode:
         assert det_im.ndim == 3
 
 
-@pytest.mark.usefixtures("protect_currsys", "patch_all_mock_paths")
+@pytest.mark.usefixtures("patch_all_mock_paths")
 class TestFitsHeader:
     def test_source_keywords_in_header(self):
         src = st.star()
@@ -264,7 +264,7 @@ class TestFitsHeader:
         assert hdr["ESO ATM SEEING"] == opt.cmds["!OBS.psf_fwhm"]
 
 
-@pytest.mark.usefixtures("protect_currsys", "patch_all_mock_paths")
+@pytest.mark.usefixtures("patch_all_mock_paths")
 class TestModeStatus:
     def test_concept_mode_init(self):
         with pytest.raises(NotImplementedError):
@@ -361,7 +361,7 @@ def basic_opt_with_autoexp_and_digitize_observed():
     return opt, default, adconverter
 
 
-@pytest.mark.usefixtures("protect_currsys", "patch_all_mock_paths")
+@pytest.mark.usefixtures("patch_all_mock_paths")
 class TestDitNdit:
     @pytest.mark.parametrize(("dit", "ndit", "factor"),
                              [(20, 1, 2), (10, 3, 3)])

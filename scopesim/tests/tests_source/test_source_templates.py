@@ -56,7 +56,6 @@ def test_all_zero_spectra_line_up():
 
 
 class TestUniformIllumination:
-    @pytest.mark.usefixtures("protect_currsys")
     def test_makes_source_and_runs_through_basic_instrument(self):
         opt = load_example_optical_train()
 

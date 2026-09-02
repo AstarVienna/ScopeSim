@@ -4,8 +4,6 @@
 from pathlib import Path
 import yaml
 
-from copy import deepcopy
-
 from astar_utils import NestedMapping, UniqueList
 
 __pkg_dir__ = Path(__file__).parent
@@ -25,7 +23,6 @@ with (__pkg_dir__ / "logconfig.yaml").open(encoding="utf-8") as file:
 
 
 __config__ = NestedMapping(dicts, title="SystemDict")
-__currsys__ = deepcopy(__config__)
 __logging_config__ = logconfig
 
 # Order matters!

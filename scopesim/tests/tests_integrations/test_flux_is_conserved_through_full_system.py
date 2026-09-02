@@ -40,7 +40,7 @@ def im_src():
     return _image_source()
 
 
-@pytest.mark.usefixtures("protect_currsys", "patch_mock_path")
+@pytest.mark.usefixtures("patch_mock_path")
 class TestObserve:
     # The CMD_unity_cmds.yaml sets the background emission to 0
     def test_flux_is_conserved_for_no_bg_emission(self, cmds, tbl_src):
@@ -84,7 +84,7 @@ class TestObserve:
         assert np.median(im) == approx(1.5, abs=1e-2)
 
 
-@pytest.mark.usefixtures("protect_currsys", "patch_all_mock_paths")
+@pytest.mark.usefixtures("patch_all_mock_paths")
 class TestStackedStars:
     """Test whether stars can be stacked."""
 

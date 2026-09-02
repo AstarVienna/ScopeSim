@@ -119,7 +119,7 @@ If the global to be patched implements the `MutableMapping` protocol, it is poss
 
 The following examples illustrate the use of this patching:
 
-_Sidenote: These examples make use of `rc.__currsys__`, which is expected to see substantial change in future versions of ScopeSim. This guide will be updated when that occurs._
+_Sidenote: `rc.__currsys__` no longer exists. Bang-strings are resolved against an explicit `UserCommands` (`cmds`); the only remaining globals are `rc.__config__` (the package defaults) and `rc.__search_path__`. Prefer setting values on a `UserCommands` instance over patching `rc.__config__` wherever a test can reach one._
 
 For all examples in this section, we will assume the following has been imported:
 ```python
@@ -128,7 +128,7 @@ from unittest.mock import patch
 
 For simple cases, the easiest way can be to use `patch.dict` as a decorator:
 ```python
-@patch.dict("scopesim.rc.__currsys__",
+@patch.dict("scopesim.rc.__config__",
             {"!OBS.detector_readout_mode": "fast"})
 ```             
 
@@ -136,7 +136,7 @@ For more complex cases, or ones where another fixture (e.g. a mock path, see abo
 ```python
 patched = {"!DET.width": 4.2,
            "!DET.pixel_size": 0.1}
-with patch.dict("scopesim.rc.__currsys__", patched):
+with patch.dict("scopesim.rc.__config__", patched):
     assert something
 
 # use global fixtures mock_path and mock_path_yamls
@@ -149,9 +149,9 @@ This kind of fixture can (like any other fixture) also accept other fixtures, su
 ```python
 @pytest.fixture(scope="function")
 def no_file_error():
-    """Patch currsys to avoid missing file error."""
+    """Patch config to avoid missing file error."""
     patched = {"!SIM.file.error_on_missing_file": False}
-    with patch.dict("scopesim.rc.__currsys__", patched):
+    with patch.dict("scopesim.rc.__config__", patched):
         yield
 ```
 
@@ -162,12 +162,10 @@ The following global `yield`-fixtures are available for patching, to be used via
 - `patch_mock_path` and `patch_mock_path_micado`: patches `rc.__search_path__` to `mock_path` and `mock_path_micado`, respectively (see above).
 Note that in these cases, _only_ that path is present in the patched `rc.__search_path__`.
 - `patch_all_mock_paths`: like `patch_mock_path`, but also patches `"!SIM.file.local_packages_path"` with `mock_dir`, which is needed by some tests.
-- `no_file_error`: sets `rc.__currsys__["!SIM.file.error_on_missing_file"] = False`.
+- `no_file_error`: sets `rc.__config__["!SIM.file.error_on_missing_file"] = False`.
 Allowing files to not be present in a specific location is a feature of ScopeSim, used e.g. to determine if something needs to be downloaded or looked for at another location.
 However, the tests are generally run with this set to `True`, to spot any cases of files missing unintentionally.
 If a test needs the "silent missing" functionality, this patch needs to be applied.
-- `protect_currsys`: creates a copy of `rc.__currsys__` for the scope of the test, to avoid polluting the global one.
-Should be used around everything the uses `OpticalTrain`.
 
 ## Misc
 

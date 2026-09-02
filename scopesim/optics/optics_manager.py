@@ -46,9 +46,9 @@ class OpticsManager:
         if cmds is None:
             # set_derived_parameters() writes !TEL.area and !TEL.etendue into
             # cmds, so it needs a UserCommands of its own: those writes land
-            # in the chain map's top layer and stay there. Falling back on
-            # rc.__currsys__ -- a plain, process-wide mapping -- leaked them
-            # into every subsequent OpticalTrain in the same session.
+            # in the chain map's top layer and stay there. The old fallback
+            # on a plain, process-wide mapping leaked them into every
+            # subsequent OpticalTrain in the same session.
             raise ValueError(
                 "OpticsManager requires a UserCommands object, got None.")
         self.cmds = cmds

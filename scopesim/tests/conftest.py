@@ -64,8 +64,7 @@ def patch_all_mock_paths(mock_dir):
     with patch("scopesim.rc.__search_path__", UniqueList([mock_dir])):
         patched = {"!SIM.file.local_packages_path": str(mock_dir)}
         with patch.dict("scopesim.rc.__config__", patched):
-            with patch.dict("scopesim.rc.__currsys__", patched):
-                yield
+            yield
 
 
 @pytest.fixture(scope="package")
@@ -96,13 +95,6 @@ def no_file_error():
     """Patch config to avoid missing file error."""
     patched = {"!SIM.file.error_on_missing_file": False}
     with patch.dict("scopesim.rc.__config__", patched):
-        yield
-
-
-@pytest.fixture(scope="function")
-def protect_currsys():
-    """Prevent modification of global currsys."""
-    with patch("scopesim.rc.__currsys__"):
         yield
 
 

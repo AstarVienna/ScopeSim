@@ -68,7 +68,6 @@ def obs_dict():
 
 
 @pytest.mark.slow
-@pytest.mark.usefixtures("protect_currsys")
 def test_simplecado(obs_dict, det_yaml):
 
     src = scopesim.source.source_templates.empty_sky()
@@ -89,7 +88,6 @@ def test_simplecado(obs_dict, det_yaml):
     assert np.all(hdu[1].data == 2.0)
 
 
-@pytest.mark.usefixtures("protect_currsys")
 def test_setitem_in_optical_train(obs_dict, det_yaml):
     cmd = sim.commands.UserCommands(yamls=[det_yaml], properties=obs_dict)
 
@@ -101,7 +99,6 @@ def test_setitem_in_optical_train(obs_dict, det_yaml):
     assert opt["dark_current"].meta["include"] is True
 
 
-# @pytest.mark.usefixtures("protect_currsys")
 # def read_in_simplecado_package():
 #     # ..todo: FIX THIS!!!!
 #     # only works on the local laptop

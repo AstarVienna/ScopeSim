@@ -6,7 +6,6 @@ from docutils.nodes import comment, literal_block
 import yaml
 
 from .. import rc
-from ..utils import from_currsys
 
 
 def walk(node, context_code=None):

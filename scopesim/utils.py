@@ -603,8 +603,8 @@ def default_cmds():
     ``OpticalTrain``, and therefore still need somewhere to resolve
     bang-strings against. Each call returns its own chain map layered on the
     shared read-only ``rc.__config__``, so writes stay local to the instance
-    instead of leaking into a process-wide dict the way the former
-    ``rc.__currsys__`` did. Construction costs a few microseconds.
+    instead of leaking into a process-wide dict the way the former global
+    did. Construction costs a few microseconds.
     """
     # Local import: scopesim.commands imports this module.
     from .commands import UserCommands

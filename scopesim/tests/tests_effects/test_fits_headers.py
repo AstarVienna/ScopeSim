@@ -2,7 +2,6 @@
 # pylint: disable=missing-function-docstring
 
 import pytest
-from unittest.mock import patch
 
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -16,10 +15,9 @@ import scopesim as sim
 
 @pytest.fixture(name="simplecado_opt", scope="function")
 def fixture_simplecado_opt(mock_path_yamls):
-    with patch("scopesim.rc.__currsys__"):
-        simplecado_yaml = str(mock_path_yamls / "SimpleCADO.yaml")
-        cmd = sim.UserCommands(yamls=[simplecado_yaml])
-        yield sim.OpticalTrain(cmd)
+    simplecado_yaml = str(mock_path_yamls / "SimpleCADO.yaml")
+    cmd = sim.UserCommands(yamls=[simplecado_yaml])
+    yield sim.OpticalTrain(cmd)
 
 
 @pytest.fixture(name="comb_hdul", scope="function")

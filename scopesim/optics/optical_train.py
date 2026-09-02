@@ -146,18 +146,6 @@ class OpticalTrain:
         # self.cmds = user_commands.new_child(RecursiveNestedMapping(title="CurrObs"))
         self.cmds = user_commands
         self.cmds.maps = [RecursiveNestedMapping(title="CurrObs"), *self.cmds.maps]
-        # FIXME: Setting rc.__currsys__ to user_commands causes many problems:
-        #        UserCommands used NestedMapping internally, but is itself not
-        #        an instance or subclas thereof. So rc.__currsys__ actually
-        #        changes type as a result of this line. On one hand, some other
-        #        code relies on this change, i.e. uses attributes from
-        #        UserCommands via rc.__currsys__, but on the other hand some
-        #        tests (now with proper patching) fail because of this type
-        #        change. THIS IS A PROBLEM!
-        # NOTE: All tests pass without setting rc.__currsys__ to user_commands.
-        #       Nevertheless, I'm a bit reluctant to removing this code just
-        #       yet. So it is commented out.
-        # rc.__currsys__ = user_commands
 
         # Guard against all-empty cmds to avoid cryptical error downstream.
         if all(len(m) == 0 for m in self.cmds.maps):
