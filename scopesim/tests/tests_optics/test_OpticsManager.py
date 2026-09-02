@@ -2,6 +2,7 @@ import pytest
 from unittest.mock import patch
 from astropy.io import fits
 
+from scopesim.commands import UserCommands
 from scopesim.optics import optics_manager as opt_mgr
 from scopesim.optics.optical_element import OpticalElement
 from scopesim.effects import Effect
@@ -17,6 +18,12 @@ def paths_patch(mock_path, mock_path_micado):
 
 
 @pytest.fixture(scope="function")
+def cmds():
+    """OpticsManager requires explicit commands; the global is gone."""
+    return UserCommands()
+
+
+@pytest.fixture(scope="function")
 def inst_yaml_dict():
     return _inst_yaml_dict()
 
@@ -28,22 +35,26 @@ def detector_yaml_dict():
 
 @pytest.mark.usefixtures("paths_patch")
 class TestOpticsManager:
-    def test_initialises_with_nothing(self):
-        assert isinstance(opt_mgr.OpticsManager(),
+    def test_initialises_with_nothing_but_cmds(self, cmds):
+        assert isinstance(opt_mgr.OpticsManager(cmds=cmds),
                           opt_mgr.OpticsManager)
 
-    def test_initialises_yaml_dict(self, detector_yaml_dict):
-        opt_man = opt_mgr.OpticsManager(detector_yaml_dict)
+    def test_raises_without_cmds(self):
+        with pytest.raises(ValueError):
+            opt_mgr.OpticsManager()
+
+    def test_initialises_yaml_dict(self, detector_yaml_dict, cmds):
+        opt_man = opt_mgr.OpticsManager(detector_yaml_dict, cmds=cmds)
         assert isinstance(opt_man, opt_mgr.OpticsManager)
 
     def test_initialises_two_yaml_dicts(self, detector_yaml_dict,
-                                        inst_yaml_dict):
-        opt_man = opt_mgr.OpticsManager([detector_yaml_dict, inst_yaml_dict])
+                                        inst_yaml_dict, cmds):
+        opt_man = opt_mgr.OpticsManager([detector_yaml_dict, inst_yaml_dict], cmds=cmds)
         assert isinstance(opt_man, opt_mgr.OpticsManager)
         assert len(opt_man.optical_elements) == 2
 
-    def test_has_effects_loaded(self, detector_yaml_dict):
-        opt_man = opt_mgr.OpticsManager([detector_yaml_dict])
+    def test_has_effects_loaded(self, detector_yaml_dict, cmds):
+        opt_man = opt_mgr.OpticsManager([detector_yaml_dict], cmds=cmds)
         # print(opt_man.optical_elements[1])
         assert isinstance(opt_man.optical_elements[0],
                           opt_mgr.OpticalElement)
@@ -52,8 +63,8 @@ class TestOpticsManager:
 
 @pytest.mark.usefixtures("patch_mock_path")
 class TestOpticsManagerImagePlaneHeader:
-    def test_makes_image_plane_header_correctly(self, detector_yaml_dict):
-        opt_man = opt_mgr.OpticsManager(detector_yaml_dict)
+    def test_makes_image_plane_header_correctly(self, detector_yaml_dict, cmds):
+        opt_man = opt_mgr.OpticsManager(detector_yaml_dict, cmds=cmds)
         opt_man.meta["SIM_PIXEL_SCALE"] = 0.004
         print(opt_man)
         assert isinstance(opt_man.image_plane_headers[0], fits.Header)
@@ -61,32 +72,32 @@ class TestOpticsManagerImagePlaneHeader:
 
 @pytest.mark.usefixtures("patch_mock_path")
 class TestGetItem:
-    def test_returns_optical_element(self, detector_yaml_dict):
-        opt_man = opt_mgr.OpticsManager([detector_yaml_dict])
+    def test_returns_optical_element(self, detector_yaml_dict, cmds):
+        opt_man = opt_mgr.OpticsManager([detector_yaml_dict], cmds=cmds)
         assert isinstance(opt_man["micado_detector_array"], OpticalElement)
 
-    def test_returns_effect(self, detector_yaml_dict):
-        opt_man = opt_mgr.OpticsManager([detector_yaml_dict])
+    def test_returns_effect(self, detector_yaml_dict, cmds):
+        opt_man = opt_mgr.OpticsManager([detector_yaml_dict], cmds=cmds)
         assert isinstance(opt_man["detector_qe_curve"], Effect)
 
-    def test_raise_error_for_wrong_name(self, detector_yaml_dict):
-        opt_man = opt_mgr.OpticsManager([detector_yaml_dict])
+    def test_raise_error_for_wrong_name(self, detector_yaml_dict, cmds):
+        opt_man = opt_mgr.OpticsManager([detector_yaml_dict], cmds=cmds)
         with pytest.raises(ValueError):
             opt_man["knut_dietrich"]
 
-    def test_returns_value_from_simple_hash_string(self, detector_yaml_dict):
-        opt_man = opt_mgr.OpticsManager([detector_yaml_dict])
+    def test_returns_value_from_simple_hash_string(self, detector_yaml_dict, cmds):
+        opt_man = opt_mgr.OpticsManager([detector_yaml_dict], cmds=cmds)
         value = opt_man["#detector_qe_curve.filename"]
         assert value == "TER_blank.dat"
 
-    def test_returns_value_from_full_hash_string(self, detector_yaml_dict):
-        opt_man = opt_mgr.OpticsManager([detector_yaml_dict])
+    def test_returns_value_from_full_hash_string(self, detector_yaml_dict, cmds):
+        opt_man = opt_mgr.OpticsManager([detector_yaml_dict], cmds=cmds)
         value = opt_man["#micado_detector_array.detector_qe_curve.filename"]
         assert value == "TER_blank.dat"
 
     @pytest.mark.parametrize("key", [("detector_qe_curve.filename"),
                                      ("#detector_qe_curve")])
-    def test_errors_on_wrong_hash_strings(self, detector_yaml_dict, key):
-        opt_man = opt_mgr.OpticsManager([detector_yaml_dict])
+    def test_errors_on_wrong_hash_strings(self, detector_yaml_dict, key, cmds):
+        opt_man = opt_mgr.OpticsManager([detector_yaml_dict], cmds=cmds)
         with pytest.raises(ValueError):
             opt_man[key]

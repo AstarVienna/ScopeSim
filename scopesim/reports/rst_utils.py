@@ -306,7 +306,7 @@ def latexify_rst_text(rst_text, filename=None, path=None, title_char="=",
     """
 
     if path is None:
-        path = from_currsys(rc.__config__["!SIM.reports.latex_path"])
+        path = rc.__config__["!SIM.reports.latex_path"]
 
     if filename is None:
         filename = rst_text.split(title_char)[0].strip().replace(" ", "_")
@@ -345,7 +345,7 @@ def latexify_rst_text(rst_text, filename=None, path=None, title_char="=",
 def rstify_rst_text(rst_text, filename=None, path=None, title_char="="):
     """ The same as ``latexify_rst_text```, but the output is in RST format """
     if path is None:
-        path = from_currsys(rc.__config__["!SIM.reports.rst_path"])
+        path = rc.__config__["!SIM.reports.rst_path"]
 
     if filename is None:
         filename = rst_text.split(title_char)[0].strip().replace(" ", "_")

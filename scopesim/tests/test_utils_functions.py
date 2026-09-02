@@ -47,7 +47,7 @@ class TestFindFile:
     @pytest.mark.parametrize("throw_error", [True, False])
     def test_throws_error_if_file_doesnt_exist(self, throw_error):
         patched = {"!SIM.file.error_on_missing_file": throw_error}
-        with patch.dict("scopesim.rc.__currsys__", patched):
+        with patch.dict("scopesim.rc.__config__", patched):
             filename = "utils987654.pz"
             if throw_error:
                 with pytest.raises(FileNotFoundError):

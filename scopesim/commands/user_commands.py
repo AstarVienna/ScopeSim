@@ -455,8 +455,8 @@ def check_for_updates(package_name):
     response = {}
 
     # tracking **exclusively** your IP address for our internal stats
-    if rc.__currsys__["!SIM.reports.ip_tracking"]:
-        front_matter = str(rc.__currsys__["!SIM.file.server_base_url"])
+    if rc.__config__["!SIM.reports.ip_tracking"]:
+        front_matter = str(rc.__config__["!SIM.file.server_base_url"])
         back_matter = f"api.php?package_name={package_name}"
         try:
             response = httpx.get(url=front_matter+back_matter).json()

@@ -18,7 +18,6 @@ from .. import effects as efs
 from ..effects.effects_utils import is_spectroscope
 from ..utils import write_report, from_currsys, get_logger
 from ..reports.rst_utils import table_to_rst
-from .. import rc
 
 
 logger = get_logger(__name__)
@@ -44,11 +43,15 @@ class OpticsManager:
         self.meta = {}
         self.meta.update(kwargs)
 
+        if cmds is None:
+            # set_derived_parameters() writes !TEL.area and !TEL.etendue into
+            # cmds, so it needs a UserCommands of its own: those writes land
+            # in the chain map's top layer and stay there. Falling back on
+            # rc.__currsys__ -- a plain, process-wide mapping -- leaked them
+            # into every subsequent OpticalTrain in the same session.
+            raise ValueError(
+                "OpticsManager requires a UserCommands object, got None.")
         self.cmds = cmds
-        if self.cmds is None:
-            logger.warning("No UserCommands object was passed when "
-                           "initialising OpticsManager")
-            self.cmds = rc.__currsys__
 
         if yaml_dicts is not None:
             self.load_effects(yaml_dicts, **self.meta)

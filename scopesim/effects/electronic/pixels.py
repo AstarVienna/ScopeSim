@@ -53,7 +53,8 @@ class ReferencePixelBorder(Effect):
                 "ReferencePixelBorder: got non-detector object: %s", type(obj))
             return obj
 
-        logger.info(f"Applying border {from_currsys(self.meta['border'])}")
+        logger.info("Applying border %s",
+                    from_currsys(self.meta["border"], self.cmds))
         if hasattr(self.meta["border"], "dic"):
             dtcr_id = obj.meta[real_colname("id", obj.meta)]
             border = self.meta["border"].dic[dtcr_id]

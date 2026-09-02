@@ -13,7 +13,7 @@ from astar_utils import UniqueList
 
 MOCK_DIR = Path(__file__).parent / "mocks"
 
-sim.rc.__currsys__["!SIM.file.error_on_missing_file"] = True
+sim.rc.__config__["!SIM.file.error_on_missing_file"] = True
 
 
 @pytest.fixture(scope="function", autouse=True)
@@ -93,9 +93,9 @@ def patch_mock_path_micado(mock_path_micado):
 
 @pytest.fixture(scope="function")
 def no_file_error():
-    """Patch currsys to avoid missing file error."""
+    """Patch config to avoid missing file error."""
     patched = {"!SIM.file.error_on_missing_file": False}
-    with patch.dict("scopesim.rc.__currsys__", patched):
+    with patch.dict("scopesim.rc.__config__", patched):
         yield
 
 

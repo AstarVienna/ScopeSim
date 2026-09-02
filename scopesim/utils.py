@@ -289,7 +289,10 @@ def find_file(
     msg = f"File cannot be found: {filename}"
     if not silent:
         logger.error(msg)
-    if from_currsys("!SIM.file.error_on_missing_file"):
+    # Process-level configuration, not instrument configuration, so it is
+    # read straight from rc.__config__ rather than threading a
+    # UserCommands through all ~20 callers of find_file().
+    if rc.__config__["!SIM.file.error_on_missing_file"]:
         raise FileNotFoundError(msg)
 
     return None
