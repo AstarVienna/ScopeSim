@@ -53,9 +53,11 @@ class FPMask:
         fpmask_filename_format: str | None = None,
         angle: float = 0,
         shift: tuple[float, float] = (0., 0.),
+        cmds=None,
         **kwargs
     ):
         logger.debug("Initialising FPMask with %s", maskname)
+        self.cmds = cmds
         self.name = maskname
         self.angle = angle
         self.shift = shift
@@ -69,12 +71,14 @@ class FPMask:
         else:
             # Try to find the file as a path
             if find_file(maskname, silent=True) is None:
-                file_format = from_currsys(fpmask_filename_format)
+                file_format = from_currsys(fpmask_filename_format,
+                                           self.cmds)
                 self.filename = file_format.format(maskname)
             else:
                 self.filename = maskname
 
-            self.data_container = DataContainer(filename=self.filename, **kwargs)
+            self.data_container = DataContainer(filename=self.filename,
+                                                cmds=self.cmds, **kwargs)
             self.pixarea = (self.hdr["CDELT1"] * u.Unit(self.hdr["CUNIT1"])
                             * self.hdr["CDELT2"] * u.Unit(self.hdr["CUNIT2"]))
             self.make_hdus(header=self.hdr)

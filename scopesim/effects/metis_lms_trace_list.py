@@ -55,8 +55,8 @@ class MetisLMSSpectralTraceList(SpectralTraceList):
         "fit_inverse": True,
     }
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, cmds=None, **kwargs):
+        super().__init__(cmds=cmds, **kwargs)
 
         self.wavelen = self.meta["wavelen"]
 
@@ -626,7 +626,7 @@ class MetisLMSImageSlicer(ApertureMask):
     `!OBS.trace_file`.
     """
 
-    def __init__(self, filename, ext_id="Aperture List", **kwargs):
+    def __init__(self, filename, ext_id="Aperture List", cmds=None, **kwargs):
         filename = find_file(from_currsys(filename, kwargs.get("cmds")))
         ap_hdr = fits.getheader(filename, extname=ext_id)
         ap_list = fits.getdata(filename, extname=ext_id)
@@ -640,7 +640,7 @@ class MetisLMSImageSlicer(ApertureMask):
         except KeyError:
             pass
 
-        super().__init__(array_dict=slicer_dict, id="LMS slicer",
+        super().__init__(cmds=cmds, array_dict=slicer_dict, id="LMS slicer",
                          conserve_image=True, **kwargs)
 
 
@@ -659,11 +659,11 @@ class MetisLMSEfficiency(TERCurve):
         "eff_max": 0.75
     }
 
-    def __init__(self, **kwargs):
+    def __init__(self, cmds=None, **kwargs):
         # TODO: Refactor these _class_params?
         self.meta = copy.copy(self._class_params)
         assert "grat_spacing" in self.meta, "grat_spacing is missing from self.meta 1"
-        super().__init__(**(kwargs | self.meta))
+        super().__init__(cmds=cmds, **(kwargs | self.meta))
         assert "grat_spacing" in self.meta, "grat_spacing is missing from self.meta 2"
 
         filename = find_file(self.meta["filename"])
@@ -678,7 +678,7 @@ class MetisLMSEfficiency(TERCurve):
 
         lam, efficiency = self.make_ter_curve(wcal, wavelen)
 
-        super().__init__(wavelength=lam,
+        super().__init__(cmds=cmds, wavelength=lam,
                          transmission=efficiency,
                          emissivity=np.zeros_like(lam),
                          **self.meta)

@@ -19,8 +19,8 @@ class AnalyticalPSF(PSF):
 
     z_order: ClassVar[tuple[int, ...]] = (41, 641)
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, cmds=None, **kwargs):
+        super().__init__(cmds=cmds, **kwargs)
         self.convolution_classes = FieldOfView
 
 
@@ -30,8 +30,8 @@ class Vibration(AnalyticalPSF):
     required_keys = {"fwhm", "pixel_scale"}
     z_order: ClassVar[tuple[int, ...]] = (244, 744)
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, cmds=None, **kwargs):
+        super().__init__(cmds=cmds, **kwargs)
         self.meta["width_n_fwhms"] = 4
         self.convolution_classes = ImagePlane
 
@@ -64,8 +64,8 @@ class NonCommonPathAberration(AnalyticalPSF):
     required_keys = {"pixel_scale"}
     z_order: ClassVar[tuple[int, ...]] = (241, 641)
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, cmds=None, **kwargs):
+        super().__init__(cmds=cmds, **kwargs)
         self.meta["kernel_width"] = None
         self.meta["strehl_drift"] = 0.02
         self.meta["wave_min"] = "!SIM.spectral.wave_min"
@@ -141,8 +141,8 @@ class SeeingPSF(AnalyticalPSF):
 
     z_order: ClassVar[tuple[int, ...]] = (242, 642)
 
-    def __init__(self, fwhm=1.5, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, fwhm=1.5, cmds=None, **kwargs):
+        super().__init__(cmds=cmds, **kwargs)
 
         self.meta["fwhm"] = fwhm
 
@@ -170,8 +170,8 @@ class SeeingPSF(AnalyticalPSF):
 class GaussianDiffractionPSF(AnalyticalPSF):
     z_order: ClassVar[tuple[int, ...]] = (242, 642)
 
-    def __init__(self, diameter, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, diameter, cmds=None, **kwargs):
+        super().__init__(cmds=cmds, **kwargs)
         self.meta["diameter"] = diameter
 
     def update(self, **kwargs):

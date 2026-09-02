@@ -109,8 +109,8 @@ class SpectralTraceList(Effect):
     report_plot_include: ClassVar[bool] = True
     report_table_include: ClassVar[bool] = False
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, cmds=None, **kwargs):
+        super().__init__(cmds=cmds, **kwargs)
 
         if "hdulist" in kwargs and isinstance(kwargs["hdulist"], fits.HDUList):
             self._file = kwargs["hdulist"]
@@ -152,7 +152,8 @@ class SpectralTraceList(Effect):
             params = {col: row[col] for col in row.colnames}
             params.update(self.meta)
             hdu = self._file[row["extension_id"]]
-            spec_traces[row["description"]] = SpectralTrace(hdu, **params)
+            spec_traces[row["description"]] = SpectralTrace(
+                hdu, cmds=self.cmds, **params)
 
         self.spectral_traces = spec_traces
 
@@ -326,7 +327,8 @@ class SpectralTraceList(Effect):
 
         filtcurve = FilterCurve(
             filter_name=filter_name,
-            filename_format=from_currsys("!INST.filter_file_format", self.cmds))
+            filename_format=from_currsys("!INST.filter_file_format", self.cmds),
+            cmds=self.cmds)
         filtwaves = filtcurve.table["wavelength"]
         filtwave = filtwaves[filtcurve.table["transmission"] > 0.01]
         wave_min, wave_max = min(filtwave), max(filtwave)
@@ -505,8 +507,8 @@ class SpectralTraceListWheel(Effect):
     report_table_rounding: ClassVar[int] = 4
     _current_str = "current_trace_list"
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, cmds=None, **kwargs):
+        super().__init__(cmds=cmds, **kwargs)
         check_keys(kwargs, self.required_keys, action="error")
 
         params = {
@@ -523,6 +525,7 @@ class SpectralTraceListWheel(Effect):
             fname = str(path).format(name)
             self.trace_lists[name] = SpectralTraceList(filename=fname,
                                                        name=name,
+                                                       cmds=self.cmds,
                                                        **kwargs)
 
     def apply_to(self, obj, **kwargs):

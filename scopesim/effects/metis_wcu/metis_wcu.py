@@ -83,8 +83,8 @@ class WCUSource(TERCurve):
 
     z_order: ClassVar[tuple[int, ...]] = (113, 513)
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, cmds=None, **kwargs):
+        super().__init__(cmds=cmds, **kwargs)
         params = {
             "action": "emissivity",
             "position": 0,  # position in surface table
@@ -385,6 +385,7 @@ class WCUSource(TERCurve):
             fpmask_filename_format=self.meta["fpmask_filename_format"],
             angle=self.meta["fpmask_angle"],
             shift=self.meta["fpmask_shift"],
+            cmds=self.cmds,
         )
 
     @property

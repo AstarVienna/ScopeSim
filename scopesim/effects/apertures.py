@@ -86,7 +86,7 @@ class ApertureMask(Effect):
     report_table_include: ClassVar[bool] = True
     report_table_rounding: ClassVar[int] = 4
 
-    def __init__(self, **kwargs):
+    def __init__(self, cmds=None, **kwargs):
         if not np.any([key in kwargs for key in ["filename", "table",
                                                  "array_dict"]]):
             if "width" in kwargs and "height" in kwargs and \
@@ -95,7 +95,7 @@ class ApertureMask(Effect):
                 w, h = kwargs["width"], kwargs["height"]
                 kwargs["filename"] = kwargs["filename_format"].format(w, h)
 
-        super().__init__(**kwargs)
+        super().__init__(cmds=cmds, **kwargs)
         params = {
             "pixel_scale": "!INST.pixel_scale",
             "no_mask": True,
@@ -206,8 +206,8 @@ class ApertureMask(Effect):
 class RectangularApertureMask(ApertureMask):
     required_keys = {"x", "y", "width", "height"}
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, cmds=None, **kwargs):
+        super().__init__(cmds=cmds, **kwargs)
         params = {"x_unit": "arcsec",
                   "y_unit": "arcsec"}
         self.meta.update(params)
@@ -280,8 +280,8 @@ class ApertureList(Effect):
     report_table_include: ClassVar[bool] = True
     report_table_rounding: ClassVar[int] = 4
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, cmds=None, **kwargs):
+        super().__init__(cmds=cmds, **kwargs)
         params = {
             "pixel_scale": "!INST.pixel_scale",
             "n_round_corners": 32,        # number of corners use to estimate ellipse
@@ -345,7 +345,9 @@ class ApertureList(Effect):
                 "y_unit": "arcsec",
                 "angle_unit": "arcsec",
             }
-            apertures_list.append(ApertureMask(array_dict=array_dict, **params))
+            apertures_list.append(
+                ApertureMask(array_dict=array_dict, cmds=self.cmds,
+                             **params))
 
         return apertures_list
 
@@ -435,8 +437,8 @@ class SlitWheel(Effect):
     report_table_rounding: ClassVar[int] = 4
     _current_str = "current_slit"
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, cmds=None, **kwargs):
+        super().__init__(cmds=cmds, **kwargs)
         check_keys(kwargs, self.required_keys, action="error")
 
         params = {
@@ -450,7 +452,8 @@ class SlitWheel(Effect):
         for name in from_currsys(self.meta["slit_names"], self.cmds):
             kwargs["name"] = name
             fname = str(path).format(name)
-            self.slits[name] = ApertureMask(filename=fname, **kwargs)
+            self.slits[name] = ApertureMask(filename=fname,
+                                            cmds=self.cmds, **kwargs)
 
         self.table = self.get_table()
 

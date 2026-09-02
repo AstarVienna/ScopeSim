@@ -57,10 +57,10 @@ class ChopNodCombiner(Effect):
     required_keys = {"chop_offsets", "pixel_scale"}
     z_order: ClassVar[tuple[int, ...]] = (863,)
 
-    def __init__(self, **kwargs):
+    def __init__(self, cmds=None, **kwargs):
         check_keys(kwargs, self.required_keys)
 
-        super().__init__(**kwargs)
+        super().__init__(cmds=cmds, **kwargs)
         params = {
             "chop_offsets": None,
             "nod_offsets": None,

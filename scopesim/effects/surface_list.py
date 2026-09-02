@@ -19,8 +19,8 @@ class SurfaceList(TERCurve):
     report_plot_include: ClassVar[bool] = True
     report_table_include: ClassVar[bool] = True
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, cmds=None, **kwargs):
+        super().__init__(cmds=cmds, **kwargs)
         params = {"minimum_throughput": "!SIM.spectral.minimum_throughput",
                   "etendue": "!TEL.etendue"}
         self.meta.update(params)
@@ -233,14 +233,14 @@ class SurfaceList(TERCurve):
             # Plot the individual surfaces
             # TODO: do we want separate plots for these? if yes, how (row/col)?
             for key, surface in self.surfaces.items():
-                curve = TERCurve(**surface.meta)
+                curve = TERCurve(cmds=self.cmds, **surface.meta)
                 curve.surface = surface
                 kwargs.update(plot_kwargs={"ls": "-", "label": key})
                 curve.plot(ter, wavelength, axes=ax, **kwargs)
 
             # Plot the system surface
             # TODO: self is a subclass of TERCurve, why create again??
-            curve = TERCurve(**self.meta)
+            curve = TERCurve(cmds=self.cmds, **self.meta)
             curve.surface = self.surface
             kwargs.update(plot_kwargs={"ls": "-.",
                                        "label": "System Throughput"})

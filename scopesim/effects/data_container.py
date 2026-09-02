@@ -200,7 +200,6 @@ class DataContainer:
         self.meta.update(self.table.meta)
         self.meta.update(hdr_dict)
         self.table.meta.update(self.meta)
-        self.table.meta.pop("cmds", None)
 
         self.meta["history"].append(
             f"ASCII table read from {self.meta['filename']}"

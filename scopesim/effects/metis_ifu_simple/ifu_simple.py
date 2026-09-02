@@ -48,8 +48,8 @@ class LineSpreadFunction(Effect):
     report_plot_include: ClassVar[bool] = True
     report_table_include: ClassVar[bool] = False
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, cmds=None, **kwargs):
+        super().__init__(cmds=cmds, **kwargs)
         self.meta.update(kwargs)
         self.meta = from_currsys(self.meta, self.cmds)
 

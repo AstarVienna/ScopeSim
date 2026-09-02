@@ -51,13 +51,13 @@ def is_spectroscope(effects):
     return any(isinstance(eff, spec_classes) for eff in effects)
 
 
-def empty_surface_list(**kwargs):
+def empty_surface_list(cmds=None, **kwargs):
     tbl = Table(names=["name", "outer", "inner", "angle",
                        "temperature", "action", "filename"],
                 data=[["test"], [0.], [0.], [0.], [0.], ["none"], ["none"]],
                 meta={"outer_unit": "m", "inner_unit": "m",
                       "angle_unit": "deg", "temperature_unit": "deg_C"})
-    return efs.SurfaceList(table=tbl[:0], **kwargs)
+    return efs.SurfaceList(table=tbl[:0], cmds=cmds, **kwargs)
 
 
 def scopesim_effect_classes(base_effect=efs.Effect):

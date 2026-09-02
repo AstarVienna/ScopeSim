@@ -35,10 +35,10 @@ class DiscretePSF(PSF):
 
     z_order: ClassVar[tuple[int, ...]] = (43,)
 
-    def __init__(self, **kwargs):
+    def __init__(self, cmds=None, **kwargs):
         kwargs["filename"] = self._find_psf_file(**kwargs)
 
-        super().__init__(**kwargs)
+        super().__init__(cmds=cmds, **kwargs)
         self.convolution_classes = FieldOfView
         # self.convolution_classes = ImagePlane
 
@@ -102,7 +102,7 @@ class DiscretePSF(PSF):
             self.meta["psf_name"] = filename
             self.meta["filename"] = filename
 
-        self.data_container = DataContainer(**self.meta)
+        self.data_container = DataContainer(cmds=self.cmds, **self.meta)
         self.meta.update(self.data_container.meta)
 
     def _get_psf_wave_exts(self):
@@ -181,9 +181,9 @@ class FieldConstantPSF(DiscretePSF):
     required_keys = {"filename"}
     z_order: ClassVar[tuple[int, ...]] = (262, 662)
 
-    def __init__(self, **kwargs):
+    def __init__(self, cmds=None, **kwargs):
         # sub_pixel_flag and flux_accuracy are taken care of in PSF base class
-        super().__init__(**kwargs)
+        super().__init__(cmds=cmds, **kwargs)
 
         check_keys(self.meta, self.required_keys, action="error")
 
@@ -343,9 +343,9 @@ class FieldVaryingPSF(DiscretePSF):
     required_keys = {"filename"}
     z_order: ClassVar[tuple[int, ...]] = (261, 661)
 
-    def __init__(self, **kwargs):
+    def __init__(self, cmds=None, **kwargs):
         # sub_pixel_flag and flux_accuracy are taken care of in PSF base class
-        super().__init__(**kwargs)
+        super().__init__(cmds=cmds, **kwargs)
 
         check_keys(self.meta, self.required_keys, action="error")
 

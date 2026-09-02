@@ -30,8 +30,8 @@ class MosaicSpectralTraceList(SpectralTraceList):
 
     """
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, cmds=None, **kwargs):
+        super().__init__(cmds=cmds, **kwargs)
 
         self.aplist = Table(self._file["Aperture List"].data)
         # TODO: check units or normalise to arcsec

@@ -36,11 +36,11 @@ class PSF(Effect):
     report_plot_include: ClassVar[bool] = True
     report_table_include: ClassVar[bool] = False
 
-    def __init__(self, **kwargs):
+    def __init__(self, cmds=None, **kwargs):
         self.kernel = None
         self.valid_waverange = None
         self._waveset = []
-        super().__init__(**kwargs)
+        super().__init__(cmds=cmds, **kwargs)
 
         params = {
             "flux_accuracy": "!SIM.computing.flux_accuracy",

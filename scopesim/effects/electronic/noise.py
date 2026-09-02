@@ -19,8 +19,8 @@ class Bias(Effect):
     required_keys = {"bias"}
     z_order: ClassVar[tuple[int, ...]] = (855,)
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, cmds=None, **kwargs):
+        super().__init__(cmds=cmds, **kwargs)
         self.meta.update(kwargs)
         check_keys(self.meta, self.required_keys, action="error")
 
@@ -41,8 +41,8 @@ class PoorMansHxRGReadoutNoise(Effect):
     report_plot_include: ClassVar[bool] = False
     report_table_include: ClassVar[bool] = False
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, cmds=None, **kwargs):
+        super().__init__(cmds=cmds, **kwargs)
         params = {
             "pedestal_fraction": 0.3,
             "read_fraction": 0.4,
@@ -102,8 +102,8 @@ class BasicReadoutNoise(Effect):
     required_keys = {"noise_std", "ndit"}
     z_order: ClassVar[tuple[int, ...]] = (811,)
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, cmds=None, **kwargs):
+        super().__init__(cmds=cmds, **kwargs)
         self.meta["random_seed"] = "!SIM.random.seed"
         self.meta.update(kwargs)
 
@@ -177,8 +177,8 @@ class PixelResponseNonUniformity(Effect):
     required_keys: ClassVar[set] = set()
     z_order: ClassVar[tuple[int, ...]] = (805,)
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, cmds=None, **kwargs):
+        super().__init__(cmds=cmds, **kwargs)
         self.meta.update(kwargs)
         self._gain_maps = {}  # keyed by dtcr_id
 
@@ -231,8 +231,8 @@ class PixelResponseNonUniformity(Effect):
 class ShotNoise(Effect):
     z_order: ClassVar[tuple[int, ...]] = (820,)
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, cmds=None, **kwargs):
+        super().__init__(cmds=cmds, **kwargs)
         self.meta["random_seed"] = "!SIM.random.seed"
         self.meta.update(kwargs)
 
@@ -310,8 +310,8 @@ class DarkCurrent(Effect):
     required_keys = {"value", "dit", "ndit"}
     z_order: ClassVar[tuple[int, ...]] = (830,)
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, cmds=None, **kwargs):
+        super().__init__(cmds=cmds, **kwargs)
         check_keys(self.meta, self.required_keys, action="error")
 
     def apply_to(self, obj, **kwargs):

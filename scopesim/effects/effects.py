@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Contains base class for effects."""
 
+import inspect
 from pathlib import Path
 from collections.abc import Mapping, MutableMapping
 from dataclasses import dataclass, field, InitVar, fields
@@ -46,10 +47,31 @@ class Effect:
     z_order: ClassVar[tuple[int, ...]] = tuple()
     required_keys = set()
 
-    def __init__(self, filename=None, **kwargs):
-        self.data_container = DataContainer(filename=filename, **kwargs)
+    def __init_subclass__(cls, **kwargs):
+        """Require every subclass __init__ to name ``cmds`` explicitly.
+
+        ``cmds`` must be a named parameter, never swallowed by ``**kwargs``.
+        A subclass that leaves it in ``**kwargs`` puts a whole UserCommands
+        into ``self.meta`` on the next ``self.meta.update(kwargs)``, from
+        where it reaches FITS headers and every ``**self.meta`` splat. That
+        used to happen silently; now it is a TypeError at import time.
+        """
+        super().__init_subclass__(**kwargs)
+        init = cls.__dict__.get("__init__")
+        if init is None:
+            return  # inherits an __init__ that already handles cmds
+        params = inspect.signature(init).parameters
+        if "cmds" not in params:
+            raise TypeError(
+                f"{cls.__module__}.{cls.__qualname__}.__init__ must take an "
+                "explicit 'cmds' parameter and forward it to super(), rather "
+                "than letting it fall into **kwargs.")
+
+    def __init__(self, filename=None, cmds=None, **kwargs):
+        self.cmds = cmds
+        self.data_container = DataContainer(filename=filename, cmds=cmds,
+                                            **kwargs)
         self.meta = kwargs.get("meta", {})
-        self.cmds = kwargs.get("cmds")
 
         self.meta.update(self.data_container.meta)
         self.meta["include"] = True

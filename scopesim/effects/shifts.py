@@ -19,8 +19,8 @@ class Shift3D(Effect):
     report_plot_include: ClassVar[bool] = True
     report_table_include: ClassVar[bool] = False
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, cmds=None, **kwargs):
+        super().__init__(cmds=cmds, **kwargs)
         self.meta.update(kwargs)
 
     def apply_to(self, obj, **kwargs):
@@ -117,8 +117,8 @@ class AtmosphericDispersion(Shift3D):
     }
     z_order: ClassVar[tuple[int, ...]] = (231,)
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, cmds=None, **kwargs):
+        super().__init__(cmds=cmds, **kwargs)
         params = {
             "wave_min": "!SIM.spectral.wave_min",
             "wave_mid": "!SIM.spectral.wave_mid",
@@ -197,8 +197,8 @@ class AtmosphericDispersionCorrection(Shift3D):
     }
     z_order: ClassVar[tuple[int, ...]] = (632,)
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, cmds=None, **kwargs):
+        super().__init__(cmds=cmds, **kwargs)
         if "quick_adc" in self.meta and self.meta["quick_adc"] is True:
             self.z_order = (*self.z_order, 232)
         if "efficiency" not in self.meta:
@@ -254,7 +254,7 @@ class AtmosphericDispersionCorrection(Shift3D):
                       "in a future release.", DeprecationWarning, stacklevel=2)
         kwargs.update(self.meta)
         if "quick_adc" in self.meta:
-            ad = AtmosphericDispersion(**self.meta)
+            ad = AtmosphericDispersion(cmds=self.cmds, **self.meta)
             waves, dx, dy = ad.fov_grid()
             dx *= -(1 - self.meta["efficiency"])
             dy *= -(1 - self.meta["efficiency"])

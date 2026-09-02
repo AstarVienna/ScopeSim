@@ -135,8 +135,8 @@ class DetectorList(Effect):
     report_plot_include: ClassVar[bool] = True
     report_table_include: ClassVar[bool] = True
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, cmds=None, **kwargs):
+        super().__init__(cmds=cmds, **kwargs)
         params = {
             "pixel_scale": "!INST.pixel_scale",  # arcsec
             "active_detectors": "all",
@@ -416,7 +416,7 @@ class DetectorWindow(DetectorList):
     """
 
     def __init__(self, pixel_size, x, y, width, height=None, angle=0, gain=1,
-                 units="mm", **kwargs):
+                 units="mm", cmds=None, **kwargs):
 
         if height is None:
             height = width
@@ -443,7 +443,7 @@ class DetectorWindow(DetectorList):
             "pixel_size": [pixel_size],
         }
 
-        super().__init__(array_dict=array_dict, **params)
+        super().__init__(cmds=cmds, array_dict=array_dict, **params)
 
 
 class DetectorList3D(DetectorList):
@@ -454,8 +454,8 @@ class DetectorList3D(DetectorList):
 
     dims = "xyz"  # 2 spatial dimensions, 1 spectral dimension
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, cmds=None, **kwargs):
+        super().__init__(cmds=cmds, **kwargs)
         params = {
             "pixel_scale": "!INST.pixel_scale",  # arcsec
             "active_detectors": "all",

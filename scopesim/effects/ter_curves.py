@@ -84,8 +84,8 @@ class TERCurve(Effect):
     report_plot_include: ClassVar[bool] = True
     report_table_include: ClassVar[bool] = False
 
-    def __init__(self, filename=None, **kwargs):
-        super().__init__(filename=filename, **kwargs)
+    def __init__(self, filename=None, cmds=None, **kwargs):
+        super().__init__(cmds=cmds, filename=filename, **kwargs)
         params = {
             "ignore_wings": False,
             "wave_min": "!SIM.spectral.wave_min",
@@ -256,8 +256,8 @@ class TERCurve(Effect):
 class AtmosphericTERCurve(TERCurve):
     z_order: ClassVar[tuple[int, ...]] = (111, 511)
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, cmds=None, **kwargs):
+        super().__init__(cmds=cmds, **kwargs)
         self.meta["action"] = "transmission"
         self.meta["position"] = 0       # position in surface table
         self.meta.update(kwargs)
@@ -416,8 +416,8 @@ class SkycalcTERCurve(AtmosphericTERCurve):
 
     z_order: ClassVar[tuple[int, ...]] = (112, 512)
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, cmds=None, **kwargs):
+        super().__init__(cmds=cmds, **kwargs)
         self.meta["use_local_skycalc_file"] = False
         self.meta.update(kwargs)
 
@@ -541,8 +541,8 @@ class SkycalcTERCurve(AtmosphericTERCurve):
 class QuantumEfficiencyCurve(TERCurve):
     z_order: ClassVar[tuple[int, ...]] = (113, 513)
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, cmds=None, **kwargs):
+        super().__init__(cmds=cmds, **kwargs)
         self.meta["action"] = "transmission"
         self.meta["position"] = -1          # position in surface table
 
@@ -716,11 +716,11 @@ class TopHatFilterCurve(FilterCurve):
 class DownloadableFilterCurve(FilterCurve):
     required_keys = {"filter_name", "filename_format"}
 
-    def __init__(self, **kwargs):
+    def __init__(self, cmds=None, **kwargs):
         check_keys(kwargs, self.required_keys, action="error")
         filt_str = kwargs["filename_format"].format(kwargs["filter_name"])
         tbl = download_svo_filter(filt_str, return_style="table")
-        super().__init__(table=tbl, **kwargs)
+        super().__init__(cmds=cmds, table=tbl, **kwargs)
 
 
 class SpanishVOFilterCurve(FilterCurve):
@@ -748,7 +748,7 @@ class SpanishVOFilterCurve(FilterCurve):
 
     required_keys = {"observatory", "instrument", "filter_name"}
 
-    def __init__(self, **kwargs):
+    def __init__(self, cmds=None, **kwargs):
         check_keys(kwargs, self.required_keys, action="error")
         filt_str = "{}/{}.{}".format(kwargs["observatory"],
                                      kwargs["instrument"],
@@ -757,7 +757,7 @@ class SpanishVOFilterCurve(FilterCurve):
         kwargs["svo_id"] = filt_str
 
         tbl = download_svo_filter(filt_str, return_style="table")
-        super().__init__(table=tbl, **kwargs)
+        super().__init__(cmds=cmds, table=tbl, **kwargs)
 
 
 class FilterWheelBase(Effect):
@@ -769,8 +769,8 @@ class FilterWheelBase(Effect):
     report_table_rounding: ClassVar[int] = 4
     _current_str = "current_filter"
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, cmds=None, **kwargs):
+        super().__init__(cmds=cmds, **kwargs)
         check_keys(kwargs, self.required_keys, action="error")
 
         self.meta.update(kwargs)
@@ -893,8 +893,8 @@ class FilterWheel(FilterWheelBase):
 
     required_keys = {"filter_names", "filename_format", "current_filter"}
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, cmds=None, **kwargs):
+        super().__init__(cmds=cmds, **kwargs)
 
         params = {"path": ""}
         self.meta.update(params)
@@ -904,7 +904,7 @@ class FilterWheel(FilterWheelBase):
         for name in from_currsys(self.meta["filter_names"], self.cmds):
             kwargs["name"] = name
             self.filters[name] = FilterCurve(filename=str(path).format(name),
-                                             **kwargs)
+                                             cmds=self.cmds, **kwargs)
 
         self.table = self.get_table()
 
@@ -952,8 +952,8 @@ class TopHatFilterWheel(FilterWheelBase):
     required_keys = {"filter_names", "transmissions", "wing_transmissions",
                      "blue_cutoffs", "red_cutoffs"}
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, cmds=None, **kwargs):
+        super().__init__(cmds=cmds, **kwargs)
 
         current_filter = kwargs.get("current_filter",
                                     kwargs["filter_names"][0])
@@ -968,7 +968,8 @@ class TopHatFilterWheel(FilterWheelBase):
                 "wing_transmission": self.meta["wing_transmissions"][i_filt],
                 "blue_cutoff": self.meta["blue_cutoffs"][i_filt],
                 "red_cutoff": self.meta["red_cutoffs"][i_filt]}
-            self.filters[name] = TopHatFilterCurve(**effect_kwargs)
+            self.filters[name] = TopHatFilterCurve(cmds=self.cmds,
+                                                  **effect_kwargs)
 
 
 class SpanishVOFilterWheel(FilterWheelBase):
@@ -1016,8 +1017,8 @@ class SpanishVOFilterWheel(FilterWheelBase):
 
     required_keys = {"observatory", "instrument", "current_filter"}
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, cmds=None, **kwargs):
+        super().__init__(cmds=cmds, **kwargs)
 
         params = {"include_str": None,         # passed to
                   "exclude_str": None,
@@ -1034,11 +1035,12 @@ class SpanishVOFilterWheel(FilterWheelBase):
         for name in filter_names:
             self.filters[name] = SpanishVOFilterCurve(observatory=obs,
                                                       instrument=inst,
-                                                      filter_name=name)
+                                                      filter_name=name,
+                                                      cmds=self.cmds)
 
         self.filters["open"] = FilterCurve(
             array_dict={"wavelength": [0.3, 3.0], "transmission": [1., 1.]},
-            wavelength_unit="um", name="unity transmission")
+            wavelength_unit="um", name="unity transmission", cmds=self.cmds)
 
         self.table = self.get_table()
 
@@ -1069,7 +1071,8 @@ class PupilTransmission(TERCurve):
         """Set a new transmission value"""
         self.surface = SpectralSurface(wavelength=self.meta['wavelength'],
                                        transmission=[transmission, transmission],
-                                       emissivity=[0., 0.], **kwargs)
+                                       emissivity=[0., 0.],
+                                       cmds=self.cmds, **kwargs)
         self.meta.update(self.surface.meta)
 
 

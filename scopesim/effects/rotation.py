@@ -28,8 +28,8 @@ class Rotate90CCD(Effect):
     required_keys = {"rotations"}
     z_order: ClassVar[tuple[int, ...]] = (809,)
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, cmds=None, **kwargs):
+        super().__init__(cmds=cmds, **kwargs)
         self.meta.update(kwargs)
 
         check_keys(self.meta, self.required_keys, action="error")

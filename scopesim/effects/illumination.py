@@ -166,9 +166,9 @@ class Illumination(Effect):
         self,
         model: Callable = gaussian2d,
         modelargs: Mapping | None = None,
-        **kwargs,
+        cmds=None, **kwargs,
     ) -> None:
-        super().__init__(**kwargs)
+        super().__init__(cmds=cmds, **kwargs)
         self.meta.setdefault("include", "!DET.include_illumination")
         self._model = model
         self._modelargs = modelargs or {}

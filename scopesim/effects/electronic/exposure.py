@@ -47,8 +47,8 @@ class AutoExposure(Effect):
     required_keys = {"fill_frac", "full_well", "mindit"}
     z_order: ClassVar[tuple[int, ...]] = (902,)
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, cmds=None, **kwargs):
+        super().__init__(cmds=cmds, **kwargs)
         self.meta.update(kwargs)
         if self.cmds is None:
             logger.error("No cmds present, using default.")
@@ -198,8 +198,8 @@ class ExposureOutput(Effect):
     z_order: ClassVar[tuple[int, ...]] = (861,)
     _current_str = "current_mode"
 
-    def __init__(self, mode="average", **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, mode="average", cmds=None, **kwargs):
+        super().__init__(cmds=cmds, **kwargs)
         self.meta.update(kwargs)
         self.modes = ("average", "sum")
         if mode not in self.modes:
@@ -241,8 +241,8 @@ class ExposureIntegration(Effect):
     required_keys = {"dit", "ndit"}
     z_order: ClassVar[tuple[int, ...]] = (860,)
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, cmds=None, **kwargs):
+        super().__init__(cmds=cmds, **kwargs)
         self.meta.update(kwargs)
 
         check_keys(self.meta, self.required_keys, action="error")

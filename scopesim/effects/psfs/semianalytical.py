@@ -29,8 +29,8 @@ class SemiAnalyticalPSF(PSF):
 
     z_order: ClassVar[tuple[int, ...]] = (42,)
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, cmds=None, **kwargs):
+        super().__init__(cmds=cmds, **kwargs)
         self.convolution_classes = FieldOfView
         # self.convolution_classes = ImagePlane
 
@@ -94,8 +94,8 @@ class AnisocadoConstPSF(SemiAnalyticalPSF):
     required_keys = {"filename", "strehl", "wavelength"}
     z_order: ClassVar[tuple[int, ...]] = (42, 652)
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, cmds=None, **kwargs):
+        super().__init__(cmds=cmds, **kwargs)
         params = {
             "psf_side_length": 512,
             "offset": (0, 0),

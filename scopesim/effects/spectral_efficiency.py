@@ -65,8 +65,8 @@ class SpectralEfficiency(Effect):
 
     z_order: ClassVar[tuple[int, ...]] = (630,)
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, cmds=None, **kwargs):
+        super().__init__(cmds=cmds, **kwargs)
 
         if "hdulist" in kwargs and isinstance(kwargs["hdulist"], fits.HDUList):
             self._file = kwargs["hdulist"]
@@ -93,7 +93,7 @@ class SpectralEfficiency(Effect):
             params.pop("filename", None)  # don't pass filename to TERCurve!
             effic_curve = TERCurve(array_dict={"wavelength":wavelength,
                                    "transmission":efficiency},
-                                   **params)
+                                   cmds=self.cmds, **params)
             efficiencies[name] = effic_curve
 
         hdul.close()

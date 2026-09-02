@@ -56,8 +56,8 @@ class LinearityCurve(Effect):
     report_plot_include: ClassVar[bool] = True
     report_table_include: ClassVar[bool] = False
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, cmds=None, **kwargs):
+        super().__init__(cmds=cmds, **kwargs)
         self.meta.update(kwargs)
 
         check_keys(self.meta, self.required_keys, action="error")
@@ -145,8 +145,8 @@ class InterPixelCapacitance(Effect):
 
     z_order: ClassVar[tuple[int, ...]] = (810,)
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, cmds=None, **kwargs):
+        super().__init__(cmds=cmds, **kwargs)
 
         self.meta.update(kwargs)
         self.kernel = self._build_kernel(kwargs)
@@ -267,8 +267,8 @@ class ADConversion(Effect):
 
     z_order: ClassVar[tuple[int, ...]] = (825,)
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, cmds=None, **kwargs):
+        super().__init__(cmds=cmds, **kwargs)
         params = {
             "dtype": "uint16",
             "gain": 1.      # default, usually overridden from yaml

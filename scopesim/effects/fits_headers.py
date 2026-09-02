@@ -539,7 +539,7 @@ class EffectsMetaKeywords(ExtraFitsKeywords):
                 keys = list(eff_meta.keys())
                 for key in keys:
                     value = eff_meta[key]
-                    if key in ["history", "notes", "changes", "cmds"]:
+                    if key in ["history", "notes", "changes"]:
                         eff_meta.pop(key)
                     if isinstance(value, Table):
                         eff_meta[key] = f"Table object of length: {len(value)}"

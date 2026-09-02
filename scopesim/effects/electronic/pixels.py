@@ -30,8 +30,8 @@ class ReferencePixelBorder(Effect):
 
     z_order: ClassVar[tuple[int, ...]] = (861,)
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, cmds=None, **kwargs):
+        super().__init__(cmds=cmds, **kwargs)
         self.meta["border_sequence"] = "bottom left top right"
         if "border" not in self.meta:
             self.meta["border"] = [0, 0, 0, 0]
@@ -94,8 +94,8 @@ class BinnedImage(Effect):
     required_keys = {"bin_size"}
     z_order: ClassVar[tuple[int, ...]] = (870,)
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, cmds=None, **kwargs):
+        super().__init__(cmds=cmds, **kwargs)
         check_keys(self.meta, self.required_keys, action="error")
 
     def apply_to(self, det, **kwargs):
@@ -115,8 +115,8 @@ class UnequalBinnedImage(Effect):
     required_keys = {"binx","biny"}
     z_order: ClassVar[tuple[int, ...]] = (870,)
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, cmds=None, **kwargs):
+        super().__init__(cmds=cmds, **kwargs)
         check_keys(self.meta, self.required_keys, action="error")
 
     def apply_to(self, det, **kwargs):
