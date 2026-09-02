@@ -57,12 +57,12 @@ optional = true
 
 [tool.poetry.group.dev.dependencies]
 jupyter = "^1.1.1"
-jupytext = "^1.19.3"
+jupytext = "^1.19.5"
 ipykernel = "^7.3.0"
 ipympl = "^0.10.0"
 
 [tool.poetry.group.test.dependencies]
-pytest = "^9.0.3"
+pytest = "^9.1.1"
 pytest-cov = "^7.1.0"
 ipykernel = "^7.3.0"
 
@@ -71,12 +71,12 @@ optional = true
 
 [tool.poetry.group.docs.dependencies]
 sphinx = "^9.1.0"
-sphinx-book-theme = "^1.1.4"
+sphinx-book-theme = "^1.4.0"
 jupyter-sphinx = ">=0.5.3"
 sphinx-copybutton = ">=0.5.2,<1.0"
 myst-nb = "^1.4.0"
 sphinxcontrib-apidoc = ">=0.6.0,<1.0"
-sphinxcontrib-mermaid = "^2.0"
+sphinxcontrib-mermaid = "^2.1"
 nbsphinx = "^0.9.8"
 numpydoc = "^1.10.0"
 ipykernel = "^7.3.0"
