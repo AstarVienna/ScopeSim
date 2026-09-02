@@ -451,24 +451,22 @@ class MetisLMSSpectralTrace(SpectralTrace):
         matrices = {}
 
         poly = self.table
-        for matid in range(4):
-            select = ((poly["Ord"] == order) *
-                      (poly["Sli"] == spslice) *
-                      (poly["Mat"] == matid))
-            if not np.any(select):
+        select = (poly["Ord"] == order) & (poly["Sli"] == spslice)
+        subpoly = poly[select]
+
+        # Evaluate the angle polynomial for all rows of the four matrices
+        values = (subpoly["P3"] * angle**3 + subpoly["P2"] * angle**2 +
+                  subpoly["P1"] * angle + subpoly["P0"])
+
+        for matid, matname in enumerate(matnames):
+            sel_mat = subpoly["Mat"] == matid
+            if not np.any(sel_mat):
                 raise KeyError("Combination of Order, Slice not found")
 
-            subpoly = poly[select]
             thematrix = np.zeros((4, 4))
-            for i in range(4):
-                for j in range(4):
-                    sel_ij = (subpoly["Row"] == i) * (subpoly["Col"] == j)
-                    thematrix[i, j] = (subpoly["P3"][sel_ij][0] * angle**3 +
-                                       subpoly["P2"][sel_ij][0] * angle**2 +
-                                       subpoly["P1"][sel_ij][0] * angle +
-                                       subpoly["P0"][sel_ij][0])
-
-            matrices[matnames[matid]] = thematrix
+            thematrix[subpoly["Row"][sel_mat],
+                      subpoly["Col"][sel_mat]] = values[sel_mat]
+            matrices[matname] = thematrix
 
         return matrices
 
