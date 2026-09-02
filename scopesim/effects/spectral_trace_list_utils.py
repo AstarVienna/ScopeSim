@@ -28,6 +28,7 @@ from ..utils import (
     power_vector,
     quantify,
     from_currsys,
+    default_cmds,
     close_loop,
     figure_factory,
     get_logger,
@@ -74,7 +75,7 @@ class SpectralTrace:
         self.meta = {}
         self.meta.update(self._class_params)
         self.meta.update(kwargs)
-        self.cmds = cmds
+        self.cmds = cmds or default_cmds()
 
         if isinstance(trace_tbl, (fits.BinTableHDU, fits.TableHDU)):
             self.table = Table.read(trace_tbl)

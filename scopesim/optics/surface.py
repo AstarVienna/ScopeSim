@@ -14,7 +14,7 @@ from synphot.models import Empirical1D
 from ..effects import ter_curves_utils as ter_utils
 from .surface_utils import (make_emission_from_emissivity,
                             make_emission_from_array, extract_type_from_unit)
-from ..utils import (get_meta_quantity, quantify, from_currsys,
+from ..utils import (get_meta_quantity, quantify, from_currsys, default_cmds,
                      convert_table_comments_to_dict, find_file, get_logger)
 
 logger = get_logger(__name__)
@@ -50,7 +50,7 @@ class SpectralSurface:
                      "emission_unit": "",
                      "wavelength_unit": u.um}
 
-        self.cmds = cmds
+        self.cmds = cmds or default_cmds()
         self.table = Table()
         if filename is not None and Path(filename).exists():
             self.table = ioascii.read(filename)

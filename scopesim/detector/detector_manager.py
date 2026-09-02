@@ -7,7 +7,7 @@ from astropy.io.fits import HDUList, PrimaryHDU, TableHDU
 
 from .detector import Detector
 from ..effects import Effect
-from ..utils import stringify_dict, get_logger
+from ..utils import stringify_dict, get_logger, default_cmds
 
 
 logger = get_logger(__name__)
@@ -19,7 +19,7 @@ class DetectorManager(Sequence):
     def __init__(self, detector_list=None, cmds=None, **kwargs):
         self.meta = {}
         self.meta.update(kwargs)
-        self.cmds = cmds
+        self.cmds = cmds or default_cmds()
 
         # The effect from which the instance is constructed
         self._detector_list = detector_list

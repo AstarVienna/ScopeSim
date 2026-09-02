@@ -52,7 +52,7 @@ from astropy.wcs import WCS
 from . import image_plane_utils as ipu
 from ..effects import DetectorList
 from ..effects import effects_utils as eu
-from ..utils import from_currsys, get_logger
+from ..utils import from_currsys, get_logger, default_cmds
 
 from .fov import FieldOfView, FieldOfView1D, FieldOfView2D, FieldOfView3D
 from .fov_volume_list import FovVolumeList
@@ -93,7 +93,7 @@ class FOVManager:
             "aperture_id": 0,
         }
         self.meta.update(kwargs)
-        self.cmds = cmds
+        self.cmds = cmds or default_cmds()
 
         params = from_currsys({"wave_min": self.meta["wave_min"],
                                "wave_max": self.meta["wave_max"]},

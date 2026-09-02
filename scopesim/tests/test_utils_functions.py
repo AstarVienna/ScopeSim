@@ -190,40 +190,51 @@ class TestHasWcsKeys:
 
 
 class TestFromCurrSys:
-    def test_converts_string(self):
-        assert utils.from_currsys("!SIM.random.seed") is None
+    """from_currsys() has no global fallback, so every case passes cmds."""
 
-    def test_converts_list(self):
-        assert utils.from_currsys(["!SIM.random.seed"]*3)[2] is None
+    @pytest.fixture(name="cmds", scope="function")
+    def fixture_cmds(self):
+        return utils.default_cmds()
 
-    def test_converts_numpy_array(self):
-        assert utils.from_currsys(np.array(["!SIM.random.seed"]*2))[1] is None
+    def test_raises_without_cmds(self):
+        with pytest.raises(ValueError):
+            utils.from_currsys("!SIM.random.seed")
 
-    def test_converts_dict(self):
-        assert utils.from_currsys({"seed": "!SIM.random.seed"})["seed"] is None
+    def test_converts_string(self, cmds):
+        assert utils.from_currsys("!SIM.random.seed", cmds) is None
 
-    def test_converts_layered_bang_strings(self):
+    def test_converts_list(self, cmds):
+        assert utils.from_currsys(["!SIM.random.seed"]*3, cmds)[2] is None
+
+    def test_converts_numpy_array(self, cmds):
+        arr = np.array(["!SIM.random.seed"]*2)
+        assert utils.from_currsys(arr, cmds)[1] is None
+
+    def test_converts_dict(self, cmds):
+        dic = {"seed": "!SIM.random.seed"}
+        assert utils.from_currsys(dic, cmds)["seed"] is None
+
+    def test_converts_layered_bang_strings(self, cmds):
         patched = {"!SIM.sub_pixel.flag": "!SIM.sub_pixel.fraction"}
-        with patch.dict("scopesim.rc.__currsys__", patched):
-            result = utils.from_currsys("!SIM.sub_pixel.flag")
+        with patch.dict("scopesim.rc.__config__", patched):
+            result = utils.from_currsys("!SIM.sub_pixel.flag", cmds)
             assert not isinstance(result, str)
             assert result == 1
 
-    def test_converts_astropy_table(self):
+    def test_converts_astropy_table(self, cmds):
         tbl = Table(data=[["!SIM.random.seed"]*2, ["!SIM.random.seed"]*2],
                     names=["seeds", "seeds2"])
-        assert utils.from_currsys(tbl["seeds2"][1]) is None
+        assert utils.from_currsys(tbl["seeds2"][1], cmds) is None
 
-    def test_converts_string_numericals_to_floats(self):
+    def test_converts_string_numericals_to_floats(self, cmds):
         patched = {"!SIM.sub_pixel.fraction": "1e0"}
-        with patch.dict("scopesim.rc.__currsys__", patched):
-            result = utils.from_currsys("!SIM.sub_pixel.fraction")
+        with patch.dict("scopesim.rc.__config__", patched):
+            result = utils.from_currsys("!SIM.sub_pixel.fraction", cmds)
             assert isinstance(result, float)
             assert result == 1
 
 
-# load_example_optical_train modifies __currsys__!
-@pytest.mark.usefixtures("protect_currsys")
+
 class TestLoadExampleOptTrain:
     def test_loads_imager_optical_train_object(self):
         opt = load_example_optical_train()

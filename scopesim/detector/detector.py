@@ -6,7 +6,8 @@ from astropy.wcs import WCS
 from ..optics import ImagePlane
 from ..optics.image_plane_utils import (add_imagehdu_to_imagehdu,
                                         sky_wcs_from_det_wcs)
-from ..utils import get_logger, from_currsys, stringify_dict, zeros_from_header
+from ..utils import (get_logger, from_currsys, stringify_dict,
+                     zeros_from_header, default_cmds)
 
 
 logger = get_logger(__name__)
@@ -18,7 +19,7 @@ class Detector:
         self.meta = {}
         self.meta.update(header)
         self.meta.update(kwargs)
-        self.cmds = cmds
+        self.cmds = cmds or default_cmds()
 
     def extract_from(self, image_plane, spline_order=1, reset=True):
         """Extract HDU from ImagePlane object and add to internal HDU."""

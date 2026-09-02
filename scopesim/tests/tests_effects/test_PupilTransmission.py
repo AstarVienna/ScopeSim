@@ -22,7 +22,7 @@ def fixture_pupilmask():
     # Ensure same values no matter the currsysS
     patched = {"!SIM.spectral.wave_min": 0.3,
                "!SIM.spectral.wave_max": 20}
-    with patch.dict("scopesim.rc.__currsys__", patched):
+    with patch.dict("scopesim.rc.__config__", patched):
         yield PupilTransmission(transmission=THROUGHPUT)
 
 

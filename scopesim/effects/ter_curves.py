@@ -23,7 +23,7 @@ from ..source.source import Source
 from ..source.source_fields import (CubeSourceField, SpectrumSourceField,
                                     BackgroundSourceField)
 from ..utils import (from_currsys, quantify, check_keys, find_file,
-                     figure_factory, get_logger)
+                     figure_factory, get_logger, default_cmds)
 from ..server.download_utils import create_retriever
 
 logger = get_logger(__name__)
@@ -694,7 +694,8 @@ class TopHatFilterCurve(FilterCurve):
 
     def __init__(self, cmds=None, **kwargs):
         check_keys(kwargs, self.required_keys, action="error")
-        self.cmds = cmds
+        # Resolved before super().__init__() can default it, so do it here.
+        self.cmds = cmds or default_cmds()
 
         wave_min = from_currsys("!SIM.spectral.wave_min", self.cmds)
         wave_max = from_currsys("!SIM.spectral.wave_max", self.cmds)
@@ -1055,6 +1056,8 @@ class PupilTransmission(TERCurve):
     """
 
     def __init__(self, transmission, cmds=None, **kwargs):
+        # Resolved before super().__init__() can default it, so do it here.
+        cmds = cmds or default_cmds()
         self.params = {"wave_min": "!SIM.spectral.wave_min",
                        "wave_max": "!SIM.spectral.wave_max"}
         self.params.update(kwargs)

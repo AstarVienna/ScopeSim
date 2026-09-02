@@ -60,7 +60,7 @@ class TestInit:
         reason="This currently fails if run after a test using OpticalTrain, "
         "because of the rc.__currsys__ type change happening there.")
 class TestApplyTo:
-    @patch.dict("scopesim.rc.__currsys__",
+    @patch.dict("scopesim.rc.__config__",
                 {"!OBS.detector_readout_mode": "fast"})
     def test_currsys_updated_with_mode_specific_values(self,
                                                        imageplane,
@@ -69,20 +69,20 @@ class TestApplyTo:
         key_name = "!DET.mindit"
         assert from_currsys(key_name) == basic_dmps.mode_properties["fast"][key_name]
 
-    @patch.dict("scopesim.rc.__currsys__",
+    @patch.dict("scopesim.rc.__config__",
                 {"!OBS.detector_readout_mode": None,
                  "!OBS.auto_exposure.fill_frac": 0.5})
     def test_understands_detector_mode_auto(self, imageplane, basic_dmps):
         basic_dmps.apply_to(imageplane, detector_readout_mode="auto")
         assert from_currsys("!OBS.detector_readout_mode") == "slow"
 
-    @patch.dict("scopesim.rc.__currsys__",
+    @patch.dict("scopesim.rc.__config__",
                 {"!OBS.detector_readout_mode": "notthere"})
     def test_throws_error_for_unknown_detector_mode(self, basic_dmps):
         with pytest.raises(KeyError):
             basic_dmps.apply_to(Detector())
 
-    @patch.dict("scopesim.rc.__currsys__",
+    @patch.dict("scopesim.rc.__config__",
                 {"!OBS.detector_readout_mode": "fast"})
     def test_returns_object(self, basic_dmps):
         obj = basic_dmps.apply_to(Detector())
@@ -104,6 +104,6 @@ class TestSelectModes:
                               (5e6, "fast")])
     def test_selects_correct_mode(self, imageplane, value, mode, basic_dmps):
         patched = {"!OBS.auto_exposure.fill_frac": 0.5}
-        with patch.dict("scopesim.rc.__currsys__", patched):
+        with patch.dict("scopesim.rc.__config__", patched):
             imageplane.hdu.data += value
             assert basic_dmps.select_mode(imageplane) == mode

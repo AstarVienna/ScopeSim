@@ -596,8 +596,27 @@ def stringify_dict(dic, ignore_types=(str, int, float, bool), fits_safe=False):
             yield key, str(value)
 
 
+def default_cmds():
+    """Return a fresh ``UserCommands`` holding only the package defaults.
+
+    For classes that can legitimately be built standalone, outside an
+    ``OpticalTrain``, and therefore still need somewhere to resolve
+    bang-strings against. Each call returns its own chain map layered on the
+    shared read-only ``rc.__config__``, so writes stay local to the instance
+    instead of leaking into a process-wide dict the way the former
+    ``rc.__currsys__`` did. Construction costs a few microseconds.
+    """
+    # Local import: scopesim.commands imports this module.
+    from .commands import UserCommands
+    return UserCommands()
+
+
 def from_currsys(item, cmds=None):
-    """Return the current value of a bang-string from ``rc.__currsys__``."""
+    """Resolve a bang-string against `cmds`.
+
+    Containers (lists, arrays, dicts, tables) are resolved element-wise.
+    `cmds` is required: there is no global fallback.
+    """
     if isinstance(item, Table):
         tbl_dict = {col: item[col].data for col in item.colnames}
         tbl_dict = from_currsys(tbl_dict, cmds)
@@ -620,16 +639,18 @@ def from_currsys(item, cmds=None):
         # if not isinstance(cmds, UserCommands)
         #     raise TypeError
 
-        if not cmds:
-            cmds = rc.__currsys__
-            # raise ValueError(f"No cmds dict passed for resolving {item}")
+        if cmds is None:
+            raise ValueError(
+                f"No cmds passed for resolving {item!r}. Bang-strings are "
+                "resolved against a UserCommands instance; there is no "
+                "global fallback.")
 
         if item in cmds:
             item = cmds[item]
             if isinstance(item, str) and item.startswith("!"):
                 item = from_currsys(item, cmds=cmds)
         else:
-            raise ValueError(f"{item} was not found in rc.__currsys__")
+            raise ValueError(f"{item} was not found in {cmds}")
 
     if isinstance(item, str):
         if item.lower() == "none":

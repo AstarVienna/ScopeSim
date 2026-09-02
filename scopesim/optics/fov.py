@@ -27,6 +27,7 @@ from ..source.source_fields import (
 
 from ..utils import (
     from_currsys,
+    default_cmds,
     quantify,
     has_needed_keywords,
     get_logger,
@@ -91,7 +92,7 @@ class FieldOfView:
         }
         self.meta.update(kwargs)
 
-        self.cmds = cmds
+        self.cmds = cmds or default_cmds()
 
         if not any(has_needed_keywords(header, s) for s in {"", "S"}):
             raise ValueError(

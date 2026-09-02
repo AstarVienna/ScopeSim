@@ -10,7 +10,7 @@ from astropy.table import Table
 
 from .. import effects as efs
 from ..effects.effects_utils import make_effect, z_order_in_range
-from ..utils import write_report, get_logger
+from ..utils import write_report, get_logger, default_cmds
 from ..reports.rst_utils import table_to_rst
 
 
@@ -64,7 +64,7 @@ class OpticalElement:
         self.meta.update(kwargs)
         self.properties = {}
         self.effects = []
-        self.cmds = cmds
+        self.cmds = cmds or default_cmds()
 
         if not isinstance(yaml_dict, Mapping):
             return

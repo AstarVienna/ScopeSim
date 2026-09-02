@@ -13,6 +13,7 @@ from .image_plane_utils import add_table_to_imagehdu, add_imagehdu_to_imagehdu
 
 from ..utils import (
     from_currsys,
+    default_cmds,
     has_needed_keywords,
     get_logger,
     zeros_from_header,
@@ -58,7 +59,7 @@ class ImagePlane:
 
     def __init__(self, header, cmds=None, **kwargs):
 
-        self.cmds = cmds
+        self.cmds = cmds or default_cmds()
         self.meta = {}
         self.meta.update(kwargs)
         self.id = header.get("IMGPLANE", 0)

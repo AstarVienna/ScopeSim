@@ -45,7 +45,7 @@ class TestInit:
     @pytest.mark.webtest
     def test_initialises_with_bang_strings(self):
         patched = {"!OBS.pwv": 20.0}
-        with patch.dict("scopesim.rc.__currsys__", patched):
+        with patch.dict("scopesim.rc.__config__", patched):
             sky_ter = SkycalcTERCurve(pwv="!OBS.pwv")
 
         assert sky_ter.skycalc_conn.values["pwv"] == 20.0

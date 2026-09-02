@@ -82,12 +82,7 @@ class DataContainer:
         cmds: UserCommands | None = None,
         **kwargs
     ):
-        self.cmds = cmds
-        # Setting a default for cmds cannot be done here, because from_currsys
-        # checks whether cmds is None. TODO: make this possible.
-        # if self.cmds is None:
-        #     from scopesim import UserCommands
-        #     self.cmds = UserCommands()
+        self.cmds = cmds or utils.default_cmds()
 
         if "file_name" in kwargs:
             raise ValueError("The 'file_name' kwarg is deprecated, please use "

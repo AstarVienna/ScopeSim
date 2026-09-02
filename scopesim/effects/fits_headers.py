@@ -17,7 +17,7 @@ from astar_utils.nested_mapping import recursive_update
 
 from . import Effect
 from ..source.source_fields import HDUSourceField, TableSourceField
-from ..utils import from_currsys, find_file, get_logger
+from ..utils import from_currsys, find_file, get_logger, default_cmds
 
 logger = get_logger(__name__)
 
@@ -320,7 +320,8 @@ def _get_relevant_extensions(dic, hdul):
 
 def _resolve_references(value, optics_manager):
     """Resolve !-strings from cmds and #-strings from `optics_manager`."""
-    cmds = optics_manager.cmds if optics_manager is not None else None
+    cmds = (optics_manager.cmds if optics_manager is not None
+            else default_cmds())
 
     if value.startswith("!"):
         return from_currsys(value, cmds)

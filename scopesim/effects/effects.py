@@ -8,7 +8,7 @@ from dataclasses import dataclass, field, InitVar, fields
 from typing import NewType, ClassVar
 
 from .data_container import DataContainer
-from ..utils import from_currsys, write_report
+from ..utils import from_currsys, write_report, default_cmds
 from ..reports.rst_utils import table_to_rst
 
 
@@ -68,7 +68,7 @@ class Effect:
                 "than letting it fall into **kwargs.")
 
     def __init__(self, filename=None, cmds=None, **kwargs):
-        self.cmds = cmds
+        self.cmds = cmds or default_cmds()
         self.data_container = DataContainer(filename=filename, cmds=cmds,
                                             **kwargs)
         self.meta = kwargs.get("meta", {})

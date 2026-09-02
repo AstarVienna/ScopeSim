@@ -30,7 +30,7 @@ def setup_and_teardown():
                "!SIM.reports.rst_path": str(RST_PATH.absolute()),
                }
     with patch.dict("scopesim.rc.__config__", patched):
-        with patch.dict("scopesim.rc.__currsys__", patched):
+        with patch.dict("scopesim.rc.__config__", patched):
             yield
 
     if CLEAN_UP:
@@ -108,7 +108,7 @@ class TestEffectReport:
         #            "!SIM.reports.latex_path": str(LATEX_PATH.absolute()),
         #            "!SIM.reports.rst_path": str(RST_PATH.absolute()),
         #            }
-        # with patch.dict("scopesim.rc.__currsys__", patched):
+        # with patch.dict("scopesim.rc.__config__", patched):
         det_list = eo._detector_list()
         rst_text = det_list.report()
         ru.rstify_rst_text(rst_text, title_char="*", filename=det_list.meta["name"])

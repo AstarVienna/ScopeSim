@@ -12,7 +12,8 @@ from astropy.io import fits
 from astropy import units as u
 
 from ..data_container import DataContainer
-from ...utils import find_file, from_currsys, get_logger, figure_factory
+from ...utils import (find_file, from_currsys, get_logger,
+                      figure_factory, default_cmds)
 from ...optics.image_plane_utils import sub_pixel_fractions
 
 logger = get_logger(__name__)
@@ -57,7 +58,7 @@ class FPMask:
         **kwargs
     ):
         logger.debug("Initialising FPMask with %s", maskname)
-        self.cmds = cmds
+        self.cmds = cmds or default_cmds()
         self.name = maskname
         self.angle = angle
         self.shift = shift
