@@ -1062,16 +1062,57 @@ def _xiy2xlam_fit(layout, params):
     return xiy2x, xiy2lam
 
 
+class BilinearImageInterpolation:
+    """
+    Bilinear interpolation of an image on its integer pixel grid.
+
+    Drop-in replacement for
+    ``RectBivariateSpline(arange(ny), arange(nx), image, kx=1, ky=1)``:
+    called with (j, i) pixel coordinates and ``grid=False``, it returns the
+    same values (coordinates outside the image are clamped to the edges),
+    but avoids FITPACK's slow scattered-point evaluation.
+    """
+
+    def __init__(self, image):
+        self.image = np.asarray(image)
+
+    def __call__(self, jarr, iarr, grid=False):
+        if grid:
+            raise NotImplementedError(
+                "BilinearImageInterpolation only supports grid=False")
+        n_j, n_i = self.image.shape
+        jarr = np.clip(np.asarray(jarr, dtype=float), 0, n_j - 1)
+        iarr = np.clip(np.asarray(iarr, dtype=float), 0, n_i - 1)
+        j_0 = np.clip(jarr.astype(int), 0, n_j - 2)
+        i_0 = np.clip(iarr.astype(int), 0, n_i - 2)
+        w_j = jarr - j_0
+        w_i = iarr - i_0
+        img = self.image
+        return ((1 - w_j) * (1 - w_i) * img[j_0, i_0]
+                + (1 - w_j) * w_i * img[j_0, i_0 + 1]
+                + w_j * (1 - w_i) * img[j_0 + 1, i_0]
+                + w_j * w_i * img[j_0 + 1, i_0 + 1])
+
+
 def make_image_interpolations(hdulist, **kwargs):
     """Create 2D interpolation functions for images.
 
     The interpolation functions are called with (j, i) pixel coordinates,
     i.e. the first argument corresponds to the row (NAXIS2) axis of the
     image, the second to the column (NAXIS1) axis.
+
+    For ``kx=1, ky=1`` (the case used for rectification) a direct bilinear
+    interpolator is returned, which evaluates large scattered coordinate
+    arrays orders of magnitude faster than FITPACK. Other spline degrees
+    fall back to ``RectBivariateSpline``.
     """
     interps = []
     for hdu in hdulist:
-        if isinstance(hdu, fits.ImageHDU):
+        if not isinstance(hdu, fits.ImageHDU):
+            continue
+        if kwargs.get("kx") == 1 and kwargs.get("ky") == 1:
+            interps.append(BilinearImageInterpolation(hdu.data))
+        else:
             interps.append(
                 RectBivariateSpline(np.arange(hdu.header["NAXIS2"]),
                                     np.arange(hdu.header["NAXIS1"]),
