@@ -7,6 +7,7 @@ from astropy.wcs import WCS
 import matplotlib.pyplot as plt
 
 from scopesim.optics import image_plane_utils as imp_utils
+from scopesim.optics.fov_manager import chunk_edges
 from scopesim.tests.mocks.py_objects import imagehdu_objects as imo
 
 
@@ -249,11 +250,8 @@ class TestLatticeIsSharedBetweenChunks:
         parent, parent_naxis = imp_utils.create_wcs_from_points(
             np.array([[lo, lo], [hi, hi]]), pixel_scale)
 
-        edges = [lo]
-        for val in np.arange(lo, hi, chunk * pixel_scale):
-            if lo < val < hi and val > edges[-1]:
-                edges.append(float(val))
-        edges.append(hi)
+        # the real chunk-edge helper, not a copy of it
+        edges = [lo, *chunk_edges(lo, hi, chunk * pixel_scale), hi]
 
         for x0, x1 in zip(edges[:-1], edges[1:]):
             child, child_naxis = imp_utils.create_wcs_from_points(

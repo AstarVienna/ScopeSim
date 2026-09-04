@@ -12,6 +12,7 @@ from astropy.wcs import WCS
 
 from scopesim.optics import image_plane_utils as imp_utils
 from scopesim.optics.fov import FieldOfView2D
+from scopesim.optics.fov_manager import chunk_edges
 from scopesim.optics.image_plane import ImagePlane
 
 from scopesim.tests.mocks.py_objects import source_objects as src
@@ -99,14 +100,12 @@ def _chunked_fov_headers(x_mm, y_mm, pixel_size, pixel_scale, chunk):
             for v in (x_mm[0], x_mm[1], y_mm[0], y_mm[1])]
 
     def edges(vmin, vmax):
-        out = [vmin]
-        for val in np.arange(vmin, vmax, chunk * pixel_scale):
-            if vmin < val < vmax and val > out[-1]:
-                out.append(float(val))
-        return out + [vmax]
+        # the real chunk-edge helper, not a copy of it
+        return [vmin, *chunk_edges(vmin, vmax, chunk * pixel_scale), vmax]
 
-    for x0, x1 in zip(*(lambda e: (e[:-1], e[1:]))(edges(lims[0], lims[1]))):
-        for y0, y1 in zip(*(lambda e: (e[:-1], e[1:]))(edges(lims[2], lims[3]))):
+    xe, ye = edges(lims[0], lims[1]), edges(lims[2], lims[3])
+    for x0, x1 in zip(xe[:-1], xe[1:]):
+        for y0, y1 in zip(ye[:-1], ye[1:]):
             skyhdr = imp_utils.header_from_list_of_xy(
                 [x0 / 3600, x1 / 3600], [y0 / 3600, y1 / 3600],
                 pixel_scale=pixel_scale / 3600)

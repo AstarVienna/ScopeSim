@@ -3,7 +3,7 @@ from pytest import approx
 import numpy as np
 from astropy import units as u
 
-from scopesim.optics.fov_manager import FOVManager
+from scopesim.optics.fov_manager import FOVManager, chunk_edges
 from scopesim.tests.mocks.py_objects import effects_objects as eo
 from scopesim.utils import from_currsys
 
@@ -56,3 +56,60 @@ class TestGenerateFovList:
         assert len(fovs) == 4
         assert fov_skycorners.min(axis=0)[0] == approx(-1024 / 3600)  # [deg] 2k detector / pixel_scale
         assert fovs[0].waverange[0] == 0.6 * u.um  # filter blue edge
+
+
+class TestChunkEdges:
+    """Chunk edges must be interior and platform-independent.
+
+    np.arange(vmin, vmax, step) returns one element too many when
+    (vmax - vmin) / step rounds just above an integer, and whether that
+    element lands on vmax or one ulp below it depends on how the platform
+    rounds vmin + i * step. One ulp below vmax is a legal split point, so
+    FovVolumeList.split would carve off a ~1e-15 px volume that
+    create_wcs_from_points then rounds up into a spurious one-pixel FOV.
+    """
+
+    @pytest.mark.parametrize("span_px, chunk, n_chunks", [
+        (24.0, 8, 3),          # exact multiple -- the fragile case
+        (24.0, 4, 6),          # exact multiple
+        (16.0, 8, 2),
+        (21.0, 8, 3),          # fractional last chunk
+        (17.32, 8, 3),         # fractional pixels, fractional last chunk
+        (12621 + 1 / 3, 2048, 7),   # MICADO's y axis
+        (5.0, 8, 1),           # smaller than one chunk
+    ])
+    def test_edges_are_interior_and_count_is_right(self, span_px, chunk,
+                                                   n_chunks):
+        pixel_scale = 0.1
+        vmin = -span_px / 2 * pixel_scale
+        vmax = vmin + span_px * pixel_scale
+        edges = chunk_edges(vmin, vmax, chunk * pixel_scale)
+
+        assert len(edges) == n_chunks - 1
+        assert (edges > vmin).all()
+        assert (edges < vmax).all()
+
+    @pytest.mark.parametrize("span_px, chunk", [(24.0, 8), (24.0, 4),
+                                                (16.0, 8), (32.0, 16)])
+    def test_exact_multiples_give_no_sliver_chunk(self, span_px, chunk):
+        # A span that is an exact multiple of the chunk must come out as
+        # equal chunks, with no degenerate remainder however the float
+        # arithmetic rounds.
+        pixel_scale = 0.1
+        vmin = -span_px / 2 * pixel_scale
+        vmax = vmin + span_px * pixel_scale
+        edges = chunk_edges(vmin, vmax, chunk * pixel_scale)
+
+        bounds = np.array([vmin, *edges, vmax])
+        widths = np.diff(bounds) / pixel_scale
+        assert len(widths) == span_px / chunk
+        np.testing.assert_allclose(widths, chunk, atol=1e-9)
+
+    def test_a_split_one_ulp_inside_the_upper_bound_is_not_emitted(self):
+        # np.arange does emit such a value on arm64 macOS; assert directly
+        # that chunk_edges never does, on any platform.
+        vmin, vmax, step = -1.2000000000000002, 1.2000000000000002, 0.8
+        edges = chunk_edges(vmin, vmax, step)
+        assert (edges < np.nextafter(vmax, -np.inf)).all()
+        # ... which np.arange does not guarantee
+        assert len(np.arange(vmin, vmax, step)) == len(edges) + 2

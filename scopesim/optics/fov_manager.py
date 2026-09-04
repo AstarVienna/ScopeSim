@@ -61,6 +61,32 @@ from .fov_volume_list import FovVolumeList
 logger = get_logger(__name__)
 
 
+def chunk_edges(vmin, vmax, step):
+    """Return the interior points that cut ``[vmin, vmax]`` into `step` chunks.
+
+    Only interior points are returned, so no edge can coincide with `vmin` or
+    `vmax`. `step` need not divide the span, and need not be an integer (see
+    HAWKI/test_hawki/test_full_package_hawki.py), so this cannot be a plain
+    ``range``.
+
+    It cannot be ``np.arange(vmin, vmax, step)`` either. That returns
+    ``ceil((vmax - vmin) / step)`` elements, which is one too many when the
+    division rounds just above an integer - as it does for a span that is an
+    exact multiple of `step`, e.g. ``(1.2000000000000002 - -1.2000000000000002)
+    / 0.8 == 3.0000000000000004``. Whether the surplus element then lands
+    exactly on `vmax` or one ulp below it depends on how the platform rounds
+    ``vmin + i * step``: it lands on `vmax` on x86, but below it on arm64
+    macOS. One ulp below `vmax` is a perfectly legal split point, so
+    ``FovVolumeList.split`` accepts it and carves off a volume ~1e-15 px wide,
+    which ``create_wcs_from_points`` then rounds up to a whole pixel - a
+    spurious one-pixel FOV, off the pixel lattice, double-counting flux at the
+    edge of the array.
+
+    """
+    n_chunks = max(1, int(np.ceil((vmax - vmin) / step - 1e-9)))
+    return vmin + step * np.arange(1, n_chunks)
+
+
 class FOVManager:
     """
     A class to manage the (monochromatic) image windows covering the target.
@@ -122,11 +148,8 @@ class FOVManager:
             if vol_pix_area > max_seg_size:
                 step = chunk_size * pixel_scale
 
-                # These are not always integers, unlike in the tests.
-                # See for example HAWKI/test_hawki/test_full_package_hawki.py.
-                # The np.arange can therefore not be changed to just a range.
-                yield (np.arange(vol["x_min"], vol["x_max"], step),
-                       np.arange(vol["y_min"], vol["y_max"], step))
+                yield (chunk_edges(vol["x_min"], vol["x_max"], step),
+                       chunk_edges(vol["y_min"], vol["y_max"], step))
 
     def generate_fovs_list(self) -> Iterator[FieldOfView]:
         """
