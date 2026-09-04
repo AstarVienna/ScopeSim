@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 """TBA."""
 
-import warnings
 from collections import OrderedDict
 from copy import deepcopy
 from typing import ClassVar
@@ -38,31 +37,6 @@ class SurfaceList(TERCurve):
                 surf_kwargs["cmds"] = self.cmds
                 surf_kwargs["filename"] = from_currsys(surf_kwargs["filename"], self.cmds)
                 self.surfaces[surf_kwargs["name"]] = SpectralSurface(**surf_kwargs)
-
-    def fov_grid(self, which="waveset", **kwargs):
-        warnings.warn("The fov_grid method is deprecated and will be removed "
-                      "in a future release.", DeprecationWarning, stacklevel=2)
-        wave_edges = []
-        if which == "waveset":
-            self.meta.update(kwargs)
-            self.meta = from_currsys(self.meta, self.cmds)
-            wave_min = quantify(self.meta["wave_min"], u.um)
-            wave_max = quantify(self.meta["wave_max"], u.um)
-            # ..todo:: add 1001 to default.yaml somewhere
-            wave = np.linspace(wave_min, wave_max, 1001)
-            throughput = self.throughput(wave)
-            threshold = self.meta["minimum_throughput"]
-            valid_waves = np.where(throughput >= threshold)[0]
-
-            if not len(valid_waves):
-                msg = ("No transmission found above the threshold "
-                       f"{self.meta['minimum_throughput']} in this wavelength "
-                       f"range {[self.meta['wave_min'], self.meta['wave_max']]}."
-                       " Did you open the shutter?")
-                raise ValueError(msg)
-
-            wave_edges = [min(wave[valid_waves]), max(wave[valid_waves])]
-        return wave_edges
 
     @property
     def throughput(self):
