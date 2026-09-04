@@ -80,6 +80,22 @@ def fixture_spectral_trace_list():
     #        spectral_trace_list.rectify_traces(hdulist)
 
 
+class TestNoSelfDeprecation:
+    def test_init_does_not_emit_deprecation_warning(self, full_trace_list):
+        """The effect used to call its own deprecated fov_grid internally,
+        warning on every construction and observation."""
+        import warnings as w
+        with w.catch_warnings():
+            w.simplefilter("error", DeprecationWarning)
+            SpectralTraceList(hdulist=full_trace_list)
+
+    def test_external_fov_grid_still_warns(self, full_trace_list):
+        slist = SpectralTraceList(hdulist=full_trace_list)
+        spt = next(iter(slist.spectral_traces.values()))
+        with pytest.warns(DeprecationWarning):
+            spt.fov_grid()
+
+
 class TestSpectralTraceListWheel:
     @pytest.mark.usefixtures("no_file_error")
     def test_basic_init(self):

@@ -73,7 +73,7 @@ class MetisLMSSpectralTraceList(SpectralTraceList):
         if isinstance(obj, FovVolumeList):
             # Create a single volume that covers the aperture and
             # the maximum wavelength range of LMS
-            volumes = [spectral_trace.fov_grid()
+            volumes = [spectral_trace._volume()
                        for spectral_trace in self.spectral_traces.values()]
 
             wave_min = min(vol["wave_min"] for vol in volumes)
@@ -345,11 +345,15 @@ class MetisLMSSpectralTrace(SpectralTrace):
         self.meta["trace_id"] = f"Slice {spslice + 1}"
         self.meta.update(params)
         # Provisional:
-        self.meta["fov"] = self.fov_grid()
+        self.meta["fov"] = self._volume()
 
     def fov_grid(self):
         """
         Provide information on the source space volume required by the effect.
+
+        .. deprecated::
+           Use is discouraged for external callers; the effect accesses the
+           volume information through the internal `_volume` method.
 
         Returns
         -------
@@ -357,11 +361,12 @@ class MetisLMSSpectralTrace(SpectralTrace):
         `x_max`, `y_max`. Spatial limits refer to the sky and are given in
         arcsec.
         """
-        # TODO: Specify in the warning where the functionality should go!
         warnings.warn("The fov_grid method is deprecated and will be removed "
-                      "in a future release. The functionality should be moved"
-                      " somewhere else.", DeprecationWarning, stacklevel=2)
+                      "in a future release.", DeprecationWarning, stacklevel=2)
+        return self._volume()
 
+    def _volume(self):
+        """Return the source space volume required by this slice trace."""
         aperture = self._file["Aperture list"].data[self.meta["slice"]]
         x_min = aperture["left"]
         x_max = aperture["right"]

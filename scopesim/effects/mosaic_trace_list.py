@@ -47,7 +47,7 @@ class MosaicSpectralTraceList(SpectralTraceList):
             logger.debug("Executing %s, FoV setup", self.meta["name"])
             # Create a single volume that covers the aperture and
             # the maximum wavelength range of the grating
-            volumes = [spectral_trace.fov_grid()
+            volumes = [spectral_trace._volume()
                        for spectral_trace in self.spectral_traces.values()]
             wave_min = min(vol["wave_min"] for vol in volumes)
             wave_max = max(vol["wave_max"] for vol in volumes)

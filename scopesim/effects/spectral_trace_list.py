@@ -165,7 +165,7 @@ class SpectralTraceList(Effect):
         """
         wlim, xlim, ylim = [], [], []
         for thetrace in self.spectral_traces.values():
-            fov = thetrace.fov_grid()
+            fov = thetrace._volume()
             if "wave_min" in fov:
                 wlim.extend([fov["wave_min"], fov["wave_max"]])
             if "x_min" in fov:
@@ -200,14 +200,10 @@ class SpectralTraceList(Effect):
             logger.debug("%s applied to %s", self.display_name,
                          obj.__class__.__name__)
             # Setup of FieldOfView object
-            # volumes = [spectral_trace.fov_grid()
-            #            for spectral_trace in self.spectral_traces.values()]
-
             new_vols_list = []
 
-            # for vol in volumes:
             for spt in self.spectral_traces.values():
-                vol = spt.fov_grid()
+                vol = spt._volume()
                 wave_edges = [vol["wave_min"], vol["wave_max"]]
                 if "x_min" in vol:
                     x_edges = [vol["x_min"], vol["x_max"]]

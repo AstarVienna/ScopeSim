@@ -104,6 +104,10 @@ class SpectralTrace:
         """
         Provide information on the source space volume required by the effect.
 
+        .. deprecated::
+           Use is discouraged for external callers; the effect accesses the
+           volume information through the internal `_volume` method.
+
         Returns
         -------
         A dictionary with entries `wave_min` and `wave_max`.
@@ -112,6 +116,10 @@ class SpectralTrace:
         """
         warnings.warn("The fov_grid method is deprecated and will be removed "
                       "in a future release.", DeprecationWarning, stacklevel=2)
+        return self._volume()
+
+    def _volume(self):
+        """Return the source space volume required by this trace."""
         aperture_id = self.meta["aperture_id"]
         lam_arr = self.table[self.meta["wave_colname"]]
 
