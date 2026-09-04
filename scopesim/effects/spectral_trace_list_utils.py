@@ -1063,13 +1063,18 @@ def _xiy2xlam_fit(layout, params):
 
 
 def make_image_interpolations(hdulist, **kwargs):
-    """Create 2D interpolation functions for images."""
+    """Create 2D interpolation functions for images.
+
+    The interpolation functions are called with (j, i) pixel coordinates,
+    i.e. the first argument corresponds to the row (NAXIS2) axis of the
+    image, the second to the column (NAXIS1) axis.
+    """
     interps = []
     for hdu in hdulist:
         if isinstance(hdu, fits.ImageHDU):
             interps.append(
-                RectBivariateSpline(np.arange(hdu.header["NAXIS1"]),
-                                    np.arange(hdu.header["NAXIS2"]),
+                RectBivariateSpline(np.arange(hdu.header["NAXIS2"]),
+                                    np.arange(hdu.header["NAXIS1"]),
                                     hdu.data, **kwargs)
             )
     return interps
