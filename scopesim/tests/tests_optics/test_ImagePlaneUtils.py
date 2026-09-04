@@ -229,6 +229,50 @@ class TestOverlayImage:
             plt.show()
 
 
+class TestOverlayImageSnapping:
+    """The origin, not the centre, must be snapped to the pixel grid.
+
+    ``ceil(coords) - shape // 2`` snapped the centre instead, which is off by
+    up to a whole pixel whenever ``coords`` is not on the lattice implied by
+    ``small_im.shape``, in a direction that flips with the parity of that
+    shape. Adjacent FOVs of different sizes were therefore displaced opposite
+    ways, and their shared edge gained a duplicated or a dropped row/column.
+    """
+
+    @pytest.mark.parametrize("size", [1, 2, 3, 4, 7, 8])
+    def test_places_image_on_its_own_lattice_without_shift(self, size):
+        big = np.zeros((32, 32))
+        small = np.ones((size, size))
+        # centre coordinate that the shape's own lattice implies
+        centre = 10 + (size - 1) / 2
+        imp_utils.overlay_image(small, big, (centre, centre))
+        rows = np.where(big.any(axis=1))[0]
+        assert rows[0] == 10
+        assert rows[-1] == 10 + size - 1
+
+    @pytest.mark.parametrize("size", [1, 2, 3, 4, 7, 8])
+    def test_snaps_sub_pixel_offset_the_same_way_for_any_shape(self, size):
+        # A 0.3 pix offset must never move the image by a whole pixel, whatever
+        # the parity of the shape.
+        big = np.zeros((32, 32))
+        small = np.ones((size, size))
+        centre = 10 + (size - 1) / 2 + 0.3
+        imp_utils.overlay_image(small, big, (centre, centre))
+        rows = np.where(big.any(axis=1))[0]
+        assert rows[0] == 10
+        assert rows[-1] == 10 + size - 1
+
+    def test_adjacent_differently_sized_images_tile_exactly(self):
+        # Mimics chunked FOVs, where the last chunk is smaller than the rest.
+        big = np.zeros((1, 20))
+        origin = 0
+        for size in (8, 8, 4):
+            small = np.ones((1, size))
+            imp_utils.overlay_image(small, big, (origin + (size - 1) / 2, 0))
+            origin += size
+        assert (big == 1).all()
+
+
 class TestRescaleImageHDU:
     @pytest.mark.parametrize("pixel_scale", [0.3, 0.5, 1, 2, 3])
     def test_rescales_a_2D_imagehdu(self, pixel_scale):

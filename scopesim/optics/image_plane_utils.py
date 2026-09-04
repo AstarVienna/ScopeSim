@@ -437,13 +437,32 @@ def overlay_image(small_im, big_im, coords, mask=None, sub_pixel=False):
         coords = np.array([*coords, (big_im.shape[0] - 1) / 2])
 
     # FIXME: this would not be necessary if we used WCS instead of manual 2pix
-    # Round to 1e-4 pix before ceil: WCS deg-space round-trips leave
-    # float dust of order 1e-8..1e-6 pix on integer-valued coords, which
-    # ceil would amplify to a full-pixel shift; genuine sub-pixel intent
-    # cannot be finer than 0.5 pix here (sub_pixel is not implemented),
-    # and the half-integer even-shape convention is preserved exactly.
-    coords = np.ceil(np.asarray(coords).round(4)).astype(np.intp)
-    idx = coords.astype(int)[::-1] - np.array(small_im.shape) // 2
+    # Round to 1e-4 pix first: WCS deg-space round-trips leave float dust of
+    # order 1e-8..1e-6 pix on integer-valued coords, which the snap below
+    # would otherwise amplify to a full-pixel shift; genuine sub-pixel intent
+    # cannot be finer than 0.5 pix here (sub_pixel is not implemented).
+    coords = np.asarray(coords, dtype=float).round(4)
+
+    # `idx` is the origin, in array order, at which small_im must be placed to
+    # centre it on `coords` (both are 0-based pixel-centre coordinates, as
+    # returned by WCS.wcs_world2pix(..., 0)).
+    #
+    # Snap that origin, NOT `coords` itself. The old expression
+    #     np.ceil(coords)[::-1] - np.array(small_im.shape) // 2
+    # is off by up to a whole pixel whenever `coords` is not on the lattice
+    # small_im implies (half-integer for even shapes, integer for odd ones),
+    # and the direction of that error flips with the parity of the shape. Two
+    # adjacent FOVs of different sizes therefore get displaced opposite ways
+    # and their shared edge picks up a duplicated or a dropped row/column.
+    # Snapping the origin instead keeps every placement consistent, whatever
+    # the shape.
+    #
+    # Half-integer origins (a real sub-pixel shift, which sub_pixel=True would
+    # have to handle properly) are rounded towards the lower index, matching
+    # what the old expression did for even shapes.
+    idx = np.ceil(
+        coords[::-1] - (np.array(small_im.shape) - 1) / 2 - 0.5
+    ).astype(np.intp)
 
     # Image ranges
     idx1 = np.maximum(0, idx)
