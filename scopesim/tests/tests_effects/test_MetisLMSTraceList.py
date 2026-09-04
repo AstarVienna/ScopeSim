@@ -16,6 +16,30 @@ def patch_mock_path_metis(mock_dir):
     with patch("scopesim.rc.__search_path__", [metis_dir]):
         yield
 
+class TestDetectorLayoutCache:
+    def test_layout_file_is_read_only_once(self, mock_dir, monkeypatch):
+        from scopesim.effects import metis_lms_trace_list as mlt
+
+        mlt._read_detector_layout.cache_clear()
+        calls = []
+        real_read = mlt.ioascii.read
+
+        def counting_read(*args, **kwargs):
+            calls.append(args)
+            return real_read(*args, **kwargs)
+
+        monkeypatch.setattr(mlt.ioascii, "read", counting_read)
+
+        path = str(mock_dir / "files" / "LIST_detector_layout.dat")
+        first = mlt._read_detector_layout(path)
+        second = mlt._read_detector_layout(path)
+
+        assert len(calls) == 1
+        assert first is second
+        mlt._read_detector_layout.cache_clear()
+
+
+
 @pytest.mark.usefixtures("patch_mock_path_metis")
 class TestPredisperserAngle:
     @pytest.mark.parametrize("coeffs,wavelen,expected",

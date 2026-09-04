@@ -4,6 +4,7 @@ from itertools import product
 from collections.abc import Iterable
 
 import numpy as np
+from numpy.typing import ArrayLike, NDArray
 from astropy import units as u
 from astropy.wcs import WCS, find_all_wcs
 from astropy.io import fits
@@ -154,9 +155,11 @@ def _make_bounding_header_for_tables(*tables, pixel_scale=1*u.arcsec):
     return hdr
 
 
-def create_wcs_from_points(points: np.ndarray,
-                           pixel_scale: float,
-                           wcs_suffix: str = "") -> tuple[WCS, np.ndarray]:
+def create_wcs_from_points(
+    points: ArrayLike,
+    pixel_scale: float,
+    wcs_suffix: str = "",
+) -> tuple[WCS, NDArray]:
     """
     Create `astropy.wcs.WCS` instance that fits all points inside.
 
@@ -1017,9 +1020,14 @@ def calc_footprint(header, wcs_suffix="", new_unit: str = None):
     return xy1
 
 
-def calc_table_footprint(table: Table, x_name: str, y_name: str,
-                         tbl_unit: str, new_unit: str,
-                         padding=None) -> np.ndarray:
+def calc_table_footprint(
+    table: Table,
+    x_name: str,
+    y_name: str,
+    tbl_unit: str,
+    new_unit: str,
+    padding: u.Quantity | None = None,
+) -> NDArray:
     """
     Equivalent to ``calc_footprint()``, but for tables instead of images.
 
@@ -1130,10 +1138,12 @@ def _get_unit_from_headers(*headers, wcs_suffix: str = "") -> str:
     return unit
 
 
-def det_wcs_from_sky_wcs(sky_wcs: WCS,
-                         pixel_scale: float,
-                         plate_scale: float,
-                         naxis=None) -> tuple[WCS, np.ndarray]:
+def det_wcs_from_sky_wcs(
+    sky_wcs: WCS,
+    pixel_scale: float,
+    plate_scale: float,
+    naxis: tuple[int, int] | None = None,
+) -> tuple[WCS, NDArray]:
     """
     Create detector WCS from celestial WCS using pixel and plate scales.
 

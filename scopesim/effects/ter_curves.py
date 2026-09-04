@@ -4,26 +4,38 @@
 import warnings
 from typing import ClassVar
 from collections.abc import Collection, Iterable
-from pooch import retrieve
 import numpy as np
+from numpy.typing import ArrayLike, NDArray
 from scipy import integrate
 from astropy import units as u
 from astropy.io import fits
 from astropy.table import Table
+from synphot import SpectralElement, SourceSpectrum
 
 import skycalc_ipy
 
 from .effects import Effect
-from .ter_curves_utils import (add_edge_zeros, combine_two_spectra,
-                               apply_throughput_to_cube, download_svo_filter,
-                               download_svo_filter_list)
+from .ter_curves_utils import (
+    add_edge_zeros,
+    download_svo_filter,
+    download_svo_filter_list,
+)
 from ..optics.fov_volume_list import FovVolumeList
 from ..optics.surface import SpectralSurface
 from ..source.source import Source
-from ..source.source_fields import (CubeSourceField, SpectrumSourceField,
-                                    BackgroundSourceField)
-from ..utils import (from_currsys, quantify, check_keys, find_file,
-                     figure_factory, get_logger)
+from ..source.source_fields import (
+    CubeSourceField,
+    SpectrumSourceField,
+    BackgroundSourceField,
+)
+from ..utils import (
+    from_currsys,
+    quantify,
+    check_keys,
+    find_file,
+    figure_factory,
+    get_logger,
+)
 from ..server.download_utils import create_retriever
 
 logger = get_logger(__name__)
@@ -109,53 +121,64 @@ class TERCurve(Effect):
             self.surface.table = data
             self.surface.table.meta.update(self.meta)
 
+    def __call__(self, data: ArrayLike, waveset: u.Quantity[u.um]) -> NDArray:
+        return data * self.throughput(waveset).value[:, None, None]
+
+    def _apply_to_fvl(self, fvl: FovVolumeList) -> None:
+        logger.debug("Apply %s, FoV setup", self.display_name)
+
+        wave = self.surface.throughput.waveset
+        thru = self.surface.throughput(wave)
+        valid_waves = np.argwhere(thru > 0)
+        wave_min = wave[max(0, valid_waves[0][0] - 1)]
+        wave_max = wave[min(len(wave) - 1, valid_waves[-1][0] + 1)]
+
+        fvl.shrink("wave", [wave_min.to_value(u.um), wave_max.to_value(u.um)])
+
+    def _apply_to_src(self, src: Source) -> None:
+        logger.debug("Apply %s, Source spectra", self.display_name)
+
+        self.meta = from_currsys(self.meta, self.cmds)
+        wave_min = quantify(self.meta["wave_min"], u.um).to(u.AA)
+        wave_max = quantify(self.meta["wave_max"], u.um).to(u.AA)
+
+        thru = self.throughput
+
+        # apply transmission to source spectra
+        for fld in src.fields:
+            if isinstance(fld, CubeSourceField):
+                fld.field.data = self(fld.field.data, fld.waveset)
+            elif isinstance(fld, SpectrumSourceField):
+                fld.spectra = {
+                    isp: spec * thru  # This works because synphot!
+                    for isp, spec in fld.spectra.items()
+                }
+            else:
+                # Rather log than raise here, can still move on
+                logger.error(
+                    "Source field is neither Cube nor has spectra, this "
+                    "should not happen, but moving on.")
+
+        # add the effect background to the source background field
+        if self.background_source is not None:
+            for bgs in self.background_source:
+                src.append(bgs)
+
     def apply_to(self, obj, **kwargs):
         if isinstance(obj, Source):
-            self.meta = from_currsys(self.meta, self.cmds)
-            wave_min = quantify(self.meta["wave_min"], u.um).to(u.AA)
-            wave_max = quantify(self.meta["wave_max"], u.um).to(u.AA)
-
-            thru = self.throughput
-
-            # apply transmission to source spectra
-            for fld in obj.fields:
-                if isinstance(fld, CubeSourceField):
-                    fld.field = apply_throughput_to_cube(
-                        fld.field, thru, fld.waveset)
-                elif isinstance(fld, SpectrumSourceField):
-                    fld.spectra = {
-                        isp: combine_two_spectra(spec, thru, "multiply",
-                                                 wave_min, wave_max)
-                        for isp, spec in fld.spectra.items()
-                    }
-                else:
-                    # Rather log than raise here, can still move on
-                    logger.error("Source field is neither Cube nor has "
-                                 "spectra, this shouldn't occur...")
-
-            # add the effect background to the source background field
-            if self.background_source is not None:
-                for bgs in self.background_source:
-                    obj.append(bgs)
+            self._apply_to_src(obj)
 
         if isinstance(obj, FovVolumeList):
-            wave = self.surface.throughput.waveset
-            thru = self.surface.throughput(wave)
-            valid_waves = np.argwhere(thru > 0)
-            wave_min = wave[max(0, valid_waves[0][0] - 1)]
-            wave_max = wave[min(len(wave) - 1, valid_waves[-1][0] + 1)]
-
-            obj.shrink("wave", [wave_min.to_value(u.um),
-                                wave_max.to_value(u.um)])
+            self._apply_to_fvl(obj)
 
         return obj
 
     @property
-    def emission(self):
+    def emission(self) -> SourceSpectrum:
         return self.surface.emission
 
     @property
-    def throughput(self):
+    def throughput(self) -> SpectralElement:
         return self.surface.throughput
 
     @property
@@ -166,23 +189,16 @@ class TERCurve(Effect):
             bkg_hdr = fits.Header()
 
             bkg_hdr.update({
+                "ROLE": "background",  # not used yet
                 "BG_SRC": True,
                 "BG_SURF": self.display_name,
                 "SPEC_REF": 0,
-                # Seem those are not needed...
-                # "CUNIT1": "ARCSEC",
-                # "CUNIT2": "ARCSEC",
-                # "CDELT1": 0,
-                # "CDELT2": 0,
                 "BUNIT": "photlam arcsec-2",
                 "SOLIDANG": "arcsec-2",
             })
             bkg_fld = BackgroundSourceField(field=None, spectra=bkg_spec, header=bkg_hdr)
             bkg_src = Source(field=bkg_fld)
 
-            # Before BackgroundSourceField:
-            # bkg_hdu = fits.ImageHDU(header=bkg_hdr)
-            # bkg_src = Source(image_hdu=bkg_hdu, spectra=flux)
             self._background_source = bkg_src
 
         return [self._background_source]
@@ -286,7 +302,8 @@ class AtmoLibraryTERCurve(AtmosphericTERCurve):
     extension 3 etc.
       Tables with columns `transmission` and `emission`.
 
-    Currently the curves are distinguished by a single parameter (`pwv`).
+    Currently the curves are distinguished by a single parameter, whose name
+    is specified by `parameter` (cf. the examples below).
 
     .. versionadded:: 0.11.1
 
@@ -298,12 +315,14 @@ class AtmoLibraryTERCurve(AtmosphericTERCurve):
           class: AtmoLibraryTERCurve
           kwargs:
              filename: "!ATMO.spectrum.filename
+             parameter: "pwv"
              pwv: 10.
 
         - name: atmosphere
           class: AtmoLibraryTERCurve
           kwargs:
-             pwv: 25.
+             parameter: "relH"
+             relH: 0.25
              remote_filename: "!ATMO.spectrum.filename"
 
     The location of a downloaded file is provided by `.meta['filename']`.
@@ -318,9 +337,9 @@ class AtmoLibraryTERCurve(AtmosphericTERCurve):
             remote_filename = from_currsys(kwargs["remote_filename"], cmds)
             kwargs["filename"] = self._download_library(remote_filename)
 
-        self.param = 'pwv'
         super().__init__(cmds=cmds, **kwargs)
         self.meta.update(kwargs)
+        self.param = self.meta['parameter']
         self.load_table_from_library()
 
     def update(self, **kwargs):
@@ -343,8 +362,7 @@ class AtmoLibraryTERCurve(AtmosphericTERCurve):
 
     def load_table_from_library(self):
         """Load the appropriate library extension based on parameter value."""
-        param = 'pwv'
-
+        param = self.param
         self.value = from_currsys(self.meta[param], self.cmds)
         self.ext_data = self._file[0].header["EDATA"]
         self.ext_cat = self._file[0].header["ECAT"]
@@ -367,10 +385,12 @@ class AtmoLibraryTERCurve(AtmosphericTERCurve):
             tbl.add_column(wavelength, index=0)
 
         tbl.meta["wavelength_unit"] = tbl["wavelength"].unit
-        tbl.meta["emission_unit"] = tbl["emission"].unit
+        if "emission" in tbl.colnames:
+            tbl.meta["emission_unit"] = tbl["emission"].unit
 
         self.surface.table = tbl
         self.surface.meta.update(tbl.meta)
+        self.meta.update(tbl.meta)
 
     def __str__(self) -> str:
         """Return str(self)."""
@@ -600,34 +620,6 @@ class FilterCurve(TERCurve):
         # TODO: maybe use actually masked table here?
         self.table["transmission"][mask] = 0
 
-    def fov_grid(self, which="waveset", **kwargs):
-        warnings.warn("The fov_grid method is deprecated and will be removed "
-                      "in a future release.", DeprecationWarning, stacklevel=2)
-        if which == "waveset":
-            self.meta.update(kwargs)
-            self.meta = from_currsys(self.meta, self.cmds)
-            # ..todo:: replace the 101 with a variable in !SIM
-            wave = np.linspace(self.meta["wave_min"],
-                               self.meta["wave_max"], 101)
-            wave = quantify(wave, u.um)
-            throughput = self.surface.transmission(wave)
-            min_thru = self.meta["minimum_throughput"]
-            valid_waves = np.where(throughput.value > min_thru)[0]
-            if len(valid_waves) > 0:
-                wave_edges = [min(wave[valid_waves].value),
-                              max(wave[valid_waves].value)] * u.um
-            else:
-                raise ValueError("No transmission found above the threshold {}"
-                                 " in this wavelength range {}. Did you open "
-                                 "the shutter?"
-                                 "".format(self.meta["minimum_throughput"],
-                                           [self.meta["wave_min"],
-                                            self.meta["wave_max"]]))
-        else:
-            wave_edges = []
-
-        return wave_edges
-
     @property
     def fwhm(self):
         wave = self.surface.wavelength
@@ -784,11 +776,6 @@ class FilterWheelBase(Effect):
     @property
     def throughput(self):
         return self.current_filter.throughput
-
-    def fov_grid(self, which="waveset", **kwargs):
-        warnings.warn("The fov_grid method is deprecated and will be removed "
-                      "in a future release.", DeprecationWarning, stacklevel=2)
-        return self.current_filter.fov_grid(which=which, **kwargs)
 
     def change_filter(self, filtername=None):
         """Change the current filter."""

@@ -152,6 +152,8 @@ class TestAddImageHDUtoImageHDU:
         assert np.sum(new.data) == small_sum
 
 
+    # face is downloaded from the internet.
+    @pytest.mark.webtest
     def test_python_image_coords(self):
         # numpy uses a system of im[y, x]
         # numpy.shape[0] = y_len, numpy.shape[1] = x_len

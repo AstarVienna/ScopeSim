@@ -5,6 +5,7 @@ from typing import ClassVar
 from collections.abc import Callable, Mapping
 
 import numpy as np
+from numpy.typing import NDArray
 from astropy import units as u
 from astropy.modeling.functional_models import Gaussian2D
 
@@ -22,7 +23,7 @@ def gaussian2d(
     mu: tuple[float, float] = (0.0, 0.0),
     sigma: tuple[float, float] = (2000.0, 2000.0),
     theta: u.Quantity[u.deg] | float = 0.0 * u.deg,
-) -> np.ndarray:
+) -> NDArray:
     """
     2D elliptical Gaussian to be used for vignetting map.
 
@@ -45,7 +46,7 @@ def gaussian2d(
 
     Returns
     -------
-    np.ndarray
+    NDArray
         Vignetting map.
 
     """
@@ -71,7 +72,7 @@ def quadratic_vignetting(
     r_ref: float | None = None,
     mu: tuple[float, float] = (0.0, 0.0),
     stretch: tuple[float, float, float, float] = (1.0, 1.0, 1.0, 1.0),
-) -> np.ndarray:
+) -> NDArray:
     """
     Quadratic vignetting pattern with independent stretch factors.
 
@@ -97,7 +98,7 @@ def quadratic_vignetting(
 
     Returns
     -------
-    np.ndarray
+    NDArray
         Vignetting map.
 
     """

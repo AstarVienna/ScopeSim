@@ -15,6 +15,7 @@ import functools
 from docutils.core import publish_string
 import yaml
 import numpy as np
+from numpy.typing import NDArray
 import matplotlib as mpl
 from matplotlib import pyplot as plt
 from astropy import units as u
@@ -350,7 +351,7 @@ def zeros_from_header(
     header: fits.Header,
     dtype: type | np.dtype = float,
     ndims: int | None = None,
-) -> np.ndarray:
+) -> NDArray:
     """
     Create all-zero array of the shape given by NAXISn keywords in `header`.
 
@@ -369,7 +370,7 @@ def zeros_from_header(
 
     Returns
     -------
-    arr : np.ndarray
+    arr : NDArray
         All-zero array of desired shape and dtype.
 
     """

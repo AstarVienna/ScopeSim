@@ -40,6 +40,15 @@ def fixture_bbsource():
                      bb_temp=1000*u.K,
                      is_temp=300*u.K,
                      wcu_temp=300*u.K,
+                     laser_l_wave=3.39,    # [um]
+                     laser_l_power=5e-3,   # [W]
+                     laser_t_wave=[4.70],  # [um], array
+                     laser_t_wave_limits=[1., 30.],  # [um]
+                     laser_t_power=70e-3,  # [W]
+                     laser_m_wave=5.26,    # [um]
+                     laser_m_power=20e-3,  # [W]
+                     laser_n_wave=10.4,    # [um]
+                     laser_n_power=2.e-3,  # [W]
                      bb_aperture=1.,
                      bb_to_is=None,
                      rho_tube=0.95,
@@ -211,7 +220,18 @@ class TestWCUSource:
         bbsource.set_lamp("laser")
         intens_2 = np.sum(bbsource.intens_lamp)
 
-        assert intens_2 / intens_1 == ft_2 / ft_1
+        npt.assert_allclose(intens_2 / intens_1, ft_2 / ft_1)
+
+
+    def test_can_tune_laser(self, bbsource):
+        bbsource.set_lamp("laser")
+        assert bbsource.meta["laser_t_wave"] == [4.70]
+        bbsource.tune_laser(4.72)
+        assert bbsource.meta["laser_t_wave"] == [4.72]
+        bbsource.tune_laser(np.linspace(4.68, 4.72, 10))
+        assert len(bbsource.meta["laser_t_wave"]) == 10
+        bbsource.tune_laser([])
+        assert bbsource.meta["laser_t_wave"] == [0.001]
 
 
 @pytest.fixture(name="fpmask", scope="function")

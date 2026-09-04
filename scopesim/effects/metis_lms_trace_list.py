@@ -3,6 +3,7 @@
 
 import copy
 import warnings
+from functools import lru_cache
 
 from tqdm.auto import tqdm
 import numpy as np
@@ -16,9 +17,11 @@ from astropy import units as u
 
 from ..utils import from_currsys, find_file, quantify, get_logger
 from .spectral_trace_list import SpectralTraceList
-from .spectral_trace_list_utils import SpectralTrace
-from .spectral_trace_list_utils import Transform2D
-from .spectral_trace_list_utils import make_image_interpolations
+from .spectral_trace_list_utils import (
+    SpectralTrace,
+    Transform2D,
+    make_image_interpolations,
+)
 from .apertures import ApertureMask
 from .ter_curves import TERCurve
 from ..optics.fov import FieldOfView, FieldOfView3D
@@ -26,6 +29,17 @@ from ..optics.fov_volume_list import FovVolumeList
 
 
 logger = get_logger(__name__)
+
+
+@lru_cache(maxsize=8)
+def _read_detector_layout(filename):
+    """Read (and cache) a detector layout file.
+
+    The layout is required by ``MetisLMSSpectralTrace.fov_grid``, which is
+    called several times for each of the 28 slices; without the cache the
+    same file is read and parsed from disk on every call.
+    """
+    return ioascii.read(find_file(filename))
 
 
 class MetisLMSSpectralTraceList(SpectralTraceList):
@@ -114,28 +128,44 @@ class MetisLMSSpectralTraceList(SpectralTraceList):
 
                 slicecube = np.zeros((n_z, ny_slice, n_x))
                 for islice in range(n_z):
-                    ifov = RectBivariateSpline(np.arange(n_y),
-                                               np.arange(n_x),
-                                               fovcube[islice], kx=1, ky=1)
+                    ifov = RectBivariateSpline(
+                        np.arange(n_y),
+                        np.arange(n_x),
+                        fovcube[islice],
+                        kx=1,
+                        ky=1,
+                    )
                     slicecube[islice] = ifov(yfov, xfov, grid=False)
 
-                slicefov = FieldOfView3D(obj.header,
-                                         [obj.meta["wave_min"],
-                                          obj.meta["wave_max"]])
+                slicefov = FieldOfView3D(
+                    obj.header,
+                    [obj.meta["wave_min"], obj.meta["wave_max"]],
+                )
                 slicefov.detector_header = obj.detector_header
                 slicefov.meta["xi_min"] = obj.meta["xi_min"]
                 slicefov.meta["xi_max"] = obj.meta["xi_max"]
                 slicefov.meta["trace_id"] = sptid
-                slicefov.cube = fits.ImageHDU(header=slicewcs.to_header(),
-                                              data=slicecube)
+                slicefov.cube = fits.ImageHDU(
+                    header=slicewcs.to_header(),
+                    data=slicecube,
+                )
                 # slicefov.cube.writeto(f"slicefov_{sptid}.fits", overwrite=True)
-                slicefov.hdu = spt.map_spectra_to_focal_plane(slicefov)
-                if slicefov.hdu is not None:
-                    sxmin = slicefov.hdu.header["XMIN"]
-                    sxmax = slicefov.hdu.header["XMAX"]
-                    symin = slicefov.hdu.header["YMIN"]
-                    symax = slicefov.hdu.header["YMAX"]
-                    fovimage[symin:symax, sxmin:sxmax] += slicefov.hdu.data
+
+                try:
+                    # If footprint is outside FOV, this will assign None to the hdu
+                    slicefov.hdu = spt.map_spectra_to_focal_plane(slicefov)
+                except ValueError as err:  # xlim_mm is None
+                    logger.error(err)
+                    continue
+
+                if slicefov.hdu is None:  # footprint outside FOV
+                    continue
+
+                sxmin = slicefov.hdu.header["XMIN"]
+                sxmax = slicefov.hdu.header["XMAX"]
+                symin = slicefov.hdu.header["YMIN"]
+                symax = slicefov.hdu.header["YMAX"]
+                fovimage[symin:symax, sxmin:sxmax] += slicefov.hdu.data
 
             obj.hdu = fits.ImageHDU(data=fovimage, header=obj.detector_header)
 
@@ -151,11 +181,13 @@ class MetisLMSSpectralTraceList(SpectralTraceList):
         self.meta["predisperser"] = tempres["Predisperser"]
 
         spec_traces = {}
-        for sli in np.arange(self.meta["nslice"]):
-            slicename = "Slice " + str(sli + 1)
+        for sli in range(self.meta["nslice"]):
+            slicename = f"Slice {sli + 1}"
             spec_traces[slicename] = MetisLMSSpectralTrace(
                 self._file,
-                spslice=sli, params=self.meta)
+                spslice=sli,
+                params=self.meta,
+            )
 
         self.spectral_traces = spec_traces
 
@@ -223,11 +255,25 @@ class MetisLMSSpectralTraceList(SpectralTraceList):
         for i, spt in enumerate(self.spectral_traces.values()):
             spt.wave_min = wave_min
             spt.wave_max = wave_max
-            result = spt.rectify(hdulist, interps=interps,
-                                 wave_min=wave_min, wave_max=wave_max,
-                                 xi_min=xi_min, xi_max=xi_max,
-                                 bin_width=dwave,
-                                 fit_inverse=fit_inverse)
+
+            try:
+                result = spt.rectify(
+                    hdulist,
+                    interps=interps,
+                    wave_min=wave_min,
+                    wave_max=wave_max,
+                    xi_min=xi_min,
+                    xi_max=xi_max,
+                    bin_width=dwave,
+                    fit_inverse=fit_inverse,
+                )
+            except (KeyError, ValueError) as err:
+                logger.error(err)
+                continue
+
+            if result is None:  # Outside filter range
+                continue
+
             cube[:, i, :] = result.data.T
 
         # FIXME: use wcs object here
@@ -295,7 +341,7 @@ class MetisLMSSpectralTrace(SpectralTrace):
         super().__init__(polyhdu, **params)
 
         self._file = hdulist
-        self.meta["description"] = "Slice " + str(spslice + 1)
+        self.meta["description"] = f"Slice {spslice + 1}"
         self.meta["trace_id"] = f"Slice {spslice + 1}"
         self.meta.update(params)
         # Provisional:
@@ -323,7 +369,7 @@ class MetisLMSSpectralTrace(SpectralTrace):
         y_max = aperture["top"]
 
         filename_det_layout = from_currsys("!DET.layout.file_name", cmds=self.cmds)
-        layout = ioascii.read(find_file(filename_det_layout))
+        layout = _read_detector_layout(filename_det_layout)
         det_lims = {}
         xhw = layout["pixel_size"] * layout["x_size"] / 2
         yhw = layout["pixel_size"] * layout["y_size"] / 2
