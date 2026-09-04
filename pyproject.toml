@@ -107,7 +107,10 @@ filterwarnings = [
     "ignore:invalid value encountered in divide:RuntimeWarning",
     "ignore:Cannot merge meta key.*:astropy.utils.metadata.MergeConflictWarning",
     "ignore::astropy.wcs.wcs.FITSFixedWarning",
-    "default:The fov_grid*:DeprecationWarning",
+    # Only SpectralTraceList still calls the deprecated fov_grid internally.
+    # Delete this line once that call moves to an internal method; every other
+    # fov_grid DeprecationWarning is now an error.
+    "default:The fov_grid*:DeprecationWarning:scopesim.effects.spectral_trace_list",
     # Pytest Notebook stuff
     "ignore:Proactor*:RuntimeWarning",
 ]

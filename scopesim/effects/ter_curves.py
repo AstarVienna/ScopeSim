@@ -130,6 +130,14 @@ class TERCurve(Effect):
         wave = self.surface.throughput.waveset
         thru = self.surface.throughput(wave)
         valid_waves = np.argwhere(thru > 0)
+
+        if not len(valid_waves):
+            raise ValueError(
+                f"No transmission found in {self.display_name} over the "
+                f"wavelength range [{wave.min().to_value(u.um):.3f}, "
+                f"{wave.max().to_value(u.um):.3f}] um. "
+                "Did you open the shutter?")
+
         wave_min = wave[max(0, valid_waves[0][0] - 1)]
         wave_max = wave[min(len(wave) - 1, valid_waves[-1][0] + 1)]
 
