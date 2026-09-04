@@ -6,6 +6,8 @@ import numpy as np
 from synphot import Empirical1D, SourceSpectrum
 from synphot.units import PHOTLAM
 from astropy import units as u
+from astropy.io import fits
+from astropy.wcs import WCS
 
 from scopesim.optics.fov import FieldOfView, extract_range_from_spectrum
 from scopesim.optics import image_plane_utils as imp_utils
@@ -128,3 +130,72 @@ class TestExtractRangeFromSpectrum:
         extract_range_from_spectrum(spec, waverange)
 
         assert msg in caplog.text
+
+class TestExtractAreaKeepsTheInputPixelGrid:
+    """The cutout is made of input pixels, so its WCS must say so.
+
+    The cutout WCS used to be re-derived from the world corners *before* the
+    slice was grown outwards to whole input pixels. That gave a WCS for a
+    differently sized image (``NAXISn`` disagreed with ``data.shape``, silently
+    corrected by ``fits.ImageHDU``, which left ``CRPIXn`` describing the wrong
+    array) sitting on the FOV's pixel lattice rather than the input's. The
+    cutout was then mis-registered by up to a whole pixel when projected, and
+    by differing amounts for neighbouring FOVs, so their shared edge gained a
+    duplicated or a dropped row/column.
+    """
+
+    @staticmethod
+    def _image_hdu(naxis=32, pixel_scale=0.1, crval=(0.0, 0.0)):
+        """Image with a distinct value in every pixel, in deg."""
+        skywcs = WCS(naxis=2)
+        skywcs.wcs.ctype = ["LINEAR", "LINEAR"]
+        skywcs.wcs.cunit = ["deg", "deg"]
+        skywcs.wcs.cdelt = 2 * [pixel_scale / 3600]
+        skywcs.wcs.crval = list(crval)
+        skywcs.wcs.crpix = 2 * [(naxis + 1) / 2]
+        hdr = skywcs.to_header()
+        hdr["BUNIT"] = ""
+        data = np.arange(naxis * naxis, dtype=float).reshape(naxis, naxis)
+        return fits.ImageHDU(header=hdr, data=data)
+
+    @staticmethod
+    def _fov(x_min, x_max, y_min, y_max, pixel_scale=0.1):
+        skyhdr = imp_utils.header_from_list_of_xy(
+            [x_min / 3600, x_max / 3600], [y_min / 3600, y_max / 3600],
+            pixel_scale=pixel_scale / 3600)
+        dethdr, _ = imp_utils.det_wcs_from_sky_wcs(
+            WCS(skyhdr), pixel_scale, pixel_scale / 0.01)
+        skyhdr.update(dethdr.to_header())
+        return FieldOfView(skyhdr, [1.0, 2.0])
+
+    # FOVs deliberately offset from the image's pixel edges by a fraction of a
+    # pixel, which is what chunking produces whenever the detector extent is
+    # not a whole number of pixels.
+    @pytest.mark.parametrize("offset", [0.0, 0.16, 0.34, 0.5, 0.68, 0.84])
+    def test_naxis_matches_data_shape(self, offset):
+        hdu = self._image_hdu()
+        fov = self._fov(-0.8 + offset * 0.1, 0.0 + offset * 0.1,
+                        -0.8 + offset * 0.1, 0.0 + offset * 0.1)
+        cut = fov.extract_area_from_imagehdu(hdu, fov.get_corners("deg")[0])
+        assert (cut.header["NAXIS2"], cut.header["NAXIS1"]) == cut.data.shape
+
+    @pytest.mark.parametrize("offset", [0.0, 0.16, 0.34, 0.5, 0.68, 0.84])
+    def test_cutout_pixels_keep_their_world_coordinates(self, offset):
+        hdu = self._image_hdu()
+        fov = self._fov(-0.8 + offset * 0.1, 0.0 + offset * 0.1,
+                        -0.8 + offset * 0.1, 0.0 + offset * 0.1)
+        cut = fov.extract_area_from_imagehdu(hdu, fov.get_corners("deg")[0])
+
+        # every cutout value must sit at the world coordinate its value had in
+        # the input image
+        in_wcs = WCS(hdu.header, naxis=2)
+        cut_wcs = WCS(cut.header, naxis=2)
+        ny, nx = cut.data.shape
+        yy, xx = np.indices((ny, nx))
+        world = cut_wcs.wcs_pix2world(
+            np.column_stack([xx.ravel(), yy.ravel()]), 0)
+        back = in_wcs.wcs_world2pix(world, 0).round(6)
+        expected = hdu.data[back[:, 1].astype(int), back[:, 0].astype(int)]
+        np.testing.assert_array_equal(cut.data.ravel(), expected)
+        # ... and land on whole input pixels, not between them
+        np.testing.assert_allclose(back, back.round(), atol=1e-6)
