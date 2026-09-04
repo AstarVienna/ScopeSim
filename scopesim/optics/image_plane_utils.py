@@ -214,7 +214,41 @@ def create_wcs_from_points(
         offset[zeroaxis] = 0
 
     crpix = (naxis + 1) / 2
-    crval = (points.min(axis=0) + points.max(axis=0) + offset) / 2
+
+    # Where to put the pixel lattice when NAXISn cannot cover the requested
+    # region exactly.
+    #
+    # If the grid truncates the region (naxis < extent, i.e. the region is not
+    # a whole number of pixels across), anchor the lower pixel edge at
+    # points.min and let the leftover fraction fall off the far edge. Every
+    # region carved out of the same origin in whole-pixel steps then shares one
+    # lattice - which is what chunked FOVs are: the image plane, the full-size
+    # chunks and the smaller last chunk all measure from the same detector
+    # edge. Centring each of them on its own midpoint instead, and absorbing
+    # its own rounding remainder into CRVAL, put them on lattices offset from
+    # one another by fractions of a pixel, so the projection had to snap them
+    # and the last chunk could land a whole pixel off its neighbours.
+    #
+    # MICADO's detector plane is 189.32 mm / 0.015 mm = 12621.33 px tall, so it
+    # hits this on every run.
+    #
+    # If the grid covers the region (naxis >= extent) there is nothing to
+    # truncate, so keep centring it on the region. That is the right thing for
+    # a region smaller than a single pixel, where naxis was clamped up to 1.
+    _pxs = float(pixel_scale.value if isinstance(pixel_scale, u.Quantity)
+                 else pixel_scale)
+    _pts = points.value if isinstance(points, u.Quantity) else np.asarray(points)
+    _naxis = np.asarray(naxis, dtype=float)
+    _extent = np.atleast_1d(np.asarray(extent, dtype=float))
+
+    crval = np.where(
+        _naxis < _extent,
+        _pts.min(axis=0) + (_naxis / 2) * _pxs,                      # anchored
+        (_pts.min(axis=0) + _pts.max(axis=0) +
+         np.asarray(offset, dtype=float)) / 2,                       # centred
+    )
+    if isinstance(points, u.Quantity):
+        crval = crval * points.unit
 
     # Cannot do `in "DX"` here because that would also match the empty string.
     linsuff = {"D", "X"}

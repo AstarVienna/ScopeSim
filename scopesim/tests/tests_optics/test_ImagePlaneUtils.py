@@ -229,6 +229,52 @@ class TestOverlayImage:
             plt.show()
 
 
+class TestLatticeIsSharedBetweenChunks:
+    """Regions carved from one origin in whole-pixel steps share a lattice.
+
+    This is what chunked FOVs are: the image plane, the full-size chunks and
+    the smaller last chunk are all measured from the same detector edge. When
+    the region is not a whole number of pixels across, CRVAL used to absorb
+    each region's own rounding remainder, putting them on lattices offset from
+    one another by fractions of a pixel.
+    """
+
+    @pytest.mark.parametrize("extent_px", [24.0, 21.0, 17.32, 17.1, 12621 + 1/3])
+    @pytest.mark.parametrize("chunk", [4, 8])
+    def test_chunks_land_on_the_parent_lattice(self, extent_px, chunk):
+        pixel_scale = 0.1
+        lo = -extent_px / 2 * pixel_scale
+        hi = lo + extent_px * pixel_scale
+
+        parent, parent_naxis = imp_utils.create_wcs_from_points(
+            np.array([[lo, lo], [hi, hi]]), pixel_scale)
+
+        edges = [lo]
+        for val in np.arange(lo, hi, chunk * pixel_scale):
+            if lo < val < hi and val > edges[-1]:
+                edges.append(float(val))
+        edges.append(hi)
+
+        for x0, x1 in zip(edges[:-1], edges[1:]):
+            child, child_naxis = imp_utils.create_wcs_from_points(
+                np.array([[x0, x0], [x1, x1]]), pixel_scale)
+            # the child's pixel 0 must sit on a whole-pixel offset of the
+            # parent's grid, otherwise the projection has to snap it
+            world = child.wcs_pix2world([[0, 0]], 0)
+            pix = parent.wcs_world2pix(world, 0)[0]
+            np.testing.assert_allclose(pix, np.round(pix), atol=1e-6)
+
+    @pytest.mark.parametrize("pnts, pixel_scale", [
+        (np.array([[0, 0]]), 5),                                  # single point
+        (np.array([[-1, -1], [-1, 1], [1, -1], [1, 1]]), 5),      # sub-pixel
+    ])
+    def test_regions_smaller_than_a_pixel_stay_centred(self, pnts, pixel_scale):
+        wcs, naxis = imp_utils.create_wcs_from_points(pnts, pixel_scale)
+        np.testing.assert_array_equal(naxis, [1, 1])
+        np.testing.assert_array_equal(wcs.wcs.crval,
+                                      pnts.mean(axis=0))
+
+
 class TestOverlayImageSnapping:
     """The origin, not the centre, must be snapped to the pixel grid.
 
