@@ -2,9 +2,11 @@
 """Any kinds of electronic or photonic noise."""
 
 from typing import ClassVar
-from numbers import Real
+from collections.abc import Mapping
+from numbers import Real  # matches int, float and all the numpy scalars
 
 import numpy as np
+from numpy.typing import ArrayLike, NDArray
 from astropy.io import fits
 
 from .. import Effect
@@ -24,14 +26,18 @@ class Bias(Effect):
         self.meta.update(kwargs)
         check_keys(self.meta, self.required_keys, action="error")
 
+    def __call__(self, data: ArrayLike) -> NDArray:
+        return data + self.bias_level
+
+    @property
+    def bias_level(self) -> float:
+        return from_currsys(self.meta["bias"], self.cmds)
+
     def apply_to(self, obj, **kwargs):
         if not isinstance(obj, Detector):
             return obj
 
-        biaslevel = from_currsys(self.meta["bias"], self.cmds)
-        # Can't do in-place because of Quantization data type conflicts.
-        obj._hdu.data = obj._hdu.data + biaslevel
-
+        obj.data = self(obj.data)
         return obj
 
 
@@ -55,32 +61,89 @@ class PoorMansHxRGReadoutNoise(Effect):
 
         check_keys(self.meta, self.required_keys, action="error")
 
-    def apply_to(self, det, **kwargs):
-        if not isinstance(det, Detector):
-            return det
-
-        self.meta["random_seed"] = from_currsys(self.meta["random_seed"],
-                                                self.cmds)
-        if self.meta["random_seed"] is not None:
-            np.random.seed(self.meta["random_seed"])
-
+    def __call__(self, data: ArrayLike, ndit: int = 1) -> NDArray:
         self.meta = from_currsys(self.meta, self.cmds)
-        ron_keys = ["noise_std", "n_channels", "channel_fraction",
-                    "line_fraction", "pedestal_fraction", "read_fraction"]
-        ron_kwargs = {key: self.meta[key] for key in ron_keys}
-        ron_kwargs["image_shape"] = det._hdu.data.shape
 
-        ron_frame = _make_ron_frame(**ron_kwargs)
+        ron_frame = self._make_ron_frame(data.shape)
+
         stacked_ron_frame = np.zeros_like(ron_frame)
-        for i in range(self.meta["ndit"]):
+        for i in range(ndit):
             dx = np.random.randint(0, ron_frame.shape[1])
             dy = np.random.randint(0, ron_frame.shape[0])
             stacked_ron_frame += np.roll(ron_frame, (dy, dx), axis=(0, 1))
 
         # TODO: this .T is ugly. Work out where things are getting switched and remove it!
-        # Can't do in-place because of Quantization data type conflicts.
-        det._hdu.data = det._hdu.data + stacked_ron_frame.T
+        return data + stacked_ron_frame.T
 
+    @property
+    def noise_std(self) -> int:
+        return from_currsys(self.meta["noise_std"], self.cmds)
+
+    @property
+    def n_channels(self) -> int:
+        return from_currsys(self.meta["n_channels"], self.cmds)
+
+    @property
+    def random_seed(self) -> int:
+        return from_currsys(self.meta["random_seed"], self.cmds)
+
+    @staticmethod
+    def _pseudo_random_field(
+        rng,
+        scale: float = 1.,
+        size: tuple[int, ...] = (1024, 1024),
+    ) -> NDArray:
+        n = 256
+        image = np.zeros(size)
+        batch = rng.normal(loc=0, scale=scale, size=(2*n, 2*n))
+        for y in range(0, size[1], n):
+            for x in range(0, size[0], n):
+                i, j = rng.integers(n, size=2)
+                dx, dy = min(size[0]-x, n), min(size[1]-y, n)
+                image[x:x+dx, y:y+dy] = batch[i:i+dx, j:j+dy]
+
+        return image
+
+    def _make_ron_frame(self, shape: tuple[int, ...]) -> NDArray:
+        # TODO: Add yaml-settable seed here
+        rng = np.random.default_rng(self.random_seed)
+
+        channel_fraction = self.meta["channel_fraction"]
+        line_fraction = self.meta["line_fraction"]
+        pedestal_fraction = self.meta["pedestal_fraction"]
+        read_fraction = self.meta["read_fraction"]
+
+        pixel_std = self.noise_std * (pedestal_fraction + read_fraction)**0.5
+        if shape < (1024, 1024):
+            pixel = rng.normal(loc=0, scale=pixel_std, size=shape)
+            line = rng.normal(
+                loc=0,
+                scale=self.noise_std * line_fraction**0.5,
+                size=shape[1],
+            )
+        else:
+            # TODO: Why bother with this pseudo random function?
+            pixel = self._pseudo_random_field(rng, scale=pixel_std, size=shape)
+            line = pixel[0]
+
+        channel = np.repeat(
+            rng.normal(
+                loc=0,
+                scale=self.noise_std * channel_fraction**0.5,
+                size=self.n_channels,
+            ),
+            max(1, shape[0] // self.n_channels) + 1,
+            axis=0,
+        )
+
+        return (pixel + line).T + channel[:shape[0]]
+
+    def apply_to(self, det, **kwargs):
+        if not isinstance(det, Detector):
+            return det
+
+        ndit = from_currsys(self.meta["ndit"], self.cmds)
+        det.data = self(det.data, ndit)
         return det
 
     def plot(self, det, **kwargs):
@@ -109,21 +172,25 @@ class BasicReadoutNoise(Effect):
 
         check_keys(self.meta, self.required_keys, action="error")
 
+    def __call__(self, data: ArrayLike, ndit: int = 1) -> NDArray:
+        rng = np.random.default_rng(self.random_seed)
+        scale = self.noise_std * np.sqrt(float(ndit))
+        return data + rng.normal(loc=0, scale=scale, size=data.shape)
+
+    @property
+    def noise_std(self) -> float:
+        return from_currsys(self.meta["noise_std"], self.cmds)
+
+    @property
+    def random_seed(self) -> int:
+        return from_currsys(self.meta["random_seed"], self.cmds)
+
     def apply_to(self, det, **kwargs):
         if not isinstance(det, Detector):
             return det
 
         ndit = from_currsys(self.meta["ndit"], self.cmds)
-        ron = from_currsys(self.meta["noise_std"], self.cmds)
-        noise_std = ron * np.sqrt(float(ndit))
-
-        random_seed = from_currsys(self.meta["random_seed"], self.cmds)
-        if random_seed is not None:
-            np.random.seed(random_seed)
-        # Can't do in-place because of Quantization data type conflicts.
-        det._hdu.data = det._hdu.data + np.random.normal(
-            loc=0, scale=noise_std, size=det._hdu.data.shape)
-
+        det.data = self(det.data, ndit)
         return det
 
     def plot(self, det):
@@ -191,7 +258,7 @@ class PixelResponseNonUniformity(Effect):
         dtcr_id = obj.meta[id_key] if id_key is not None else None
 
         prnu_std_meta = from_currsys(self.meta["prnu_std"], self.cmds)
-        if isinstance(prnu_std_meta, dict):
+        if isinstance(prnu_std_meta, Mapping):
             prnu_std = float(from_currsys(prnu_std_meta[dtcr_id], self.cmds))
         elif isinstance(prnu_std_meta, Real):
             prnu_std = float(prnu_std_meta)
@@ -201,7 +268,7 @@ class PixelResponseNonUniformity(Effect):
                 f"or a dict keyed by detector ID, got {type(prnu_std_meta)}"
             )
 
-        shape = obj._hdu.data.shape
+        shape = obj.data.shape
         if dtcr_id not in self._gain_maps:
             rng = np.random.default_rng(random_seed)
             self._gain_maps[dtcr_id] = rng.normal(
@@ -211,7 +278,7 @@ class PixelResponseNonUniformity(Effect):
         if self._gain_maps[dtcr_id].shape != shape:
             raise ValueError("gain map shape mismatch")
 
-        obj._hdu.data = obj._hdu.data * self._gain_maps[dtcr_id]
+        obj.data = obj.data * self._gain_maps[dtcr_id]
         return obj
 
     def plot(self, det_id=None):
@@ -236,13 +303,36 @@ class ShotNoise(Effect):
         self.meta["random_seed"] = "!SIM.random.seed"
         self.meta.update(kwargs)
 
+    def __call__(self, data: ArrayLike) -> NDArray:
+        rng = np.random.default_rng(self.random_seed)
+
+        # Check if there are negative values in the data.
+        values_negative = data < 0
+        if values_negative.any():
+            logger.warning(
+                "Effect ShotNoise: %d negative pixels", values_negative.sum())
+        data[values_negative] = 0
+
+        # Apply a Poisson distribution to the low values.
+        values_low = data < 1e7
+        data[values_low] = rng.poisson(data[values_low])
+
+        # Apply a normal distribution to the high values.
+        values_high = ~values_low
+        data[values_high] = rng.normal(data[values_high], np.sqrt(data[values_high]))
+
+        return data
+
+    @property
+    def random_seed(self) -> int:
+        return from_currsys(self.meta["random_seed"], self.cmds)
+
     def apply_to(self, det, **kwargs):
         if not isinstance(det, Detector):
             return det
 
-        self.meta["random_seed"] = from_currsys(self.meta["random_seed"],
-                                                self.cmds)
-        rng = np.random.default_rng(self.meta["random_seed"])
+        self.meta["random_seed"] = from_currsys(
+            self.meta["random_seed"], self.cmds)
 
         # numpy has a problem with generating Poisson distributions above
         # certain values. E.g. on linux, numpy.random.poisson(1e20) raises
@@ -264,29 +354,7 @@ class ShotNoise(Effect):
         # - numpy.nan are implicitly passed through the normal distribution;
         #   because the Poisson distribution cannot handle them.
 
-        data = det._hdu.data
-
-        # Check if there are negative values in the data.
-        values_negative = data < 0
-        if values_negative.any():
-            logger.warning(
-                "Effect ShotNoise: %d negative pixels", values_negative.sum())
-        data[values_negative] = 0
-
-        # Apply a Poisson distribution to the low values.
-        values_low = data < 1e7
-        data[values_low] = rng.poisson(data[values_low])
-
-        # Apply a normal distribution to the high values.
-        values_high = ~values_low
-        data[values_high] = rng.normal(data[values_high], np.sqrt(data[values_high]))
-
-        new_imagehdu = fits.ImageHDU(
-            data=data,
-            header=det._hdu.header,
-        )
-
-        det._hdu = new_imagehdu
+        det._hdu = fits.ImageHDU(header=det.header, data=self(det.data))
         return det
 
     def plot(self, det):
@@ -314,25 +382,41 @@ class DarkCurrent(Effect):
         super().__init__(**kwargs)
         check_keys(self.meta, self.required_keys, action="error")
 
+    def __call__(
+        self,
+        data: np.ndarray,
+        dark_level: float,
+        dit: float,
+        ndit: int,
+    ) -> np.ndarray:
+        return data + dark_level * dit * ndit
+
+    @property
+    def random_seed(self) -> int:
+        return from_currsys(self.meta["random_seed"], self.cmds)
+
+    def _get_dark_level(self, det_meta) -> float:
+        dark_level = float(from_currsys(self.meta["value"], self.cmds))
+        if isinstance(dark_level, Real):
+            return dark_level
+        if isinstance(dark_level, Mapping):
+            dtcr_id = det_meta[real_colname("id", det_meta)]
+            return from_currsys(dark_level[dtcr_id], self.cmds)
+        raise ValueError(
+            f"<{self.__class__.__name__}>.meta['value'] must be either "
+            f"dict-like or scalar number, but is {dark_level}."
+        )
+
     def apply_to(self, obj, **kwargs):
         if not isinstance(obj, Detector):
             return obj
 
-        if isinstance(from_currsys(self.meta["value"], self.cmds), dict):
-            dtcr_id = obj.meta[real_colname("id", obj.meta)]
-            dark = from_currsys(self.meta["value"][dtcr_id], self.cmds)
-        elif isinstance(from_currsys(self.meta["value"], self.cmds), Real):
-            dark = float(from_currsys(self.meta["value"], self.cmds))
-        else:
-            raise ValueError("<DarkCurrent>.meta['value'] must be either "
-                             f"dict or float, but is {self.meta['value']}")
-
+        # Dark level needs detector meta so can't go into __call__()
+        dark_level = self._get_dark_level(obj.meta)
         dit = from_currsys(self.meta["dit"], self.cmds)
         ndit = from_currsys(self.meta["ndit"], self.cmds)
 
-        # Can't do in-place because of Quantization data type conflicts.
-        obj._hdu.data = obj._hdu.data + dark * dit * ndit
-
+        obj.data = self(obj.data, dark_level, dit, ndit)
         return obj
 
     def plot(self, det, **kwargs):
@@ -348,39 +432,3 @@ class DarkCurrent(Effect):
         ax.plot(times, levels, **kwargs)
         ax.set_xlabel("time")
         ax.set_ylabel("dark level")
-
-
-def _pseudo_random_field(scale=1, size=(1024, 1024)):
-    n = 256
-    image = np.zeros(size)
-    batch = np.random.normal(loc=0, scale=scale, size=(2*n, 2*n))
-    for y in range(0, size[1], n):
-        for x in range(0, size[0], n):
-            i, j = np.random.randint(n, size=2)
-            dx, dy = min(size[0]-x, n), min(size[1]-y, n)
-            image[x:x+dx, y:y+dy] = batch[i:i+dx, j:j+dy]
-
-    return image
-
-
-def _make_ron_frame(image_shape, noise_std, n_channels, channel_fraction,
-                   line_fraction, pedestal_fraction, read_fraction):
-    shape = image_shape
-    w_chan = max(1, shape[0] // n_channels)
-
-    pixel_std = noise_std * (pedestal_fraction + read_fraction)**0.5
-    line_std = noise_std * line_fraction**0.5
-    if shape < (1024, 1024):
-        pixel = np.random.normal(loc=0, scale=pixel_std, size=shape)
-        line = np.random.normal(loc=0, scale=line_std, size=shape[1])
-    else:
-        pixel = _pseudo_random_field(scale=pixel_std, size=shape)
-        line = pixel[0]
-
-    channel_std = noise_std * channel_fraction**0.5
-    channel = np.repeat(np.random.normal(loc=0, scale=channel_std,
-                                         size=n_channels), w_chan + 1, axis=0)
-
-    ron_frame = (pixel + line).T + channel[:shape[0]]
-
-    return ron_frame
