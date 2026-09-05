@@ -170,7 +170,7 @@ class FOVManager:
         for effect in self.effects:
             self.volumes_list = effect.apply_to(self.volumes_list, **params)
 
-        # ..todo: add catch to split volumes larger than chunk_size
+        # TODO: add catch to split volumes larger than chunk_size
         pixel_scale = from_currsys(self.meta["pixel_scale"], self.cmds)
         plate_scale = from_currsys(self.meta["plate_scale"], self.cmds)
 
@@ -182,7 +182,6 @@ class FOVManager:
         for vol in self.volumes_list:
             xs_min, xs_max = vol["x_min"] / 3600., vol["x_max"] / 3600.
             ys_min, ys_max = vol["y_min"] / 3600., vol["y_max"] / 3600.
-            waverange = (vol["wave_min"], vol["wave_max"])
             skyhdr = ipu.header_from_list_of_xy([xs_min, xs_max],
                                                 [ys_min, ys_max],
                                                 pixel_scale=pixel_scale / 3600.)
@@ -210,7 +209,7 @@ class FOVManager:
 
             new_fov = fovcls(
                 skyhdr,
-                waverange,
+                (vol["wave_min"], vol["wave_max"]),
                 detector_header=dethdr,
                 cmds=self.cmds,
                 **vol["meta"],

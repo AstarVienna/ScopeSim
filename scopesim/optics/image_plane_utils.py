@@ -1221,8 +1221,6 @@ def det_wcs_from_sky_wcs(
         Shape of the image (``NAXIS1``, ``NAXIS2``).
 
     """
-    # TODO: Using astropy units for now to avoid deg vs. arcsec confusion.
-    #       Once Scopesim is consistent there, remove astropy units.
     pixel_scale <<= u.arcsec / u.pixel
     plate_scale <<= u.arcsec / u.mm
     logger.debug("Pixel scale: %s", pixel_scale)
@@ -1268,8 +1266,6 @@ def sky_wcs_from_det_wcs(det_wcs: WCS,
         Shape of the image (``NAXIS1``, ``NAXIS2``).
 
     """
-    # TODO: Using astropy units for now to avoid deg vs. arcsec confusion.
-    #       Once Scopesim is consistent there, remove astropy units.
     pixel_scale <<= u.arcsec / u.pixel
     plate_scale <<= u.arcsec / u.mm
     logger.debug("Pixel scale: %s", pixel_scale)
