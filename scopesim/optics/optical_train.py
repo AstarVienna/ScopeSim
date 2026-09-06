@@ -473,11 +473,12 @@ class OpticalTrain:
             self.cmds[f"!OBS.{key}"] = value
 
         hduls = []
-        for i, detector_array in enumerate(self.detector_managers):
-            array_effects = self.optics_manager.detector_array_effects
-            dtcr_effects = self.optics_manager.detector_effects
-            hdul = detector_array.readout(
-                self.image_planes, array_effects, dtcr_effects)
+        for i, detector_manager in enumerate(self.detector_managers):
+            hdul = detector_manager.readout(
+                self.image_planes,
+                self.optics_manager.detector_array_effects,
+                self.optics_manager.detector_effects,
+            )
 
             fits_effects = self.optics_manager.get_all(ExtraFitsKeywords)
             if len(fits_effects) > 0:
