@@ -499,7 +499,7 @@ class DetectorList3D(DetectorList):
         # FIXME: Heavy property.....
         new_wcs, naxis = create_wcs_from_points(
             self._get_corner_points(),
-            self.pixel_size.to(u.mm),
+            self.pixel_size.to(u.mm) / u.pixel,
             wcs_suffix="D",
         )
 
