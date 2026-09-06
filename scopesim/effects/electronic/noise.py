@@ -391,10 +391,6 @@ class DarkCurrent(Effect):
     ) -> np.ndarray:
         return data + dark_level * dit * ndit
 
-    @property
-    def random_seed(self) -> int:
-        return from_currsys(self.meta["random_seed"], self.cmds)
-
     def _get_dark_level(self, det_meta) -> float:
         dark_level = float(from_currsys(self.meta["value"], self.cmds))
         if isinstance(dark_level, Real):
