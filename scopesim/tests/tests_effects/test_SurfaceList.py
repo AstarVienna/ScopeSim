@@ -1,4 +1,5 @@
-""" Tests for the the new SurfaceList object """
+# -*- coding: utf-8 -*-
+"""Tests for the the SurfaceList object."""
 
 import pytest
 from pytest import approx

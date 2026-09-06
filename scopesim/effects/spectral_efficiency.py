@@ -11,7 +11,6 @@ from astropy.table import Table
 
 from .effects import Effect
 from .ter_curves import TERCurve
-from .ter_curves_utils import apply_throughput_to_cube
 from ..utils import figure_factory, get_logger
 
 
@@ -91,9 +90,12 @@ class SpectralEfficiency(Effect):
             wavelength = tbl['wavelength'].quantity
             efficiency = tbl['efficiency'].value
             params.pop("filename", None)  # don't pass filename to TERCurve!
-            effic_curve = TERCurve(array_dict={"wavelength":wavelength,
-                                   "transmission":efficiency},
-                                   **params)
+            effic_curve = TERCurve(
+                array_dict={
+                    "wavelength": wavelength,
+                    "transmission": efficiency,
+                },
+                **params)
             efficiencies[name] = effic_curve
 
         hdul.close()
@@ -111,7 +113,8 @@ class SpectralEfficiency(Effect):
         swcs = WCS(obj.hdu.header).spectral
         with u.set_enabled_equivalencies(u.spectral()):
             wave = swcs.pixel_to_world(np.arange(swcs.pixel_shape[0])) << u.um
-        obj.hdu = apply_throughput_to_cube(obj.hdu, effic.throughput, wave)
+            thru = effic.throughput(wave)
+        obj.hdu.data = obj.hdu.data * thru.value[:, None, None]
         return obj
 
     def plot(self):
