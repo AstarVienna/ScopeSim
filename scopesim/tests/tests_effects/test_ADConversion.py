@@ -32,9 +32,9 @@ def fixture_mock_detector():
 def fixture_detector_with_data(mock_detector):
     """Instantiate a Detector with some data"""
     det = mock_detector
-    width = det._hdu.data.shape[1]
-    det._hdu.data[:] = 1.2
-    det._hdu.data[:, width//2] = 1.99
+    width = det.data.shape[1]
+    det.data[:] = 1.2
+    det.data[:, width//2] = 1.99
     return det
 
 
@@ -73,11 +73,11 @@ class TestApplyTo:
     def test_applies_gain(self, mock_detector, gain):
         det = mock_detector
         data = np.random.randn(100, 100) * 100. + 1000.
-        det._hdu.data = 1. * data
+        det.data = 1. * data
         adconverter = ADConversion(gain=gain)
         adconverter.cmds = {"!DET.gain": gain, "!OBS.ndit": 1}
         adconverter.apply_to(det)
-        assert np.all((data/gain).astype(int) == det._hdu.data)
+        assert np.all((data/gain).astype(int) == det.data)
 
     @pytest.mark.usefixtures("patch_mock_path_micado")
     def test_applies_gain_list_to_detector_list(self):
@@ -104,10 +104,10 @@ class TestApplyTo:
         data = medval * np.ones((100, 100), dtype=np.float64)
         data[50, 50] = 1.e12
         data[60, 60] = -100000.
-        det._hdu.data = data
+        det.data = data
         adconverter = ADConversion(gain=gain, dtype=newtype)
         adconverter.cmds = {"!DET.gain": gain, "!OBS.ndit": 1}
         adconverter.apply_to(det)
-        assert(np.median(det._hdu.data) == newtype(medval/gain))
-        assert(np.max(det._hdu.data) == maxval)
-        assert(np.min(det._hdu.data) == minval)
+        assert(np.median(det.data) == newtype(medval/gain))
+        assert(np.max(det.data) == maxval)
+        assert(np.min(det.data) == minval)

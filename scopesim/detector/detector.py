@@ -1,4 +1,7 @@
+# -*- coding: utf-8 -*-
+
 import numpy as np
+from numpy.typing import ArrayLike
 
 from astropy.io.fits import ImageHDU
 from astropy.wcs import WCS
@@ -71,6 +74,10 @@ class Detector:
     def data(self):
         """Return data from internal HDU."""
         return self._hdu.data
+
+    @data.setter
+    def data(self, data: ArrayLike):
+        self._hdu.data = data
 
     @property
     def image(self):

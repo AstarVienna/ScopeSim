@@ -87,7 +87,7 @@ def fixture_detector():
     """Instantiate a random detector object"""
     hdu = fits.ImageHDU(data=np.random.randn(214, 333))
     det = Detector(hdu.header)
-    det._hdu.data = hdu.data
+    det.data = hdu.data
     return det
 
 class TestApply:
@@ -102,7 +102,7 @@ class TestApply:
                                            [0., 1., 0.],
                                            [0., 0., 0.]]))
         det = Detector(hdu.header)
-        det._hdu.data = hdu.data
+        det.data = hdu.data
         ipc = IPC(kernel=np.random.rand(3, 3))
         newdet = ipc.apply_to(det)
         np.testing.assert_allclose(newdet.hdu.data, ipc.kernel)

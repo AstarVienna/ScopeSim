@@ -104,7 +104,7 @@ def fixture_detector():
     xsize, ysize = 50, 4096
     hdr = header_from_list_of_xy([-xsize/2, xsize/2], [-ysize/2, ysize/2], 1, "D")
     dtcr = Detector(hdr)
-    dtcr._hdu.data[rows, :] = 1
+    dtcr.data[rows, :] = 1
     return dtcr
 
 @pytest.fixture(name="apply_collapse1d", scope="class")
@@ -159,7 +159,7 @@ class TestCollapse1D:
         assert isinstance(apply_collapse1d._hdu, fits.BinTableHDU)
 
     def test_collapse1d_gives_correct_result(self, apply_collapse1d):
-        assert np.all(apply_collapse1d._hdu.data['spectrum'] == 7)
+        assert np.all(apply_collapse1d.data['spectrum'] == 7)
 
 
 @pytest.mark.usefixtures("patch_mock_path_mosaic")
@@ -181,7 +181,7 @@ class TestConvertToTable:
         assert isinstance(apply_converttotable._hdu, fits.BinTableHDU)
 
     def test_converttotable_gives_correct_result(self, apply_converttotable):
-        for row in apply_converttotable._hdu.data:
+        for row in apply_converttotable.data:
             assert np.all(row['spectrum'] == 1)
 
 @pytest.mark.usefixtures("patch_mock_path_mosaic")

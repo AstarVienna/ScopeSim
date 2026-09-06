@@ -253,8 +253,8 @@ class MosaicOutputFormat(MosaicSpectralTraceList):
                            type(det))
             return det
 
-        image = det._hdu.data
-        detwcs = WCS(det._hdu.header, key="D")
+        image = det.data
+        detwcs = WCS(det.header, key="D")
 
         output_format = from_currsys(self.meta["format"], self.cmds)
 

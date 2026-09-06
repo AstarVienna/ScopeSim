@@ -217,7 +217,7 @@ class ExposureOutput(Effect):
         logger.debug("Exposure: DIT = %s s, NDIT = %s", dit, ndit)
 
         if self.current_mode == "average":
-            obj._hdu.data /= ndit
+            obj.data = obj.data / ndit
 
         return obj
 
@@ -276,6 +276,6 @@ class ExposureIntegration(Effect):
                 "readout call."
             )
 
-        obj._hdu.data *= dit * ndit
+        obj.data = obj.data * dit * ndit
 
         return obj

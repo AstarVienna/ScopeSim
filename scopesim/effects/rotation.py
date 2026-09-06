@@ -40,5 +40,5 @@ class Rotate90CCD(Effect):
             return obj
 
         rotations = from_currsys(self.meta["rotations"], self.cmds)
-        obj._hdu.data = np.rot90(obj._hdu.data, rotations)
+        obj.data = np.rot90(obj.data, rotations)
         return obj
