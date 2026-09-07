@@ -140,9 +140,9 @@ class UnequalBinnedImage(BinnedImageBase):
     def __call__(self, data: ArrayLike) -> NDArray:
         height, width = data.shape
         binned_data = data.reshape((
-            height//self.binx,
-            self.binx,
-            width//self.biny,
+            height//self.biny,
+            self.biny,
+            width//self.binx,
             self.binx
         )).sum(axis=3).sum(axis=1)
         return binned_data
