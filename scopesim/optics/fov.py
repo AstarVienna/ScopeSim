@@ -992,9 +992,8 @@ class FieldOfView3D(FieldOfView):
             spec = field.spectrum(fov_waveset)
             # 2D * 1D -> 3D
             field_cube = canvas_image_hdu.data[None, :, :] * spec[:, None, None]
-            # logger.debug("3D FOV make_imagefields: field_cube.mean() = %f",
-            #     field_cube.mean().value)
-            logger.debug(f"3D FOV make_imagefields: {field_cube.mean() = }")
+            logger.debug("3D FOV make_imagefields: field_cube.mean() = %f",
+                field_cube.mean().value)
             yield field_cube.value
 
     def _make_tablefields(self, fov_waveset):
