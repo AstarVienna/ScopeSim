@@ -1,8 +1,12 @@
+"""Tests for TERCurve class"""
+
 import pytest
 
 import numpy as np
+import numpy.testing as npt
 from matplotlib import pyplot as plt
 from astropy import units as u
+from astropy.wcs import WCS
 
 from scopesim.effects import ter_curves as tc
 from scopesim.tests.mocks.py_objects import source_objects as so
@@ -20,6 +24,8 @@ def _filter_wheel(mock_path_micado):
                              "filename_format": fname,
                              "current_filter": "Br-gamma"})
 
+# pylint: disable=missing-class-docstring,
+# pylint: disable=missing-function-docstring
 
 class TestTERCurveApplyTo:
     def test_adds_bg_to_source_if_source_has_no_bg(self):
@@ -46,6 +52,26 @@ class TestTERCurveApplyTo:
                 flux = spec(wave)
                 plt.semilogy(wave, flux, "r")
             plt.show()
+
+    def test_applies_to_cube_source(self):
+        src = so._cube_source()
+        wcs = WCS(src.cube_fields[0].header).spectral
+        nlam = src.cube_fields[0].data.shape[0]
+        lam = wcs.all_pix2world(np.arange(nlam), 0)[0] * u.m
+
+        eff = eo._filter_surface()
+        thru = eff.throughput(lam)
+
+        # Save spectrum before application
+        orig = src.cube_fields[0].data[:, 25, 25] * 1.
+
+        # Apply effect
+        src = eff.apply_to(src)
+
+        # Spectrum after application
+        new = src.cube_fields[0].data[:, 25, 25]
+
+        npt.assert_allclose(new, orig * thru)
 
 
 class TestTERCurvePlot:
