@@ -485,7 +485,8 @@ def overlay_image(small_im, big_im, coords, mask=None, sub_pixel=False):
 
 def rescale_imagehdu(imagehdu: fits.ImageHDU, pixel_scale: float | u.Quantity,
                      wcs_suffix: str = "", conserve_flux: bool = True,
-                     spline_order: int = 1) -> fits.ImageHDU:
+                     spline_order: int = 1,
+                     differential: bool = False) -> fits.ImageHDU:
     """
     Scale the .data array by the ratio of pixel_scale [deg] and CDELTn.
 
@@ -540,6 +541,8 @@ def rescale_imagehdu(imagehdu: fits.ImageHDU, pixel_scale: float | u.Quantity,
         return imagehdu
 
     sum_orig = np.sum(imagehdu.data)
+    if differential:
+        sum_orig *= primary_wcs.wcs.cdelt[0]*primary_wcs.wcs.cdelt[1]
 
     # Perform the rescaling. Axes need to be inverted because python.
     zoom_np = zoom[::-1]
@@ -592,9 +595,12 @@ def rescale_imagehdu(imagehdu: fits.ImageHDU, pixel_scale: float | u.Quantity,
     if conserve_flux:
         new_im = np.nan_to_num(new_im, copy=False)
         sum_new = np.sum(new_im)
+        if differential:
+            sum_new *= (pixel_scale.value**2)
+
         if sum_new != 0:
             flux_factor = sum_orig / sum_new
-            logger.debug("flux factor = %f", flux_factor)
+            logger.info("flux factor = %f", flux_factor)
             new_im *= flux_factor
         elif sum_orig != 0:
             logger.warning(
@@ -785,7 +791,8 @@ def add_imagehdu_to_imagehdu(image_hdu: fits.ImageHDU,
                              canvas_hdu: fits.ImageHDU,
                              spline_order: int = 1,
                              wcs_suffix: str = "",
-                             conserve_flux: bool = True) -> fits.ImageHDU:
+                             conserve_flux: bool = True,
+                             differential: bool = False) -> fits.ImageHDU:
     """
     Re-project one ``fits.ImageHDU`` onto another ``fits.ImageHDU``.
 
@@ -838,7 +845,8 @@ def add_imagehdu_to_imagehdu(image_hdu: fits.ImageHDU,
     new_hdu = rescale_imagehdu(image_hdu, pixel_scale=canvas_pixel_scale / conv_fac,
                                wcs_suffix=canvas_wcs.wcs.alt,
                                spline_order=spline_order,
-                               conserve_flux=conserve_flux)
+                               conserve_flux=conserve_flux,
+                               differential=differential)
     # TODO: Perhaps add separately formatted WCS logger?
     logger.debug("fromrescale %s", WCS(new_hdu.header, key=canvas_wcs.wcs.alt))
     new_hdu = reorient_imagehdu(new_hdu,
