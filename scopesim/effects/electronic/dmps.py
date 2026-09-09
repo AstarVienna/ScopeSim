@@ -73,9 +73,11 @@ class DetectorModePropertiesSetter(Effect):
 
     def apply_to(self, obj, **kwargs):
         logger.debug("Entering DetectorModePropertiesSetter.apply_to")
-        mode_name = kwargs.get("detector_readout_mode",
-                               from_currsys("!OBS.detector_readout_mode",
-                                            self.cmds))
+        mode_name = kwargs.get(
+            "detector_readout_mode",
+            from_currsys("!OBS.detector_readout_mode", self.cmds),
+        )
+
         if isinstance(obj, ImagePlane) and mode_name == "auto":
             mode_name = self.select_mode(obj, **kwargs)
             logger.info("Detector mode set to %s", mode_name)
@@ -101,9 +103,10 @@ class DetectorModePropertiesSetter(Effect):
         saturation level (peak to full_well).
         """
         immax = np.max(obj.data)
-        fillfrac = kwargs.get("fill_frac",
-                              from_currsys("!OBS.auto_exposure.fill_frac",
-                                           self.cmds))
+        fillfrac = kwargs.get(
+            "fill_frac",
+            from_currsys("!OBS.auto_exposure.fill_frac", self.cmds),
+        )
 
         goodmodes = []
         goodron = []

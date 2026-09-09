@@ -70,10 +70,10 @@ class AutoExposure(Effect):
         logger.info("Total exposure time: %.3f s", dit * ndit)
 
     def estimate_dit_ndit(
-            self,
-            exptime: float,
-            image_plane_max: float,
-            **kwargs
+        self,
+        exptime: float,
+        image_plane_max: float,
+        **kwargs
     ) -> tuple[float, int]:
         """
         Automatically determine DIT and NDIT from exposure time.
@@ -136,8 +136,10 @@ class AutoExposure(Effect):
             #       in both cases, `obj` is an ImagePlane.
             return obj
 
-        exptime = kwargs.pop("exptime",
-                             from_currsys("!OBS.exptime", self.cmds))
+        exptime = kwargs.pop(
+            "exptime",
+            from_currsys("!OBS.exptime", self.cmds),
+        )
         mindit = from_currsys(self.meta["mindit"], self.cmds)
 
         # TODO: Remove this silly try-except once currsys works properly...
