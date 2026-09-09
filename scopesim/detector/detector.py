@@ -103,3 +103,8 @@ class Detector:
     def image(self):
         """Return data from internal HDU."""
         return self.data
+
+    def __str__(self) -> str:
+        if self.det_id is not None:
+            return f"Detector {self.det_id:>2d}"
+        return "Detector"
