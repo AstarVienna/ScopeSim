@@ -37,10 +37,10 @@ class TestApplyTo:
         """Dict mode: different amplitude per detector ID."""
         hdr = header_from_list_of_xy([-5, 5], [-5, 5], 1, "D")
         dtcr = Detector(hdr)
-        dtcr.meta["id"] = "H2RG"
+        dtcr.meta["id"] = 0
         dtcr.data[:] = 1000
         prnu = PixelResponseNonUniformity(
-            prnu_std={"H2RG": 0.005, "GeoSnap": 0.020}, prnu_seed=42)
+            prnu_std={0: 0.005, 1: 0.020}, prnu_seed=42)
         prnu.apply_to(dtcr)
         assert dtcr.data.std() > 0
 
