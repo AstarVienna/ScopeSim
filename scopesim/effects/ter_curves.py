@@ -147,7 +147,9 @@ class TERCurve(Effect):
         # apply transmission to source spectra
         for fld in src.fields:
             if isinstance(fld, CubeSourceField):
-                fld.field.data = self(fld.field.data, fld.waveset)
+                ## in-place is much faster than self()
+                #fld.field.data = self(fld.field.data, fld.waveset)
+                fld.field.data *= thru(fld.waveset).value[:, None, None]
             elif isinstance(fld, SpectrumSourceField):
                 fld.spectra = {
                     isp: spec * thru  # This works because synphot!
