@@ -3,11 +3,13 @@
 import copy
 
 from datetime import datetime
+from pathlib import Path
 
 import numpy as np
 from scipy.interpolate import interp1d
 from astropy import units as u
 from astropy.wcs import WCS
+from astropy.io.fits import HDUList
 
 from tqdm.auto import tqdm
 
@@ -426,23 +428,39 @@ class OpticalTrain:
         return source
 
     @top_level_catch
-    def readout(self, filename=None, reset=True, **kwargs):
+    def readout(
+        self,
+        filename: Path | str | None = None,
+        reset: bool = True,
+        roid: int = 0,
+        **kwargs
+    ) -> list[HDUList]:
         """
         Produce detector readouts for the observed image.
 
         Parameters
         ----------
-        filename : str, optional
-            Where to save the FITS file
-        kwargs
+        filename : Path | str | None, optional
+            Full path or local name for to store the resulting FITS file.
+            If None (the default), the function still returns the result, but
+            will not automatically save it to disk.
+        reset : bool, optional
+            If true (the default), do not keep any parameters set during any
+            previous readout. This is usually what you want.
+        roid : int, optional
+            Readout ID, used for seeding randomness. If you run multiple
+            readouts on the same observation and want the random effects to
+            produce different results, set this parameter with e.g. the loop
+            counter. Simple integers are fine (0, 1, 2, ...), because this gets
+            wrangled into a proper random seed downstream. If you need to
+            reproduce a specific readout in a sequence, set e.g. `roid=4`.
+        **kwargs :
+            Any other kwargs passed to the detector effects.
 
         Returns
         -------
-        hdu : fits.HDUList
-
-        Notes
-        -----
-        - Apply detector plane (0D, 2D) effects - z_order = 500..599
+        list[HDUList]
+            List of HDUList objects.
 
         """
         if reset:
@@ -500,11 +518,15 @@ class OpticalTrain:
                         "incomplete header. See stack trace for details."
                     )
 
+            if filename is not None:
+                if len(self.detector_managers) == 1:
+                    fname = filename
+                else:
+                    if isinstance(filename, str):
+                        fname = f"{i}_{filename}"
+                    if isinstance(filename, Path):
+                        fname = filename.parent / f"{i}_{filename.name}"
 
-            if filename is not None and isinstance(filename, str):
-                fname = filename
-                if len(self.detector_managers) > 1:
-                    fname = f"{i}_{filename}"
                 hdul.writeto(fname, overwrite=True)
 
             hduls.append(hdul)
