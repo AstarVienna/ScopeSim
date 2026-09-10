@@ -169,9 +169,9 @@ class OpticalTrain:
 
         self.yaml_dicts = self.cmds.yaml_dicts
         self.optics_manager = OpticsManager(self.yaml_dicts, self.cmds)
-        self.update()
+        self.update(migrate_cmds=True)
 
-    def update(self, **kwargs):
+    def update(self, migrate_cmds=False, **kwargs):
         """
         Update the user-defined parameters and remake main internal classes.
 
@@ -209,7 +209,8 @@ class OpticalTrain:
         # self.cmds.maps[0].clear()
         # HACK: recursive_update is needed to avoid overwriting emtpy !ABCs
         # TODO: or is it??
-        self.cmds.maps[1].dic = recursive_update(self.cmds.maps[1].dic, self.cmds.maps[0].dic)
+        if migrate_cmds:
+            self.cmds.maps[1].dic = recursive_update(self.cmds.maps[1].dic, self.cmds.maps[0].dic)
         self.cmds.maps[0].dic.clear()
 
     @top_level_catch
@@ -244,6 +245,17 @@ class OpticalTrain:
         """
         if update:
             self.update(**kwargs)
+
+        if self.cmds["!SIM.random.seed"] is None:
+            # Concretize seed from system entropy to keep constant during the
+            # observe run. For multiple observations, this is cleared above.
+            self.cmds["!SIM.random.seed"] = np.random.SeedSequence().entropy
+        elif self.cmds["!SIM.random.seed"] in {"None", "none", "NONE"}:
+            logger.warning(
+                "Got random seed '%s' (a string, not None!), use NULL in yaml",
+                self.cmds["!SIM.random.seed"]
+            )
+            self.cmds["!SIM.random.seed"] = np.random.SeedSequence().entropy
 
         # self.set_focus(**kwargs)    # put focus back on current instrument package
 
