@@ -602,8 +602,6 @@ class FieldOfView:
         """Deal with BUNIT and pixel area."""
         # Note: Do not scale source data - make a copy first.
         field_hdu = field.field.copy()  # .field is the HDU (yeah...)
-        logger.debug("scaling by %f", field.pixel_area.value)
-        field_hdu.data /= field.pixel_area.value
 
         # TODO: Check if this scaling is actually correct. How does this
         #       work with the add_imagehdu_to_imagehdu below? Isn't that
@@ -611,10 +609,12 @@ class FieldOfView:
         if field.is_bunit_spatially_differential:
             logger.debug("differential bunit...")
             # Field is in (PHOTLAM) arcsec-2, need to scale by pixarea
-            logger.debug("scaling by %f", self.pixel_area.value)
-            field_hdu.data *= self.pixel_area.value
+            # logger.debug("scaling by %f", self.pixel_area.value)
+            # field_hdu.data *= self.pixel_area.value
         else:
             logger.debug("binned bunit...")
+            logger.debug("scaling by %f", field.pixel_area.value)
+            field_hdu.data /= field.pixel_area.value
             # Pixel area doesn't cancel out, need to convert
             new_bunit = field.bunit / u.arcsec**2
             field_hdu.header["BUNIT"] = new_bunit.to_string("fits")
@@ -954,10 +954,9 @@ class FieldOfView3D(FieldOfView):
             field_data = field_interp(fov_waveset.value)
 
             # Pixel scale conversion
-            field_data *= field.pixel_area / self.pixel_area
+            # field_data *= field.pixel_area / self.pixel_area
             logger.debug(
-                "3D FOV make_cubefields: field_data.mean() = %f "
-                "PHOTLAM arcsec-2", field_data.mean())
+                "3D FOV make_cubefields: field_data.mean() = %f [%s]", field_data.mean(), field.bunit)
             field_hdu = fits.ImageHDU(data=field_data, header=field.header)
             yield field_hdu
 
@@ -984,6 +983,7 @@ class FieldOfView3D(FieldOfView):
                 canvas_image_hdu,
                 spline_order=spline_order,
                 conserve_flux=True,
+                differential=True,
             )
 
             spec = field.spectrum(fov_waveset)
@@ -1143,6 +1143,7 @@ class FieldOfView3D(FieldOfView):
                 canvas_cube_hdu,
                 spline_order=self.spline_order,
                 conserve_flux=True,
+                differential=True,
             )
 
         canvas_cube_hdu.data = sum(self._make_imagefields(
