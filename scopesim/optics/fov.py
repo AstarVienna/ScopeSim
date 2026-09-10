@@ -2,7 +2,6 @@
 """Defines FieldOfView class."""
 
 from warnings import warn
-from copy import deepcopy
 from itertools import chain
 from collections.abc import Iterable, Generator
 
@@ -32,7 +31,6 @@ from ..utils import (
     get_logger,
     array_minmax,
     close_loop,
-    unit_includes_per_physical_type,
     figure_factory,
     image_plotter,
     cube_plotter,
@@ -603,14 +601,8 @@ class FieldOfView:
         # Note: Do not scale source data - make a copy first.
         field_hdu = field.field.copy()  # .field is the HDU (yeah...)
 
-        # TODO: Check if this scaling is actually correct. How does this
-        #       work with the add_imagehdu_to_imagehdu below? Isn't that
-        #       supposed to conserve flux? Test carefully!!
         if field.is_bunit_spatially_differential:
             logger.debug("differential bunit...")
-            # Field is in (PHOTLAM) arcsec-2, need to scale by pixarea
-            # logger.debug("scaling by %f", self.pixel_area.value)
-            # field_hdu.data *= self.pixel_area.value
         else:
             logger.debug("binned bunit...")
             logger.debug("scaling by %f", field.pixel_area.value)
@@ -864,20 +856,16 @@ class FieldOfView2D(FieldOfView):
             data=np.zeros((self.header["NAXIS2"], self.header["NAXIS1"])),
             header=self.header)
 
-        for tmp_hdu in chain(self._make_cubefields(),
-                             self._make_imagefields(
-                                 fov_waveset, bin_widths)):
+        for tmp_hdu in chain(
+            self._make_cubefields(),
+            self._make_imagefields(fov_waveset, bin_widths)
+        ):
             canvas_image_hdu = imp_utils.add_imagehdu_to_imagehdu(
                 tmp_hdu,
                 canvas_image_hdu,
                 conserve_flux=True,  # binned flux needs this
-                spline_order=self.spline_order)
-            logger.info(
-                "2D FOV make_hdu: canvas_image_hdu.data.mean() = %f ph/s/pix",
-                canvas_image_hdu.data.mean())
-            logger.info(
-                "2D FOV make_hdu: canvas_image_hdu.data.max() = %f ph/s/pix",
-                canvas_image_hdu.data.max())
+                spline_order=self.spline_order,
+            )
 
         for flux, weight, x, y in self._make_tablefields(
                 fov_waveset, bin_widths):
@@ -947,16 +935,16 @@ class FieldOfView3D(FieldOfView):
             # Assumption is that ImageHDUs have units of PHOTLAM arcsec-2
 
             # TODO: Deal with this bounds_error in a more elegant way
-            field_interp = interp1d(field.waveset.to(u.um).value,
-                                    field.data, axis=0, kind="linear",
-                                    bounds_error=False, fill_value=0)
+            field_interp = interp1d(
+                field.waveset.to(u.um).value,
+                field.data,
+                axis=0,
+                kind="linear",
+                bounds_error=False,
+                fill_value=0,
+            )
 
             field_data = field_interp(fov_waveset.value)
-
-            # Pixel scale conversion
-            # field_data *= field.pixel_area / self.pixel_area
-            logger.debug(
-                "3D FOV make_cubefields: field_data.mean() = %f [%s]", field_data.mean(), field.bunit)
             field_hdu = fits.ImageHDU(data=field_data, header=field.header)
             yield field_hdu
 
@@ -989,8 +977,6 @@ class FieldOfView3D(FieldOfView):
             spec = field.spectrum(fov_waveset)
             # 2D * 1D -> 3D
             field_cube = canvas_image_hdu.data[None, :, :] * spec[:, None, None]
-            logger.debug("3D FOV make_imagefields: field_cube.mean() = %f",
-                field_cube.mean().value)
             yield field_cube.value
 
     def _make_tablefields(self, fov_waveset):
@@ -1146,9 +1132,10 @@ class FieldOfView3D(FieldOfView):
                 differential=True,
             )
 
-        canvas_cube_hdu.data = sum(self._make_imagefields(
-            fov_waveset, self.spline_order),
-            start=canvas_cube_hdu.data)
+        canvas_cube_hdu.data = sum(
+            self._make_imagefields(fov_waveset, self.spline_order),
+            start=canvas_cube_hdu.data,
+        )
 
         for flux, x, y in self._make_tablefields(fov_waveset):
             # To prevent adding array values in this manner.

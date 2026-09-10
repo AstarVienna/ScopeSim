@@ -536,10 +536,14 @@ def overlay_image(small_im, big_im, coords, mask=None, sub_pixel=False):
     return big_im
 
 
-def rescale_imagehdu(imagehdu: fits.ImageHDU, pixel_scale: float | u.Quantity,
-                     wcs_suffix: str = "", conserve_flux: bool = True,
-                     spline_order: int = 1,
-                     differential: bool = False) -> fits.ImageHDU:
+def rescale_imagehdu(
+    imagehdu: fits.ImageHDU,
+    pixel_scale: float | u.Quantity,
+    wcs_suffix: str = "",
+    conserve_flux: bool = True,
+    spline_order: int = 1,
+    differential: bool = False,
+) -> fits.ImageHDU:
     """
     Scale the .data array by the ratio of pixel_scale [deg] and CDELTn.
 
@@ -597,7 +601,7 @@ def rescale_imagehdu(imagehdu: fits.ImageHDU, pixel_scale: float | u.Quantity,
 
     # scale by pixel area if the flux is differential (i.e. per unit area)
     if differential:
-        sum_orig *= primary_wcs.wcs.cdelt[0]*primary_wcs.wcs.cdelt[1]
+        sum_orig *= primary_wcs.wcs.cdelt[0] * primary_wcs.wcs.cdelt[1]
 
     # Perform the rescaling. Axes need to be inverted because python.
     zoom_np = zoom[::-1]
@@ -709,9 +713,12 @@ def rescale_imagehdu(imagehdu: fits.ImageHDU, pixel_scale: float | u.Quantity,
     return imagehdu
 
 
-def reorient_imagehdu(imagehdu: fits.ImageHDU, wcs_suffix: str = "",
-                      conserve_flux: bool = True,
-                      spline_order: int = 1) -> fits.ImageHDU:
+def reorient_imagehdu(
+    imagehdu: fits.ImageHDU,
+    wcs_suffix: str = "",
+    conserve_flux: bool = True,
+    spline_order: int = 1,
+) -> fits.ImageHDU:
     """
     Apply an affine transformation to the image, as given in its header.
 
@@ -769,9 +776,15 @@ def reorient_imagehdu(imagehdu: fits.ImageHDU, wcs_suffix: str = "",
     return imagehdu
 
 
-def affine_map(input, matrix=None, rotation_angle: float = 0.,
-               shear_angle: float = 0., scale_factor=None,
-               reshape: bool = True, spline_order: int = 3):
+def affine_map(
+    input,
+    matrix=None,
+    rotation_angle: float = 0.,
+    shear_angle: float = 0.,
+    scale_factor=None,
+    reshape: bool = True,
+    spline_order: int = 3,
+):
     """
     Apply an affine transformation matrix to an image around its centre.
 
@@ -842,12 +855,14 @@ def affine_map(input, matrix=None, rotation_angle: float = 0.,
     return output
 
 
-def add_imagehdu_to_imagehdu(image_hdu: fits.ImageHDU,
-                             canvas_hdu: fits.ImageHDU,
-                             spline_order: int = 1,
-                             wcs_suffix: str = "",
-                             conserve_flux: bool = True,
-                             differential: bool = False) -> fits.ImageHDU:
+def add_imagehdu_to_imagehdu(
+    image_hdu: fits.ImageHDU,
+    canvas_hdu: fits.ImageHDU,
+    spline_order: int = 1,
+    wcs_suffix: str = "",
+    conserve_flux: bool = True,
+    differential: bool = False,
+) -> fits.ImageHDU:
     """
     Re-project one ``fits.ImageHDU`` onto another ``fits.ImageHDU``.
 
@@ -897,17 +912,22 @@ def add_imagehdu_to_imagehdu(image_hdu: fits.ImageHDU,
     canvas_pixel_scale = float(canvas_wcs.wcs.cdelt[0])
     conv_fac = u.Unit(image_hdu.header[f"CUNIT1{wcs_suffix}"].lower()).to(canvas_wcs.wcs.cunit[0])
 
-    new_hdu = rescale_imagehdu(image_hdu, pixel_scale=canvas_pixel_scale / conv_fac,
-                               wcs_suffix=canvas_wcs.wcs.alt,
-                               spline_order=spline_order,
-                               conserve_flux=conserve_flux,
-                               differential=differential)
+    new_hdu = rescale_imagehdu(
+        image_hdu,
+        pixel_scale=canvas_pixel_scale / conv_fac,
+        wcs_suffix=canvas_wcs.wcs.alt,
+        spline_order=spline_order,
+        conserve_flux=conserve_flux,
+        differential=differential,
+    )
     # TODO: Perhaps add separately formatted WCS logger?
     logger.debug("fromrescale %s", WCS(new_hdu.header, key=canvas_wcs.wcs.alt))
-    new_hdu = reorient_imagehdu(new_hdu,
-                                wcs_suffix=canvas_wcs.wcs.alt,
-                                spline_order=spline_order,
-                                conserve_flux=conserve_flux)
+    new_hdu = reorient_imagehdu(
+        new_hdu,
+        wcs_suffix=canvas_wcs.wcs.alt,
+        spline_order=spline_order,
+        conserve_flux=conserve_flux,
+    )
 
     img_center = np.array([[new_hdu.header[f"NAXIS{i+1}"]
                            for i in range(new_hdu.header["NAXIS"])]])
@@ -1250,10 +1270,12 @@ def det_wcs_from_sky_wcs(
     return create_wcs_from_points(corners, pixel_size, "D")
 
 
-def sky_wcs_from_det_wcs(det_wcs: WCS,
-                         pixel_scale: float,
-                         plate_scale: float,
-                         naxis=None) -> tuple[WCS, np.ndarray]:
+def sky_wcs_from_det_wcs(
+    det_wcs: WCS,
+    pixel_scale: float,
+    plate_scale: float,
+    naxis=None,
+) -> tuple[WCS, np.ndarray]:
     """
     Create celestial WCS from detector WCS using pixel and plate scales.
 
