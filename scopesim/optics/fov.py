@@ -605,7 +605,6 @@ class FieldOfView:
         """Deal with BUNIT and pixel area."""
         # Note: Do not scale source data - make a copy first.
         field_hdu = field.field.copy()  # .field is the HDU (yeah...)
-        logger.debug("scaling by %f", field.pixel_area.value)
 
         # TODO: Check if this scaling is actually correct. How does this
         #       work with the add_imagehdu_to_imagehdu below? Isn't that
@@ -617,6 +616,7 @@ class FieldOfView:
             # field_hdu.data *= self.pixel_area.value
         else:
             logger.debug("binned bunit...")
+            logger.debug("scaling by %f", field.pixel_area.value)
             field_hdu.data /= field.pixel_area.value
             # Pixel area doesn't cancel out, need to convert
             new_bunit = field.bunit / u.arcsec**2
@@ -1145,7 +1145,7 @@ class FieldOfView3D(FieldOfView):
                 field_hdu,
                 canvas_cube_hdu,
                 spline_order=self.spline_order,
-                conserve_flux=False,
+                conserve_flux=True,
                 differential=True,
             )
 

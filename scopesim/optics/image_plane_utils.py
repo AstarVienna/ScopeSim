@@ -541,6 +541,8 @@ def rescale_imagehdu(imagehdu: fits.ImageHDU, pixel_scale: float | u.Quantity,
         return imagehdu
 
     sum_orig = np.sum(imagehdu.data)
+
+    # scale by pixel area if the flux is differential (i.e. per unit area)
     if differential:
         sum_orig *= primary_wcs.wcs.cdelt[0]*primary_wcs.wcs.cdelt[1]
 
@@ -600,7 +602,7 @@ def rescale_imagehdu(imagehdu: fits.ImageHDU, pixel_scale: float | u.Quantity,
 
         if sum_new != 0:
             flux_factor = sum_orig / sum_new
-            logger.info("flux factor = %f", flux_factor)
+            logger.debug("flux factor = %f", flux_factor)
             new_im *= flux_factor
         elif sum_orig != 0:
             logger.warning(
