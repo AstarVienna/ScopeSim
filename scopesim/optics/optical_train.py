@@ -169,9 +169,9 @@ class OpticalTrain:
 
         self.yaml_dicts = self.cmds.yaml_dicts
         self.optics_manager = OpticsManager(self.yaml_dicts, self.cmds)
-        self.update()
+        self.update(migrate_cmds=True)
 
-    def update(self, **kwargs):
+    def update(self, migrate_cmds=False, **kwargs):
         """
         Update the user-defined parameters and remake main internal classes.
 
@@ -209,7 +209,8 @@ class OpticalTrain:
         # self.cmds.maps[0].clear()
         # HACK: recursive_update is needed to avoid overwriting emtpy !ABCs
         # TODO: or is it??
-        self.cmds.maps[1].dic = recursive_update(self.cmds.maps[1].dic, self.cmds.maps[0].dic)
+        if migrate_cmds:
+            self.cmds.maps[1].dic = recursive_update(self.cmds.maps[1].dic, self.cmds.maps[0].dic)
         self.cmds.maps[0].dic.clear()
 
     @top_level_catch
