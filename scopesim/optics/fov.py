@@ -340,27 +340,24 @@ class FieldOfView:
         xy1p += (xy0p == xy1p)
         logger.debug("xy0p: %s; xy1p: %s", xy0p, xy1p)
 
-        new_wcs, new_naxis = imp_utils.create_wcs_from_points(
-            np.array([xy0s, xy1s]).round(11), pixel_scale=hdr["CDELT1"])
-
-        # TODO: Come back at some point and figure out if the failing tests
-        #       here are relevant or can be ignored...
-        # FIXME: Commented out for now because it appears too often IRL...
-        # try:
-        #     roundtrip = new_wcs.wcs_world2pix(
-        #         np.array([xy0s, xy1s - .5*image_wcs.wcs.cdelt]), 0).round(5)
-        #     np.testing.assert_array_equal(roundtrip[0], [0, 0])
-        #     np.testing.assert_array_equal(roundtrip[1], new_naxis - [1, 1])
-        # except AssertionError:
-        #     logger.exception("WCS roundtrip assertion failed.")
-        # FIXME: Related to the above, this sometimes fails:
-        # np.testing.assert_equal(xy1p - xy0p, new_naxis)
-        # This occurs when the floor and ceil in xy0s and xy1s produce an
-        # off-by-one error. Using .round instead for both would solve things
-        # in those cases, but breaks in other cases. Find a proper solution!
-        # Note: This is not super fatal, because the resulting projections
-        #       will trim off that extra pixel later on, but this should still
-        #       be addressed.
+        # Describe the cutout with the input WCS, shifted by the slice origin.
+        # The cutout's pixels ARE input pixels, so this is exact: the cutout
+        # stays on the input's pixel lattice and NAXISn always agrees with
+        # data.shape.
+        #
+        # Deriving the WCS from [xy0s, xy1s] instead (via
+        # create_wcs_from_points) got both wrong. Those are the world corners
+        # *before* the floor/ceil above grew the slice outwards to whole input
+        # pixels, so the resulting WCS described a differently sized image
+        # (NAXISn disagreed with data.shape by a pixel, silently corrected by
+        # fits.ImageHDU, which left CRPIXn describing the wrong array) placed
+        # on the FOV's lattice rather than the input's. Projecting that cutout
+        # then mis-registered it by up to a whole pixel, and by differing
+        # amounts for neighbouring FOVs, so the seam between two FOVs picked
+        # up a duplicated or a dropped row/column.
+        new_wcs = image_wcs.deepcopy()
+        new_wcs.wcs.crpix = image_wcs.wcs.crpix - xy0p
+        new_naxis = xy1p - xy0p
 
         new_hdr = new_wcs.to_header()
         new_hdr.update({"NAXIS1": new_naxis[0], "NAXIS2": new_naxis[1]})

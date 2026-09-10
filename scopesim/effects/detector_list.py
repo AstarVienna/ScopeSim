@@ -497,9 +497,11 @@ class DetectorList3D(DetectorList):
     def image_plane_header(self):
         """Create and return the Image Plane Header."""
         # FIXME: Heavy property.....
-        points = self._get_corner_points().value
         new_wcs, naxis = create_wcs_from_points(
-            points, self.pixel_size.to_value(u.mm), "D")
+            self._get_corner_points(),
+            self.pixel_size.to(u.mm) / u.pixel,
+            wcs_suffix="D",
+        )
 
         hdr = fits.Header()
         hdr["NAXIS"] = 3

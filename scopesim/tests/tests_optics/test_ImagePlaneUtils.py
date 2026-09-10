@@ -7,6 +7,7 @@ from astropy.wcs import WCS
 import matplotlib.pyplot as plt
 
 from scopesim.optics import image_plane_utils as imp_utils
+from scopesim.optics.fov_manager import chunk_edges
 from scopesim.tests.mocks.py_objects import imagehdu_objects as imo
 
 
@@ -227,6 +228,93 @@ class TestOverlayImage:
             plt.subplot(133)
             plt.imshow(im[0, :, :], origin="lower")
             plt.show()
+
+
+class TestLatticeIsSharedBetweenChunks:
+    """Regions carved from one origin in whole-pixel steps share a lattice.
+
+    This is what chunked FOVs are: the image plane, the full-size chunks and
+    the smaller last chunk are all measured from the same detector edge. When
+    the region is not a whole number of pixels across, CRVAL used to absorb
+    each region's own rounding remainder, putting them on lattices offset from
+    one another by fractions of a pixel.
+    """
+
+    @pytest.mark.parametrize("extent_px", [24.0, 21.0, 17.32, 17.1, 12621 + 1/3])
+    @pytest.mark.parametrize("chunk", [4, 8])
+    def test_chunks_land_on_the_parent_lattice(self, extent_px, chunk):
+        pixel_scale = 0.1
+        lo = -extent_px / 2 * pixel_scale
+        hi = lo + extent_px * pixel_scale
+
+        parent, parent_naxis = imp_utils.create_wcs_from_points(
+            np.array([[lo, lo], [hi, hi]]), pixel_scale)
+
+        # the real chunk-edge helper, not a copy of it
+        edges = [lo, *chunk_edges(lo, hi, chunk * pixel_scale), hi]
+
+        for x0, x1 in zip(edges[:-1], edges[1:]):
+            child, child_naxis = imp_utils.create_wcs_from_points(
+                np.array([[x0, x0], [x1, x1]]), pixel_scale)
+            # the child's pixel 0 must sit on a whole-pixel offset of the
+            # parent's grid, otherwise the projection has to snap it
+            world = child.wcs_pix2world([[0, 0]], 0)
+            pix = parent.wcs_world2pix(world, 0)[0]
+            np.testing.assert_allclose(pix, np.round(pix), atol=1e-6)
+
+    @pytest.mark.parametrize("pnts, pixel_scale", [
+        (np.array([[0, 0]]), 5),                                  # single point
+        (np.array([[-1, -1], [-1, 1], [1, -1], [1, 1]]), 5),      # sub-pixel
+    ])
+    def test_regions_smaller_than_a_pixel_stay_centred(self, pnts, pixel_scale):
+        wcs, naxis = imp_utils.create_wcs_from_points(pnts, pixel_scale)
+        np.testing.assert_array_equal(naxis, [1, 1])
+        np.testing.assert_array_equal(wcs.wcs.crval,
+                                      pnts.mean(axis=0))
+
+
+class TestOverlayImageSnapping:
+    """The origin, not the centre, must be snapped to the pixel grid.
+
+    ``ceil(coords) - shape // 2`` snapped the centre instead, which is off by
+    up to a whole pixel whenever ``coords`` is not on the lattice implied by
+    ``small_im.shape``, in a direction that flips with the parity of that
+    shape. Adjacent FOVs of different sizes were therefore displaced opposite
+    ways, and their shared edge gained a duplicated or a dropped row/column.
+    """
+
+    @pytest.mark.parametrize("size", [1, 2, 3, 4, 7, 8])
+    def test_places_image_on_its_own_lattice_without_shift(self, size):
+        big = np.zeros((32, 32))
+        small = np.ones((size, size))
+        # centre coordinate that the shape's own lattice implies
+        centre = 10 + (size - 1) / 2
+        imp_utils.overlay_image(small, big, (centre, centre))
+        rows = np.where(big.any(axis=1))[0]
+        assert rows[0] == 10
+        assert rows[-1] == 10 + size - 1
+
+    @pytest.mark.parametrize("size", [1, 2, 3, 4, 7, 8])
+    def test_snaps_sub_pixel_offset_the_same_way_for_any_shape(self, size):
+        # A 0.3 pix offset must never move the image by a whole pixel, whatever
+        # the parity of the shape.
+        big = np.zeros((32, 32))
+        small = np.ones((size, size))
+        centre = 10 + (size - 1) / 2 + 0.3
+        imp_utils.overlay_image(small, big, (centre, centre))
+        rows = np.where(big.any(axis=1))[0]
+        assert rows[0] == 10
+        assert rows[-1] == 10 + size - 1
+
+    def test_adjacent_differently_sized_images_tile_exactly(self):
+        # Mimics chunked FOVs, where the last chunk is smaller than the rest.
+        big = np.zeros((1, 20))
+        origin = 0
+        for size in (8, 8, 4):
+            small = np.ones((1, size))
+            imp_utils.overlay_image(small, big, (origin + (size - 1) / 2, 0))
+            origin += size
+        assert (big == 1).all()
 
 
 class TestRescaleImageHDU:
