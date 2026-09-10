@@ -184,12 +184,19 @@ class OpticalTrain:
         self.optics_manager.update(**kwargs)
         opt_man = self.optics_manager
 
-        self.fov_manager = FOVManager(opt_man.fov_setup_effects, cmds=self.cmds,
-                                      **kwargs)
-        self.image_planes = [ImagePlane(hdr, self.cmds, **kwargs)
-                             for hdr in opt_man.image_plane_headers]
-        self.detector_managers = [DetectorManager(det_list, cmds=self.cmds, **kwargs)
-                                for det_list in opt_man.detector_setup_effects]
+        self.fov_manager = FOVManager(
+            opt_man.fov_setup_effects,
+            cmds=self.cmds,
+            **kwargs
+        )
+        self.image_planes = [
+            ImagePlane(hdr, self.cmds, **kwargs)
+            for hdr in opt_man.image_plane_headers
+        ]
+        self.detector_managers = [
+            DetectorManager(det_list, cmds=self.cmds, **kwargs)
+            for det_list in opt_man.detector_setup_effects
+        ]
 
         # Move everything from CurrObs to CurrSys, so CurrObs is clean for
         # .observe and .readout. This is necessary because the setup and
@@ -488,9 +495,11 @@ class OpticalTrain:
                 try:
                     hdul = self.write_header(hdul)
                 except Exception:
-                    logger.exception("Header update failed, data will be "
-                                     "saved with incomplete header. See stack "
-                                     "trace for details.")
+                    logger.exception(
+                        "Header update failed, data will be saved with "
+                        "incomplete header. See stack trace for details."
+                    )
+
 
             if filename is not None and isinstance(filename, str):
                 fname = filename
