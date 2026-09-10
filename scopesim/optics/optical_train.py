@@ -245,6 +245,17 @@ class OpticalTrain:
         if update:
             self.update(**kwargs)
 
+        if self.cmds["!SIM.random.seed"] is None:
+            # Concretize seed from system entropy to keep constant during the
+            # observe run. For multiple observations, this is cleared above.
+            self.cmds["!SIM.random.seed"] = np.random.SeedSequence().entropy
+        elif self.cmds["!SIM.random.seed"] in {"None", "none", "NONE"}:
+            logger.warning(
+                "Got random seed '%s' (a string, not None!), use NULL in yaml",
+                self.cmds["!SIM.random.seed"]
+            )
+            self.cmds["!SIM.random.seed"] = np.random.SeedSequence().entropy
+
         # self.set_focus(**kwargs)    # put focus back on current instrument package
 
         # Make a copy of the Source and prepare for observation (convert to
