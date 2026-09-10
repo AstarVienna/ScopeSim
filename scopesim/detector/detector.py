@@ -7,9 +7,17 @@ from astropy.io.fits import ImageHDU
 from astropy.wcs import WCS
 
 from ..optics import ImagePlane
-from ..optics.image_plane_utils import (add_imagehdu_to_imagehdu,
-                                        sky_wcs_from_det_wcs)
-from ..utils import get_logger, from_currsys, stringify_dict, zeros_from_header
+from ..optics.image_plane_utils import (
+    add_imagehdu_to_imagehdu,
+    sky_wcs_from_det_wcs,
+)
+from ..utils import (
+    get_logger,
+    from_currsys,
+    stringify_dict,
+    zeros_from_header,
+    real_colname,
+)
 
 
 logger = get_logger(__name__)
@@ -66,6 +74,18 @@ class Detector:
         return self._hdu
 
     @property
+    def det_id(self) -> int | None:
+        """Return detector ID.
+
+        Avoid calling it just "id", because ``id(self)`` is something else.
+
+        If not found in `self.meta`, return None.
+        """
+        if key := real_colname("id", self.meta):
+            return self.meta[key]
+        return None
+
+    @property
     def header(self):
         """Return header from internal HDU."""
         return self._hdu.header
@@ -83,3 +103,8 @@ class Detector:
     def image(self):
         """Return data from internal HDU."""
         return self.data
+
+    def __str__(self) -> str:
+        if self.det_id is not None:
+            return f"Detector {self.det_id:>2d}"
+        return "Detector"

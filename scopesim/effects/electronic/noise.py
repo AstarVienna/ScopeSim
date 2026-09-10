@@ -11,7 +11,7 @@ from astropy.io import fits
 
 from .. import Effect
 from ...detector import Detector
-from ...utils import from_currsys, figure_factory, check_keys, real_colname
+from ...utils import from_currsys, figure_factory, check_keys
 from . import logger
 
 
@@ -247,19 +247,18 @@ class PixelResponseNonUniformity(Effect):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.meta.update(kwargs)
-        self._gain_maps = {}  # keyed by dtcr_id
+        self._gain_maps = {}  # keyed by det_id
 
     def apply_to(self, obj, **kwargs):
         if not isinstance(obj, Detector):
             return obj
 
         random_seed = from_currsys(self.meta.get("prnu_seed"), self.cmds)
-        id_key = real_colname("id", obj.meta)
-        dtcr_id = obj.meta[id_key] if id_key is not None else None
+        det_id = obj.det_id
 
         prnu_std_meta = from_currsys(self.meta["prnu_std"], self.cmds)
         if isinstance(prnu_std_meta, Mapping):
-            prnu_std = float(from_currsys(prnu_std_meta[dtcr_id], self.cmds))
+            prnu_std = float(from_currsys(prnu_std_meta[det_id], self.cmds))
         elif isinstance(prnu_std_meta, Real):
             prnu_std = float(prnu_std_meta)
         else:
@@ -269,16 +268,16 @@ class PixelResponseNonUniformity(Effect):
             )
 
         shape = obj.data.shape
-        if dtcr_id not in self._gain_maps:
+        if det_id not in self._gain_maps:
             rng = np.random.default_rng(random_seed)
-            self._gain_maps[dtcr_id] = rng.normal(
+            self._gain_maps[det_id] = rng.normal(
                 loc=1.0, scale=prnu_std, size=shape,
             )
 
-        if self._gain_maps[dtcr_id].shape != shape:
+        if self._gain_maps[det_id].shape != shape:
             raise ValueError("gain map shape mismatch")
 
-        obj.data = obj.data * self._gain_maps[dtcr_id]
+        obj.data = obj.data * self._gain_maps[det_id]
         return obj
 
     def plot(self, det_id=None):
@@ -391,13 +390,12 @@ class DarkCurrent(Effect):
     ) -> np.ndarray:
         return data + dark_level * dit * ndit
 
-    def _get_dark_level(self, det_meta) -> float:
+    def _get_dark_level(self, det_id: int) -> float:
         dark_level = float(from_currsys(self.meta["value"], self.cmds))
         if isinstance(dark_level, Real):
             return dark_level
         if isinstance(dark_level, Mapping):
-            dtcr_id = det_meta[real_colname("id", det_meta)]
-            return from_currsys(dark_level[dtcr_id], self.cmds)
+            return from_currsys(dark_level[det_id], self.cmds)
         raise ValueError(
             f"<{self.__class__.__name__}>.meta['value'] must be either "
             f"dict-like or scalar number, but is {dark_level}."
@@ -408,7 +406,7 @@ class DarkCurrent(Effect):
             return obj
 
         # Dark level needs detector meta so can't go into __call__()
-        dark_level = self._get_dark_level(obj.meta)
+        dark_level = self._get_dark_level(obj.det_id)
         dit = from_currsys(self.meta["dit"], self.cmds)
         ndit = from_currsys(self.meta["ndit"], self.cmds)
 

@@ -18,7 +18,7 @@ from scipy.signal import oaconvolve
 from .. import Effect
 from ...detector import Detector
 from ...utils import figure_factory, check_keys
-from ...utils import from_currsys, real_colname
+from ...utils import from_currsys
 from . import logger
 
 
@@ -309,14 +309,13 @@ class ADConversion(Effect):
     def __call__(self, data: ArrayLike, gain: Real) -> NDArray:
         return data / gain
 
-    def _get_gain(self, det_meta) -> Real:
+    def _get_gain(self, det_id: int) -> Real:
         # Apply the gain value (copy from DarkCurrent)
         # Note that this does not cater for the case where the gain is given
         # as a plain dictionary. Should we implement that?
         if hasattr(self.cmds["!DET.gain"], "dic"):
-            dtcr_id = det_meta[real_colname("id", det_meta)]
-            gain = self.cmds["!DET.gain"].dic[dtcr_id]
-            logger.info(f"Detector {dtcr_id}: applying gain {gain}")
+            gain = self.cmds["!DET.gain"].dic[det_id]
+            logger.info(f"Detector {det_id}: applying gain {gain}")
             return gain
         if isinstance(self.cmds["!DET.gain"], Real):
             gain = self.cmds["!DET.gain"]
@@ -333,7 +332,7 @@ class ADConversion(Effect):
         new_dtype = self.meta["dtype"]
 
         # Apply gain
-        obj.data = self(obj.data, self._get_gain(obj.meta))
+        obj.data = self(obj.data, self._get_gain(obj.det_id))
 
         # Type-conversion wraps around input values that are higher or lower than
         # the respective maximum and minimum values of the new data type. Before
