@@ -330,12 +330,12 @@ class FieldOfView:
         xyp.sort(axis=0)
         logger.debug("xyp:\n%s", xyp)
 
-        xy0p = np.max(((0, 0), np.floor(xyp[0]).astype(int)), axis=0)
-        xy1p = np.min(((naxis1, naxis2), np.ceil(xyp[1]).astype(int)), axis=0)
-        logger.debug("xy0p: %s; xy1p: %s", xy0p, xy1p)
-
-        # Add 1 if the same
-        xy1p += (xy0p == xy1p)
+        xy0p = np.max(((0, 0), np.floor(xyp[0]).astype(np.intp)), axis=0)
+        # xyp are inclusive bounds; python (in)famously excludes upper bound,
+        # hence xy1p needs to be increased by one
+        xy1p = np.min(((naxis1, naxis2),
+                       1 + np.ceil(xyp[1]).astype(np.intp)),
+                      axis=0)
         logger.debug("xy0p: %s; xy1p: %s", xy0p, xy1p)
 
         # Describe the cutout with the input WCS, shifted by the slice origin.
@@ -356,6 +356,9 @@ class FieldOfView:
         new_wcs = image_wcs.deepcopy()
         new_wcs.wcs.crpix = image_wcs.wcs.crpix - xy0p
         new_naxis = xy1p - xy0p
+        logger.debug("orig image wcs: %s", image_wcs)
+        logger.debug("new cutout wcs: %s", new_wcs)
+        logger.debug("new cutout naxis: %s", new_naxis)
 
         new_hdr = new_wcs.to_header()
         new_hdr.update({"NAXIS1": new_naxis[0], "NAXIS2": new_naxis[1]})
