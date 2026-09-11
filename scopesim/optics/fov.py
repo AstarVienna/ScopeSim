@@ -353,9 +353,11 @@ class FieldOfView:
         # then mis-registered it by up to a whole pixel, and by differing
         # amounts for neighbouring FOVs, so the seam between two FOVs picked
         # up a duplicated or a dropped row/column.
-        new_wcs = image_wcs.deepcopy()
-        new_wcs.wcs.crpix = image_wcs.wcs.crpix - xy0p
-        new_naxis = xy1p - xy0p
+        # new_wcs = image_wcs.deepcopy()
+        # new_wcs.wcs.crpix = image_wcs.wcs.crpix - xy0p
+        # new_naxis = xy1p - xy0p
+        new_wcs, new_naxis = imp_utils.create_wcs_from_points(
+        np.array([xy0s, xy1s]).round(11), pixel_scale=hdr["CDELT1"])
 
         new_hdr = new_wcs.to_header()
         new_hdr.update({"NAXIS1": new_naxis[0], "NAXIS2": new_naxis[1]})
