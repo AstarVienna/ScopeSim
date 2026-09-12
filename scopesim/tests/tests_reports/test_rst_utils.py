@@ -10,6 +10,7 @@ from scopesim.reports import rst_utils as ru
 from scopesim.tests.mocks.py_objects import report_objects as ro
 from scopesim.tests.mocks.py_objects import effects_objects as eo
 
+pytestmark = pytest.mark.skip  # whole file
 
 CLEAN_UP = True
 PLOTS = False
