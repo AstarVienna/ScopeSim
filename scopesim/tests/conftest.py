@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pytest
 from unittest.mock import patch
+import matplotlib
 
 import scopesim as sim
 from astar_utils import UniqueList
@@ -14,6 +15,8 @@ from astar_utils import UniqueList
 MOCK_DIR = Path(__file__).parent / "mocks"
 
 sim.rc.__currsys__["!SIM.file.error_on_missing_file"] = True
+
+matplotlib.use("agg")  # Don't render plots in normal testing
 
 
 @pytest.fixture(scope="function", autouse=True)
