@@ -1,6 +1,13 @@
+# -*- coding: utf-8 -*-
+
+# TODO: What does this (rather clunky) Sphinx extension do that isn't covered
+#       by autodoc/autosummary?? If it's redundant, just get rid of it tbh.
+
 import os
 import numpy as np
-from scopesim.effects import effects_utils as eu
+
+# This function is only used here. If this extension is removed, rm the func.
+from scopesim.effects.effects_utils import scopesim_effect_classes
 
 
 def setup(app):
@@ -8,7 +15,7 @@ def setup(app):
                                  "../effects_docstrings"))
     os.makedirs(output_dir, exist_ok=True)
 
-    efs_dict = eu.scopesim_effect_classes()
+    efs_dict = scopesim_effect_classes()
     eff_types = np.unique([eff.split(".")[0] for eff in efs_dict])
     eff_type_strs = {eff_type: f"{eff_type}\n{'='*len(eff_type)}\n\n"
                      for eff_type in eff_types}
@@ -37,7 +44,7 @@ def setup(app):
     :glob:
 
     *
-    
+
 """
 
     with open(os.path.join(output_dir, "index.rst"), "w") as f:

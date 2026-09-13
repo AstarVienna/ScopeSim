@@ -1,31 +1,16 @@
+# -*- coding: utf-8 -*-
+
 import pytest
 
 from scopesim import effects as efs
-from scopesim.effects import effects_utils as eu, GaussianDiffractionPSF, \
-    SurfaceList
-from scopesim.tests.mocks.py_objects.effects_objects import _surf_list, \
-    _surf_list_empty, _filter_surface
+from scopesim.effects import effects_utils as eu, GaussianDiffractionPSF
+
 from scopesim.tests.mocks.py_objects.yaml_objects import _atmo_yaml_dict
 
 
 @pytest.fixture(scope="function")
 def atmo_yaml_dict():
     return _atmo_yaml_dict()
-
-
-@pytest.fixture(scope="function")
-def surf_list():
-    return _surf_list()
-
-
-@pytest.fixture(scope="function")
-def surf_list_empty():
-    return _surf_list_empty()
-
-
-@pytest.fixture(scope="function")
-def filter_surface():
-    return _filter_surface()
 
 
 class TestMakeEffect:

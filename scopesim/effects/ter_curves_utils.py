@@ -49,6 +49,7 @@ PATH_HERE = Path(__file__).parent
 PATH_SVO_DATA = PATH_HERE.parent / "data" / "svo"
 
 
+# This function is only used in the AnisoCADO PSF...
 def get_filter_effective_wavelength(filter_name):
     # TODO: This is technically stored in the SVO XML file as WavelengthEff...
     # (actually WavelengthMean, by definition of formula ...)
