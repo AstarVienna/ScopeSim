@@ -25,18 +25,14 @@ from astropy.wcs import WCS
 
 from synphot import SpectralElement, SourceSpectrum
 
-from ..optics.image_plane import ImagePlane
-from ..optics import image_plane_utils as imp_utils
 from .source_utils import (
     validate_source_input,
     convert_to_list_of_spectra,
-    photons_in_range,
 )
 from .source_fields import (
     SourceField,
     TableSourceField,
     SpectrumSourceField,
-    HDUSourceField,
     ImageSourceField,
     CubeSourceField,
 )
@@ -44,7 +40,6 @@ from ..utils import (
     find_file,
     is_fits,
     get_fits_type,
-    quantity_from_table,
     figure_factory,
     get_logger,
 )
@@ -414,75 +409,6 @@ class Source:
 
         self._bandpass = bandpass
 
-    def image_in_range(self, wave_min, wave_max, pixel_scale=1*u.arcsec,
-                       layers=None, area=None, spline_order=1, sub_pixel=False):
-        if layers is None:
-            layers = range(len(self.fields))
-        fields = [self.fields[ii].field for ii in layers]
-
-        hdr = imp_utils.get_canvas_header(fields, pixel_scale=pixel_scale)
-        im_plane = ImagePlane(hdr)
-
-        for field in fields:
-            if isinstance(field, Table):
-                fluxes = self.photons_in_range(wave_min, wave_max, area,
-                                               field["ref"]) * field["weight"]
-                x = quantity_from_table("x", field, u.arcsec)
-                y = quantity_from_table("y", field, u.arcsec)
-                tbl = Table(names=["x", "y", "flux"], data=[x, y, fluxes])
-                tbl.meta.update(field.meta)
-                hdu_or_table = tbl
-
-            elif isinstance(field, fits.ImageHDU):
-                if field.header["SPEC_REF"] != "":
-                    ref = [field.header["SPEC_REF"]]
-                    flux = self.photons_in_range(wave_min, wave_max, area, ref)
-                    # [ph s-1] or [ph s-1 m-2] come out of photons_in_range
-
-                image = field.data * flux
-                hdu = fits.ImageHDU(header=field.header, data=image)
-                hdu_or_table = hdu
-            else:
-                continue
-
-            im_plane.add(hdu_or_table, sub_pixel=sub_pixel,
-                         spline_order=spline_order)
-
-        return im_plane
-
-    def photons_in_range(self, wave_min, wave_max, area=None, indices=None):
-        """
-
-        Parameters
-        ----------
-        wave_min : float, u.Quantity
-            [um]
-        wave_max : float, u.Quantity
-            [um]
-        area : float, u.Quantity, optional
-            [m2]
-        indices : list of integers, optional
-
-        Returns
-        -------
-        counts : u.Quantity list
-            [ph / s / m2] if area is None
-            [ph / s] if area is passed
-
-        """
-        if indices is None:
-            indices = self.spectra.keys()
-
-        spectra = [self.spectra[ii] for ii in indices]
-        counts = photons_in_range(spectra, wave_min, wave_max, area=area,
-                                  bandpass=self.bandpass)
-        return counts
-
-    def fluxes(self, wave_min, wave_max, **kwargs):
-        return self.photons_in_range(wave_min, wave_max, **kwargs)
-
-    def image(self, wave_min, wave_max, **kwargs):
-        return self.image_in_range(wave_min, wave_max, **kwargs)
 
     def shift(self, dx: float = 0, dy: float = 0, layers=None) -> None:
         """
