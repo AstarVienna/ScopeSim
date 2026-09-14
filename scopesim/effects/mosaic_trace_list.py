@@ -271,8 +271,9 @@ class MosaicOutputFormat(MosaicSpectralTraceList):
 
             det._hdu = fits.BinTableHDU.from_columns([
                 fits.Column(name="wavelength", format="D", array=lam, unit="um"),
-                fits.Column(name="spectrum", format="D", array=spec, unit="ADU"),
+                fits.Column(name="spectrum", format="D", array=spec, unit="adu"),
             ])
+            det._hdu.header["INHERIT"] = True
 
         elif output_format == "table":
             ntrace = len(self.spectral_traces)
@@ -298,8 +299,9 @@ class MosaicOutputFormat(MosaicSpectralTraceList):
 
             tab = Table(data=[idarr, xarr, yarr, lamarr, specarr],
                         names=["id", "x", "y", "wavelength", "spectrum"],
-                        units=["", "arcsec", "arcsec", "um", "ADU"])
+                        units=["", "arcsec", "arcsec", "um", "adu"])
             det._hdu = fits.BinTableHDU(data=tab)
+            det._hdu.header["INHERIT"] = True
 
         elif output_format == "image":
             pass
