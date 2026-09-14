@@ -12,7 +12,6 @@
 #   - psf : returns self, as array returns a layer based on defaults
 # 4. should have the following methods:
 #   - (?) apply_to(obj)
-#   - fov_grid(which="waveset")
 #   - get_kernel(obj)
 """
 

@@ -44,21 +44,17 @@ class TestInit:
             isinstance(AtmosphericDispersion(), AtmosphericDispersion)
 
 
-class TestFovGrid:
-    def test_returns_list_of_3_arrays_with_correct_which(self, atmo_yaml_dict):
+class TestGetTable:
+    def test_returns_wavelength_dx_dy_columns(self, atmo_yaml_dict):
         atmo_disp = AtmosphericDispersion(**atmo_yaml_dict["properties"])
-        response = atmo_disp.fov_grid()
-        assert len(response) == 3
-        assert all([isinstance(x, np.ndarray) for x in response])
-
-    def test_returns_non_with_wrong_which_keyword(self, atmo_yaml_dict):
-        atmo_disp = AtmosphericDispersion(**atmo_yaml_dict["properties"])
-        response = atmo_disp.fov_grid(which="bogus")
-        assert response is None
+        tbl = atmo_disp.get_table()
+        assert tbl.colnames == ["wavelength", "dx", "dy"]
+        assert all(isinstance(tbl[col], np.ndarray) for col in tbl.colnames)
 
     def test_returns_similar_values_to_lasilla_website(self, atmo_yaml_dict):
         atmo_disp = AtmosphericDispersion(**atmo_yaml_dict["properties"])
-        waves, dx, dy = atmo_disp.fov_grid()
+        tbl = atmo_disp.get_table()
+        waves, dx, dy = tbl["wavelength"], tbl["dx"], tbl["dy"]
         assert dy[0] - dy[-1] == approx(0.53, rel=1e-2)
         assert all(dx == 0)
         assert waves[0] == 0.5 and waves[-1] == 2.5
@@ -66,14 +62,16 @@ class TestFovGrid:
     def test_returns_same_results_when_turned_90_degrees(self, atmo_yaml_dict):
         atmo_yaml_dict["properties"]["pupil_angle"] = 90
         atmo_disp = AtmosphericDispersion(**atmo_yaml_dict["properties"])
-        waves, dx, dy = atmo_disp.fov_grid()
+        tbl = atmo_disp.get_table()
+        dx, dy = tbl["dx"], tbl["dy"]
         assert dx[0] - dx[-1] == approx(0.53, rel=1e-2)
         assert all([y == approx(0) for y in dy])
 
     def test_returns_same_results_when_turned_30_degrees(self, atmo_yaml_dict):
         atmo_yaml_dict["properties"]["pupil_angle"] = 30
         atmo_disp = AtmosphericDispersion(**atmo_yaml_dict["properties"])
-        waves, dx, dy = atmo_disp.fov_grid()
+        tbl = atmo_disp.get_table()
+        dx, dy = tbl["dx"], tbl["dy"]
         dr = ((dx[0] - dx[-1])**2 + (dy[0] - dy[-1])**2)**0.5
         assert dr == approx(0.53, rel=1e-2)
 

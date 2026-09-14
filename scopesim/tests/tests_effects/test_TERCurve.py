@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Tests for TERCurve class"""
 
 import pytest
@@ -7,8 +8,10 @@ import numpy.testing as npt
 from matplotlib import pyplot as plt
 from astropy import units as u
 from astropy.wcs import WCS
+from astropy.table import Table
 
 from scopesim.effects import ter_curves as tc
+from scopesim.optics.fov_volume_list import FovVolumeList
 from scopesim.tests.mocks.py_objects import source_objects as so
 from scopesim.tests.mocks.py_objects import effects_objects as eo
 
@@ -72,6 +75,18 @@ class TestTERCurveApplyTo:
         new = src.cube_fields[0].data[:, 25, 25]
 
         npt.assert_allclose(new, orig * thru)
+
+    def test_raises_helpful_error_when_nothing_transmits(self):
+        """A fully opaque surface used to die on a bare IndexError inside the
+        volume setup. The error must name the effect and the waverange."""
+        tbl = Table(data=[[0.5, 1.0, 2.0, 3.0], [0.0, 0.0, 0.0, 0.0]],
+                    names=["wavelength", "transmission"])
+        tbl["wavelength"].unit = "um"
+        eff = tc.TERCurve(table=tbl, wave_min=0.5, wave_max=3.0,
+                          name="closed shutter")
+
+        with pytest.raises(ValueError, match="Did you open the shutter"):
+            eff.apply_to(FovVolumeList())
 
 
 class TestTERCurvePlot:
