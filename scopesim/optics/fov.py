@@ -355,6 +355,7 @@ class FieldOfView:
         # up a duplicated or a dropped row/column.
         new_wcs = image_wcs.deepcopy()
         new_wcs.wcs.crpix = image_wcs.wcs.crpix - xy0p
+        new_wcs.wcs.cdelt = np.abs(new_wcs.wcs.cdelt)
         new_naxis = xy1p - xy0p
         logger.debug("orig image wcs: %s", image_wcs)
         logger.debug("new cutout wcs: %s", new_wcs)

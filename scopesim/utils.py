@@ -556,6 +556,8 @@ def unit_includes_per_physical_type(unit, physical_type):
 def pixel_area(header: fits.Header) -> u.Quantity[u.arcsec**2]:
     """Calculate area covered by one pixel in arcsec**2 from header.
 
+    The pixel area is always positive.
+
     .. versionadded:: 0.11.1
 
     """
@@ -571,7 +573,7 @@ def pixel_area(header: fits.Header) -> u.Quantity[u.arcsec**2]:
     area = (header["CDELT1"] * u.Unit(header["CUNIT1"]) *
             header["CDELT2"] * u.Unit(header["CUNIT2"]))
 
-    return area.to(u.arcsec**2)
+    return np.abs(area.to(u.arcsec**2))
 
 
 def has_needed_keywords(header, suffix=""):
