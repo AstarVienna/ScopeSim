@@ -813,14 +813,42 @@ class XiLamImage():
         self.xi = self.wcs.all_pix2world(self.lam[0], np.arange(n_xi), 0)[1]
         self.npix_xi = n_xi
         self.npix_lam = n_lam
-        # ..todo: cubic spline introduces negative values, linear does not.
-        #  Alternative might be to cubic-spline interpolate on sqrt(image),
-        #  with subsequent squaring of the result. This would require
-        #  wrapping RectBivariateSpline in a new (sub)class.
-        spline_order = (1, 1)
-        self.interp = RectBivariateSpline(self.xi, self.lam, self.image,
-                                          kx=spline_order[0],
-                                          ky=spline_order[1])
+
+    def interp(self, xi, lam, grid=False):
+        """
+        Bilinear interpolation of the xi-lambda image at (xi, lam).
+
+        Direct equivalent of evaluating a ``RectBivariateSpline`` with
+        ``kx=ky=1`` on the regular (xi, lam) grid, including the clamping
+        of out-of-range coordinates to the boundary values -- but avoiding
+        FITPACK's point-evaluation path, which is orders of magnitude
+        slower for large coordinate arrays.
+
+        With ``grid=False``, `xi` and `lam` are coordinate pairs of equal
+        shape. With ``grid=True``, the image is evaluated on the tensor
+        product of the two vectors.
+        """
+        xi = np.asarray(xi, dtype=float)
+        lam = np.asarray(lam, dtype=float)
+
+        i_xi = np.clip(np.searchsorted(self.xi, xi) - 1,
+                       0, self.npix_xi - 2)
+        j_lam = np.clip(np.searchsorted(self.lam, lam) - 1,
+                        0, self.npix_lam - 2)
+        w_xi = np.clip((xi - self.xi[i_xi])
+                       / (self.xi[i_xi + 1] - self.xi[i_xi]), 0., 1.)
+        w_lam = np.clip((lam - self.lam[j_lam])
+                        / (self.lam[j_lam + 1] - self.lam[j_lam]), 0., 1.)
+
+        if grid:
+            i_xi, w_xi = i_xi[:, None], w_xi[:, None]
+            j_lam, w_lam = j_lam[None, :], w_lam[None, :]
+
+        img = self.image
+        return ((1 - w_xi) * (1 - w_lam) * img[i_xi, j_lam]
+                + (1 - w_xi) * w_lam * img[i_xi, j_lam + 1]
+                + w_xi * (1 - w_lam) * img[i_xi + 1, j_lam]
+                + w_xi * w_lam * img[i_xi + 1, j_lam + 1])
 
 
 class Transform2D():
