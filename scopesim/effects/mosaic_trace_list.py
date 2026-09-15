@@ -135,8 +135,10 @@ class MosaicSpectralTraceList(SpectralTraceList):
             # a possibility to "mask" traces.
             if row["image_plane_id"] == -1:
                 continue
-            params = {col: row[col] for col in row.colnames}
-            params.update(self.meta)
+            # list-level meta provides defaults, the trace-specific values
+            # from the catalogue row (description, extension_id, ...) win
+            params = dict(self.meta)
+            params.update({col: row[col] for col in row.colnames})
             hdu = self._file[row["extension_id"]]
             spec_traces[row["description"]] = MosaicSpectralTrace(hdu, **params)
 

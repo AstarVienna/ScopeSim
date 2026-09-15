@@ -149,8 +149,10 @@ class SpectralTraceList(Effect):
         self.catalog = Table(self._file[self.ext_cat].data)
         spec_traces = {}
         for row in self.catalog:
-            params = {col: row[col] for col in row.colnames}
-            params.update(self.meta)
+            # list-level meta provides defaults, the trace-specific values
+            # from the catalogue row (description, extension_id, ...) win
+            params = dict(self.meta)
+            params.update({col: row[col] for col in row.colnames})
             hdu = self._file[row["extension_id"]]
             spec_traces[row["description"]] = SpectralTrace(hdu, **params)
 

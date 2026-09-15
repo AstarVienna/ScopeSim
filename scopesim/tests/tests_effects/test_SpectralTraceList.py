@@ -59,6 +59,14 @@ class TestInit:
         slist = SpectralTraceList(hdulist=full_trace_list)
         assert isinstance(slist['Sheared'], SpectralTrace)
 
+    def test_trace_values_win_over_list_meta(self, full_trace_list):
+        # The effect-level meta (e.g. the YAML description of the whole
+        # list) previously clobbered the per-trace catalogue columns
+        slist = SpectralTraceList(hdulist=full_trace_list,
+                                  description="list-level description")
+        for key, trace in slist.spectral_traces.items():
+            assert trace.meta["description"] == key
+
     def test_setitem_appends_correctly(self, full_trace_list):
         slist = SpectralTraceList(hdulist=full_trace_list)
         n_trace = len(slist.spectral_traces)
