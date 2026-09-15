@@ -161,7 +161,7 @@ class TestTransform2D:
 
 class MockCubeFov:
     """Minimal stand-in for a FieldOfView carrying a spectral cube."""
-    def __init__(self, n_lam=20, n_eta=3, n_xi=11):
+    def __init__(self, n_lam=20, n_eta=3, n_xi=11, data=None):
         hdr = fits.Header()
         hdr["NAXIS"] = 3
         hdr["NAXIS1"], hdr["NAXIS2"], hdr["NAXIS3"] = n_xi, n_eta, n_lam
@@ -170,8 +170,9 @@ class MockCubeFov:
         hdr["CRVAL1"], hdr["CRVAL2"], hdr["CRVAL3"] = 0., 0., 2.0
         hdr["CDELT1"], hdr["CDELT2"], hdr["CDELT3"] = 0.1, 0.1, 0.001
         hdr["CUNIT1"], hdr["CUNIT2"], hdr["CUNIT3"] = "arcsec", "arcsec", "um"
-        self.cube = fits.ImageHDU(
-            data=np.ones((n_lam, n_eta, n_xi)), header=hdr)
+        if data is None:
+            data = np.ones((n_lam, n_eta, n_xi))
+        self.cube = fits.ImageHDU(data=data, header=hdr)
         self.meta = {"xi_min": -0.5 * u.arcsec, "xi_max": 0.5 * u.arcsec}
 
 
@@ -181,6 +182,36 @@ class TestXiLamImage:
         xilam = XiLamImage(MockCubeFov(), dlam_per_pix=0.001)
         assert list(xilam.wcs.wcs.cunit) == [u.um, u.arcsec]
         assert list(xilam.wcsa.wcs.cunit) == [u.um, u.dimensionless_unscaled]
+
+    def test_image_matches_rect_bivariate_spline_reference(self):
+        """The vectorised wavelength interpolation must reproduce the
+        previous per-plane RectBivariateSpline(kx=1, ky=1) computation."""
+        from scipy.interpolate import RectBivariateSpline
+
+        n_lam, n_eta, n_xi = 40, 5, 13
+        rng = np.random.default_rng(42)
+        data = rng.random((n_lam, n_eta, n_xi))
+        fov = MockCubeFov(n_lam, n_eta, n_xi, data=data)
+        dlam_per_pix = 0.0015
+
+        xilam = XiLamImage(fov, dlam_per_pix)
+
+        # reference: the removed spline-per-plane implementation
+        hdr = fov.cube.header
+        d_xi, d_eta, d_lam = hdr["CDELT1"], hdr["CDELT2"], hdr["CDELT3"]
+        cube_xi = d_xi * np.arange(n_xi) + fov.meta["xi_min"].value
+        cube_eta = d_eta * (np.arange(n_eta) - (n_eta - 1) / 2)
+        cube_lam = hdr["CRVAL3"] + d_lam * np.arange(n_lam)
+        reference = np.zeros((n_xi, n_lam))
+        for i, eta in enumerate(cube_eta):
+            lam0 = cube_lam + dlam_per_pix * eta / d_eta
+            plane = data[:, i, :].T
+            spline = RectBivariateSpline(cube_xi, cube_lam, plane,
+                                         kx=1, ky=1)
+            reference += spline(cube_xi, lam0)
+        reference *= d_eta
+
+        np.testing.assert_allclose(xilam.image, reference, rtol=1e-6)
 
 
 class TestImageInterpolations:
