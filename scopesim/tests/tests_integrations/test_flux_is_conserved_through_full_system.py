@@ -1,18 +1,21 @@
+# -*- coding: utf-8 -*-
 
 import pytest
 from pytest import approx
 from unittest.mock import patch
 
 import numpy as np
+import matplotlib.pyplot as plt
 
 from scopesim.optics.optical_train import OpticalTrain
 from scopesim.commands import UserCommands
 
 from scopesim.tests.mocks.py_objects.source_objects import (
-    _image_source, _single_table_source, _table_source_overlapping)
-
-import matplotlib.pyplot as plt
-from matplotlib.colors import LogNorm
+    _image_source,
+    _single_table_source,
+    _table_source_overlapping,
+)
+from scopesim.tests.tests_source.source_helpers import src_photons_in_range
 
 
 PLOTS = False
@@ -48,11 +51,11 @@ class TestObserve:
         opt.observe(tbl_src)
         im = opt.image_planes[0].image
         bg_flux = np.pi / 4 * np.prod(im.shape)
-        src_flux = tbl_src.photons_in_range(1, 2, 1)[0].value
+        src_flux = src_photons_in_range(tbl_src, 1, 2, 1)[0].value
 
         if PLOTS:
             implane = opt.image_planes[0]
-            plt.imshow(implane.image.T, origin="lower", norm=LogNorm())
+            plt.imshow(implane.image.T, origin="lower", norm="log")
             plt.colorbar()
             plt.show()
 
@@ -70,11 +73,11 @@ class TestObserve:
         opt = OpticalTrain(non_unity_cmds)
         opt.observe(tbl_src)
         im = opt.image_planes[0].image
-        src_flux = tbl_src.photons_in_range(1, 2, 1)[0].value
+        src_flux = src_photons_in_range(tbl_src, 1, 2, 1)[0].value
 
         if PLOTS:
             implane = opt.image_planes[0]
-            plt.imshow(implane.image.T, origin="lower", norm=LogNorm())
+            plt.imshow(implane.image.T, origin="lower", norm="log")
             plt.colorbar()
             plt.show()
 
@@ -133,7 +136,7 @@ class TestStackedStars:
 
         if PLOTS:
             fig, axes = plt.subplots(nrows=1, ncols=1, figsize=(12, 12))
-            axes.imshow(np.sqrt(im_h), norm=LogNorm(), cmap="inferno")
+            axes.imshow(np.sqrt(im_h), norm="log", cmap="inferno")
             axes.set_title('H-band MORFEO "PSF Generic" ')
             plt.show()
 

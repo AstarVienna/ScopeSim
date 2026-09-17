@@ -1,24 +1,5 @@
+# -*- coding: utf-8 -*-
 """
-# old functionality to implement:
-# - provide x, y, lam, spectra, weight, ref
-# - overridden + : number, Source, SourceSpectrum
-# - overridden * : number, SpectralElement
-# - write to and read from file
-# - shift all fields
-# - rotate around the centre
-# - photons_in_range returns the photons per spectrum in a wavelength range
-# - image_in_range returns an image of the source for a wavelength range
-#
-# old functionality which will be removed:
-# - project_onto_chip
-# - apply_optical_train
-#
-# old structure --> new structure:
-# - all data held in 6 arrays
-# --> new dicts for fields, spectrum
-#       field can be a Table or an ImageHDU
-#       spectrum is a SourceSpectrum
-#
 # Use cases:
 # image + spectrum
 # images + spectra
@@ -44,18 +25,14 @@ from astropy.wcs import WCS
 
 from synphot import SpectralElement, SourceSpectrum
 
-from ..optics.image_plane import ImagePlane
-from ..optics import image_plane_utils as imp_utils
 from .source_utils import (
     validate_source_input,
     convert_to_list_of_spectra,
-    photons_in_range,
 )
 from .source_fields import (
     SourceField,
     TableSourceField,
     SpectrumSourceField,
-    HDUSourceField,
     ImageSourceField,
     CubeSourceField,
 )
@@ -63,7 +40,6 @@ from ..utils import (
     find_file,
     is_fits,
     get_fits_type,
-    quantity_from_table,
     figure_factory,
     get_logger,
 )
@@ -242,27 +218,6 @@ class Source:
                                    **kwargs):
         assert not self.fields, "Constructor method must act on empty instance!"
 
-        if not image_hdu.header.get("BG_SRC"):
-            pass
-            # FIXME: This caused more problems than it solved!
-            #        Find out if there's a good reason to mess with this,
-            #        otherwise just remove...
-
-            # image_hdu.header["CRVAL1"] = 0
-            # image_hdu.header["CRVAL2"] = 0
-            # image_hdu.header["CRPIX1"] = image_hdu.header["NAXIS1"] / 2
-            # image_hdu.header["CRPIX2"] = image_hdu.header["NAXIS2"] / 2
-            # #image_hdu.header["CRPIX1"] = (image_hdu.header["NAXIS1"] + 1) / 2
-            # #image_hdu.header["CRPIX2"] = (image_hdu.header["NAXIS2"] + 1) / 2
-            # # .. todo:: find where the actual problem is with negative CDELTs
-            # # .. todo:: --> abs(pixel_scale) in header_from_list_of_xy
-            # if image_hdu.header["CDELT1"] < 0:
-            #     image_hdu.header["CDELT1"] *= -1
-            #     image_hdu.data = image_hdu.data[:, ::-1]
-            # if image_hdu.header["CDELT2"] < 0:
-            #     image_hdu.header["CDELT2"] *= -1
-            #     image_hdu.data = image_hdu.data[::-1, :]
-
         if isinstance(image_hdu, fits.PrimaryHDU):
             image_hdu = fits.ImageHDU(data=image_hdu.data,
                                       header=image_hdu.header)
@@ -270,7 +225,6 @@ class Source:
         if not spectra:
             raise ValueError("No spectrum was provided.")
 
-        # image_hdu.header["SPEC_REF"] = len(self.spectra)
         assert len(spectra) == 1, f"_from_imagehdu_and_spectra needs single spectrum, ref was {image_hdu.header.get('SPEC_REF')}"
         image_hdu.header["SPEC_REF"] = 0
 
@@ -455,99 +409,6 @@ class Source:
 
         self._bandpass = bandpass
 
-    # ..todo: rewrite this method
-    def image_in_range(self, wave_min, wave_max, pixel_scale=1*u.arcsec,
-                       layers=None, area=None, spline_order=1, sub_pixel=False):
-        if layers is None:
-            layers = range(len(self.fields))
-        fields = [self.fields[ii].field for ii in layers]
-
-        hdr = imp_utils.get_canvas_header(fields, pixel_scale=pixel_scale)
-        im_plane = ImagePlane(hdr)
-
-        for field in fields:
-            if isinstance(field, Table):
-                fluxes = self.photons_in_range(wave_min, wave_max, area,
-                                               field["ref"]) * field["weight"]
-                x = quantity_from_table("x", field, u.arcsec)
-                y = quantity_from_table("y", field, u.arcsec)
-                tbl = Table(names=["x", "y", "flux"], data=[x, y, fluxes])
-                tbl.meta.update(field.meta)
-                hdu_or_table = tbl
-
-            elif isinstance(field, fits.ImageHDU):
-                if field.header["SPEC_REF"] != "":
-                    ref = [field.header["SPEC_REF"]]
-                    flux = self.photons_in_range(wave_min, wave_max, area, ref)
-                    # [ph s-1] or [ph s-1 m-2] come out of photons_in_range
-
-                # ## ..todo: CATCH UNITS HERE. DEAL WITH THEM PROPERLY
-                # Currently assuming that all images are scaled appropriately
-                # and that they have SPEC_REF
-
-                # else:
-                #     field = scale_imagehdu(field, area=area,
-                #                            solid_angle=pixel_scale**2,
-                #                            waverange=(wave_min, wave_max))
-                #     # [ph s-1] or [ph s-1 m-2] come out of photons_in_range
-                #     flux = 1
-
-                image = field.data * flux
-                hdu = fits.ImageHDU(header=field.header, data=image)
-                hdu_or_table = hdu
-            else:
-                continue
-
-            im_plane.add(hdu_or_table, sub_pixel=sub_pixel,
-                         spline_order=spline_order)
-
-        return im_plane
-
-    def photons_in_range(self, wave_min, wave_max, area=None, indices=None):
-        """
-
-        Parameters
-        ----------
-        wave_min : float, u.Quantity
-            [um]
-        wave_max : float, u.Quantity
-            [um]
-        area : float, u.Quantity, optional
-            [m2]
-        indices : list of integers, optional
-
-        Returns
-        -------
-        counts : u.Quantity list
-            [ph / s / m2] if area is None
-            [ph / s] if area is passed
-
-        """
-        if indices is None:
-            indices = self.spectra.keys()
-
-        spectra = [self.spectra[ii] for ii in indices]
-        counts = photons_in_range(spectra, wave_min, wave_max, area=area,
-                                  bandpass=self.bandpass)
-        return counts
-
-    def fluxes(self, wave_min, wave_max, **kwargs):
-        return self.photons_in_range(wave_min, wave_max, **kwargs)
-
-    def image(self, wave_min, wave_max, **kwargs):
-        return self.image_in_range(wave_min, wave_max, **kwargs)
-
-    # @classmethod
-    # def load(cls, filename):
-    #     """Load :class:'.Source' object from filename"""
-    #     with open(filename, "rb") as fp1:
-    #         src = pickle.load(fp1)
-    #     return src
-
-    # def dump(self, filename):
-    #     """Save to filename as a pickle"""
-    #     with open(filename, "wb") as fp1:
-    #         pickle.dump(self, fp1)
 
     def shift(self, dx: float = 0, dy: float = 0, layers=None) -> None:
         """

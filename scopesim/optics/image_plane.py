@@ -1,15 +1,10 @@
 # -*- coding: utf-8 -*-
 """Contains ``ImagePlane`` class."""
 
-from warnings import warn
-
-import numpy as np
-
 from astropy.io import fits
-from astropy.table import Table
 from astropy.wcs import WCS
 
-from .image_plane_utils import add_table_to_imagehdu, add_imagehdu_to_imagehdu
+from .image_plane_utils import add_imagehdu_to_imagehdu
 
 from ..utils import (
     from_currsys,

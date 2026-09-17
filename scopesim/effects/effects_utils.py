@@ -1,9 +1,8 @@
+# -*- coding: utf-8 -*-
 """TBA."""
 
 import inspect
 from collections.abc import Iterable
-
-from astropy.table import Table
 
 from .. import effects as efs
 from ..utils import get_logger
@@ -51,15 +50,7 @@ def is_spectroscope(effects):
     return any(isinstance(eff, spec_classes) for eff in effects)
 
 
-def empty_surface_list(**kwargs):
-    tbl = Table(names=["name", "outer", "inner", "angle",
-                       "temperature", "action", "filename"],
-                data=[["test"], [0.], [0.], [0.], [0.], ["none"], ["none"]],
-                meta={"outer_unit": "m", "inner_unit": "m",
-                      "angle_unit": "deg", "temperature_unit": "deg_C"})
-    return efs.SurfaceList(table=tbl[:0], **kwargs)
-
-
+# This is only used for the questionable sphinx extension.
 def scopesim_effect_classes(base_effect=efs.Effect):
     members = inspect.getmembers(efs)
     efs_dict = {".".join([cls.__module__, cls.__name__]).replace("scopesim.effects.", ""): cls

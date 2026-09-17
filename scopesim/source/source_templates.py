@@ -1,11 +1,11 @@
+# -*- coding: utf-8 -*-
+
 from pathlib import Path
 
 import numpy as np
-
 from astropy import units as u
 from astropy.table import Table
 from astropy.io import fits
-from astropy.utils.decorators import deprecated_renamed_argument
 
 from synphot import SourceSpectrum, ConstFlux1D, Empirical1D
 from synphot.units import PHOTLAM
@@ -30,7 +30,6 @@ def empty_sky(flux=0):
     return sky
 
 
-@deprecated_renamed_argument("mag", "flux", "0.1.5")
 def star(x=0, y=0, flux=0):
     """
     Source object for a single star in either vega, AB magnitudes, or Jansky

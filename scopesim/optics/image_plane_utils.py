@@ -1,158 +1,17 @@
 # -*- coding: utf-8 -*-
 
-from itertools import product
-from collections.abc import Iterable
-
 import numpy as np
 from numpy.typing import ArrayLike, NDArray
 from astropy import units as u
 from astropy.wcs import WCS, find_all_wcs
 from astropy.io import fits
-from astropy.table import Table
 from astropy.utils.exceptions import AstropyWarning
 from scipy import ndimage as ndi
 
-from ..utils import (unit_from_table, quantity_from_table, has_needed_keywords,
-                     get_logger)
+from ..utils import get_logger
 
 
 logger = get_logger(__name__)
-
-
-def get_canvas_header(hdu_or_table_list, pixel_scale=1 * u.arcsec):
-    """
-    Generate a fits.Header with a WCS that covers everything in the FOV.
-
-    Parameters
-    ----------
-    hdu_or_table_list : list
-        A list of Tables and/or ImageHDU py_objects
-
-    pixel_scale : astropy.Quantity
-        [arcsec] The pixel scale of the projection. Default in 1 arcsec
-
-    Returns
-    -------
-    header : fits.Header
-        A Header containing a WCS and NAXISn values to build an ImageHDU
-
-    """
-    size_warning = ("Header dimension are {adverb} large: {num_pix}. "
-                    "Any image made from this header will use more that "
-                    ">{size} in memory")
-
-    def _get_headers(hdus_or_tables):
-        tables = []
-        for hdu_or_table in hdus_or_tables:
-            if isinstance(hdu_or_table, fits.ImageHDU):
-                yield hdu_or_table.header
-            elif isinstance(hdu_or_table, fits.Header):
-                yield hdu_or_table
-            elif isinstance(hdu_or_table, Table):
-                tables.append(hdu_or_table)
-            else:
-                raise TypeError(
-                    "hdu_or_table_list may only contain fits.ImageHDU, Table "
-                    f"or fits.Header, found {type(hdu_or_table)}.")
-        if tables:
-            yield _make_bounding_header_for_tables(*tables,
-                                                   pixel_scale=pixel_scale)
-
-    headers = list(_get_headers(hdu_or_table_list))
-
-    if not headers:
-        logger.warning("No tables or ImageHDUs were passed")
-        return None
-
-    hdr = _make_bounding_header_from_headers(*headers, pixel_scale=pixel_scale)
-
-    num_pix = hdr["NAXIS1"] * hdr["NAXIS2"]
-    if num_pix > 2 ** 28:
-        raise MemoryError(size_warning.format(adverb="too", num_pix=num_pix,
-                                              size="8 GB"))
-    if num_pix > 2 ** 25:  # 2 * 4096**2
-        logger.warning(size_warning.format(adverb="", num_pix=num_pix,
-                                           size="256 MB"))
-    return hdr
-
-
-def _make_bounding_header_from_headers(*headers, pixel_scale=1*u.arcsec):
-    """
-    Return a Header with WCS and NAXISn keywords bounding all input ImageHDUs.
-
-    Parameters
-    ----------
-    headers : list of fits.ImageHDU
-    pixel_scale : u.Quantity
-        [arcsec]
-
-    Returns
-    -------
-    hdr : fits.Header
-
-    """
-    wcs_suffix = "D" if pixel_scale.unit.physical_type == "length" else ""
-    unit = u.Unit(_get_unit_from_headers(*headers, wcs_suffix=wcs_suffix))
-
-    if unit.physical_type == "angle":
-        unit = "deg"
-        pixel_scale = pixel_scale.to_value(u.deg)
-    else:
-        pixel_scale = pixel_scale.to_value(unit)
-
-    extents = [calc_footprint(header, wcs_suffix, unit) for header in headers]
-    pnts = np.vstack(extents)
-
-    hdr = header_from_list_of_xy(pnts[:, 0], pnts[:, 1],
-                                 pixel_scale, wcs_suffix)
-    hdr["NAXIS1"] += 1
-    hdr["NAXIS2"] += 1
-    hdr[f"CRVAL1{wcs_suffix}"] -= 0.5 * pixel_scale
-    hdr[f"CRVAL2{wcs_suffix}"] -= 0.5 * pixel_scale
-
-    return hdr
-
-
-def _make_bounding_header_for_tables(*tables, pixel_scale=1*u.arcsec):
-    """
-    Return a Header with WCS and NAXISn keywords bounding all input Tables.
-
-    Parameters
-    ----------
-    tables : list of astropy.Tables
-        [arcsec] Must contain columns: "x", "y"
-
-    pixel_scale : u.Quantity
-        [arcsec]
-
-    Returns
-    -------
-    hdr : fits.Header
-
-    """
-    wcs_suffix = "D" if pixel_scale.unit.physical_type == "length" else ""
-    # FIXME: Convert to deg here? If yes, remove the arcsec=True below...
-    # Note: this could all be a lot simpler if we have consistent units, i.e.
-    #       don't need to convert mm -> mm and arcsec -> arcsec (or deg)
-    new_unit = u.mm if wcs_suffix == "D" else u.arcsec  # u.deg
-    tbl_unit = u.mm if wcs_suffix == "D" else u.arcsec
-    x_name = "x_mm" if wcs_suffix == "D" else "x"
-    y_name = "y_mm" if wcs_suffix == "D" else "y"
-
-    pixel_scale = pixel_scale.to(new_unit)
-
-    extents = []
-    for table in tables:
-        extent = calc_table_footprint(table, x_name, y_name,
-                                      tbl_unit, new_unit,
-                                      padding=pixel_scale)
-        extents.append(extent)
-    pnts = np.vstack(extents)
-
-    # TODO: check if this could just use create_wcs_from_points
-    hdr = header_from_list_of_xy(pnts[:, 0], pnts[:, 1], pixel_scale.value,
-                                 wcs_suffix, arcsec=wcs_suffix != "D")
-    return hdr
 
 
 def create_wcs_from_points(
@@ -311,95 +170,6 @@ def header_from_list_of_xy(x, y, pixel_scale, wcs_suffix="", arcsec=False):
     hdr.update(new_wcs.to_header())
 
     return hdr
-
-
-def add_table_to_imagehdu(table: Table, canvas_hdu: fits.ImageHDU,
-                          sub_pixel: bool = True,
-                          wcs_suffix: str = "") -> fits.ImageHDU:
-    """
-    Add files from an astropy.Table to the image of an fits.ImageHDU.
-
-    Parameters
-    ----------
-    table : astropy.Table
-        Must contain the columns "x_mm", "y_mm", "flux" with the units in the
-        column attribute .unit, or in the table.meta dictionary as
-        "<colname>_unit". Default units are ``mm`` and ``ph / s / pix``
-
-    canvas_hdu : fits.ImageHDU
-        The ImageHDU onto which the table files should be projected.
-        This must include a valid WCS
-
-    sub_pixel : bool, optional
-        Default is True. If True, sub-pixel shifts of files will be taken into
-        account when projecting onto the canvas pixel grid. This takes about 5x
-        longer than ignoring the sub-pixel shifts
-
-    wcs_suffix : str, optional
-
-    Returns
-    -------
-    canvas_hdu : fits.ImageHDU
-
-    """
-    s = wcs_suffix
-    if not has_needed_keywords(canvas_hdu.header, s):
-        raise ValueError(f"canvas_hdu must include an appropriate WCS: {s}")
-
-    f = quantity_from_table("flux", table, default_unit=u.Unit("ph s-1"))
-    if s == "D":
-        x = quantity_from_table("x_mm", table, default_unit=u.mm).to(u.mm)
-        y = quantity_from_table("y_mm", table, default_unit=u.mm).to(u.mm)
-    else:
-        arcsec = u.arcsec
-        canvas_unit = u.Unit(canvas_hdu.header[f"CUNIT1{s}"])
-        x = quantity_from_table("x", table, default_unit=arcsec.to(canvas_unit))
-        y = quantity_from_table("y", table, default_unit=arcsec.to(canvas_unit))
-        x *= arcsec.to(canvas_unit)
-        y *= arcsec.to(canvas_unit)
-
-    xpix, ypix = val2pix(canvas_hdu.header, x.value, y.value, s)
-
-    naxis1 = canvas_hdu.header["NAXIS1"]
-    naxis2 = canvas_hdu.header["NAXIS2"]
-    # Occasionally 0 is returned as ~ -1e-11
-    eps = -1e-7
-    mask = (xpix >= eps) * (xpix < naxis1) * (ypix >= eps) * (ypix < naxis2)
-
-    if sub_pixel:
-        canvas_hdu = _add_subpixel_sources_to_canvas(
-            canvas_hdu, xpix, ypix, f, mask)
-    else:
-        canvas_hdu = _add_intpixel_sources_to_canvas(
-            canvas_hdu, xpix, ypix, f, mask)
-
-    return canvas_hdu
-
-
-def _add_intpixel_sources_to_canvas(canvas_hdu, xpix, ypix, flux, mask):
-    canvas_hdu.header["comment"] = f"Adding {len(flux)} int-pixel files"
-    for xpx, ypx, flx, msk in zip(xpix.astype(int), ypix.astype(int),
-                                  flux, mask):
-        # To prevent adding array values in this manner.
-        assert not isinstance(xpx, Iterable), "xpx should be integer"
-        canvas_hdu.data[ypx, xpx] += flx.value * msk
-
-    return canvas_hdu
-
-
-def _add_subpixel_sources_to_canvas(canvas_hdu, xpix, ypix, flux, mask):
-    canvas_hdu.header["comment"] = f"Adding {len(flux)} sub-pixel files"
-    canvas_shape = canvas_hdu.data.shape
-    for xpx, ypx, flx, msk in zip(xpix, ypix, flux, mask):
-        if msk:
-            xx, yy, fracs = sub_pixel_fractions(xpx, ypx)
-            for x, y, frac in zip(xx, yy, fracs):
-                if y < canvas_shape[0] and x < canvas_shape[1]:
-                    # To prevent adding array values in this manner.
-                    assert not isinstance(x, Iterable), "x should be integer"
-                    canvas_hdu.data[y, x] += frac * flx.value
-
-    return canvas_hdu
 
 
 def sub_pixel_fractions(x, y):
@@ -955,6 +725,7 @@ def add_imagehdu_to_imagehdu(
     return canvas_hdu
 
 
+# TODO: Use proper WCS functions instead and rm this on-foot implementation!
 def pix2val(header, x, y, wcs_suffix=""):
     """
     Return the real coordinates [deg, mm] for coordinates from a Header WCS.
@@ -995,6 +766,7 @@ def pix2val(header, x, y, wcs_suffix=""):
     return a, b
 
 
+# TODO: Use proper WCS functions instead and rm this on-foot implementation!
 def val2pix(header, a, b, wcs_suffix=""):
     """
     Return the pixel coordinates for real coordinates [deg, mm] from a WCS.
@@ -1105,103 +877,6 @@ def calc_footprint(header, wcs_suffix="", new_unit: str = None):
     return xy1
 
 
-def calc_table_footprint(
-    table: Table,
-    x_name: str,
-    y_name: str,
-    tbl_unit: str,
-    new_unit: str,
-    padding: u.Quantity | None = None,
-) -> NDArray:
-    """
-    Equivalent to ``calc_footprint()``, but for tables instead of images.
-
-    Parameters
-    ----------
-    table : astropy.table.Table
-        Table containing data.
-    x_name : str
-        Name of the column in `table` to use as x-coordinates.
-    y_name : str
-        Name of the column in `table` to use as y-coordinates.
-    tbl_unit : str
-        Default unit to use for x and y if no units are found in `table`.
-    new_unit : str
-        Unit to convert x and y to, can be identical to `tbl_unit`.
-    padding : astropy.units.Quantity, optional
-        Constant value to subtract from minima and add to maxima. If used, must
-        be Quantity with same physical type as x and y. If None (default), no
-        padding is added.
-
-    Returns
-    -------
-    extent : (4, 2) array
-        Array containing corner points (clockwise from bottom left). Format and
-        order are equivalent to the output of
-        ``astropy.wcs.WCS.calc_footprint()``.
-
-    """
-    if padding is not None:
-        padding = padding.to_value(new_unit)
-    else:
-        padding = 0.
-
-    x_convf = unit_from_table(x_name, table, tbl_unit).to(new_unit)
-    y_convf = unit_from_table(y_name, table, tbl_unit).to(new_unit)
-
-    x_col = table[x_name] * x_convf
-    y_col = table[y_name] * y_convf
-
-    x_min = x_col.min() - padding
-    x_max = x_col.max() + padding
-    y_min = y_col.min() - padding
-    y_max = y_col.max() + padding
-
-    extent = np.array([[x_min, y_min],
-                       [x_min, y_max],
-                       [x_max, y_max],
-                       [x_max, y_min]])
-
-    return extent
-
-
-def split_header(hdr, chunk_size, wcs_suffix=""):
-    """
-    Split a header into many smaller parts of the chunk_size.
-
-    Parameters
-    ----------
-    hdr
-    chunk_size
-    wcs_suffix
-
-    Returns
-    -------
-    hdr_list
-    """
-    # TODO: test that this works
-    s = wcs_suffix
-    naxis1, naxis2 = hdr["NAXIS1"+s], hdr["NAXIS2"+s]
-    x0_pix, y0_pix = hdr["CRPIX1"+s], hdr["CRPIX2"+s]       # pix
-    x0_sky, y0_sky = hdr["CRVAL1"+s], hdr["CRVAL2"+s]       # deg
-    x_delt, y_delt = hdr["CDELT1"+s], hdr["CDELT2"+s]       # deg / pix
-
-    hdr_list = []
-    for x1_pix in range(0, naxis1, chunk_size):
-        for y1_pix in range(0, naxis2, chunk_size):
-            x1_sky = x0_sky + (x1_pix - x0_pix) * x_delt
-            y1_sky = y0_sky + (y1_pix - y0_pix) * y_delt
-            x2_sky = x1_sky + x_delt * min(chunk_size, naxis1 - x1_pix)
-            y2_sky = y1_sky + y_delt * min(chunk_size, naxis2 - y1_pix)
-
-            hdr_sky = header_from_list_of_xy([x1_sky, x2_sky],
-                                             [y1_sky, y2_sky],
-                                             pixel_scale=x_delt, wcs_suffix=s)
-            hdr_list.append(hdr_sky)
-
-    return hdr_list
-
-
 def _fix_360(arr):
     """Fix the "full circle overflow" that occurs with deg."""
     if isinstance(arr, u.Quantity):
@@ -1212,15 +887,6 @@ def _fix_360(arr):
         arr[arr > 270] -= 360
         arr[arr <= -90] += 360
     return arr
-
-
-def _get_unit_from_headers(*headers, wcs_suffix: str = "") -> str:
-    unit = headers[0][f"CUNIT1{wcs_suffix}"].lower()
-    assert all(header[f"CUNIT{i}{wcs_suffix}"].lower() == unit
-               for header, i in product(headers, range(1, 3))), \
-        [(i, header[f"CUNIT{i}{wcs_suffix}"])
-         for header, i in product(headers, range(1, 3))]
-    return unit
 
 
 def det_wcs_from_sky_wcs(
