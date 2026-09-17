@@ -102,8 +102,17 @@ class AutoExposure(Effect):
             "fill_frac",
             from_currsys(self.meta["fill_frac"], self.cmds)
         )
+        try:
+            dark_current = kwargs.get(
+                "dark_current",
+                from_currsys(self.meta["dark_current"], self.cmds)
+            )
+        except KeyError:
+            logger.warning("No dark current found for %s",
+                           self.display_name)
+            dark_current = 0
 
-        dit_nosat = fill_frac * full_well / image_plane_max
+        dit_nosat = fill_frac * full_well / (image_plane_max + dark_current)
         logger.info("Required DIT without saturation: %.3f s", dit_nosat)
 
         # np.ceil so that dit is at most what is required for fill_frac
