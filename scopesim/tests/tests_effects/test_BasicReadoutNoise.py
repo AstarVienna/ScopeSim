@@ -46,7 +46,8 @@ class TestMakeRonFrame:
             "pedestal_fraction": 0.3,
             "read_fraction": 0.4,
         })
-        frames = np.array([ron._make_ron_frame((256, 256))
+        rng = np.random.default_rng(42)
+        frames = np.array([ron._make_ron_frame(rng, (256, 256))
                            for _ in range(n)])
         assert np.std(np.sum(frames, axis=0)) == approx(10*n**0.5, rel=0.3)
 
@@ -59,5 +60,6 @@ class TestMakeRonFrame:
             "pedestal_fraction": 0.25,
             "read_fraction": 0.25,
         })
-        frame = ron._make_ron_frame(shape)
+        rng = np.random.default_rng(42)
+        frame = ron._make_ron_frame(rng, shape)
         assert frame.shape > (0, 0)

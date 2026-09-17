@@ -5,13 +5,11 @@ from typing import ClassVar
 
 from numpy.typing import ArrayLike, NDArray
 
-from .. import Effect
-from ...detector import Detector
-from ...utils import from_currsys, figure_factory, check_keys, real_colname
-from .. import logger
+from ...utils import from_currsys, figure_factory
+from . import ElectronicEffect, Detector, logger
 
 
-class ReferencePixelBorder(Effect):
+class ReferencePixelBorder(ElectronicEffect):
     """Remove signal from reference pixels.
 
     Detectors often have a number of rows and columns around the edges masked.
@@ -59,26 +57,20 @@ class ReferencePixelBorder(Effect):
             data[:, -border[3]:] = 0
         return data
 
-    def _get_border(self, det_meta) -> dict[int, int]:
+    def _get_border(self, det_id: int) -> dict[int, int]:
         if hasattr(self.meta["border"], "dic"):
-            dtcr_id = det_meta[real_colname("id", det_meta)]
-            return self.meta["border"].dic[dtcr_id]
+            return self.meta["border"].dic[det_id]
         if isinstance(self.meta["border"], list):
             return self.meta["border"]
-        raise ValueError(
+        raise TypeError(
             f"{self.__class__.__name__}.meta['border'] must be either "
             f"dict or list, but is {self.meta['border']}")
 
-    def apply_to(self, obj, **kwargs):
-        """Mask border pixels."""
-        if not isinstance(obj, Detector):
-            logger.warning(
-                "ReferencePixelBorder: got non-detector object: %s", type(obj))
-            return obj
-
+    def _apply_to_det(self, det: Detector) -> None:
+        """Subclasses can override if more params needed in call."""
+        logger.debug("Apply %s to %s", self.display_name, det)
         logger.info(f"Applying border {from_currsys(self.meta['border'])}")
-        obj.data = self(obj.data, self._get_border(obj.meta))
-        return obj
+        det.data = self(det.data, self._get_border(det.det_id))
 
     def plot(self, det, **kwargs):
         """Show the masked detector image."""
@@ -96,24 +88,10 @@ class ReferencePixelBorder(Effect):
         return msg
 
 
-class BinnedImageBase(Effect):
+class BinnedImageBase(ElectronicEffect):
     """Base class for binning effects."""
 
     z_order: ClassVar[tuple[int, ...]] = (870,)
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        check_keys(self.meta, self.required_keys, action="error")
-
-    def __call__(self, data: ArrayLike) -> NDArray:
-        raise NotImplementedError("Subclasses must implement this.")
-
-    def apply_to(self, det, **kwargs):
-        if not isinstance(det, Detector):
-            return det
-
-        det.data = self(det.data)
-        return det
 
 
 class BinnedImage(BinnedImageBase):

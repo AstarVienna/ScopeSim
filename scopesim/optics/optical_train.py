@@ -486,7 +486,7 @@ class OpticalTrain:
         #     self.cmds["!OBS.dit"] = None
         #     self.cmds["!OBS.ndit"] = None
         # TODO: This is still hacky but seems to work for now...
-        params = {"exptime": None}
+        params = {"exptime": None, "roid": roid}
         params.update(kwargs)
         if params["exptime"] is not None and params.get("dit") is None:
             params.update(
