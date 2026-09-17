@@ -1,7 +1,8 @@
 """Tests for Effect AutoExposure."""
 
+import logging
+
 import pytest
-from unittest.mock import patch
 
 from scopesim import UserCommands
 from scopesim.optics.image_plane import ImagePlane
@@ -9,9 +10,10 @@ from scopesim.effects.electronic import AutoExposure
 
 from scopesim.tests.mocks.py_objects.imagehdu_objects import _image_hdu_square
 
-# pylint: disable=no-self-use, missing-class-docstring
+# pylint: disable=missing-class-docstring
 # pylint: disable=missing-function-docstring
 
+LOGGER = logging.getLogger(__name__)
 
 def _patched_cmds(exptime=1, dit=None, ndit=None):
     return UserCommands(properties={"!OBS.exptime": exptime,
@@ -162,14 +164,16 @@ class TestAutoExposure:
 
         assert dit2 < dit1
 
-    def test_no_dark_gives_zero_dark(self, imageplane):
+    def test_no_dark_gives_zero_dark(self, imageplane, caplog):
         exptime = 3600
         # no dark provided
         autoexp_1 = AutoExposure(fill_frac=0.75,
                                  full_well=1e6,
                                  mindit=1.3)
         autoexp_1.cmds["!OBS.exptime"] = exptime
+        caplog.set_level(logging.WARNING)
         autoexp_1.apply_to(imageplane)
+        assert "No dark current found for" in caplog.text
         dit1 = autoexp_1.cmds["!OBS.dit"]
 
         # zero dark explicitly provided
