@@ -94,12 +94,12 @@ class MicadoIFUSpectralTraceList(SpectralTraceList):
             ymin = spt.meta["fov"]["y_min"]
             ymax = spt.meta["fov"]["y_max"]
 
-
             slicewcs = fovwcs.deepcopy()
 
             slicewcs.wcs.ctype = ["LINEAR", "LINEAR",
                                   slicewcs.wcs.ctype[2]]
             slicewcs.wcs.crpix[1] = (ny_slice + 1) / 2
+            # todo: here we silently assume that ymin, ymax are in degrees
             slicewcs.wcs.crval[1] = (ymin + ymax) / 2 / 3600
             slicewcs.wcs.cdelt[1] = (ymax - ymin) / ny_slice / 3600
             slicewcs_spat = slicewcs.sub(2)
@@ -112,6 +112,7 @@ class MicadoIFUSpectralTraceList(SpectralTraceList):
 
             slicecube = np.zeros((n_z, ny_slice, n_x))
             for islice in range(n_z):
+                # todo: replace by explicit bilinear interpolation
                 ifov = RectBivariateSpline(np.arange(n_y),
                                            np.arange(n_x),
                                            fovcube[islice], kx=1, ky=1)
@@ -139,8 +140,6 @@ class MicadoIFUSpectralTraceList(SpectralTraceList):
         return obj
 
 
-
-
     def make_spectral_traces(self):
         """Make a spectral trace for each combination of order and aperture"""
         self.ext_data = self._file[0].header["EDATA"]
@@ -157,13 +156,15 @@ class MicadoIFUSpectralTraceList(SpectralTraceList):
 
             for spslice, apid in enumerate(self.slicelist["id"]):
                 specid = f"{row['description']}_{apid:02d}"
-                thistrace = MicadoIFUSpectralTrace(trace_hdu, self.slicelist, spslice,
-                                                   **params)
+                thistrace = MicadoIFUSpectralTrace(
+                    trace_hdu,
+                    self.slicelist,
+                    spslice,
+                    **params)
                 thistrace.meta["trace_id"] = specid
                 spec_traces[specid] = thistrace
 
         self.spectral_traces = spec_traces
-
 
 
 class MicadoIFUSpectralTrace(SpectralTrace):
@@ -187,8 +188,8 @@ class MicadoIFUSpectralTrace(SpectralTrace):
         self.meta["fov"] = self.fov_grid()
 
         lam = np.linspace(self.wave_min, self.wave_max, 1001) * u.um
-        off_y = aplist['offset'][spslice]
-        dlam = np.median(self.dlam_per_pix(lam)) / self.meta["pixsize"] * off_y
+        off_y = aplist['offset'][spslice]    # offset on detector in mm
+        dlam = np.median(self.dlam_per_pix(lam)) * off_y / self.meta["pixsize"]
         self.xy2lam.posttransform = (det_offset, {"offset": -dlam})
         self.xilam2x.pretransform_y = (det_offset, {"offset": -dlam})
         self.xilam2y.pretransform_y = (det_offset, {"offset": -dlam})
