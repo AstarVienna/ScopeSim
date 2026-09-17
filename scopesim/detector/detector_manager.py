@@ -40,8 +40,13 @@ class DetectorManager(Sequence):
 
         self._latest_exposure: HDUList | None = None
 
-    def readout(self, image_planes, array_effects=None, dtcr_effects=None,
-                **kwargs) -> HDUList:
+    def readout(
+        self,
+        image_planes,
+        array_effects: list[Effect] | None = None,
+        dtcr_effects: list[Effect] | None = None,
+        **kwargs
+    ) -> HDUList:
         """
         Read out the detector array into a FITS HDU List.
 
@@ -74,9 +79,6 @@ class DetectorManager(Sequence):
             Output FITS HDU List.
 
         """
-        # .. note:: Detector is what used to be called Chip
-        #           DetectorManager is the old Detector
-
         self._array_effects = array_effects or []
         self._dtcr_effects = dtcr_effects or []
         self.meta.update(kwargs)
@@ -100,7 +102,7 @@ class DetectorManager(Sequence):
                 detector = effect.apply_to(detector)
 
             # 6. add necessary header keywords
-            # .. todo: add keywords
+            # TODO: add keywords
 
         # FIXME: Why is this applied twice ???
         for effect in self._array_effects:
@@ -148,7 +150,7 @@ class DetectorManager(Sequence):
         return prihdu
 
     def _make_effects_hdu(self):
-        # .. todo:: decide what goes into the effects table of meta data
+        # TODO: decide what goes into the effects table of meta data
         # effects = self._array_effects + self._dtcr_effects
         return TableHDU()
 

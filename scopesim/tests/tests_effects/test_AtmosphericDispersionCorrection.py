@@ -101,9 +101,11 @@ class TestCombinedWithAtmoDisp:
 
         ad = AD(**atmo_params)
         adc = ADC(**atmo_params)
-        ad_shifts = ad.fov_grid()
-        ad_x_shift = np.interp(fov_wave_mid, ad_shifts[0], ad_shifts[1])
-        ad_y_shift = np.interp(fov_wave_mid, ad_shifts[0], ad_shifts[2])
+        ad_shifts = ad.get_table()
+        ad_x_shift = np.interp(fov_wave_mid, ad_shifts["wavelength"],
+                               ad_shifts["dx"])
+        ad_y_shift = np.interp(fov_wave_mid, ad_shifts["wavelength"],
+                               ad_shifts["dy"])
 
         adc.apply_to(fov)
         new_crpix_d = np.array([fov.header["CRPIX1D"], fov.header["CRPIX2D"]])

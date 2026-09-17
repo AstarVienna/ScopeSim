@@ -70,10 +70,10 @@ class AutoExposure(Effect):
         logger.info("Total exposure time: %.3f s", dit * ndit)
 
     def estimate_dit_ndit(
-            self,
-            exptime: float,
-            image_plane_max: float,
-            **kwargs
+        self,
+        exptime: float,
+        image_plane_max: float,
+        **kwargs
     ) -> tuple[float, int]:
         """
         Automatically determine DIT and NDIT from exposure time.
@@ -102,8 +102,17 @@ class AutoExposure(Effect):
             "fill_frac",
             from_currsys(self.meta["fill_frac"], self.cmds)
         )
+        try:
+            dark_current = kwargs.get(
+                "dark_current",
+                from_currsys(self.meta["dark_current"], self.cmds)
+            )
+        except KeyError:
+            logger.warning("No dark current found for %s",
+                           self.display_name)
+            dark_current = 0
 
-        dit_nosat = fill_frac * full_well / image_plane_max
+        dit_nosat = fill_frac * full_well / (image_plane_max + dark_current)
         logger.info("Required DIT without saturation: %.3f s", dit_nosat)
 
         # np.ceil so that dit is at most what is required for fill_frac
@@ -136,8 +145,10 @@ class AutoExposure(Effect):
             #       in both cases, `obj` is an ImagePlane.
             return obj
 
-        exptime = kwargs.pop("exptime",
-                             from_currsys("!OBS.exptime", self.cmds))
+        exptime = kwargs.pop(
+            "exptime",
+            from_currsys("!OBS.exptime", self.cmds),
+        )
         mindit = from_currsys(self.meta["mindit"], self.cmds)
 
         # TODO: Remove this silly try-except once currsys works properly...
@@ -217,7 +228,7 @@ class ExposureOutput(Effect):
         logger.debug("Exposure: DIT = %s s, NDIT = %s", dit, ndit)
 
         if self.current_mode == "average":
-            obj._hdu.data /= ndit
+            obj.data = obj.data / ndit
 
         return obj
 
@@ -276,6 +287,6 @@ class ExposureIntegration(Effect):
                 "readout call."
             )
 
-        obj._hdu.data *= dit * ndit
+        obj.data = obj.data * dit * ndit
 
         return obj

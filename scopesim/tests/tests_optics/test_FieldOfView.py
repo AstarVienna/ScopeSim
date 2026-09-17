@@ -1,3 +1,6 @@
+# -*- coding: utf-8 -*-
+"""Test for FieldOfView classes"""
+
 import pytest
 from pytest import approx
 import numpy as np
@@ -5,7 +8,6 @@ from astropy import units as u
 from astropy.io import fits
 from astropy.table import Table
 from matplotlib import pyplot as plt
-from matplotlib.colors import LogNorm
 
 from scopesim.tests.mocks.py_objects import header_objects as ho
 from scopesim.tests.mocks.py_objects import source_objects as so
@@ -69,9 +71,6 @@ class TestInit:
 
 
 class TestExtractFrom:
-    # @pytest.mark.xfail(reason=("is_field_in_fov drops table if anything is "
-    #                            "outside fov volume, therefore no point source "
-    #                            "is extracted..."))
     def test_extract_point_sources_from_table(self):
         src = so._table_source()
         src.fields[0].field["x"] = [-15, -5, 0, 0] * u.arcsec
@@ -88,7 +87,7 @@ class TestExtractFrom:
         fov = _fov_190_210_um()
         fov.extract_from(src)
 
-        assert fov.fields[0].data.shape == (51, 25)
+        assert fov.fields[0].data.shape == (51, 26)
         assert len(fov.fields[0].spectra[0].waveset) == 11
         assert fov.fields[0].spectra[0].waveset[0].value == approx(19000)
 
@@ -107,11 +106,8 @@ class TestExtractFrom:
         fov = _fov_197_202_um()
         fov.extract_from(src)
 
-        assert fov.fields[0].field.shape == (3, 51, 25)
+        assert fov.fields[0].field.shape == (3, 51, 26)
 
-    # @pytest.mark.xfail(reason=("is_field_in_fov drops table if anything is "
-    #                            "outside fov volume, therefore no point source "
-    #                            "is extracted..."))
     def test_extract_one_of_each_type_from_source_object(self):
         src_table = so._table_source()              # 4 sources, put two outside of FOV
         src_table.fields[0].field["x"] = [-15, -5, 0, 0] * u.arcsec
@@ -124,7 +120,7 @@ class TestExtractFrom:
         fov.extract_from(src)
 
         assert fov.fields[0].field.shape == (3, 51, 51)
-        assert fov.fields[1].field.shape == (51, 25)
+        assert fov.fields[1].field.shape == (51, 26)
         assert len(fov.fields[2].field) == 2
 
         # assert len(fov.spectra) == 3
@@ -144,17 +140,6 @@ class TestExtractFrom:
         fov.extract_from(src)
 
         assert len(fov.fields) == 0
-
-    @pytest.mark.skip(reason="SPEC_REF is obsolete, just rm this test?")
-    def test_all_spectra_are_referenced_correctly(self):
-        src = so._image_source() + so._cube_source() + so._table_source()
-        fov = _fov_190_210_um()
-        fov.extract_from(src)
-        # check the same spectrum object is referenced by both lists
-        assert fov.fields[0].header["SPEC_REF"] == \
-               src.fields[0].header["SPEC_REF"]
-        assert all(fov.fields[2][i]["ref"] == src.fields[2][i]["ref"]
-                   for i in range(4))
 
     def test_contains_all_fields_inside_fov(self):
         src = so._image_source() + so._cube_source() + so._table_source()
@@ -294,7 +279,7 @@ class TestMakeCube:
 
         if PLOTS:
             im = cube.data[0, :, :]
-            plt.imshow(im, origin="lower", norm=LogNorm(), vmin=1e-8)
+            plt.imshow(im, origin="lower", norm="log", vmin=1e-8)
             plt.show()
 
     @pytest.mark.parametrize("src", [so._table_source(),
@@ -434,7 +419,7 @@ class TestMakeImage:
 
         if PLOTS:
             im = image.data
-            plt.imshow(im, origin="lower", norm=LogNorm(), vmin=1e-8)
+            plt.imshow(im, origin="lower", norm="log", vmin=1e-8)
             plt.show()
 
 

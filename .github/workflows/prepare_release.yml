@@ -1,0 +1,47 @@
+name: Prepare release
+on:
+  workflow_dispatch:
+    inputs:
+      rule:
+        type: choice
+        description: Version bump level for the release (ignored if explicit version is given)
+        required: true
+        options:
+        - patch
+        - minor
+        - major
+        - prepatch
+        - preminor
+        - premajor
+      version:
+        type: string
+        description: >
+          Explicit release version (overrides rule), e.g. "X.Y.Zb0" to tag the feature freeze.
+        required: false
+        default: ""
+      notes:
+        type: string
+        description: >
+          Optional manual release notes section, shown above the
+          auto-generated notes. Can also be added or edited in the
+          draft release before publishing.
+        required: false
+        default: ""
+      previous-tag:
+        type: string
+        description: >
+          Optional comparison base for auto-generated notes. Only needed
+          for backport releases from maintenance branches (e.g. "v2.1.0"
+          when releasing 2.1.1 while 2.5.0 already exists).
+        required: false
+        default: ""
+
+jobs:
+  Prepare:
+    name: Prepare release
+    uses: AstarVienna/DevOps/.github/workflows/prepare_release.yml@main
+    secrets: inherit
+    with:
+      rule: ${{ inputs.version != '' && inputs.version || inputs.rule }}
+      notes: ${{ inputs.notes }}
+      previous-tag: ${{ inputs.previous-tag }}

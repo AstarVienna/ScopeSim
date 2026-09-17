@@ -3,11 +3,13 @@
 import copy
 
 from datetime import datetime
+from pathlib import Path
 
 import numpy as np
 from scipy.interpolate import interp1d
 from astropy import units as u
 from astropy.wcs import WCS
+from astropy.io.fits import HDUList
 
 from tqdm.auto import tqdm
 
@@ -158,11 +160,20 @@ class OpticalTrain:
         #       Nevertheless, I'm a bit reluctant to removing this code just
         #       yet. So it is commented out.
         # rc.__currsys__ = user_commands
+
+        # Guard against all-empty cmds to avoid cryptical error downstream.
+        if all(len(m) == 0 for m in self.cmds.maps):
+            raise ValueError("Empty cmds, cannot construct OpticalTrain.")
+
+        # Guard against empty yamls to avoid cryptical error downstream.
+        if not self.cmds.yaml_dicts:
+            raise ValueError("No YAMLS found, cannot construct OpticalTrain.")
+
         self.yaml_dicts = self.cmds.yaml_dicts
         self.optics_manager = OpticsManager(self.yaml_dicts, self.cmds)
-        self.update()
+        self.update(migrate_cmds=True)
 
-    def update(self, **kwargs):
+    def update(self, migrate_cmds=False, **kwargs):
         """
         Update the user-defined parameters and remake main internal classes.
 
@@ -175,12 +186,19 @@ class OpticalTrain:
         self.optics_manager.update(**kwargs)
         opt_man = self.optics_manager
 
-        self.fov_manager = FOVManager(opt_man.fov_setup_effects, cmds=self.cmds,
-                                      **kwargs)
-        self.image_planes = [ImagePlane(hdr, self.cmds, **kwargs)
-                             for hdr in opt_man.image_plane_headers]
-        self.detector_managers = [DetectorManager(det_list, cmds=self.cmds, **kwargs)
-                                for det_list in opt_man.detector_setup_effects]
+        self.fov_manager = FOVManager(
+            opt_man.fov_setup_effects,
+            cmds=self.cmds,
+            **kwargs
+        )
+        self.image_planes = [
+            ImagePlane(hdr, self.cmds, **kwargs)
+            for hdr in opt_man.image_plane_headers
+        ]
+        self.detector_managers = [
+            DetectorManager(det_list, cmds=self.cmds, **kwargs)
+            for det_list in opt_man.detector_setup_effects
+        ]
 
         # Move everything from CurrObs to CurrSys, so CurrObs is clean for
         # .observe and .readout. This is necessary because the setup and
@@ -193,7 +211,8 @@ class OpticalTrain:
         # self.cmds.maps[0].clear()
         # HACK: recursive_update is needed to avoid overwriting emtpy !ABCs
         # TODO: or is it??
-        self.cmds.maps[1].dic = recursive_update(self.cmds.maps[1].dic, self.cmds.maps[0].dic)
+        if migrate_cmds:
+            self.cmds.maps[1].dic = recursive_update(self.cmds.maps[1].dic, self.cmds.maps[0].dic)
         self.cmds.maps[0].dic.clear()
 
     @top_level_catch
@@ -228,6 +247,17 @@ class OpticalTrain:
         """
         if update:
             self.update(**kwargs)
+
+        if self.cmds["!SIM.random.seed"] is None:
+            # Concretize seed from system entropy to keep constant during the
+            # observe run. For multiple observations, this is cleared above.
+            self.cmds["!SIM.random.seed"] = np.random.SeedSequence().entropy
+        elif self.cmds["!SIM.random.seed"] in {"None", "none", "NONE"}:
+            logger.warning(
+                "Got random seed '%s' (a string, not None!), use NULL in yaml",
+                self.cmds["!SIM.random.seed"]
+            )
+            self.cmds["!SIM.random.seed"] = np.random.SeedSequence().entropy
 
         # self.set_focus(**kwargs)    # put focus back on current instrument package
 
@@ -279,6 +309,10 @@ class OpticalTrain:
                 for effect in tqdm(foveffs, disable=nobar,
                                    desc=" FOV effects", position=1):#, leave=False):
                     fov = effect.apply_to(fov)
+
+                if fov.hdu is None:
+                    logger.info("  Skipping empty FOV")
+                    continue
 
                 if self.cmds.get("!INST.flatten", True):
                     fov.flatten()
@@ -406,23 +440,39 @@ class OpticalTrain:
         return source
 
     @top_level_catch
-    def readout(self, filename=None, reset=True, **kwargs):
+    def readout(
+        self,
+        filename: Path | str | None = None,
+        reset: bool = True,
+        roid: int = 0,
+        **kwargs
+    ) -> list[HDUList]:
         """
         Produce detector readouts for the observed image.
 
         Parameters
         ----------
-        filename : str, optional
-            Where to save the FITS file
-        kwargs
+        filename : Path | str | None, optional
+            Full path or local name for to store the resulting FITS file.
+            If None (the default), the function still returns the result, but
+            will not automatically save it to disk.
+        reset : bool, optional
+            If true (the default), do not keep any parameters set during any
+            previous readout. This is usually what you want.
+        roid : int, optional
+            Readout ID, used for seeding randomness. If you run multiple
+            readouts on the same observation and want the random effects to
+            produce different results, set this parameter with e.g. the loop
+            counter. Simple integers are fine (0, 1, 2, ...), because this gets
+            wrangled into a proper random seed downstream. If you need to
+            reproduce a specific readout in a sequence, set e.g. `roid=4`.
+        **kwargs :
+            Any other kwargs passed to the detector effects.
 
         Returns
         -------
-        hdu : fits.HDUList
-
-        Notes
-        -----
-        - Apply detector plane (0D, 2D) effects - z_order = 500..599
+        list[HDUList]
+            List of HDUList objects.
 
         """
         if reset:
@@ -436,7 +486,7 @@ class OpticalTrain:
         #     self.cmds["!OBS.dit"] = None
         #     self.cmds["!OBS.ndit"] = None
         # TODO: This is still hacky but seems to work for now...
-        params = {"exptime": None}
+        params = {"exptime": None, "roid": roid}
         params.update(kwargs)
         if params["exptime"] is not None and params.get("dit") is None:
             params.update(
@@ -460,11 +510,12 @@ class OpticalTrain:
             self.cmds[f"!OBS.{key}"] = value
 
         hduls = []
-        for i, detector_array in enumerate(self.detector_managers):
-            array_effects = self.optics_manager.detector_array_effects
-            dtcr_effects = self.optics_manager.detector_effects
-            hdul = detector_array.readout(
-                self.image_planes, array_effects, dtcr_effects)
+        for i, detector_manager in enumerate(self.detector_managers):
+            hdul = detector_manager.readout(
+                self.image_planes,
+                self.optics_manager.detector_array_effects,
+                self.optics_manager.detector_effects,
+            )
 
             fits_effects = self.optics_manager.get_all(ExtraFitsKeywords)
             if len(fits_effects) > 0:
@@ -474,14 +525,20 @@ class OpticalTrain:
                 try:
                     hdul = self.write_header(hdul)
                 except Exception:
-                    logger.exception("Header update failed, data will be "
-                                     "saved with incomplete header. See stack "
-                                     "trace for details.")
+                    logger.exception(
+                        "Header update failed, data will be saved with "
+                        "incomplete header. See stack trace for details."
+                    )
 
-            if filename is not None and isinstance(filename, str):
-                fname = filename
-                if len(self.detector_managers) > 1:
-                    fname = f"{i}_{filename}"
+            if filename is not None:
+                if len(self.detector_managers) == 1:
+                    fname = filename
+                else:
+                    if isinstance(filename, str):
+                        fname = f"{i}_{filename}"
+                    if isinstance(filename, Path):
+                        fname = filename.parent / f"{i}_{filename.name}"
+
                 hdul.writeto(fname, overwrite=True)
 
             hduls.append(hdul)
@@ -496,93 +553,29 @@ class OpticalTrain:
         return copy.deepcopy(hduls)
 
     def write_header(self, hdulist):
-        """Write meaningful header to simulation product."""
-        # Primary hdu
+        """Write minimal header to output HDUL.
+
+        This method exists as a fallback of last resort, if no FITS header
+        effect is present in the optical train. It should not be expanded,
+        instead any other keywords required in the output should be included
+        via those effects. This should only be called for very minimal
+        instrument setups or during testing and debugging, where most effects
+        are switched off.
+        """
+        # Primary HDU
         pheader = hdulist[0].header
         pheader["DATE"] = datetime.now().isoformat(timespec="seconds")
         pheader["ORIGIN"] = f"Scopesim {__version__}"
+
+        # These are always present in cmds, so should be save
         pheader["INSTRUME"] = from_currsys("!OBS.instrument", self.cmds)
         pheader["INSTMODE"] = ", ".join(from_currsys("!OBS.modes", self.cmds))
-        pheader["TELESCOP"] = from_currsys("!TEL.telescope", self.cmds)
-        pheader["LOCATION"] = from_currsys("!ATMO.location", self.cmds)
 
-        # Source information taken from first only.
-        # ..todo: What if source is a composite?
-        srcfield = self._last_source.fields[0]
-        if type(srcfield).__name__ == "Table":
-            pheader["SOURCE"] = "Table"
-        elif type(srcfield).__name__ == "ImageHDU":
-            if "BG_SURF" in srcfield.header:
-                pheader["SOURCE"] = srcfield.header["BG_SURF"]
-            else:
-                try:
-                    pheader["SOURCE"] = srcfield.header["FILENAME"]
-                except KeyError:
-                    pheader["SOURCE"] = "ImageHDU"
-
-        # Image hdul
-        # ..todo: currently only one, update for detector arrays
-        # ..todo: normalise filenames - some need from_currsys, some need Path(...).name
-        #         this should go into a function so as to reduce clutter here.
-        iheader = hdulist[1].header
-        iheader["EXPTIME"] = from_currsys("!OBS.exptime", self.cmds), "[s]"
-        iheader["DIT"] = from_currsys("!OBS.dit", self.cmds), "[s]"
-        iheader["NDIT"] = from_currsys("!OBS.ndit", self.cmds)
-        iheader["BUNIT"] = "e", "per EXPTIME"
-        iheader["PIXSCALE"] = from_currsys("!INST.pixel_scale", self.cmds), "[arcsec]"
-
-        for eff in self.optics_manager.detector_setup_effects:
-            efftype = type(eff).__name__
-
-            if efftype == "DetectorList" and eff.include:
-                iheader["DETECTOR"] = eff.meta["detector"]
-
-        for eff in self.optics_manager.detector_array_effects:
-            efftype = type(eff).__name__
-
-            if (efftype == "DetectorModePropertiesSetter" and
-                eff.include):
-                # ..todo: can we write this into currsys?
-                iheader["DET_MODE"] = (eff.meta["detector_readout_mode"],
-                                       "detector readout mode")
-                iheader["MINDIT"] = from_currsys("!DET.mindit", self.cmds), "[s]"
-                iheader["FULLWELL"] = from_currsys("!DET.full_well", self.cmds), "[s]"
-                iheader["RON"] = from_currsys("!DET.readout_noise", self.cmds), "[e]"
-                iheader["DARK"] = from_currsys("!DET.dark_current", self.cmds), "[e/s]"
-
-        ifilter = 1   # Counts filter wheels
-        isurface = 1  # Counts surface lists
-        for eff in self.optics_manager.source_effects:
-            efftype = type(eff).__name__
-
-            if efftype == "ADCWheel" and eff.include:
-                iheader["ADC"] = eff.current_adc.meta["name"]
-
-            if efftype == "FilterWheel" and eff.include:
-                iheader[f"FILTER{ifilter}"] = (eff.current_filter.meta["name"],
-                                               eff.meta["name"])
-                ifilter += 1
-
-            if efftype == "SlitWheel" and eff.include:
-                iheader["SLIT"] = (eff.current_slit.meta["name"],
-                                   eff.meta["name"])
-
-            if efftype == "PupilTransmission" and eff.include:
-                iheader["PUPTRANS"] = (from_currsys("!OBS.pupil_transmission", self.cmds),
-                                       "cold stop, pupil transmission")
-
-            if efftype == "SkycalcTERCurve" and eff.include:
-                iheader["ATMOSPHE"] = "Skycalc", "atmosphere model"
-                iheader["LOCATION"] = eff.meta["location"]
-                iheader["AIRMASS"] = eff.meta["airmass"]
-                iheader["TEMPERAT"] = eff.meta["temperature"], "[degC]"
-                iheader["HUMIDITY"] = eff.meta["humidity"]
-                iheader["PRESSURE"] = eff.meta["pressure"], "[hPa]"
-                iheader["PWV"] = eff.meta["pwv"], "precipitable water vapour"
-
-            if efftype == "SurfaceList" and eff.include:
-                iheader[f"SURFACE{isurface}"] = eff.meta["name"]
-                isurface += 1
+        # Image HDUs
+        for hdu in hdulist[1:]:
+            hdu.header["EXPTIME"] = from_currsys("!OBS.exptime", self.cmds), "[s]"
+            hdu.header["DIT"] = from_currsys("!OBS.dit", self.cmds), "[s]"
+            hdu.header["NDIT"] = from_currsys("!OBS.ndit", self.cmds)
 
         return hdulist
 

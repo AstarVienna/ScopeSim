@@ -23,20 +23,20 @@ jobs:
         # is more useful than 5 green and one red. The others can be enabled
         # once we fix the problem properly.
         # os: [ubuntu-latest, windows-latest, macos-latest]
-        # python-version: ['3.8', '3.11']
+        # python-version: ['3.12', '3.14']
         os: [ubuntu-latest]
-        python-version: ["3.11"]
+        python-version: ["3.12"]
     runs-on: ${{ matrix.os }}
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Install poetry
         shell: bash
-        run: pipx install poetry==2.1.4
+        run: pipx install poetry==2.4.1
 
       - name: Set up Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v7
         with:
           python-version: ${{ matrix.python-version }}
 

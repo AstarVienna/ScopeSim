@@ -39,7 +39,7 @@ def fixture_exposureoutput():
 @pytest.fixture(name="detector", scope="function")
 def fixture_detector():
     det = Detector(_image_hdu_square().header)
-    det._hdu.data[:] = 1.e5
+    det.data[:] = 1.e5
     return det
 
 class TestExposureIntegration:
@@ -47,9 +47,9 @@ class TestExposureIntegration:
         assert isinstance(exposureintegration, ExposureIntegration)
 
     def test_integrates_correctly(self, exposureintegration, detector):
-        orig = 1. * detector._hdu.data
+        orig = 1. * detector.data
         assert isinstance(exposureintegration.apply_to(detector), Detector)
-        assert np.allclose(detector._hdu.data, 4 * orig)
+        assert np.allclose(detector.data, 4 * orig)
 
     def test_fails_without_dit(self):
         with pytest.raises(ValueError):
@@ -91,17 +91,17 @@ class TestExposureOutput:
                               (2., 5),
                               (3, 36)])
     def test_applies_average(self, dit, ndit, detector):
-        det_mean = detector._hdu.data.mean()
+        det_mean = detector.data.mean()
         exposureoutput = ExposureOutput("average", dit=dit, ndit=ndit)
         result = exposureoutput.apply_to(detector)
-        assert np.isclose(result._hdu.data.mean(), det_mean / ndit)
+        assert np.isclose(result.data.mean(), det_mean / ndit)
 
     @pytest.mark.parametrize("dit, ndit",
                              [(1., 1),
                               (2., 5),
                               (3, 36)])
     def test_applies_sum(self, dit, ndit, detector):
-        det_mean = detector._hdu.data.mean()
+        det_mean = detector.data.mean()
         exposureoutput = ExposureOutput("sum", dit=dit, ndit=ndit)
         result = exposureoutput.apply_to(detector)
-        assert np.isclose(result._hdu.data.mean(), det_mean)
+        assert np.isclose(result.data.mean(), det_mean)

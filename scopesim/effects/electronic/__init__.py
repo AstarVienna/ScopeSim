@@ -19,8 +19,36 @@ Classes:
 - InterPixelCapacitance - apply IPC kernel to detector readout
 """
 
-from ...utils import get_logger
+from ...utils import get_logger, check_keys
+from ...detector import Detector
+from .. import Effect
+
 logger = get_logger(__name__)
+
+
+class ElectronicEffect(Effect):
+    """Base class for electronic effects.
+
+    This will eventually replace the 800-range zorder (or parts of it).
+    """
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.meta.update(kwargs)
+        check_keys(self.meta, self.required_keys, action="error")
+
+    def _apply_to_det(self, det: Detector) -> None:
+        """Subclasses can override if more params needed in call."""
+        logger.debug("Apply %s to %s", self.display_name, det)
+        det.data = self(det.data)
+
+    def apply_to(self, obj, **kwargs):
+        """See parent docstring."""
+        if isinstance(obj, Detector):
+            self._apply_to_det(obj)
+
+        return obj
+
 
 from .electrons import LinearityCurve, ADConversion, InterPixelCapacitance
 from .noise import (Bias, PoorMansHxRGReadoutNoise, BasicReadoutNoise,

@@ -15,6 +15,7 @@ import functools
 from docutils.core import publish_string
 import yaml
 import numpy as np
+from numpy.typing import NDArray
 import matplotlib as mpl
 from matplotlib import pyplot as plt
 from astropy import units as u
@@ -350,7 +351,7 @@ def zeros_from_header(
     header: fits.Header,
     dtype: type | np.dtype = float,
     ndims: int | None = None,
-) -> np.ndarray:
+) -> NDArray:
     """
     Create all-zero array of the shape given by NAXISn keywords in `header`.
 
@@ -369,7 +370,7 @@ def zeros_from_header(
 
     Returns
     -------
-    arr : np.ndarray
+    arr : NDArray
         All-zero array of desired shape and dtype.
 
     """
@@ -555,6 +556,8 @@ def unit_includes_per_physical_type(unit, physical_type):
 def pixel_area(header: fits.Header) -> u.Quantity[u.arcsec**2]:
     """Calculate area covered by one pixel in arcsec**2 from header.
 
+    The pixel area is always positive.
+
     .. versionadded:: 0.11.1
 
     """
@@ -570,7 +573,7 @@ def pixel_area(header: fits.Header) -> u.Quantity[u.arcsec**2]:
     area = (header["CDELT1"] * u.Unit(header["CUNIT1"]) *
             header["CDELT2"] * u.Unit(header["CUNIT2"]))
 
-    return area.to(u.arcsec**2)
+    return np.abs(area.to(u.arcsec**2))
 
 
 def has_needed_keywords(header, suffix=""):
@@ -715,7 +718,7 @@ def write_report(text, filename=None, output=None):
         for fmt in output:
             out_text = deepcopy(text)
             if fmt.lower() == "latex":
-                out_text = publish_string(out_text, writer_name="latex")
+                out_text = publish_string(out_text, writer="latex")
                 out_text = out_text.decode("utf-8")
 
             suffix = {"rst": ".rst", "latex": ".tex"}[fmt]

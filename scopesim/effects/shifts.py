@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 """TBA."""
 
-import warnings
 from typing import ClassVar
 
 import numpy as np
@@ -26,17 +25,6 @@ class Shift3D(Effect):
     def apply_to(self, obj, **kwargs):
         """See parent docstring."""
         return obj
-
-    def fov_grid(self, which="shifts", **kwargs):
-        """See parent docstring."""
-        warnings.warn("The fov_grid method is deprecated and will be removed "
-                      "in a future release.", DeprecationWarning, stacklevel=2)
-        if which == "shifts":
-            col_names = ["wavelength", "dx", "dy"]
-            waves, dx, dy = [self.get_table(**kwargs)[col]
-                             for col in col_names]
-            return waves, dx, dy
-        return None
 
     def get_table(self, **kwargs):
         if self.table is None:
@@ -70,7 +58,7 @@ class AtmosphericDispersion(Shift3D):
     Used to generate the wavelength bins based on shifts due to the atmosphere.
 
     Doesn't contain an ``apply_to`` function, but provides information through
-    the ``fov_grid`` function.
+    the ``get_table`` function.
 
     Required Parameters
     -------------------
@@ -133,7 +121,7 @@ class AtmosphericDispersion(Shift3D):
 
     def get_table(self, **kwargs):
         """
-        Called by the fov_grid method of Shift3D.
+        Compute the wavelength-dependent refraction shifts.
 
         Returns
         -------
@@ -247,19 +235,6 @@ class AtmosphericDispersionCorrection(Shift3D):
             fov.header["CRPIX2D"] += dy_pix
 
         return fov
-
-    def fov_grid(self, which="shifts", **kwargs):
-        """See parent docstring."""
-        warnings.warn("The fov_grid method is deprecated and will be removed "
-                      "in a future release.", DeprecationWarning, stacklevel=2)
-        kwargs.update(self.meta)
-        if "quick_adc" in self.meta:
-            ad = AtmosphericDispersion(**self.meta)
-            waves, dx, dy = ad.fov_grid()
-            dx *= -(1 - self.meta["efficiency"])
-            dy *= -(1 - self.meta["efficiency"])
-            return waves, dx, dy
-        return None
 
     def plot(self):
         return None

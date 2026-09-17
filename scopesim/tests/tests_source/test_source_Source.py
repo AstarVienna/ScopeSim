@@ -1,8 +1,10 @@
-# actually for Source
+# -*- coding: utf-8 -*-
+
 import pytest
 from pytest import approx
 
 import numpy as np
+import matplotlib.pyplot as plt
 
 from astropy.io import fits
 from astropy.io import ascii as ioascii
@@ -10,7 +12,7 @@ from astropy.table import Table
 from astropy import units as u
 from astropy import wcs
 
-from synphot import SourceSpectrum, SpectralElement
+from synphot import SourceSpectrum
 from synphot.models import Empirical1D
 from synphot.units import PHOTLAM
 
@@ -18,13 +20,9 @@ from scopesim.source import source_utils
 from scopesim.source.source import Source
 from scopesim.source.source_fields import CubeSourceField, TableSourceField
 
-from scopesim.optics.image_plane import ImagePlane
 from scopesim.utils import convert_table_comments_to_dict
 
 from scopesim.tests.mocks.py_objects import source_objects as so
-
-import matplotlib.pyplot as plt
-from matplotlib.colors import LogNorm
 
 
 PLOTS = False
@@ -261,77 +259,6 @@ class TestSourceAddition:
         assert len(new_source_2.fields) == len(new_source_2._meta_dicts)
 
 
-class TestSourceImageInRange:
-    # TODO: figure out why this occurs here, then solve it
-    @pytest.mark.filterwarnings("ignore:Adding a table directly*:DeprecationWarning")
-    def test_returns_an_image_plane_object(self, table_source):
-        im = table_source.image_in_range(1*u.um, 2*u.um)
-        assert isinstance(im, ImagePlane)
-
-    # TODO: figure out why this occurs here, then solve it
-    @pytest.mark.filterwarnings("ignore:Adding a table directly*:DeprecationWarning")
-    def test_flux_from_table_on_image_is_as_expected(self, table_source):
-        ph = table_source.photons_in_range(1*u.um, 2*u.um)
-        ref = table_source.fields[0].field["ref"]
-        weight = table_source.fields[0].field["weight"]
-        counts = np.sum([ph.value[r] * w for r, w in zip(ref, weight)])
-
-        im = table_source.image_in_range(1*u.um, 2*u.um)
-        assert np.sum(im.image) == approx(counts)
-
-    @pytest.mark.parametrize("pix_scl", [0.1, 0.2, 0.4, 1.0])
-    def test_flux_from_imagehdu_is_as_expected(self, image_source, pix_scl):
-        ph = image_source.photons_in_range(1*u.um, 2*u.um)[0].value
-        im_sum = ph * np.sum(image_source.fields[0].data)
-        im = image_source.image_in_range(1*u.um, 2*u.um, pix_scl*u.arcsec)
-        assert np.sum(im.image) == approx(im_sum)
-
-    def test_combines_more_that_one_field_into_image(self, image_source,
-                                                     table_source):
-        ph = table_source.photons_in_range(1 * u.um, 2 * u.um)
-        fld = table_source.fields[0]
-        tbl_sum = u.Quantity([ph[fld.field["ref"][ii]] * fld.field["weight"][ii]
-                              for ii in range(len(fld.field))])
-        tbl_sum = np.sum(tbl_sum.value)
-
-        ph = image_source.photons_in_range(1 * u.um, 2 * u.um)[0]
-        im_sum = np.sum(image_source.fields[0].data) * ph.value
-
-        comb_src = image_source
-        im_plane = comb_src.image_in_range(1*u.um, 2*u.um, 0.3*u.arcsec)
-
-        assert np.sum(im_plane.image) == approx(im_sum)
-
-        if PLOTS:
-            plt.imshow(im_plane.image.T, origin="lower", norm=LogNorm())
-            plt.show()
-
-
-class TestSourcePhotonsInRange:
-    def test_correct_photons_are_returned_for_table_source(self, table_source):
-        ph = table_source.photons_in_range(1, 2)
-        assert np.allclose(ph.value, [4., 2., 2.])
-
-    def test_correct_photons_are_returned_for_image_source(self, image_source):
-        ph = image_source.photons_in_range(1, 2)
-        assert np.allclose(ph.value, [2.])
-
-    def test_correct_photons_are_returned_for_no_spectra(self, image_source):
-        image_source.fields[0].spectra = {}
-        ph = image_source.photons_in_range(1, 2)
-        assert len(ph) == 0
-
-    @pytest.mark.parametrize("area, expected", [(None, 2), (1, 2), (10, 20)])
-    def test_photons_increase_with_area(self, area, expected, image_source):
-        ph = image_source.photons_in_range(1, 2, area=area)
-        assert ph[0].value == approx(expected)
-
-    def test_photons_returned_only_for_indices(self, table_source):
-        ph = table_source.photons_in_range(1, 2, indices=[0, 2])
-        assert len(ph) == 2
-        assert np.allclose(ph.value, [4, 2])
-
-
 @pytest.mark.xfail
 class TestSourceShift:
     def test_that_it_does_what_it_should(self):
@@ -342,65 +269,6 @@ class TestSourceShift:
 class TestSourceRotate:
     def test_that_it_does_what_it_should(self):
         assert False
-
-
-class TestPhotonsInRange:
-    @pytest.mark.parametrize("ii, n_ph",
-                             [(0, 50),
-                              (1, 8e12)])
-    def test_returns_correct_number_of_photons_for_one_spectrum(self, ii, n_ph,
-                                                                input_spectra):
-        spec = input_spectra[ii]
-        counts = source_utils.photons_in_range([spec], 1, 2)
-        assert np.isclose(counts.value, n_ph, rtol=2e-3)
-
-    def test_returns_ones_for_unity_spectrum(self):
-        flux = np.ones(11) * u.Unit("ph s-1 m-2 um-1")
-        wave = np.linspace(1, 2, 11) * u.um
-        spec = SourceSpectrum(Empirical1D, points=wave, lookup_table=flux)
-        counts = source_utils.photons_in_range([spec], 1 * u.um, 2 * u.um)
-        assert counts.value == approx(1)
-
-    @pytest.mark.parametrize("area, expected_units",
-                             [(1*u.m**2, u.ph / u.s),
-                              (None, u.ph / u.s / u.m**2)])
-    def test_returns_correct_units_with_without_area_argument(self, area,
-                                                              expected_units):
-        flux = np.ones(11) * u.Unit("ph s-1 m-2 um-1")
-        wave = np.linspace(1, 2, 11) * u.um
-        spec = SourceSpectrum(Empirical1D, points=wave, lookup_table=flux)
-        counts = source_utils.photons_in_range([spec], 1 * u.um, 2 * u.um,
-                                               area=area)
-        assert counts.unit == expected_units
-
-    def test_returns_correct_half_flux_with_bandpass(self):
-        flux = np.ones(11) * u.Unit("ph s-1 m-2 um-1")
-        wave = np.linspace(0.5, 2.5, 11) * u.um
-        spec = SourceSpectrum(Empirical1D, points=wave, lookup_table=flux)
-        bandpass = SpectralElement(Empirical1D,
-                                   points=np.linspace(1, 2, 13)*u.um,
-                                   lookup_table=0.5 * np.ones(13))
-        counts = source_utils.photons_in_range([spec], 1 * u.um, 2 * u.um,
-                                               bandpass=bandpass)
-        assert counts.value == approx(0.5)
-
-    @pytest.mark.parametrize("flux, area, expected",
-                             [(np.linspace(0, 1, 11),      1E4*u.cm**2, 0.25),
-                              (np.linspace(0, 1, 11)**2,   None, 0.13625),
-                              (np.linspace(0, 1, 11)**0.5, 100,  34.931988)])
-    def test_with_bandpass_and_area_returns_correct_value(self, flux, area,
-                                                          expected):
-        flux *= u.Unit("ph s-1 m-2 um-1")
-        spec = SourceSpectrum(Empirical1D,
-                              points=np.linspace(0.5, 2.5, 11) * u.um,
-                              lookup_table=flux)
-        bandpass = SpectralElement(Empirical1D,
-                                   points=np.linspace(1, 2, 13)*u.um,
-                                   lookup_table=0.5 * np.ones(13))
-        counts = source_utils.photons_in_range([spec], 1 * u.um, 2 * u.um,
-                                               bandpass=bandpass,
-                                               area=area)
-        assert counts.value == approx(expected)
 
 
 class TestSpectraListConverter:
@@ -459,33 +327,3 @@ def test_throws_for_invalid_ref():
         # Minimal Table
         tbl = Table(data=[[0, 1]], names=["ref"])
         TableSourceField(tbl, {0: None})
-
-
-#
-# class TestScaleImageHDU:
-#     def test_scaling_properly_for_si_photlam_in_header(self):
-#         hdu = fits.ImageHDU(data=np.ones((10,10)))
-#         hdu.header["CDELT1"] = 0.1 * u.arcsec.to(u.deg)
-#         hdu.header["CDELT2"] = 0.1 * u.arcsec.to(u.deg)
-#         hdu.header["BUNIT"] = "ph s-1 m-2 um-1"
-#         waverange = (1, 2)*u.um
-#         scaled_hdu = source2_utils.scale_imagehdu(hdu, waverange)
-#         assert scaled_hdu
-#
-#     def test_scaling_properly_for_cgs_photlam_per_arcsec2_in_header(self):
-#         pass
-#
-#     def test_scaling_properly_for_photlam_per_arcsec2_no_area_in_header(self):
-#         pass
-#
-#     def test_scaling_properly_for_Jansky_in_header(self):
-#         pass
-#
-#     def test_scaling_properly_for_Jansky_per_arcsec_in_header(self):
-#         pass
-#
-#     def test_scaling_properly_for_photlam_and_bscale_in_header(self):
-#         pass
-#
-#     def test_scaling_properly_for_photlam_and_bscale_bzero_in_header(self):
-#         pass

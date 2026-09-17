@@ -2,7 +2,6 @@
 """Defines FieldOfView class."""
 
 from warnings import warn
-from copy import deepcopy
 from itertools import chain
 from collections.abc import Iterable, Generator
 
@@ -32,7 +31,6 @@ from ..utils import (
     get_logger,
     array_minmax,
     close_loop,
-    unit_includes_per_physical_type,
     figure_factory,
     image_plotter,
     cube_plotter,
@@ -332,35 +330,36 @@ class FieldOfView:
         xyp.sort(axis=0)
         logger.debug("xyp:\n%s", xyp)
 
-        xy0p = np.max(((0, 0), np.floor(xyp[0]).astype(int)), axis=0)
-        xy1p = np.min(((naxis1, naxis2), np.ceil(xyp[1]).astype(int)), axis=0)
+        xy0p = np.max(((0, 0), np.floor(xyp[0]).astype(np.intp)), axis=0)
+        # xyp are inclusive bounds; python (in)famously excludes upper bound,
+        # hence xy1p needs to be increased by one
+        xy1p = np.min(((naxis1, naxis2),
+                       1 + np.ceil(xyp[1]).astype(np.intp)),
+                      axis=0)
         logger.debug("xy0p: %s; xy1p: %s", xy0p, xy1p)
 
-        # Add 1 if the same
-        xy1p += (xy0p == xy1p)
-        logger.debug("xy0p: %s; xy1p: %s", xy0p, xy1p)
-
-        new_wcs, new_naxis = imp_utils.create_wcs_from_points(
-            np.array([xy0s, xy1s]).round(11), pixel_scale=hdr["CDELT1"])
-
-        # TODO: Come back at some point and figure out if the failing tests
-        #       here are relevant or can be ignored...
-        # FIXME: Commented out for now because it appears too often IRL...
-        # try:
-        #     roundtrip = new_wcs.wcs_world2pix(
-        #         np.array([xy0s, xy1s - .5*image_wcs.wcs.cdelt]), 0).round(5)
-        #     np.testing.assert_array_equal(roundtrip[0], [0, 0])
-        #     np.testing.assert_array_equal(roundtrip[1], new_naxis - [1, 1])
-        # except AssertionError:
-        #     logger.exception("WCS roundtrip assertion failed.")
-        # FIXME: Related to the above, this sometimes fails:
-        # np.testing.assert_equal(xy1p - xy0p, new_naxis)
-        # This occurs when the floor and ceil in xy0s and xy1s produce an
-        # off-by-one error. Using .round instead for both would solve things
-        # in those cases, but breaks in other cases. Find a proper solution!
-        # Note: This is not super fatal, because the resulting projections
-        #       will trim off that extra pixel later on, but this should still
-        #       be addressed.
+        # Describe the cutout with the input WCS, shifted by the slice origin.
+        # The cutout's pixels ARE input pixels, so this is exact: the cutout
+        # stays on the input's pixel lattice and NAXISn always agrees with
+        # data.shape.
+        #
+        # Deriving the WCS from [xy0s, xy1s] instead (via
+        # create_wcs_from_points) got both wrong. Those are the world corners
+        # *before* the floor/ceil above grew the slice outwards to whole input
+        # pixels, so the resulting WCS described a differently sized image
+        # (NAXISn disagreed with data.shape by a pixel, silently corrected by
+        # fits.ImageHDU, which left CRPIXn describing the wrong array) placed
+        # on the FOV's lattice rather than the input's. Projecting that cutout
+        # then mis-registered it by up to a whole pixel, and by differing
+        # amounts for neighbouring FOVs, so the seam between two FOVs picked
+        # up a duplicated or a dropped row/column.
+        new_wcs = image_wcs.deepcopy()
+        new_wcs.wcs.crpix = image_wcs.wcs.crpix - xy0p
+        new_wcs.wcs.cdelt = np.abs(new_wcs.wcs.cdelt)
+        new_naxis = xy1p - xy0p
+        logger.debug("orig image wcs: %s", image_wcs)
+        logger.debug("new cutout wcs: %s", new_wcs)
+        logger.debug("new cutout naxis: %s", new_naxis)
 
         new_hdr = new_wcs.to_header()
         new_hdr.update({"NAXIS1": new_naxis[0], "NAXIS2": new_naxis[1]})
@@ -605,18 +604,17 @@ class FieldOfView:
         """Deal with BUNIT and pixel area."""
         # Note: Do not scale source data - make a copy first.
         field_hdu = field.field.copy()  # .field is the HDU (yeah...)
-        field_hdu.data /= self.pixel_area.value
 
-        # TODO: Check if this scaling is actually correct. How does this
-        #       work with the add_imagehdu_to_imagehdu below? Isn't that
-        #       supposed to conserve flux? Test carefully!!
         if field.is_bunit_spatially_differential:
-            # Field is in (PHOTLAM) arcsec-2, need to scale by pixarea
-            field_hdu.data *= field.pixel_area.value
+            logger.debug("differential bunit...")
         else:
+            logger.debug("binned bunit...")
+            logger.debug("scaling by %f", field.pixel_area.value)
+            field_hdu.data /= field.pixel_area.value
             # Pixel area doesn't cancel out, need to convert
             new_bunit = field.bunit / u.arcsec**2
             field_hdu.header["BUNIT"] = new_bunit.to_string("fits")
+            logger.debug("BUNIT after scaling: %s", field_hdu.header["BUNIT"])
 
         return field_hdu
 
@@ -744,13 +742,16 @@ class FieldOfView2D(FieldOfView):
             # cube_fields come in with units of photlam/arcsec2,
             # need to convert to ph/s
             # We need to the voxel volume (spectral and solid angle) for that.
-            spectral_bin_width = (field.header["CDELT3"] *
-                                  u.Unit(field.header["CUNIT3"])
-                                  ).to(u.Angstrom)
+            spectral_bin_width = (
+                field.header["CDELT3"] *
+                u.Unit(field.header["CUNIT3"])
+            ).to(u.Angstrom)
             # First collapse to image, then convert units
             image = np.sum(field.data, axis=0) * PHOTLAM/u.arcsec**2
-            image = (image * self.area *
-                     spectral_bin_width).to(u.ph/u.s/u.arcsec**2)
+            image = (image * self.area * field.pixel_area *
+                     spectral_bin_width).to(u.ph/u.s)
+            logger.debug("2D FOV make_cubefields: image.mean() = %f %s",
+                         image.mean().value, image.unit)
             # FIXME: This might create a 2D ImageHDU with a 3D header, not ideal...
             yield fits.ImageHDU(data=image, header=field.header)
 
@@ -763,7 +764,18 @@ class FieldOfView2D(FieldOfView):
         * yield image  to be added to canvas image
         """
         for field in self._get_image_fields():
-            field_hdu = self._make_scaled_hdu(field)
+            logger.debug("2D FOV make_imagefields: field.data.sum() = %f %s",
+                         field.data.sum(), field.bunit)
+
+            field_hdu = field.field.copy()
+
+            if field.is_bunit_spatially_differential:
+                logger.warning("Differential BUNIT in 2D image is discouraged.")
+                logger.debug("scaling by %f", field.pixel_area.value)
+                field_hdu.data *= field.pixel_area.value
+                new_bunit = field.bunit / field.pixel_area.unit
+                field_hdu.header["BUNIT"] = new_bunit.to_string("fits")
+                logger.debug("BUNIT after scaling: %s", field_hdu.header["BUNIT"])
 
             # Reevaluate spectrum onto FOV waveset
             spec = field.spectrum(fov_waveset)  # PHOTLAM
@@ -772,7 +784,10 @@ class FieldOfView2D(FieldOfView):
             flux = (spec * bin_widths * self.area).to_value(u.ph / u.s).sum()
 
             # Rescale 2D flux weight map by integrated flux from spectrum
-            field_hdu.data *= flux  # ph s-1 arcsec-2
+            field_hdu.data *= flux  # ph s-1
+            logger.info(
+                "2D FOV make_imagefields: field_hdu.data.mean() = %f ph/s",
+                field_hdu.data.mean())
             yield field_hdu
 
     def _make_tablefields(self, fov_waveset, bin_widths, use_photlam=False):
@@ -845,17 +860,16 @@ class FieldOfView2D(FieldOfView):
             data=np.zeros((self.header["NAXIS2"], self.header["NAXIS1"])),
             header=self.header)
 
-        for tmp_hdu in chain(self._make_cubefields(),
-                             self._make_imagefields(
-                                 fov_waveset, bin_widths)):
+        for tmp_hdu in chain(
+            self._make_cubefields(),
+            self._make_imagefields(fov_waveset, bin_widths)
+        ):
             canvas_image_hdu = imp_utils.add_imagehdu_to_imagehdu(
                 tmp_hdu,
                 canvas_image_hdu,
-                conserve_flux=True,
-                spline_order=self.spline_order)
-
-        # TODO: Move this further along at some point...
-        canvas_image_hdu.data *= self.pixel_area.value  # eliminate arcsec-2
+                conserve_flux=True,  # binned flux needs this
+                spline_order=self.spline_order,
+            )
 
         for flux, weight, x, y in self._make_tablefields(
                 fov_waveset, bin_widths):
@@ -925,14 +939,16 @@ class FieldOfView3D(FieldOfView):
             # Assumption is that ImageHDUs have units of PHOTLAM arcsec-2
 
             # TODO: Deal with this bounds_error in a more elegant way
-            field_interp = interp1d(field.waveset.to(u.um).value,
-                                    field.data, axis=0, kind="linear",
-                                    bounds_error=False, fill_value=0)
+            field_interp = interp1d(
+                field.waveset.to(u.um).value,
+                field.data,
+                axis=0,
+                kind="linear",
+                bounds_error=False,
+                fill_value=0,
+            )
 
             field_data = field_interp(fov_waveset.value)
-
-            # Pixel scale conversion
-            field_data *= field.pixel_area / self.pixel_area
             field_hdu = fits.ImageHDU(data=field_data, header=field.header)
             yield field_hdu
 
@@ -957,10 +973,12 @@ class FieldOfView3D(FieldOfView):
             canvas_image_hdu = imp_utils.add_imagehdu_to_imagehdu(
                 field_hdu,
                 canvas_image_hdu,
-                spline_order=spline_order)
+                spline_order=spline_order,
+                conserve_flux=True,
+                differential=True,
+            )
 
             spec = field.spectrum(fov_waveset)
-
             # 2D * 1D -> 3D
             field_cube = canvas_image_hdu.data[None, :, :] * spec[:, None, None]
             yield field_cube.value
@@ -1113,11 +1131,15 @@ class FieldOfView3D(FieldOfView):
             canvas_cube_hdu = imp_utils.add_imagehdu_to_imagehdu(
                 field_hdu,
                 canvas_cube_hdu,
-                spline_order=self.spline_order)
+                spline_order=self.spline_order,
+                conserve_flux=True,
+                differential=True,
+            )
 
-        canvas_cube_hdu.data = sum(self._make_imagefields(
-            fov_waveset, self.spline_order),
-            start=canvas_cube_hdu.data)
+        canvas_cube_hdu.data = sum(
+            self._make_imagefields(fov_waveset, self.spline_order),
+            start=canvas_cube_hdu.data,
+        )
 
         for flux, x, y in self._make_tablefields(fov_waveset):
             # To prevent adding array values in this manner.
@@ -1131,6 +1153,9 @@ class FieldOfView3D(FieldOfView):
         canvas_cube_hdu.data *= self.area.to(u.cm ** 2).value
         canvas_cube_hdu.data *= 1e4       # ph/s/AA/arcsec2 --> ph/s/um/arcsec2
         canvas_cube_hdu.header["BUNIT"] = "ph s-1 um-1 arcsec-2"
+
+        logger.debug("3D FOV make_hdu: canvas_cube_hdu.data.mean() = %f",
+            canvas_cube_hdu.data.mean())
 
         return canvas_cube_hdu  # [ph s-1 um-1 (arcsec-2)]
 

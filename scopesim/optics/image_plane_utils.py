@@ -1,162 +1,24 @@
 # -*- coding: utf-8 -*-
 
-from itertools import product
-from collections.abc import Iterable
-
 import numpy as np
+from numpy.typing import ArrayLike, NDArray
 from astropy import units as u
 from astropy.wcs import WCS, find_all_wcs
 from astropy.io import fits
-from astropy.table import Table
 from astropy.utils.exceptions import AstropyWarning
 from scipy import ndimage as ndi
 
-from ..utils import (unit_from_table, quantity_from_table, has_needed_keywords,
-                     get_logger)
+from ..utils import get_logger
 
 
 logger = get_logger(__name__)
 
 
-def get_canvas_header(hdu_or_table_list, pixel_scale=1 * u.arcsec):
-    """
-    Generate a fits.Header with a WCS that covers everything in the FOV.
-
-    Parameters
-    ----------
-    hdu_or_table_list : list
-        A list of Tables and/or ImageHDU py_objects
-
-    pixel_scale : astropy.Quantity
-        [arcsec] The pixel scale of the projection. Default in 1 arcsec
-
-    Returns
-    -------
-    header : fits.Header
-        A Header containing a WCS and NAXISn values to build an ImageHDU
-
-    """
-    size_warning = ("Header dimension are {adverb} large: {num_pix}. "
-                    "Any image made from this header will use more that "
-                    ">{size} in memory")
-
-    def _get_headers(hdus_or_tables):
-        tables = []
-        for hdu_or_table in hdus_or_tables:
-            if isinstance(hdu_or_table, fits.ImageHDU):
-                yield hdu_or_table.header
-            elif isinstance(hdu_or_table, fits.Header):
-                yield hdu_or_table
-            elif isinstance(hdu_or_table, Table):
-                tables.append(hdu_or_table)
-            else:
-                raise TypeError(
-                    "hdu_or_table_list may only contain fits.ImageHDU, Table "
-                    f"or fits.Header, found {type(hdu_or_table)}.")
-        if tables:
-            yield _make_bounding_header_for_tables(*tables,
-                                                   pixel_scale=pixel_scale)
-
-    headers = list(_get_headers(hdu_or_table_list))
-
-    if not headers:
-        logger.warning("No tables or ImageHDUs were passed")
-        return None
-
-    hdr = _make_bounding_header_from_headers(*headers, pixel_scale=pixel_scale)
-
-    num_pix = hdr["NAXIS1"] * hdr["NAXIS2"]
-    if num_pix > 2 ** 28:
-        raise MemoryError(size_warning.format(adverb="too", num_pix=num_pix,
-                                              size="8 GB"))
-    if num_pix > 2 ** 25:  # 2 * 4096**2
-        logger.warning(size_warning.format(adverb="", num_pix=num_pix,
-                                           size="256 MB"))
-    return hdr
-
-
-def _make_bounding_header_from_headers(*headers, pixel_scale=1*u.arcsec):
-    """
-    Return a Header with WCS and NAXISn keywords bounding all input ImageHDUs.
-
-    Parameters
-    ----------
-    headers : list of fits.ImageHDU
-    pixel_scale : u.Quantity
-        [arcsec]
-
-    Returns
-    -------
-    hdr : fits.Header
-
-    """
-    wcs_suffix = "D" if pixel_scale.unit.physical_type == "length" else ""
-    unit = u.Unit(_get_unit_from_headers(*headers, wcs_suffix=wcs_suffix))
-
-    if unit.physical_type == "angle":
-        unit = "deg"
-        pixel_scale = pixel_scale.to_value(u.deg)
-    else:
-        pixel_scale = pixel_scale.to_value(unit)
-
-    extents = [calc_footprint(header, wcs_suffix, unit) for header in headers]
-    pnts = np.vstack(extents)
-
-    hdr = header_from_list_of_xy(pnts[:, 0], pnts[:, 1],
-                                 pixel_scale, wcs_suffix)
-    hdr["NAXIS1"] += 1
-    hdr["NAXIS2"] += 1
-    hdr[f"CRVAL1{wcs_suffix}"] -= 0.5 * pixel_scale
-    hdr[f"CRVAL2{wcs_suffix}"] -= 0.5 * pixel_scale
-
-    return hdr
-
-
-def _make_bounding_header_for_tables(*tables, pixel_scale=1*u.arcsec):
-    """
-    Return a Header with WCS and NAXISn keywords bounding all input Tables.
-
-    Parameters
-    ----------
-    tables : list of astropy.Tables
-        [arcsec] Must contain columns: "x", "y"
-
-    pixel_scale : u.Quantity
-        [arcsec]
-
-    Returns
-    -------
-    hdr : fits.Header
-
-    """
-    wcs_suffix = "D" if pixel_scale.unit.physical_type == "length" else ""
-    # FIXME: Convert to deg here? If yes, remove the arcsec=True below...
-    # Note: this could all be a lot simpler if we have consistent units, i.e.
-    #       don't need to convert mm -> mm and arcsec -> arcsec (or deg)
-    new_unit = u.mm if wcs_suffix == "D" else u.arcsec  # u.deg
-    tbl_unit = u.mm if wcs_suffix == "D" else u.arcsec
-    x_name = "x_mm" if wcs_suffix == "D" else "x"
-    y_name = "y_mm" if wcs_suffix == "D" else "y"
-
-    pixel_scale = pixel_scale.to(new_unit)
-
-    extents = []
-    for table in tables:
-        extent = calc_table_footprint(table, x_name, y_name,
-                                      tbl_unit, new_unit,
-                                      padding=pixel_scale)
-        extents.append(extent)
-    pnts = np.vstack(extents)
-
-    # TODO: check if this could just use create_wcs_from_points
-    hdr = header_from_list_of_xy(pnts[:, 0], pnts[:, 1], pixel_scale.value,
-                                 wcs_suffix, arcsec=wcs_suffix != "D")
-    return hdr
-
-
-def create_wcs_from_points(points: np.ndarray,
-                           pixel_scale: float,
-                           wcs_suffix: str = "") -> tuple[WCS, np.ndarray]:
+def create_wcs_from_points(
+    points: ArrayLike,
+    pixel_scale: float,
+    wcs_suffix: str = "",
+) -> tuple[WCS, NDArray]:
     """
     Create `astropy.wcs.WCS` instance that fits all points inside.
 
@@ -211,7 +73,41 @@ def create_wcs_from_points(points: np.ndarray,
         offset[zeroaxis] = 0
 
     crpix = (naxis + 1) / 2
-    crval = (points.min(axis=0) + points.max(axis=0) + offset) / 2
+
+    # Where to put the pixel lattice when NAXISn cannot cover the requested
+    # region exactly.
+    #
+    # If the grid truncates the region (naxis < extent, i.e. the region is not
+    # a whole number of pixels across), anchor the lower pixel edge at
+    # points.min and let the leftover fraction fall off the far edge. Every
+    # region carved out of the same origin in whole-pixel steps then shares one
+    # lattice - which is what chunked FOVs are: the image plane, the full-size
+    # chunks and the smaller last chunk all measure from the same detector
+    # edge. Centring each of them on its own midpoint instead, and absorbing
+    # its own rounding remainder into CRVAL, put them on lattices offset from
+    # one another by fractions of a pixel, so the projection had to snap them
+    # and the last chunk could land a whole pixel off its neighbours.
+    #
+    # MICADO's detector plane is 189.32 mm / 0.015 mm = 12621.33 px tall, so it
+    # hits this on every run.
+    #
+    # If the grid covers the region (naxis >= extent) there is nothing to
+    # truncate, so keep centring it on the region. That is the right thing for
+    # a region smaller than a single pixel, where naxis was clamped up to 1.
+    _pxs = float(pixel_scale.value if isinstance(pixel_scale, u.Quantity)
+                 else pixel_scale)
+    _pts = points.value if isinstance(points, u.Quantity) else np.asarray(points)
+    _naxis = np.asarray(naxis, dtype=float)
+    _extent = np.atleast_1d(np.asarray(extent, dtype=float))
+
+    crval = np.where(
+        _naxis < _extent,
+        _pts.min(axis=0) + (_naxis / 2) * _pxs,                      # anchored
+        (_pts.min(axis=0) + _pts.max(axis=0) +
+         np.asarray(offset, dtype=float)) / 2,                       # centred
+    )
+    if isinstance(points, u.Quantity):
+        crval = crval * points.unit
 
     # Cannot do `in "DX"` here because that would also match the empty string.
     linsuff = {"D", "X"}
@@ -274,95 +170,6 @@ def header_from_list_of_xy(x, y, pixel_scale, wcs_suffix="", arcsec=False):
     hdr.update(new_wcs.to_header())
 
     return hdr
-
-
-def add_table_to_imagehdu(table: Table, canvas_hdu: fits.ImageHDU,
-                          sub_pixel: bool = True,
-                          wcs_suffix: str = "") -> fits.ImageHDU:
-    """
-    Add files from an astropy.Table to the image of an fits.ImageHDU.
-
-    Parameters
-    ----------
-    table : astropy.Table
-        Must contain the columns "x_mm", "y_mm", "flux" with the units in the
-        column attribute .unit, or in the table.meta dictionary as
-        "<colname>_unit". Default units are ``mm`` and ``ph / s / pix``
-
-    canvas_hdu : fits.ImageHDU
-        The ImageHDU onto which the table files should be projected.
-        This must include a valid WCS
-
-    sub_pixel : bool, optional
-        Default is True. If True, sub-pixel shifts of files will be taken into
-        account when projecting onto the canvas pixel grid. This takes about 5x
-        longer than ignoring the sub-pixel shifts
-
-    wcs_suffix : str, optional
-
-    Returns
-    -------
-    canvas_hdu : fits.ImageHDU
-
-    """
-    s = wcs_suffix
-    if not has_needed_keywords(canvas_hdu.header, s):
-        raise ValueError(f"canvas_hdu must include an appropriate WCS: {s}")
-
-    f = quantity_from_table("flux", table, default_unit=u.Unit("ph s-1"))
-    if s == "D":
-        x = quantity_from_table("x_mm", table, default_unit=u.mm).to(u.mm)
-        y = quantity_from_table("y_mm", table, default_unit=u.mm).to(u.mm)
-    else:
-        arcsec = u.arcsec
-        canvas_unit = u.Unit(canvas_hdu.header[f"CUNIT1{s}"])
-        x = quantity_from_table("x", table, default_unit=arcsec.to(canvas_unit))
-        y = quantity_from_table("y", table, default_unit=arcsec.to(canvas_unit))
-        x *= arcsec.to(canvas_unit)
-        y *= arcsec.to(canvas_unit)
-
-    xpix, ypix = val2pix(canvas_hdu.header, x.value, y.value, s)
-
-    naxis1 = canvas_hdu.header["NAXIS1"]
-    naxis2 = canvas_hdu.header["NAXIS2"]
-    # Occasionally 0 is returned as ~ -1e-11
-    eps = -1e-7
-    mask = (xpix >= eps) * (xpix < naxis1) * (ypix >= eps) * (ypix < naxis2)
-
-    if sub_pixel:
-        canvas_hdu = _add_subpixel_sources_to_canvas(
-            canvas_hdu, xpix, ypix, f, mask)
-    else:
-        canvas_hdu = _add_intpixel_sources_to_canvas(
-            canvas_hdu, xpix, ypix, f, mask)
-
-    return canvas_hdu
-
-
-def _add_intpixel_sources_to_canvas(canvas_hdu, xpix, ypix, flux, mask):
-    canvas_hdu.header["comment"] = f"Adding {len(flux)} int-pixel files"
-    for xpx, ypx, flx, msk in zip(xpix.astype(int), ypix.astype(int),
-                                  flux, mask):
-        # To prevent adding array values in this manner.
-        assert not isinstance(xpx, Iterable), "xpx should be integer"
-        canvas_hdu.data[ypx, xpx] += flx.value * msk
-
-    return canvas_hdu
-
-
-def _add_subpixel_sources_to_canvas(canvas_hdu, xpix, ypix, flux, mask):
-    canvas_hdu.header["comment"] = f"Adding {len(flux)} sub-pixel files"
-    canvas_shape = canvas_hdu.data.shape
-    for xpx, ypx, flx, msk in zip(xpix, ypix, flux, mask):
-        if msk:
-            xx, yy, fracs = sub_pixel_fractions(xpx, ypx)
-            for x, y, frac in zip(xx, yy, fracs):
-                if y < canvas_shape[0] and x < canvas_shape[1]:
-                    # To prevent adding array values in this manner.
-                    assert not isinstance(x, Iterable), "x should be integer"
-                    canvas_hdu.data[y, x] += frac * flx.value
-
-    return canvas_hdu
 
 
 def sub_pixel_fractions(x, y):
@@ -434,8 +241,32 @@ def overlay_image(small_im, big_im, coords, mask=None, sub_pixel=False):
         coords = np.array([*coords, (big_im.shape[0] - 1) / 2])
 
     # FIXME: this would not be necessary if we used WCS instead of manual 2pix
-    coords = np.ceil(np.asarray(coords).round(10)).astype(int)
-    idx = coords.astype(int)[::-1] - np.array(small_im.shape) // 2
+    # Round to 1e-4 pix first: WCS deg-space round-trips leave float dust of
+    # order 1e-8..1e-6 pix on integer-valued coords, which the snap below
+    # would otherwise amplify to a full-pixel shift; genuine sub-pixel intent
+    # cannot be finer than 0.5 pix here (sub_pixel is not implemented).
+    coords = np.asarray(coords, dtype=float).round(4)
+
+    # `idx` is the origin, in array order, at which small_im must be placed to
+    # centre it on `coords` (both are 0-based pixel-centre coordinates, as
+    # returned by WCS.wcs_world2pix(..., 0)).
+    #
+    # Snap that origin, NOT `coords` itself. The old expression
+    #     np.ceil(coords)[::-1] - np.array(small_im.shape) // 2
+    # is off by up to a whole pixel whenever `coords` is not on the lattice
+    # small_im implies (half-integer for even shapes, integer for odd ones),
+    # and the direction of that error flips with the parity of the shape. Two
+    # adjacent FOVs of different sizes therefore get displaced opposite ways
+    # and their shared edge picks up a duplicated or a dropped row/column.
+    # Snapping the origin instead keeps every placement consistent, whatever
+    # the shape.
+    #
+    # Half-integer origins (a real sub-pixel shift, which sub_pixel=True would
+    # have to handle properly) are rounded towards the lower index, matching
+    # what the old expression did for even shapes.
+    idx = np.ceil(
+        coords[::-1] - (np.array(small_im.shape) - 1) / 2 - 0.5
+    ).astype(np.intp)
 
     # Image ranges
     idx1 = np.maximum(0, idx)
@@ -475,9 +306,14 @@ def overlay_image(small_im, big_im, coords, mask=None, sub_pixel=False):
     return big_im
 
 
-def rescale_imagehdu(imagehdu: fits.ImageHDU, pixel_scale: float | u.Quantity,
-                     wcs_suffix: str = "", conserve_flux: bool = True,
-                     spline_order: int = 1) -> fits.ImageHDU:
+def rescale_imagehdu(
+    imagehdu: fits.ImageHDU,
+    pixel_scale: float | u.Quantity,
+    wcs_suffix: str = "",
+    conserve_flux: bool = True,
+    spline_order: int = 1,
+    differential: bool = False,
+) -> fits.ImageHDU:
     """
     Scale the .data array by the ratio of pixel_scale [deg] and CDELTn.
 
@@ -533,14 +369,72 @@ def rescale_imagehdu(imagehdu: fits.ImageHDU, pixel_scale: float | u.Quantity,
 
     sum_orig = np.sum(imagehdu.data)
 
+    # scale by pixel area if the flux is differential (i.e. per unit area)
+    if differential:
+        sum_orig *= primary_wcs.wcs.cdelt[0] * primary_wcs.wcs.cdelt[1]
+
     # Perform the rescaling. Axes need to be inverted because python.
-    new_im = ndi.zoom(imagehdu.data, zoom[::-1], order=spline_order)
+    zoom_np = zoom[::-1]
+    data = imagehdu.data
+    in_shape = np.array(data.shape)  # pre-zoom, for the realised-zoom CRPIX
+
+    # ndi.zoom point-samples the input on the output lattice; for zoom < 1 that
+    # DECIMATES rather than integrates, so a source narrower than the sample
+    # spacing can be aliased away partially or (on an unlucky grid phase)
+    # entirely -- silently, since the conserve_flux guard below skips a zeroed
+    # array. Downsample each such axis with an exact area-weighted rebin (the
+    # cumulative sum evaluated at the output bin edges) instead. Unlike a
+    # smoothing prefilter this integrates without SPREADING flux beyond the
+    # output cell, so a compact source cannot leak into wings that a smaller
+    # downstream FOV would clip (which would defeat conserve_flux). It conserves
+    # flux to machine precision by construction and handles non-integer ratios.
+    #
+    # Gated on spline_order > 0: order == 0 is nearest-neighbour resampling of
+    # categorical data (masks, strehl-region label maps), where integrating /
+    # averaging is meaningless and would synthesise phantom label values -- those
+    # keep the stock ndi.zoom path. Upsampled axes also use stock ndi.zoom.
+    if spline_order > 0 and (zoom_np < 1).any():
+        out = np.asarray(data, dtype=float)
+        for _ax in range(out.ndim):
+            _n_in = out.shape[_ax]
+            _n_out = max(int(round(_n_in * zoom_np[_ax])), 1)
+            if _n_out == _n_in:
+                continue
+            if _n_out < _n_in:
+                _a = np.moveaxis(out, _ax, 0)
+                _csum = np.empty((_n_in + 1,) + _a.shape[1:], dtype=float)
+                _csum[0] = 0.0
+                np.cumsum(_a, axis=0, out=_csum[1:])
+                _edges = np.linspace(0.0, _n_in, _n_out + 1)
+                _lo = np.floor(_edges).astype(np.intp)
+                _frac = _edges - _lo
+                _loc = np.clip(_lo, 0, _n_in)
+                _hic = np.clip(_lo + 1, 0, _n_in)
+                _fr = _frac[(...,) + (None,) * (_a.ndim - 1)]
+                _vals = _csum[_loc] + (_csum[_hic] - _csum[_loc]) * _fr
+                out = np.moveaxis(np.diff(_vals, axis=0), 0, _ax)
+            else:
+                _zf = np.ones(out.ndim)
+                _zf[_ax] = _n_out / _n_in
+                out = ndi.zoom(out, _zf, order=spline_order, mode="nearest")
+        new_im = out
+    else:
+        new_im = ndi.zoom(data, zoom_np, order=spline_order)
 
     if conserve_flux:
         new_im = np.nan_to_num(new_im, copy=False)
         sum_new = np.sum(new_im)
+        if differential:
+            sum_new *= (pixel_scale.value**2)
+
         if sum_new != 0:
-            new_im *= sum_orig / sum_new
+            flux_factor = sum_orig / sum_new
+            logger.debug("flux factor = %f", flux_factor)
+            new_im *= flux_factor
+        elif sum_orig != 0:
+            logger.warning(
+                "rescale_imagehdu: all input flux (%g) was lost in resampling; "
+                "flux cannot be conserved.", sum_orig)
 
     imagehdu.data = new_im
 
@@ -572,8 +466,16 @@ def rescale_imagehdu(imagehdu: fits.ImageHDU, pixel_scale: float | u.Quantity,
         #
         # The transformation only applies to spatial coordinates, which we
         # assume to be the first two in the WCS.
+        # CDELT keeps the nominal zoom (CDELT' == pixel_scale exactly). CRPIX
+        # uses the realised zoom n_out/n_in (ndi.zoom / the rebin both produce
+        # round(n_in*zoom) pixels), else the reference pixel -- and every source
+        # -- is misplaced by up to half an output pixel when n_in*zoom is not
+        # integer.
+        n_in_sp = in_shape[::-1][:2].astype(float)
+        n_out_sp = np.array(imagehdu.data.shape[::-1][:2], dtype=float)
+        zoom_real = n_out_sp / n_in_sp
         ww.wcs.cdelt[:2] /= zoom[:2]
-        ww.wcs.crpix[:2] = 0.5 + (ww.wcs.crpix[:2] - 0.5) * zoom[:2]
+        ww.wcs.crpix[:2] = 0.5 + (ww.wcs.crpix[:2] - 0.5) * zoom_real
         logger.debug("new crpix %s", ww.wcs.crpix)
 
         imagehdu.header.update(ww.to_header())
@@ -581,9 +483,12 @@ def rescale_imagehdu(imagehdu: fits.ImageHDU, pixel_scale: float | u.Quantity,
     return imagehdu
 
 
-def reorient_imagehdu(imagehdu: fits.ImageHDU, wcs_suffix: str = "",
-                      conserve_flux: bool = True,
-                      spline_order: int = 1) -> fits.ImageHDU:
+def reorient_imagehdu(
+    imagehdu: fits.ImageHDU,
+    wcs_suffix: str = "",
+    conserve_flux: bool = True,
+    spline_order: int = 1,
+) -> fits.ImageHDU:
     """
     Apply an affine transformation to the image, as given in its header.
 
@@ -641,9 +546,15 @@ def reorient_imagehdu(imagehdu: fits.ImageHDU, wcs_suffix: str = "",
     return imagehdu
 
 
-def affine_map(input, matrix=None, rotation_angle: float = 0.,
-               shear_angle: float = 0., scale_factor=None,
-               reshape: bool = True, spline_order: int = 3):
+def affine_map(
+    input,
+    matrix=None,
+    rotation_angle: float = 0.,
+    shear_angle: float = 0.,
+    scale_factor=None,
+    reshape: bool = True,
+    spline_order: int = 3,
+):
     """
     Apply an affine transformation matrix to an image around its centre.
 
@@ -714,11 +625,14 @@ def affine_map(input, matrix=None, rotation_angle: float = 0.,
     return output
 
 
-def add_imagehdu_to_imagehdu(image_hdu: fits.ImageHDU,
-                             canvas_hdu: fits.ImageHDU,
-                             spline_order: int = 1,
-                             wcs_suffix: str = "",
-                             conserve_flux: bool = True) -> fits.ImageHDU:
+def add_imagehdu_to_imagehdu(
+    image_hdu: fits.ImageHDU,
+    canvas_hdu: fits.ImageHDU,
+    spline_order: int = 1,
+    wcs_suffix: str = "",
+    conserve_flux: bool = True,
+    differential: bool = False,
+) -> fits.ImageHDU:
     """
     Re-project one ``fits.ImageHDU`` onto another ``fits.ImageHDU``.
 
@@ -768,16 +682,22 @@ def add_imagehdu_to_imagehdu(image_hdu: fits.ImageHDU,
     canvas_pixel_scale = float(canvas_wcs.wcs.cdelt[0])
     conv_fac = u.Unit(image_hdu.header[f"CUNIT1{wcs_suffix}"].lower()).to(canvas_wcs.wcs.cunit[0])
 
-    new_hdu = rescale_imagehdu(image_hdu, pixel_scale=canvas_pixel_scale / conv_fac,
-                               wcs_suffix=canvas_wcs.wcs.alt,
-                               spline_order=spline_order,
-                               conserve_flux=conserve_flux)
+    new_hdu = rescale_imagehdu(
+        image_hdu,
+        pixel_scale=canvas_pixel_scale / conv_fac,
+        wcs_suffix=canvas_wcs.wcs.alt,
+        spline_order=spline_order,
+        conserve_flux=conserve_flux,
+        differential=differential,
+    )
     # TODO: Perhaps add separately formatted WCS logger?
-    # logger.debug("fromrescale %s", WCS(new_hdu.header, key=canvas_wcs.wcs.alt))
-    new_hdu = reorient_imagehdu(new_hdu,
-                                wcs_suffix=canvas_wcs.wcs.alt,
-                                spline_order=spline_order,
-                                conserve_flux=conserve_flux)
+    logger.debug("fromrescale %s", WCS(new_hdu.header, key=canvas_wcs.wcs.alt))
+    new_hdu = reorient_imagehdu(
+        new_hdu,
+        wcs_suffix=canvas_wcs.wcs.alt,
+        spline_order=spline_order,
+        conserve_flux=conserve_flux,
+    )
 
     img_center = np.array([[new_hdu.header[f"NAXIS{i+1}"]
                            for i in range(new_hdu.header["NAXIS"])]])
@@ -805,6 +725,7 @@ def add_imagehdu_to_imagehdu(image_hdu: fits.ImageHDU,
     return canvas_hdu
 
 
+# TODO: Use proper WCS functions instead and rm this on-foot implementation!
 def pix2val(header, x, y, wcs_suffix=""):
     """
     Return the real coordinates [deg, mm] for coordinates from a Header WCS.
@@ -845,6 +766,7 @@ def pix2val(header, x, y, wcs_suffix=""):
     return a, b
 
 
+# TODO: Use proper WCS functions instead and rm this on-foot implementation!
 def val2pix(header, a, b, wcs_suffix=""):
     """
     Return the pixel coordinates for real coordinates [deg, mm] from a WCS.
@@ -955,98 +877,6 @@ def calc_footprint(header, wcs_suffix="", new_unit: str = None):
     return xy1
 
 
-def calc_table_footprint(table: Table, x_name: str, y_name: str,
-                         tbl_unit: str, new_unit: str,
-                         padding=None) -> np.ndarray:
-    """
-    Equivalent to ``calc_footprint()``, but for tables instead of images.
-
-    Parameters
-    ----------
-    table : astropy.table.Table
-        Table containing data.
-    x_name : str
-        Name of the column in `table` to use as x-coordinates.
-    y_name : str
-        Name of the column in `table` to use as y-coordinates.
-    tbl_unit : str
-        Default unit to use for x and y if no units are found in `table`.
-    new_unit : str
-        Unit to convert x and y to, can be identical to `tbl_unit`.
-    padding : astropy.units.Quantity, optional
-        Constant value to subtract from minima and add to maxima. If used, must
-        be Quantity with same physical type as x and y. If None (default), no
-        padding is added.
-
-    Returns
-    -------
-    extent : (4, 2) array
-        Array containing corner points (clockwise from bottom left). Format and
-        order are equivalent to the output of
-        ``astropy.wcs.WCS.calc_footprint()``.
-
-    """
-    if padding is not None:
-        padding = padding.to_value(new_unit)
-    else:
-        padding = 0.
-
-    x_convf = unit_from_table(x_name, table, tbl_unit).to(new_unit)
-    y_convf = unit_from_table(y_name, table, tbl_unit).to(new_unit)
-
-    x_col = table[x_name] * x_convf
-    y_col = table[y_name] * y_convf
-
-    x_min = x_col.min() - padding
-    x_max = x_col.max() + padding
-    y_min = y_col.min() - padding
-    y_max = y_col.max() + padding
-
-    extent = np.array([[x_min, y_min],
-                       [x_min, y_max],
-                       [x_max, y_max],
-                       [x_max, y_min]])
-
-    return extent
-
-
-def split_header(hdr, chunk_size, wcs_suffix=""):
-    """
-    Split a header into many smaller parts of the chunk_size.
-
-    Parameters
-    ----------
-    hdr
-    chunk_size
-    wcs_suffix
-
-    Returns
-    -------
-    hdr_list
-    """
-    # TODO: test that this works
-    s = wcs_suffix
-    naxis1, naxis2 = hdr["NAXIS1"+s], hdr["NAXIS2"+s]
-    x0_pix, y0_pix = hdr["CRPIX1"+s], hdr["CRPIX2"+s]       # pix
-    x0_sky, y0_sky = hdr["CRVAL1"+s], hdr["CRVAL2"+s]       # deg
-    x_delt, y_delt = hdr["CDELT1"+s], hdr["CDELT2"+s]       # deg / pix
-
-    hdr_list = []
-    for x1_pix in range(0, naxis1, chunk_size):
-        for y1_pix in range(0, naxis2, chunk_size):
-            x1_sky = x0_sky + (x1_pix - x0_pix) * x_delt
-            y1_sky = y0_sky + (y1_pix - y0_pix) * y_delt
-            x2_sky = x1_sky + x_delt * min(chunk_size, naxis1 - x1_pix)
-            y2_sky = y1_sky + y_delt * min(chunk_size, naxis2 - y1_pix)
-
-            hdr_sky = header_from_list_of_xy([x1_sky, x2_sky],
-                                             [y1_sky, y2_sky],
-                                             pixel_scale=x_delt, wcs_suffix=s)
-            hdr_list.append(hdr_sky)
-
-    return hdr_list
-
-
 def _fix_360(arr):
     """Fix the "full circle overflow" that occurs with deg."""
     if isinstance(arr, u.Quantity):
@@ -1059,19 +889,12 @@ def _fix_360(arr):
     return arr
 
 
-def _get_unit_from_headers(*headers, wcs_suffix: str = "") -> str:
-    unit = headers[0][f"CUNIT1{wcs_suffix}"].lower()
-    assert all(header[f"CUNIT{i}{wcs_suffix}"].lower() == unit
-               for header, i in product(headers, range(1, 3))), \
-        [(i, header[f"CUNIT{i}{wcs_suffix}"])
-         for header, i in product(headers, range(1, 3))]
-    return unit
-
-
-def det_wcs_from_sky_wcs(sky_wcs: WCS,
-                         pixel_scale: float,
-                         plate_scale: float,
-                         naxis=None) -> tuple[WCS, np.ndarray]:
+def det_wcs_from_sky_wcs(
+    sky_wcs: WCS,
+    pixel_scale: float,
+    plate_scale: float,
+    naxis: tuple[int, int] | None = None,
+) -> tuple[WCS, NDArray]:
     """
     Create detector WCS from celestial WCS using pixel and plate scales.
 
@@ -1096,8 +919,6 @@ def det_wcs_from_sky_wcs(sky_wcs: WCS,
         Shape of the image (``NAXIS1``, ``NAXIS2``).
 
     """
-    # TODO: Using astropy units for now to avoid deg vs. arcsec confusion.
-    #       Once Scopesim is consistent there, remove astropy units.
     pixel_scale <<= u.arcsec / u.pixel
     plate_scale <<= u.arcsec / u.mm
     logger.debug("Pixel scale: %s", pixel_scale)
@@ -1115,10 +936,12 @@ def det_wcs_from_sky_wcs(sky_wcs: WCS,
     return create_wcs_from_points(corners, pixel_size, "D")
 
 
-def sky_wcs_from_det_wcs(det_wcs: WCS,
-                         pixel_scale: float,
-                         plate_scale: float,
-                         naxis=None) -> tuple[WCS, np.ndarray]:
+def sky_wcs_from_det_wcs(
+    det_wcs: WCS,
+    pixel_scale: float,
+    plate_scale: float,
+    naxis=None,
+) -> tuple[WCS, np.ndarray]:
     """
     Create celestial WCS from detector WCS using pixel and plate scales.
 
@@ -1143,8 +966,6 @@ def sky_wcs_from_det_wcs(det_wcs: WCS,
         Shape of the image (``NAXIS1``, ``NAXIS2``).
 
     """
-    # TODO: Using astropy units for now to avoid deg vs. arcsec confusion.
-    #       Once Scopesim is consistent there, remove astropy units.
     pixel_scale <<= u.arcsec / u.pixel
     plate_scale <<= u.arcsec / u.mm
     logger.debug("Pixel scale: %s", pixel_scale)

@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 from pathlib import Path
 from dataclasses import dataclass
 from typing import Any
@@ -8,14 +10,29 @@ from astropy import units as u
 from astropy.io import ascii as ioascii
 from astropy.table import Table
 
-from synphot import SpectralElement
-from synphot.models import Empirical1D
+from synphot import SpectralElement, SourceSpectrum, Empirical1D, Observation
+from synphot.units import PHOTLAM
 
-from ..effects import ter_curves_utils as ter_utils
-from .surface_utils import (make_emission_from_emissivity,
-                            make_emission_from_array, extract_type_from_unit)
-from ..utils import (get_meta_quantity, quantify, from_currsys,
-                     convert_table_comments_to_dict, find_file, get_logger)
+from ..utils import (
+    get_meta_quantity,
+    quantify,
+    from_currsys,
+    convert_table_comments_to_dict,
+    find_file,
+    get_logger,
+)
+from ..source.source_templates import (
+    vega_spectrum,
+    st_spectrum,
+    ab_spectrum,
+)
+from ..effects.ter_curves_utils import get_filter
+from .surface_utils import (
+    make_emission_from_emissivity,
+    make_emission_from_array,
+    extract_type_from_unit,
+)
+
 
 logger = get_logger(__name__)
 
@@ -88,15 +105,15 @@ class SpectralSurface:
         return self._get_array("wavelength")
 
     @property
-    def throughput(self):
+    def throughput(self) -> SpectralElement:
         return self._get_ter_property(self.meta.get("action", "transmission"))
 
     @property
-    def transmission(self):
+    def transmission(self) -> SpectralElement:
         return self._get_ter_property("transmission")
 
     @property
-    def emissivity(self):
+    def emissivity(self) -> SourceSpectrum:
         return self._get_ter_property("emissivity")
 
     @property
@@ -144,7 +161,7 @@ class SpectralSurface:
             filter_name = dic["filter_name"]
             if "filename_format" in dic:
                 filter_name = dic["filename_format"].format(filter_name)
-            flux = ter_utils.scale_spectrum(flux, filter_name, amplitude)
+            flux = scale_spectrum(flux, filter_name, amplitude)
 
         return flux
 
@@ -197,9 +214,12 @@ class SpectralSurface:
         fill_value = 0. if ter_property == "transmission" else np.nan
 
         if value_arr is not None and wave is not None and fmt == "synphot":
-            response_curve = SpectralElement(Empirical1D, points=wave,
-                                             lookup_table=value_arr,
-                                             fill_value=fill_value)
+            response_curve = SpectralElement(
+                Empirical1D,
+                points=wave,
+                lookup_table=value_arr,
+                fill_value=fill_value,
+            )
         elif fmt == "array":
             response_curve = value_arr
         else:
@@ -299,3 +319,76 @@ class SpectralSurface:
         msg = f"SpectralSurface [{cols}] \"{name}\""
 
         return msg
+
+
+# TODO: This feels WET with some SpeXtra / synphot functionality...
+def scale_spectrum(spectrum, filter_name, amplitude):
+    """
+    Scale a SourceSpectrum to a value in a filter.
+
+    Parameters
+    ----------
+    spectrum : synphot.SourceSpectrum
+
+    filter_name : str
+        Name of a filter from
+        - a local instrument package (available in ``rc.__search_path__``)
+        - a generic filter name (see ``ter_curves_utils.FILTER_DEFAULTS``)
+        - a spanish-vo filter service reference (e.g. "Paranal/HAWKI.Ks")
+
+    amplitude : astropy.Quantity, float
+        The value that the spectrum should have in the given filter. Acceptable
+        astropy quantities are:
+        - u.mag : Vega magnitudes
+        - u.ABmag : AB magnitudes
+        - u.STmag : HST magnitudes
+        - u.Jy : Jansky per filter bandpass
+        Additionally the "FLAM" and "FNU" units from ``synphot.units`` can
+        be used when passing the quantity for `amplitude`.
+
+    Returns
+    -------
+    spectrum : synphot.SourceSpectrum
+        Input spectrum scaled to the given amplitude in the given filter.
+
+    Examples
+    --------
+    ::
+
+        >>> from scopesim.source.source_templates import vega_spectrum
+        >>> from scopesim.optics.surface import scale_spectrum
+        >>>
+        >>> spec = vega_spectrum()
+        >>> vega_185 = scale_spectrum(spec, "Ks", -1.85 * u.mag)
+        >>> ab_0 = scale_spectrum(spec, "Ks", 0 * u.ABmag)
+        >>> jy_3630 = scale_spectrum(spec, "Ks", 3630 * u.Jy)
+
+    """
+    if isinstance(amplitude, u.Quantity):
+        if amplitude.unit.physical_type == "spectral flux density":
+            if amplitude.unit != u.ABmag:
+                amplitude = amplitude.to(u.ABmag)
+            ref_spec = ab_spectrum(amplitude.value)
+
+        elif amplitude.unit.physical_type == "spectral flux density wav":
+            if amplitude.unit != u.STmag:
+                amplitude = amplitude.to(u.STmag)
+            ref_spec = st_spectrum(amplitude.value)
+
+        elif amplitude.unit == u.mag:
+            ref_spec = vega_spectrum(amplitude.value)
+
+        else:
+            raise ValueError(f"Units of amplitude must be one of "
+                             f"[u.mag, u.ABmag, u.STmag, u.Jy]: {amplitude}")
+    else:
+        ref_spec = vega_spectrum(amplitude)
+
+    filt = get_filter(filter_name)
+    ref_flux = Observation(ref_spec, filt).effstim(flux_unit=PHOTLAM)
+
+    real_flux = Observation(spectrum, filt).effstim(flux_unit=PHOTLAM)
+    scale_factor = ref_flux / real_flux
+    spectrum *= scale_factor.value
+
+    return spectrum

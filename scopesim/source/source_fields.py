@@ -62,6 +62,7 @@ from dataclasses import dataclass, KW_ONLY, field as dataclass_field
 # rename it dataclass_field to avoid confusion with source field
 
 import numpy as np
+from numpy.typing import ArrayLike, NDArray
 
 from astropy.table import Table, Column
 from astropy.io.registry import IORegistryError
@@ -127,7 +128,7 @@ class SourceField:
         """Name of the object (if set)."""
         return self.meta.get("object", "<unknown>")
 
-    def get_corners(self, unit: u.Unit | str = "arcsec") -> np.ndarray:
+    def get_corners(self, unit: u.Unit | str = "arcsec") -> NDArray:
         """Calculate and return footprint corner points in `unit`.
 
         .. versionadded:: 0.10.0
@@ -187,9 +188,15 @@ class TableSourceField(SpectrumSourceField):
         return cls(tbl, spectra=spectra, meta=kwargs)
 
     @classmethod
-    def from_arrays(cls, x, y, ref, weight,
-                    spectra: dict[int, SourceSpectrum],
-                    **kwargs):
+    def from_arrays(
+        cls,
+        x: ArrayLike,
+        y: ArrayLike,
+        ref: ArrayLike,
+        weight: ArrayLike,
+        spectra: dict[int, SourceSpectrum],
+        **kwargs,
+    ):
         """Construct source table from arrays for each column."""
         if weight is None:
             weight = np.ones(len(x))
@@ -222,7 +229,7 @@ class TableSourceField(SpectrumSourceField):
         stream.write(f"Table with {len(self)} rows, referencing "
                      f"spectra {set(self.spectra)}")
 
-    def get_corners(self, unit: u.Unit | str = "arcsec") -> np.ndarray:
+    def get_corners(self, unit: u.Unit | str = "arcsec") -> NDArray:
         """Calculate and return footprint corner points in `unit`."""
         x_qty = self.field["x"].quantity.to(unit).value
         y_qty = self.field["y"].quantity.to(unit).value
@@ -283,7 +290,7 @@ class HDUSourceField(SourceField):
         return self.field.header
 
     @property
-    def data(self) -> np.ndarray:
+    def data(self) -> NDArray:
         """Shortcut for `field.data`."""
         return self.field.data
 
@@ -333,7 +340,7 @@ class HDUSourceField(SourceField):
         stream.write(f"ImageHDU with size {self.img_size}, referencing "
                      f"spectrum {self.field.header.get('SPEC_REF', '-')}")
 
-    def get_corners(self, unit: u.Unit | str = "arcsec") -> np.ndarray:
+    def get_corners(self, unit: u.Unit | str = "arcsec") -> NDArray:
         """Calculate and return footprint corner points in `unit`."""
         return imp_utils.calc_footprint(self.header, new_unit=unit)
 
@@ -445,7 +452,7 @@ class BackgroundSourceField(SpectrumSourceField):
 
     header: fits.Header
 
-    def get_corners(self, unit: u.Unit | str = "arcsec") -> np.ndarray:
+    def get_corners(self, unit: u.Unit | str = "arcsec") -> NDArray:
         """Return imaginary corner from + to - infinity."""
         return np.array([-np.inf, np.inf])
 

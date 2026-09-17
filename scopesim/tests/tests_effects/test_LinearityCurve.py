@@ -46,11 +46,11 @@ class TestApplyTo:
                                                    (60, 60), (1e5, 60)])
     def test_only_applied_to_detector(self, in_flux, out_flux, basic_lincurve):
         dtcr = _basic_detector()
-        dtcr._hdu.data[0, 0] = in_flux
+        dtcr.data[0, 0] = in_flux
 
         new_dtcr = basic_lincurve.apply_to(dtcr)
-        assert new_dtcr._hdu.data[0, 0] == out_flux
-        assert np.min(new_dtcr._hdu.data) == 0
+        assert new_dtcr.data[0, 0] == out_flux
+        assert np.min(new_dtcr.data) == 0
 
     def test_bypasses_non_detector_objects(self, basic_lincurve):
         new_dict = basic_lincurve.apply_to({"gigawatts": 1.21})

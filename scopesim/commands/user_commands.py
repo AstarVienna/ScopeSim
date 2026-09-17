@@ -8,7 +8,7 @@ from collections.abc import Iterable, Collection, Mapping, MutableMapping
 from typing import Any
 
 import yaml
-import httpx
+import httpxyz as httpx
 from packaging.version import parse
 
 from astar_utils import NestedMapping, RecursiveNestedMapping, NestedChainMap
@@ -162,6 +162,11 @@ class UserCommands(NestedChainMap):
         if not any(getattr(_map, "title", "") == "CurrSys" for _map in maps):
             # Don't add another layer when .new_child() is called.
             maps = [RecursiveNestedMapping(title="CurrSys"), *maps]
+
+        # Guard against wrong args to avoid cryptical error downstream.
+        if not all(isinstance(m, Mapping) for m in maps):
+                raise TypeError(
+                    "Non-keyword args to UserCommands must be dict-like.")
 
         super().__init__(*maps)
 

@@ -1,4 +1,6 @@
+# -*- coding: utf-8 -*-
 import pytest
+from pytest import approx
 
 import numpy as np
 from astropy import units as u
@@ -6,7 +8,8 @@ from matplotlib import pyplot as plt
 from synphot import SpectralElement, SourceSpectrum
 
 from scopesim.effects import TERCurve
-from scopesim.optics.surface import SpectralSurface
+from scopesim.optics.surface import SpectralSurface, scale_spectrum
+from scopesim.source.source_templates import vega_spectrum
 
 
 PLOTS = False
@@ -50,4 +53,26 @@ class TestSurfaceAttribute:
         if PLOTS:
             wave = surf.surface.wavelength
             plt.plot(wave, surf.surface.emission(wave))
+            plt.show()
+
+
+@pytest.mark.webtest
+@pytest.mark.usefixtures("no_file_error")
+class TestScaleSpectrum:
+    def test_scales_vega_spectrum_to_vega_ab_or_jansky(self):
+        spec = vega_spectrum()
+        vega_185 = scale_spectrum(spec, "Ks", -1.85 * u.mag)
+        ab_0 = scale_spectrum(spec, "Ks", 0 * u.ABmag)
+        jy_3630 = scale_spectrum(spec, "Ks", 3630 * u.Jy)
+
+        wave = np.linspace(1.8, 2.5, 1000) * u.um
+        assert vega_185(wave).value == approx(ab_0(wave).value, rel=1e-2)
+        assert vega_185(wave).value == approx(jy_3630(wave).value, rel=1e-2)
+
+        if PLOTS:
+            plt.plot(wave, spec(wave), "b")
+            plt.plot(wave, vega_185(wave), "r:")
+            plt.plot(wave, ab_0(wave), "g--")
+            plt.plot(wave, jy_3630(wave), "y-.")
+            plt.semilogy()
             plt.show()

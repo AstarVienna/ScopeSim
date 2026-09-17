@@ -1,3 +1,25 @@
+# Version 0.11.4
+**2026-05-20**
+
+Quick patch to make TipTop PSFs work with ScopeSim effects.
+
+## What's Changed
+### New Features or Improvements
+* Squeeze extra dimensions out of PSF kernel by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/908
+### Dependency Changes
+* Bump nbconvert from 7.17.0 to 7.17.1 by @dependabot[bot] in https://github.com/AstarVienna/ScopeSim/pull/906
+* Bump lxml from 6.0.2 to 6.1.0 by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/907
+* Bump pytest and pytest-cov by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/909
+* Bump jupyterlab and notebook by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/914
+* Bump jupyter-server from 2.11.2 to 2.18.0 by @dependabot[bot] in https://github.com/AstarVienna/ScopeSim/pull/921
+* Bump mistune from 3.0.2 to 3.2.1 by @dependabot[bot] in https://github.com/AstarVienna/ScopeSim/pull/923
+* Bump urllib3 from 2.6.3 to 2.7.0 by @dependabot[bot] in https://github.com/AstarVienna/ScopeSim/pull/926
+### Other Changes
+* Update hashes for PPS_CFO2 psfs by @oczoske in https://github.com/AstarVienna/ScopeSim/pull/925
+
+**Full Changelog**: https://github.com/AstarVienna/ScopeSim/compare/v0.11.3...v0.11.4
+
+
 # Version 0.11.3
 **2026-04-16**
 

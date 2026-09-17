@@ -7,10 +7,9 @@ from pathlib import Path
 from collections.abc import Iterator, Iterable, Mapping
 
 import yaml
-import httpx
+import httpxyz as httpx
 from more_itertools import first, last, groupby_transform
 
-from .github_utils import download_github_folder
 from .download_utils import (
     get_server_folder_contents,
     handle_download,
@@ -33,40 +32,25 @@ class PkgNotFoundError(Exception):
     """Unable to find given package or given release of that package."""
 
 
-def get_server_package_list():
-    """Deprecated since v0.6.0."""
-    raise AttributeError(
-        "The singular variant of this function has been deprecated since "
-        "version 0.6.0 of ScopeSim and will be completely removed in v0.12.")
-
-
 def _get_package_name(package: str) -> str:
     return package.split(".", maxsplit=1)[0]
 
 
-def _parse_raw_version(raw_version: str) -> str:
-    """Catch initial package version which has no date info.
-
-    Set initial package version to basically "minus infinity".
-    """
-    if raw_version in ("", "zip"):
-        return str(date(1, 1, 1))
-    return raw_version.strip(".zip")
-
-
-def _unparse_raw_version(raw_version: str, package_name: str) -> str:
-    """Turn version string back into full zip folder name.
-
-    If initial version was set with `_parse_raw_version`, revert that.
-    """
-    if raw_version == str(date(1, 1, 1)):
-        return f"{package_name}.zip"
-    return f"{package_name}.{raw_version}.zip"
-
-
 def _parse_package_version(package: str) -> tuple[str, str]:
+    """Split zip folder name into package name and version."""
     p_name, p_version = package.split(".", maxsplit=1)
-    return p_name, _parse_raw_version(p_version)
+    return p_name, p_version.strip(".zip")
+
+
+def _unparse_package_version(
+    package_name: str,
+    version: str,
+    suffix: str | None = None,
+) -> str:
+    """Turn version string back into full zip folder name."""
+    if suffix is None:
+        return f"{package_name}.{version}.zip"
+    return f"{package_name}.{version}.{suffix}.zip"
 
 
 def _is_stable(package_version: str) -> bool:
@@ -123,10 +107,9 @@ def get_all_latest(version_groups: _GrpVerType) -> Iterator[tuple[str, str]]:
 
 def group_package_versions(all_packages: Iterable[tuple[str, str]]) -> _GrpItrType:
     """Group different versions of packages by package name."""
-    version_groups = groupby_transform(sorted(all_packages),
-                                       keyfunc=first,
-                                       valuefunc=last,
-                                       reducefunc=list)
+    version_groups = groupby_transform(
+        sorted(all_packages), keyfunc=first, valuefunc=last, reducefunc=list,
+    )
     return version_groups
 
 
@@ -269,7 +252,7 @@ def list_packages(pkg_name: str | None = None) -> list[str]:
     if pkg_name not in all_grouped:
         raise ValueError(f"Package name {pkg_name} not found on server.")
 
-    p_versions = [_unparse_raw_version(version, pkg_name)
+    p_versions = [_unparse_package_version(pkg_name, version)
                   for version in all_grouped[pkg_name]]
     return p_versions
 
@@ -280,14 +263,14 @@ def _get_zipname(pkg_name: str, release: str, all_versions) -> str:
     elif release == "latest":
         zip_name = get_latest(all_versions[pkg_name])
     else:
-        release = _parse_raw_version(release)
+        release = release.strip(".zip")
         if release not in all_versions[pkg_name]:
             msg = (f"Requested version '{release}' of '{pkg_name}' package"
                    " could not be found on the server. Available versions "
                    f"are: {all_versions[pkg_name]}")
             raise ValueError(msg)
         zip_name = release
-    return _unparse_raw_version(zip_name, pkg_name)
+    return _unparse_package_version(pkg_name, zip_name)
 
 
 def _download_single_package(
@@ -315,17 +298,11 @@ def _download_single_package(
     save_dir.mkdir(parents=True, exist_ok=True)
 
     if "github" in release:
-        warn("Downloading IRDB packages directly from GitHub is deprecated "
-             "and will raise an error from ScopeSim version 0.12 onwards. "
-             "If you really need to use an unreleased version of an IRDB "
-             "package, please use a local clone of the IRDB repo instead.",
-             FutureWarning, stacklevel=3)
-
-        base_url = "https://github.com/AstarVienna/irdb/tree/"
-        github_hash = release.split(":")[-1].split("@")[-1]
-        pkg_url = f"{base_url}{github_hash}/{pkg_name}"
-        download_github_folder(repo_url=pkg_url, output_dir=save_dir)
-        return save_dir.absolute()
+        raise ValueError(
+            "Downloading IRDB packages directly from GitHub is deprecated. "
+            "If you really need to use an unreleased version of an IRDB "
+            "package, please use a local clone of the IRDB repo instead."
+        )
 
     zip_name = _get_zipname(pkg_name, release, all_versions)
     pkg_url = f"{folders_dict[pkg_name]}/{zip_name}"
@@ -433,7 +410,11 @@ def download_packages(
 def download_missing_pkgs(instrument: str) -> None:
     """Download instrument package and required support packages."""
     # First download package itself
-    zip_file = download_packages([instrument])[0]
+    downloaded = download_packages([instrument])
+    if not downloaded:
+        raise RuntimeError(f"Could not download \"{instrument}\".")
+
+    zip_file = downloaded[0]
 
     # If package needs other packages, download them as well
     defyam = zip_file.with_suffix("") / "default.yaml"
@@ -460,15 +441,3 @@ def check_packages(instrument: str, download_missing: bool) -> None:
             raise ValueError(
                 f"IRDB package for {instrument} not found, auto-download is "
                 "disabled. Please set package directory or download package.")
-
-
-# ==============================================================================
-# Funtions below from from OLD_database.py
-# ==============================================================================
-
-def download_package(*args, **kwargs):
-    """Deprecated since v0.5.0."""
-    raise AttributeError(
-        "The singular variant of this function has been deprecated since "
-        "version 0.5.0 of ScopeSim. It will be completely removed in version "
-        "0.12. Please use ``download_packages`` (plural variant) instead!")

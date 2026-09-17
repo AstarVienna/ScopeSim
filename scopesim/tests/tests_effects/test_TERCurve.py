@@ -1,10 +1,17 @@
+# -*- coding: utf-8 -*-
+"""Tests for TERCurve class"""
+
 import pytest
 
 import numpy as np
+import numpy.testing as npt
 from matplotlib import pyplot as plt
 from astropy import units as u
+from astropy.wcs import WCS
+from astropy.table import Table
 
 from scopesim.effects import ter_curves as tc
+from scopesim.optics.fov_volume_list import FovVolumeList
 from scopesim.tests.mocks.py_objects import source_objects as so
 from scopesim.tests.mocks.py_objects import effects_objects as eo
 
@@ -20,6 +27,8 @@ def _filter_wheel(mock_path_micado):
                              "filename_format": fname,
                              "current_filter": "Br-gamma"})
 
+# pylint: disable=missing-class-docstring,
+# pylint: disable=missing-function-docstring
 
 class TestTERCurveApplyTo:
     def test_adds_bg_to_source_if_source_has_no_bg(self):
@@ -46,6 +55,38 @@ class TestTERCurveApplyTo:
                 flux = spec(wave)
                 plt.semilogy(wave, flux, "r")
             plt.show()
+
+    def test_applies_to_cube_source(self):
+        src = so._cube_source()
+        wcs = WCS(src.cube_fields[0].header).spectral
+        nlam = src.cube_fields[0].data.shape[0]
+        lam = wcs.all_pix2world(np.arange(nlam), 0)[0] * u.m
+
+        eff = eo._filter_surface()
+        thru = eff.throughput(lam)
+
+        # Save spectrum before application
+        orig = src.cube_fields[0].data[:, 25, 25] * 1.
+
+        # Apply effect
+        src = eff.apply_to(src)
+
+        # Spectrum after application
+        new = src.cube_fields[0].data[:, 25, 25]
+
+        npt.assert_allclose(new, orig * thru)
+
+    def test_raises_helpful_error_when_nothing_transmits(self):
+        """A fully opaque surface used to die on a bare IndexError inside the
+        volume setup. The error must name the effect and the waverange."""
+        tbl = Table(data=[[0.5, 1.0, 2.0, 3.0], [0.0, 0.0, 0.0, 0.0]],
+                    names=["wavelength", "transmission"])
+        tbl["wavelength"].unit = "um"
+        eff = tc.TERCurve(table=tbl, wave_min=0.5, wave_max=3.0,
+                          name="closed shutter")
+
+        with pytest.raises(ValueError, match="Did you open the shutter"):
+            eff.apply_to(FovVolumeList())
 
 
 class TestTERCurvePlot:
@@ -111,9 +152,6 @@ class TestFilterWheelInit:
 
     def test_current_filter_is_filter(self, fwheel):
         assert isinstance(fwheel.current_filter, tc.FilterCurve)
-
-    def test_current_filter_has_fov_grid_method(self, fwheel):
-        assert hasattr(fwheel.current_filter, "fov_grid")
 
     def test_change_to_known_filter(self, fwheel):
         fwheel.change_filter('Ks')

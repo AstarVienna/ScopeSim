@@ -11,20 +11,19 @@ from ..utils import from_currsys, write_report
 from ..reports.rst_utils import table_to_rst
 
 
-# FIXME: This docstring is out-of-date for several reasons:
-#   - Effects can act on objects other than Source (eg FOV, IMP, DET)
-#   - fov_grid is outdated
-
-
 # @dataclass(kw_only=True, eq=False)
 class Effect:
     """
     Base class for representing the effects (artifacts) in an optical system.
 
     The ``Effect`` class is conceived to independently apply the changes that
-    an optical component (or series thereof) has on an incoming 3D description
-    of an on-sky object. In other words, **an Effect object should receive a
-    derivative of a ``Source`` object, alter it somehow, and return it**.
+    an optical component (or series thereof) has on an incoming description of
+    an on-sky object. **An Effect object should receive an object, alter it
+    somehow, and return an instance of the same class.** Besides ``Source``,
+    that object may be a ``FovVolumeList``, a ``FieldOfView``, an
+    ``ImagePlane`` or a ``Detector``; ``apply_to`` is expected to dispatch on
+    the type it is given and to pass anything it does not handle straight
+    through.
 
     The interface for the Effect base-class has been kept very general so that
     it can easily be sub-classed as data for new effects becomes available.
@@ -32,9 +31,12 @@ class Effect:
     attributes:
 
     * ``self.meta`` - a dictionary to contain metadata.
-    * ``self.apply_to(obj, **kwargs)`` - a method which accepts a
-      Source-derivative and returns an instance of the same class as ``obj``
-    * ``self.fov_grid(which="", **kwargs)``
+    * ``self.apply_to(obj, **kwargs)`` - a method which accepts one of the
+      objects above and returns an instance of the same class as ``obj``
+
+    An Effect that needs to constrain the source-space volume the simulation
+    covers does so in the ``FovVolumeList`` branch of ``apply_to``, by calling
+    ``shrink``, ``extract`` or ``split`` on the list it is passed.
 
 
     Parameters

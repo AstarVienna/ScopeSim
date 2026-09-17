@@ -402,6 +402,10 @@ def flatten_dict(
 
         # Catch any value+comments lists/tuples
         match val:
+            # This became necessary in numpy 2.5, to avoid tripping on scalar quantities
+            case u.Quantity() as value:
+                # value get bound to variable anyway
+                comment = ""
             case [value, str(comment)]:
                 pass  # values get bound to variables anyway
             case value:

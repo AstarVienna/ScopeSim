@@ -9,19 +9,17 @@ Related effects:
 """
 
 from typing import ClassVar
+from numbers import Real  # matches int, float and all the numpy scalars
 
 import numpy as np
+from numpy.typing import ArrayLike, NDArray
 from scipy.signal import oaconvolve
 
-from .. import Effect
-from ...detector import Detector
-from ...utils import figure_factory, check_keys
-from ...utils import from_currsys, real_colname, get_logger
-from . import logger
+from ...utils import from_currsys, figure_factory
+from . import ElectronicEffect, Detector, logger
 
-logger = get_logger(__name__)
 
-class LinearityCurve(Effect):
+class LinearityCurve(ElectronicEffect):
     """
     Detector linearity effect.
 
@@ -56,28 +54,29 @@ class LinearityCurve(Effect):
     report_plot_include: ClassVar[bool] = True
     report_table_include: ClassVar[bool] = False
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.meta.update(kwargs)
+    def __call__(self, data: ArrayLike, ndit: int = 1) -> NDArray:
+        incident = self.incident * ndit
+        measured = self.measured * ndit
+        return np.interp(data, incident, measured)
 
-        check_keys(self.meta, self.required_keys, action="error")
+    @property
+    def incident(self) -> NDArray:
+        if self.table is not None:
+            return self.table["incident"]
+        return np.asarray(from_currsys(self.meta["incident"], self.cmds))
 
-    def apply_to(self, obj, **kwargs):
-        if not isinstance(obj, Detector):
-            return obj
+    @property
+    def measured(self) -> NDArray:
+        if self.table is not None:
+            return self.table["measured"]
+        return np.asarray(from_currsys(self.meta["measured"], self.cmds))
+
+    def _apply_to_det(self, det: Detector) -> None:
+        """Subclasses can override if more params needed in call."""
+        logger.debug("Apply %s to %s", self.display_name, det)
 
         ndit = from_currsys(self.meta["ndit"], self.cmds)
-        if self.table is not None:
-            incident = self.table["incident"] * ndit
-            measured = self.table["measured"] * ndit
-        else:
-            incident = np.asarray(from_currsys(self.meta["incident"],
-                                               self.cmds)) * ndit
-            measured = np.asarray(from_currsys(self.meta["measured"],
-                                               self.cmds)) * ndit
-        obj._hdu.data = np.interp(obj._hdu.data, incident, measured)
-
-        return obj
+        det.data = self(det.data, ndit)
 
     def plot(self, **kwargs):
         fig, ax = figure_factory()
@@ -93,7 +92,7 @@ class LinearityCurve(Effect):
         return fig
 
 
-class InterPixelCapacitance(Effect):
+class InterPixelCapacitance(ElectronicEffect):
     r"""Inter-pixel capacitance effect.
 
     The effect models cross-talk due to inter-pixel capacitance with
@@ -147,8 +146,6 @@ class InterPixelCapacitance(Effect):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-
-        self.meta.update(kwargs)
         self.kernel = self._build_kernel(kwargs)
 
     def _build_kernel(self, params):
@@ -174,15 +171,10 @@ class InterPixelCapacitance(Effect):
         ])
         return kernel
 
-    def apply_to(self, det, **kwargs):
-        if not isinstance(det, Detector):
-            logger.debug("%s applied to %s", self.display_name,
-                         det.__class__.__name__)
-            return det
-
-        newdata = oaconvolve(det._hdu.data, self.kernel, mode="same")
-        det._hdu.data = newdata
-        return det
+    def _apply_to_det(self, det: Detector) -> None:
+        """Subclasses can override if more params needed in call."""
+        logger.debug("Apply %s to %s", self.display_name, det)
+        det.data = oaconvolve(det.data, self.kernel, mode="same")
 
     def update(self, **kwargs):
         """Update the IPC kernel.
@@ -220,7 +212,7 @@ class InterPixelCapacitance(Effect):
         return msg
 
 
-class ADConversion(Effect):
+class ADConversion(ElectronicEffect):
     """Analogue-Digital Conversion effect.
 
     The effect applies the gain factor (electrons/ADU) to the detector readouts
@@ -285,7 +277,7 @@ class ADConversion(Effect):
             logger.warning("Cannot access cmds for ADConversion effect.")
             return True
 
-        # ..todo: need to deal with this case more realistically
+        # TODO: need to deal with this case more realistically
         # Is this still necessary?
         #if self.cmds.get("!OBS.autoexpset", False):
         #    logger.info("DIT, NDIT determined by AutoExposure -> "
@@ -298,28 +290,33 @@ class ADConversion(Effect):
 
         return True
 
-    def apply_to(self, obj, **kwargs):
-        if not isinstance(obj, Detector):
-            return obj
+    def __call__(self, data: ArrayLike, gain: Real) -> NDArray:
+        return data / gain
 
-        new_dtype = self.meta["dtype"]
-
+    def _get_gain(self, det_id: int) -> Real:
         # Apply the gain value (copy from DarkCurrent)
         # Note that this does not cater for the case where the gain is given
         # as a plain dictionary. Should we implement that?
         if hasattr(self.cmds["!DET.gain"], "dic"):
-            dtcr_id = obj.meta[real_colname("id", obj.meta)]
-            gain = self.cmds["!DET.gain"].dic[dtcr_id]
-            logger.info(f"Detector {dtcr_id}: applying gain {gain}")
-        elif isinstance(self.cmds["!DET.gain"], (float, int)):
+            gain = self.cmds["!DET.gain"].dic[det_id]
+            logger.info(f"Detector {det_id}: applying gain {gain}")
+            return gain
+        if isinstance(self.cmds["!DET.gain"], Real):
             gain = self.cmds["!DET.gain"]
             logger.info(f"Applying gain {gain}")
-        else:
-            raise ValueError("<ADConversion>.meta['gain'] must be either "
-                             f"dict or float, but is {self.cmds['!DET.gain']}")
+            return gain
+        raise ValueError(
+            f"{self.__class__.__name__}.meta['gain'] must be either "
+            f"dict or float, but is {self.cmds['!DET.gain']}")
+
+    def _apply_to_det(self, det: Detector) -> None:
+        """Subclasses can override if more params needed in call."""
+        logger.debug("Apply %s to %s", self.display_name, det)
+
+        new_dtype = self.meta["dtype"]
 
         # Apply gain
-        obj._hdu.data /= gain
+        det.data = self(det.data, self._get_gain(det.det_id))
 
         # Type-conversion wraps around input values that are higher or lower than
         # the respective maximum and minimum values of the new data type. Before
@@ -328,14 +325,14 @@ class ADConversion(Effect):
         if np.issubdtype(new_dtype, np.integer):
             minval = np.iinfo(new_dtype).min
             maxval = np.iinfo(new_dtype).max
-            minvals_mask = obj._hdu.data < minval
-            maxvals_mask = obj._hdu.data > maxval
+            minvals_mask = det.data < minval
+            maxvals_mask = det.data > maxval
             if minvals_mask.any():
-                obj._hdu.data[minvals_mask] = minval
+                det.data[minvals_mask] = minval
                 logger.warning(
                     f"Effect ADConversion: {minvals_mask.sum()} negative pixels")
             if maxvals_mask.any():
-                obj._hdu.data[maxvals_mask] = maxval
+                det.data[maxvals_mask] = maxval
                 logger.warning(
                     f"Effect ADConversion: {maxvals_mask.sum()} saturated pixels")
 
@@ -343,6 +340,4 @@ class ADConversion(Effect):
         # set to the modified data. It should be fine to simply re-assign the
         # data attribute, but just in case it's not...
         logger.debug("Applying digitization to dtype %s.", new_dtype)
-        obj._hdu.data = obj._hdu.data.astype(new_dtype)
-
-        return obj
+        det.data = det.data.astype(new_dtype)

@@ -15,8 +15,16 @@ class TestLocalFile:
     def test_initialises_from_local_file(self, mock_path):
         with patch("scopesim.rc.__search_path__", [mock_path]):
             atmo = AtmoLibraryTERCurve(filename=MOCKFILE,
+                                       parameter="pwv",
                                        pwv=1)
             assert isinstance(atmo, AtmoLibraryTERCurve)
+
+    def test_fails_with_wrong_parameter(self, mock_path):
+        with patch("scopesim.rc.__search_path__", [mock_path]):
+            with pytest.raises(KeyError):
+                _ = AtmoLibraryTERCurve(filename=MOCKFILE,
+                                        parameter="relH",
+                                        relH=50)
 
     @pytest.mark.parametrize("pwv, extname",
                              [(1.0, "PWV_01"),
@@ -26,6 +34,7 @@ class TestLocalFile:
     def test_picks_nearest_pwv(self, pwv, extname, mock_path):
         with patch("scopesim.rc.__search_path__", [mock_path]):
             atmo = AtmoLibraryTERCurve(filename=MOCKFILE,
+                                       parameter="pwv",
                                        pwv=pwv)
             assert atmo.meta['extname'] == extname
             assert atmo.meta['pwv'] == pwv
@@ -34,6 +43,7 @@ class TestLocalFile:
         with patch("scopesim.rc.__search_path__", [mock_path]):
             oldpwv, newpwv = 1, 22.5
             atmo = AtmoLibraryTERCurve(filename=MOCKFILE,
+                                       parameter="pwv",
                                        pwv=oldpwv)
             assert atmo.meta['extname'] == "PWV_01"
             assert atmo.meta['pwv'] == oldpwv
@@ -45,6 +55,7 @@ class TestLocalFile:
         caplog.set_level(logging.WARNING)
         with patch("scopesim.rc.__search_path__", [mock_path]):
             atmo = AtmoLibraryTERCurve(filename=MOCKFILE,
+                                       parameter="pwv",
                                        pwv=1.)
             atmo.update(temp=23)
         assert "Can only update with parameter pwv" in caplog.text

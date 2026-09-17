@@ -88,13 +88,6 @@ def download_example_data(
        will be silently passed to the `retriever`.
 
     """
-    if isinstance(files[0], list):
-        raise TypeError(
-            "Passing a list to download_example_data is deprecated. "
-            "Simply pass filenames as *args, i.e. "
-            "download_example_data(\"foo.fits\", \"bar.fits\")."
-        )
-
     retriever = create_retriever("example_data", save_dir, url)
 
     save_paths = []
