@@ -32,6 +32,7 @@ def fixture_autoexposure():
     """Instantiate an AutoExposure object"""
     return AutoExposure(fill_frac=0.75,
                         full_well=1e5,
+                        dark_current=0,
                         mindit=0.011,
                         exptime=None)
 
@@ -40,6 +41,7 @@ class TestAutoExposure:
     def test_initialises_correctly(self):
         autoexposure = AutoExposure(fill_frac=0.75,
                                     full_well=1e5,
+                                    dark_current=0,
                                     mindit=0.011)
         assert isinstance(autoexposure, AutoExposure)
 
@@ -102,7 +104,7 @@ class TestAutoExposure:
         assert out_ndit_1 == fill_2 / fill_1 * out_ndit_2
 
     @pytest.mark.xfail(reason=("This now fails because a user-specified DIT "
-                               "and NDIT will now just go thourgh unmodified. "
+                               "and NDIT will now just go through unmodified. "
                                "Decide what to do with this test later..."))
     def test_exptime_specified_by_dit_ndit(self, autoexposure, imageplane):
         """
@@ -139,3 +141,44 @@ class TestAutoExposure:
 
         assert dit == mindit
         assert ndit == 1
+
+    def test_takes_dark_current_into_account(self, imageplane):
+        exptime = 3600
+        autoexp_1 = AutoExposure(fill_frac=0.75,
+                                 full_well=1e6,
+                                 mindit=1.3,
+                                 dark_current=0)
+        autoexp_1.cmds["!OBS.exptime"] = exptime
+        autoexp_1.apply_to(imageplane)
+        dit1 = autoexp_1.cmds["!OBS.dit"]
+
+        autoexp_2 = AutoExposure(fill_frac=0.75,
+                                 full_well=1e6,
+                                 mindit=1.3,
+                                 dark_current=1e4)
+        autoexp_2.cmds["!OBS.exptime"] = exptime
+        autoexp_2.apply_to(imageplane)
+        dit2 = autoexp_2.cmds["!OBS.dit"]
+
+        assert dit2 < dit1
+
+    def test_no_dark_gives_zero_dark(self, imageplane):
+        exptime = 3600
+        # no dark provided
+        autoexp_1 = AutoExposure(fill_frac=0.75,
+                                 full_well=1e6,
+                                 mindit=1.3)
+        autoexp_1.cmds["!OBS.exptime"] = exptime
+        autoexp_1.apply_to(imageplane)
+        dit1 = autoexp_1.cmds["!OBS.dit"]
+
+        # zero dark explicitly provided
+        autoexp_2 = AutoExposure(fill_frac=0.75,
+                                 full_well=1e6,
+                                 mindit=1.3,
+                                 dark_current=0.)
+        autoexp_2.cmds["!OBS.exptime"] = exptime
+        autoexp_2.apply_to(imageplane)
+        dit2 = autoexp_2.cmds["!OBS.dit"]
+
+        assert dit2 == dit1
