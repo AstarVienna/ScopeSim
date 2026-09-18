@@ -55,8 +55,6 @@ class SpectralTrace:
         "x_colname": "x",
         "y_colname": "y",
         "s_colname": "s",
-        "offset_x": 0,
-        "offset_y": 0,
         "wave_colname": "wavelength",
         "dwave": 0.002,
         "aperture_id": 0,
@@ -121,6 +119,7 @@ class SpectralTrace:
         return {"wave_min": wave_min, "wave_max": wave_max,
                 "trace_id": self.trace_id, "aperture_id": aperture_id}
 
+
     def compute_interpolation_functions(self):
         """
         Compute various interpolation functions between slit and focal plane.
@@ -129,17 +128,21 @@ class SpectralTrace:
         `xi` (spatial coordinate along the slit, in arcsec) and `lam`
         (wavelength, in um).
 
-        The interpolation functions include a shift in the focal-plane
-        coordinates, determined from the CRVAL of the source FOV.
+        #The interpolation functions include a shift in the focal-plane
+        #coordinates, determined from the CRVAL of the source FOV.
         """
-        x_arr = self.table[self.meta["x_colname"]] + self.meta["offset_x"]
-        y_arr = self.table[self.meta["y_colname"]] + self.meta["offset_y"]
+        x_arr = self.table[self.meta["x_colname"]]
+        y_arr = self.table[self.meta["y_colname"]]
+
         xi_arr = self.table[self.meta["s_colname"]]
         lam_arr = self.table[self.meta["wave_colname"]]
 
         self.wave_min = quantify(np.min(lam_arr), u.um).value
         self.wave_max = quantify(np.max(lam_arr), u.um).value
 
+
+        # TODO There should be an option to include pre- and
+        # posttransforms. But how should they be defined?
         self.xy2xi = Transform2D.fit(x_arr, y_arr, xi_arr)
         self.xy2lam = Transform2D.fit(x_arr, y_arr, lam_arr)
         self.xilam2x = Transform2D.fit(xi_arr, lam_arr, x_arr)
@@ -172,6 +175,7 @@ class SpectralTrace:
         where this image lies in the focal plane.
         """
         logger.debug("Mapping %s", fov.trace_id)
+
         # Initialise the image based on the footprint of the spectral
         # trace and the focal plane WCS
         wave_min = fov.meta["wave_min"].value       # [um]
@@ -185,8 +189,10 @@ class SpectralTrace:
             xi_max=xi_max,
         )
 
-        if xlim_mm is None:
-            raise ValueError("xlim_mm is None")
+        if xlim_mm is None or ylim_mm is None:
+            # Cases where there is no overlap betwen slit/trace and
+            # fov are acceptable.
+            return None
 
         fov_header = fov.header
         det_header = fov.detector_header
@@ -528,6 +534,7 @@ class SpectralTrace:
             # Requested wavelenth range is entirely outside definition range:
             # no footprint
             if wave_min > np.max(wave_val) or wave_max < np.min(wave_val):
+                logger.info("Trace not in wavelength range")
                 return None, None
 
             # Restrict to overlap of requested range and definition range
@@ -556,6 +563,7 @@ class SpectralTrace:
             # Requested slit range is entirely outside definition range:
             # no footprint
             if xi_min > np.max(xi_val) or xi_max < np.min(xi_val):
+                logger.info("Slit outside range (spatial)")
                 return None, None
 
             # Restrict to overlap of requested range and definition range
@@ -1135,3 +1143,7 @@ def get_affine_parameters(coords):
     shears = (np.average(shears, axis=0) * rad2deg) - (90 + rotations)
 
     return rotations, shears
+
+def det_offset(x, offset):
+    """Apply offset to x"""
+    return x + offset
