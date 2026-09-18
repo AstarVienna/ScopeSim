@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """Contains ``ImagePlane`` class."""
+import numpy as np
 
 from astropy.io import fits
 from astropy.wcs import WCS
