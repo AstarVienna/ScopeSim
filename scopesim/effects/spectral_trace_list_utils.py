@@ -175,6 +175,7 @@ class SpectralTrace:
         where this image lies in the focal plane.
         """
         logger.debug("Mapping %s", fov.trace_id)
+
         # Initialise the image based on the footprint of the spectral
         # trace and the focal plane WCS
         wave_min = fov.meta["wave_min"].value       # [um]
@@ -188,8 +189,10 @@ class SpectralTrace:
             xi_max=xi_max,
         )
 
-        if xlim_mm is None:
-            raise ValueError("xlim_mm is None")
+        if xlim_mm is None or ylim_mm is None:
+            # Cases where there is no overlap betwen slit/trace and
+            # fov are acceptable.
+            return None
 
         fov_header = fov.header
         det_header = fov.detector_header
@@ -531,6 +534,7 @@ class SpectralTrace:
             # Requested wavelenth range is entirely outside definition range:
             # no footprint
             if wave_min > np.max(wave_val) or wave_max < np.min(wave_val):
+                logger.info("Trace not in wavelength range")
                 return None, None
 
             # Restrict to overlap of requested range and definition range
@@ -559,6 +563,7 @@ class SpectralTrace:
             # Requested slit range is entirely outside definition range:
             # no footprint
             if xi_min > np.max(xi_val) or xi_max < np.min(xi_val):
+                logger.info("Slit outside range (spatial)")
                 return None, None
 
             # Restrict to overlap of requested range and definition range

@@ -128,7 +128,11 @@ class MicadoIFUSpectralTraceList(SpectralTraceList):
             slicefov.cube = fits.ImageHDU(header=slicewcs.to_header(),
                                           data=slicecube)
             # slicefov.cube.writeto(f"slicefov_{sptid}.fits", overwrite=True)
-            slicefov.hdu = spt.map_spectra_to_focal_plane(slicefov)
+            try:
+                slicefov.hdu = spt.map_spectra_to_focal_plane(slicefov)
+            except ValueError as err:
+                logger.debug(err)
+
             if slicefov.hdu is not None:
                 sxmin = slicefov.hdu.header["XMIN"]
                 sxmax = slicefov.hdu.header["XMAX"]
