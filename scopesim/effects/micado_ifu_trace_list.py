@@ -99,7 +99,8 @@ class MicadoIFUSpectralTraceList(SpectralTraceList):
             slicewcs.wcs.ctype = ["LINEAR", "LINEAR",
                                   slicewcs.wcs.ctype[2]]
             slicewcs.wcs.crpix[1] = (ny_slice + 1) / 2
-            # todo: here we silently assume that ymin, ymax are in degrees
+            # TODO: here we silently assume that ymin, ymax are in arcsec
+            #       and wcs in degrees
             slicewcs.wcs.crval[1] = (ymin + ymax) / 2 / 3600
             slicewcs.wcs.cdelt[1] = (ymax - ymin) / ny_slice / 3600
             slicewcs_spat = slicewcs.sub(2)
@@ -112,7 +113,7 @@ class MicadoIFUSpectralTraceList(SpectralTraceList):
 
             slicecube = np.zeros((n_z, ny_slice, n_x))
             for islice in range(n_z):
-                # todo: replace by explicit bilinear interpolation
+                # TODO: replace by explicit bilinear interpolation
                 ifov = RectBivariateSpline(np.arange(n_y),
                                            np.arange(n_x),
                                            fovcube[islice], kx=1, ky=1)
@@ -127,7 +128,7 @@ class MicadoIFUSpectralTraceList(SpectralTraceList):
             slicefov.meta["trace_id"] = sptid
             slicefov.cube = fits.ImageHDU(header=slicewcs.to_header(),
                                           data=slicecube)
-            # slicefov.cube.writeto(f"slicefov_{sptid}.fits", overwrite=True)
+
             try:
                 slicefov.hdu = spt.map_spectra_to_focal_plane(slicefov)
             except ValueError as err:
@@ -142,7 +143,6 @@ class MicadoIFUSpectralTraceList(SpectralTraceList):
 
         obj.hdu = fits.ImageHDU(data=fovimage, header=obj.detector_header)
         return obj
-
 
     def make_spectral_traces(self):
         """Make a spectral trace for each combination of order and aperture"""
