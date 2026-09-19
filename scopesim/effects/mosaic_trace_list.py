@@ -239,7 +239,7 @@ class MosaicOutputFormat(MosaicSpectralTraceList):
        "image": The output is a (pseudo-)detector image where the
               spectrum for each fibre occupies a row.
 
-    .. versionadded:: PLACEHOLDER_NEXT_RELEASE_VERSION
+    .. versionadded:: 0.12.0
     """
 
     required_keys = {"filename", "format"}

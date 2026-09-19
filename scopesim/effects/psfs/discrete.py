@@ -172,7 +172,7 @@ class FieldConstantPSF(DiscretePSF):
        Fixed handling of background level and rounded edges to avoid visible
        "squares" in the image.
 
-    .. versionchanged:: PLACEHOLDER_NEXT_RELEASE_VERSION
+    .. versionchanged:: 0.12.0
 
        Interpolation spline order can now be set via "!SIM.psf.interp_order".
 
