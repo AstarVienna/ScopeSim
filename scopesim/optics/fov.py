@@ -764,9 +764,6 @@ class FieldOfView2D(FieldOfView):
         * yield image  to be added to canvas image
         """
         for field in self._get_image_fields():
-            logger.debug("2D FOV make_imagefields: field.data.sum() = %f %s",
-                         field.data.sum(), field.bunit)
-
             field_hdu = field.field.copy()
 
             if field.is_bunit_spatially_differential:
@@ -785,9 +782,6 @@ class FieldOfView2D(FieldOfView):
 
             # Rescale 2D flux weight map by integrated flux from spectrum
             field_hdu.data *= flux  # ph s-1
-            logger.info(
-                "2D FOV make_imagefields: field_hdu.data.mean() = %f ph/s",
-                field_hdu.data.mean())
             yield field_hdu
 
     def _make_tablefields(self, fov_waveset, bin_widths, use_photlam=False):
