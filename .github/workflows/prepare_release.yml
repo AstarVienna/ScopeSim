@@ -10,6 +10,7 @@ on:
         - patch
         - minor
         - major
+        - prerelease
         - prepatch
         - preminor
         - premajor
