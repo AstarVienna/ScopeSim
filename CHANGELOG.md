@@ -1,3 +1,100 @@
+# Version 0.12.0
+**2026-09-24**
+
+Large release with many important bug fixes centered around flux conservation and pixel shifts.
+
+> [!IMPORTANT]
+> The minimum required Python version for this package is now **3.12** (see Dependency Changes).
+
+## Feature highlights
+### General
+- Improved handling of random seeds.
+  Nosie can now vary per readout (needs different `roid`) and is fully reproducible.
+  For instruments (and modes) with multiple detectors, the random seed varies per detector.
+- PSF interpolation was made more efficient in some cases, and the interpolation order can now be specified.
+
+### MICADO
+- Calibration mode added (see IRDB).
+- IFU and offset slits implemented.
+
+### MOSAIC
+- Tabular output format for the mIFU mode added.
+
+> [!WARNING]
+> We expect backwards incompatibility, so we strongly recommend updating your IRDB packages as well.
+
+## What's Changed
+### API Changes
+* Reduce `OpticalTrain.write_header()` to the bare minimum by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/935
+* PSF interpolation order by @oczoske in https://github.com/AstarVienna/ScopeSim/pull/950
+* Fully remove deprecated functionality by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/963
+* AtmoLibraryTERCurve works with parameters other than pwv by @oczoske in https://github.com/AstarVienna/ScopeSim/pull/972
+* Make laser parameters configurable; utility function for tunable laser by @oczoske in https://github.com/AstarVienna/ScopeSim/pull/970
+### Bugs fixed
+* Catch wrong inputs to `UserCommands` by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/934
+* Dark value can be given as number without floating point by @oczoske in https://github.com/AstarVienna/ScopeSim/pull/941
+* Remove reflectance factor from integrating sphere background by @oczoske in https://github.com/AstarVienna/ScopeSim/pull/962
+* Fix scalar Quantity pattern matching by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/964
+* Fix flux loss, aliasing, and placement errors in image-plane resampling and overlay by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/958
+* Fix NameError in `SpectralTrace.plot` when `plot_trace_id` is used without `plot_outline` by @astronomyk in https://github.com/AstarVienna/ScopeSim/pull/981
+* Fix `XiLamImage` overwriting the cunit of its primary WCS by @astronomyk in https://github.com/AstarVienna/ScopeSim/pull/982
+* Skip empty FOVs by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/1001
+* Fix transposed axes in `make_image_interpolations` by @astronomyk in https://github.com/AstarVienna/ScopeSim/pull/984
+* Fix 2D image rescaling by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/1016
+* Fix yet another off-by-one bug by @astronomyk in https://github.com/AstarVienna/ScopeSim/pull/1013
+* SPEC scaling now also fixed  by @janusbrink in https://github.com/AstarVienna/ScopeSim/pull/1018
+* Set INHERIT keyword and fix unit to FITS standard by @oczoske in https://github.com/AstarVienna/ScopeSim/pull/1022
+* Fix indexing in FoV extraction by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/1024
+### Changes to or addition of Effects
+* MOSAIC mIFU: tabular output by @oczoske in https://github.com/AstarVienna/ScopeSim/pull/968
+* Refactor `PSF.apply_to()` by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/1002
+* Refactor `TERCurve.apply_to()` by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/1004
+* Refactor `.apply_to()` in electronic effects by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/1006
+* Apply throughput in-place for speed by @oczoske in https://github.com/AstarVienna/ScopeSim/pull/1017
+* `AutoExposure` to take dark current into account by @oczoske in https://github.com/AstarVienna/ScopeSim/pull/1031
+* Improve randomness, refactor electronic effects by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/1030
+* Define slit transforms for image slicer IFUs and offset slits by @oczoske in https://github.com/AstarVienna/ScopeSim/pull/922
+### New Features or Improvements
+* Use optimal inverse transform for rectification by @oczoske in https://github.com/AstarVienna/ScopeSim/pull/961
+* Skip PSF convolution for exactly-uniform fields by @astronomyk in https://github.com/AstarVienna/ScopeSim/pull/973
+* More useful error when download fails by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/990
+* Allow readout ID, fix Path support by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/1020
+* Resolve random seed in `.observe()` by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/1021
+### Dependency Changes
+* Bump the dev-dependencies group with 3 updates by @dependabot[bot] in https://github.com/AstarVienna/ScopeSim/pull/940
+* Switch from httpx to httpxyz by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/924
+* Bump various dependencies by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/946
+* Bump astar-utils from 0.5.3 to 0.6.0 by @dependabot[bot] in https://github.com/AstarVienna/ScopeSim/pull/951
+* Bump actions/checkout from 6 to 7 by @dependabot[bot] in https://github.com/AstarVienna/ScopeSim/pull/947
+* Bump various dependencies by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/954
+* Bump actions/setup-python from 6 to 7 by @dependabot[bot] in https://github.com/AstarVienna/ScopeSim/pull/960
+* Drop support for Python 3.10 and 3.11 by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/969
+* Bump matplotlib and skycalc-ipy by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/977
+* Bump tornado from 6.5.7 to 6.5.8 by @dependabot[bot] in https://github.com/AstarVienna/ScopeSim/pull/1011
+* Bump tqdm from 4.68.4 to 4.70.0 by @dependabot[bot] in https://github.com/AstarVienna/ScopeSim/pull/1009
+* Bump the dev-dependencies group across 1 directory with 4 updates by @dependabot[bot] in https://github.com/AstarVienna/ScopeSim/pull/1008
+* Bump soupsieve from 2.8.4 to 2.9 by @dependabot[bot] in https://github.com/AstarVienna/ScopeSim/pull/1032
+* Bump anyio from 3.7.1 to 4.14.2 by @dependabot[bot] in https://github.com/AstarVienna/ScopeSim/pull/1033
+### Other Changes
+* Add prepare-release workflow from elsewhere by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/971
+* Remove obsolete logic to deal with unversioned versions by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/979
+* Make `Transform2D` per-call transform overrides non-persistent by @astronomyk in https://github.com/AstarVienna/ScopeSim/pull/983
+* Cache the detector layout file in `MetisLMSSpectralTraceList` to avoid reading the file N*28 times for every `OpticalTrain` usage by @astronomyk in https://github.com/AstarVienna/ScopeSim/pull/987
+* Improve handling of spectral trace mapping and rectification by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/999
+* Cleanup PSF by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/1003
+* Use correct NumPy type hints by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/1005
+* Mark test_python_image_coords as webtest, because face is downloaded. by @hugobuddel in https://github.com/AstarVienna/ScopeSim/pull/1012
+* Cleanup in `TER_curve_utils` etc. by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/1014
+* Add `Detector.det_id` convenience property by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/1015
+* Formatting and cleanup by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/1019
+* Set mpl backend for tests by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/1026
+* Skip all tests in test_rst_utils.py by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/1025
+* Remove unused `fov_grid()` methods by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/1027
+* SimCADO corpse removal by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/1029
+
+**Full Changelog**: https://github.com/AstarVienna/ScopeSim/compare/v0.11.4...v0.12.0
+
+
 # Version 0.11.4
 **2026-05-20**
 
