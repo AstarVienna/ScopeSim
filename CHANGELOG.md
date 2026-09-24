@@ -9,7 +9,7 @@ Large release with many important bug fixes centered around flux conservation an
 ## Feature highlights
 ### General
 - Improved handling of random seeds.
-  Nosie can now vary per readout (needs different `roid`) and is fully reproducible.
+  Noise can now vary per readout (needs different `roid`) and is fully reproducible.
   For instruments (and modes) with multiple detectors, the random seed varies per detector.
 - PSF interpolation was made more efficient in some cases, and the interpolation order can now be specified.
 
@@ -29,7 +29,6 @@ Large release with many important bug fixes centered around flux conservation an
 * PSF interpolation order by @oczoske in https://github.com/AstarVienna/ScopeSim/pull/950
 * Fully remove deprecated functionality by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/963
 * AtmoLibraryTERCurve works with parameters other than pwv by @oczoske in https://github.com/AstarVienna/ScopeSim/pull/972
-* Make laser parameters configurable; utility function for tunable laser by @oczoske in https://github.com/AstarVienna/ScopeSim/pull/970
 ### Bugs fixed
 * Catch wrong inputs to `UserCommands` by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/934
 * Dark value can be given as number without floating point by @oczoske in https://github.com/AstarVienna/ScopeSim/pull/941
@@ -47,6 +46,7 @@ Large release with many important bug fixes centered around flux conservation an
 * Fix indexing in FoV extraction by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/1024
 ### Changes to or addition of Effects
 * MOSAIC mIFU: tabular output by @oczoske in https://github.com/AstarVienna/ScopeSim/pull/968
+* METIS WCU: Make laser parameters configurable; utility function for tunable laser by @oczoske in https://github.com/AstarVienna/ScopeSim/pull/970
 * Refactor `PSF.apply_to()` by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/1002
 * Refactor `TERCurve.apply_to()` by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/1004
 * Refactor `.apply_to()` in electronic effects by @teutoburg in https://github.com/AstarVienna/ScopeSim/pull/1006
