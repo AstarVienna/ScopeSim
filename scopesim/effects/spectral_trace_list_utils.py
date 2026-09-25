@@ -37,6 +37,43 @@ from ..utils import (
 logger = get_logger(__name__)
 
 
+def _bilinear_interpolate_regular(x_axis, y_axis, values, x, y):
+    """Bilinearly sample values defined on two regular coordinate axes.
+
+    For the regularly spaced ``XiLamImage`` axes, this is equivalent to the
+    original, simpler FITPACK expression::
+
+        RectBivariateSpline(
+            x_axis, y_axis, values, kx=1, ky=1
+        )(x, y, grid=False)
+
+    A first-degree tensor-product spline is bilinear within each grid cell.
+    Computing the cell indices and four weights directly is considerably
+    faster for the large focal-plane coordinate images used here, although it
+    is more verbose.  Out-of-range coordinates are clipped to the nearest
+    boundary, as by ``RectBivariateSpline``.
+    """
+    x = np.asarray(x)
+    y = np.asarray(y)
+    if x.shape != y.shape:
+        raise ValueError("x and y must have the same shape")
+
+    ix = np.clip((x - x_axis[0]) / (x_axis[1] - x_axis[0]),
+                 0, len(x_axis) - 1)
+    iy = np.clip((y - y_axis[0]) / (y_axis[1] - y_axis[0]),
+                 0, len(y_axis) - 1)
+    ix0 = np.floor(ix).astype(int)
+    iy0 = np.floor(iy).astype(int)
+    ix1 = np.minimum(ix0 + 1, len(x_axis) - 1)
+    iy1 = np.minimum(iy0 + 1, len(y_axis) - 1)
+    dx = ix - ix0
+    dy = iy - iy0
+
+    lower = values[ix0, iy0] * (1 - dy) + values[ix0, iy1] * dy
+    upper = values[ix1, iy0] * (1 - dy) + values[ix1, iy1] * dy
+    return lower * (1 - dx) + upper * dx
+
+
 class SpectralTrace:
     """Definition of one spectral trace.
 
@@ -821,14 +858,12 @@ class XiLamImage():
         self.xi = self.wcs.all_pix2world(self.lam[0], np.arange(n_xi), 0)[1]
         self.npix_xi = n_xi
         self.npix_lam = n_lam
-        # ..todo: cubic spline introduces negative values, linear does not.
-        #  Alternative might be to cubic-spline interpolate on sqrt(image),
-        #  with subsequent squaring of the result. This would require
-        #  wrapping RectBivariateSpline in a new (sub)class.
-        spline_order = (1, 1)
-        self.interp = RectBivariateSpline(self.xi, self.lam, self.image,
-                                          kx=spline_order[0],
-                                          ky=spline_order[1])
+    def interp(self, xi, lam, grid=True):
+        """Interpolate the xi-lambda image on its regular coordinate grid."""
+        if grid:
+            xi, lam = np.meshgrid(xi, lam, indexing="ij")
+        return _bilinear_interpolate_regular(
+            self.xi, self.lam, self.image, xi, lam)
 
 
 class Transform2D():

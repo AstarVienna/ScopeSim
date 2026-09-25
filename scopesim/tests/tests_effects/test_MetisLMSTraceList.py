@@ -1,10 +1,15 @@
 """Tests for MetisLMSSpectralTraceList"""
 
 from unittest.mock import patch
+import numpy as np
 import pytest
 from numpy.testing import assert_allclose
+from scipy.interpolate import RectBivariateSpline
 from astropy.io import fits
-from scopesim.effects.metis_lms_trace_list import predisperser_angle
+from scopesim.effects.metis_lms_trace_list import (
+    _bilinear_interpolate,
+    predisperser_angle,
+)
 
 
 # pylint: disable=missing-class-docstring
@@ -37,6 +42,36 @@ class TestDetectorLayoutCache:
         assert len(calls) == 1
         assert first is second
         mlt._read_detector_layout.cache_clear()
+
+
+class TestBilinearInterpolate:
+    def test_matches_linear_spline(self):
+        rng = np.random.default_rng(1234)
+        cube = rng.random((5, 7, 11))
+        y = rng.uniform(0, 6, (3, 4))
+        x = rng.uniform(0, 10, (3, 4))
+
+        expected = np.array([
+            RectBivariateSpline(np.arange(7), np.arange(11), plane,
+                                kx=1, ky=1)(y, x, grid=False)
+            for plane in cube
+        ])
+
+        result = _bilinear_interpolate(cube, y, x, chunk_size=2)
+        assert_allclose(result, expected, rtol=1e-14, atol=1e-14)
+
+    def test_clips_coordinates_to_grid_boundary(self):
+        cube = np.arange(24, dtype=float).reshape(2, 3, 4)
+        y = np.array([[-1., 1., 3.]])
+        x = np.array([[2., -1., 5.]])
+
+        expected = np.array([
+            RectBivariateSpline(np.arange(3), np.arange(4), plane,
+                                kx=1, ky=1)(y, x, grid=False)
+            for plane in cube
+        ])
+
+        assert_allclose(_bilinear_interpolate(cube, y, x), expected)
 
 
 

@@ -7,7 +7,6 @@ from functools import lru_cache
 
 from tqdm.auto import tqdm
 import numpy as np
-from scipy.interpolate import RectBivariateSpline
 
 from astropy.io import fits
 from astropy.io import ascii as ioascii
@@ -29,6 +28,46 @@ from ..optics.fov_volume_list import FovVolumeList
 
 
 logger = get_logger(__name__)
+
+
+def _bilinear_interpolate(cube, y, x, chunk_size=256):
+    """Sample every plane of a cube on a common regular pixel grid.
+
+    This is the vectorised equivalent of applying the following expression
+    separately to every plane in ``cube``::
+
+        RectBivariateSpline(
+            np.arange(n_y), np.arange(n_x), plane, kx=1, ky=1
+        )(y, x, grid=False)
+
+    A first-degree tensor-product spline on an integer pixel grid is bilinear
+    interpolation, so the four weighted pixel values below produce the same
+    result without constructing a FITPACK spline for each plane.  Coordinates
+    outside the grid are clipped to its boundary, matching FITPACK's behavior.
+    Chunking limits the size of the temporary arrays; it does not change the
+    interpolation.
+    """
+    n_z, n_y, n_x = cube.shape
+    x = np.clip(np.asarray(x), 0, n_x - 1)
+    y = np.clip(np.asarray(y), 0, n_y - 1)
+
+    x0 = np.floor(x).astype(int)
+    y0 = np.floor(y).astype(int)
+    x1 = np.minimum(x0 + 1, n_x - 1)
+    y1 = np.minimum(y0 + 1, n_y - 1)
+    dx = x - x0
+    dy = y - y0
+
+    output = np.empty((n_z, *x.shape), dtype=np.float64)
+    for start in range(0, n_z, chunk_size):
+        stop = min(start + chunk_size, n_z)
+        planes = cube[start:stop]
+        lower = (planes[:, y0, x0] * (1 - dx)
+                 + planes[:, y0, x1] * dx)
+        upper = (planes[:, y1, x0] * (1 - dx)
+                 + planes[:, y1, x1] * dx)
+        output[start:stop] = lower * (1 - dy) + upper * dy
+    return output
 
 
 @lru_cache(maxsize=8)
@@ -131,12 +170,7 @@ class MetisLMSSpectralTraceList(SpectralTraceList):
             # FOV pixel coordinates for the slice
             xfov, yfov = fovwcs_spat.all_world2pix(xworld, yworld, 0)
 
-            slicecube = np.zeros((n_z, ny_slice, n_x))
-            for islice in range(n_z):
-                ifov = RectBivariateSpline(np.arange(n_y),
-                                           np.arange(n_x),
-                                           fovcube[islice], kx=1, ky=1)
-                slicecube[islice] = ifov(yfov, xfov, grid=False)
+            slicecube = _bilinear_interpolate(fovcube, yfov, xfov)
 
             slicefov = FieldOfView3D(obj.header,
                                      [obj.meta["wave_min"],
