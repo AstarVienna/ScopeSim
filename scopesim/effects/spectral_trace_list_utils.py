@@ -38,7 +38,21 @@ logger = get_logger(__name__)
 
 
 def _bilinear_interpolate_regular(x_axis, y_axis, values, x, y):
-    """Bilinearly sample values defined on two regular coordinate axes."""
+    """Bilinearly sample values defined on two regular coordinate axes.
+
+    For the regularly spaced ``XiLamImage`` axes, this is equivalent to the
+    original, simpler FITPACK expression::
+
+        RectBivariateSpline(
+            x_axis, y_axis, values, kx=1, ky=1
+        )(x, y, grid=False)
+
+    A first-degree tensor-product spline is bilinear within each grid cell.
+    Computing the cell indices and four weights directly is considerably
+    faster for the large focal-plane coordinate images used here, although it
+    is more verbose.  Out-of-range coordinates are clipped to the nearest
+    boundary, as by ``RectBivariateSpline``.
+    """
     x = np.asarray(x)
     y = np.asarray(y)
     if x.shape != y.shape:

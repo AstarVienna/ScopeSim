@@ -31,7 +31,22 @@ logger = get_logger(__name__)
 
 
 def _bilinear_interpolate(cube, y, x, chunk_size=256):
-    """Sample every plane of a cube on a common regular pixel grid."""
+    """Sample every plane of a cube on a common regular pixel grid.
+
+    This is the vectorised equivalent of applying the following expression
+    separately to every plane in ``cube``::
+
+        RectBivariateSpline(
+            np.arange(n_y), np.arange(n_x), plane, kx=1, ky=1
+        )(y, x, grid=False)
+
+    A first-degree tensor-product spline on an integer pixel grid is bilinear
+    interpolation, so the four weighted pixel values below produce the same
+    result without constructing a FITPACK spline for each plane.  Coordinates
+    outside the grid are clipped to its boundary, matching FITPACK's behavior.
+    Chunking limits the size of the temporary arrays; it does not change the
+    interpolation.
+    """
     n_z, n_y, n_x = cube.shape
     x = np.clip(np.asarray(x), 0, n_x - 1)
     y = np.clip(np.asarray(y), 0, n_y - 1)
