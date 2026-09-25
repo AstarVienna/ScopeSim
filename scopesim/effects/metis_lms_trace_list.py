@@ -111,6 +111,16 @@ class MetisLMSSpectralTraceList(SpectralTraceList):
                              obj.detector_header["NAXIS1"]),
                             dtype=np.float32)
 
+        # Interpolating splines.
+        # The splines are the same for every trace, so create them once and
+        # reuse them.  They cost about 200MB of memory space.
+        y_axis = np.arange(n_y)
+        x_axis = np.arange(n_x)
+        spatial_interps = [
+            RectBivariateSpline(y_axis, x_axis, plane, kx=1, ky=1)
+            for plane in fovcube
+        ]
+
         for sptid, spt in tqdm(self.spectral_traces.items(),
                                desc=" Spectral Traces", position=2):
             ymin = spt.meta["fov"]["y_min"]
@@ -132,10 +142,7 @@ class MetisLMSSpectralTraceList(SpectralTraceList):
             xfov, yfov = fovwcs_spat.all_world2pix(xworld, yworld, 0)
 
             slicecube = np.zeros((n_z, ny_slice, n_x))
-            for islice in range(n_z):
-                ifov = RectBivariateSpline(np.arange(n_y),
-                                           np.arange(n_x),
-                                           fovcube[islice], kx=1, ky=1)
+            for islice, ifov in enumerate(spatial_interps):
                 slicecube[islice] = ifov(yfov, xfov, grid=False)
 
             slicefov = FieldOfView3D(obj.header,
