@@ -6,6 +6,7 @@
 import pytest
 
 import numpy as np
+from scipy.interpolate import RectBivariateSpline
 
 from astropy.io import fits
 
@@ -15,6 +16,9 @@ from scopesim.effects.spectral_trace_list_utils import SpectralTrace
 from scopesim.effects.spectral_trace_list_utils import Transform2D, power_vector
 from scopesim.effects.spectral_trace_list_utils import make_image_interpolations
 from scopesim.effects.spectral_trace_list_utils import XiLamImage
+from scopesim.effects.spectral_trace_list_utils import (
+    _bilinear_interpolate_regular,
+)
 from scopesim.tests.mocks.py_objects import trace_list_objects as tlo
 
 class TestSpectralTrace:
@@ -181,6 +185,21 @@ class TestXiLamImage:
         xilam = XiLamImage(MockCubeFov(), dlam_per_pix=0.001)
         assert list(xilam.wcs.wcs.cunit) == [u.um, u.arcsec]
         assert list(xilam.wcsa.wcs.cunit) == [u.um, u.dimensionless_unscaled]
+
+    def test_regular_bilinear_interpolation_matches_linear_spline(self):
+        rng = np.random.default_rng(1234)
+        x_axis = np.linspace(-2, 3, 7)
+        y_axis = np.linspace(4, 9, 11)
+        values = rng.random((len(x_axis), len(y_axis)))
+        x = rng.uniform(-3, 4, (5, 6))
+        y = rng.uniform(3, 10, (5, 6))
+
+        expected = RectBivariateSpline(
+            x_axis, y_axis, values, kx=1, ky=1)(x, y, grid=False)
+        result = _bilinear_interpolate_regular(
+            x_axis, y_axis, values, x, y)
+
+        assert np.allclose(result, expected, rtol=1e-14, atol=1e-14)
 
 
 class TestImageInterpolations:
