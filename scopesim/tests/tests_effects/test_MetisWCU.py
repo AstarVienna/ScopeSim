@@ -211,6 +211,13 @@ class TestWCUSource:
         bbsource.set_bb_aperture(newvalue)
         npt.assert_equal(bbsource.intens_bg, ref_bg)
 
+    def test_open_is_ports_decrease_multiplication(self, bbsource):
+        lam = 5 * u.um
+        nports = np.arange(1, 10)
+        is_mult = [bbsource.is_multiplication(lam, nport)
+                   for nport in nports]
+        assert np.all(np.diff(is_mult) < 0)
+
     def test_laser_brighter_with_fibre_transmission(self, bbsource):
         bbsource.set_lamp("laser")
         ft_1 = bbsource.fibre_trans

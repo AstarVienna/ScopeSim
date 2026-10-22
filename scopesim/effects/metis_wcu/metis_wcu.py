@@ -560,7 +560,7 @@ class WCUSource(TERCurve):
         area_out = (self.d_is_out**2
                     * (1 - np.cos(np.arcsin(self.d_is_out / self.d_is))))
         area_is = np.pi * self.d_is**2
-        if nport == 0:
+        if nport > 0:
             frac = ((area_in + (nport - 1) * area_out) / area_is).decompose().value
         else:
             frac = 0
