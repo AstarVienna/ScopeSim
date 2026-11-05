@@ -1143,14 +1143,14 @@ zstd = ["zstandard (>=0.18.0)"]
 
 [[package]]
 name = "httpxyz"
-version = "0.31.2"
+version = "0.42.1"
 description = "Friendly fork of the next generation HTTP client."
 optional = false
 python-versions = ">=3.9"
 groups = ["main"]
 files = [
-    {file = "httpxyz-0.31.2-py3-none-any.whl", hash = "sha256:1e8058b7324aaf875efb6b4cf5a5a423f4ac101fd4af515349fb4e1d3e4d4441"},
-    {file = "httpxyz-0.31.2.tar.gz", hash = "sha256:da96c2f35c724023b9395b1df718f7d52d049b8424a0c919ca0fe2b64dce73a0"},
+    {file = "httpxyz-0.42.1-py3-none-any.whl", hash = "sha256:1140cf26814ecf5da132514cf85f7037d907e46e5888e30fc0068163cd343929"},
+    {file = "httpxyz-0.42.1.tar.gz", hash = "sha256:194fe5577784983af2bc26a8ffb608bc19d3c6c6260d5972d4c19f801f7a509f"},
 ]
 
 [package.dependencies]
@@ -4415,4 +4415,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.12,<3.15"
-content-hash = "a18e987b1266dbb2f2af781e2cbecdd378f311757ac10c4060891cb066874b68"
+content-hash = "29f69fa7690da9408f94494e3969c1b0b6b1beb32d66a58f07c72fc0c290bb92"
