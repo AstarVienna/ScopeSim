@@ -281,9 +281,10 @@ class FieldConstantPSF(DiscretePSF):
             unit_factor = 1
         ref_pixel_scale = hdr["CDELT1"] * unit_factor
 
-        psfwcs = WCS(hdr)
+        psfwcs = WCS(hdr).sub(2) # get the spatial part of the WCS
         psf = self._file[ext].data
         psf = psf / psf.sum()         # normalisation of the input psf
+        psf = np.atleast_2d(psf.squeeze()) # remove any extra singleton dimensions
         nyin, nxin = psf.shape
 
         ipsf = RectBivariateSpline(
