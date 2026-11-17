@@ -362,7 +362,7 @@ def table_to_rst(tbl, indent=0, rounding=None):
         for col in tbl.itercols():
             if col.info.dtype.kind == "f":
                 col.info.format = f".{rounding}f"
-    
+
     tbl_fmtr = TableFormatter()
     lines, outs = tbl_fmtr._pformat_table(tbl, max_width=-1, max_lines=-1,
                                           show_unit=False)
