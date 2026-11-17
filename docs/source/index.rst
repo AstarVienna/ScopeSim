@@ -51,12 +51,25 @@ ScopeSim_ is on pip::
 
 .. toctree::
     :maxdepth: 2
-    :caption: Contents:
+    :caption: Getting Started:
 
     getting_started
+    concepts
+    simcado_migration
+
+.. toctree::
+    :maxdepth: 2
+    :caption: Reference:
+
+    psfs
+    faqs/index
+
+.. toctree::
+    :maxdepth: 2
+    :caption: Examples:
+
     examples/index
     5_liners/index
-    faqs/index
 
 .. warning:: July 2022: The downloadable content server was retired and the data migrated to a new server.
 

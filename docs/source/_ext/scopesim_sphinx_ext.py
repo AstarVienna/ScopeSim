@@ -31,7 +31,7 @@ def setup(app):
         eff_type_strs[base_name] += new_str
 
     for eff_type, strs in eff_type_strs.items():
-        with open(os.path.join(output_dir, f"{eff_type}.rst"), "w") as f:
+        with open(os.path.join(output_dir, f"{eff_type}.rst"), "w", encoding="utf-8") as f:
             f.write(strs)
 
 
