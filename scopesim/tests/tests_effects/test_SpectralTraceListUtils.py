@@ -161,7 +161,7 @@ class TestTransform2D:
 
 class MockCubeFov:
     """Minimal stand-in for a FieldOfView carrying a spectral cube."""
-    def __init__(self, n_lam=20, n_eta=3, n_xi=11):
+    def __init__(self, n_lam=20, n_eta=3, n_xi=11, data=None):
         hdr = fits.Header()
         hdr["NAXIS"] = 3
         hdr["NAXIS1"], hdr["NAXIS2"], hdr["NAXIS3"] = n_xi, n_eta, n_lam
@@ -170,8 +170,9 @@ class MockCubeFov:
         hdr["CRVAL1"], hdr["CRVAL2"], hdr["CRVAL3"] = 0., 0., 2.0
         hdr["CDELT1"], hdr["CDELT2"], hdr["CDELT3"] = 0.1, 0.1, 0.001
         hdr["CUNIT1"], hdr["CUNIT2"], hdr["CUNIT3"] = "arcsec", "arcsec", "um"
-        self.cube = fits.ImageHDU(
-            data=np.ones((n_lam, n_eta, n_xi)), header=hdr)
+        if data is None:
+            data = np.ones((n_lam, n_eta, n_xi))
+        self.cube = fits.ImageHDU(data=data, header=hdr)
         self.meta = {"xi_min": -0.5 * u.arcsec, "xi_max": 0.5 * u.arcsec}
 
 
@@ -181,6 +182,34 @@ class TestXiLamImage:
         xilam = XiLamImage(MockCubeFov(), dlam_per_pix=0.001)
         assert list(xilam.wcs.wcs.cunit) == [u.um, u.arcsec]
         assert list(xilam.wcsa.wcs.cunit) == [u.um, u.dimensionless_unscaled]
+
+    def test_interp_matches_rect_bivariate_spline(self):
+        """XiLamImage.interp must reproduce RectBivariateSpline(kx=ky=1)
+        point evaluation, including clamping outside the grid."""
+        from scipy.interpolate import RectBivariateSpline
+
+        rng = np.random.default_rng(7)
+        n_lam, n_eta, n_xi = 30, 3, 12
+        fov = MockCubeFov(n_lam, n_eta, n_xi,
+                          data=rng.random((n_lam, n_eta, n_xi)))
+        xilam = XiLamImage(fov, dlam_per_pix=0.001)
+
+        spline = RectBivariateSpline(xilam.xi, xilam.lam, xilam.image,
+                                     kx=1, ky=1)
+
+        # scattered points, deliberately extending beyond the grid
+        xi_pts = rng.uniform(xilam.xi[0] - 0.2, xilam.xi[-1] + 0.2, 500)
+        lam_pts = rng.uniform(xilam.lam[0] - 0.01, xilam.lam[-1] + 0.01, 500)
+        np.testing.assert_allclose(
+            xilam.interp(xi_pts, lam_pts, grid=False),
+            spline(xi_pts, lam_pts, grid=False), rtol=1e-10)
+
+        # grid evaluation
+        xi_vec = np.sort(rng.uniform(xilam.xi[0], xilam.xi[-1], 7))
+        lam_vec = np.sort(rng.uniform(xilam.lam[0], xilam.lam[-1], 9))
+        np.testing.assert_allclose(
+            xilam.interp(xi_vec, lam_vec, grid=True),
+            spline(xi_vec, lam_vec, grid=True), rtol=1e-10)
 
 
 class TestImageInterpolations:
